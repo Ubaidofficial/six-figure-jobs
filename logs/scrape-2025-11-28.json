@@ -1,0 +1,334 @@
+{
+  "date": "2025-11-28T23:33:52.088Z",
+  "duration": "1.1",
+  "stats": {
+    "scraped": 50,
+    "failed": 64,
+    "totalNew": 8524,
+    "totalUpdated": 121,
+    "totalJobs": 8728,
+    "highSalary": 5387
+  },
+  "failures": [
+    {
+      "name": "OpenAI",
+      "atsUrl": "https://boards.greenhouse.io/openai",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Hugging Face",
+      "atsUrl": "https://boards.greenhouse.io/huggingface",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Cohere",
+      "atsUrl": "https://boards.greenhouse.io/cohere",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Perplexity",
+      "atsUrl": "https://boards.greenhouse.io/perplexityai",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Mistral AI",
+      "atsUrl": "https://boards.greenhouse.io/mistral",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Adept",
+      "atsUrl": "https://boards.greenhouse.io/adeptailabs",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Character AI",
+      "atsUrl": "https://boards.greenhouse.io/character",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Plaid",
+      "atsUrl": "https://boards.greenhouse.io/plaid",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Ramp",
+      "atsUrl": "https://boards.greenhouse.io/ramp",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Klarna",
+      "atsUrl": "https://boards.greenhouse.io/klarna",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Wise",
+      "atsUrl": "https://boards.greenhouse.io/wise",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Revolut",
+      "atsUrl": "https://boards.greenhouse.io/revolut",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Supabase",
+      "atsUrl": "https://boards.greenhouse.io/supabase",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Neon",
+      "atsUrl": "https://boards.greenhouse.io/neondatabase",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Railway",
+      "atsUrl": "https://boards.greenhouse.io/railway",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Render",
+      "atsUrl": "https://boards.greenhouse.io/render",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Snowflake",
+      "atsUrl": "https://boards.greenhouse.io/snowflake",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Linear",
+      "atsUrl": "https://boards.greenhouse.io/linear",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Dbt Labs",
+      "atsUrl": "https://boards.greenhouse.io/daboratoriesdbtlabs",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Hex",
+      "atsUrl": "https://boards.greenhouse.io/hex",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Sentry",
+      "atsUrl": "https://boards.greenhouse.io/sentry",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Spotify",
+      "atsUrl": "https://boards.greenhouse.io/spotify",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Notion",
+      "atsUrl": "https://boards.greenhouse.io/notion",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Zapier",
+      "atsUrl": "https://boards.greenhouse.io/zapier",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "DoorDash",
+      "atsUrl": "https://boards.greenhouse.io/doordash",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Uber",
+      "atsUrl": "https://boards.greenhouse.io/uber",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Rippling",
+      "atsUrl": "https://boards.greenhouse.io/rippling",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Deel",
+      "atsUrl": "https://boards.greenhouse.io/deel",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Zendesk",
+      "atsUrl": "https://boards.greenhouse.io/zendesk",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "1Password",
+      "atsUrl": "https://boards.greenhouse.io/1password",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "CrowdStrike",
+      "atsUrl": "https://boards.greenhouse.io/crowdstrike",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Snyk",
+      "atsUrl": "https://boards.greenhouse.io/snyk",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Relativity Space",
+      "atsUrl": "https://boards.greenhouse.io/relativityspace",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Tempus",
+      "atsUrl": "https://boards.greenhouse.io/tempus",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Color",
+      "atsUrl": "https://boards.greenhouse.io/color",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Ro",
+      "atsUrl": "https://boards.greenhouse.io/ro",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Hims & Hers",
+      "atsUrl": "https://boards.greenhouse.io/himshers",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Shopify",
+      "atsUrl": "https://jobs.lever.co/shopify",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Twilio",
+      "atsUrl": "https://jobs.lever.co/twilio",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Asana",
+      "atsUrl": "https://jobs.lever.co/asana",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Postman",
+      "atsUrl": "https://jobs.lever.co/postman",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Canva",
+      "atsUrl": "https://jobs.lever.co/canva",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Datadog",
+      "atsUrl": "https://jobs.lever.co/datadog",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Grafana Labs",
+      "atsUrl": "https://jobs.lever.co/grafanalabs",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "LaunchDarkly",
+      "atsUrl": "https://jobs.lever.co/launchdarkly",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Auth0",
+      "atsUrl": "https://jobs.lever.co/auth0",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Segment",
+      "atsUrl": "https://jobs.lever.co/segment",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Miro",
+      "atsUrl": "https://jobs.lever.co/miro",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Loom",
+      "atsUrl": "https://jobs.lever.co/useloom",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Calendly",
+      "atsUrl": "https://jobs.lever.co/calendly",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Dropbox",
+      "atsUrl": "https://jobs.lever.co/dropbox",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Slack",
+      "atsUrl": "https://jobs.lever.co/slack",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Box",
+      "atsUrl": "https://jobs.lever.co/box",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "DocuSign",
+      "atsUrl": "https://jobs.lever.co/docusign",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Okta",
+      "atsUrl": "https://jobs.lever.co/okta",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Flexport",
+      "atsUrl": "https://jobs.lever.co/flexport",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Samsara",
+      "atsUrl": "https://jobs.lever.co/samsara",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Faire",
+      "atsUrl": "https://jobs.ashbyhq.com/faire",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Coda",
+      "atsUrl": "https://jobs.ashbyhq.com/coda",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Liveblocks",
+      "atsUrl": "https://jobs.ashbyhq.com/liveblocks",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Sourcegraph",
+      "atsUrl": "https://jobs.ashbyhq.com/sourcegraph",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Cockroach Labs",
+      "atsUrl": "https://jobs.ashbyhq.com/cockroachlabs",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Clay",
+      "atsUrl": "https://jobs.ashbyhq.com/clay",
+      "error": "HTTP 404"
+    },
+    {
+      "name": "Cursor",
+      "atsUrl": "https://jobs.ashbyhq.com/anysphere",
+      "error": "HTTP 404"
+    }
+  ]
+}

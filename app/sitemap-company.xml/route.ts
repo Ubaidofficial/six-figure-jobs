@@ -1,0 +1,47 @@
+// app/sitemap-company.xml/route.ts
+// Sitemap for all /company/[slug] pages
+
+import { prisma } from '../../lib/prisma'
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+
+export const dynamic = "force-static"
+
+export async function GET() {
+  // Only include companies that actually have jobs (SEO best practice)
+  const companies = await prisma.company.findMany({
+    where: {
+      jobCount: { gt: 0 }, // avoid dead pages
+    },
+    select: {
+      slug: true,
+      updatedAt: true,
+    },
+    orderBy: {
+      updatedAt: 'desc',
+    },
+    take: 50000, // Google soft limit
+  })
+
+  const urls = companies
+    .filter((c) => c.slug)
+    .map((c) => {
+      const loc = `${SITE_URL}/company/${c.slug}`
+      const lastmod = c.updatedAt.toISOString()
+      return `<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`
+    })
+    .join('\n')
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>`
+
+  return new Response(xml, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+    },
+  })
+}

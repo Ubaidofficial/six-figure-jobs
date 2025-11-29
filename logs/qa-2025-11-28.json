@@ -1,0 +1,148 @@
+{
+  "timestamp": "2025-11-28T14:21:27.037Z",
+  "summary": {
+    "passed": 18,
+    "warned": 1,
+    "failed": 4
+  },
+  "results": [
+    {
+      "category": "Database",
+      "check": "Total Jobs",
+      "status": "pass",
+      "message": "21,301 active jobs"
+    },
+    {
+      "category": "Database",
+      "check": "High-Salary Jobs",
+      "status": "pass",
+      "message": "10,709 (50.3%)"
+    },
+    {
+      "category": "Database",
+      "check": "Companies",
+      "status": "pass",
+      "message": "2,667 total, 277 with ATS"
+    },
+    {
+      "category": "Database",
+      "check": "ATS Distribution",
+      "status": "pass",
+      "message": "Greenhouse: 196, Lever: 40, Ashby: 41"
+    },
+    {
+      "category": "Database",
+      "check": "Job Sources",
+      "status": "pass",
+      "message": "ats:greenhouse: 16,776, ats:ashby: 2,256, ats:lever: 1,589, board:remote100k: 360, ats: 96, board:remoteok: 95, board:nodesk: 85, board:weworkremotely: 30, board:career-page: 14"
+    },
+    {
+      "category": "Database",
+      "check": "Orphan Jobs",
+      "status": "warn",
+      "message": "2 jobs without company"
+    },
+    {
+      "category": "Database",
+      "check": "Scrape Failures",
+      "status": "pass",
+      "message": "No failed scrapes"
+    },
+    {
+      "category": "Database",
+      "check": "Salary Outliers",
+      "status": "pass",
+      "message": "No extreme salary outliers"
+    },
+    {
+      "category": "Database",
+      "check": "Currencies",
+      "status": "pass",
+      "message": "USD: 5,417, AUD: 4,354, EUR: 2,058, CAD: 1,511, SEK: 364"
+    },
+    {
+      "category": "API",
+      "check": "Greenhouse API",
+      "status": "pass",
+      "message": "Connected"
+    },
+    {
+      "category": "API",
+      "check": "Lever API",
+      "status": "fail",
+      "message": "The operation was aborted due to timeout"
+    },
+    {
+      "category": "API",
+      "check": "Ashby API",
+      "status": "pass",
+      "message": "Connected"
+    },
+    {
+      "category": "API",
+      "check": "RemoteOK API",
+      "status": "pass",
+      "message": "Connected"
+    },
+    {
+      "category": "Files",
+      "check": "Required Files",
+      "status": "pass",
+      "message": "11/11 files exist"
+    },
+    {
+      "category": "SEO",
+      "check": "Sitemaps",
+      "status": "pass",
+      "message": "5/5 sitemaps"
+    },
+    {
+      "category": "SEO",
+      "check": "SEO Pages",
+      "status": "pass",
+      "message": "3/3 programmatic pages"
+    },
+    {
+      "category": "Scraper",
+      "check": "Last Run",
+      "status": "pass",
+      "message": "11/28/2025 (26.5)"
+    },
+    {
+      "category": "Scraper",
+      "check": "Failures",
+      "status": "fail",
+      "message": "21 failures"
+    },
+    {
+      "category": "Scraper",
+      "check": "Stats",
+      "status": "pass",
+      "message": "11,753 new, 9,503 updated"
+    },
+    {
+      "category": "Scraper",
+      "check": "Freshness",
+      "status": "pass",
+      "message": "277/277 scraped in 24h"
+    },
+    {
+      "category": "Test",
+      "check": "Anthropic (Greenhouse)",
+      "status": "fail",
+      "message": "The operation was aborted due to timeout"
+    },
+    {
+      "category": "Test",
+      "check": "Spotify (Lever)",
+      "status": "fail",
+      "message": "The operation was aborted due to timeout"
+    },
+    {
+      "category": "Test",
+      "check": "OpenAI (Ashby)",
+      "status": "pass",
+      "message": "453 jobs"
+    }
+  ]
+}

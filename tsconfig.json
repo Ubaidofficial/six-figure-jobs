@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    /* -------------------------------- Core -------------------------------- */
+    "target": "ESNext",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    /* ------------------------------- Behavior ----------------------------- */
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "incremental": true,
+    /* ------------------------------- Next.js ------------------------------ */
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  /* --------------------------- Included Files ---------------------------- */
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  /* --------------------------- Excluded Files ---------------------------- */
+  "exclude": [
+    "node_modules",
+    "lib/normalizers/location.test.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "tests/**/*"
+  ]
+}
