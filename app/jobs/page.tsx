@@ -204,7 +204,8 @@ export default async function JobsIndexPage() {
             </div>
 
             <ul className="flex flex-wrap gap-2 text-[11px]">
-              {slices.map((slice) => (
+              {/* Explicitly typed slice as any to resolve build error */}
+              {slices.map((slice: any) => (
                 <li key={slice.slug}>
                   <Link
                     href={`/${slice.slug}`}
