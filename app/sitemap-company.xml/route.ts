@@ -25,8 +25,9 @@ export async function GET() {
   })
 
   const urls = companies
-    .filter((c) => c.slug)
-    .map((c) => {
+    // Explicitly type 'c' as any to satisfy TypeScript strict mode
+    .filter((c: any) => c.slug)
+    .map((c: any) => {
       const loc = `${SITE_URL}/company/${c.slug}`
       const lastmod = c.updatedAt.toISOString()
       return `<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`
