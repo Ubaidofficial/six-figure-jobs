@@ -9,8 +9,11 @@ export type JobCardJob = any // expects JobWithCompany + roleInference, etc.
 export default function JobCard({ job }: { job: JobCardJob }) {
   const companyName =
     job.companyRef?.name ?? job.company ?? 'Unknown company'
+  
+  // Prioritize the logo from the CompanyRef (Clearbit logo from seed) over the scrape
   const logo =
     job.companyRef?.logoUrl ?? job.companyLogo ?? null
+    
   const companySlug = job.companyRef?.slug
   const companySize = job.companyRef?.sizeBucket || null
   const companyTags = parseJsonArray(job.companyRef?.tagsJson)
@@ -27,6 +30,9 @@ export default function JobCard({ job }: { job: JobCardJob }) {
 
   const benefits = parseJsonArray(job.benefitsJson).slice(0, 3)
 
+  // Use the database flag for highlighting high salaries
+  const isHighSalary = job.isHighSalary || false
+
   return (
     <article className="group rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-4 shadow-sm transition hover:border-slate-500/80 hover:bg-slate-900/80">
       <div className="flex gap-4">
@@ -38,12 +44,21 @@ export default function JobCard({ job }: { job: JobCardJob }) {
                 src={logo}
                 alt={companyName}
                 className="h-10 w-10 rounded-full bg-slate-900 object-contain p-1 hover:ring-2 hover:ring-slate-600"
+                onError={(e) => {
+                  // Fallback if image fails to load
+                  e.currentTarget.style.display = 'none'
+                  e.currentTarget.parentElement?.querySelector('.fallback-logo')?.classList.remove('hidden')
+                }}
               />
             ) : (
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300 hover:ring-2 hover:ring-slate-600">
                 {companyName?.charAt(0) ?? '?'}
               </div>
             )}
+            {/* Hidden fallback div for onError */}
+            <div className="fallback-logo hidden h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300 hover:ring-2 hover:ring-slate-600">
+               {companyName?.charAt(0) ?? '?'}
+            </div>
           </Link>
         ) : (
           <div className="mt-1 flex-shrink-0">
@@ -175,7 +190,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
             )}
 
             {salaryText && (
-              <Badge highlight>
+              <Badge highlight={isHighSalary}>
                 💵 {salaryText}
               </Badge>
             )}
@@ -200,7 +215,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                   Badge                                    */
+/* Badge                                    */
 /* -------------------------------------------------------------------------- */
 
 function Badge({
@@ -229,8 +244,22 @@ function Badge({
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                  Helpers                                   */
+/* Helpers                                   */
 /* -------------------------------------------------------------------------- */
+
+function getCurrencySymbol(code: string | null | undefined) {
+  if (!code) return '$'
+  switch (code.toUpperCase()) {
+    case 'EUR': return '€'
+    case 'GBP': return '£'
+    case 'AUD': return 'A$'
+    case 'CAD': return 'C$'
+    case 'SGD': return 'S$'
+    case 'JPY': return '¥'
+    case 'INR': return '₹'
+    default: return '$'
+  }
+}
 
 function buildSalaryText(job: any): string | null {
   const rawMin = job.minAnnual
@@ -259,12 +288,13 @@ function buildSalaryText(job: any): string | null {
     max = null
   }
 
-  const sym =
-    job.currency === 'USD' || !job.currency
-      ? '$'
-      : job.currency + ' '
+  // Improved currency formatting
+  const sym = getCurrencySymbol(job.currency)
 
-  const fmt = (v: number) => `${Math.round(v / 1000)}k`
+  const fmt = (v: number) => {
+    if (v >= 1000) return `${Math.round(v / 1000)}k`
+    return v.toString()
+  }
 
   if (min !== null && max !== null) {
     if (min === max) {
