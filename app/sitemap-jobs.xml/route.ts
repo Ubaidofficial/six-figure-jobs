@@ -48,7 +48,8 @@ export async function GET() {
   })
 
   const urls = jobs
-    .map((job) => {
+    // Explicitly type job as any to fix build error
+    .map((job: any) => {
       const href = buildJobSlugHref(job as JobWithCompany)
       const lastmodSource = job.lastSeenAt || job.postedAt
       const lastmod = (lastmodSource || new Date()).toISOString()
