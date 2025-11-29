@@ -1,15 +1,5 @@
 // lib/scrapers/remote100k.ts
-// Remote100k scraper - Puppeteer-based for JavaScript-rendered content
-//
-// This scraper fetches jobs from remote100k.com which is built with Framer
-// and requires JavaScript execution to render job listings.
-//
-// Strategy:
-// 1. Use Puppeteer to load category listing pages
-// 2. Extract job cards with salary, company, location data
-// 3. Use the new central ingest function for deduplication
-//
-// Rate limiting: 20 pages max per run, 500ms delay between pages
+// UPDATED: Fixes "Detached Frame" error by using fresh pages for each category
 
 import puppeteer, { Browser, Page } from 'puppeteer'
 import { ingestJob } from '../ingest'
@@ -25,11 +15,10 @@ const BASE_URL = 'https://remote100k.com'
 
 // Rate limiting
 const MAX_PAGES_PER_RUN = 20
-const DELAY_BETWEEN_PAGES_MS = 500
-const PAGE_LOAD_TIMEOUT_MS = 30000
+const DELAY_BETWEEN_PAGES_MS = 1000 // Increased delay slightly
+const PAGE_LOAD_TIMEOUT_MS = 45000 // Increased timeout
 const WAIT_FOR_CONTENT_MS = 3000
 
-// Category pages to scrape (from sitemap analysis)
 const CATEGORY_PAGES = [
   '/remote-jobs/engineering',
   '/remote-jobs/data-science',
@@ -52,7 +41,6 @@ const CATEGORY_PAGES = [
   '/remote-jobs/cloud-engineer',
 ]
 
-// Known categories to filter out from location
 const CATEGORIES = [
   'Engineering', 'Marketing', 'Product', 'Data', 'Sales', 
   'Management', 'Design', 'Operations', 'All Other', 'Data Science'
@@ -77,9 +65,6 @@ interface ParsedJob {
 // Scraper Functions
 // =============================================================================
 
-/**
- * Main entry point - scrapes Remote100k job listings
- */
 export default async function scrapeRemote100k(): Promise<IngestStats> {
   console.log(`[${BOARD_NAME}] Starting scrape...`)
   
@@ -94,7 +79,6 @@ export default async function scrapeRemote100k(): Promise<IngestStats> {
   let browser: Browser | null = null
 
   try {
-    // Launch browser
     browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -105,17 +89,9 @@ export default async function scrapeRemote100k(): Promise<IngestStats> {
       ],
     })
 
-    const page = await browser.newPage()
-    
-    // Set user agent to look like a real browser
-    await page.setUserAgent(
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    )
-
     // Track seen jobs to avoid duplicates across category pages
     const seenJobUrls = new Set<string>()
 
-    // Scrape each category page
     const pagesToScrape = CATEGORY_PAGES.slice(0, MAX_PAGES_PER_RUN)
     
     for (let i = 0; i < pagesToScrape.length; i++) {
@@ -124,15 +100,22 @@ export default async function scrapeRemote100k(): Promise<IngestStats> {
       
       console.log(`[${BOARD_NAME}] Scraping page ${i + 1}/${pagesToScrape.length}: ${url}`)
       
+      // CRITICAL FIX: Open a new page for EVERY request to prevent "Detached Frame" errors
+      let page: Page | null = null;
+
       try {
+        page = await browser.newPage()
+        
+        await page.setUserAgent(
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        )
+
         const jobs = await scrapeListingPage(page, url, seenJobUrls)
         console.log(`[${BOARD_NAME}] Found ${jobs.length} new jobs on ${categoryPath}`)
         
-        // Ingest each job
         for (const job of jobs) {
           try {
             const result = await ingestJob(job)
-            // Handle the status - map 'error' to 'errors' for stats
             if (result.status === 'error') {
               stats.errors++
             } else {
@@ -144,13 +127,17 @@ export default async function scrapeRemote100k(): Promise<IngestStats> {
           }
         }
         
-        // Rate limit
-        if (i < pagesToScrape.length - 1) {
-          await delay(DELAY_BETWEEN_PAGES_MS)
-        }
       } catch (err) {
         console.error(`[${BOARD_NAME}] Error scraping ${url}:`, err)
         stats.errors++
+      } finally {
+        // CRITICAL FIX: Always close the page to free up memory/context
+        if (page) await page.close().catch(() => {}) 
+      }
+
+      // Rate limit
+      if (i < pagesToScrape.length - 1) {
+        await delay(DELAY_BETWEEN_PAGES_MS)
       }
     }
 
@@ -167,9 +154,6 @@ export default async function scrapeRemote100k(): Promise<IngestStats> {
   return stats
 }
 
-/**
- * Scrape a single listing page and extract job cards
- */
 async function scrapeListingPage(
   page: Page, 
   url: string,
@@ -178,20 +162,15 @@ async function scrapeListingPage(
   const jobs: ScrapedJobInput[] = []
 
   try {
-    // Navigate to page
     await page.goto(url, {
-      waitUntil: 'networkidle2',
+      waitUntil: 'domcontentloaded', // Changed from networkidle2 to be faster/safer
       timeout: PAGE_LOAD_TIMEOUT_MS,
     })
 
-    // Wait for content to render
     await delay(WAIT_FOR_CONTENT_MS)
 
-    // Get page text and parse jobs from it
     const pageText = await page.evaluate(() => document.body.innerText)
     
-    // Also get all job URLs from the page
-    // Use .href property (not getAttribute) to get fully resolved URLs
     const jobUrls = await page.evaluate(() => {
       const urls: string[] = []
       document.querySelectorAll('a[href*="/remote-job/"]').forEach(link => {
@@ -203,12 +182,9 @@ async function scrapeListingPage(
       return urls
     })
 
-    // Parse jobs from text
     const parsedJobs = parseJobsFromText(pageText, jobUrls)
     
-    // Convert to ScrapedJobInput and filter already seen
     for (const parsed of parsedJobs) {
-      // Skip if we've already processed this job URL
       if (seenJobUrls.has(parsed.url)) {
         continue
       }
@@ -241,19 +217,16 @@ async function scrapeListingPage(
 
   } catch (err) {
     console.error(`[${BOARD_NAME}] Error parsing page ${url}:`, err)
+    throw err; // Re-throw so the main loop knows it failed
   }
 
   return jobs
 }
 
-/**
- * Parse jobs from page text using line-by-line analysis
- */
 function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
   const jobs: ParsedJob[] = []
   const lines = pageText.split('\n').map(l => l.trim()).filter(l => l.length > 0)
   
-  // Create a URL lookup map from job slug
   const urlMap = new Map<string, string>()
   for (const url of jobUrls) {
     const match = url.match(/\/remote-job\/([^/]+)/)
@@ -262,17 +235,11 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
     }
   }
 
-  // Find job patterns in text
   for (let i = 0; i < lines.length - 5; i++) {
     const line = lines[i]
-    
-    // Skip navigation/header lines
     if (isNavigationLine(line)) continue
-    
-    // Skip employment type lines (these can appear due to page structure)
     if (/^(Full-Time|Part-Time|Contract)$/i.test(line)) continue
     
-    // Look for salary pattern in nearby lines (within 8 lines)
     let salaryLineIdx = -1
     for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
       if (/^[$£€][\d,]+/.test(lines[j])) {
@@ -283,7 +250,6 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
     
     if (salaryLineIdx === -1) continue
     
-    // Look for "Remote:" marker
     let remoteIdx = -1
     for (let j = i + 1; j < salaryLineIdx; j++) {
       if (lines[j] === 'Remote:') {
@@ -294,13 +260,9 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
     
     if (remoteIdx === -1) continue
     
-    // Title is at line i
     const title = line
-    
-    // Validate title - must look like a job title, not an employment type
     if (!isValidJobTitle(title)) continue
     
-    // Find company (lines between title and Remote:)
     let company = ''
     for (let j = i + 1; j < remoteIdx; j++) {
       const candidateLine = lines[j]
@@ -314,10 +276,8 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
       }
     }
     
-    // Skip if no valid company found
     if (!company || !isValidCompanyName(company)) continue
     
-    // Find location (after Remote: until category)
     let locationParts: string[] = []
     let category = ''
     for (let j = remoteIdx + 1; j < salaryLineIdx; j++) {
@@ -326,20 +286,15 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
         category = l
         break
       } else if (l && !isNavigationLine(l) && l.length > 0) {
-        // Only add non-empty location parts
         if (l !== ',') {
           locationParts.push(l)
         }
       }
     }
     
-    // Clean up location - join parts and clean
     let location = cleanLocation(locationParts.join(', '))
-    
-    // Salary line
     const salaryText = lines[salaryLineIdx]
     
-    // Employment type (line after salary)
     let employmentType = 'Full-Time'
     if (salaryLineIdx + 1 < lines.length) {
       const typeLine = lines[salaryLineIdx + 1]
@@ -348,16 +303,13 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
       else if (/contract/i.test(typeLine)) employmentType = 'Contract'
     }
     
-    // Age
     let ageText = ''
-    // Check line after employment type
     if (salaryLineIdx + 2 < lines.length) {
       const potentialAge = lines[salaryLineIdx + 2]
       if (/^(NEW|\d+d)$/i.test(potentialAge)) {
         ageText = potentialAge
       }
     }
-    // Check line before title
     if (!ageText && i > 0) {
       const lineBefore = lines[i - 1]
       if (/^(NEW|\d+d)$/i.test(lineBefore)) {
@@ -365,7 +317,6 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
       }
     }
     
-    // Find matching URL
     let url = findMatchingUrl(company, title, urlMap)
     
     jobs.push({
@@ -379,68 +330,40 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
       url,
     })
     
-    // Skip ahead past this job
     i = salaryLineIdx + 2
   }
   
   return jobs
 }
 
-/**
- * Check if a string looks like a valid job title
- */
 function isValidJobTitle(title: string): boolean {
-  // Must be at least 5 chars
   if (title.length < 5) return false
-  
-  // Must not be employment type
   if (/^(Full-Time|Part-Time|Contract|Remote)$/i.test(title)) return false
-  
-  // Must not be just a number with 'd' (age indicator)
   if (/^\d+d$/.test(title)) return false
-  
-  // Should contain letters
   if (!/[a-zA-Z]/.test(title)) return false
-  
   return true
 }
 
-/**
- * Check if a string looks like a valid company name
- */
 function isValidCompanyName(name: string): boolean {
-  // Must be at least 2 chars
   if (name.length < 2) return false
-  
-  // Must not be employment type
   if (/^(Full-Time|Part-Time|Contract|Remote|NEW)$/i.test(name)) return false
-  
-  // Must not be age indicator
   if (/^\d+d$/.test(name)) return false
-  
-  // Must not be a category
   if (CATEGORIES.includes(name)) return false
-  
   return true
 }
 
-/**
- * Find matching URL for a job
- */
 function findMatchingUrl(company: string, title: string, urlMap: Map<string, string>): string {
   const companySlug = company.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
   const titleSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
   
-  // Try exact match starting with company slug
   const entries = Array.from(urlMap.entries())
   for (const [urlSlug, fullUrl] of entries) {
     if (urlSlug.startsWith(companySlug)) {
-      urlMap.delete(urlSlug) // Remove to avoid reuse
+      urlMap.delete(urlSlug)
       return fullUrl
     }
   }
   
-  // Try partial company match (at least first 5 chars)
   const shortCompanySlug = companySlug.slice(0, Math.max(5, companySlug.length))
   for (const [urlSlug, fullUrl] of entries) {
     if (urlSlug.startsWith(shortCompanySlug)) {
@@ -449,141 +372,74 @@ function findMatchingUrl(company: string, title: string, urlMap: Map<string, str
     }
   }
   
-  // Fallback: generate URL
   return `${BASE_URL}/remote-job/${companySlug}-${titleSlug}`
 }
 
-/**
- * Check if a line is navigation/header content
- */
 function isNavigationLine(line: string): boolean {
   const navPatterns = [
-    'Remote100K',
-    'Stop applying',
-    'Meet JobCopilot',
-    'Remote jobs from companies like',
-    'Land your next',
-    'Apply directly',
-    'Find remote',
-    '💻',
+    'Remote100K', 'Stop applying', 'Meet JobCopilot', 'Remote jobs from companies like',
+    'Land your next', 'Apply directly', 'Find remote', '💻',
   ]
-  
   for (const pattern of navPatterns) {
     if (line.includes(pattern)) return true
   }
-  
-  // Standalone category in navigation (not as part of job data)
   if (/^(Engineering|Marketing|Product|Data|Sales|Management|Design|Operations|All Other)$/.test(line)) {
     return true
   }
-  
   return false
 }
 
-/**
- * Clean location string
- */
 function cleanLocation(location: string): string {
   let cleaned = location
-  
-  // Remove category names
   for (const cat of CATEGORIES) {
     cleaned = cleaned.replace(new RegExp(`\\s*,?\\s*${cat}\\s*,?\\s*`, 'gi'), ', ')
   }
-  
-  // Clean up multiple commas and spaces
-  cleaned = cleaned
-    .replace(/,\s*,+/g, ',')     // Multiple commas
-    .replace(/,\s*$/g, '')        // Trailing comma
-    .replace(/^\s*,/g, '')        // Leading comma
-    .replace(/\s+/g, ' ')         // Multiple spaces
-    .trim()
-  
+  cleaned = cleaned.replace(/,\s*,+/g, ',').replace(/,\s*$/g, '').replace(/^\s*,/g, '').replace(/\s+/g, ' ').trim()
   return cleaned || 'Remote'
 }
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Parse salary text like "$164,000 - $246,000" or "£125,000" into min/max/currency
- */
 function parseSalaryText(text: string): { min: number | null; max: number | null; currency: string } {
-  if (!text) {
-    return { min: null, max: null, currency: 'USD' }
-  }
-
-  // Detect currency
+  if (!text) return { min: null, max: null, currency: 'USD' }
   let currency = 'USD'
   if (text.includes('£')) currency = 'GBP'
   else if (text.includes('€')) currency = 'EUR'
   else if (text.includes('CAD')) currency = 'CAD'
   else if (text.includes('AUD')) currency = 'AUD'
 
-  // Match numbers
   const matches = text.match(/[\d,]+/g)
   if (!matches) return { min: null, max: null, currency }
 
-  const numbers = matches
-    .map(m => parseInt(m.replace(/,/g, ''), 10))
-    .filter(n => !isNaN(n) && n > 10000) // Filter out small numbers (not salaries)
-  
+  const numbers = matches.map(m => parseInt(m.replace(/,/g, ''), 10)).filter(n => !isNaN(n) && n > 10000)
   if (numbers.length === 0) return { min: null, max: null, currency }
   if (numbers.length === 1) return { min: numbers[0], max: numbers[0], currency }
-  
   return { min: Math.min(...numbers), max: Math.max(...numbers), currency }
 }
 
-/**
- * Parse age text like "2d" or "New" to a Date
- */
 function parseAgeToDate(ageText: string): Date | null {
-  if (!ageText) {
-    return null
-  }
-
+  if (!ageText) return null
   const now = new Date()
-  
-  if (ageText.toLowerCase() === 'new') {
-    return now
-  }
-  
+  if (ageText.toLowerCase() === 'new') return now
   const daysMatch = ageText.match(/(\d+)d/)
   if (daysMatch) {
     const days = parseInt(daysMatch[1], 10)
     return new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
   }
-  
   return null
 }
 
-/**
- * Generate a stable external ID from a URL
- */
 function generateExternalId(url: string): string {
   try {
     const urlObj = new URL(url)
-    // Extract the job slug from path like /remote-job/company-title
     const match = urlObj.pathname.match(/\/remote-job\/(.+)/)
-    if (match) {
-      return match[1]
-    }
+    if (match) return match[1]
     return urlObj.pathname.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home'
   } catch {
     return Buffer.from(url).toString('base64').slice(0, 32)
   }
 }
 
-/**
- * Delay execution
- */
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
-
-// =============================================================================
-// Exports
-// =============================================================================
 
 export { scrapeRemote100k, scrapeListingPage }

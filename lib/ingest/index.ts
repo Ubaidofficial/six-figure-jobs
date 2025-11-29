@@ -21,6 +21,9 @@ import slugify from 'slugify'
 import { isJobTooOld, MAX_INGEST_AGE_DAYS } from './jobAgeFilter'
 import { parseGreenhouseSalary, isHighSalary as isHighSalaryGreenhouse } from './greenhouseSalaryParser'
 
+// 🔥 NEW: Import the multi-currency threshold helper
+import { isHighSalary } from '../currency/thresholds'
+
 import { getSourcePriority, isAtsSource, isBoardSource } from './sourcePriority'
 import { makeJobDedupeKey, normalizeLocation, normalizeUrl } from './dedupeHelpers'
 import type {
@@ -45,8 +48,7 @@ const ATS_RECENT_DAYS = 7
 
 /**
  * Ingest a scraped job into the database.
- * 
- * This function handles:
+ * * This function handles:
  * - Company resolution (find existing or create new)
  * - Dedupe key generation
  * - Finding existing jobs with same dedupe key or URL
@@ -445,6 +447,12 @@ function processSalary(input: ScrapedJobInput) {
     interval: salaryInterval,
   })
 
+  // 🔥 NEW: Check multi-currency thresholds
+  // We check against the normalized annual max to be optimistic
+  const effectiveMax = Number(normalized.maxAnnual || normalized.minAnnual || 0)
+  // FIX: Force currency to 'USD' if null so the strict check passes
+  const isHigh = isHighSalary(effectiveMax, normalized.currency || 'USD')
+
   return {
     salaryMin: salaryMin !== null ? BigInt(Math.round(salaryMin)) : null,
     salaryMax: salaryMax !== null ? BigInt(Math.round(salaryMax)) : null,
@@ -453,7 +461,7 @@ function processSalary(input: ScrapedJobInput) {
     minAnnual: normalized.minAnnual,
     maxAnnual: normalized.maxAnnual,
     currency: normalized.currency,
-    isHighSalary: normalized.isHighSalary,
+    isHighSalary: isHigh,
   }
 }
 
