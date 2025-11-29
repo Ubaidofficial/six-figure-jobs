@@ -14,10 +14,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
 /* Types                                                                      */
 /* -------------------------------------------------------------------------- */
 
-// Helper to infer the full return type of our specific query
 type CompanyWithJobs = Awaited<ReturnType<typeof getCompanyWithJobs>>
-
-// Helper to extract the single Job type from the company array
 type JobWithFlags = NonNullable<CompanyWithJobs>['jobs'][number]
 
 /* -------------------------------------------------------------------------- */
@@ -58,7 +55,6 @@ export async function generateMetadata({
   }
 
   const jobCount = company.jobs.length
-  // Explicitly typing j ensures no 'any' error
   const highSalaryCount = company.jobs.filter(
     (j: JobWithFlags) => j.isHighSalary
   ).length

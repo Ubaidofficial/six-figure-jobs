@@ -106,7 +106,8 @@ export default async function CompanyIndexPage({ searchParams }: PageProps) {
 
   // For each company on this page, count $100k+ jobs
   const companiesWithCounts = await Promise.all(
-    companiesPage.map(async (company) => {
+    // Explicitly typed as any to fix build error
+    companiesPage.map(async (company: any) => {
       const jobCount = await prisma.job.count({
         where: {
           companyId: company.id,
