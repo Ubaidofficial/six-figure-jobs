@@ -1,5 +1,5 @@
 // prisma/schema.prisma
-// UPDATED: Adds SEO fields for programmatic pages
+// UPDATED: Fixes @db.Text error for SQLite compatibility
 
 generator client {
   provider = "prisma-client-js"
@@ -11,7 +11,7 @@ datasource db {
 }
 
 model Job {
-  id          String  @id
+  id        String  @id
   title       String
   company     String
   companyLogo String?
@@ -29,7 +29,7 @@ model Job {
   salaryRaw String?
 
   // Full HTML job description
-  descriptionHtml String? @db.Text
+  descriptionHtml String?
 
   // Parsed salary (original values from source)
   salaryMin      BigInt?
@@ -67,10 +67,10 @@ model Job {
   updatedAt  DateTime  @updatedAt
 
   // Relations
-  companyId     String?
-  companyRef    Company?       @relation(fields: [companyId], references: [id])
-  locationId    String?
-  locationRef   Location?      @relation(fields: [locationId], references: [id])
+  companyId   String?
+  companyRef  Company?       @relation(fields: [companyId], references: [id])
+  locationId  String?
+  locationRef Location?      @relation(fields: [locationId], references: [id])
   roleInference RoleInference?
 
   // Deduplication fields
@@ -131,7 +131,7 @@ model Company {
   lastScrapedAt DateTime?
   scrapeStatus  String?
   scrapeError   String?
-  jobCount      Int       @default(0)
+  jobCount      Int        @default(0)
 
   // Career-site metrics
   totalJobCount      Int?
@@ -231,9 +231,9 @@ model Skill {
 }
 
 model RoleInference {
-  id        String  @id @default(cuid())
-  jobId     String  @unique
-  roleSlug  String?
+  id       String  @id @default(cuid())
+  jobId    String  @unique
+  roleSlug String?
   seniority String?
   tagsJson  String?
 
