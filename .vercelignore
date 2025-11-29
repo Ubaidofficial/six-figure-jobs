@@ -1,0 +1,10 @@
+
+# Ignore local Prisma databases
+prisma/dev.db
+prisma/dev.backup.db
+
+# Usual heavy stuff (optional but good practice)
+node_modules
+npm-debug.log*
+.yarn*
+.next/cache

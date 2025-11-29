@@ -15,6 +15,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
 /* -------------------------------------------------------------------------- */
 
 type CompanyWithJobs = Awaited<ReturnType<typeof getCompanyWithJobs>>
+type JobWithFlags = NonNullable<CompanyWithJobs>['jobs'][number]
 
 /* -------------------------------------------------------------------------- */
 /* Data Fetching                                                              */
@@ -54,9 +55,7 @@ export async function generateMetadata({
   }
 
   const jobCount = company.jobs.length
-  const highSalaryCount = company.jobs.filter(
-    (j: any) => j.isHighSalary
-  ).length
+  const highSalaryCount = company.jobs.filter((j: JobWithFlags) => j.isHighSalary).length
 
   const title = `${company.name} Jobs - ${jobCount} Open Positions | Remote100k`
   const description =
@@ -118,8 +117,12 @@ export default async function CompanyPage({
   if (!company) return notFound()
 
   const jobs = company.jobs
-  const highSalaryJobs = jobs.filter((j: any) => j.isHighSalary)
-  const otherJobs = jobs.filter((j: any) => !j.isHighSalary)
+  const highSalaryJobs: JobWithFlags[] = jobs.filter(
+    (j: JobWithFlags) => j.isHighSalary
+  )
+  const otherJobs: JobWithFlags[] = jobs.filter(
+    (j: JobWithFlags) => !j.isHighSalary
+  )
 
   // Build JSON-LD
   const organizationJsonLd = buildOrganizationJsonLd(company)
@@ -277,7 +280,7 @@ export default async function CompanyPage({
                   <span>💰</span> High-Salary Positions ($100k+)
                 </h3>
                 <div className="space-y-3">
-                  {highSalaryJobs.map((job) => (
+                  {highSalaryJobs.map((job: JobWithFlags) => (
                     <JobListItem key={job.id} job={job} />
                   ))}
                 </div>
@@ -293,7 +296,7 @@ export default async function CompanyPage({
                   </h3>
                 )}
                 <div className="space-y-3">
-                  {otherJobs.map((job) => (
+                  {otherJobs.map((job: JobWithFlags) => (
                     <JobListItem key={job.id} job={job} />
                   ))}
                 </div>
@@ -357,7 +360,7 @@ export default async function CompanyPage({
 /* Components                                                                 */
 /* -------------------------------------------------------------------------- */
 
-function JobListItem({ job }: { job: any }) {
+function JobListItem({ job }: { job: JobWithFlags }) {
   const salaryText = buildSalaryText(job)
   const locationText = buildLocationText(job)
   const isHighSalary = job.isHighSalary
@@ -378,8 +381,7 @@ function JobListItem({ job }: { job: any }) {
             {job.type && <span>· {job.type}</span>}
             {job.postedAt && (
               <span>
-                · Posted{' '}
-                {new Date(job.postedAt).toLocaleDateString()}
+                · Posted {new Date(job.postedAt).toLocaleDateString()}
               </span>
             )}
           </div>
@@ -418,7 +420,7 @@ function JobListItem({ job }: { job: any }) {
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
-function buildSalaryText(job: any): string | null {
+function buildSalaryText(job: JobWithFlags): string | null {
   let min = job.minAnnual != null ? Number(job.minAnnual) : null
   let max = job.maxAnnual != null ? Number(job.maxAnnual) : null
 
@@ -427,9 +429,7 @@ function buildSalaryText(job: any): string | null {
   }
 
   const currencySymbol =
-    job.currency === 'USD' || !job.currency
-      ? '$'
-      : `${job.currency} `
+    job.currency === 'USD' || !job.currency ? '$' : `${job.currency} `
   const fmt = (v: number) =>
     v.toLocaleString('en-US', { maximumFractionDigits: 0 })
 
@@ -440,18 +440,14 @@ function buildSalaryText(job: any): string | null {
   return null
 }
 
-function buildLocationText(job: any): string {
-  const isRemote =
-    job.remote === true || job.remoteMode === 'remote'
+function buildLocationText(job: JobWithFlags): string {
+  const isRemote = job.remote === true || job.remoteMode === 'remote'
 
   if (isRemote) {
-    return job.countryCode
-      ? `Remote (${job.countryCode})`
-      : 'Remote'
+    return job.countryCode ? `Remote (${job.countryCode})` : 'Remote'
   }
 
-  if (job.city && job.countryCode)
-    return `${job.city}, ${job.countryCode}`
+  if (job.city && job.countryCode) return `${job.city}, ${job.countryCode}`
   if (job.countryCode) return job.countryCode
   if (job.locationRaw) return job.locationRaw
 
@@ -463,7 +459,7 @@ function parseTags(raw?: string | null): string[] {
   try {
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed)
-      ? parsed.filter((x) => typeof x === 'string')
+      ? (parsed as unknown[]).filter((x): x is string => typeof x === 'string')
       : []
   } catch {
     return []
@@ -497,9 +493,7 @@ function truncateText(str: string, maxChars: number): string {
 /* JSON-LD Builders                                                           */
 /* -------------------------------------------------------------------------- */
 
-function buildOrganizationJsonLd(
-  company: NonNullable<CompanyWithJobs>
-) {
+function buildOrganizationJsonLd(company: NonNullable<CompanyWithJobs>) {
   const jsonLd: any = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -512,10 +506,7 @@ function buildOrganizationJsonLd(
   }
 
   if (company.description) {
-    jsonLd.description = truncateText(
-      stripTags(company.description),
-      200
-    )
+    jsonLd.description = truncateText(stripTags(company.description), 200)
   }
 
   if (company.headquarters) {
@@ -535,9 +526,7 @@ function buildOrganizationJsonLd(
   return jsonLd
 }
 
-function buildBreadcrumbJsonLd(
-  company: NonNullable<CompanyWithJobs>
-) {
+function buildBreadcrumbJsonLd(company: NonNullable<CompanyWithJobs>) {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
