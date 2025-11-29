@@ -1,313 +1,429 @@
-// scripts/salarySanityCleanupV2.ts
-// Aggressive salary cleanup - fixes Greenhouse cents issue + clears bad data
-// Run: npx ts-node scripts/salarySanityCleanupV2.ts
+// scripts/salarySanityCleanup.ts
+// Find and fix salary outliers (jobs with unrealistic salary values)
+// Run: npx ts-node scripts/salarySanityCleanup.ts
+// Run with --fix flag to actually apply fixes: npx ts-node scripts/salarySanityCleanup.ts --fix
 
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 // ============================================
-// Configuration
+// Configuration - Salary thresholds
 // ============================================
 
-const CONFIG = {
-  // Maximum reasonable annual salaries by currency
-  MAX_ANNUAL: {
-    USD: 800_000,
-    EUR: 700_000,
-    GBP: 600_000,
-    CAD: 900_000,
-    AUD: 900_000,
-    CHF: 800_000,
-    INR: 30_000_000, // ~$360K USD
-    SGD: 800_000,
-    NZD: 700_000,
-    SEK: 8_000_000,
+const SALARY_THRESHOLDS = {
+  // Absolute maximum reasonable annual salary (anything above is wrong)
+  MAX_REASONABLE_ANNUAL: 1_000_000, // $1M - even CEO salaries rarely exceed this
+  
+  // Per-currency maximums (in local currency)
+  CURRENCY_MAX: {
+    USD: 1_000_000,
+    EUR: 900_000,
+    GBP: 800_000,
+    CAD: 1_200_000,
+    AUD: 1_200_000,
+    CHF: 900_000,
+    INR: 50_000_000, // ~$600K USD
+    SGD: 1_200_000,
+    NZD: 1_200_000,
+    SEK: 10_000_000,
   } as Record<string, number>,
   
-  // Default max if currency not in list
-  DEFAULT_MAX: 800_000,
+  // Minimum sensible annual salary (below this, probably hourly rate mistake)
+  MIN_REASONABLE_ANNUAL: 20_000,
   
-  // Minimum annual salary (below this = probably hourly or bad data)
-  MIN_ANNUAL: 15_000,
+  // Suspected hourly rates misinterpreted as annual
+  HOURLY_RATE_THRESHOLD: 500, // If salary < $500, probably an hourly rate
+  
+  // Common multipliers for fixing
+  HOURLY_TO_ANNUAL: 2080, // 40 hours/week * 52 weeks
+  MONTHLY_TO_ANNUAL: 12,
+  DAILY_TO_ANNUAL: 260, // ~260 working days/year
 }
 
 // ============================================
-// Helper Functions
+// Types
 // ============================================
 
-function getMaxForCurrency(currency: string | null): number {
-  return CONFIG.MAX_ANNUAL[currency || 'USD'] || CONFIG.DEFAULT_MAX
+interface SalaryOutlier {
+  id: string
+  title: string
+  company: string
+  salaryRaw: string | null
+  minAnnual: bigint | null
+  maxAnnual: bigint | null
+  currency: string | null
+  source: string
+  issueType: string
+  suggestedFix: string
 }
 
-function formatMoney(value: bigint | number | null, currency: string = 'USD'): string {
-  if (value === null) return 'null'
-  const num = typeof value === 'bigint' ? Number(value) : value
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(num)
-  } catch {
-    return `${currency} ${num.toLocaleString()}`
+interface CleanupStats {
+  totalJobs: number
+  jobsWithSalary: number
+  outliers: {
+    tooHigh: number
+    tooLow: number
+    suspectedHourly: number
+    suspectedMonthly: number
+    negativeOrZero: number
   }
+  fixed: number
+  flagged: number
 }
 
 // ============================================
-// Main Cleanup Logic
+// Analysis Functions
 // ============================================
 
-async function main() {
-  console.log('🔍 Salary Sanity Cleanup V2\n')
-  console.log('='.repeat(70))
+async function findSalaryOutliers(): Promise<SalaryOutlier[]> {
+  const outliers: SalaryOutlier[] = []
   
-  // Stats before
-  const totalJobs = await prisma.job.count()
-  const jobsWithSalary = await prisma.job.count({
-    where: { OR: [{ minAnnual: { not: null } }, { maxAnnual: { not: null } }] }
-  })
-  const highSalaryJobs = await prisma.job.count({ where: { isHighSalary: true } })
-  
-  console.log(`📊 BEFORE CLEANUP:`)
-  console.log(`   Total jobs: ${totalJobs.toLocaleString()}`)
-  console.log(`   Jobs with salary: ${jobsWithSalary.toLocaleString()}`)
-  console.log(`   High salary jobs: ${highSalaryJobs.toLocaleString()}`)
-  
-  // Count extreme values
-  const over1M = await prisma.job.count({
-    where: { OR: [{ minAnnual: { gt: 1_000_000n } }, { maxAnnual: { gt: 1_000_000n } }] }
-  })
-  const over10M = await prisma.job.count({
-    where: { OR: [{ minAnnual: { gt: 10_000_000n } }, { maxAnnual: { gt: 10_000_000n } }] }
-  })
-  
-  console.log(`\n⚠️  Jobs with salary > $1M: ${over1M}`)
-  console.log(`🚨 Jobs with salary > $10M: ${over10M}`)
-  
-  // ============================================
-  // STEP 1: Clear all obviously bad data (> $10M)
-  // ============================================
-  console.log('\n' + '='.repeat(70))
-  console.log('STEP 1: Clearing extreme outliers (> $10M)')
-  console.log('='.repeat(70))
-  
-  const extremeOutliers = await prisma.job.updateMany({
+  // Find jobs with any salary data
+  const jobs = await prisma.job.findMany({
     where: {
       OR: [
-        { minAnnual: { gt: 10_000_000n } },
-        { maxAnnual: { gt: 10_000_000n } },
-      ]
-    },
-    data: {
-      minAnnual: null,
-      maxAnnual: null,
-      isHighSalary: false,
-    }
-  })
-  console.log(`✅ Cleared ${extremeOutliers.count} jobs with salaries > $10M`)
-  
-  // ============================================
-  // STEP 2: Fix "stored in cents" issue (divide by 100)
-  // Values between $1M and $10M that become reasonable when /100
-  // ============================================
-  console.log('\n' + '='.repeat(70))
-  console.log('STEP 2: Fixing "stored in cents" issue')
-  console.log('='.repeat(70))
-  
-  // Find jobs that look like they're in cents
-  const possibleCents = await prisma.job.findMany({
-    where: {
-      OR: [
-        { minAnnual: { gte: 1_000_000n, lte: 10_000_000n } },
-        { maxAnnual: { gte: 1_000_000n, lte: 10_000_000n } },
+        { minAnnual: { not: null } },
+        { maxAnnual: { not: null } },
       ]
     },
     select: {
       id: true,
       title: true,
       company: true,
+      salaryRaw: true,
       minAnnual: true,
       maxAnnual: true,
       currency: true,
+      source: true,
+      salaryPeriod: true,
     }
   })
   
-  let centsFixed = 0
-  let centsCleared = 0
-  
-  for (const job of possibleCents) {
-    const minVal = job.minAnnual ? Number(job.minAnnual) : null
-    const maxVal = job.maxAnnual ? Number(job.maxAnnual) : null
-    const maxAllowed = getMaxForCurrency(job.currency)
+  for (const job of jobs) {
+    const minAnnual = job.minAnnual ? Number(job.minAnnual) : null
+    const maxAnnual = job.maxAnnual ? Number(job.maxAnnual) : null
+    const currency = job.currency || 'USD'
+    const maxReasonable = SALARY_THRESHOLDS.CURRENCY_MAX[currency] || SALARY_THRESHOLDS.MAX_REASONABLE_ANNUAL
     
-    // Check if dividing by 100 gives reasonable values
-    const minFixed = minVal ? minVal / 100 : null
-    const maxFixed = maxVal ? maxVal / 100 : null
-    
-    const minReasonable = minFixed === null || (minFixed >= CONFIG.MIN_ANNUAL && minFixed <= maxAllowed)
-    const maxReasonable = maxFixed === null || (maxFixed >= CONFIG.MIN_ANNUAL && maxFixed <= maxAllowed)
-    
-    if (minReasonable && maxReasonable && (minFixed || maxFixed)) {
-      // Fix by dividing by 100
-      const newMin = minFixed ? BigInt(Math.round(minFixed)) : null
-      const newMax = maxFixed ? BigInt(Math.round(maxFixed)) : null
-      const isHigh = (newMax || newMin || 0) >= 100_000
-      
-      await prisma.job.update({
-        where: { id: job.id },
-        data: {
-          minAnnual: newMin,
-          maxAnnual: newMax,
-          isHighSalary: isHigh,
-        }
+    // Check for negative or zero values
+    if ((minAnnual !== null && minAnnual <= 0) || (maxAnnual !== null && maxAnnual <= 0)) {
+      outliers.push({
+        ...job,
+        issueType: 'NEGATIVE_OR_ZERO',
+        suggestedFix: 'Set salary fields to null',
       })
-      centsFixed++
-    } else {
-      // Can't fix - clear it
-      await prisma.job.update({
-        where: { id: job.id },
-        data: {
+      continue
+    }
+    
+    // Check for impossibly high salaries (> $1M or currency equivalent)
+    if ((minAnnual && minAnnual > maxReasonable) || (maxAnnual && maxAnnual > maxReasonable)) {
+      const highValue = Math.max(minAnnual || 0, maxAnnual || 0)
+      
+      // Check if it might be in cents (divide by 100)
+      if (highValue > 100_000_000) {
+        outliers.push({
+          ...job,
+          issueType: 'POSSIBLY_IN_CENTS',
+          suggestedFix: `Divide by 100: ${highValue} → ${highValue / 100}`,
+        })
+      } 
+      // Check if monthly was stored as annual
+      else if (highValue / 12 < maxReasonable && highValue / 12 > SALARY_THRESHOLDS.MIN_REASONABLE_ANNUAL) {
+        outliers.push({
+          ...job,
+          issueType: 'POSSIBLY_MONTHLY_AS_ANNUAL',
+          suggestedFix: `Already monthly? Keep as-is or divide by 12`,
+        })
+      }
+      else {
+        outliers.push({
+          ...job,
+          issueType: 'TOO_HIGH',
+          suggestedFix: 'Set salary to null (unreliable data)',
+        })
+      }
+      continue
+    }
+    
+    // Check for suspiciously low values (might be hourly rates)
+    if ((minAnnual && minAnnual < SALARY_THRESHOLDS.HOURLY_RATE_THRESHOLD) || 
+        (maxAnnual && maxAnnual < SALARY_THRESHOLDS.HOURLY_RATE_THRESHOLD)) {
+      const lowValue = minAnnual || maxAnnual || 0
+      const asAnnual = lowValue * SALARY_THRESHOLDS.HOURLY_TO_ANNUAL
+      
+      // Only flag if converting to annual gives reasonable value
+      if (asAnnual >= SALARY_THRESHOLDS.MIN_REASONABLE_ANNUAL && asAnnual <= maxReasonable) {
+        outliers.push({
+          ...job,
+          issueType: 'SUSPECTED_HOURLY',
+          suggestedFix: `Multiply by 2080: ${lowValue} → ${asAnnual}`,
+        })
+      } else {
+        outliers.push({
+          ...job,
+          issueType: 'TOO_LOW',
+          suggestedFix: 'Set salary to null (unreliable data)',
+        })
+      }
+      continue
+    }
+    
+    // Check for values that look like monthly salaries stored as annual
+    // Monthly salary in $5K-$50K range stored as annual
+    if ((minAnnual && minAnnual >= 5000 && minAnnual <= 50000) ||
+        (maxAnnual && maxAnnual >= 5000 && maxAnnual <= 50000)) {
+      const value = minAnnual || maxAnnual || 0
+      const asAnnualFromMonthly = value * 12
+      
+      // Check if the salaryRaw suggests it's monthly
+      const salaryRaw = job.salaryRaw?.toLowerCase() || ''
+      if (salaryRaw.includes('month') || salaryRaw.includes('/mo') || salaryRaw.includes('pm')) {
+        outliers.push({
+          ...job,
+          issueType: 'SUSPECTED_MONTHLY',
+          suggestedFix: `Multiply by 12: ${value} → ${asAnnualFromMonthly}`,
+        })
+      }
+    }
+  }
+  
+  return outliers
+}
+
+// ============================================
+// Display Functions
+// ============================================
+
+function formatCurrency(value: number | bigint | null, currency: string = 'USD'): string {
+  if (value === null) return 'null'
+  const num = typeof value === 'bigint' ? Number(value) : value
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency,
+    maximumFractionDigits: 0,
+  }).format(num)
+}
+
+function displayOutliers(outliers: SalaryOutlier[]): void {
+  const grouped = outliers.reduce((acc, o) => {
+    acc[o.issueType] = acc[o.issueType] || []
+    acc[o.issueType].push(o)
+    return acc
+  }, {} as Record<string, SalaryOutlier[]>)
+  
+  console.log('\n' + '='.repeat(80))
+  console.log('SALARY OUTLIER ANALYSIS')
+  console.log('='.repeat(80))
+  
+  for (const [issueType, jobs] of Object.entries(grouped)) {
+    console.log(`\n📊 ${issueType} (${jobs.length} jobs)`)
+    console.log('-'.repeat(60))
+    
+    // Show first 10 examples
+    const examples = jobs.slice(0, 10)
+    for (const job of examples) {
+      console.log(`
+  ID: ${job.id}
+  Title: ${job.title}
+  Company: ${job.company}
+  Raw: ${job.salaryRaw || 'N/A'}
+  Min: ${formatCurrency(job.minAnnual, job.currency || 'USD')}
+  Max: ${formatCurrency(job.maxAnnual, job.currency || 'USD')}
+  Currency: ${job.currency || 'null'}
+  Source: ${job.source}
+  Fix: ${job.suggestedFix}
+`)
+    }
+    
+    if (jobs.length > 10) {
+      console.log(`  ... and ${jobs.length - 10} more`)
+    }
+  }
+}
+
+// ============================================
+// Fix Functions
+// ============================================
+
+async function fixOutliers(outliers: SalaryOutlier[], dryRun: boolean = true): Promise<number> {
+  let fixed = 0
+  
+  for (const outlier of outliers) {
+    const minAnnual = outlier.minAnnual ? Number(outlier.minAnnual) : null
+    const maxAnnual = outlier.maxAnnual ? Number(outlier.maxAnnual) : null
+    
+    let updates: {
+      minAnnual?: bigint | null
+      maxAnnual?: bigint | null
+      isHighSalary?: boolean
+    } = {}
+    
+    switch (outlier.issueType) {
+      case 'NEGATIVE_OR_ZERO':
+      case 'TOO_HIGH':
+      case 'TOO_LOW':
+        // Clear salary data for unreliable entries
+        updates = {
           minAnnual: null,
           maxAnnual: null,
           isHighSalary: false,
         }
-      })
-      centsCleared++
+        break
+        
+      case 'POSSIBLY_IN_CENTS':
+        // Divide by 100
+        updates = {
+          minAnnual: minAnnual ? BigInt(Math.round(minAnnual / 100)) : null,
+          maxAnnual: maxAnnual ? BigInt(Math.round(maxAnnual / 100)) : null,
+        }
+        // Recalculate isHighSalary
+        const fixedMax = maxAnnual ? maxAnnual / 100 : (minAnnual ? minAnnual / 100 : 0)
+        updates.isHighSalary = fixedMax >= 100000
+        break
+        
+      case 'SUSPECTED_HOURLY':
+        // Convert hourly to annual
+        updates = {
+          minAnnual: minAnnual ? BigInt(Math.round(minAnnual * SALARY_THRESHOLDS.HOURLY_TO_ANNUAL)) : null,
+          maxAnnual: maxAnnual ? BigInt(Math.round(maxAnnual * SALARY_THRESHOLDS.HOURLY_TO_ANNUAL)) : null,
+        }
+        const hourlyFixedMax = maxAnnual ? maxAnnual * 2080 : (minAnnual ? minAnnual * 2080 : 0)
+        updates.isHighSalary = hourlyFixedMax >= 100000
+        break
+        
+      case 'SUSPECTED_MONTHLY':
+        // Convert monthly to annual
+        updates = {
+          minAnnual: minAnnual ? BigInt(Math.round(minAnnual * 12)) : null,
+          maxAnnual: maxAnnual ? BigInt(Math.round(maxAnnual * 12)) : null,
+        }
+        const monthlyFixedMax = maxAnnual ? maxAnnual * 12 : (minAnnual ? minAnnual * 12 : 0)
+        updates.isHighSalary = monthlyFixedMax >= 100000
+        break
+        
+      case 'POSSIBLY_MONTHLY_AS_ANNUAL':
+        // Skip - ambiguous, needs manual review
+        continue
     }
-  }
-  
-  console.log(`✅ Fixed ${centsFixed} jobs (divided by 100)`)
-  console.log(`⚠️  Cleared ${centsCleared} jobs (couldn't salvage)`)
-  
-  // ============================================
-  // STEP 3: Clear remaining outliers per currency
-  // ============================================
-  console.log('\n' + '='.repeat(70))
-  console.log('STEP 3: Clearing remaining outliers by currency')
-  console.log('='.repeat(70))
-  
-  let currencyCleared = 0
-  
-  for (const [currency, maxSalary] of Object.entries(CONFIG.MAX_ANNUAL)) {
-    const result = await prisma.job.updateMany({
-      where: {
-        currency,
-        OR: [
-          { minAnnual: { gt: BigInt(maxSalary) } },
-          { maxAnnual: { gt: BigInt(maxSalary) } },
-        ]
-      },
-      data: {
-        minAnnual: null,
-        maxAnnual: null,
-        isHighSalary: false,
-      }
-    })
     
-    if (result.count > 0) {
-      console.log(`   ${currency}: Cleared ${result.count} jobs (max: ${formatMoney(maxSalary, currency)})`)
-      currencyCleared += result.count
+    if (Object.keys(updates).length > 0) {
+      if (dryRun) {
+        console.log(`  [DRY RUN] Would update ${outlier.id}: ${JSON.stringify(updates)}`)
+      } else {
+        await prisma.job.update({
+          where: { id: outlier.id },
+          data: updates,
+        })
+      }
+      fixed++
     }
   }
   
-  // Clear jobs with unknown currencies that are too high
-  const unknownCurrencyCleared = await prisma.job.updateMany({
+  return fixed
+}
+
+// ============================================
+// Main
+// ============================================
+
+async function main() {
+  const args = process.argv.slice(2)
+  const shouldFix = args.includes('--fix')
+  
+  console.log('🔍 Analyzing salary data...\n')
+  
+  // Get total stats
+  const totalJobs = await prisma.job.count()
+  const jobsWithSalary = await prisma.job.count({
     where: {
-      currency: null,
       OR: [
-        { minAnnual: { gt: BigInt(CONFIG.DEFAULT_MAX) } },
-        { maxAnnual: { gt: BigInt(CONFIG.DEFAULT_MAX) } },
+        { minAnnual: { not: null } },
+        { maxAnnual: { not: null } },
+      ]
+    }
+  })
+  
+  console.log(`📈 Total jobs: ${totalJobs.toLocaleString()}`)
+  console.log(`💰 Jobs with salary data: ${jobsWithSalary.toLocaleString()}`)
+  
+  // Quick stats on extreme values
+  const extremeHigh = await prisma.job.count({
+    where: {
+      OR: [
+        { minAnnual: { gt: BigInt(1_000_000) } },
+        { maxAnnual: { gt: BigInt(1_000_000) } },
+      ]
+    }
+  })
+  
+  const extremeVeryHigh = await prisma.job.count({
+    where: {
+      OR: [
+        { minAnnual: { gt: BigInt(10_000_000) } },
+        { maxAnnual: { gt: BigInt(10_000_000) } },
+      ]
+    }
+  })
+  
+  console.log(`\n⚠️  Jobs with salary > $1M: ${extremeHigh}`)
+  console.log(`🚨 Jobs with salary > $10M: ${extremeVeryHigh}`)
+  
+  // Find outliers
+  const outliers = await findSalaryOutliers()
+  
+  // Display analysis
+  displayOutliers(outliers)
+  
+  // Summary
+  console.log('\n' + '='.repeat(80))
+  console.log('SUMMARY')
+  console.log('='.repeat(80))
+  
+  const byType = outliers.reduce((acc, o) => {
+    acc[o.issueType] = (acc[o.issueType] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+  
+  console.log('\nOutliers by type:')
+  for (const [type, count] of Object.entries(byType)) {
+    console.log(`  ${type}: ${count}`)
+  }
+  console.log(`\nTotal outliers: ${outliers.length}`)
+  
+  // Fix if requested
+  if (shouldFix) {
+    console.log('\n🔧 Applying fixes...')
+    const fixed = await fixOutliers(outliers, false)
+    console.log(`✅ Fixed ${fixed} jobs`)
+  } else {
+    console.log('\n💡 Run with --fix flag to apply corrections:')
+    console.log('   npx ts-node scripts/salarySanityCleanup.ts --fix')
+    
+    // Show dry run preview
+    console.log('\n📝 Dry run preview (first 5 fixes):')
+    await fixOutliers(outliers.slice(0, 5), true)
+  }
+  
+  // Show top outliers for manual review
+  console.log('\n' + '='.repeat(80))
+  console.log('TOP 20 HIGHEST SALARY VALUES (for manual review)')
+  console.log('='.repeat(80))
+  
+  const topHighest = await prisma.job.findMany({
+    where: {
+      OR: [
+        { minAnnual: { not: null } },
+        { maxAnnual: { not: null } },
       ]
     },
-    data: {
-      minAnnual: null,
-      maxAnnual: null,
-      isHighSalary: false,
-    }
-  })
-  
-  console.log(`   Unknown currency: Cleared ${unknownCurrencyCleared.count} jobs`)
-  currencyCleared += unknownCurrencyCleared.count
-  
-  console.log(`\n✅ Total currency-based cleanup: ${currencyCleared} jobs`)
-  
-  // ============================================
-  // STEP 4: Recalculate isHighSalary flag
-  // ============================================
-  console.log('\n' + '='.repeat(70))
-  console.log('STEP 4: Recalculating isHighSalary flags')
-  console.log('='.repeat(70))
-  
-  // Set isHighSalary = true for jobs with salary >= 100k
-  const setHighTrue = await prisma.job.updateMany({
-    where: {
-      OR: [
-        { minAnnual: { gte: 100_000n } },
-        { maxAnnual: { gte: 100_000n } },
-      ],
-      isHighSalary: false,
-    },
-    data: { isHighSalary: true }
-  })
-  
-  // Set isHighSalary = false for jobs with salary < 100k
-  const setHighFalse = await prisma.job.updateMany({
-    where: {
-      minAnnual: { lt: 100_000n },
-      maxAnnual: { lt: 100_000n },
-      isHighSalary: true,
-    },
-    data: { isHighSalary: false }
-  })
-  
-  // Set isHighSalary = false for jobs with no salary
-  const setHighFalseNull = await prisma.job.updateMany({
-    where: {
-      minAnnual: null,
-      maxAnnual: null,
-      isHighSalary: true,
-    },
-    data: { isHighSalary: false }
-  })
-  
-  console.log(`✅ Set isHighSalary=true: ${setHighTrue.count} jobs`)
-  console.log(`✅ Set isHighSalary=false: ${setHighFalse.count + setHighFalseNull.count} jobs`)
-  
-  // ============================================
-  // Final Stats
-  // ============================================
-  console.log('\n' + '='.repeat(70))
-  console.log('📊 AFTER CLEANUP:')
-  console.log('='.repeat(70))
-  
-  const finalJobsWithSalary = await prisma.job.count({
-    where: { OR: [{ minAnnual: { not: null } }, { maxAnnual: { not: null } }] }
-  })
-  const finalHighSalary = await prisma.job.count({ where: { isHighSalary: true } })
-  const finalOver1M = await prisma.job.count({
-    where: { OR: [{ minAnnual: { gt: 1_000_000n } }, { maxAnnual: { gt: 1_000_000n } }] }
-  })
-  
-  console.log(`   Total jobs: ${totalJobs.toLocaleString()}`)
-  console.log(`   Jobs with salary: ${finalJobsWithSalary.toLocaleString()} (was ${jobsWithSalary.toLocaleString()})`)
-  console.log(`   High salary jobs: ${finalHighSalary.toLocaleString()} (was ${highSalaryJobs.toLocaleString()})`)
-  console.log(`   Jobs > $1M: ${finalOver1M} (was ${over1M})`)
-  
-  // ============================================
-  // Sample of remaining high-value jobs
-  // ============================================
-  console.log('\n' + '='.repeat(70))
-  console.log('TOP 10 HIGHEST SALARIES (sanity check)')
-  console.log('='.repeat(70))
-  
-  const topJobs = await prisma.job.findMany({
-    where: { maxAnnual: { not: null } },
     orderBy: { maxAnnual: 'desc' },
-    take: 10,
+    take: 20,
     select: {
+      id: true,
       title: true,
       company: true,
+      salaryRaw: true,
       minAnnual: true,
       maxAnnual: true,
       currency: true,
@@ -315,15 +431,14 @@ async function main() {
     }
   })
   
-  for (const job of topJobs) {
-    const curr = job.currency || 'USD'
+  for (const job of topHighest) {
     console.log(`
 ${job.title} @ ${job.company}
-  Range: ${formatMoney(job.minAnnual, curr)} - ${formatMoney(job.maxAnnual, curr)}
-  Source: ${job.source}`)
+  Raw: ${job.salaryRaw || 'N/A'}
+  Range: ${formatCurrency(job.minAnnual, job.currency || 'USD')} - ${formatCurrency(job.maxAnnual, job.currency || 'USD')}
+  Source: ${job.source}
+`)
   }
-  
-  console.log('\n✅ Cleanup complete!')
   
   await prisma.$disconnect()
 }

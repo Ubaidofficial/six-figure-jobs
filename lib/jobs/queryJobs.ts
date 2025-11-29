@@ -1,11 +1,7 @@
 import type { Job, Company, Prisma } from '@prisma/client'
 import { prisma } from '../prisma'
 import { getDateThreshold, MAX_DISPLAY_AGE_DAYS } from '../ingest/jobAgeFilter'
-import type { JobWithCompany } from '../../../lib/jobs/queryJobs'
 
-jobs.map((j: JobWithCompany) => {
-  // ...
-})
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
