@@ -26,8 +26,11 @@ async function getCompanyWithJobs(slug: string) {
     include: {
       jobs: {
         where: { isExpired: false },
-        orderBy: [{ isHighSalary: 'desc' }, { maxAnnual: 'desc' }, { createdAt: 'desc' }],
-        
+        orderBy: [
+          { isHighSalary: 'desc' },
+          { maxAnnual: 'desc' },
+          { createdAt: 'desc' },
+        ],
       },
     },
   })
@@ -51,12 +54,23 @@ export async function generateMetadata({
   }
 
   const jobCount = company.jobs.length
-  const highSalaryCount = company.jobs.filter((j) => j.isHighSalary).length
+  const highSalaryCount = company.jobs.filter(
+    (j: any) => j.isHighSalary
+  ).length
 
   const title = `${company.name} Jobs - ${jobCount} Open Positions | Remote100k`
-  const description = highSalaryCount > 0
-    ? `Browse ${jobCount} jobs at ${company.name}, including ${highSalaryCount} high-salary positions paying $100k+. ${company.description ? truncateText(stripTags(company.description), 120) : `Find your next role at ${company.name}.`}`
-    : `Browse ${jobCount} open positions at ${company.name}. ${company.description ? truncateText(stripTags(company.description), 120) : `Find your next role at ${company.name}.`}`
+  const description =
+    highSalaryCount > 0
+      ? `Browse ${jobCount} jobs at ${company.name}, including ${highSalaryCount} high-salary positions paying $100k+. ${
+          company.description
+            ? truncateText(stripTags(company.description), 120)
+            : `Find your next role at ${company.name}.`
+        }`
+      : `Browse ${jobCount} open positions at ${company.name}. ${
+          company.description
+            ? truncateText(stripTags(company.description), 120)
+            : `Find your next role at ${company.name}.`
+        }`
 
   const canonicalUrl = `${SITE_URL}/company/${slug}`
 
@@ -70,7 +84,16 @@ export async function generateMetadata({
       url: canonicalUrl,
       siteName: 'Remote100k',
       type: 'website',
-      images: company.logoUrl ? [{ url: company.logoUrl, width: 200, height: 200, alt: company.name }] : undefined,
+      images: company.logoUrl
+        ? [
+            {
+              url: company.logoUrl,
+              width: 200,
+              height: 200,
+              alt: company.name,
+            },
+          ]
+        : undefined,
     },
     twitter: {
       card: 'summary',
@@ -95,8 +118,8 @@ export default async function CompanyPage({
   if (!company) return notFound()
 
   const jobs = company.jobs
-  const highSalaryJobs = jobs.filter((j) => j.isHighSalary)
-  const otherJobs = jobs.filter((j) => !j.isHighSalary)
+  const highSalaryJobs = jobs.filter((j: any) => j.isHighSalary)
+  const otherJobs = jobs.filter((j: any) => !j.isHighSalary)
 
   // Build JSON-LD
   const organizationJsonLd = buildOrganizationJsonLd(company)
@@ -127,7 +150,9 @@ export default async function CompanyPage({
 
           {/* Company Info */}
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-slate-50">{company.name}</h1>
+            <h1 className="text-2xl font-bold text-slate-50">
+              {company.name}
+            </h1>
 
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
               {company.industry && (
@@ -154,7 +179,10 @@ export default async function CompanyPage({
 
             {company.description && (
               <p className="mt-4 text-sm leading-relaxed text-slate-300">
-                {truncateText(stripTags(decodeHtmlEntities(company.description)), 400)}
+                {truncateText(
+                  stripTags(decodeHtmlEntities(company.description)),
+                  400
+                )}
               </p>
             )}
 
@@ -199,12 +227,16 @@ export default async function CompanyPage({
           {/* Stats */}
           <div className="flex gap-4 sm:flex-col sm:items-end sm:gap-2">
             <div className="text-center sm:text-right">
-              <div className="text-2xl font-bold text-slate-50">{jobs.length}</div>
+              <div className="text-2xl font-bold text-slate-50">
+                {jobs.length}
+              </div>
               <div className="text-xs text-slate-400">Open Jobs</div>
             </div>
             {highSalaryJobs.length > 0 && (
               <div className="text-center sm:text-right">
-                <div className="text-2xl font-bold text-emerald-400">{highSalaryJobs.length}</div>
+                <div className="text-2xl font-bold text-emerald-400">
+                  {highSalaryJobs.length}
+                </div>
                 <div className="text-xs text-slate-400">$100k+ Jobs</div>
               </div>
             )}
@@ -224,7 +256,10 @@ export default async function CompanyPage({
             <p className="mt-2 text-sm text-slate-500">
               Check back later or visit their{' '}
               {company.atsUrl ? (
-                <a href={company.atsUrl} className="text-blue-400 hover:underline">
+                <a
+                  href={company.atsUrl}
+                  className="text-blue-400 hover:underline"
+                >
                   careers page
                 </a>
               ) : (
@@ -304,11 +339,15 @@ export default async function CompanyPage({
       {/* JSON-LD */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(organizationJsonLd),
+        }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbJsonLd),
+        }}
       />
     </main>
   )
@@ -338,7 +377,10 @@ function JobListItem({ job }: { job: any }) {
             {locationText && <span>📍 {locationText}</span>}
             {job.type && <span>· {job.type}</span>}
             {job.postedAt && (
-              <span>· Posted {new Date(job.postedAt).toLocaleDateString()}</span>
+              <span>
+                · Posted{' '}
+                {new Date(job.postedAt).toLocaleDateString()}
+              </span>
             )}
           </div>
         </div>
@@ -384,8 +426,12 @@ function buildSalaryText(job: any): string | null {
     return null
   }
 
-  const currencySymbol = job.currency === 'USD' || !job.currency ? '$' : `${job.currency} `
-  const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 0 })
+  const currencySymbol =
+    job.currency === 'USD' || !job.currency
+      ? '$'
+      : `${job.currency} `
+  const fmt = (v: number) =>
+    v.toLocaleString('en-US', { maximumFractionDigits: 0 })
 
   if (min && max) return `${currencySymbol}${fmt(min)}–${fmt(max)}/yr`
   if (min) return `${currencySymbol}${fmt(min)}+/yr`
@@ -395,13 +441,17 @@ function buildSalaryText(job: any): string | null {
 }
 
 function buildLocationText(job: any): string {
-  const isRemote = job.remote === true || job.remoteMode === 'remote'
+  const isRemote =
+    job.remote === true || job.remoteMode === 'remote'
 
   if (isRemote) {
-    return job.countryCode ? `Remote (${job.countryCode})` : 'Remote'
+    return job.countryCode
+      ? `Remote (${job.countryCode})`
+      : 'Remote'
   }
 
-  if (job.city && job.countryCode) return `${job.city}, ${job.countryCode}`
+  if (job.city && job.countryCode)
+    return `${job.city}, ${job.countryCode}`
   if (job.countryCode) return job.countryCode
   if (job.locationRaw) return job.locationRaw
 
@@ -412,7 +462,9 @@ function parseTags(raw?: string | null): string[] {
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : []
+    return Array.isArray(parsed)
+      ? parsed.filter((x) => typeof x === 'string')
+      : []
   } catch {
     return []
   }
@@ -435,14 +487,19 @@ function truncateText(str: string, maxChars: number): string {
   if (str.length <= maxChars) return str
   const truncated = str.slice(0, maxChars)
   const lastSpace = truncated.lastIndexOf(' ')
-  return truncated.slice(0, lastSpace > 0 ? lastSpace : maxChars) + '…'
+  return (
+    truncated.slice(0, lastSpace > 0 ? lastSpace : maxChars) +
+    '…'
+  )
 }
 
 /* -------------------------------------------------------------------------- */
 /* JSON-LD Builders                                                           */
 /* -------------------------------------------------------------------------- */
 
-function buildOrganizationJsonLd(company: NonNullable<CompanyWithJobs>) {
+function buildOrganizationJsonLd(
+  company: NonNullable<CompanyWithJobs>
+) {
   const jsonLd: any = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -455,7 +512,10 @@ function buildOrganizationJsonLd(company: NonNullable<CompanyWithJobs>) {
   }
 
   if (company.description) {
-    jsonLd.description = truncateText(stripTags(company.description), 200)
+    jsonLd.description = truncateText(
+      stripTags(company.description),
+      200
+    )
   }
 
   if (company.headquarters) {
@@ -475,7 +535,9 @@ function buildOrganizationJsonLd(company: NonNullable<CompanyWithJobs>) {
   return jsonLd
 }
 
-function buildBreadcrumbJsonLd(company: NonNullable<CompanyWithJobs>) {
+function buildBreadcrumbJsonLd(
+  company: NonNullable<CompanyWithJobs>
+) {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
