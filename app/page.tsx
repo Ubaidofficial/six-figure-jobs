@@ -70,8 +70,13 @@ const SALARY_BANDS = [
 export default async function HomePage() {
   const [jobsData, totalJobs, totalCompanies, salaryBandCounts, roleCounts] =
     await Promise.all([
-      queryJobs({ minAnnual: 100_000, page: 1, pageSize: PAGE_SIZE }),
-      prisma.job.count({
+queryJobs({
+  minAnnual: 100_000,
+  page: 1,
+  pageSize: PAGE_SIZE,
+  sortBy: 'date',          // newest first
+  excludeInternships: true // (optional, now default, but explicit is fine)
+}),      prisma.job.count({
         where: {
           isExpired: false,
           OR: [

@@ -766,7 +766,7 @@ async function main() {
 
     // Check if exists
     const existing = await prisma.company.findFirst({
-      where: { OR: [{ slug }, { name: c.name }] }
+      where: { OR: [{ slug }, { name: c.name }] },
     })
 
     if (existing) {
@@ -774,7 +774,7 @@ async function main() {
       if (c.ats && !existing.atsUrl) {
         await prisma.company.update({
           where: { id: existing.id },
-          data: { atsUrl: c.ats }
+          data: { atsUrl: c.ats },
         })
         console.log(`  Updated ATS for: ${c.name}`)
       } else {
@@ -804,16 +804,34 @@ async function main() {
     // Best-guess website if not explicitly provided
     const website = c.website || `https://${slug}.com`
 
+    // --- NEW: logo.dev instead of Clearbit -------------------------------
+    let logoDomain: string | null = null
+    try {
+      const urlObj = new URL(website)
+      logoDomain = urlObj.hostname
+    } catch {
+      // Fallback if website isn't a valid URL
+      logoDomain = `${slug.replace(/-/g, '')}.com`
+    }
+
+    const logoToken =
+      process.env.LOGO_DEV_PUBLISHABLE_KEY ?? 'pk_MxvH3NvfTD6CYFx-txjD2g'
+
+    const logoUrl = logoDomain
+      ? `https://img.logo.dev/${logoDomain}?token=${logoToken}`
+      : null
+    // --------------------------------------------------------------------
+
     await prisma.company.create({
       data: {
         name: c.name,
         slug,
         atsUrl: c.ats || null,
         atsProvider: provider,
-        atsSlug: atsSlug,
-        website: website,
-        logoUrl: `https://logo.clearbit.com/${slug.replace(/-/g, '')}.com`,
-      }
+        atsSlug,
+        website,
+        logoUrl,
+      },
     })
 
     console.log(`  + Added: ${c.name}`)

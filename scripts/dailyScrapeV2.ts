@@ -26,7 +26,7 @@ const prisma = new PrismaClient()
 
 // How many ATS companies to scrape in parallel
 // 10 is safe for 'fetch' based scrapers. If using Puppeteer for ATS, lower to 3.
-const CONCURRENCY_LIMIT = 10 
+const CONCURRENCY_LIMIT = 10
 
 // ============================================
 // ATS SCRAPERS (Inline Helpers)

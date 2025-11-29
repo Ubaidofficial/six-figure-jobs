@@ -1,7 +1,8 @@
+// lib/jobs/queryJobs.ts
+
 import type { Job, Company, Prisma } from '@prisma/client'
 import { prisma } from '../prisma'
 import { getDateThreshold, MAX_DISPLAY_AGE_DAYS } from '../ingest/jobAgeFilter'
-
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
@@ -24,11 +25,18 @@ export type JobQueryInput = {
   employmentTypes?: string[]
   remoteMode?: 'remote' | 'hybrid' | 'onsite'
   companySizeBuckets?: string[]
-  
-  // NEW: SEO filters
+
+  // SEO filters
   experienceLevel?: string
   industry?: string
   workArrangement?: string
+
+  // Control ordering and internship leakage
+  //  - 'salary' (default) → salary-first ranking
+  //  - 'date' → newest jobs first
+  sortBy?: 'salary' | 'date'
+  // If not provided, we default to true in queryJobs()
+  excludeInternships?: boolean
 }
 
 export type JobQueryResult = {
@@ -42,25 +50,50 @@ export type JobQueryResult = {
 export async function queryJobs(
   input: JobQueryInput
 ): Promise<JobQueryResult> {
-  const page = Math.max(1, input.page || 1)
-  const pageSize = Math.min(Math.max(input.pageSize || 20, 1), 100)
+  const page = Math.max(1, input.page ?? 1)
+  const pageSize = Math.min(Math.max(input.pageSize ?? 20, 1), 100)
 
-  const where = buildWhere(input)
+  // Apply defaults here so buildWhere + ordering logic both see them
+  const normalizedInput: JobQueryInput = {
+    ...input,
+    sortBy: input.sortBy ?? 'salary',
+    excludeInternships: input.excludeInternships ?? true,
+  }
 
-  const isMinSalaryFilter = typeof input.minAnnual === "number" && input.minAnnual > 100_000
-  const orderBy: Prisma.JobOrderByWithRelationInput[] = isMinSalaryFilter
-    ? [
-        { minAnnual: "desc" },
-        { maxAnnual: "desc" },
-        { postedAt: "desc" },
-        { createdAt: "desc" },
-      ]
-    : [
-        { maxAnnual: "desc" },
-        { minAnnual: "desc" },
-        { postedAt: "desc" },
-        { createdAt: "desc" },
-      ]
+  const where = buildWhere(normalizedInput)
+
+  const sortBy = normalizedInput.sortBy ?? 'salary'
+
+  let orderBy: Prisma.JobOrderByWithRelationInput[]
+
+  if (sortBy === 'date') {
+    // For "Latest $100k+ jobs" etc.
+    orderBy = [
+      { postedAt: 'desc' },
+      { createdAt: 'desc' },
+      { maxAnnual: 'desc' },
+      { minAnnual: 'desc' },
+    ]
+  } else {
+    // Default behaviour – salary-first
+    const isMinSalaryFilter =
+      typeof normalizedInput.minAnnual === 'number' &&
+      normalizedInput.minAnnual > 100_000
+
+    orderBy = isMinSalaryFilter
+      ? [
+          { minAnnual: 'desc' },
+          { maxAnnual: 'desc' },
+          { postedAt: 'desc' },
+          { createdAt: 'desc' },
+        ]
+      : [
+          { maxAnnual: 'desc' },
+          { minAnnual: 'desc' },
+          { postedAt: 'desc' },
+          { createdAt: 'desc' },
+        ]
+  }
 
   const [total, jobs] = await Promise.all([
     prisma.job.count({ where }),
@@ -89,7 +122,10 @@ export function buildWhere(
     isExpired: false,
     OR: [
       { postedAt: { gte: getDateThreshold(MAX_DISPLAY_AGE_DAYS) } },
-      { postedAt: null, createdAt: { gte: getDateThreshold(MAX_DISPLAY_AGE_DAYS) } },
+      {
+        postedAt: null,
+        createdAt: { gte: getDateThreshold(MAX_DISPLAY_AGE_DAYS) },
+      },
     ],
   }
 
@@ -103,6 +139,7 @@ export function buildWhere(
     }
   }
 
+  // Role / basic filters
   if (filters.roleSlugs?.length) {
     addAnd({
       OR: filters.roleSlugs.map((slug) => ({
@@ -127,6 +164,7 @@ export function buildWhere(
     where.remoteMode = filters.remoteMode
   }
 
+  // Company filters
   let companyFilter: Prisma.CompanyWhereInput | undefined
 
   if (filters.companySlug) {
@@ -147,6 +185,7 @@ export function buildWhere(
     where.companyRef = companyFilter
   }
 
+  // Salary filters / 100k logic
   if (typeof filters.minAnnual === 'number' && filters.minAnnual > 0) {
     const min = filters.minAnnual
 
@@ -174,6 +213,7 @@ export function buildWhere(
     where.postedAt = { gte: cutoff }
   }
 
+  // Seniority via RoleInference relation
   if (filters.seniorityLevels?.length) {
     const roleInferenceFilter: Prisma.RoleInferenceWhereInput = {
       seniority: { in: filters.seniorityLevels },
@@ -181,10 +221,21 @@ export function buildWhere(
     where.roleInference = roleInferenceFilter
   }
 
+  // Employment type + internship exclusion
   if (filters.employmentTypes?.length) {
+    // Caller wants explicit types → respect that
     where.type = { in: filters.employmentTypes }
+  } else if (filters.excludeInternships) {
+    // Generic “no internships” filter – use title, case-insensitive
+    addAnd({
+      NOT: [
+        { title: { contains: 'Intern' } },
+        { title: { contains: 'intern' } },
+      ],
+    })
   }
 
+  // Skills
   if (filters.skillSlugs?.length) {
     const ors = filters.skillSlugs.map((slug) => ({
       skillsJson: { contains: slug },
@@ -192,6 +243,7 @@ export function buildWhere(
     addAnd({ OR: ors })
   }
 
+  // Extra SEO-ish filters
   if (filters.experienceLevel) {
     where.experienceLevel = filters.experienceLevel
   }

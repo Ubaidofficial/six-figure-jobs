@@ -47,12 +47,20 @@ export function normalizeLocation(
 
   const lower = text.toLowerCase()
 
-  // Detect remote/hybrid keywords
-  const hasRemote = /\bremote\b/.test(lower)
+  // Detect remote/hybrid/onsite keywords
+  const hasRemote =
+    /\bremote\b/.test(lower) ||
+    /\bwork from home\b/.test(lower) ||
+    /\bwfh\b/.test(lower) ||
+    /\banywhere\b/.test(lower) ||
+    /\bglobal\b/.test(lower)
+
   const hasHybrid = /\bhybrid\b/.test(lower)
+
   const hasOnsite =
-    /\bonsite\b/.test(lower) ||
-    /\bon site\b/.test(lower) ||
+    /\bonsite\b/.test(lower) || // "onsite"
+    /\bon site\b/.test(lower) || // "on site"
+    /\bon-site\b/.test(lower) || // "on-site"
     /\boffice\b/.test(lower)
 
   let kind: LocationKind | null = null
@@ -137,11 +145,14 @@ function stripRemoteQualifiers(text: string): string {
   let result = text
 
   // Remove trailing parenthetical qualifiers: "(Remote)", "(Hybrid, US)", etc.
-  result = result.replace(/\s*\((remote|hybrid|onsite|on site|anywhere|global)[^)]*\)\s*$/gi, '')
+  result = result.replace(
+    /\s*\((remote|hybrid|onsite|on site|on-site|anywhere|global)[^)]*\)\s*$/gi,
+    '',
+  )
 
   // Remove simple suffixes: " - Remote", " | Remote", ", Remote"
   result = result.replace(
-    /(\s*[-|,]\s*(remote|hybrid|onsite|on site|anywhere|global)\s*)$/gi,
+    /(\s*[-|,]\s*(remote|hybrid|onsite|on site|on-site|anywhere|global)\s*)$/gi,
     '',
   )
 
@@ -150,8 +161,11 @@ function stripRemoteQualifiers(text: string): string {
 
 /**
  * Very lightweight location splitting:
- * - Split by commas
+ * - Split by commas first
  * - Use heuristics for city, region, country
+ *
+ * Also handles "Remote - US", "Remote / US", "Remote | US" by
+ * letting the country normalizer look at trailing segments.
  */
 function splitLocationParts(text: string): {
   city: string | null
@@ -167,7 +181,7 @@ function splitLocationParts(text: string): {
     return { city: null, region: null, country: null }
   }
 
-  // Guess country from last part
+  // Guess country from last part (with extra handling inside normalizeCountry)
   const last = parts[parts.length - 1]
   const country = normalizeCountry(last)
 
@@ -208,52 +222,88 @@ function splitLocationParts(text: string): {
 /**
  * Small best-effort country normalizer.
  * This is NOT exhaustive — just a pragmatic mapping for common cases.
+ *
+ * New behaviour:
+ *  - Looks at trailing pieces split by ",", "-", "/", "|" etc.
+ *    so "Remote - US", "Remote / Canada" correctly resolve to
+ *    United States / Canada.
  */
 function normalizeCountry(raw: string): string | null {
-  const lower = raw.toLowerCase()
+  const cleaned = raw.trim()
+  if (!cleaned) return null
 
-  if (/^(us|usa|united states|united states of america)$/i.test(raw)) {
-    return 'United States'
-  }
-  if (/^(uk|united kingdom|great britain|england|scotland)$/i.test(raw)) {
-    return 'United Kingdom'
-  }
-  if (lower === 'canada' || lower === 'ca') return 'Canada'
-  if (lower === 'germany' || lower === 'de' || lower === 'deutschland') return 'Germany'
-  if (lower === 'france' || lower === 'fr') return 'France'
-  if (lower === 'netherlands' || lower === 'nl' || lower === 'holland') return 'Netherlands'
-  if (lower === 'spain' || lower === 'es') return 'Spain'
-  if (lower === 'italy' || lower === 'it') return 'Italy'
-  if (lower === 'australia' || lower === 'au') return 'Australia'
-  if (lower === 'new zealand' || lower === 'nz') return 'New Zealand'
-  if (lower === 'sweden' || lower === 'se') return 'Sweden'
-  if (lower === 'norway' || lower === 'no') return 'Norway'
-  if (lower === 'denmark' || lower === 'dk') return 'Denmark'
-  if (lower === 'finland' || lower === 'fi') return 'Finland'
-  if (lower === 'switzerland' || lower === 'ch') return 'Switzerland'
-  if (lower === 'ireland' || lower === 'ie') return 'Ireland'
-  if (lower === 'poland' || lower === 'pl') return 'Poland'
-  if (lower === 'portugal' || lower === 'pt') return 'Portugal'
-  if (lower === 'brazil' || lower === 'br') return 'Brazil'
-  if (lower === 'mexico' || lower === 'mx') return 'Mexico'
-  if (lower === 'india' || lower === 'in') return 'India'
-  if (lower === 'singapore' || lower === 'sg') return 'Singapore'
+  // Break into tokens on common separators, then scan from right to left.
+  const tokens = cleaned
+    .split(/[,\/\-|]/)
+    .map((t) => t.trim())
+    .filter(Boolean)
 
-  // Region-ish placeholders we *don't* want as country:
-  if (lower.includes('emea') || lower.includes('apac') || lower.includes('latam')) {
+  // Helper to map a single token to a country (or null)
+  const mapToken = (token: string): string | null => {
+    const lower = token.toLowerCase()
+
+    // Region-ish placeholders we *don't* want as country:
+    if (
+      lower.includes('emea') ||
+      lower.includes('apac') ||
+      lower.includes('latam') ||
+      lower.includes('americas') ||
+      lower.includes('europe') ||
+      lower.includes('worldwide') ||
+      lower.includes('anywhere')
+    ) {
+      return null
+    }
+
+    // If it has "remote", it's not a country
+    if (lower.includes('remote')) return null
+
+    if (/^(us|usa|united states|united states of america)$/i.test(token)) {
+      return 'United States'
+    }
+    if (/^(uk|united kingdom|great britain|england|scotland)$/i.test(token)) {
+      return 'United Kingdom'
+    }
+    if (lower === 'canada' || lower === 'ca') return 'Canada'
+    if (lower === 'germany' || lower === 'de' || lower === 'deutschland') return 'Germany'
+    if (lower === 'france' || lower === 'fr') return 'France'
+    if (lower === 'netherlands' || lower === 'nl' || lower === 'holland') return 'Netherlands'
+    if (lower === 'spain' || lower === 'es') return 'Spain'
+    if (lower === 'italy' || lower === 'it') return 'Italy'
+    if (lower === 'australia' || lower === 'au') return 'Australia'
+    if (lower === 'new zealand' || lower === 'nz') return 'New Zealand'
+    if (lower === 'sweden' || lower === 'se') return 'Sweden'
+    if (lower === 'norway' || lower === 'no') return 'Norway'
+    if (lower === 'denmark' || lower === 'dk') return 'Denmark'
+    if (lower === 'finland' || lower === 'fi') return 'Finland'
+    if (lower === 'switzerland' || lower === 'ch') return 'Switzerland'
+    if (lower === 'ireland' || lower === 'ie') return 'Ireland'
+    if (lower === 'poland' || lower === 'pl') return 'Poland'
+    if (lower === 'portugal' || lower === 'pt') return 'Portugal'
+    if (lower === 'brazil' || lower === 'br') return 'Brazil'
+    if (lower === 'mexico' || lower === 'mx') return 'Mexico'
+    if (lower === 'india' || lower === 'in') return 'India'
+    if (lower === 'singapore' || lower === 'sg') return 'Singapore'
+
+    // If it's one or two letters, probably a region/state (e.g., "CA", "TX", "NY")
+    if (token.length <= 2) return null
+
+    // As a fallback, if it looks like a real word with letters, use it as-is
+    if (/[a-zA-Z]/.test(token)) {
+      return token.trim()
+    }
+
     return null
   }
 
-  // If it has "remote", it's not a country
-  if (lower.includes('remote')) return null
-
-  // If it's one or two letters, probably a region/state (e.g., "CA", "TX", "NY")
-  if (raw.length <= 2) return null
-
-  // As a fallback, if it looks like a real word with letters, use it as-is
-  if (/[a-zA-Z]/.test(raw)) {
-    return raw.trim()
+  // Check tokens from right to left to pick the most specific trailing region/country
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    const candidate = mapToken(tokens[i])
+    if (candidate) {
+      return candidate
+    }
   }
 
+  // Nothing matched
   return null
 }
