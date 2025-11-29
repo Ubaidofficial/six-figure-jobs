@@ -4,9 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
+    "build": "npx prisma generate && next build",    "lint": "next lint",
     "jobs:audit:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=audit --dry-run",
     "jobs:repair:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=repair"
   },
