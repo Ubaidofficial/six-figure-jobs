@@ -7,17 +7,21 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🧹 Clearing obviously broken salaries (> $1M/yr)…')
 
-  // 1) Clear all jobs with salary > $1M (clearly broken)
+  // 1) Clear all jobs with *any* salary field > $1M (clearly broken)
   const cleared = await prisma.job.updateMany({
     where: {
       OR: [
         { minAnnual: { gt: 1_000_000n } },
         { maxAnnual: { gt: 1_000_000n } },
+        { salaryMin: { gt: 1_000_000n } },
+        { salaryMax: { gt: 1_000_000n } },
       ],
     },
     data: {
       minAnnual: null,
       maxAnnual: null,
+      salaryMin: null,
+      salaryMax: null,
       isHighSalary: false,
       isHundredKLocal: false,
     },
@@ -28,6 +32,7 @@ async function main() {
   // 2) Recalculate isHighSalary / isHundredKLocal for remaining jobs
   const setHigh = await prisma.job.updateMany({
     where: {
+      isExpired: false,
       OR: [
         { minAnnual: { gte: 100_000n, lte: 1_000_000n } },
         { maxAnnual: { gte: 100_000n, lte: 1_000_000n } },

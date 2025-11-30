@@ -1,10 +1,10 @@
-// app/components/JobCard.tsx
+'use client'
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
-import { buildSalaryText } from '../../lib/jobs/salary'   // ← NEW unified helper
+import { buildSalaryText } from '../../lib/jobs/salary' // ← unified helper
 
 /** Extend queryJobs result with UI-only optional fields */
 export type JobCardJob = JobWithCompany & {
@@ -29,7 +29,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
   const companyTags = parseJsonArray(job.companyRef?.tagsJson)
 
   const location = buildLocation(job)
-  const salaryText = buildSalaryText(job)   // ← UNIFIED salary logic
+  const salaryText = buildSalaryText(job) // ← UNIFIED salary logic
   const snippet = buildSnippet(job)
 
   const seniority = inferSeniorityFromTitle(job.title)
@@ -56,7 +56,10 @@ export default function JobCard({ job }: { job: JobCardJob }) {
       <div className="flex gap-4">
         {/* Logo — click→company */}
         {companySlug ? (
-          <Link href={`/company/${companySlug}`} className="mt-1 flex-shrink-0">
+          <Link
+            href={`/company/${companySlug}`}
+            className="mt-1 flex-shrink-0"
+          >
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -67,7 +70,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
                   e.currentTarget.style.display = 'none'
                   const fallback =
                     e.currentTarget.parentElement?.querySelector(
-                      '.fallback-logo'
+                      '.fallback-logo',
                     ) as HTMLElement | null
                   if (fallback) fallback.classList.remove('hidden')
                 }}
@@ -77,7 +80,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
                 {companyName?.charAt(0) ?? '?'}
               </div>
             )}
-            <div className="fallback-logo hidden h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300 hover:ring-2 hover:ring-slate-600">
+            <div className="fallback-logo hidden flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300 hover:ring-2 hover:ring-slate-600">
               {companyName?.charAt(0) ?? '?'}
             </div>
           </Link>
@@ -103,9 +106,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="truncate text-[15px] font-semibold text-slate-50 group-hover:text-slate-100">
-                <Link href={buildJobSlugHref(job)}>
-                  {job.title}
-                </Link>
+                <Link href={buildJobSlugHref(job)}>{job.title}</Link>
               </h3>
 
               {/* Company info */}
@@ -180,7 +181,6 @@ export default function JobCard({ job }: { job: JobCardJob }) {
 
           {/* Badges */}
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-
             {location && <Badge>📍 {location}</Badge>}
 
             {/* Avoid duplicating Remote */}
@@ -277,13 +277,8 @@ function buildLocation(job: JobCardJob): string | null {
 }
 
 function buildSnippet(job: JobCardJob): string | null {
-  const raw =
-    job.snippet ??
-    job.descriptionHtml ??
-    null
-
+  const raw = job.snippet ?? job.descriptionHtml ?? null
   if (!raw) return null
-
   return truncateText(stripTags(decodeHtmlEntities(raw)), 160)
 }
 
@@ -317,7 +312,8 @@ function truncateText(str: string, maxChars: number) {
 function inferSeniorityFromTitle(title: string): string | null {
   const t = title.toLowerCase()
   if (t.includes('intern')) return '🧑‍🎓 Internship'
-  if (t.includes('principal') || t.includes('staff')) return '⭐ Staff / Principal'
+  if (t.includes('principal') || t.includes('staff'))
+    return '⭐ Staff / Principal'
   if (t.includes('lead') || t.includes('head')) return '⭐ Lead'
   if (t.includes('senior') || t.includes('sr')) return '⭐ Senior'
   if (t.includes('junior') || t.includes('jr')) return '🌱 Junior'

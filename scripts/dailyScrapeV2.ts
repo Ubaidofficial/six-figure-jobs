@@ -1,499 +1,200 @@
 // scripts/dailyScrapeV2.ts
-// Comprehensive daily scraper - ATS + All Board Scrapers
-// Run:
-//   Full:  npx tsx scripts/dailyScrapeV2.ts
-//   ATS only:     npx tsx scripts/dailyScrapeV2.ts --mode=ats
-//   Boards only:  npx tsx scripts/dailyScrapeV2.ts --mode=boards
-//   Fast (skip heavy scrapers): npx tsx scripts/dailyScrapeV2.ts --fast
+// -------------------------------------------------------------
+// Comprehensive daily scraper – ATS + All Board Scrapers
+//
+// Run examples:
+//
+//   Full (boards + ATS):
+//     npx tsx scripts/dailyScrapeV2.ts --mode=all
+//
+//   Boards only:
+//     npx tsx scripts/dailyScrapeV2.ts --mode=boards
+//
+//   ATS only:
+//     npx tsx scripts/dailyScrapeV2.ts --mode=ats
+//
+//   Fast (skip slower boards):
+//     npx tsx scripts/dailyScrapeV2.ts --mode=boards --fast
+// -------------------------------------------------------------
 
 import { PrismaClient } from '@prisma/client'
-import { ingestJob } from '../lib/ingest'
 
-// 1. Core Board Scrapers
+// Core board scrapers (default exports)
 import scrapeRemoteOK from '../lib/scrapers/remoteok'
-import { scrapeWeWorkRemotely } from '../lib/scrapers/weworkremotely'
-import { scrapeNodesk } from '../lib/scrapers/nodesk'
+import scrapeWeWorkRemotely from '../lib/scrapers/weworkremotely'
+import scrapeNodesk from '../lib/scrapers/nodesk'
+import scrapeBuiltIn from '../lib/scrapers/builtin'
 import scrapeRemote100k from '../lib/scrapers/remote100k'
-
-// 2. Dormant / Specialized Scrapers
-import { scrapeWorkday } from '../lib/scrapers/workday'
-import { scrapeYCombinator } from '../lib/scrapers/ycombinator'
-import { scrapeRemotive } from '../lib/scrapers/remotive'
 import scrapeRemoteRocketship from '../lib/scrapers/remoterocketship'
 import scrapeGenericSources from '../lib/scrapers/generic'
 
+// New board scrapers (named exports)
+import { scrapeRealWorkFromAnywhere } from '../lib/scrapers/realworkfromanywhere'
+import { scrapeJustJoin } from '../lib/scrapers/justjoin'
+import { scrapeRemoteOtter } from '../lib/scrapers/remoteotter'
+import { scrapeTrawle } from '../lib/scrapers/trawle'
+import { scrapeFourDayWeek } from '../lib/scrapers/fourdayweek'
+
+// “API style” board scrapers / extra sources
+import scrapeRemotive from '../lib/scrapers/remotive'
+// YC disabled for now – endpoint returning 404s, will revisit later
+// import scrapeYCombinator from '../lib/scrapers/ycombinator'
+
+// ATS scrapers
+import scrapeGreenhouse from '../lib/scrapers/greenhouse'
+// (add Ashby / Lever / Workday ATS scripts here when ready)
+
 const prisma = new PrismaClient()
 
-// ============================================
-// CONFIGURATION
-// ============================================
-
-// How many ATS companies to scrape in parallel
-// 10 is safe for 'fetch' based scrapers. If using Puppeteer for ATS, lower to 3.
-const CONCURRENCY_LIMIT = 10
-
-type Mode = 'all' | 'ats' | 'boards'
+type Mode = 'all' | 'boards' | 'ats'
 
 interface CliOptions {
   mode: Mode
   fast: boolean
 }
 
-// Simple CLI arg parser
 function parseCliArgs(): CliOptions {
   const args = process.argv.slice(2)
-  let mode: Mode = 'all'
-  let fast = false
 
-  for (const arg of args) {
-    if (arg === '--fast') fast = true
-    if (arg.startsWith('--mode=')) {
-      const val = arg.split('=')[1] as Mode | undefined
-      if (val === 'ats' || val === 'boards' || val === 'all') {
-        mode = val
-      }
-    }
+  const getFlagValue = (name: string): string | null => {
+    const idx = args.indexOf(name)
+    if (idx === -1) return null
+    return args[idx + 1] ?? null
   }
+
+  const modeArg = (getFlagValue('--mode') || 'all').toLowerCase()
+  const mode: Mode =
+    modeArg === 'boards' || modeArg === 'ats' ? (modeArg as Mode) : 'all'
+
+  const fast = args.includes('--fast')
 
   return { mode, fast }
 }
 
-// ============================================
-// ATS SCRAPERS (Inline Helpers)
-// ============================================
+async function runBoardScrapers(options: CliOptions) {
+  const { fast } = options
 
-async function scrapeGreenhouse(slug: string): Promise<any[]> {
-  try {
-    const res = await fetch(
-      `https://boards-api.greenhouse.io/v1/boards/${slug}/jobs?content=true`,
-      {
-        headers: { 'User-Agent': 'SixFigureJobs/1.0' },
-        signal: AbortSignal.timeout(10000),
-      },
-    )
-    if (!res.ok) return []
-    const data = await res.json()
-    return (data.jobs || []).map((job: any) => ({
-      externalId: `gh-${job.id}`,
-      title: job.title,
-      location: job.location?.name || 'Remote',
-      url: job.absolute_url,
-      description: job.content || '',
-      postedAt: job.updated_at ? new Date(job.updated_at) : new Date(),
-    }))
-  } catch {
-    return []
+  console.log('🌐 Running BOARD scrapers…\n')
+
+  // Ordered so we hit “core” boards first
+  const allScrapers: Array<[string, () => Promise<unknown>]> = [
+    ['RemoteOK', scrapeRemoteOK],
+    ['WeWorkRemotely', scrapeWeWorkRemotely],
+    ['NoDesk', scrapeNodesk],
+    ['BuiltIn', scrapeBuiltIn],
+    ['Remote100k', scrapeRemote100k],
+    ['RemoteRocketship', scrapeRemoteRocketship],
+    ['RealWorkFromAnywhere', scrapeRealWorkFromAnywhere],
+    ['JustJoin', scrapeJustJoin],
+    ['RemoteOtter', scrapeRemoteOtter],
+    ['Trawle', scrapeTrawle],
+    ['FourDayWeek', scrapeFourDayWeek],
+    ['Remotive', scrapeRemotive],
+    // ['YCombinator', scrapeYCombinator], // disabled for now
+    ['GenericSources', scrapeGenericSources],
+  ]
+
+  // In fast mode, skip the slower / more experimental scrapers
+  const scrapers = fast
+    ? allScrapers.filter(([name]) =>
+        [
+          'RemoteOK',
+          'WeWorkRemotely',
+          'Remote100k',
+          'RemoteRocketship',
+          'RealWorkFromAnywhere',
+          'JustJoin',
+          'FourDayWeek',
+        ].includes(name),
+      )
+    : allScrapers
+
+  for (const [name, fn] of scrapers) {
+    console.log(`▶ ${name}…`)
+    try {
+      await fn()
+      console.log(`   ✅ ${name} done.\n`)
+    } catch (err: any) {
+      console.error(`   ❌ ${name} failed:`, err?.message || err)
+      console.error('')
+    }
   }
 }
 
-async function scrapeLever(slug: string): Promise<any[]> {
-  try {
-    const res = await fetch(
-      `https://api.lever.co/v0/postings/${slug}?mode=json`,
-      {
-        headers: { 'User-Agent': 'SixFigureJobs/1.0' },
-        signal: AbortSignal.timeout(10000),
-      },
-    )
-    if (!res.ok) return []
-    const jobs = await res.json()
-    return (jobs || []).map((job: any) => ({
-      externalId: `lever-${job.id}`,
-      title: job.text,
-      location: job.categories?.location || 'Remote',
-      url: job.hostedUrl || job.applyUrl,
-      description: job.descriptionPlain || job.description || '',
-      postedAt: job.createdAt ? new Date(job.createdAt) : new Date(),
-    }))
-  } catch {
-    return []
+async function runAtsScrapers() {
+  console.log('🏢 Running ATS scrapers…\n')
+
+  const scrapers: Array<[string, () => Promise<unknown>]> = [
+    ['Greenhouse', scrapeGreenhouse],
+    // ['Ashby', scrapeAshby], etc – when ready
+  ]
+
+  for (const [name, fn] of scrapers) {
+    console.log(`▶ ${name}…`)
+    try {
+      await fn()
+      console.log(`   ✅ ${name} done.\n`)
+    } catch (err: any) {
+      console.error(`   ❌ ${name} failed:`, err?.message || err)
+      console.error('')
+    }
   }
 }
 
-async function scrapeAshby(slug: string): Promise<any[]> {
-  try {
-    const res = await fetch(
-      `https://api.ashbyhq.com/posting-api/job-board/${slug}`,
-      {
-        headers: { 'User-Agent': 'SixFigureJobs/1.0' },
-        signal: AbortSignal.timeout(10000),
-      },
-    )
-    if (!res.ok) return []
-    const data = await res.json()
-    return (data.jobs || []).map((job: any) => ({
-      externalId: `ashby-${job.id}`,
-      title: job.title,
-      location: job.location || 'Remote',
-      url: `https://jobs.ashbyhq.com/${slug}/${job.id}`,
-      description: job.descriptionHtml || job.descriptionPlain || '',
-      postedAt: new Date(),
-    }))
-  } catch {
-    return []
-  }
-}
+async function printJobSummary() {
+  const totalJobs = await prisma.job.count()
 
-// ============================================
-// ATS JOB INGEST
-// ============================================
-
-async function ingestATSJob(
-  job: any,
-  companyName: string,
-  companyWebsite: string | null,
-  source: string,
-) {
-  return ingestJob({
-    externalId: job.externalId,
-    title: job.title,
-    rawCompanyName: companyName,
-    companyWebsiteUrl: companyWebsite,
-    locationText: job.location,
-    url: job.url,
-    applyUrl: job.url,
-    descriptionText: null,
-    descriptionHtml: job.description,
-    postedAt: job.postedAt,
-    source,
-    isRemote: /remote/i.test(job.location || ''),
-    salaryMin: null,
-    salaryMax: null,
-    salaryCurrency: null,
-    salaryInterval: null,
-    employmentType: null,
+  const jobs100k = await prisma.job.count({
+    where: { minAnnual: { gte: 100_000 } },
   })
-}
+  const jobs200k = await prisma.job.count({
+    where: { minAnnual: { gte: 200_000 } },
+  })
+  const jobs300k = await prisma.job.count({
+    where: { minAnnual: { gte: 300_000 } },
+  })
+  const jobs400k = await prisma.job.count({
+    where: { minAnnual: { gte: 400_000 } },
+  })
 
-// ============================================
-// MAIN
-// ============================================
+  console.log('\n📊 Job Totals (for frontend parity)')
+  console.log('------------------------------------')
+  console.log(`Total jobs in DB          : ${totalJobs}`)
+  console.log(`Jobs ≥ $100k (minAnnual)  : ${jobs100k}`)
+  console.log(`Jobs ≥ $200k              : ${jobs200k}`)
+  console.log(`Jobs ≥ $300k              : ${jobs300k}`)
+  console.log(`Jobs ≥ $400k              : ${jobs400k}\n`)
+}
 
 async function main() {
-  const { mode, fast } = parseCliArgs()
+  const options = parseCliArgs()
 
-  console.log('\n' + '='.repeat(60))
-  console.log('🚀 Starting Comprehensive Daily Scrape (V2 - High Performance)')
-  console.log(`   Mode: ${mode.toUpperCase()}   Fast: ${fast ? 'YES' : 'NO'}`)
-  console.log('='.repeat(60) + '\n')
+  console.log('===========================================')
+  console.log('  SixFigureJobs – Daily Scraper v2')
+  console.log('===========================================')
+  console.log(`Mode : ${options.mode}`)
+  console.log(`Fast : ${options.fast ? 'YES (skip slow boards)' : 'no'}`)
+  console.log('')
 
-  let totalNew = 0,
-    totalUpdated = 0
-
-  // ─────────────────────────────────────────────────────────────
-  // PART 1: ATS Companies (Greenhouse, Lever, Ashby, Workday)
-  // ─────────────────────────────────────────────────────────────
-  if (mode === 'all' || mode === 'ats') {
-    console.log('━━━ PART 1: ATS Companies ━━━\n')
-
-    const companies = await prisma.company.findMany({
-      where: { atsUrl: { not: null } },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        atsUrl: true,
-        website: true,
-        atsProvider: true,
-        atsSlug: true,
-      },
-    })
-
-    console.log(
-      `Found ${companies.length} ATS companies. Processing in batches of ${CONCURRENCY_LIMIT}...\n`,
-    )
-
-    for (let i = 0; i < companies.length; i += CONCURRENCY_LIMIT) {
-      const batch = companies.slice(i, i + CONCURRENCY_LIMIT)
-
-      const results = await Promise.all(
-        batch.map(async (company) => {
-          const slug =
-            company.atsSlug || company.atsUrl?.split('/').pop() || ''
-          if (!slug && !company.atsUrl) return { new: 0, updated: 0 }
-
-          let jobs: any[] = []
-          let source = ''
-          const provider = company.atsProvider || ''
-          const url = company.atsUrl || ''
-
-          try {
-            if (provider === 'greenhouse' || url.includes('greenhouse')) {
-              jobs = await scrapeGreenhouse(slug)
-              source = 'ats:greenhouse'
-            } else if (provider === 'lever' || url.includes('lever')) {
-              jobs = await scrapeLever(slug)
-              source = 'ats:lever'
-            } else if (provider === 'ashby' || url.includes('ashby')) {
-              jobs = await scrapeAshby(slug)
-              source = 'ats:ashby'
-            } else if (
-              !fast && // Workday is slower → skip in fast mode
-              (provider === 'workday' || url.includes('myworkdayjobs'))
-            ) {
-              jobs = await scrapeWorkday(url)
-              source = 'ats:workday'
-            } else {
-              return { new: 0, updated: 0 }
-            }
-
-            let batchNew = 0
-            let batchUpdated = 0
-
-            for (const job of jobs) {
-              const result = await ingestATSJob(
-                job,
-                company.name,
-                company.website,
-                source,
-              )
-              if (result.status === 'created') batchNew++
-              else if (
-                result.status === 'updated' ||
-                result.status === 'upgraded'
-              )
-                batchUpdated++
-            }
-
-            if (jobs.length > 0) {
-              console.log(
-                `  ✓ ${company.name}: ${jobs.length} jobs (${batchNew} new, ${batchUpdated} updated)`,
-              )
-            }
-            return { new: batchNew, updated: batchUpdated }
-          } catch (err: any) {
-            console.error(
-              `  ✗ ${company.name}: ${String(err.message || err).slice(0, 80)}`,
-            )
-            return { new: 0, updated: 0 }
-          }
-        }),
-      )
-
-      results.forEach((r) => {
-        totalNew += r.new
-        totalUpdated += r.updated
-      })
-    }
-  } else {
-    console.log('⏩ Skipping ATS Companies (mode != ats/all)\n')
+  if (options.mode === 'boards' || options.mode === 'all') {
+    await runBoardScrapers(options)
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // PART 2: Job Boards
-  // ─────────────────────────────────────────────────────────────
-  if (mode === 'all' || mode === 'boards') {
-    console.log('\n━━━ PART 2: Job Boards ━━━\n')
-
-    // Remote100k (likely Puppeteer-heavy) → keep sequential for safety
-    if (!fast) {
-      try {
-        console.log('  Scraping Remote100k (Puppeteer)...')
-        const result = await scrapeRemote100k()
-        console.log(
-          `  ✓ Remote100k: ${result.created} new, ${result.updated} updated`,
-        )
-        totalNew += result.created
-        totalUpdated += result.updated
-      } catch (err: any) {
-        console.error(
-          `  ✗ Remote100k: ${String(err.message || err).slice(0, 80)}`,
-        )
-      }
-    } else {
-      console.log('  ⏩ Skipping Remote100k in fast mode')
-    }
-
-    // These HTTP-only scrapers can run in parallel
-    const boardTasks: Array<Promise<{ new: number; updated: number }>> = []
-
-    boardTasks.push(
-      (async () => {
-        try {
-          console.log('  Scraping RemoteOK...')
-          const result = await scrapeRemoteOK()
-          console.log(
-            `  ✓ RemoteOK: ${result.jobsNew} new, ${result.jobsUpdated} updated`,
-          )
-          return { new: result.jobsNew ?? 0, updated: result.jobsUpdated ?? 0 }
-        } catch (err: any) {
-          console.error(
-            `  ✗ RemoteOK: ${String(err.message || err).slice(0, 80)}`,
-          )
-          return { new: 0, updated: 0 }
-        }
-      })(),
-    )
-
-    boardTasks.push(
-      (async () => {
-        try {
-          console.log('  Scraping WeWorkRemotely...')
-          const jobs = await scrapeWeWorkRemotely()
-          console.log(`  ✓ WeWorkRemotely: ${jobs.length} jobs found`)
-          // This scraper currently doesn't ingest via ingestJob here,
-          // so we don't add to totals.
-          return { new: 0, updated: 0 }
-        } catch (err: any) {
-          console.error(
-            `  ✗ WeWorkRemotely: ${String(err.message || err).slice(0, 80)}`,
-          )
-          return { new: 0, updated: 0 }
-        }
-      })(),
-    )
-
-    boardTasks.push(
-      (async () => {
-        try {
-          console.log('  Scraping Nodesk...')
-          const jobs = await scrapeNodesk()
-          console.log(`  ✓ Nodesk: ${jobs.length} jobs found`)
-          // Same as WWR: just logging count.
-          return { new: 0, updated: 0 }
-        } catch (err: any) {
-          console.error(
-            `  ✗ Nodesk: ${String(err.message || err).slice(0, 80)}`,
-          )
-          return { new: 0, updated: 0 }
-        }
-      })(),
-    )
-
-    const boardResults = await Promise.all(boardTasks)
-    boardResults.forEach((r) => {
-      totalNew += r.new
-      totalUpdated += r.updated
-    })
-  } else {
-    console.log('\n⏩ Skipping Job Boards (mode != boards/all)')
+  if (options.mode === 'ats' || options.mode === 'all') {
+    await runAtsScrapers()
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // PART 3: Additional Sources
-  // ─────────────────────────────────────────────────────────────
-  if (mode === 'all' || mode === 'boards') {
-    console.log('\n━━━ PART 3: Additional Sources ━━━\n')
+  await printJobSummary()
 
-    const extraTasks: Array<Promise<{ source: string; new: number; updated: number }>> =
-      []
-
-    if (!fast) {
-      // Generic career pages
-      extraTasks.push(
-        (async () => {
-          try {
-            console.log('  Scraping Generic Career Pages...')
-            const result = await scrapeGenericSources()
-            console.log(
-              `  ✓ Generic Sources: ${result.created} new, ${result.updated} updated`,
-            )
-            return {
-              source: 'generic',
-              new: result.created ?? 0,
-              updated: result.updated ?? 0,
-            }
-          } catch (err: any) {
-            console.error(
-              `  ✗ Generic Sources: ${String(err.message || err).slice(0, 80)}`,
-            )
-            return { source: 'generic', new: 0, updated: 0 }
-          }
-        })(),
-      )
-
-      // YCombinator
-      extraTasks.push(
-        (async () => {
-          try {
-            console.log('  Scraping YCombinator...')
-            await scrapeYCombinator()
-            console.log('  ✓ YCombinator: Scrape complete')
-            // Not adding to totals here (same as before)
-            return { source: 'yc', new: 0, updated: 0 }
-          } catch (err: any) {
-            console.error(
-              `  ✗ YCombinator: ${String(err.message || err).slice(0, 80)}`,
-            )
-            return { source: 'yc', new: 0, updated: 0 }
-          }
-        })(),
-      )
-
-      // Remotive
-      extraTasks.push(
-        (async () => {
-          try {
-            console.log('  Scraping Remotive...')
-            await scrapeRemotive()
-            console.log('  ✓ Remotive: Scrape complete')
-            return { source: 'remotive', new: 0, updated: 0 }
-          } catch (err: any) {
-            console.error(
-              `  ✗ Remotive: ${String(err.message || err).slice(0, 80)}`,
-            )
-            return { source: 'remotive', new: 0, updated: 0 }
-          }
-        })(),
-      )
-
-      // Remote Rocketship
-      extraTasks.push(
-        (async () => {
-          try {
-            console.log('  Scraping Remote Rocketship...')
-            await scrapeRemoteRocketship()
-            console.log('  ✓ Remote Rocketship: Scrape complete')
-            return { source: 'remote-rocketship', new: 0, updated: 0 }
-          } catch (err: any) {
-            console.error(
-              `  ✗ Remote Rocketship: ${String(err.message || err).slice(0, 80)}`,
-            )
-            return { source: 'remote-rocketship', new: 0, updated: 0 }
-          }
-        })(),
-      )
-    } else {
-      console.log(
-        '  ⏩ Skipping Generic, YC, Remotive, Remote Rocketship in fast mode',
-      )
-    }
-
-    const extraResults = await Promise.all(extraTasks)
-    extraResults.forEach((r) => {
-      if (r.source === 'generic') {
-        totalNew += r.new
-        totalUpdated += r.updated
-      }
-    })
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Summary
-  // ─────────────────────────────────────────────────────────────
-  console.log('\n' + '='.repeat(60))
-  console.log('✅ COMPLETE')
-  console.log('='.repeat(60) + '\n')
-
-  const totalJobs = await prisma.job.count({ where: { isExpired: false } })
-  const highSalaryJobs = await prisma.job.count({
-    where: { isExpired: false, isHighSalary: true },
-  })
-  const totalCompanies = await prisma.company.count()
-
-  console.log('📊 Database Summary:')
-  console.log(
-    `   ${totalJobs.toLocaleString()} active jobs (${highSalaryJobs.toLocaleString()} high-salary)`,
-  )
-  console.log(`   ${totalCompanies.toLocaleString()} companies`)
-  console.log(
-    `   This run created ${totalNew.toLocaleString()} new jobs and updated ${totalUpdated.toLocaleString()} jobs`,
-  )
-
-  await prisma.$disconnect()
+  console.log('✅ Finished daily scrape run.')
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err)
-  process.exit(1)
-})
+main()
+  .catch((err) => {
+    console.error('💥 Fatal error in dailyScrapeV2.ts')
+    console.error(err)
+    process.exitCode = 1
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })

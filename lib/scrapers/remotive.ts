@@ -1,12 +1,39 @@
+// lib/scrapers/remotive.ts
+
 import axios from 'axios'
+import { upsertBoardJob } from './_boardHelpers'
 
-export async function scrapeRemotive() {
+const BOARD = 'remotive'
+
+type ProcessedJob = {
+  id: string
+  title: string
+  company: string
+  companyLogo?: string
+  location: string
+  salary: string
+  minSalary: number
+  maxSalary: number
+  type: string
+  url: string
+  applyUrl: string
+  postedDate: string
+  source: string
+  tags: string[]
+  description: string
+  requirements: string[]
+  benefits: string[]
+  skills: string[]
+  remote: boolean
+  verified: boolean
+}
+
+export default async function scrapeRemotive() {
   try {
-    console.log('Scraping Remotive API...')
+    console.log('▶ Scraping Remotive API…')
 
-    const jobs = []
+    const jobs: ProcessedJob[] = []
 
-    // ML/AI-related search terms
     const searchTerms = [
       'machine learning',
       'artificial intelligence',
@@ -20,60 +47,88 @@ export async function scrapeRemotive() {
 
     const categories = ['software-dev']
 
-    // ----- Fetch by search terms in parallel -----
+    // ----- search-based -----
     const searchPromises = searchTerms.map((term) =>
-      fetchJobsBySearch(term).catch((err) => {
-        console.error(`Error searching for "${term}":`, err.message)
-        return []
+      fetchJobsBySearch(term).catch((err: any) => {
+        console.error(`  Error searching "${term}":`, err?.message ?? err)
+        return [] as ProcessedJob[]
       })
     )
 
     const searchResults = await Promise.allSettled(searchPromises)
-    for (const result of searchResults) {
-      if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-        jobs.push(...result.value)
-      }
+    for (const res of searchResults) {
+      if (res.status === 'fulfilled') jobs.push(...res.value)
     }
 
-    // ----- Fetch by categories in parallel -----
+    // ----- category-based -----
     const categoryPromises = categories.map((category) =>
-      fetchJobsByCategory(category).catch((err) => {
-        console.error(`Error fetching category "${category}":`, err.message)
-        return []
+      fetchJobsByCategory(category).catch((err: any) => {
+        console.error(`  Error fetching category "${category}":`, err?.message ?? err)
+        return [] as ProcessedJob[]
       })
     )
 
     const categoryResults = await Promise.allSettled(categoryPromises)
-    for (const result of categoryResults) {
-      if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-        jobs.push(...result.value)
-      }
+    for (const res of categoryResults) {
+      if (res.status === 'fulfilled') jobs.push(...res.value)
     }
 
-    // De-duplicate by id
+    // De-dupe by id
     const uniqueJobs = Array.from(
       new Map(jobs.map((job) => [job.id, job])).values()
     )
 
-    // Strict $100k+ filter (minSalary comes from extractSalary / estimates)
+    // Strict $100k+ filter
     const highPayingJobs = uniqueJobs.filter((job) => job.minSalary >= 100)
 
     console.log(
-      `Remotive: Found ${highPayingJobs.length} ML/AI jobs with estimated $100k+`
+      `  Remotive: Found ${highPayingJobs.length} ML/AI jobs with estimated $100k+`
     )
-    return highPayingJobs
-  } catch (error) {
-    console.error('Remotive error:', error.message)
-    return []
+
+    let stored = 0
+
+    for (const job of highPayingJobs) {
+      await upsertBoardJob({
+        board: BOARD,
+        externalId: job.id,
+        title: job.title,
+        company: job.company || 'Unknown company',
+        applyUrl: job.applyUrl,
+        location: job.location,
+        salaryText: job.salary,
+        remote: job.remote,
+      })
+      stored++
+    }
+
+    console.log(`✅ Remotive: upserted ${stored} jobs`)
+
+    return {
+      board: BOARD,
+      found: highPayingJobs.length,
+      stored,
+    }
+  } catch (error: any) {
+    console.error('Remotive error:', error?.message ?? error)
+    return {
+      board: BOARD,
+      found: 0,
+      stored: 0,
+      error: String(error),
+    }
   }
 }
 
-async function fetchJobsBySearch(searchTerm) {
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+async function fetchJobsBySearch(searchTerm: string): Promise<ProcessedJob[]> {
   const url = `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(
     searchTerm
   )}&limit=100`
 
-  console.log(`  Searching: "${searchTerm}"...`)
+  console.log(`  Searching: "${searchTerm}"…`)
 
   const response = await axios.get(url, {
     headers: {
@@ -84,16 +139,16 @@ async function fetchJobsBySearch(searchTerm) {
     timeout: 15000,
   })
 
-  const jobData = response.data.jobs || []
-  console.log(`  Found ${jobData.length} jobs for "${searchTerm}"`)
+  const jobData: any[] = response.data.jobs || []
+  console.log(`    Found ${jobData.length} jobs for "${searchTerm}"`)
 
-  return jobData.map((job) => processJob(job)).filter((job) => job !== null)
+  return jobData.map(processJob).filter((j): j is ProcessedJob => j !== null)
 }
 
-async function fetchJobsByCategory(category) {
+async function fetchJobsByCategory(category: string): Promise<ProcessedJob[]> {
   const url = `https://remotive.com/api/remote-jobs?category=${category}&limit=200`
 
-  console.log(`  Fetching category: ${category}...`)
+  console.log(`  Fetching category: ${category}…`)
 
   const response = await axios.get(url, {
     headers: {
@@ -104,7 +159,7 @@ async function fetchJobsByCategory(category) {
     timeout: 15000,
   })
 
-  const jobData = response.data.jobs || []
+  const jobData: any[] = response.data.jobs || []
 
   const mlKeywords = [
     'machine learning',
@@ -133,7 +188,7 @@ async function fetchJobsByCategory(category) {
     'diffusion',
   ]
 
-  const mlJobs = jobData.filter((job) => {
+  const mlJobs = jobData.filter((job: any) => {
     const title = (job.title || '').toLowerCase()
     const description = (job.description || '').toLowerCase()
     const text = title + ' ' + description
@@ -141,12 +196,12 @@ async function fetchJobsByCategory(category) {
     return mlKeywords.some((keyword) => text.includes(keyword))
   })
 
-  console.log(`  Found ${mlJobs.length} ML/AI jobs in ${category}`)
+  console.log(`    Found ${mlJobs.length} ML/AI jobs in ${category}`)
 
-  return mlJobs.map((job) => processJob(job)).filter((job) => job !== null)
+  return mlJobs.map(processJob).filter((j): j is ProcessedJob => j !== null)
 }
 
-function processJob(job) {
+function processJob(job: any): ProcessedJob | null {
   try {
     const title = (job.title || '').trim()
     let company = (job.company_name || '').trim()
@@ -162,16 +217,14 @@ function processJob(job) {
       'current openings',
     ]
     if (badTitlePrefixes.some((p) => titleLower.startsWith(p))) {
-      // Skip non-job rows
       return null
     }
 
     const salaryInfo = extractSalary(job.salary, title, job.description)
 
-    // Job type
     let jobType = 'Full-time'
     if (job.job_type) {
-      const typeMap = {
+      const typeMap: Record<string, string> = {
         full_time: 'Full-time',
         part_time: 'Part-time',
         contract: 'Contract',
@@ -181,14 +234,12 @@ function processJob(job) {
       jobType = typeMap[job.job_type] || job.job_type
     }
 
-    // Location
-    let location = job.candidate_required_location || 'Remote'
+    let location: string = job.candidate_required_location || 'Remote'
     if (location.toLowerCase().includes('worldwide')) {
       location = 'Anywhere in the World'
     }
 
-    // Tags
-    const tags = ['Remote', 'Verified']
+    const tags: string[] = ['Remote', 'Verified']
     if (salaryInfo.minSalary >= 100) tags.push('$100k+')
 
     if (titleLower.includes('senior')) tags.push('Senior')
@@ -203,10 +254,10 @@ function processJob(job) {
 
     const skills = extractSkills(title, job.description || '')
 
-    // Description
-    let description =
+    let description: string =
       job.description ||
       `${title} at ${company || 'this company'}. Remote ${jobType.toLowerCase()} position.`
+
     description = description
       .replace(/<[^>]*>/g, '')
       .replace(/&nbsp;/g, ' ')
@@ -218,7 +269,7 @@ function processJob(job) {
       .slice(0, 500)
 
     const requirements = generateRequirements(tags, titleLower, skills)
-    const benefits = generateBenefits(salaryInfo.salary, location, company)
+    const benefits = generateBenefits(salaryInfo.salary, location)
 
     let postedDate = 'Recently'
     if (job.publication_date) {
@@ -232,7 +283,7 @@ function processJob(job) {
     return {
       id: `remotive-${job.id}`,
       title,
-      company, // may be empty; normalization can infer from URL if needed
+      company,
       companyLogo:
         job.company_logo ||
         (logoCompany
@@ -255,26 +306,31 @@ function processJob(job) {
       remote: true,
       verified: true,
     }
-  } catch (err) {
-    console.error('Error processing Remotive job:', err.message)
+  } catch (err: any) {
+    console.error('Error processing Remotive job:', err?.message ?? err)
     return null
   }
 }
 
-function extractSalary(salaryString, title, description) {
+function extractSalary(
+  salaryString: string | null,
+  title: string,
+  description: string | null
+): { salary: string; minSalary: number; maxSalary: number } {
   if (salaryString && typeof salaryString === 'string') {
     const cleanSalary = salaryString.trim()
 
-    // $XXX,XXX - $XXX,XXX or $XXXk - $XXXk
-    let match = cleanSalary.match(
-      /\$(\d{1,3}),?(\d{3})?\s*[-–—to]+\s*\$(\d{1,3}),?(\d{3})?/i
-    )
+    let match =
+      cleanSalary.match(
+        /\$(\d{1,3}),?(\d{3})?\s*[-–—to]+\s*\$(\d{1,3}),?(\d{3})?/i
+      ) || null
+
     if (match) {
       let min = parseInt(match[1], 10)
       let max = parseInt(match[3], 10)
 
       if (!match[2] && min < 1000) {
-        // already in k
+        // already k
       } else {
         min = parseInt(match[1] + (match[2] || '000'), 10) / 1000
         max = parseInt(match[3] + (match[4] || '000'), 10) / 1000
@@ -287,7 +343,6 @@ function extractSalary(salaryString, title, description) {
       }
     }
 
-    // $XXXk+
     match = cleanSalary.match(/\$(\d{2,3})k?\+/i)
     if (match) {
       const min = parseInt(match[1], 10)
@@ -298,7 +353,6 @@ function extractSalary(salaryString, title, description) {
       }
     }
 
-    // "40000-50000"
     match = cleanSalary.match(/(\d{5,6})\s*[-–—to]+\s*(\d{5,6})/i)
     if (match) {
       const min = parseInt(match[1], 10) / 1000
@@ -311,11 +365,10 @@ function extractSalary(salaryString, title, description) {
     }
   }
 
-  // Look in description as last resort
   const text = (title + ' ' + (description || '')).toLowerCase()
-  const descMatch = text.match(
-    /\$(\d{3}),?(\d{3})?\s*[-–—to]+\s*\$(\d{3}),?(\d{3})?/
-  )
+  const descMatch =
+    text.match(/\$(\d{3}),?(\d{3})?\s*[-–—to]+\s*\$(\d{3}),?(\d{3})?/) || null
+
   if (descMatch) {
     const min =
       parseInt(descMatch[1] + (descMatch[2] || '000'), 10) / 1000
@@ -328,46 +381,24 @@ function extractSalary(salaryString, title, description) {
     }
   }
 
-  // Estimation based on seniority
   const titleLower = title.toLowerCase()
 
   if (titleLower.includes('staff') || titleLower.includes('principal')) {
-    return {
-      salary: '$180k - $300k (est.)',
-      minSalary: 180,
-      maxSalary: 300,
-    }
+    return { salary: '$180k - $300k (est.)', minSalary: 180, maxSalary: 300 }
   } else if (titleLower.includes('senior') || titleLower.includes('lead')) {
-    return {
-      salary: '$130k - $220k (est.)',
-      minSalary: 130,
-      maxSalary: 220,
-    }
+    return { salary: '$130k - $220k (est.)', minSalary: 130, maxSalary: 220 }
   } else if (titleLower.includes('director') || titleLower.includes('head')) {
-    return {
-      salary: '$200k - $350k (est.)',
-      minSalary: 200,
-      maxSalary: 350,
-    }
+    return { salary: '$200k - $350k (est.)', minSalary: 200, maxSalary: 350 }
   } else if (titleLower.includes('manager')) {
-    return {
-      salary: '$140k - $200k (est.)',
-      minSalary: 140,
-      maxSalary: 200,
-    }
+    return { salary: '$140k - $200k (est.)', minSalary: 140, maxSalary: 200 }
   }
 
-  // Default mid-level ML/AI
-  return {
-    salary: '$100k - $160k (est.)',
-    minSalary: 100,
-    maxSalary: 160,
-  }
+  return { salary: '$100k - $160k (est.)', minSalary: 100, maxSalary: 160 }
 }
 
-function extractSkills(title, description) {
-  const skills = []
-  const skillKeywords = {
+function extractSkills(title: string, description: string): string[] {
+  const skills: string[] = []
+  const skillKeywords: Record<string, string> = {
     python: 'Python',
     pytorch: 'PyTorch',
     tensorflow: 'TensorFlow',
@@ -426,8 +457,15 @@ function extractSkills(title, description) {
   return [...new Set(skills)].slice(0, 12)
 }
 
-function generateRequirements(tags, titleLower, skills) {
-  const requirements = ['Remote work experience', 'Strong communication skills']
+function generateRequirements(
+  tags: string[],
+  _titleLower: string,
+  skills: string[]
+): string[] {
+  const requirements = [
+    'Remote work experience',
+    'Strong communication skills',
+  ]
 
   if (tags.includes('Staff') || tags.includes('Principal')) {
     requirements.push(
@@ -473,7 +511,7 @@ function generateRequirements(tags, titleLower, skills) {
   return requirements
 }
 
-function generateBenefits(salary, location, company) {
+function generateBenefits(salary: string, location: string): string[] {
   const benefits = ['Fully remote work', 'Flexible work hours', 'Work-life balance']
 
   if (salary && !salary.includes('est.')) {
@@ -495,11 +533,11 @@ function generateBenefits(salary, location, company) {
   return benefits
 }
 
-function formatDate(dateString) {
+function formatDate(dateString: string): string {
   try {
     const date = new Date(dateString)
     const now = new Date()
-    const diffTime = Math.abs(now - date)
+    const diffTime = Math.abs(now.getTime() - date.getTime())
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
     if (diffDays === 0) return 'Today'
@@ -512,5 +550,3 @@ function formatDate(dateString) {
     return 'Recently'
   }
 }
-
-export default scrapeRemotive

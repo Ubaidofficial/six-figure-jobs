@@ -1,0 +1,96 @@
+// lib/scrapers/fourdayweek.ts
+import * as cheerio from 'cheerio'
+import { upsertBoardJob } from './_boardHelpers'
+
+const BOARD = '4dayweek'
+const BASE_URL = 'https://4dayweek.io'
+const LIST_URL = `${BASE_URL}/remote-jobs`
+
+async function fetchHtml(url: string): Promise<string> {
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; Remote100kBot/1.0)',
+    },
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${url}: ${res.status}`)
+  }
+  return res.text()
+}
+
+function absolute(url: string) {
+  if (url.startsWith('http')) return url
+  return `${BASE_URL}${url}`
+}
+
+export async function scrapeFourDayWeek() {
+  console.log(`▶ Scraping ${BOARD}…`)
+
+  const html = await fetchHtml(LIST_URL)
+  const $ = cheerio.load(html)
+
+  // Job cards are <article> blocks inside main listing (tune selector if needed)
+  const cards = $('article, .job-card, .job').toArray()
+  console.log(`  Found ${cards.length} potential job cards`)
+
+  let created = 0
+  const seen = new Set<string>()
+
+  for (const el of cards) {
+    const card = $(el)
+    const linkEl = card.find('a[href^="/jobs/"]').first()
+    const href = linkEl.attr('href')
+    if (!href) continue
+
+    const normalizedHref = href.split('#')[0]
+    if (seen.has(normalizedHref)) continue
+    seen.add(normalizedHref)
+
+    const title =
+      card.find('h3').first().text().trim() ||
+      linkEl.text().trim()
+    if (!title) continue
+
+    const company =
+      card.find('h4, h5').first().text().trim() ||
+      'Unknown company'
+
+    let location: string | null = null
+    let salaryText: string | null = null
+
+    card
+      .find('li, span, p, small')
+      .each((_i, node) => {
+        const t = $(node).text().trim()
+        if (!t) return
+        if (!salaryText && /[$€£].*(year|yr|month|mo|day|hour)/i.test(t)) {
+          salaryText = t
+        }
+        if (
+          !location &&
+          /remote|anywhere|usa|uk|europe|canada|australia|new zealand/i.test(
+            t,
+          )
+        ) {
+          location = t
+        }
+      })
+
+    const applyUrl = absolute(normalizedHref)
+
+    await upsertBoardJob({
+      board: BOARD,
+      externalId: normalizedHref.replace(/^\//, ''),
+      title,
+      company,
+      applyUrl,
+      location,
+      salaryText,
+      remote: /remote/i.test(location || ''),
+    })
+
+    created++
+  }
+
+  console.log(`✅ ${BOARD}: upserted ${created} jobs`)
+}
