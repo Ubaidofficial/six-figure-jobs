@@ -1,3 +1,5 @@
+// app/page.tsx
+
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '../lib/prisma'
@@ -70,19 +72,21 @@ const SALARY_BANDS = [
 export default async function HomePage() {
   const [jobsData, totalJobs, totalCompanies, salaryBandCounts, roleCounts] =
     await Promise.all([
-queryJobs({
-  minAnnual: 100_000,
-  page: 1,
-  pageSize: PAGE_SIZE,
-  sortBy: 'date',          // newest first
-  excludeInternships: true // (optional, now default, but explicit is fine)
-}),      prisma.job.count({
+      queryJobs({
+        minAnnual: 100_000,
+        page: 1,
+        pageSize: PAGE_SIZE,
+        sortBy: 'date', // newest first
+        excludeInternships: true, // explicit
+      }),
+      prisma.job.count({
         where: {
           isExpired: false,
           OR: [
             { maxAnnual: { gte: BigInt(100_000) } },
             { minAnnual: { gte: BigInt(100_000) } },
             { isHighSalary: true },
+            { isHundredKLocal: true },
           ],
         },
       }),
@@ -95,24 +99,46 @@ queryJobs({
                 { maxAnnual: { gte: BigInt(100_000) } },
                 { minAnnual: { gte: BigInt(100_000) } },
                 { isHighSalary: true },
+                { isHundredKLocal: true },
               ],
             },
           },
         },
       }),
+      // UPDATED: make 100k+ band use isHighSalary / isHundredKLocal as well,
+      // so it matches QA + our currency-aware thresholds.
       Promise.all(
-        SALARY_BANDS.map(async (band) => ({
-          ...band,
-          count: await prisma.job.count({
-            where: {
-              isExpired: false,
-              OR: [
-                { maxAnnual: { gte: BigInt(band.min) } },
-                { minAnnual: { gte: BigInt(band.min) } },
-              ],
-            },
-          }),
-        }))
+        SALARY_BANDS.map(async (band) => {
+          let count: number
+
+          if (band.min === 100_000) {
+            // $100k+ band: treat as "high-salary" in any local currency
+            count = await prisma.job.count({
+              where: {
+                isExpired: false,
+                OR: [
+                  { isHighSalary: true },
+                  { isHundredKLocal: true },
+                  { maxAnnual: { gte: BigInt(100_000) } },
+                  { minAnnual: { gte: BigInt(100_000) } },
+                ],
+              },
+            })
+          } else {
+            // Higher bands rely on normalized annual fields
+            count = await prisma.job.count({
+              where: {
+                isExpired: false,
+                OR: [
+                  { maxAnnual: { gte: BigInt(band.min) } },
+                  { minAnnual: { gte: BigInt(band.min) } },
+                ],
+              },
+            })
+          }
+
+          return { ...band, count }
+        }),
       ),
       Promise.all(
         ROLE_CATEGORIES.map(async (role) => ({
@@ -124,7 +150,7 @@ queryJobs({
               roleSlug: { contains: role.slug },
             },
           }),
-        }))
+        })),
       ),
     ])
 
