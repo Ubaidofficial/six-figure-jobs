@@ -5,20 +5,19 @@
  * Usage examples:
  *
  *  Audit only (no writes):
- *    npx ts-node scripts/repairCurrencyAndSalary.ts --mode=audit --dry-run --limit=500
+ *    npx tsx scripts/repairCurrencyAndSalary.ts --mode=audit --dry-run --limit=500
  *
  *  Dry-run repair (log what WOULD change):
- *    npx ts-node scripts/repairCurrencyAndSalary.ts --mode=repair --dry-run --limit=500
+ *    npx tsx scripts/repairCurrencyAndSalary.ts --mode=repair --dry-run --limit=500
  *
  *  Full repair (be careful, this writes to DB):
- *    npx ts-node scripts/repairCurrencyAndSalary.ts --mode=repair
+ *    npx tsx scripts/repairCurrencyAndSalary.ts --mode=repair
  */
 
 import { PrismaClient, Prisma, Job } from '@prisma/client'
 import {
   normalizeJobSalaryFields,
   checkCurrencyLocationMismatch,
-  getExpectedCurrencyForCountry,
   COUNTRY_TO_CURRENCY,
 } from '../lib/normalizers/salary'
 
@@ -63,7 +62,6 @@ async function main() {
 
   const countryCodesToCheck = Object.keys(COUNTRY_TO_CURRENCY)
 
-  // Basic filter: only jobs with a known country, or any salary data
   const whereClause: Prisma.JobWhereInput = {
     OR: [
       {
@@ -107,8 +105,6 @@ async function main() {
   let fixed = 0
   let updatedHighSalaryFlag = 0
 
-  const updates: Array<Promise<Job>> = []
-
   for (const job of jobs) {
     scanned++
 
@@ -134,7 +130,7 @@ async function main() {
 
     // 2) Check high-salary flag
     const newIsHighSalary = normalized.isHighSalary
-    const newIsHundredKLocal = normalized.isHighSalary // keep them in sync in Phase 4
+    const newIsHundredKLocal = normalized.isHighSalary
 
     if (
       newIsHighSalary !== job.isHighSalary ||
@@ -153,15 +149,15 @@ async function main() {
       mismatches++
     }
 
-    // If we're only auditing, we don't build updates
+    // Audit-only mode: no updates, just stats
     if (mode === 'audit') {
       continue
     }
 
-    // 4) Build the update payload for this job
+    // 4) Build update payload
     const data: Partial<Job> = {}
 
-    // Always sync normalized fields from our helper
+    // Sync normalized fields
     if (normalized.minAnnual !== null) {
       data.minAnnual = normalized.minAnnual
     }
@@ -175,12 +171,10 @@ async function main() {
     data.isHighSalary = newIsHighSalary
     data.isHundredKLocal = newIsHundredKLocal
 
-    // If we have a clear expected currency for the country, and it's mismatched,
-    // we relabel the currency to the expected local currency WITHOUT changing
-    // the numeric annual figures (they are already "local" amounts).
+    // Fix mismatched currency labels based on location
     if (check.isMismatch && check.expectedCurrency) {
       data.currency = check.expectedCurrency
-      // For annual salaries, we can also align salaryCurrency if it exists.
+
       if (
         job.salaryPeriod === 'year' ||
         job.salaryPeriod === 'annual' ||
@@ -189,7 +183,7 @@ async function main() {
         data.salaryCurrency = check.expectedCurrency
       }
     } else if (!currentCurrency && check.expectedCurrency) {
-      // If currency is missing but country is known, we can safely set currency
+      // If currency is missing but country is known, set expected
       data.currency = check.expectedCurrency
     }
 
@@ -199,30 +193,26 @@ async function main() {
     fixed++
 
     if (dryRun) {
-      // Log a small sample of what would change
       if (fixed <= 20) {
         console.log(
           `• [DRY RUN] Job ${job.id} (${job.title}) – country=${countryCode}, ` +
             `oldCurrency=${job.currency ?? job.salaryCurrency ?? 'null'} → newCurrency=${
               data.currency ?? 'unchanged'
-            }`
+            }`,
         )
       }
       continue
     }
 
-    updates.push(
-      prisma.job.update({
-        where: { id: job.id },
-        data,
-      })
-    )
-  }
+    // 🚫 No Promise.all – update sequentially to avoid connection pool timeouts
+    await prisma.job.update({
+      where: { id: job.id },
+      data,
+    })
 
-  // Execute updates if not dry-run
-  if (!dryRun && updates.length > 0) {
-    console.log(`💾 Applying ${updates.length} job updates...`)
-    await Promise.all(updates)
+    if (fixed % 500 === 0) {
+      console.log(`   …updated ${fixed} jobs so far`)
+    }
   }
 
   console.log('')
@@ -234,7 +224,7 @@ async function main() {
   console.log(`Jobs with updated high-salary flags   : ${updatedHighSalaryFlag}`)
   if (mode === 'repair') {
     console.log(
-      `Jobs ${dryRun ? 'that WOULD be ' : ''}updated     : ${fixed}`
+      `Jobs ${dryRun ? 'that WOULD be ' : ''}updated     : ${fixed}`,
     )
   }
 
