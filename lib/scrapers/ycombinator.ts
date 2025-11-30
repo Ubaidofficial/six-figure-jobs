@@ -10,7 +10,9 @@ export default async function scrapeYCombinator() {
   try {
     console.log('▶ Scraping Y Combinator Startup Jobs…')
 
-    const url = `${BASE_URL}/companies/jobs?include=jobs`
+    // NOTE: old URL `/companies/jobs?include=jobs` now 404s.
+    // YC exposes jobs attached to companies via the main companies endpoint.
+    const url = `${BASE_URL}/companies?include=jobs`
 
     const response = await axios.get(url, {
       headers: {
@@ -24,16 +26,18 @@ export default async function scrapeYCombinator() {
     const data = response.data as any
 
     if (!data || !Array.isArray(data.companies)) {
-      console.log('YC returned unexpected format.')
+      console.log('YC returned unexpected format for companies:')
+      console.log(Object.keys(data || {}))
       return { board: BOARD, found: 0, stored: 0 }
     }
 
     const companies: any[] = data.companies
+
     const mlKeywords = [
       'machine learning',
-      'ml',
+      ' ml ',
       'artificial intelligence',
-      'ai ',
+      ' ai ',
       'deep learning',
       'data scientist',
       'computer vision',
@@ -58,14 +62,12 @@ export default async function scrapeYCombinator() {
         const description: string = job.description || ''
         const combinedText = (title + ' ' + description).toLowerCase()
 
-        const isMLJob = mlKeywords.some((kw) =>
-          combinedText.includes(kw)
-        )
+        const isMLJob = mlKeywords.some((kw) => combinedText.includes(kw))
         if (!isMLJob) continue
 
         found++
 
-        // Salary estimation
+        // --- Salary estimation (very rough) --------------------
         let minSalary = 100
         let maxSalary = 180
         let salaryText = '$100k+ (estimated)'
@@ -80,8 +82,10 @@ export default async function scrapeYCombinator() {
           }
         }
 
+        // Skip clearly sub-100k roles
         if (minSalary < 100) continue
 
+        // --- Location handling ---------------------------------
         let location: string = job.location || 'Remote'
         if (location.toLowerCase().includes('remote')) {
           location = 'Remote'
@@ -89,7 +93,11 @@ export default async function scrapeYCombinator() {
 
         const companyName: string = company.name || 'YC company'
 
-        const applyUrl = `${BASE_URL}${job.url}`
+        // YC job URLs are relative; prefix with BASE_URL
+        const applyUrl =
+          job.url && job.url.startsWith('/')
+            ? `${BASE_URL}${job.url}`
+            : `${BASE_URL}/companies/${company.slug || ''}`
 
         await upsertBoardJob({
           board: BOARD,
