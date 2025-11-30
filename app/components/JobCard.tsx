@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
+import { buildSalaryText } from '../../lib/jobs/salary'   // ← NEW unified helper
 
 /** Extend queryJobs result with UI-only optional fields */
 export type JobCardJob = JobWithCompany & {
@@ -28,7 +29,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
   const companyTags = parseJsonArray(job.companyRef?.tagsJson)
 
   const location = buildLocation(job)
-  const salaryText = buildSalaryText(job)
+  const salaryText = buildSalaryText(job)   // ← UNIFIED salary logic
   const snippet = buildSnippet(job)
 
   const seniority = inferSeniorityFromTitle(job.title)
@@ -253,61 +254,6 @@ const COUNTRY_FLAGS: Record<string, string> = {
   NL: '🇳🇱',
   AU: '🇦🇺',
   IE: '🇮🇪',
-}
-
-function getCurrencySymbol(code?: string | null) {
-  if (!code) return '$'
-  switch (code.toUpperCase()) {
-    case 'EUR': return '€'
-    case 'GBP': return '£'
-    case 'AUD': return 'A$'
-    case 'CAD': return 'C$'
-    case 'SGD': return 'S$'
-    case 'JPY': return '¥'
-    case 'INR': return '₹'
-    default: return '$'
-  }
-}
-
-function buildSalaryText(job: JobCardJob): string | null {
-  const rawMin = job.minAnnual
-  const rawMax = job.maxAnnual
-
-  let min = rawMin != null ? Number(rawMin) : null
-  let max = rawMax != null ? Number(rawMax) : null
-
-  if (min !== null && (!Number.isFinite(min) || min <= 0)) min = null
-  if (max !== null && (!Number.isFinite(max) || max <= 0)) max = null
-
-  const tooLarge =
-    (min !== null && min > 2_000_000) ||
-    (max !== null && max > 2_000_000)
-  if (tooLarge) {
-    min = null
-    max = null
-  }
-
-  const sym = getCurrencySymbol(job.currency)
-
-  const fmt = (v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : v.toString())
-
-  if (min !== null && max !== null) {
-    return min === max
-      ? `${sym}${fmt(min)}/yr`
-      : `${sym}${fmt(min)}–${fmt(max)}/yr`
-  }
-
-  if (min !== null) return `${sym}${fmt(min)}+/yr`
-  if (max !== null) return `up to ${sym}${fmt(max)}/yr`
-
-  if (job.salaryRaw) {
-    return truncateText(
-      stripTags(decodeHtmlEntities(String(job.salaryRaw))),
-      80
-    )
-  }
-
-  return null
 }
 
 function buildLocation(job: JobCardJob): string | null {

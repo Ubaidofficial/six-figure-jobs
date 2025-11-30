@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next'
 import type { Job, Company } from '@prisma/client'
+import { buildJobSlugHref } from '../jobs/jobSlug'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
@@ -9,34 +10,69 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
 
 export function buildJobMetadata(job: JobWithCompany): Metadata {
-  const companyName = job.companyRef?.name || job.company
+  const companyName =
+    job.companyRef?.name || job.company || 'Company'
+
   const salary = buildSalary(job)
-  const location = job.remote
-    ? 'Remote'
-    : buildLocation(job) || 'Location not specified'
+  const location =
+    job.remote === true || job.remoteMode === 'remote'
+      ? buildLocation(job) || 'Remote'
+      : buildLocation(job) || 'Location not specified'
 
   const title = salary
     ? `${job.title} at ${companyName} — ${salary} | Remote100k`
     : `${job.title} at ${companyName} | Remote100k`
 
-  const description = `Apply for ${job.title} at ${companyName}. ${
-    job.type || 'Role'
-  } paying ${salary || '100k+ base compensation'}. ${
-    job.remote ? 'Remote options available.' : ''
-  } Location: ${location}`
+  const bits: string[] = []
 
-  const path = `/job/${job.id}`
+  bits.push(`Apply for ${job.title} at ${companyName}.`)
+
+  if (salary) {
+    bits.push(`Compensation: ${salary}.`)
+  } else if (job.isHundredKLocal || job.isHighSalary) {
+    bits.push('High-paying $100k+ local-compensation role.')
+  } else {
+    bits.push('High-paying tech role.')
+  }
+
+  if (job.type) {
+    bits.push(`Type: ${job.type}.`)
+  }
+
+  if (location) {
+    bits.push(`Location: ${location}.`)
+  }
+
+  if (job.remote === true || job.remoteMode === 'remote') {
+    bits.push('Remote-friendly opportunity.')
+  }
+
+  // Optional snippet from description for richer SEO, trimmed
+  if (job.descriptionHtml) {
+    const snippet = truncateText(
+      stripTags(decodeHtmlEntities(job.descriptionHtml)),
+      140
+    )
+    if (snippet) {
+      bits.push(snippet)
+    }
+  }
+
+  const description = bits.join(' ')
+
+  const path = buildJobSlugHref(job)
+  const url = `${SITE_URL}${path}`
 
   return {
     title,
     description,
     alternates: {
-      canonical: `${SITE_URL}${path}`,
+      canonical: url,
     },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}${path}`,
+      url,
       siteName: 'Remote100k',
       type: 'website',
     },
@@ -48,29 +84,139 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
   }
 }
 
-/* helpers */
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
 
+function getCurrencySymbol(code?: string | null): string {
+  if (!code) return '$'
+  const upper = code.toUpperCase()
+  switch (upper) {
+    case 'USD':
+      return '$'
+    case 'EUR':
+      return '€'
+    case 'GBP':
+      return '£'
+    case 'AUD':
+      return 'A$'
+    case 'CAD':
+      return 'C$'
+    case 'SGD':
+      return 'S$'
+    case 'JPY':
+      return '¥'
+    case 'INR':
+      return '₹'
+    default:
+      return `${upper} `
+  }
+}
+
+/**
+ * Salary builder:
+ *  A) prefer minAnnual / maxAnnual (normalized local annual)
+ *  B) fallback to salaryMin / salaryMax
+ *  C) finally, use salaryRaw snippet
+ */
 function buildSalary(job: any): string | null {
-  const min =
-    job.minAnnual != null ? Number(job.minAnnual) : null
-  const max =
-    job.maxAnnual != null ? Number(job.maxAnnual) : null
-  const sym =
-    job.currency === 'USD' || !job.currency
-      ? '$'
-      : job.currency + ' '
+  const primaryMin = job.minAnnual ?? job.salaryMin ?? null
+  const primaryMax = job.maxAnnual ?? job.salaryMax ?? null
 
-  const fmt = (v: number) => `${Math.round(v / 1000)}k`
+  let min = primaryMin != null ? Number(primaryMin) : null
+  let max = primaryMax != null ? Number(primaryMax) : null
 
-  if (min && max) return `${sym}${fmt(min)}–${fmt(max)}/yr`
-  if (min) return `${sym}${fmt(min)}+/yr`
+  if (min !== null && (!Number.isFinite(min) || min <= 0)) min = null
+  if (max !== null && (!Number.isFinite(max) || max <= 0)) max = null
+
+  const tooLarge =
+    (min !== null && min > 2_000_000) ||
+    (max !== null && max > 2_000_000)
+  if (tooLarge) {
+    min = null
+    max = null
+  }
+
+  const currencyCode = job.currency || job.salaryCurrency || 'USD'
+  const sym = getCurrencySymbol(currencyCode)
+
+  const fmt = (v: number) =>
+    v >= 1000 ? `${Math.round(v / 1000)}k` : v.toString()
+
+  if (min !== null && max !== null) {
+    if (min === max) return `${sym}${fmt(min)}/yr`
+    return `${sym}${fmt(min)}–${sym}${fmt(max)}/yr`
+  }
+
+  if (min !== null) return `${sym}${fmt(min)}+/yr`
+  if (max !== null) return `Up to ${sym}${fmt(max)}/yr`
+
+  // C) Fallback: short snippet from salaryRaw
+  if (job.salaryRaw) {
+    const clean = truncateText(
+      stripTags(decodeHtmlEntities(String(job.salaryRaw))),
+      60
+    )
+    return clean || null
+  }
+
   return null
 }
 
+/**
+ * Match job page behaviour: remote vs on-site, with country/city.
+ */
 function buildLocation(job: any): string | null {
-  if (job.city && job.countryCode)
-    return `${job.city}, ${job.countryCode}`
-  if (job.countryCode) return job.countryCode
-  if (job.locationRaw) return job.locationRaw
+  const isRemote = job.remote === true || job.remoteMode === 'remote'
+
+  if (isRemote) {
+    if (job.countryCode) {
+      return `Remote (${String(job.countryCode).toUpperCase()})`
+    }
+    return 'Remote'
+  }
+
+  if (job.city && job.countryCode) {
+    return `${job.city}, ${String(job.countryCode).toUpperCase()}`
+  }
+
+  if (job.countryCode) {
+    return String(job.countryCode).toUpperCase()
+  }
+
+  if (job.locationRaw) {
+    return String(job.locationRaw)
+  }
+
   return null
+}
+
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+}
+
+function stripTags(str: string): string {
+  return str.replace(/<\/?[^>]+(>|$)/g, '')
+}
+
+function truncateText(str: string, maxChars: number): string {
+  if (str.length <= maxChars) return str
+
+  const truncated = str.slice(0, maxChars)
+  const lastDot = truncated.lastIndexOf('.')
+  const lastSpace = truncated.lastIndexOf(' ')
+
+  const cutoff =
+    lastDot !== -1 && lastDot > maxChars * 0.6
+      ? lastDot + 1
+      : lastSpace > 0
+      ? lastSpace
+      : maxChars
+
+  return truncated.slice(0, cutoff) + ' …'
 }
