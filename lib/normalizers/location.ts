@@ -164,7 +164,7 @@ function stripRemoteQualifiers(text: string): string {
  * - Split by commas first
  * - Use heuristics for city, region, country
  *
- * Also handles "Remote - US", "Remote / US", "Remote | US" by
+ * Also handles "Remote - US", "Remote / Canada", "Remote U.S." by
  * letting the country normalizer look at trailing segments.
  */
 function splitLocationParts(text: string): {
@@ -221,12 +221,12 @@ function splitLocationParts(text: string): {
 
 /**
  * Small best-effort country normalizer.
- * This is NOT exhaustive — just a pragmatic mapping for common cases.
  *
- * New behaviour:
- *  - Looks at trailing pieces split by ",", "-", "/", "|" etc.
- *    so "Remote - US", "Remote / Canada" correctly resolve to
- *    United States / Canada.
+ * Key behaviours:
+ *  - Handles "Remote U.S.", "Remote - US", "Remote / UK" etc.
+ *  - Ignores region placeholders like "Europe", "EMEA", "APAC",
+ *    "North America", "LATAM", etc.
+ *  - Ignores employment terms like "Full-time", "Part-time".
  */
 function normalizeCountry(raw: string): string | null {
   const cleaned = raw.trim()
@@ -238,11 +238,19 @@ function normalizeCountry(raw: string): string | null {
     .map((t) => t.trim())
     .filter(Boolean)
 
-  // Helper to map a single token to a country (or null)
   const mapToken = (token: string): string | null => {
-    const lower = token.toLowerCase()
+    if (!token) return null
 
-    // Region-ish placeholders we *don't* want as country:
+    // Strip a leading "Remote" if present: "Remote U.S." → "U.S."
+    let withoutRemote = token.replace(/\bremote\b/gi, '').trim()
+    if (!withoutRemote) return null
+
+    // Remove trailing dots (U.S. → US), collapse spaces/dots for comparisons.
+    const noDots = withoutRemote.replace(/\./g, '').trim()
+    const lower = noDots.toLowerCase()
+    const compact = lower.replace(/\s+/g, '')
+
+    // Region-ish placeholders we *don't* want as countries
     if (
       lower.includes('emea') ||
       lower.includes('apac') ||
@@ -250,47 +258,80 @@ function normalizeCountry(raw: string): string | null {
       lower.includes('americas') ||
       lower.includes('europe') ||
       lower.includes('worldwide') ||
-      lower.includes('anywhere')
+      lower.includes('anywhere') ||
+      lower.includes('global') ||
+      lower.includes('middle east') ||
+      lower.includes('asia pacific') ||
+      lower.includes('north america') ||
+      lower.includes('south america') ||
+      lower.includes('central america') ||
+      lower.includes('north to south america')
     ) {
       return null
     }
 
-    // If it has "remote", it's not a country
-    if (lower.includes('remote')) return null
+    // Ignore obvious non-location words like "Full-time"
+    if (
+      lower === 'full' ||
+      lower === 'time' ||
+      /full ?time/.test(lower) ||
+      /part ?time/.test(lower) ||
+      lower === 'contract' ||
+      lower === 'permanent'
+    ) {
+      return null
+    }
 
-    if (/^(us|usa|united states|united states of america)$/i.test(token)) {
+    // United States
+    if (
+      compact === 'us' ||
+      compact === 'usa' ||
+      lower === 'united states' ||
+      lower === 'united states of america'
+    ) {
       return 'United States'
     }
-    if (/^(uk|united kingdom|great britain|england|scotland)$/i.test(token)) {
+
+    // United Kingdom
+    if (
+      compact === 'uk' ||
+      lower === 'united kingdom' ||
+      lower === 'great britain' ||
+      lower === 'england' ||
+      lower === 'scotland'
+    ) {
       return 'United Kingdom'
     }
-    if (lower === 'canada' || lower === 'ca') return 'Canada'
-    if (lower === 'germany' || lower === 'de' || lower === 'deutschland') return 'Germany'
-    if (lower === 'france' || lower === 'fr') return 'France'
-    if (lower === 'netherlands' || lower === 'nl' || lower === 'holland') return 'Netherlands'
-    if (lower === 'spain' || lower === 'es') return 'Spain'
-    if (lower === 'italy' || lower === 'it') return 'Italy'
-    if (lower === 'australia' || lower === 'au') return 'Australia'
-    if (lower === 'new zealand' || lower === 'nz') return 'New Zealand'
-    if (lower === 'sweden' || lower === 'se') return 'Sweden'
-    if (lower === 'norway' || lower === 'no') return 'Norway'
-    if (lower === 'denmark' || lower === 'dk') return 'Denmark'
-    if (lower === 'finland' || lower === 'fi') return 'Finland'
-    if (lower === 'switzerland' || lower === 'ch') return 'Switzerland'
-    if (lower === 'ireland' || lower === 'ie') return 'Ireland'
-    if (lower === 'poland' || lower === 'pl') return 'Poland'
-    if (lower === 'portugal' || lower === 'pt') return 'Portugal'
-    if (lower === 'brazil' || lower === 'br') return 'Brazil'
-    if (lower === 'mexico' || lower === 'mx') return 'Mexico'
-    if (lower === 'india' || lower === 'in') return 'India'
-    if (lower === 'singapore' || lower === 'sg') return 'Singapore'
 
-    // If it's one or two letters, probably a region/state (e.g., "CA", "TX", "NY")
-    if (token.length <= 2) return null
+    // Canonical simple mappings
+    if (lower === 'canada' || compact === 'ca') return 'Canada'
+    if (lower === 'germany' || compact === 'de' || lower === 'deutschland') return 'Germany'
+    if (lower === 'france' || compact === 'fr') return 'France'
+    if (lower === 'netherlands' || compact === 'nl' || lower === 'holland') return 'Netherlands'
+    if (lower === 'spain' || compact === 'es') return 'Spain'
+    if (lower === 'italy' || compact === 'it') return 'Italy'
+    if (lower === 'australia' || compact === 'au') return 'Australia'
+    if (lower === 'new zealand' || compact === 'nz') return 'New Zealand'
+    if (lower === 'sweden' || compact === 'se') return 'Sweden'
+    if (lower === 'norway' || compact === 'no') return 'Norway'
+    if (lower === 'denmark' || compact === 'dk') return 'Denmark'
+    if (lower === 'finland' || compact === 'fi') return 'Finland'
+    if (lower === 'switzerland' || compact === 'ch') return 'Switzerland'
+    if (lower === 'ireland' || compact === 'ie') return 'Ireland'
+    if (lower === 'poland' || compact === 'pl') return 'Poland'
+    if (lower === 'portugal' || compact === 'pt') return 'Portugal'
+    if (lower === 'brazil' || compact === 'br') return 'Brazil'
+    if (lower === 'mexico' || compact === 'mx') return 'Mexico'
+    if (lower === 'india' || compact === 'in') return 'India'
+    if (lower === 'singapore' || compact === 'sg') return 'Singapore'
 
-    // As a fallback, if it looks like a real word with letters, use it as-is
-    if (/[a-zA-Z]/.test(token)) {
-      return token.trim()
+    // If it's just 1–2 letters, it's probably a region/state (CA, TX, NY) → not a country
+    if (noDots.length <= 2) return null
+
+    // As a fallback, if it looks like a single-word name, use it as-is.
+    // (We avoid multi-word placeholders here.)
+    if (!/\s/.test(noDots) && /[a-zA-Z]/.test(noDots)) {
+      return withoutRemote.trim()
     }
 
     return null

@@ -93,17 +93,25 @@ export default async function JobPage({
 
   const typedJob = job as JobWithCompany
   const company = typedJob.companyRef
-  
+
   // Clean company name - take only the first part before description
   const rawCompanyName = company?.name || typedJob.company || 'Company'
   const companyName = cleanCompanyName(rawCompanyName)
-  
+
   const logoUrl = company?.logoUrl ?? typedJob.companyLogo ?? null
+
+  // Safely read LinkedIn URL even if TS types are lagging behind schema
+  const companyLinkedIn =
+    (company as any)?.linkedinUrl &&
+    typeof (company as any).linkedinUrl === 'string'
+      ? ((company as any).linkedinUrl as string)
+      : null
 
   /* ------------------------------ Helpers ---------------------------------- */
 
   const salaryText = buildSalaryText(typedJob)
-  const isRemote = typedJob.remote === true || typedJob.remoteMode === 'remote'
+  const isRemote =
+    typedJob.remote === true || typedJob.remoteMode === 'remote'
   const locationText = buildLocationText(typedJob)
   const isHundredK = isHundredKJob(typedJob)
   const seniority = inferSeniorityFromTitle(typedJob.title)
@@ -216,6 +224,18 @@ export default async function JobPage({
                 </a>
               )}
 
+              {/* NEW: LinkedIn */}
+              {companyLinkedIn && (
+                <a
+                  href={companyLinkedIn}
+                  target="_blank"
+                  rel="nofollow noreferrer"
+                  className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
+                >
+                  LinkedIn
+                </a>
+              )}
+
               {company?.slug && (
                 <Link
                   href={`/company/${company.slug}`}
@@ -304,7 +324,8 @@ export default async function JobPage({
 
                   {typedJob.postedAt && (
                     <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                      📅 Posted {typedJob.postedAt.toLocaleDateString()}
+                      📅 Posted{' '}
+                      {typedJob.postedAt.toLocaleDateString()}
                     </span>
                   )}
                 </div>
@@ -437,7 +458,9 @@ export default async function JobPage({
                       </Link>
 
                       <div className="text-slate-300">
-                        {cleanCompanyName(sj.companyRef?.name || sj.company || '')}
+                        {cleanCompanyName(
+                          sj.companyRef?.name || sj.company || '',
+                        )}
                       </div>
 
                       <div className="mt-1 text-xs text-slate-400">
@@ -480,34 +503,31 @@ export default async function JobPage({
  */
 function cleanCompanyName(name: string): string {
   if (!name) return 'Company'
-  
-  // If name looks like "CompanyNameDescription text here..."
-  // Try to extract just the company name
-  
-  // Look for common patterns where description starts
+
   const patterns = [
-    /^([A-Z][a-z]+(?:[A-Z][a-z]+)*)[A-Z][a-z]/, // CamelCase followed by description
-    /^([^.]+?)\s*[.]/,  // Text before first period
-    /^(.+?)\s+(?:is|are|was|provides|offers|builds|creates|develops)/i, // Text before common description starters
+    // CamelCase followed by description
+    /^([A-Z][a-z]+(?:[A-Z][a-z]+)*)[A-Z][a-z]/,
+    // Text before first period
+    /^([^.]+?)\s*[.]/,
+    // Text before common description starters
+    /^(.+?)\s+(?:is|are|was|provides|offers|builds|creates|develops)/i,
   ]
-  
+
   for (const pattern of patterns) {
     const match = name.match(pattern)
     if (match && match[1] && match[1].length >= 2 && match[1].length <= 50) {
       return match[1].trim()
     }
   }
-  
-  // If no pattern matches, truncate at reasonable length
+
   if (name.length > 50) {
-    // Find a good break point
     const spaceIdx = name.indexOf(' ', 20)
     if (spaceIdx > 0 && spaceIdx < 50) {
       return name.slice(0, spaceIdx)
     }
     return name.slice(0, 50)
   }
-  
+
   return name
 }
 
@@ -558,16 +578,14 @@ function buildSalaryText(job: any): string | null {
  */
 function buildLocationText(job: any): string {
   const isRemote = job.remote === true || job.remoteMode === 'remote'
-  
+
   if (isRemote) {
-    // For remote jobs, show "Remote" or "Remote (US)" if country restricted
     if (job.countryCode) {
       return `Remote (${job.countryCode})`
     }
     return 'Remote'
   }
-  
-  // For non-remote jobs, show city/country
+
   if (job.city && job.countryCode) return `${job.city}, ${job.countryCode}`
   if (job.countryCode) return job.countryCode
   if (job.locationRaw) return job.locationRaw
@@ -595,7 +613,9 @@ function prettyRole(slug: string): string {
 
 function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   const links: InternalLink[] = []
-  const companyName = cleanCompanyName(job.companyRef?.name || job.company || '')
+  const companyName = cleanCompanyName(
+    job.companyRef?.name || job.company || '',
+  )
 
   if (job.roleSlug && job.countryCode) {
     const roleLabel = prettyRole(job.roleSlug)
@@ -627,10 +647,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   return links
 }
 
-function buildJobBreadcrumbJsonLd(
-  job: JobWithCompany,
-  slug: string,
-): any {
+function buildJobBreadcrumbJsonLd(job: JobWithCompany, slug: string): any {
   const items: any[] = [
     {
       '@type': 'ListItem',
@@ -693,8 +710,9 @@ function truncateText(str: string, maxChars: number): string {
   const lastDot = truncated.lastIndexOf('.')
   const lastSpace = truncated.lastIndexOf(' ')
 
-  const cutoff =
-    lastDot > maxChars * 0.6
+  // All branches return a number – no boolean union
+  const cutoff: number =
+    lastDot !== -1 && lastDot > maxChars * 0.6
       ? lastDot + 1
       : lastSpace > 0
       ? lastSpace

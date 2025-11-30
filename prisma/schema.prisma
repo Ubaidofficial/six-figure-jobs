@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL") // Uses connection pooling
+  url       = env("POSTGRES_PRISMA_URL")      // Uses connection pooling
   directUrl = env("POSTGRES_URL_NON_POOLING") // Uses direct connection
 }
 
@@ -68,10 +68,10 @@ model Job {
   updatedAt  DateTime  @updatedAt
 
   // Relations
-  companyId   String?
-  companyRef  Company?       @relation(fields: [companyId], references: [id])
-  locationId  String?
-  locationRef Location?      @relation(fields: [locationId], references: [id])
+  companyId    String?
+  companyRef   Company?       @relation(fields: [companyId], references: [id])
+  locationId   String?
+  locationRef  Location?      @relation(fields: [locationId], references: [id])
   roleInference RoleInference?
 
   // Deduplication fields
@@ -80,17 +80,18 @@ model Job {
   isUnverifiedBoardJob Boolean @default(false)
 
   // NEW: SEO & filtering fields
-  experienceLevel String?  @default("mid") // entry, mid, senior, lead, executive
+  experienceLevel String?  @default("mid")       // entry, mid, senior, lead, executive
   employmentType  String?  @default("full-time") // full-time, contract, part-time
-  workArrangement String? // remote, hybrid, onsite
+  workArrangement String?  // remote, hybrid, onsite
   visaSponsorship Boolean  @default(false)
-  techStack       String? // JSON array: ["python", "react"]
-  industry        String? // engineering, product, design, data
-  stateCode       String? // ca, ny, tx
+  techStack       String?  // JSON array: ["python", "react"]
+  industry        String?  // engineering, product, design, data
+  stateCode       String?  // ca, ny, tx
 
   // Unique constraints
   @@unique([externalId, source], name: "externalId_source")
   @@unique([companyId, dedupeKey], name: "company_dedupeKey")
+
   // Indexes
   @@index([source])
   @@index([roleSlug])
@@ -116,6 +117,9 @@ model Company {
   website     String?
   logoUrl     String?
   description String?
+
+  // NEW: Social / profiles
+  linkedinUrl String?   // ← added field
 
   // Company meta
   sizeBucket     String?
@@ -232,9 +236,9 @@ model Skill {
 }
 
 model RoleInference {
-  id       String  @id @default(cuid())
-  jobId    String  @unique
-  roleSlug String?
+  id        String  @id @default(cuid())
+  jobId     String  @unique
+  roleSlug  String?
   seniority String?
   tagsJson  String?
 
