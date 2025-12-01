@@ -9,6 +9,7 @@ import { buildJobsPath } from '../lib/jobs/searchSlug'
 import { SEARCH_ROLE_OPTIONS } from '../lib/roles/searchRoles'
 import { TARGET_COUNTRIES } from '../lib/seo/regions'
 import { HomeFAQ } from './pageFAQ'
+import RoleTypeahead from './components/RoleTypeahead'
 
 export const revalidate = 600
 
@@ -206,7 +207,7 @@ export default async function HomePage() {
 
         <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-4">
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-50 md:text-[2.35rem]">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-50 md:text-[2.7rem]">
               Find remote &amp; hybrid tech jobs paying $100k+ 💰
             </h1>
             <p className="text-sm leading-relaxed text-slate-300">
@@ -241,18 +242,11 @@ export default async function HomePage() {
                     >
                       Role
                     </label>
-                    <select
-                      id="role"
+                    <RoleTypeahead
+                      options={ROLE_OPTIONS}
                       name="role"
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
-                    >
-                      <option value="">All roles</option>
-                      {ROLE_OPTIONS.map((role) => (
-                        <option key={role.slug} value={role.slug}>
-                          {role.emoji} {role.label}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Start typing a $100k+ role…"
+                    />
                   </div>
 
                   <div>
