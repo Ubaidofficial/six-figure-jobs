@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { JobSlice } from '../../../lib/slices/types'
 import type { JobQueryResult } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
+import { TARGET_COUNTRIES } from '../../../lib/seo/regions'
 
 type SliceForPage = JobSlice
 
@@ -21,6 +22,43 @@ export function SlicePage({ slice, data }: Props) {
     defaultDescriptionFromSlug(slice.slug, slice.filters?.minAnnual ?? null)
 
   const showingLabel = buildShowingLabel(total, slice.jobCount ?? null)
+
+  const roleSlug = slice.filters?.roleSlugs?.[0]
+  const countryCode = (slice.filters as any)?.countryCode || (slice.filters as any)?.country
+  const minAnnual = slice.filters?.minAnnual ?? null
+  const countryLabel =
+    TARGET_COUNTRIES.find((c) => c.code.toLowerCase() === (countryCode ?? '').toLowerCase())?.label ||
+    countryCode ||
+    null
+  const salaryBand =
+    minAnnual && minAnnual >= 400_000
+      ? '$400k+'
+      : minAnnual && minAnnual >= 300_000
+      ? '$300k+'
+      : minAnnual && minAnnual >= 200_000
+      ? '$200k+'
+      : '$100k+'
+  const roleLabel = roleSlug ? prettyRole(roleSlug) : null
+
+  const companyCounts = new Map<string, { name: string; count: number; slug?: string | null }>()
+  jobs.forEach((job: any) => {
+    const key = job.companyId || job.company || job.companyRef?.name
+    if (!key) return
+    const existing =
+      companyCounts.get(key) ?? {
+        name: job.companyRef?.name ?? job.company,
+        count: 0,
+        slug: job.companyRef?.slug ?? null,
+      }
+    existing.count += 1
+    companyCounts.set(key, existing)
+  })
+  const topCompanies = Array.from(companyCounts.values())
+    .filter((c) => !!c.name)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6)
+
+  const relatedSalaryBands = [100_000, 200_000, 300_000, 400_000]
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
@@ -41,6 +79,14 @@ export function SlicePage({ slice, data }: Props) {
           </p>
         )}
       </header>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <p>
+          {roleLabel ? `Verified ${salaryBand} ${roleLabel.toLowerCase()}` : `Verified ${salaryBand} tech`} roles
+          {countryLabel ? ` in ${countryLabel}` : ''}. Remote, hybrid, and on-site options from ATS feeds and trusted boards,
+          refreshed daily and ranked by salary.
+        </p>
+      </section>
 
       {/* Job list */}
       <section>
@@ -79,6 +125,81 @@ export function SlicePage({ slice, data }: Props) {
           </div>
         </nav>
       )}
+
+      {relatedSalaryBands.length > 0 && (
+        <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <h2 className="mb-2 text-sm font-semibold text-slate-50">
+            Explore salary bands
+          </h2>
+          <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+            {relatedSalaryBands.map((band) => {
+              const slug =
+                band === 100_000
+                  ? '100k-plus'
+                  : band === 200_000
+                  ? '200k-plus'
+                  : band === 300_000
+                  ? '300k-plus'
+                  : '400k-plus'
+              const basePath = roleSlug
+                ? countryCode
+                  ? `/jobs/${roleSlug}/${countryCode}/${slug}`
+                  : (slice.filters as any)?.remoteOnly || (slice.filters as any)?.remoteRegion
+                  ? `/jobs/${roleSlug}/remote/${slug}`
+                  : `/jobs/${roleSlug}/${slug}`
+                : countryCode
+                ? `/jobs/${countryCode}/${slug}`
+                : `/jobs/${slug}`
+
+              return (
+                <Link
+                  key={band}
+                  href={basePath}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 hover:border-slate-600"
+                >
+                  💵 {band >= 1000 ? `$${band / 1000}k+` : `$${band}+`}
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {topCompanies.length > 0 && (
+        <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-50">
+            Top companies hiring {roleLabel ? roleLabel : 'for these roles'}
+          </h2>
+          <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+            {topCompanies.map((c) => (
+              <Link
+                key={`${c.name}-${c.slug ?? ''}`}
+                href={c.slug ? `/company/${c.slug}` : '#'}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 hover:border-slate-600"
+              >
+                <span className="font-semibold text-slate-100">{c.name}</span>
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">
+                  {c.count} roles
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-50">
+          FAQs about {roleLabel ? `${roleLabel} roles` : 'high-paying tech roles'} paying {salaryBand}
+        </h2>
+        <div className="space-y-3 text-sm text-slate-300">
+          {buildFaqs(roleLabel, countryLabel, salaryBand).map((item) => (
+            <div key={item.q}>
+              <p className="font-semibold text-slate-100">{item.q}</p>
+              <p className="text-slate-300">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
@@ -140,4 +261,33 @@ function buildShowingLabel(total: number, sliceJobCount: number | null): string 
   }
 
   return null
+}
+
+function prettyRole(slug: string): string {
+  return slug
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function buildFaqs(
+  roleLabel: string | null,
+  countryLabel: string | null,
+  salaryBand: string,
+) {
+  const roleText = roleLabel ? roleLabel.toLowerCase() : 'tech'
+  const regionText = countryLabel ? ` in ${countryLabel}` : ''
+  return [
+    {
+      q: `Are these ${roleText} jobs${regionText} really ${salaryBand}?`,
+      a: `Yes. We include roles with published or inferred compensation of ${salaryBand} (or local equivalent) from ATS feeds and vetted boards, and demote lowball ranges.`,
+    },
+    {
+      q: `Do you include remote or hybrid ${roleText} roles${regionText}?`,
+      a: 'Yes. Every listing is tagged as remote, hybrid, or on-site. Use the filters to focus on flexible roles.',
+    },
+    {
+      q: `How fresh are these ${roleText} listings${regionText}?`,
+      a: 'We refresh ATS sources daily, expire stale jobs, and rank the newest high-paying openings first.',
+    },
+  ]
 }

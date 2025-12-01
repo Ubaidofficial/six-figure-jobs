@@ -105,6 +105,24 @@ export default async function RolePage({
   const salary300kPlus = jobs.filter(j => j.minAnnual && j.minAnnual >= 300000n).length
   const salary400kPlus = jobs.filter(j => j.minAnnual && j.minAnnual >= 400000n).length
 
+  const companyCounts = new Map<string, { name: string; count: number; slug?: string | null }>()
+  jobs.forEach((job: any) => {
+    const key = job.companyId || job.company || job.companyRef?.name
+    if (!key) return
+    const existing =
+      companyCounts.get(key) ?? {
+        name: job.companyRef?.name ?? job.company,
+        count: 0,
+        slug: job.companyRef?.slug ?? null,
+      }
+    existing.count += 1
+    companyCounts.set(key, existing)
+  })
+  const topCompanies = Array.from(companyCounts.values())
+    .filter((c) => !!c.name)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6)
+
   const faqs = [
     {
       q: `Are these ${roleTitle} jobs really $100k+?`,
@@ -191,6 +209,13 @@ export default async function RolePage({
         </div>
       </section>
 
+      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <p>
+          Find verified $100k+ {roleTitle.toLowerCase()} roles across remote, hybrid, and on-site teams.
+          We refresh ATS feeds daily and rank by salary first, so you see the strongest offers up top.
+        </p>
+      </section>
+
       <JobList jobs={jobs as JobWithCompany[]} />
 
       <section className="mt-12 rounded-xl border border-slate-800 bg-slate-950/50 p-6">
@@ -217,6 +242,28 @@ export default async function RolePage({
           </Link>
         </div>
       </section>
+
+      {topCompanies.length > 0 && (
+        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-50">
+            Top companies hiring for {roleTitle}
+          </h2>
+          <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+            {topCompanies.map((c) => (
+              <Link
+                key={`${c.name}-${c.slug ?? ''}`}
+                href={c.slug ? `/company/${c.slug}` : '#'}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 hover:border-slate-600"
+              >
+                <span className="font-semibold text-slate-100">{c.name}</span>
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">
+                  {c.count} roles
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-10 space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
         <h2 className="text-sm font-semibold text-slate-50">
