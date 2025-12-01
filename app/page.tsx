@@ -211,8 +211,8 @@ export default async function HomePage() {
             </h1>
             <p className="text-sm leading-relaxed text-slate-300">
               Six Figure Jobs surfaces high-paying, six-figure roles directly from ATS-powered
-              company job boards. No lowball ranges, no spam. Just verified $100k+ (and $200k+)
-              opportunities across engineering, product, data, and more—remote, hybrid, and on-site.
+              company job boards. AI-ranked and human-reviewed—no lowball ranges, no spam.
+              Verified $100k+ (and $200k+) opportunities across engineering, product, data, and more—remote, hybrid, and on-site.
             </p>
 
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
@@ -341,6 +341,10 @@ export default async function HomePage() {
                 >
                   Search $100k+ jobs
                 </button>
+
+                <div className="text-xs text-slate-400">
+                  AI search tips: Try “remote $100k engineer”, “$200k staff roles”, or “no-degree $100k jobs” to see curated results.
+                </div>
               </form>
             </div>
           </div>

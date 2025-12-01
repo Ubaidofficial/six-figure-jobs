@@ -15,14 +15,14 @@ const BASE_LISTING_URL =
   `${BASE_URL}/?sort=DateAdded&minSalary=100000` +
   `&showHybridJobs=true&showOnsiteJobs=true`
 
-// Keep this modest; RemoteRocketship is sensitive to scraping.
-const MAX_PAGES = 2
-const PAGE_DELAY_MS = 5000
+// Keep this very modest; RemoteRocketship is sensitive to scraping.
+const MAX_PAGES = 1
+const PAGE_DELAY_MS = 6000
 
 async function fetchWithBackoff(url: string, attempt = 1): Promise<Response | null> {
-  const maxAttempts = 5
-  const baseDelay = 2500
-  const delayMs = baseDelay * attempt + Math.random() * 1000
+  const maxAttempts = 3
+  const baseDelay = 4000
+  const delayMs = baseDelay * attempt + Math.random() * 1500
 
   try {
     const res = await fetch(url, {

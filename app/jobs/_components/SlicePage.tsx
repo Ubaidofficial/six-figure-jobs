@@ -231,7 +231,7 @@ export function SlicePage({ slice, data }: Props) {
           </p>
         )}
         {jobs.length === 0 ? (
-          <p className="py-6 text-sm text-slate-400">
+          <p className="py-4 text-sm text-slate-400">
             No jobs found for this slice yet. Try another salary band or region below.
           </p>
         ) : (
