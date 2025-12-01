@@ -24,6 +24,7 @@ export function SlicePage({ slice, data }: Props) {
   const roleSlug = slice.filters?.roleSlugs?.[0]
   const countryCode = (slice.filters as any)?.countryCode || (slice.filters as any)?.country
   const minAnnual = slice.filters?.minAnnual ?? null
+  const allowIndex = total >= 3
   const countryLabel =
     TARGET_COUNTRIES.find((c) => c.code.toLowerCase() === (countryCode ?? '').toLowerCase())?.label ||
     countryCode ||
@@ -95,6 +96,16 @@ export function SlicePage({ slice, data }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
+      {/* JSON-LD for breadcrumbs and list */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+
       <nav className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
         <Link href="/" className="hover:underline">
           Home
@@ -179,12 +190,17 @@ export function SlicePage({ slice, data }: Props) {
 
       {/* Job list */}
       <section id="jobs" className="scroll-mt-20">
-        <JobList jobs={jobs} />
-
-        {jobs.length === 0 && (
-          <p className="py-6 text-sm text-slate-400">
-            No jobs found for this slice yet.
+        {!allowIndex && (
+          <p className="mb-3 text-xs text-amber-300">
+            We’ll index this page once more live $100k+ jobs are available in this slice.
           </p>
+        )}
+        {jobs.length === 0 ? (
+          <p className="py-6 text-sm text-slate-400">
+            No jobs found for this slice yet. Try another salary band or region below.
+          </p>
+        ) : (
+          <JobList jobs={jobs} />
         )}
       </section>
 
