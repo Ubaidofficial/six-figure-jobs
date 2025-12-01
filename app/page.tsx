@@ -83,7 +83,7 @@ const REMOTE_REGIONS = [
   { value: 'uk-ireland', label: 'UK & Ireland' },
 ] as const
 
-const SALARY_BANDS = [
+export const SALARY_BANDS = [
   {
     min: 100_000,
     label: '$100k+',

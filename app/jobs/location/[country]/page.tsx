@@ -8,7 +8,7 @@ import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { formatRelativeTime } from '../../../../lib/utils/time'
 import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
-import { SALARY_BANDS } from '../../page'
+import { SALARY_BANDS } from '../../../page'
 
 const PAGE_SIZE = 40
 
