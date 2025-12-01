@@ -167,6 +167,30 @@ export default async function JobPage({
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      {/* Breadcrumbs */}
+      <nav className="mb-4 text-xs text-slate-400" aria-label="Breadcrumb">
+        <ol className="flex flex-wrap items-center gap-1">
+          <li>
+            <Link href="/" className="hover:text-slate-200 hover:underline">
+              Home
+            </Link>
+          </li>
+          <li className="px-1 text-slate-600">/</li>
+          <li>
+            <Link
+              href="/jobs/100k-plus"
+              className="hover:text-slate-200 hover:underline"
+            >
+              $100k+ jobs
+            </Link>
+          </li>
+          <li className="px-1 text-slate-600">/</li>
+          <li aria-current="page" className="text-slate-200">
+            {typedJob.title}
+          </li>
+        </ol>
+      </nav>
+
       <div className="grid gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         {/* ----------------------------- Sidebar ----------------------------- */}
         <aside className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-5">

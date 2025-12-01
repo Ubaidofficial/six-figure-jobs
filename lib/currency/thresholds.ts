@@ -10,6 +10,9 @@ export const HIGH_SALARY_THRESHOLDS: Record<string, number> = {
   AUD: 140000, // Australia (approx ~92k USD)
   SGD: 120000, // Singapore
   CHF: 110000, // Switzerland (High cost of living)
+  NOK: 1_000_000, // Norway (~$100k USD equivalent)
+  SEK: 1_000_000, // Sweden (~$100k USD equivalent)
+  DKK: 700_000,   // Denmark (~$100k USD equivalent)
 }
 
 const DEFAULT_THRESHOLD_USD = 100000

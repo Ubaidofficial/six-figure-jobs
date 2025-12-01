@@ -13,7 +13,7 @@ export function HomeFAQ() {
     },
     {
       q: 'How fresh is the job data?',
-      a: 'We scrape daily, expire stale roles, and prioritize the newest high-paying openings.',
+      a: 'We refresh twice daily, expire stale roles, and prioritize the newest high-paying openings.',
     },
   ]
 

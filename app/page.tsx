@@ -371,7 +371,7 @@ export default async function HomePage() {
             </div>
             <div className="mt-4 border-t border-slate-800 pt-4">
               <p className="text-[11px] leading-relaxed text-slate-500">
-                Jobs are scraped directly from company ATS feeds, deduped, and
+                Jobs are pulled directly from company ATS feeds, deduped, and
                 ranked by salary.
               </p>
             </div>

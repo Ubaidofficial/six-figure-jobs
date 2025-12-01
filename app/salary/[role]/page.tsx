@@ -277,7 +277,7 @@ export default async function SalaryRolePage(props: PageProps) {
         </h1>
         <p className="max-w-2xl text-sm text-slate-300">
           Live salary ranges for {roleName.toLowerCase()} roles, based on
-          ATS-scraped $100k+ job listings from top tech and SaaS companies.
+          Verified $100k+ job listings from top tech and SaaS companies.
           All data comes from real roles currently in the Remote100k index.
         </p>
 

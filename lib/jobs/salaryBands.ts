@@ -54,19 +54,19 @@ export const EUR_BANDS: SalaryBand[] = [
   { id: '100-199', label: '€90k–€179k',  min: 90_000,  max: 179_999 },
   { id: '200-299', label: '€180k–€269k', min: 180_000, max: 269_999 },
   { id: '300-399', label: '€270k–€359k', min: 270_000, max: 359_999 },
-  { id: '400-500', label: '€360k–€450k', min: 360_000, max: 450_000 },
+  { id: '400-500', label: '€360k–€449k', min: 360_000, max: 449_999 },
 ]
 
 export const AUD_BANDS: SalaryBand[] = [
   { id: '100-199', label: 'A$150k–A$299k', min: 150_000, max: 299_999 },
   { id: '200-299', label: 'A$300k–A$449k', min: 300_000, max: 449_999 },
-  { id: '300-399', label: 'A$450k–A$599k', min: 450_000, max: 599_999 },
-  { id: '400-500', label: 'A$600k–A$750k', min: 600_000, max: 750_000 },
+  { id: '300-399', label: 'A$480k–A$649k', min: 480_000, max: 649_999 },
+  { id: '400-500', label: 'A$650k–A$800k', min: 650_000, max: 800_000 },
 ]
 
 export const NZD_BANDS: SalaryBand[] = [
   { id: '100-199', label: 'NZ$150k–NZ$349k', min: 150_000, max: 349_999 },
-  { id: '200-299', label: 'NZ$350k–NZ$499k', min: 350_000, max: 499_999 },
+  { id: '200-299', label: 'NZ$360k–NZ$499k', min: 360_000, max: 499_999 },
   { id: '300-399', label: 'NZ$500k–NZ$649k', min: 500_000, max: 649_999 },
   { id: '400-500', label: 'NZ$650k–NZ$800k', min: 650_000, max: 800_000 },
 ]

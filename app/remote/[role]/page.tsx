@@ -122,7 +122,7 @@ function faqItems(roleName: string) {
     },
     {
       q: `How often do you refresh remote ${lower} jobs?`,
-      a: 'We scrape ATS sources daily, expire stale listings, and prioritize the newest high-paying openings.',
+      a: 'We refresh ATS sources daily, expire stale listings, and prioritize the newest high-paying openings.',
     },
     {
       q: `Do you include hybrid/onsite ${lower} roles?`,
