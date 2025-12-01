@@ -124,6 +124,7 @@ export function buildSliceMetadata(
   const title = buildSliceTitle(slice, ctx)
   const description = buildSliceDescription(slice, ctx)
   const canonical = buildCanonicalUrl(slice, ctx.page)
+  const allowIndex = typeof ctx.totalJobs === 'number' ? ctx.totalJobs >= 3 : true
 
   return {
     title,
@@ -131,6 +132,9 @@ export function buildSliceMetadata(
     alternates: {
       canonical,
     },
+    robots: allowIndex
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
     openGraph: {
       title,
       description,
