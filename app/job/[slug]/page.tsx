@@ -125,6 +125,11 @@ export default async function JobPage({
   const postedLabel = formatRelativeTime(
     typedJob.postedAt ?? typedJob.createdAt ?? typedJob.updatedAt ?? null,
   )
+  const isFeatured =
+    Boolean((typedJob as any)?.featured) ||
+    ((typedJob as any)?.featureExpiresAt
+      ? new Date((typedJob as any).featureExpiresAt).getTime() > Date.now()
+      : false)
 
   const requirements = parseArray(typedJob.requirementsJson)
   const benefits = parseArray(typedJob.benefitsJson)
@@ -393,6 +398,11 @@ export default async function JobPage({
                   </a>
                 </div>
               )}
+              {isFeatured && (
+                <div className="ml-4 inline-flex items-center rounded-full border border-amber-500/70 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold text-amber-200">
+                  ⭐ Featured listing
+                </div>
+              )}
             </div>
           </section>
 
@@ -492,30 +502,70 @@ export default async function JobPage({
 
               <ul className="space-y-3 text-sm">
                 {similarJobs.map((sj) => {
-          const sjSalary = buildSalaryText(sj)
+                  const sjSalary = buildSalaryText(sj)
                   const sjLocation = buildLocationText(sj)
+                  const sjPosted = formatRelativeTime(
+                    sj.postedAt ?? sj.createdAt ?? sj.updatedAt ?? null,
+                  )
+                  const sliceHref =
+                    sj.roleSlug && sj.countryCode
+                      ? `/jobs/${sj.roleSlug}/${sj.countryCode.toLowerCase()}/100k-plus`
+                      : sj.roleSlug
+                      ? `/jobs/${sj.roleSlug}/100k-plus`
+                      : '/jobs/100k-plus'
 
                   return (
                     <li
                       key={sj.id}
                       className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"
                     >
-                      <Link
-                        href={buildJobSlugHref(sj)}
-                        className="font-semibold text-slate-100 hover:underline"
-                      >
-                        {sj.title}
-                      </Link>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <Link
+                            href={buildJobSlugHref(sj)}
+                            className="font-semibold text-slate-100 hover:underline"
+                          >
+                            {sj.title}
+                          </Link>
 
-                      <div className="text-slate-300">
-                        {cleanCompanyName(
-                          sj.companyRef?.name || sj.company || '',
-                        )}
-                      </div>
+                          <div className="text-slate-300">
+                            {cleanCompanyName(
+                              sj.companyRef?.name || sj.company || '',
+                            )}
+                          </div>
 
-                      <div className="mt-1 text-xs text-slate-400">
-                        {sjLocation}
-                        {sjSalary && ` · ${sjSalary}`}
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+                            {sjLocation && (
+                              <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
+                                📍 {sjLocation}
+                              </span>
+                            )}
+                            {sjSalary && (
+                              <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
+                                💵 {sjSalary}
+                              </span>
+                            )}
+                            {sj.roleSlug && (
+                              <Link
+                                href={sliceHref}
+                                className="rounded-full bg-slate-900 px-2 py-0.5 text-blue-300 ring-1 ring-slate-800 hover:text-blue-200"
+                              >
+                                {prettyRole(sj.roleSlug)} roles →
+                              </Link>
+                            )}
+                            {sjPosted && (
+                              <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
+                                Posted {sjPosted}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Link
+                          href={buildJobSlugHref(sj)}
+                          className="inline-flex items-center justify-center rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold text-slate-100 hover:border-slate-500"
+                        >
+                          View role
+                        </Link>
                       </div>
                     </li>
                   )

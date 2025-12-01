@@ -23,6 +23,12 @@ export default function JobCard({ job }: { job: JobCardJob }) {
   const companyName =
     job.companyRef?.name ?? job.company ?? 'Unknown company'
 
+  const isFeatured =
+    Boolean((job as any)?.featured) ||
+    (job as any)?.featureExpiresAt
+      ? new Date((job as any).featureExpiresAt).getTime() > Date.now()
+      : false
+
   // Prefer DB logo first, fallback to Clearbit from website
   const logo = buildLogoUrl(
     job.companyRef?.logoUrl ?? job.companyLogo ?? null,
@@ -60,7 +66,13 @@ export default function JobCard({ job }: { job: JobCardJob }) {
     false
 
   return (
-    <article className="group rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-4 shadow-sm transition hover:border-slate-500/80 hover:bg-slate-900/80">
+    <article
+      className={`group rounded-2xl border px-4 py-4 shadow-sm transition hover:border-slate-500/80 hover:bg-slate-900/80 ${
+        isFeatured
+          ? 'border-amber-500/60 bg-slate-950/90 shadow-amber-500/20'
+          : 'border-slate-800 bg-slate-950/80'
+      }`}
+    >
       <div className="flex gap-4">
         {/* Logo — click→company */}
         {companySlug ? (
@@ -201,14 +213,18 @@ export default function JobCard({ job }: { job: JobCardJob }) {
             {category && <Badge>{category}</Badge>}
             {seniority && <Badge>{seniority}</Badge>}
 
-            {salaryText && (
-              <Badge highlight={isHighSalary}>💵 {salaryText}</Badge>
-            )}
+              {salaryText && (
+                <Badge highlight={isHighSalary || isFeatured}>
+                  💵 {salaryText}
+                </Badge>
+              )}
 
-            {benefits.map((b) => (
-              <Badge key={b}>🎁 {b}</Badge>
-            ))}
-          </div>
+              {isFeatured && <Badge strong>⭐ Featured</Badge>}
+
+              {benefits.map((b) => (
+                <Badge key={b}>🎁 {b}</Badge>
+              ))}
+            </div>
 
           {/* Snippet */}
           {snippet && (

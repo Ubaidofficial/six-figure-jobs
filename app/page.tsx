@@ -541,127 +541,67 @@ export default async function HomePage() {
 
       <section className="mt-16 border-t border-slate-800 pt-8">
         <h2 className="mb-4 text-sm font-semibold text-slate-400">
-          Popular searches
+          Popular $100k+ searches (remote, hybrid, on-site)
         </h2>
         <div className="grid gap-x-8 gap-y-2 text-xs text-slate-500 sm:grid-cols-2 md:grid-cols-4">
           <div className="space-y-2">
             <p className="font-medium text-slate-400">By Role</p>
-            <Link
-              href={buildJobsPath({
-                salaryMin: 100_000,
-                roleSlug: 'software-engineer',
-              })}
-              className="block hover:text-slate-300"
-            >
-              Software Engineer Jobs
+            <Link href="/jobs/software-engineer/100k-plus" className="block hover:text-slate-300">
+              Software Engineer Jobs ($100k+)
             </Link>
-            <Link
-              href={buildJobsPath({
-                salaryMin: 100_000,
-                roleSlug: 'senior-software-engineer',
-              })}
-              className="block hover:text-slate-300"
-            >
-              Senior Engineer Jobs
+            <Link href="/jobs/senior-software-engineer/100k-plus" className="block hover:text-slate-300">
+              Senior Engineer Jobs ($100k+)
             </Link>
-            <Link
-              href={buildJobsPath({
-                salaryMin: 100_000,
-                roleSlug: 'product-manager',
-              })}
-              className="block hover:text-slate-300"
-            >
-              Product Manager Jobs
+            <Link href="/jobs/product-manager/100k-plus" className="block hover:text-slate-300">
+              Product Manager Jobs ($100k+)
             </Link>
-            <Link
-              href={buildJobsPath({
-                salaryMin: 100_000,
-                roleSlug: 'data-engineer',
-              })}
-              className="block hover:text-slate-300"
-            >
-              Data Engineer Jobs
+            <Link href="/jobs/data-engineer/100k-plus" className="block hover:text-slate-300">
+              Data Engineer Jobs ($100k+)
             </Link>
           </div>
           <div className="space-y-2">
             <p className="font-medium text-slate-400">By Location</p>
-            <Link
-              href={buildJobsPath({ salaryMin: 100_000, countryCode: 'us' })}
-              className="block hover:text-slate-300"
-            >
-              Jobs in USA
+            <Link href="/jobs/us/100k-plus" className="block hover:text-slate-300">
+              $100k+ Jobs in USA
             </Link>
-            <Link
-              href={buildJobsPath({ salaryMin: 100_000, countryCode: 'gb' })}
-              className="block hover:text-slate-300"
-            >
-              Jobs in UK
+            <Link href="/jobs/gb/100k-plus" className="block hover:text-slate-300">
+              £75k+/£100k+ Jobs in UK
             </Link>
-            <Link
-              href={buildJobsPath({ salaryMin: 100_000, countryCode: 'ca' })}
-              className="block hover:text-slate-300"
-            >
-              Jobs in Canada
+            <Link href="/jobs/ca/100k-plus" className="block hover:text-slate-300">
+              $100k+/CA$ Jobs in Canada
             </Link>
-            <Link
-              href={buildJobsPath({ salaryMin: 100_000, remoteOnly: true })}
-              className="block hover:text-slate-300"
-            >
-              Remote Jobs
+            <Link href="/jobs/remote/100k-plus" className="block hover:text-slate-300">
+              Remote $100k+ Jobs
             </Link>
           </div>
           <div className="space-y-2">
-            <p className="font-medium text-slate-400">By Salary</p>
-            <Link
-              href={buildJobsPath({ salaryMin: 100_000 })}
-              className="block hover:text-slate-300"
-            >
+            <p className="font-medium text-slate-400">By Salary Band</p>
+            <Link href="/jobs/100k-plus" className="block hover:text-slate-300">
               $100k+ Jobs
             </Link>
-            <Link
-              href={buildJobsPath({ salaryMin: 200_000 })}
-              className="block hover:text-slate-300"
-            >
+            <Link href="/jobs/200k-plus" className="block hover:text-slate-300">
               $200k+ Jobs
             </Link>
-            <Link
-              href={buildJobsPath({ salaryMin: 300_000 })}
-              className="block hover:text-slate-300"
-            >
+            <Link href="/jobs/300k-plus" className="block hover:text-slate-300">
               $300k+ Jobs
             </Link>
-            <Link
-              href={buildJobsPath({ salaryMin: 400_000 })}
-              className="block hover:text-slate-300"
-            >
+            <Link href="/jobs/400k-plus" className="block hover:text-slate-300">
               $400k+ Jobs
             </Link>
           </div>
           <div className="space-y-2">
             <p className="font-medium text-slate-400">Top Companies</p>
-            <Link
-              href="/company/stripe"
-              className="block hover:text-slate-300"
-            >
+            <Link href="/company/stripe" className="block hover:text-slate-300">
               Stripe Jobs
             </Link>
-            <Link
-              href="/company/anthropic"
-              className="block hover:text-slate-300"
-            >
+            <Link href="/company/anthropic" className="block hover:text-slate-300">
               Anthropic Jobs
             </Link>
-            <Link
-              href="/company/airbnb"
-              className="block hover:text-slate-300"
-            >
+            <Link href="/company/airbnb" className="block hover:text-slate-300">
               Airbnb Jobs
             </Link>
-            <Link
-              href="/companies"
-              className="block hover:text-slate-300"
-            >
-              All Companies →
+            <Link href="/company/mongodb" className="block hover:text-slate-300">
+              MongoDB Jobs
             </Link>
           </div>
         </div>

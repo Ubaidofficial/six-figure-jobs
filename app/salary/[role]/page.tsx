@@ -18,6 +18,13 @@ const PAGE_SIZE = 50
 
 type SearchParams = Record<string, string | string[] | undefined>
 
+const BAND_MAP: Record<string, number> = {
+  '100k-plus': 100_000,
+  '200k-plus': 200_000,
+  '300k-plus': 300_000,
+  '400k-plus': 400_000,
+}
+
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -86,12 +93,26 @@ function formatMoney(value: number, currency = 'USD'): string {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ role: string }>
+  searchParams?: Promise<SearchParams>
 }): Promise<Metadata> {
   const { role } = await params
+  const sp = searchParams ? await resolveSearchParams(searchParams) : {}
   const roleSlug = role
   const roleName = prettyRole(roleSlug)
+  const bandSlug = typeof sp.band === 'string' ? sp.band : undefined
+  const minAnnual =
+    bandSlug && BAND_MAP[bandSlug] ? BAND_MAP[bandSlug] : 100_000
+  const bandLabel =
+    minAnnual >= 400_000
+      ? '$400k+'
+      : minAnnual >= 300_000
+      ? '$300k+'
+      : minAnnual >= 200_000
+      ? '$200k+'
+      : '$100k+'
 
   // Pull some salary stats for SEO description
   const raw = await prisma.job.findMany({
@@ -99,8 +120,8 @@ export async function generateMetadata({
       isExpired: false,
       roleSlug: roleSlug,
       OR: [
-        { maxAnnual: { gte: BigInt(100_000) } },
-        { minAnnual: { gte: BigInt(100_000) } },
+        { maxAnnual: { gte: BigInt(minAnnual) } },
+        { minAnnual: { gte: BigInt(minAnnual) } },
         { isHundredKLocal: true },
       ],
     },
@@ -112,7 +133,7 @@ export async function generateMetadata({
   })
 
   let description =
-    `Explore real-time ${roleName} salary data from $100k+ tech jobs. ` +
+    `Explore real-time ${roleName} salary data from ${bandLabel} tech jobs. ` +
     `See current ranges based on live ATS-powered job listings.`
 
   if (raw.length > 0) {
@@ -127,7 +148,7 @@ export async function generateMetadata({
       const max = values[values.length - 1]
       const mid = values[Math.floor(values.length / 2)]
       description =
-        `${roleName} salary guide using live $100k+ jobs. ` +
+        `${roleName} salary guide using live ${bandLabel} jobs. ` +
         `Typical base ranges from about ${formatMoney(
           min,
         )} to ${formatMoney(max)} / year, ` +
@@ -137,8 +158,8 @@ export async function generateMetadata({
     }
   }
 
-  const title = `${roleName} Salary Guide ($100k+ Tech Jobs) | Remote100k`
-  const canonical = `${SITE_URL}/salary/${roleSlug}`
+  const title = `${roleName} Salary Guide (${bandLabel} Tech Jobs) | Remote100k`
+  const canonical = `${SITE_URL}/salary/${roleSlug}${bandSlug ? `?band=${bandSlug}` : ''}`
 
   return {
     title,
@@ -175,6 +196,17 @@ export default async function SalaryRolePage(props: PageProps) {
   const roleName = prettyRole(roleSlug)
   const page = parsePage(sp)
   const basePath = `/salary/${roleSlug}`
+  const bandSlug = typeof sp.band === 'string' ? sp.band : undefined
+  const minAnnual =
+    bandSlug && BAND_MAP[bandSlug] ? BAND_MAP[bandSlug] : 100_000
+  const bandLabel =
+    minAnnual >= 400_000
+      ? '$400k+'
+      : minAnnual >= 300_000
+      ? '$300k+'
+      : minAnnual >= 200_000
+      ? '$200k+'
+      : '$100k+'
 
   // Live salary data for this role
   const raw = await prisma.job.findMany({
@@ -182,8 +214,8 @@ export default async function SalaryRolePage(props: PageProps) {
       isExpired: false,
       roleSlug: roleSlug,
       OR: [
-        { maxAnnual: { gte: BigInt(100_000) } },
-        { minAnnual: { gte: BigInt(100_000) } },
+        { maxAnnual: { gte: BigInt(minAnnual) } },
+        { minAnnual: { gte: BigInt(minAnnual) } },
         { isHundredKLocal: true },
       ],
     },

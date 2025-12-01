@@ -21,13 +21,6 @@ export function SlicePage({ slice, data }: Props) {
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL || 'https://six-figure-jobs.vercel.app'
 
-  const heading = slice.h1 || slice.title || defaultTitleFromSlug(slice.slug)
-  const description =
-    slice.description ||
-    defaultDescriptionFromSlug(slice.slug, slice.filters?.minAnnual ?? null)
-
-  const showingLabel = buildShowingLabel(total, slice.jobCount ?? null)
-
   const roleSlug = slice.filters?.roleSlugs?.[0]
   const countryCode = (slice.filters as any)?.countryCode || (slice.filters as any)?.country
   const minAnnual = slice.filters?.minAnnual ?? null
@@ -35,6 +28,12 @@ export function SlicePage({ slice, data }: Props) {
     TARGET_COUNTRIES.find((c) => c.code.toLowerCase() === (countryCode ?? '').toLowerCase())?.label ||
     countryCode ||
     null
+  const heading = slice.h1 || slice.title || defaultTitleFromSlug(slice.slug)
+  const description =
+    slice.description ||
+    defaultDescriptionFromSlug(slice.slug, slice.filters?.minAnnual ?? null, countryLabel)
+
+  const showingLabel = buildShowingLabel(total, slice.jobCount ?? null)
   const salaryBand = formatSalaryBandLabel(minAnnual ?? 100_000, countryCode)
   const roleLabel = roleSlug ? prettyRole(roleSlug) : null
 
@@ -155,6 +154,27 @@ export function SlicePage({ slice, data }: Props) {
           {countryLabel ? ` in ${countryLabel}` : ''}. Remote, hybrid, and on-site options from ATS feeds and trusted boards,
           refreshed daily and ranked by salary.
         </p>
+        <p className="mt-2 text-xs text-slate-400">
+          Need another region? Explore remote-only roles, adjacent cities, or sibling salary bands below.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-200">
+          {countryCode && roleSlug && (
+            <Link
+              href={`/jobs/${roleSlug}/remote/${(slice.filters as any)?.remoteRegion || '100k-plus'}`}
+              className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600"
+            >
+              🌎 Remote {roleLabel} roles
+            </Link>
+          )}
+          {roleSlug && (
+            <Link
+              href={`/jobs/${roleSlug}/remote/${(slice.filters as any)?.remoteRegion || '100k-plus'}`}
+              className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600"
+            >
+              Remote regions →
+            </Link>
+          )}
+        </div>
       </section>
 
       {/* Job list */}
@@ -196,42 +216,42 @@ export function SlicePage({ slice, data }: Props) {
       )}
 
       {relatedSalaryBands.length > 0 && (
-        <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-          <h2 className="mb-2 text-sm font-semibold text-slate-50">
-            Explore salary bands
-          </h2>
-          <div className="flex flex-wrap gap-2 text-xs text-slate-300">
-              {relatedSalaryBands.map((band) => {
-                const slug =
-                  band === 100_000
-                    ? '100k-plus'
-                    : band === 200_000
-                    ? '200k-plus'
-                    : band === 300_000
-                    ? '300k-plus'
-                    : '400k-plus'
-                const basePath = roleSlug
-                  ? countryCode
-                    ? `/jobs/${roleSlug}/${countryCode}/${slug}`
-                    : (slice.filters as any)?.remoteOnly || (slice.filters as any)?.remoteRegion
-                    ? `/jobs/${roleSlug}/remote/${slug}`
-                    : `/jobs/${roleSlug}/${slug}`
-                  : countryCode
-                    ? `/jobs/${countryCode}/${slug}`
-                    : `/jobs/${slug}`
+      <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+        <h2 className="mb-2 text-sm font-semibold text-slate-50">
+          Explore salary bands
+        </h2>
+        <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+          {relatedSalaryBands.map((band) => {
+            const slug =
+              band === 100_000
+                ? '100k-plus'
+                : band === 200_000
+                ? '200k-plus'
+                : band === 300_000
+                ? '300k-plus'
+                : '400k-plus'
+            const basePath = roleSlug
+              ? countryCode
+                ? `/jobs/${roleSlug}/${countryCode}/${slug}`
+                : (slice.filters as any)?.remoteOnly || (slice.filters as any)?.remoteRegion
+                ? `/jobs/${roleSlug}/remote/${slug}`
+                : `/jobs/${roleSlug}/${slug}`
+              : countryCode
+              ? `/jobs/${countryCode}/${slug}`
+              : `/jobs/${slug}`
 
-                return (
-                  <Link
-                    key={band}
-                    href={basePath}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 hover:border-slate-600"
-                  >
-                    💵 {formatSalaryBandLabel(band, countryCode)}
-                  </Link>
-                )
-              })}
-            </div>
-          </section>
+            return (
+              <Link
+                key={band}
+                href={basePath}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 hover:border-slate-600"
+              >
+                💵 {formatSalaryBandLabel(band, countryCode)}
+              </Link>
+            )
+          })}
+        </div>
+      </section>
       )}
 
       {topCompanies.length > 0 && (
@@ -313,7 +333,8 @@ function defaultTitleFromSlug(slug: string): string {
 
 function defaultDescriptionFromSlug(
   slug: string,
-  minAnnual: number | null
+  minAnnual: number | null,
+  countryLabel: string | null
 ): string | null {
   const clean = slug.replace(/^\/+|\/+$/g, '')
   const parts = clean.split('/').filter(Boolean)
@@ -326,8 +347,8 @@ function defaultDescriptionFromSlug(
     return '$100k+'
   })()
 
-  // Very simple heuristics – we only care about the salary band text.
-  return `Browse tech jobs paying ${salaryBand} at top companies worldwide.`
+  const loc = countryLabel ? ` in ${countryLabel}` : ''
+  return `Browse verified ${salaryBand} roles${loc}, including remote and hybrid options, refreshed daily from ATS and trusted boards.`
 }
 
 function buildShowingLabel(total: number, sliceJobCount: number | null): string | null {

@@ -1,0 +1,30 @@
+name: Daily Scrape
+
+on:
+  schedule:
+    - cron: "0 2,14 * * *" # twice daily UTC
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run daily scraper (boards + ATS)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          CLEARBIT_API_KEY: ${{ secrets.CLEARBIT_API_KEY }}
+          # add other required env vars as needed
+        run: npx tsx scripts/dailyScrapeV2.ts --mode=all --concurrency=6

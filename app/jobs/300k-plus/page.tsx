@@ -74,8 +74,62 @@ export default async function Jobs300kPage() {
         $300k+ Tech Jobs ({total.toLocaleString()})
       </h1>
       <p className="mb-6 text-sm text-slate-300">
-        Principal engineer and lead roles with $300k+ compensation.
+        Principal and lead-level roles with $300k+ compensation. Remote, hybrid, and on-site openings from verified companies, refreshed daily.
       </p>
+
+      <section className="mb-8 grid gap-3 md:grid-cols-3">
+        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Principal &amp; lead roles
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <Link href="/jobs/staff-software-engineer/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Staff/Principal Engineer $300k+
+            </Link>
+            <Link href="/jobs/engineering-manager/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Eng Manager $300k+
+            </Link>
+            <Link href="/jobs/product-manager/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Product Lead $300k+
+            </Link>
+            <Link href="/jobs/ml-engineer/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              ML/AI $300k+
+            </Link>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Salary guides
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <Link href="/salary/software-engineer?band=300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Software Engineer $300k+ guide
+            </Link>
+            <Link href="/salary/staff-software-engineer?band=300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Staff Engineer $300k+ guide
+            </Link>
+            <Link href="/salary/engineering-manager?band=300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Eng Manager $300k+ guide
+            </Link>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Top regions for $300k+
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <Link href="/jobs/software-engineer/us/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              US $300k+ roles
+            </Link>
+            <Link href="/jobs/software-engineer/remote/us-only/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Remote (US-only) $300k+
+            </Link>
+            <Link href="/jobs/software-engineer/remote/global/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Global remote $300k+
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {typedJobs.length === 0 ? (
         <p className="text-slate-400">No jobs found.</p>

@@ -74,8 +74,66 @@ export default async function Jobs200kPage() {
         $200k+ Tech Jobs ({total.toLocaleString()})
       </h1>
       <p className="mb-6 text-sm text-slate-300">
-        Senior and staff-level positions paying $200k or more annually.
+        Senior and staff-level positions paying $200k or more annually. Remote, hybrid, and on-site roles from verified company sources, refreshed daily.
       </p>
+
+      {/* SEO/internal links */}
+      <section className="mb-8 grid gap-3 md:grid-cols-3">
+        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Popular senior roles
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <Link href="/jobs/senior-software-engineer/200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Senior Software Engineer $200k+
+            </Link>
+            <Link href="/jobs/product-manager/200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Product Manager $200k+
+            </Link>
+            <Link href="/jobs/data-engineer/200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Data Engineer $200k+
+            </Link>
+            <Link href="/jobs/devops/200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              DevOps/SRE $200k+
+            </Link>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Salary guides
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <Link href="/salary/software-engineer?band=200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Software Engineer $200k+ guide
+            </Link>
+            <Link href="/salary/senior-software-engineer?band=200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Senior Engineer $200k+ guide
+            </Link>
+            <Link href="/salary/product-manager?band=200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Product Manager $200k+ guide
+            </Link>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Top regions for $200k+
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <Link href="/jobs/software-engineer/us/200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              US $200k+ roles
+            </Link>
+            <Link href="/jobs/software-engineer/remote/us-only/200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Remote (US-only) $200k+
+            </Link>
+            <Link href="/jobs/software-engineer/remote/europe/200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Remote Europe $200k+
+            </Link>
+            <Link href="/jobs/software-engineer/remote/global/200k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
+              Global remote $200k+
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {typedJobs.length === 0 ? (
         <p className="text-slate-400">No jobs found.</p>
