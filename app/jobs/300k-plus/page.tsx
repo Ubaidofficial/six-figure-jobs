@@ -74,7 +74,7 @@ export default async function Jobs300kPage() {
         $300k+ Tech Jobs ({total.toLocaleString()})
       </h1>
       <p className="mb-6 text-sm text-slate-300">
-        Principal and lead-level roles with $300k+ compensation. Remote, hybrid, and on-site openings from verified companies, refreshed daily.
+        Principal and lead-level roles with $300k+ compensation. Remote, hybrid, and on-site openings from verified companies, refreshed daily. Six-figure executive-track jobs for staff/principal engineers, EMs, and product leads.
       </p>
 
       <section className="mb-8 grid gap-3 md:grid-cols-3">

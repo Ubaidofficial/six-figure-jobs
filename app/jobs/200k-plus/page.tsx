@@ -74,7 +74,7 @@ export default async function Jobs200kPage() {
         $200k+ Tech Jobs ({total.toLocaleString()})
       </h1>
       <p className="mb-6 text-sm text-slate-300">
-        Senior and staff-level positions paying $200k or more annually. Remote, hybrid, and on-site roles from verified company sources, refreshed daily.
+        Senior and staff-level positions paying $200k or more annually. Remote, hybrid, and on-site six-figure roles from verified company sources, refreshed daily. Includes staff engineer, principal IC, and senior product/data leaders.
       </p>
 
       {/* SEO/internal links */}

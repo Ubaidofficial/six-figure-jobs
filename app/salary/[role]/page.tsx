@@ -158,6 +158,7 @@ export async function generateMetadata({
     }
   }
 
+  const allowIndex = raw.length >= 3
   const title = `${roleName} Salary Guide (${bandLabel} Tech Jobs) | Remote100k`
   const canonical = `${SITE_URL}/salary/${roleSlug}${bandSlug ? `?band=${bandSlug}` : ''}`
 
@@ -165,6 +166,9 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
+    robots: allowIndex
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
     openGraph: {
       title,
       description,
@@ -255,6 +259,7 @@ export default async function SalaryRolePage(props: PageProps) {
     : null
 
   const totalListings = raw.length
+  const allowIndex = totalListings >= 3
 
   // Jobs list for this role (live $100k+)
   const data = await queryJobs({
@@ -308,9 +313,7 @@ export default async function SalaryRolePage(props: PageProps) {
           {roleName} salary guide using $100k+ tech jobs
         </h1>
         <p className="max-w-2xl text-sm text-slate-300">
-          Live salary ranges for {roleName.toLowerCase()} roles, based on
-          Verified $100k+ job listings from top tech and SaaS companies.
-          All data comes from real roles currently in the Remote100k index.
+          Live six-figure salary ranges for {roleName.toLowerCase()} roles, based on verified $100k+ job listings from top tech and SaaS companies. Remote, hybrid, and on-site pay data—across USD and local currencies—updated regularly.
         </p>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -394,6 +397,11 @@ export default async function SalaryRolePage(props: PageProps) {
         <h2 className="text-sm font-semibold text-slate-50">
           Live $100k+ {roleName.toLowerCase()} jobs
         </h2>
+        {!allowIndex && (
+          <p className="text-xs text-amber-300">
+            We’ll index this page once more live $100k+ {roleName.toLowerCase()} jobs are available. Check back soon.
+          </p>
+        )}
 
         {jobs.length === 0 ? (
           <p className="text-sm text-slate-400">
