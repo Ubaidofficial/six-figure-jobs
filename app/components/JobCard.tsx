@@ -41,6 +41,10 @@ export default function JobCard({ job }: { job: JobCardJob }) {
 
   const location = buildLocation(job)
   const salaryText = buildSalaryText(job) // ← UNIFIED salary logic
+  const salaryDisplay =
+    salaryText && /\d/.test(salaryText) && !salaryText.includes('<')
+      ? salaryText
+      : null
   const snippet = buildSnippet(job)
 
   const seniority = inferSeniorityFromTitle(job.title)
@@ -213,9 +217,9 @@ export default function JobCard({ job }: { job: JobCardJob }) {
             {category && <Badge>{category}</Badge>}
             {seniority && <Badge>{seniority}</Badge>}
 
-              {salaryText && (
+              {salaryDisplay && (
                 <Badge highlight={isHighSalary || isFeatured}>
-                  💵 {salaryText}
+                  💵 {salaryDisplay}
                 </Badge>
               )}
 

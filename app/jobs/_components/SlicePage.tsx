@@ -61,7 +61,7 @@ export function SlicePage({ slice, data }: Props) {
   if (roleSlug) {
     relatedLinks.push({
       href: `/jobs/${roleSlug}/100k-plus`,
-      label: `More $100k+ ${prettyRole(roleSlug)} jobs`,
+      label: `$100k+ ${prettyRole(roleSlug)} jobs`,
     })
     relatedLinks.push({
       href: `/jobs/${roleSlug}/remote/100k-plus`,
@@ -75,7 +75,7 @@ export function SlicePage({ slice, data }: Props) {
       label: `$200k+ ${prettyRole(roleSlug)} jobs in ${countryCode.toUpperCase()}`,
     })
   } else {
-    relatedLinks.push({ href: '/jobs/200k-plus', label: '$200k+ roles' })
+    relatedLinks.push({ href: '/jobs/200k-plus', label: '$200k+ jobs' })
   }
   if (countryCode) {
     relatedLinks.push({

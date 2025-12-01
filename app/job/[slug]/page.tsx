@@ -715,18 +715,23 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
 
     links.push({
       href: `/jobs/${job.roleSlug}/${ccLower}/100k-plus`,
-      label: `More ${roleLabel} jobs paying $100k+ in ${job.countryCode}`,
+      label: `$100k+ ${roleLabel} jobs in ${job.countryCode}`,
     })
 
     links.push({
       href: `/jobs/${ccLower}/100k-plus`,
-      label: `All $100k+ jobs in ${job.countryCode}`,
+      label: `$100k+ jobs in ${job.countryCode}`,
+    })
+
+    links.push({
+      href: `/jobs/${job.roleSlug}/remote/100k-plus`,
+      label: `Remote $100k+ ${roleLabel} jobs`,
     })
   }
 
   links.push({
     href: '/jobs/100k-plus',
-    label: 'All $100k+ jobs on Remote100k',
+    label: 'All $100k+ jobs',
   })
 
   if (job.companyRef?.slug) {
