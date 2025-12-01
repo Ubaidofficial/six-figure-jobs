@@ -46,10 +46,27 @@ async function main() {
     { country: 'SG', citySlug: 'singapore' },
     { country: 'AU', citySlug: 'sydney' },
     { country: 'AU', citySlug: 'melbourne' },
+    // Major US hubs
     { country: 'US', citySlug: 'new-york' },
     { country: 'US', citySlug: 'san-francisco' },
     { country: 'US', citySlug: 'seattle' },
     { country: 'US', citySlug: 'austin' },
+    { country: 'US', citySlug: 'los-angeles' },
+    { country: 'US', citySlug: 'chicago' },
+    { country: 'US', citySlug: 'boston' },
+    { country: 'US', citySlug: 'denver' },
+    { country: 'US', citySlug: 'atlanta' },
+    { country: 'US', citySlug: 'dallas' },
+    { country: 'US', citySlug: 'houston' },
+    { country: 'US', citySlug: 'miami' },
+    { country: 'US', citySlug: 'washington-dc' },
+    { country: 'US', citySlug: 'san-diego' },
+    { country: 'US', citySlug: 'phoenix' },
+    { country: 'US', citySlug: 'raleigh' },
+    { country: 'US', citySlug: 'salt-lake-city' },
+    { country: 'US', citySlug: 'portland' },
+    { country: 'US', citySlug: 'minneapolis' },
+    { country: 'US', citySlug: 'charlotte' },
   ]
 
   for (const country of TARGET_COUNTRIES) {
