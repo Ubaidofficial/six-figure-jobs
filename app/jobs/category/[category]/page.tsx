@@ -1,137 +1,248 @@
+// app/jobs/category/[category]/page.tsx
+// Programmatic SEO page for broad role categories (e.g., engineering, product, data)
+
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { prisma } from '../../../../lib/prisma'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
+import { formatRelativeTime } from '../../../../lib/utils/time'
+import { LOCATIONS } from '../../page'
 
-export const revalidate = 300
+const PAGE_SIZE = 40
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sixfigurejobs.com'
-
-const CATEGORIES: Record<string, { label: string; emoji: string }> = {
-  engineering: { label: 'Engineering', emoji: '💻' },
-  product: { label: 'Product', emoji: '🧭' },
-  design: { label: 'Design', emoji: '🎨' },
-  data: { label: 'Data', emoji: '📊' },
-  marketing: { label: 'Marketing', emoji: '📣' },
-  sales: { label: 'Sales', emoji: '💼' },
-  devops: { label: 'DevOps', emoji: '⚙️' },
-  'ai-ml': { label: 'AI / ML', emoji: '🤖' },
+const CATEGORY_MAP: Record<
+  string,
+  { label: string; roleSlugs: string[] }
+> = {
+  engineering: {
+    label: 'Engineering',
+    roleSlugs: [
+      'software-engineer',
+      'backend',
+      'frontend',
+      'full-stack',
+      'mobile',
+      'ios',
+      'android',
+      'platform',
+      'systems',
+      'application',
+      'devops',
+      'sre',
+      'infrastructure',
+      'web-developer',
+    ],
+  },
+  product: {
+    label: 'Product',
+    roleSlugs: ['product-manager', 'product-owner', 'product'],
+  },
+  data: {
+    label: 'Data',
+    roleSlugs: ['data-scientist', 'data-engineer', 'analytics', 'data-analyst'],
+  },
+  design: {
+    label: 'Design',
+    roleSlugs: ['designer', 'design', 'ux', 'ui', 'product-designer'],
+  },
+  devops: {
+    label: 'DevOps',
+    roleSlugs: ['devops', 'sre', 'site-reliability'],
+  },
+  mlai: {
+    label: 'ML / AI',
+    roleSlugs: ['machine-learning', 'ml', 'ai', 'artificial-intelligence'],
+  },
+  sales: {
+    label: 'Sales',
+    roleSlugs: ['sales', 'account-executive', 'sdr', 'bdr'],
+  },
+  marketing: {
+    label: 'Marketing',
+    roleSlugs: ['marketing', 'growth', 'demand-generation', 'seo', 'performance'],
+  },
 }
 
-export async function generateStaticParams() {
-  return Object.keys(CATEGORIES).map(category => ({ category }))
+function resolveCategory(slug: string) {
+  const key = slug.toLowerCase().replace(/[^a-z0-9]+/g, '')
+  return CATEGORY_MAP[key]
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ category: string }> }): Promise<Metadata> {
+function faqItems(label: string) {
+  const lower = label.toLowerCase()
+  return [
+    {
+      q: `What qualifies as a high-paying ${lower} job?`,
+      a: 'We only list roles with published or inferred compensation of $100k+ (or the local equivalent) from ATS feeds and trusted boards.',
+    },
+    {
+      q: `Do you include remote and hybrid ${lower} jobs?`,
+      a: 'Yes. Every listing is tagged as remote, hybrid, or on-site. Use the remote filters and salary bands to find flexible $100k+ roles.',
+    },
+    {
+      q: `How fresh are these ${lower} roles?`,
+      a: 'We refresh ATS sources daily, expire stale jobs, and prioritize the newest $100k+ openings.',
+    },
+  ]
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string }>
+}): Promise<Metadata> {
   const { category } = await params
-  const info = CATEGORIES[category]
-  if (!info) return { title: 'Not Found' }
-
-  const { total } = await queryJobs({
-    industry: category,
-    minAnnual: 100_000,
-    pageSize: 1,
-  })
-
-  const title = total > 0
-    ? `${info.emoji} ${info.label} Jobs $100k+ - ${total.toLocaleString()} Positions | Six Figure Jobs`
-    : `${info.emoji} ${info.label} Jobs $100k+ | Six Figure Jobs`
-
-  const description = total > 0
-    ? `Find ${total.toLocaleString()} high-salary ${info.label.toLowerCase()} jobs paying $100k+. Top tech companies hiring ${info.label.toLowerCase()} professionals. Updated daily.`
-    : `High-salary ${info.label.toLowerCase()} positions paying $100k+ at top tech companies.`
+  const cfg = resolveCategory(category)
+  if (!cfg) return { title: 'Jobs | Six Figure Jobs' }
 
   return {
-    title,
-    description,
-    alternates: { canonical: `${SITE_URL}/jobs/category/${category}` },
-    openGraph: {
-      title,
-      description,
-      url: `${SITE_URL}/jobs/category/${category}`,
-      siteName: 'Six Figure Jobs',
-      type: 'website',
-      images: [
-        {
-          url: `${SITE_URL}/og-category-${category}.png`,
-          width: 1200,
-          height: 630,
-          alt: `${info.label} Jobs $100k+`,
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [`${SITE_URL}/og-category-${category}.png`],
-    },
+    title: `${cfg.label} jobs paying $100k+ | Six Figure Jobs`,
+    description: `Browse curated ${cfg.label.toLowerCase()} roles paying $100k+ across top companies. Remote, hybrid, and on-site.`,
   }
 }
 
-export default async function CategoryPage({ params }: { params: Promise<{ category: string }> }) {
+export default async function CategoryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ category: string }>
+  searchParams?: Promise<Record<string, string>>
+}) {
   const { category } = await params
-  const info = CATEGORIES[category]
-  if (!info) notFound()
+  const cfg = resolveCategory(category)
+  if (!cfg) {
+    return (
+      <main className="mx-auto max-w-4xl px-4 py-12">
+        <h1 className="text-xl font-semibold text-slate-50">Category not found</h1>
+      </main>
+    )
+  }
+
+  const sp = (await searchParams) || {}
+  const page = Math.max(1, Number(sp.page || '1') || 1)
 
   const { jobs, total } = await queryJobs({
-    industry: category,
+    roleSlugs: cfg.roleSlugs,
     minAnnual: 100_000,
-    pageSize: 40,
+    page,
+    pageSize: PAGE_SIZE,
+    sortBy: 'date',
   })
+
+  const totalPages = total === 0 ? 1 : Math.ceil(total / PAGE_SIZE)
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
-        <ol className="flex items-center gap-1">
-          <li><Link href="/">Home</Link></li>
-          <li className="px-1">/</li>
-          <li><Link href="/jobs/100k-plus">Jobs</Link></li>
-          <li className="px-1">/</li>
-          <li>{info.emoji} {info.label}</li>
-        </ol>
-      </nav>
+      <header className="mb-6 space-y-2">
+        <h1 className="text-2xl font-semibold text-slate-50">
+          {cfg.label} jobs paying $100k+
+        </h1>
+        <p className="text-sm text-slate-300">
+          Remote, hybrid, and on-site high-paying {cfg.label.toLowerCase()} roles from top companies.
+        </p>
+        <p className="text-xs text-slate-400">
+          Updated {formatRelativeTime(new Date())} — {total.toLocaleString()} open roles.
+        </p>
+      </header>
 
-      <h1 className="mb-4 text-2xl font-semibold text-slate-50">
-        {info.emoji} {info.label} $100k+ Jobs ({total.toLocaleString()})
-      </h1>
-      <p className="mb-6 text-sm text-slate-300">
-        High-salary {info.label.toLowerCase()} positions from top companies.
-      </p>
+      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+          Explore salary bands
+        </h2>
+        <div className="flex flex-wrap gap-2 text-xs">
+          {['100k-plus', '200k-plus', '300k-plus', '400k-plus'].map((band) => (
+            <Link
+              key={band}
+              href={`/jobs/${cfg.roleSlugs[0]}/${band}`}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200 hover:border-slate-600"
+            >
+              💵 {band.replace('-plus', 'k+')}
+            </Link>
+          ))}
+          <Link
+            href={`/jobs/${cfg.roleSlugs[0]}/remote/100k-plus`}
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-3 py-1.5 text-emerald-200 hover:border-emerald-500"
+          >
+            🌍 Remote $100k+
+          </Link>
+        </div>
+      </section>
+
+      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+          Popular slices
+        </h2>
+        <div className="flex flex-wrap gap-2 text-xs">
+          {LOCATIONS.map((loc) => (
+            <Link
+              key={loc.code}
+              href={
+                loc.code === 'remote'
+                  ? `/remote/${cfg.roleSlugs[0]}`
+                  : `/jobs/${cfg.roleSlugs[0]}/${loc.code}/100k-plus`
+              }
+              className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200 hover:border-slate-600"
+            >
+              <span>{loc.flag}</span>
+              <span>{loc.code === 'remote' ? 'Remote' : loc.label}</span>
+            </Link>
+          ))}
+          <Link
+            href={`/jobs/${cfg.roleSlugs[0]}/remote/200k-plus`}
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-3 py-1.5 text-emerald-200 hover:border-emerald-500"
+          >
+            $200k+ Remote
+          </Link>
+        </div>
+      </section>
 
       {jobs.length === 0 ? (
-        <p className="text-slate-400">No jobs found.</p>
+        <p className="text-sm text-slate-400">
+          No {cfg.label.toLowerCase()} roles meet the $100k+ filter yet. Check back soon.
+        </p>
       ) : (
-        <JobList jobs={jobs as JobWithCompany[]} />
+        <>
+          <JobList jobs={jobs as JobWithCompany[]} />
+          {totalPages > 1 && (
+            <nav className="mt-6 flex items-center justify-between text-xs text-slate-300">
+              <Link
+                href={page > 1 ? `?page=${page - 1}` : '#'}
+                className={`rounded-full px-3 py-2 ${
+                  page > 1 ? 'bg-slate-800 hover:bg-slate-700' : 'cursor-not-allowed bg-slate-900 text-slate-600'
+                }`}
+                aria-disabled={page <= 1}
+              >
+                Previous
+              </Link>
+              <span>
+                Page {page} of {totalPages}
+              </span>
+              <Link
+                href={page < totalPages ? `?page=${page + 1}` : '#'}
+                className={`rounded-full px-3 py-2 ${
+                  page < totalPages ? 'bg-slate-800 hover:bg-slate-700' : 'cursor-not-allowed bg-slate-900 text-slate-600'
+                }`}
+                aria-disabled={page >= totalPages}
+              >
+                Next
+              </Link>
+            </nav>
+          )}
+        </>
       )}
 
-      <section className="mt-12 rounded-xl border border-slate-800 bg-slate-950/50 p-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">Related Searches</h2>
-        <div className="grid gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
-          <Link href="/jobs/level/senior" className="text-blue-400 hover:underline">
-            Senior {info.label} Jobs
-          </Link>
-          <Link href="/jobs/level/lead" className="text-blue-400 hover:underline">
-            Lead {info.label} Jobs
-          </Link>
-          <Link href="/jobs/country/us" className="text-blue-400 hover:underline">
-            {info.label} Jobs in USA
-          </Link>
-          <Link href="/jobs/200k-plus" className="text-blue-400 hover:underline">
-            $200k+ {info.label} Jobs
-          </Link>
-          <Link href="/jobs/100k-plus" className="text-blue-400 hover:underline">
-            All $100k+ Jobs
-          </Link>
-          {Object.entries(CATEGORIES)
-            .filter(([c]) => c !== category)
-            .slice(0, 3)
-            .map(([c, cat]) => (
-              <Link key={c} href={`/jobs/category/${c}`} className="text-blue-400 hover:underline">
-                {cat.emoji} {cat.label} Jobs
-              </Link>
-            ))}
+      <section className="mt-10 space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          FAQs about high-paying {cfg.label.toLowerCase()} jobs
+        </h2>
+        <div className="space-y-3 text-sm text-slate-300">
+          {faqItems(cfg.label).map((item) => (
+            <div key={item.q}>
+              <p className="font-semibold text-slate-100">{item.q}</p>
+              <p className="text-slate-300">{item.a}</p>
+            </div>
+          ))}
         </div>
       </section>
     </main>

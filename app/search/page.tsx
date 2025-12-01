@@ -42,12 +42,18 @@ function buildSearchHref(sp: SearchParams, page: number): string {
   const q = getParam(sp, 'q')
   const role = getParam(sp, 'role')
   const location = getParam(sp, 'location')
+  const remoteMode = getParam(sp, 'remoteMode')
   const minSalary = getParam(sp, 'minSalary')
+  const remoteRegion = getParam(sp, 'remoteRegion')
+  const seniority = getParam(sp, 'seniority')
 
   if (q) params.set('q', q)
   if (role) params.set('role', role)
   if (location) params.set('location', location)
   if (minSalary) params.set('minSalary', minSalary)
+  if (remoteMode) params.set('remoteMode', remoteMode)
+  if (remoteRegion) params.set('remoteRegion', remoteRegion)
+  if (seniority) params.set('seniority', seniority)
   if (page > 1) params.set('page', String(page))
 
   const qs = params.toString()
@@ -57,6 +63,8 @@ function buildSearchHref(sp: SearchParams, page: number): string {
 function buildTitle(sp: SearchParams): string {
   const q = getParam(sp, 'q')
   const location = getParam(sp, 'location')
+  const remoteMode = getParam(sp, 'remoteMode')
+  const remoteRegion = getParam(sp, 'remoteRegion')
   const minSalary = Number(getParam(sp, 'minSalary') || '100000') || 100000
 
   const salaryLabel =
@@ -71,11 +79,17 @@ function buildTitle(sp: SearchParams): string {
   if (q && location) {
     return `${salaryLabel} ${q} jobs in ${location.toUpperCase()} | Remote100k`
   }
+  if (q && remoteRegion) {
+    return `${salaryLabel} ${q} jobs (${remoteRegion}) | Remote100k`
+  }
   if (q) {
     return `${salaryLabel} ${q} jobs | Remote100k`
   }
   if (location) {
     return `${salaryLabel} jobs in ${location.toUpperCase()} | Remote100k`
+  }
+  if (remoteRegion) {
+    return `${salaryLabel} remote jobs (${remoteRegion}) | Remote100k`
   }
   return `${salaryLabel} tech jobs search | Remote100k`
 }
@@ -116,6 +130,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const q = getParam(sp, 'q')?.trim() || ''
   const role = getParam(sp, 'role')?.trim() || ''
   const location = getParam(sp, 'location')?.trim() || ''
+  const remoteMode = getParam(sp, 'remoteMode')?.trim() || ''
+  const remoteRegion = getParam(sp, 'remoteRegion')?.trim() || ''
+  const seniority = getParam(sp, 'seniority')?.trim() || ''
   const minSalaryRaw = Number(getParam(sp, 'minSalary') || '100000')
   const page = Math.max(1, Number(getParam(sp, 'page') || '1') || 1)
 
@@ -160,6 +177,22 @@ export default async function SearchPage({ searchParams }: PageProps) {
     }
   }
 
+  if (remoteMode === 'remote' || remoteMode === 'hybrid' || remoteMode === 'onsite') {
+    andConditions.push({ remoteMode })
+  }
+
+  if (remoteRegion) {
+    andConditions.push({ remoteRegion })
+  }
+
+  if (seniority) {
+    andConditions.push({
+      roleInference: {
+        seniority: seniority,
+      },
+    })
+  }
+
   const where: any =
     andConditions.length > 0
       ? { isExpired: false, AND: andConditions }
@@ -191,7 +224,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
       {/* Search Form */}
       <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/80 p-6">
         <form action="/search" method="GET" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-6">
             {/* Search Query */}
             <div className="md:col-span-2">
               <label htmlFor="q" className="mb-1.5 block text-xs font-medium text-slate-400">
@@ -224,7 +257,29 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 <option value="GB">United Kingdom</option>
                 <option value="CA">Canada</option>
                 <option value="DE">Germany</option>
+                <option value="IE">Ireland</option>
+                <option value="CH">Switzerland</option>
+                <option value="SG">Singapore</option>
                 <option value="AU">Australia</option>
+                <option value="NZ">New Zealand</option>
+              </select>
+            </div>
+
+            {/* Work arrangement */}
+            <div>
+              <label htmlFor="remoteMode" className="mb-1.5 block text-xs font-medium text-slate-400">
+                Work arrangement
+              </label>
+              <select
+                id="remoteMode"
+                name="remoteMode"
+                defaultValue={remoteMode}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="">Any</option>
+                <option value="remote">Remote</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="onsite">On-site</option>
               </select>
             </div>
 
@@ -245,6 +300,48 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 <option value="250000">$250k+</option>
                 <option value="300000">$300k+</option>
                 <option value="400000">$400k+</option>
+              </select>
+            </div>
+
+            {/* Remote region */}
+            <div>
+              <label htmlFor="remoteRegion" className="mb-1.5 block text-xs font-medium text-slate-400">
+                Remote region
+              </label>
+              <select
+                id="remoteRegion"
+                name="remoteRegion"
+                defaultValue={remoteRegion}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="">Any</option>
+                <option value="global">Global</option>
+                <option value="us-only">US only</option>
+                <option value="canada">Canada</option>
+                <option value="emea">EMEA</option>
+                <option value="apac">APAC</option>
+                <option value="uk-ireland">UK & Ireland</option>
+              </select>
+            </div>
+
+            {/* Seniority */}
+            <div>
+              <label htmlFor="seniority" className="mb-1.5 block text-xs font-medium text-slate-400">
+                Seniority
+              </label>
+              <select
+                id="seniority"
+                name="seniority"
+                defaultValue={seniority}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="">Any</option>
+                <option value="entry">Entry</option>
+                <option value="mid">Mid</option>
+                <option value="senior">Senior</option>
+                <option value="lead">Lead</option>
+                <option value="director">Director</option>
+                <option value="vp">VP</option>
               </select>
             </div>
           </div>

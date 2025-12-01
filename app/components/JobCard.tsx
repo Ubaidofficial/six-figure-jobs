@@ -5,6 +5,8 @@ import type { ReactNode } from 'react'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
 import { buildSalaryText } from '../../lib/jobs/salary' // ← unified helper
+import { formatRelativeTime } from '../../lib/utils/time'
+import { buildLogoUrl } from '../../lib/companies/logo'
 
 /** Extend queryJobs result with UI-only optional fields */
 export type JobCardJob = JobWithCompany & {
@@ -21,8 +23,11 @@ export default function JobCard({ job }: { job: JobCardJob }) {
   const companyName =
     job.companyRef?.name ?? job.company ?? 'Unknown company'
 
-  // Prefer DB logo first, fallback to scraped
-  const logo = job.companyRef?.logoUrl ?? job.companyLogo ?? null
+  // Prefer DB logo first, fallback to Clearbit from website
+  const logo = buildLogoUrl(
+    job.companyRef?.logoUrl ?? job.companyLogo ?? null,
+    job.companyRef?.website ?? null,
+  )
 
   const companySlug = job.companyRef?.slug ?? null
   const companySize = job.companyRef?.sizeBucket || null
@@ -39,9 +44,9 @@ export default function JobCard({ job }: { job: JobCardJob }) {
   const isRemotePrimary =
     job.remote === true || job.remoteMode === 'remote'
 
-  const postedLabel = job.postedAt
-    ? `Posted ${new Date(job.postedAt).toLocaleDateString()}`
-    : null
+  const postedLabel = formatRelativeTime(
+    job.postedAt ?? job.createdAt ?? job.updatedAt ?? null,
+  )
 
   const benefits = parseJsonArray(job.benefitsJson).slice(0, 3)
 
@@ -153,7 +158,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
             <div className="flex flex-col items-end gap-2 text-xs">
               {postedLabel && (
                 <span className="text-[11px] text-slate-400">
-                  {postedLabel}
+                  Posted {postedLabel}
                 </span>
               )}
               <div className="flex flex-wrap justify-end gap-2">

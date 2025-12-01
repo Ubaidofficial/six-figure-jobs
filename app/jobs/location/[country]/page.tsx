@@ -1,0 +1,217 @@
+// app/jobs/location/[country]/page.tsx
+// Programmatic SEO page for country or remote-only high-salary jobs
+
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { prisma } from '../../../../lib/prisma'
+import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
+import JobList from '../../../components/JobList'
+import { formatRelativeTime } from '../../../../lib/utils/time'
+import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
+import { SALARY_BANDS } from '../../page'
+
+const PAGE_SIZE = 40
+
+const LOCATION_MAP: Record<
+  string,
+  { label: string; countryCode?: string; remoteOnly?: boolean }
+> = {
+  remote: { label: 'Remote only', remoteOnly: true },
+}
+
+for (const c of TARGET_COUNTRIES) {
+  LOCATION_MAP[c.code.toLowerCase()] = {
+    label: c.label,
+    countryCode: c.code,
+  }
+}
+
+function resolveLocation(slug: string) {
+  const key = slug.toLowerCase()
+  return LOCATION_MAP[key]
+}
+
+function faqItems(label: string) {
+  return [
+    {
+      q: `Are these ${label} jobs verified at $100k+?`,
+      a: 'We surface roles with published or inferred $100k+ compensation (local equivalent) and expire stale listings quickly.',
+    },
+    {
+      q: `Do you include remote and hybrid ${label} roles?`,
+      a: 'Yes. Every job is tagged as remote, hybrid, or on-site. Use the filters to focus on flexible roles in your region.',
+    },
+    {
+      q: `How often are ${label} jobs refreshed?`,
+      a: 'We check ATS feeds daily, dedupe board jobs, and keep the freshest $100k+ roles on top.',
+    },
+  ]
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ country: string }>
+}): Promise<Metadata> {
+  const { country } = await params
+  const loc = resolveLocation(country)
+  if (!loc) return { title: 'Jobs | Six Figure Jobs' }
+
+  const title = loc.remoteOnly
+    ? 'Remote jobs paying $100k+ | Six Figure Jobs'
+    : `${loc.label} jobs paying $100k+ | Six Figure Jobs`
+
+  const description = loc.remoteOnly
+    ? 'Browse remote $100k+ roles across engineering, product, data, and more.'
+    : `Browse $100k+ roles in ${loc.label} across engineering, product, data, and more.`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+    },
+  }
+}
+
+export default async function LocationPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ country: string }>
+  searchParams?: Promise<Record<string, string>>
+}) {
+  const { country } = await params
+  const loc = resolveLocation(country)
+
+  if (!loc) {
+    return (
+      <main className="mx-auto max-w-4xl px-4 py-12">
+        <h1 className="text-xl font-semibold text-slate-50">Location not found</h1>
+      </main>
+    )
+  }
+
+  const sp = (await searchParams) || {}
+  const page = Math.max(1, Number(sp.page || '1') || 1)
+
+  const filters: any = {
+    minAnnual: 100_000,
+    page,
+    pageSize: PAGE_SIZE,
+    sortBy: 'date',
+  }
+
+  if (loc.remoteOnly) {
+    filters.remoteMode = 'remote'
+  } else if (loc.countryCode) {
+    filters.countryCode = loc.countryCode
+  }
+
+  const { jobs, total } = await queryJobs(filters)
+
+  const totalPages = total === 0 ? 1 : Math.ceil(total / PAGE_SIZE)
+
+  const title = loc.remoteOnly
+    ? 'Remote jobs paying $100k+'
+    : `${loc.label} jobs paying $100k+`
+
+  return (
+    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      <header className="mb-6 space-y-2">
+        <h1 className="text-2xl font-semibold text-slate-50">{title}</h1>
+        <p className="text-sm text-slate-300">
+          High-paying roles ({loc.remoteOnly ? 'remote only' : loc.label}) across engineering, product,
+          data, design, sales, marketing, and more.
+        </p>
+        <p className="text-xs text-slate-400">
+          Updated {formatRelativeTime(new Date())} — {total.toLocaleString()} open roles.
+        </p>
+      </header>
+
+      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+          Refine by salary
+        </h2>
+        <div className="flex flex-wrap gap-2 text-xs">
+          {SALARY_BANDS.map((band) => (
+            <Link
+              key={band.slug}
+              href={`?page=1&min=${band.min}`}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200 hover:border-slate-600"
+            >
+              💵 {band.label}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+          Popular roles
+        </h2>
+        <div className="flex flex-wrap gap-2 text-xs">
+          {['software-engineer', 'data-scientist', 'product-manager', 'designer'].map((role) => (
+            <Link
+              key={role}
+              href={`/jobs/${role}/${loc.remoteOnly ? 'remote' : country}/100k-plus`}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200 hover:border-slate-600"
+            >
+              {role.replace(/-/g, ' ')}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {jobs.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          No roles meet the $100k+ filter here yet. Check back soon.
+        </p>
+      ) : (
+        <>
+          <JobList jobs={jobs as JobWithCompany[]} />
+          {totalPages > 1 && (
+            <nav className="mt-6 flex items-center justify-between text-xs text-slate-300">
+              <Link
+                href={page > 1 ? `?page=${page - 1}` : '#'}
+                className={`rounded-full px-3 py-2 ${
+                  page > 1 ? 'bg-slate-800 hover:bg-slate-700' : 'cursor-not-allowed bg-slate-900 text-slate-600'
+                }`}
+                aria-disabled={page <= 1}
+              >
+                Previous
+              </Link>
+              <span>
+                Page {page} of {totalPages}
+              </span>
+              <Link
+                href={page < totalPages ? `?page=${page + 1}` : '#'}
+                className={`rounded-full px-3 py-2 ${
+                  page < totalPages ? 'bg-slate-800 hover:bg-slate-700' : 'cursor-not-allowed bg-slate-900 text-slate-600'
+                }`}
+                aria-disabled={page >= totalPages}
+              >
+                Next
+              </Link>
+            </nav>
+          )}
+        </>
+      )}
+
+      <section className="mt-10 space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          FAQs about $100k+ roles in {loc.label}
+        </h2>
+        <div className="space-y-3 text-sm text-slate-300">
+          {faqItems(loc.label).map((item) => (
+            <div key={item.q}>
+              <p className="font-semibold text-slate-100">{item.q}</p>
+              <p className="text-slate-300">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </main>
+  )
+}

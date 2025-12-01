@@ -14,6 +14,8 @@ export type SliceType =
   | 'role_country'
   | 'role_remote'
   | 'company_role'
+  | 'role_country_salary'
+  | 'role_remote_salary'
 
 export interface SliceFilters {
   // Role-related
@@ -212,6 +214,29 @@ export async function upsertRoleCountrySlice(options: {
     baseRoleSlug: options.baseRoleSlug,
     country: options.country,
     seniority: options.seniority,
+  })
+}
+
+export async function upsertRoleCountrySalarySlice(options: {
+  roleSlug: string
+  country: string
+  minSalaryUsd: number
+}) {
+  return upsertSlice('role_country_salary', {
+    roleSlug: options.roleSlug,
+    country: options.country,
+    minSalaryUsd: options.minSalaryUsd,
+  })
+}
+
+export async function upsertRoleRemoteSalarySlice(options: {
+  roleSlug: string
+  minSalaryUsd: number
+}) {
+  return upsertSlice('role_remote_salary', {
+    roleSlug: options.roleSlug,
+    isRemote: true,
+    minSalaryUsd: options.minSalaryUsd,
   })
 }
 

@@ -151,6 +151,7 @@ async function resolveCompany(input: ScrapedJobInput): Promise<ResolvedCompany |
     rawName: input.rawCompanyName,
     source: input.source,
     websiteUrl: input.companyWebsiteUrl ?? null,
+    linkedinUrl: input.companyLinkedInUrl ?? null,
     applyUrl: input.applyUrl ?? input.url ?? null,
     explicitAtsProvider: input.explicitAtsProvider ?? null,
     explicitAtsUrl: input.explicitAtsUrl ?? null,

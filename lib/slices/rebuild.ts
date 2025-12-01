@@ -9,6 +9,8 @@ import {
   upsertCompanySlice,
   upsertCompanyRoleSlice,
   upsertSalaryBandSlice,
+  upsertRoleCountrySalarySlice,
+  upsertRoleRemoteSalarySlice,
 } from './engine'
 
 const jobClient = (prisma as any).job
@@ -21,6 +23,8 @@ export interface SliceRebuildSummary {
   companySlices: number
   companyRoleSlices: number
   salaryBandSlices: number
+  roleCountrySalarySlices: number
+  roleRemoteSalarySlices: number
 }
 
 /**
@@ -36,6 +40,8 @@ export async function rebuildAllSlices(): Promise<SliceRebuildSummary> {
     companySlices: 0,
     companyRoleSlices: 0,
     salaryBandSlices: 0,
+    roleCountrySalarySlices: 0,
+    roleRemoteSalarySlices: 0,
   }
 
   // ---------------------------------------------------------------------------
@@ -89,6 +95,21 @@ export async function rebuildAllSlices(): Promise<SliceRebuildSummary> {
   await upsertRemoteSlice()
   summary.remoteSlices = 1
 
+  // Also capture remote role slices for salary bands
+  const remoteRoleRows = await jobClient.findMany({
+    where: {
+      isExpired: false,
+      roleSlug: { not: null },
+      OR: [{ remote: true }, { remoteMode: 'remote' }],
+    },
+    distinct: ['roleSlug'],
+    select: {
+      roleSlug: true,
+      baseRoleSlug: true,
+      seniority: true,
+    },
+  } as any)
+
   // ---------------------------------------------------------------------------
   // 4) Role + Country slices (distinct [roleSlug, country])
   // ---------------------------------------------------------------------------
@@ -116,6 +137,33 @@ export async function rebuildAllSlices(): Promise<SliceRebuildSummary> {
       seniority: rc.seniority ?? undefined,
     })
     summary.roleCountrySlices++
+  }
+
+  // ---------------------------------------------------------------------------
+  // 4b) Role + Country + Salary bands (100k/200k/300k/400k)
+  // ---------------------------------------------------------------------------
+  const salaryBands = [100_000, 200_000, 300_000, 400_000]
+  for (const rc of roleCountryRows) {
+    if (!rc.roleSlug || !rc.country) continue
+    for (const band of salaryBands) {
+      await upsertRoleCountrySalarySlice({
+        roleSlug: rc.roleSlug,
+        country: rc.country,
+        minSalaryUsd: band,
+      })
+      summary.roleCountrySalarySlices++
+    }
+  }
+  // 4c) Role + Remote + Salary bands
+  for (const rr of remoteRoleRows) {
+    if (!rr.roleSlug) continue
+    for (const band of salaryBands) {
+      await upsertRoleRemoteSalarySlice({
+        roleSlug: rr.roleSlug,
+        minSalaryUsd: band,
+      })
+      summary.roleRemoteSalarySlices++
+    }
   }
 
   // ---------------------------------------------------------------------------

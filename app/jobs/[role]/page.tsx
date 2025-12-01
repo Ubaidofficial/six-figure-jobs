@@ -53,10 +53,10 @@ export async function generateMetadata({
   const isRemote = remoteCount > total * 0.5
   
   const title = isRemote
-    ? `${roleTitle} Jobs (${salaryRange}) - ${total} Remote Roles`
-    : `${roleTitle} Jobs - ${total} Positions Paying ${salaryRange}`
+    ? `${roleTitle} Jobs (${salaryRange}) - ${total} Remote Roles | $100k+`
+    : `${roleTitle} Jobs - ${total} Positions Paying ${salaryRange} | $100k+`
   
-  const description = `Find ${total} ${roleTitle.toLowerCase()} jobs paying ${salaryRange}. Remote and on-site positions at top tech companies. Updated daily.`
+  const description = `Find ${total} ${roleTitle.toLowerCase()} jobs paying ${salaryRange}, verified at $100k+ (or local equivalent). Remote, hybrid, and on-site positions at top tech companies. Updated daily.`
 
   return {
     title,
@@ -105,6 +105,21 @@ export default async function RolePage({
   const salary300kPlus = jobs.filter(j => j.minAnnual && j.minAnnual >= 300000n).length
   const salary400kPlus = jobs.filter(j => j.minAnnual && j.minAnnual >= 400000n).length
 
+  const faqs = [
+    {
+      q: `Are these ${roleTitle} jobs really $100k+?`,
+      a: 'Yes. We include roles with published or inferred compensation of $100k+ (or local equivalent) from ATS feeds and vetted boards.',
+    },
+    {
+      q: `How often are ${roleTitle} listings refreshed?`,
+      a: 'We scrape ATS sources daily, expire stale jobs, and keep the newest high-paying roles on top.',
+    },
+    {
+      q: `Do you include remote and hybrid ${roleTitle} roles?`,
+      a: 'Yes. Use remote/hybrid filters on the search page or check the remote slices for this role.',
+    },
+  ]
+
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
@@ -118,10 +133,10 @@ export default async function RolePage({
       </nav>
 
       <h1 className="mb-4 text-2xl font-semibold text-slate-50">
-        {roleTitle} Jobs ({total.toLocaleString()})
+        {roleTitle} Jobs ({total.toLocaleString()}) — $100k+
       </h1>
       <p className="mb-6 text-sm text-slate-300">
-        High-salary {roleTitle.toLowerCase()} positions paying $100k+ from top companies.
+        Verified high-salary {roleTitle.toLowerCase()} positions paying $100k+ (or local equivalent) from ATS and trusted boards.
       </p>
 
       <section className="mb-6 rounded-xl border border-slate-800 bg-slate-950/50 p-4">
@@ -200,6 +215,20 @@ export default async function RolePage({
           <Link href="/jobs/100k-plus" className="text-blue-400 hover:underline">
             All $100k+ Jobs
           </Link>
+        </div>
+      </section>
+
+      <section className="mt-10 space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          FAQs about high-paying {roleTitle} jobs
+        </h2>
+        <div className="space-y-3 text-sm text-slate-300">
+          {faqs.map((item) => (
+            <div key={item.q}>
+              <p className="font-semibold text-slate-100">{item.q}</p>
+              <p className="text-slate-300">{item.a}</p>
+            </div>
+          ))}
         </div>
       </section>
     </main>

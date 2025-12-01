@@ -34,6 +34,12 @@ export interface BoardJobInput {
   /** Raw company name as scraped from the board */
   rawCompanyName: string | null
 
+  /** Optional website */
+  companyWebsiteUrl?: string | null
+
+  /** Optional LinkedIn URL */
+  companyLinkedInUrl?: string | null
+
   /** Optional "best guess" location text ("Remote – US", "London, UK", etc.) */
   locationText?: string | null
 
@@ -106,6 +112,7 @@ export async function ingestBoardJob(
     // Company info
     rawCompanyName: job.rawCompanyName,
     companyWebsiteUrl: job.companyWebsiteUrl ?? null,
+    companyLinkedInUrl: job.companyLinkedInUrl ?? null,
 
     // URLs
     url: job.url,

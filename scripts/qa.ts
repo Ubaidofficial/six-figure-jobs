@@ -142,8 +142,8 @@ async function checkDatabase() {
   log(
     'Database',
     'Salary Outliers',
-    outliers === 0 ? 'pass' : 'warn',
-    outliers === 0 ? 'None' : `${outliers} jobs > $1M`
+    outliers === 0 ? 'pass' : outliers <= 2 ? 'warn' : 'fail',
+    outliers === 0 ? 'None' : `${outliers} jobs > $1M (run fixSalaryOutliers.ts)`
   )
 
   // Jobs with any annual salary populated
@@ -178,6 +178,55 @@ async function checkDatabase() {
     `${jobsWithCurrency.toLocaleString()}/${jobsWithAnnual.toLocaleString()} jobs with salary have currency (${currencyCoveragePct.toFixed(
       1
     )}%)`
+  )
+
+  // Company logos + websites (to enable Clearbit fallback)
+  const companiesNeedingLogo = await prisma.company.count({
+    where: {
+      logoUrl: null,
+      website: { not: null },
+    },
+  })
+  log(
+    'Database',
+    'Companies missing logo but with website',
+    companiesNeedingLogo === 0 ? 'pass' : companiesNeedingLogo < 50 ? 'warn' : 'fail',
+    companiesNeedingLogo === 0
+      ? 'All covered'
+      : `${companiesNeedingLogo} companies can be backfilled (Clearbit)`,
+  )
+
+  // Job description coverage (detail page quality)
+  const jobsWithDesc = await prisma.job.count({
+    where: {
+      isExpired: false,
+      descriptionHtml: { not: null },
+    },
+  })
+  const descCoveragePct =
+    totalJobs === 0 ? 0 : (jobsWithDesc / totalJobs) * 100
+  log(
+    'Database',
+    'Job description coverage',
+    descCoveragePct >= 80 ? 'pass' : descCoveragePct >= 60 ? 'warn' : 'fail',
+    `${jobsWithDesc.toLocaleString()}/${totalJobs.toLocaleString()} (${descCoveragePct.toFixed(
+      1,
+    )}%) have descriptionHtml`,
+  )
+
+  // LinkedIn coverage for companies
+  const companiesWithLinkedIn = await prisma.company.count({
+    where: {
+      linkedinUrl: { not: null },
+    },
+  })
+  const linkedInPct =
+    totalCompanies === 0 ? 0 : (companiesWithLinkedIn / totalCompanies) * 100
+  log(
+    'Database',
+    'Company LinkedIn coverage',
+    linkedInPct >= 50 ? 'pass' : linkedInPct >= 30 ? 'warn' : 'fail',
+    `${companiesWithLinkedIn}/${totalCompanies} (${linkedInPct.toFixed(1)}%) have LinkedIn URLs`,
   )
 
   // -----------------------------------------------------------------------

@@ -5,6 +5,10 @@ import { upsertBoardJob } from './_boardHelpers'
 const BOARD = 'trawle'
 const BASE_URL = 'https://trawle.com'
 const JOBS_URL = `${BASE_URL}/jobs`
+const FALLBACK_URLS = [
+  'https://trawle.com',
+  'https://trawle.com/remote-jobs',
+]
 
 async function fetchHtml(url: string): Promise<string> {
   const res = await fetch(url, {
@@ -28,7 +32,21 @@ function absolute(url: string): string {
 export async function scrapeTrawle(): Promise<void> {
   console.log(`▶ Scraping ${BOARD}…`)
 
-  const html = await fetchHtml(JOBS_URL)
+  let html: string | null = null
+  for (const url of [JOBS_URL, ...FALLBACK_URLS]) {
+    try {
+      html = await fetchHtml(url)
+      break
+    } catch (err) {
+      console.warn(`[${BOARD}] Failed ${url}: ${(err as any)?.message ?? err}`)
+    }
+  }
+
+  if (!html) {
+    console.warn(`[${BOARD}] No HTML fetched, skipping`)
+    return
+  }
+
   const $ = cheerio.load(html)
 
   // Initial guess at job cards

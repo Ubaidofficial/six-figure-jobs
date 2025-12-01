@@ -17,6 +17,7 @@ export type JobQueryInput = {
   countryCode?: string
   citySlug?: string
   remoteOnly?: boolean
+  remoteRegion?: string
   companySlug?: string
   isHundredKLocal?: boolean
   maxJobAgeDays?: number
@@ -158,6 +159,10 @@ export function buildWhere(
 
   if (filters.remoteOnly) {
     where.remote = true
+  }
+
+  if (filters.remoteRegion) {
+    where.remoteRegion = filters.remoteRegion
   }
 
   if (filters.remoteMode) {

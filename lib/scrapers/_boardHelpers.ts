@@ -1,5 +1,5 @@
 // lib/scrapers/_boardHelpers.ts
-import { prisma } from '../prisma'
+import { ingestBoardJob, type BoardJobInput as IngestJobInput } from '../jobs/ingestBoardJob'
 
 export type BoardJobInput = {
   board: string
@@ -10,14 +10,8 @@ export type BoardJobInput = {
   location?: string | null
   salaryText?: string | null
   remote?: boolean
-}
-
-function slugifyCompany(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/&/g, 'and')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+  companyWebsiteUrl?: string | null
+  companyLinkedInUrl?: string | null
 }
 
 export async function upsertBoardJob(input: BoardJobInput) {
@@ -30,45 +24,27 @@ export async function upsertBoardJob(input: BoardJobInput) {
     location,
     salaryText,
     remote,
+    companyWebsiteUrl,
+    companyLinkedInUrl,
   } = input
 
-  const companySlug = slugifyCompany(company || 'unknown-company')
-
-  const companyRecord = await prisma.company.upsert({
-    where: { slug: companySlug },
-    create: {
-      name: company,
-      slug: companySlug,
-      website: null,
-      source: undefined as any, // ignore – not in schema
-    } as any,
-    update: {},
-  })
-
-  const jobId = `board:${board}:${externalId}`
-  const source = `board:${board}`
-
-  const data: any = {
-    id: jobId,
+  // Delegate to the central board ingest so we get dedupe + salary flags
+  const job: IngestJobInput = {
+    externalId,
     title,
-    company,
-    companyId: companyRecord.id,
-    source,
     url: applyUrl,
+    rawCompanyName: company,
+    companyWebsiteUrl: companyWebsiteUrl ?? null,
+    companyLinkedInUrl: companyLinkedInUrl ?? null,
+    locationText: location ?? null,
+    isRemote: remote ?? null,
     applyUrl,
-    locationRaw: location ?? null,
-    remote: remote ?? null,
-    salaryRaw: salaryText ?? null,
-    // Leave salaryMin/Max/null – your normalization scripts will fill in.
-    isHighSalary: false,
-    isHundredKLocal: false,
-    isExpired: false,
-    lastSeenAt: new Date(),
+    descriptionText: salaryText ?? null, // allow salary parsing from text if available
+    raw: {
+      sourceBoard: board,
+      salaryText: salaryText ?? null,
+    },
   }
 
-  await prisma.job.upsert({
-    where: { id: jobId },
-    update: data,
-    create: data,
-  })
+  return ingestBoardJob(board, job)
 }

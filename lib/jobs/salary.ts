@@ -9,6 +9,9 @@ export type SalaryJob = {
   salaryMax?: number | bigint | null
   salaryCurrency?: string | null
   salaryRaw?: string | null
+  countryCode?: string | null
+  remote?: boolean | null
+  remoteMode?: string | null
 }
 
 /* -------------------------------------------------------------
@@ -27,8 +30,34 @@ function getCurrencySymbol(code?: string | null) {
     case 'SGD': return 'S$'
     case 'JPY': return '¥'
     case 'INR': return '₹'
+    case 'CHF': return 'CHF '
+    case 'NZD': return 'NZ$'
     default: return `${c} `
   }
+}
+
+function currencyForCountry(code?: string | null): string | null {
+  if (!code) return null
+  const c = code.toUpperCase()
+  const map: Record<string, string> = {
+    US: 'USD',
+    CA: 'CAD',
+    GB: 'GBP',
+    UK: 'GBP',
+    IE: 'EUR',
+    DE: 'EUR',
+    FR: 'EUR',
+    ES: 'EUR',
+    IT: 'EUR',
+    NL: 'EUR',
+    BE: 'EUR',
+    CH: 'CHF',
+    SG: 'SGD',
+    AU: 'AUD',
+    NZ: 'NZD',
+    IN: 'INR',
+  }
+  return map[c] ?? null
 }
 
 /* -------------------------------------------------------------
@@ -73,6 +102,16 @@ export function buildSalaryText(job: SalaryJob): string | null {
   if (max !== null && (!Number.isFinite(max) || max <= 0)) max = null
   if (min && min > 2_000_000) min = null
   if (max && max > 2_000_000) max = null
+
+  // If this looks like an on-site job and currency mismatches country, prefer country currency for display
+  const expectedCurrency = currencyForCountry(job.countryCode)
+  const isRemote =
+    job.remote === true || (job.remoteMode && job.remoteMode.toLowerCase() === 'remote')
+  if (!isRemote && expectedCurrency && cur && cur.toUpperCase() !== expectedCurrency) {
+    cur = expectedCurrency
+  } else if (!cur && expectedCurrency) {
+    cur = expectedCurrency
+  }
 
   const symbol = getCurrencySymbol(cur)
   const f = fmtCompact

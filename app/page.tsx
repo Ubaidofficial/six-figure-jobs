@@ -6,15 +6,18 @@ import { prisma } from '../lib/prisma'
 import { queryJobs, type JobWithCompany } from '../lib/jobs/queryJobs'
 import JobList from './components/JobList'
 import { buildJobsPath } from '../lib/jobs/searchSlug'
+import { SEARCH_ROLE_OPTIONS } from '../lib/roles/searchRoles'
+import { TARGET_COUNTRIES } from '../lib/seo/regions'
+import { HomeFAQ } from './pageFAQ'
 
 export const revalidate = 600
 
 export const metadata: Metadata = {
-  title: '$100k+ Remote & Hybrid Tech Jobs | Six Figure Jobs',
+  title: 'Verified $100k+ Remote & Hybrid Tech Jobs | Six Figure Jobs',
   description:
-    'Discover curated $100k+ tech jobs from top companies. Remote, hybrid, and on-site roles in engineering, product, data, and more. Updated daily from ATS feeds.',
+    'Only verified $100k+ (or local equivalent) tech roles from ATS and trusted boards. Remote, hybrid, and on-site openings across engineering, product, data, design, and more. Updated daily.',
   openGraph: {
-    title: '$100k+ Remote & Hybrid Tech Jobs | Six Figure Jobs',
+    title: 'Verified $100k+ Remote & Hybrid Tech Jobs | Six Figure Jobs',
     description:
       'Curated high-salary tech jobs from top companies. No lowball ranges, no spam.',
     type: 'website',
@@ -34,12 +37,50 @@ const ROLE_CATEGORIES = [
   { slug: 'marketing', label: 'Marketing', emoji: '📣', color: 'red' },
 ] as const
 
-const LOCATIONS = [
+export const CATEGORY_LINKS = [
+  { href: '/jobs/category/engineering', label: 'Engineering', emoji: '💻' },
+  { href: '/jobs/category/product', label: 'Product', emoji: '🧭' },
+  { href: '/jobs/category/data', label: 'Data', emoji: '📊' },
+  { href: '/jobs/category/design', label: 'Design', emoji: '🎨' },
+  { href: '/jobs/category/devops', label: 'DevOps', emoji: '⚙️' },
+  { href: '/jobs/category/mlai', label: 'ML / AI', emoji: '🤖' },
+  { href: '/jobs/category/sales', label: 'Sales', emoji: '💼' },
+  { href: '/jobs/category/marketing', label: 'Marketing', emoji: '📣' },
+] as const
+
+// Deduped, extended role list for the search dropdown
+const ROLE_OPTIONS = (() => {
+  const seen = new Set<string>()
+  const result: typeof SEARCH_ROLE_OPTIONS = []
+  for (const opt of SEARCH_ROLE_OPTIONS) {
+    if (seen.has(opt.slug)) continue
+    seen.add(opt.slug)
+    result.push(opt)
+  }
+  return result
+})()
+
+export const LOCATIONS = [
   { code: 'us', label: 'United States', flag: '🇺🇸' },
   { code: 'gb', label: 'United Kingdom', flag: '🇬🇧' },
   { code: 'ca', label: 'Canada', flag: '🇨🇦' },
   { code: 'de', label: 'Germany', flag: '🇩🇪' },
+  { code: 'ie', label: 'Ireland', flag: '🇮🇪' },
+  { code: 'ch', label: 'Switzerland', flag: '🇨🇭' },
+  { code: 'sg', label: 'Singapore', flag: '🇸🇬' },
+  { code: 'au', label: 'Australia', flag: '🇦🇺' },
+  { code: 'nz', label: 'New Zealand', flag: '🇳🇿' },
   { code: 'remote', label: 'Remote Only', flag: '🌍' },
+] as const
+
+const REMOTE_REGIONS = [
+  { value: '', label: 'Any remote region' },
+  { value: 'global', label: 'Global' },
+  { value: 'us-only', label: 'US only' },
+  { value: 'canada', label: 'Canada' },
+  { value: 'emea', label: 'EMEA' },
+  { value: 'apac', label: 'APAC' },
+  { value: 'uk-ireland', label: 'UK & Ireland' },
 ] as const
 
 const SALARY_BANDS = [
@@ -206,7 +247,7 @@ export default async function HomePage() {
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
                     >
                       <option value="">All roles</option>
-                      {ROLE_CATEGORIES.map((role) => (
+                      {ROLE_OPTIONS.map((role) => (
                         <option key={role.slug} value={role.slug}>
                           {role.emoji} {role.label}
                         </option>
@@ -230,6 +271,45 @@ export default async function HomePage() {
                       {LOCATIONS.map((loc) => (
                         <option key={loc.code} value={loc.code}>
                           {loc.flag} {loc.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="remoteMode"
+                      className="mb-1.5 block text-[11px] font-medium text-slate-400"
+                    >
+                      Work arrangement
+                    </label>
+                    <select
+                      id="remoteMode"
+                      name="remoteMode"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="">Any</option>
+                      <option value="remote">Remote</option>
+                      <option value="hybrid">Hybrid</option>
+                      <option value="onsite">On-site</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="remoteRegion"
+                      className="mb-1.5 block text-[11px] font-medium text-slate-400"
+                    >
+                      Remote region
+                    </label>
+                    <select
+                      id="remoteRegion"
+                      name="remoteRegion"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
+                    >
+                      {REMOTE_REGIONS.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
                         </option>
                       ))}
                     </select>
@@ -303,32 +383,30 @@ export default async function HomePage() {
         <h2 className="mb-3 text-sm font-semibold text-slate-50">
           Browse by role
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {roleCounts.map((role) => (
-            <Link
-              key={role.slug}
-              href={buildJobsPath({
-                salaryMin: 100_000,
-                roleSlug: role.slug,
-              })}
-              className="group inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-slate-600 hover:bg-slate-900"
-            >
-              <span>{role.emoji}</span>
-              <span className="text-slate-200 group-hover:text-white">
-                {role.label}
-              </span>
-              {role.count > 0 && (
-                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">
-                  {role.count.toLocaleString()}
+          <div className="flex flex-wrap gap-2">
+            {CATEGORY_LINKS.map((role) => (
+              <Link
+                key={role.href}
+                href={role.href}
+                className="group inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-slate-600 hover:bg-slate-900"
+              >
+                <span>{role.emoji}</span>
+                <span className="text-slate-200 group-hover:text-white">
+                  {role.label}
                 </span>
-              )}
-            </Link>
-          ))}
+              </Link>
+            ))}
           <Link
             href="/companies"
             className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-300 transition-colors hover:border-slate-500"
           >
             🏢 Browse companies →
+          </Link>
+          <Link
+            href="/jobs/location/remote"
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500"
+          >
+            🌍 Remote $100k+ roles
           </Link>
         </div>
       </section>
@@ -343,11 +421,8 @@ export default async function HomePage() {
               key={loc.code}
               href={
                 loc.code === 'remote'
-                  ? buildJobsPath({ salaryMin: 100_000, remoteOnly: true })
-                  : buildJobsPath({
-                      salaryMin: 100_000,
-                      countryCode: loc.code,
-                    })
+                  ? '/jobs/location/remote'
+                  : `/jobs/location/${loc.code}`
               }
               className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-slate-600 hover:bg-slate-900"
             >
@@ -355,6 +430,19 @@ export default async function HomePage() {
               <span className="text-slate-200">{loc.label}</span>
             </Link>
           ))}
+          {/* Salary band quick links */}
+          <Link
+            href="/jobs/location/us?min=200000"
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500"
+          >
+            🇺🇸 $200k+ in US
+          </Link>
+          <Link
+            href="/jobs/location/gb?min=150000"
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500"
+          >
+            🇬🇧 £150k+ in UK
+          </Link>
         </div>
       </section>
 
@@ -454,6 +542,8 @@ export default async function HomePage() {
           </div>
         )}
       </section>
+
+      <HomeFAQ />
 
       <section className="mt-16 border-t border-slate-800 pt-8">
         <h2 className="mb-4 text-sm font-semibold text-slate-400">

@@ -76,7 +76,7 @@ function buildPageHref(
 function buildFilterHref(
   basePath: string,
   searchParams: SearchParams,
-  updates: Partial<{ country: string | null; min: number }>
+  updates: Partial<{ country: string | null; min: number; remoteRegion: string | null }>
 ): string {
   const params = new URLSearchParams()
 
@@ -111,6 +111,24 @@ function buildFilterHref(
 
   const query = params.toString()
   return query ? `${basePath}?${query}` : basePath
+}
+
+function faqItems(roleName: string) {
+  const lower = roleName.toLowerCase()
+  return [
+    {
+      q: `Are these remote ${lower} jobs really $100k+?`,
+      a: 'Yes. We only include roles with published or inferred compensation at $100k+ (or local equivalent) from ATS feeds and trusted boards.',
+    },
+    {
+      q: `How often do you refresh remote ${lower} jobs?`,
+      a: 'We scrape ATS sources daily, expire stale listings, and prioritize the newest high-paying openings.',
+    },
+    {
+      q: `Do you include hybrid/onsite ${lower} roles?`,
+      a: 'This page focuses on remote. For hybrid/onsite, use role pages or the work-arrangement filter in search.',
+    },
+  ]
 }
 
 function buildJobListJsonLd(
@@ -195,6 +213,7 @@ export async function generateMetadata({
   const page = parsePage(sp)
 
   const selectedCountry = normalizeStringParam(sp.country)
+  const selectedRegion = normalizeStringParam(sp.remoteRegion)
   const minParam = normalizeStringParam(sp.min)
   const minAnnual =
     minParam && !Number.isNaN(Number(minParam))
@@ -204,6 +223,7 @@ export async function generateMetadata({
   const result = await queryJobs({
     roleSlugs: [roleSlug],
     countryCode: selectedCountry || undefined,
+    remoteRegion: selectedRegion || undefined,
     minAnnual,
     page,
     pageSize: 1,
@@ -217,7 +237,7 @@ export async function generateMetadata({
       ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | Remote100k`
       : `${baseTitle} | Remote100k`
 
-  const description = `Search remote ${roleName} jobs paying $100k+ across top tech and SaaS companies. Filter by country and salary band.`
+  const description = `Search remote ${roleName} jobs paying $100k+ across top tech and SaaS companies. Filter by country, remote region, and salary band.`
 
   return {
     title,
@@ -260,6 +280,7 @@ export default async function RemoteRolePage({
   const basePath = `/remote/${roleSlug}`
 
   const selectedCountry = normalizeStringParam(sp.country)
+  const selectedRegion = normalizeStringParam(sp.remoteRegion)
   const minParam = normalizeStringParam(sp.min)
   const minAnnual =
     minParam && !Number.isNaN(Number(minParam))
@@ -269,6 +290,7 @@ export default async function RemoteRolePage({
   const data = await queryJobs({
     roleSlugs: [roleSlug],
     countryCode: selectedCountry || undefined,
+    remoteRegion: selectedRegion || undefined,
     minAnnual,
     page,
     pageSize: PAGE_SIZE,
@@ -331,7 +353,8 @@ export default async function RemoteRolePage({
         </h1>
         <p className="text-sm text-slate-300">
           Find remote and flexible {roleName} roles paying at least
-          $100k in local currency. Filter by country and salary band.
+          $100k in local currency. Filter by country, remote region,
+          and salary band.
         </p>
       </header>
 
@@ -368,6 +391,42 @@ export default async function RemoteRolePage({
                 {cc.toUpperCase()}
               </Link>
             ))}
+          </div>
+
+          {/* Remote region filter */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-slate-400">Remote region:</span>
+            {['', 'global', 'us-only', 'canada', 'emea', 'apac', 'uk-ireland'].map((slug) => {
+              const label =
+                slug === ''
+                  ? 'Any'
+                  : slug === 'global'
+                  ? 'Global'
+                  : slug === 'us-only'
+                  ? 'US only'
+                  : slug === 'canada'
+                  ? 'Canada'
+                  : slug === 'emea'
+                  ? 'EMEA'
+                  : slug === 'apac'
+                  ? 'APAC'
+                  : 'UK & Ireland'
+              return (
+                <Link
+                  key={slug || 'any'}
+                  href={buildFilterHref(basePath, sp, {
+                    remoteRegion: slug || null,
+                  })}
+                  className={`rounded-full px-2 py-1 ${
+                    (selectedRegion || '') === slug
+                      ? 'bg-slate-200 text-slate-900'
+                      : 'bg-slate-900 text-slate-200'
+                  }`}
+                >
+                  {label}
+                </Link>
+              )
+            })}
           </div>
 
           {/* Salary filter */}
@@ -450,6 +509,20 @@ export default async function RemoteRolePage({
           )}
         </>
       )}
+
+      <section className="mt-10 space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          FAQs about remote {roleName} jobs paying $100k+
+        </h2>
+        <div className="space-y-3 text-sm text-slate-300">
+          {faqItems(roleName).map((item) => (
+            <div key={item.q}>
+              <p className="font-semibold text-slate-100">{item.q}</p>
+              <p className="text-slate-300">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* -------------------------------- JSON-LD -------------------------------- */}
       <script

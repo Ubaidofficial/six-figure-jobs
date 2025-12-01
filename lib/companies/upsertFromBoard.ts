@@ -17,6 +17,9 @@ export interface BoardCompanyInput {
   /** Optional website URL if the board provides it */
   websiteUrl?: string | null
 
+  /** Optional LinkedIn URL if the board provides it */
+  linkedinUrl?: string | null
+
   /** Optional apply URL (often points to ATS) */
   applyUrl?: string | null
 
@@ -154,6 +157,10 @@ async function ensureUniqueSlug(baseName: string): Promise<string> {
 export async function upsertCompanyFromBoard(
   input: BoardCompanyInput,
 ): Promise<any | null> {
+  const inferredWebsite =
+    input.websiteUrl ??
+    (input.applyUrl ? inferWebsiteFromUrl(input.applyUrl) : null)
+
   const cleanedFromNormalizer = cleanCompanyName(input.rawName ?? null)
   const cleanedName = sanitizeBoardCompanyName(
     cleanedFromNormalizer,
@@ -212,8 +219,12 @@ export async function upsertCompanyFromBoard(
     }
 
     // Map websiteUrl → website (real Prisma field)
-    if (input.websiteUrl && !existing.website) {
-      updateData.website = input.websiteUrl
+    if (inferredWebsite && !existing.website) {
+      updateData.website = inferredWebsite
+    }
+
+    if (input.linkedinUrl && !existing.linkedinUrl) {
+      updateData.linkedinUrl = input.linkedinUrl
     }
 
     if (Object.keys(updateData).length > 0) {
@@ -236,11 +247,23 @@ export async function upsertCompanyFromBoard(
 
   if (atsProvider) data.atsProvider = atsProvider
   if (atsUrl) data.atsUrl = atsUrl
-  if (input.websiteUrl) data.website = input.websiteUrl
+  if (inferredWebsite) data.website = inferredWebsite
+  if (input.linkedinUrl) data.linkedinUrl = input.linkedinUrl
 
   const created = await companyClient.create({
     data,
   } as any)
 
   return created
+}
+
+function inferWebsiteFromUrl(applyUrl: string): string | null {
+  try {
+    const u = new URL(applyUrl)
+    const host = u.hostname.replace(/^www\./i, '')
+    if (!host) return null
+    return `https://${host}`
+  } catch {
+    return null
+  }
 }

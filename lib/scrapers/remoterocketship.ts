@@ -15,8 +15,9 @@ const BASE_LISTING_URL =
   `${BASE_URL}/?sort=DateAdded&minSalary=100000` +
   `&showHybridJobs=true&showOnsiteJobs=true`
 
-// Keep this modest; RemoteRocketship is more sensitive to scraping.
-const MAX_PAGES = 3
+// Keep this modest; RemoteRocketship is sensitive to scraping.
+const MAX_PAGES = 2
+const PAGE_DELAY_MS = 3000
 
 async function fetchWithBackoff(url: string, attempt = 1): Promise<Response | null> {
   const maxAttempts = 3
@@ -198,5 +199,8 @@ export default async function scrapeRemoteRocketship() {
     jobsUpdated,
     jobsSkipped,
     companiesSeen: companies.size,
+    }
+
+    // polite delay between pages to reduce 429s
+    await new Promise((r) => setTimeout(r, PAGE_DELAY_MS))
   }
-}

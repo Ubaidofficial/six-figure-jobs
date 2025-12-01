@@ -14,6 +14,9 @@ import {
   queryJobs,
   type JobWithCompany,
 } from '../../../lib/jobs/queryJobs'
+import { formatRelativeTime } from '../../../lib/utils/time'
+import { buildLogoUrl } from '../../../lib/companies/logo'
+import { buildSalaryText } from '../../../lib/jobs/salary'
 
 export const revalidate = 3600
 
@@ -98,7 +101,10 @@ export default async function JobPage({
   const rawCompanyName = company?.name || typedJob.company || 'Company'
   const companyName = cleanCompanyName(rawCompanyName)
 
-  const logoUrl = company?.logoUrl ?? typedJob.companyLogo ?? null
+  const logoUrl = buildLogoUrl(
+    company?.logoUrl ?? typedJob.companyLogo ?? null,
+    company?.website ?? null,
+  )
 
   // Safely read LinkedIn URL even if TS types are lagging behind schema
   const companyLinkedIn =
@@ -113,10 +119,12 @@ export default async function JobPage({
   const isRemote =
     typedJob.remote === true || typedJob.remoteMode === 'remote'
   const locationText = buildLocationText(typedJob)
-  const isHundredK = isHundredKJob(typedJob)
   const seniority = inferSeniorityFromTitle(typedJob.title)
   const category = inferCategoryFromRoleSlug(typedJob.roleSlug)
   const remoteModeLabel = getRemoteModeLabel(typedJob)
+  const postedLabel = formatRelativeTime(
+    typedJob.postedAt ?? typedJob.createdAt ?? typedJob.updatedAt ?? null,
+  )
 
   const requirements = parseArray(typedJob.requirementsJson)
   const benefits = parseArray(typedJob.benefitsJson)
@@ -203,15 +211,6 @@ export default async function JobPage({
               </div>
             )}
 
-            {company?.description && (
-              <p className="mt-4 text-xs leading-relaxed text-slate-300">
-                {truncateText(
-                  stripTags(decodeHtmlEntities(company.description)),
-                  550,
-                )}
-              </p>
-            )}
-
             <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
               {company?.website && (
                 <a
@@ -246,6 +245,40 @@ export default async function JobPage({
               )}
             </div>
           </div>
+
+          {/* Company metadata badges */}
+          <div className="flex flex-wrap justify-center gap-2 text-[11px] text-slate-200">
+            {company?.sizeBucket && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                👥 {company.sizeBucket} employees
+              </span>
+            )}
+            {company?.foundedYear && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                🏛️ Founded {company.foundedYear}
+              </span>
+            )}
+            {company?.industry && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                🏷️ {company.industry}
+              </span>
+            )}
+          </div>
+
+          {/* Company description */}
+          {company?.description && (
+            <div className="mt-2 space-y-2 rounded-xl border border-slate-800 bg-slate-900/50 p-3 text-left text-xs leading-relaxed text-slate-200">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                About {companyName}
+              </p>
+              <div className="whitespace-pre-line">
+                {truncateText(
+                  stripTags(decodeHtmlEntities(company.description)),
+                  1200,
+                )}
+              </div>
+            </div>
+          )}
         </aside>
 
         {/* --------------------------- Job Content --------------------------- */}
@@ -278,12 +311,6 @@ export default async function JobPage({
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
-                  {isHundredK && (
-                    <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 font-semibold text-emerald-300 ring-1 ring-emerald-500/40">
-                      💰 100k+ base local
-                    </span>
-                  )}
-
                   {salaryText && (
                     <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
                       💵 {salaryText}
@@ -322,10 +349,9 @@ export default async function JobPage({
                     </span>
                   )}
 
-                  {typedJob.postedAt && (
+                  {postedLabel && (
                     <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                      📅 Posted{' '}
-                      {typedJob.postedAt.toLocaleDateString()}
+                      📅 Posted {postedLabel}
                     </span>
                   )}
                 </div>
@@ -442,7 +468,7 @@ export default async function JobPage({
 
               <ul className="space-y-3 text-sm">
                 {similarJobs.map((sj) => {
-                  const sjSalary = buildSalaryText(sj)
+          const sjSalary = buildSalaryText(sj)
                   const sjLocation = buildLocationText(sj)
 
                   return (
@@ -539,38 +565,6 @@ function parseArray(raw?: string | null): string[] {
   } catch {
     return []
   }
-}
-
-function isHundredKJob(job: any): boolean {
-  const min = job.minAnnual != null ? Number(job.minAnnual) : null
-  const max = job.maxAnnual != null ? Number(job.maxAnnual) : null
-
-  if (job.isHundredKLocal) return true
-  if (min && max && min >= 100_000 && max >= 100_000) return true
-
-  return false
-}
-
-function buildSalaryText(job: any): string | null {
-  let min = job.minAnnual != null ? Number(job.minAnnual) : null
-  let max = job.maxAnnual != null ? Number(job.maxAnnual) : null
-
-  // Guard against obviously broken values
-  if ((min != null && min > 1_000_000) || (max != null && max > 1_000_000)) {
-    min = null
-    max = null
-  }
-
-  const currencySymbol =
-    job.currency === 'USD' || !job.currency ? '$' : `${job.currency} `
-
-  const fmt = (v: number) =>
-    v.toLocaleString('en-US', { maximumFractionDigits: 0 })
-
-  if (min && max) return `${currencySymbol}${fmt(min)}–${fmt(max)}/yr`
-  if (min) return `${currencySymbol}${fmt(min)}+/yr`
-
-  return null
 }
 
 /**

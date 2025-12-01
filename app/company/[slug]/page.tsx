@@ -5,6 +5,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { prisma } from '../../../lib/prisma'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
+import { buildSalaryText } from '../../../lib/jobs/salary'
+import { formatRelativeTime } from '../../../lib/utils/time'
+import { buildLogoUrl } from '../../../lib/companies/logo'
 
 export const revalidate = 3600
 
@@ -132,6 +135,7 @@ export default async function CompanyPage({
 
   // Parse tags
   const tags = parseTags(company.tagsJson)
+  const heroLogo = buildLogoUrl(company.logoUrl, company.website ?? null)
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
@@ -140,9 +144,9 @@ export default async function CompanyPage({
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
           {/* Logo */}
           <div className="flex-shrink-0">
-            {company.logoUrl ? (
+            {heroLogo ? (
               <img
-                src={company.logoUrl}
+                src={heroLogo}
                 alt={company.name}
                 className="h-20 w-20 rounded-xl bg-white object-contain p-2"
               />
@@ -383,7 +387,8 @@ function JobListItem({ job }: { job: JobWithFlags }) {
             {job.type && <span>· {job.type}</span>}
             {job.postedAt && (
               <span>
-                · Posted {new Date(job.postedAt).toLocaleDateString()}
+                · Posted{' '}
+                {formatRelativeTime(job.postedAt) ?? ''}
               </span>
             )}
           </div>
@@ -421,26 +426,6 @@ function JobListItem({ job }: { job: JobWithFlags }) {
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
-
-function buildSalaryText(job: JobWithFlags): string | null {
-  let min = job.minAnnual != null ? Number(job.minAnnual) : null
-  let max = job.maxAnnual != null ? Number(job.maxAnnual) : null
-
-  if ((min != null && min > 1_000_000) || (max != null && max > 1_000_000)) {
-    return null
-  }
-
-  const currencySymbol =
-    job.currency === 'USD' || !job.currency ? '$' : `${job.currency} `
-  const fmt = (v: number) =>
-    v.toLocaleString('en-US', { maximumFractionDigits: 0 })
-
-  if (min && max) return `${currencySymbol}${fmt(min)}–${fmt(max)}/yr`
-  if (min) return `${currencySymbol}${fmt(min)}+/yr`
-  if (max) return `Up to ${currencySymbol}${fmt(max)}/yr`
-
-  return null
-}
 
 function buildLocationText(job: JobWithFlags): string {
   const isRemote = job.remote === true || job.remoteMode === 'remote'

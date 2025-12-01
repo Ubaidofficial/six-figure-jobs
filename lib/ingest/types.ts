@@ -75,6 +75,9 @@ export interface ScrapedJobInput {
   
   /** Company website URL if available */
   companyWebsiteUrl?: string | null
+
+  /** Company LinkedIn URL if available */
+  companyLinkedInUrl?: string | null
   
   /** Company logo URL if available */
   companyLogoUrl?: string | null

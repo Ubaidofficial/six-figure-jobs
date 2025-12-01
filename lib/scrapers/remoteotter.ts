@@ -6,6 +6,11 @@ const BOARD = 'remoteotter'
 const BASE_URL = 'https://remoteotter.com'
 const LIST_URL = `${BASE_URL}/remote-jobs`
 
+const FALLBACK_URLS = [
+  'https://remoteotter.com',
+  'https://remoteotter.com/jobs',
+]
+
 async function fetchHtml(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {
@@ -28,7 +33,21 @@ function absolute(url: string): string {
 export async function scrapeRemoteOtter(): Promise<void> {
   console.log(`▶ Scraping ${BOARD}…`)
 
-  const html = await fetchHtml(LIST_URL)
+  let html: string | null = null
+  for (const url of [LIST_URL, ...FALLBACK_URLS]) {
+    try {
+      html = await fetchHtml(url)
+      break
+    } catch (err) {
+      console.warn(`[${BOARD}] Failed ${url}: ${(err as any)?.message ?? err}`)
+    }
+  }
+
+  if (!html) {
+    console.warn(`[${BOARD}] No HTML fetched, skipping`)
+    return
+  }
+
   const $ = cheerio.load(html)
 
   // Try to grab all obvious job cards
