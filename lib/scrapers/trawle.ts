@@ -148,7 +148,11 @@ export async function scrapeTrawle(): Promise<void> {
     created++
   }
 
-  console.log(`✅ ${BOARD}: upserted ${created} jobs`)
+  if (created === 0) {
+    console.warn(`⚠️  ${BOARD}: no jobs ingested (site may have changed or is empty)`)
+  } else {
+    console.log(`✅ ${BOARD}: upserted ${created} jobs`)
+  }
 }
 
 export default scrapeTrawle

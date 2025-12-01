@@ -79,7 +79,7 @@ export default async function scrapeRemoteRocketship() {
     const res = await fetchWithBackoff(url)
     if (!res) {
       if (page === 1) {
-        console.warn(`[${BOARD_NAME}] Failed to fetch page 1, aborting.`)
+        console.warn(`[${BOARD_NAME}] Failed to fetch page 1 (rate limited), skipping this run.`)
       } else {
         console.warn(
           `[${BOARD_NAME}] Stopping pagination at page=${page} due to repeated failures.`,

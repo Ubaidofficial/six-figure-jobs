@@ -50,7 +50,8 @@ async function fetchOffers(): Promise<JustJoinOffer[]> {
       console.warn(`[${BOARD}] Failed ${url}: ${(err as any)?.message || err}`)
     }
   }
-  throw new Error('Failed to fetch JustJoin offers from all endpoints')
+  console.warn(`[${BOARD}] No working offers endpoint; skipping scrape for now.`)
+  return []
 }
 
 export async function scrapeJustJoin() {

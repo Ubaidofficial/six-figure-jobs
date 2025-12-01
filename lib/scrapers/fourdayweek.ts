@@ -120,5 +120,9 @@ export async function scrapeFourDayWeek() {
     created++
   }
 
-  console.log(`✅ ${BOARD}: upserted ${created} jobs`)
+  if (created === 0) {
+    console.warn(`⚠️  ${BOARD}: no jobs ingested (selectors/JSON-LD may need refresh)`)
+  } else {
+    console.log(`✅ ${BOARD}: upserted ${created} jobs`)
+  }
 }
