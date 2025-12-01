@@ -57,6 +57,36 @@ export function SlicePage({ slice, data }: Props) {
     .slice(0, 6)
 
   const relatedSalaryBands = [100_000, 200_000, 300_000, 400_000]
+  const relatedLinks: { href: string; label: string }[] = []
+  if (roleSlug) {
+    relatedLinks.push({
+      href: `/jobs/${roleSlug}/100k-plus`,
+      label: `More $100k+ ${prettyRole(roleSlug)} jobs`,
+    })
+    relatedLinks.push({
+      href: `/jobs/${roleSlug}/remote/100k-plus`,
+      label: `Remote $100k+ ${prettyRole(roleSlug)} jobs`,
+    })
+  }
+  if (roleSlug && countryCode) {
+    const ccLower = countryCode.toLowerCase()
+    relatedLinks.push({
+      href: `/jobs/${roleSlug}/${ccLower}/200k-plus`,
+      label: `$200k+ ${prettyRole(roleSlug)} jobs in ${countryCode.toUpperCase()}`,
+    })
+  } else {
+    relatedLinks.push({ href: '/jobs/200k-plus', label: '$200k+ roles' })
+  }
+  if (countryCode) {
+    relatedLinks.push({
+      href: `/jobs/location/${countryCode.toLowerCase()}`,
+      label: `$100k+ jobs in ${countryCode.toUpperCase()}`,
+    })
+    relatedLinks.push({
+      href: `/jobs/location/remote`,
+      label: 'Remote $100k+ jobs',
+    })
+  }
 
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
@@ -222,6 +252,25 @@ export function SlicePage({ slice, data }: Props) {
           )}
         </div>
       </section>
+
+      {relatedLinks.length > 0 && (
+        <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-200">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Related searches
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+            {relatedLinks.slice(0, 6).map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Job list */}
       <section id="jobs" className="scroll-mt-20">

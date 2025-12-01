@@ -366,6 +366,9 @@ export default async function SalaryRolePage(props: PageProps) {
         <p className="max-w-2xl text-sm text-slate-300">
           Live six-figure salary ranges for {roleName.toLowerCase()} roles, based on verified $100k+ job listings from top tech and SaaS companies. Remote, hybrid, and on-site pay data—across USD and local currencies—updated regularly.
         </p>
+        <p className="text-xs text-slate-400">
+          Data freshness: updated from live $100k+ listings; thin pages stay noindex until more roles are available.
+        </p>
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
