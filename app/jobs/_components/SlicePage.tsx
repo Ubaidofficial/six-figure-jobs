@@ -5,6 +5,7 @@ import type { JobSlice } from '../../../lib/slices/types'
 import type { JobQueryResult } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import { TARGET_COUNTRIES } from '../../../lib/seo/regions'
+import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 
 type SliceForPage = JobSlice
 
@@ -15,6 +16,8 @@ type Props = {
 
 export function SlicePage({ slice, data }: Props) {
   const { jobs, total, page, totalPages } = data
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || 'https://six-figure-jobs.vercel.app'
 
   const heading = slice.h1 || slice.title || defaultTitleFromSlug(slice.slug)
   const description =
@@ -59,6 +62,42 @@ export function SlicePage({ slice, data }: Props) {
     .slice(0, 6)
 
   const relatedSalaryBands = [100_000, 200_000, 300_000, 400_000]
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: `${siteUrl}/`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: '$100k+ jobs',
+        item: `${siteUrl}/jobs/100k-plus`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: heading,
+        item: `${siteUrl}${slice.slug.startsWith('/') ? slice.slug : `/${slice.slug}`}`,
+      },
+    ],
+  }
+
+  const itemListJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: jobs.slice(0, 20).map((job, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: `${siteUrl}${buildJobSlugHref(job)}`,
+      name: job.title,
+    })),
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
@@ -200,6 +239,18 @@ export function SlicePage({ slice, data }: Props) {
           ))}
         </div>
       </section>
+
+      {/* JSON-LD for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      {jobs.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
     </div>
   )
 }

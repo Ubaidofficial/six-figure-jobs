@@ -17,11 +17,12 @@ const BASE_LISTING_URL =
 
 // Keep this modest; RemoteRocketship is sensitive to scraping.
 const MAX_PAGES = 2
-const PAGE_DELAY_MS = 3000
+const PAGE_DELAY_MS = 5000
 
 async function fetchWithBackoff(url: string, attempt = 1): Promise<Response | null> {
-  const maxAttempts = 3
-  const delayMs = 2000 * attempt
+  const maxAttempts = 5
+  const baseDelay = 2500
+  const delayMs = baseDelay * attempt + Math.random() * 1000
 
   try {
     const res = await fetch(url, {
@@ -32,13 +33,13 @@ async function fetchWithBackoff(url: string, attempt = 1): Promise<Response | nu
       cache: 'no-store',
     })
 
-    if (res.status === 429) {
+    if (res.status === 429 || res.status >= 500) {
       console.warn(
-        `[${BOARD_NAME}] HTTP 429 for ${url} (attempt ${attempt}/${maxAttempts})`,
+        `[${BOARD_NAME}] HTTP ${res.status} for ${url} (attempt ${attempt}/${maxAttempts})`,
       )
       if (attempt >= maxAttempts) {
         console.warn(
-          `[${BOARD_NAME}] Giving up on ${url} after ${attempt} attempts due to 429`,
+          `[${BOARD_NAME}] Giving up on ${url} after ${attempt} attempts due to ${res.status}`,
         )
         return null
       }
@@ -77,8 +78,6 @@ export default async function scrapeRemoteRocketship() {
 
     const res = await fetchWithBackoff(url)
     if (!res) {
-      // If the first page is rate-limited we stop entirely;
-      // for later pages we just break the loop.
       if (page === 1) {
         console.warn(`[${BOARD_NAME}] Failed to fetch page 1, aborting.`)
       } else {
@@ -92,14 +91,12 @@ export default async function scrapeRemoteRocketship() {
     const html = await res.text()
     const $ = cheerio.load(html)
 
-    // Job cards: anchors linking to /jobs/... – similar to what we used for company discovery.
     $('a[href*="/jobs/"]').each((_, el) => {
       const $link = $(el)
       const href = $link.attr('href')
       if (!href) return
 
       const jobUrl = href.startsWith('http') ? href : `${BASE_URL}${href}`
-
       if (seenJobs.has(jobUrl)) return
       seenJobs.add(jobUrl)
 
@@ -108,7 +105,6 @@ export default async function scrapeRemoteRocketship() {
       const title =
         $card.find('h2,h3,[data-testid*="title"]').first().text().trim() ||
         $link.text().trim()
-
       if (!title) return
 
       const company =
@@ -136,8 +132,6 @@ export default async function scrapeRemoteRocketship() {
           .text()
           .trim() || null
 
-      // RemoteRocketship listing is already filtered by minSalary=100000,
-      // so we treat unknown salaries as "$100k+ USD" baseline.
       let salaryMin: number | null = null
       let salaryMax: number | null = null
       let salaryCurrency: string | null = null
@@ -186,9 +180,11 @@ export default async function scrapeRemoteRocketship() {
           jobsSkipped++
         })
     })
-  }
 
-  await new Promise((resolve) => setTimeout(resolve, 0))
+    if (page < MAX_PAGES) {
+      await new Promise((r) => setTimeout(r, PAGE_DELAY_MS))
+    }
+  }
 
   console.log(
     `[${BOARD_NAME}] Done: jobsNew=${jobsNew}, jobsUpdated=${jobsUpdated}, jobsSkipped=${jobsSkipped}, uniqueCompanies=${companies.size}`,
@@ -199,8 +195,5 @@ export default async function scrapeRemoteRocketship() {
     jobsUpdated,
     jobsSkipped,
     companiesSeen: companies.size,
-    }
-
-    // polite delay between pages to reduce 429s
-    await new Promise((r) => setTimeout(r, PAGE_DELAY_MS))
   }
+}

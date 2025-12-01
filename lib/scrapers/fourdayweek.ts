@@ -30,7 +30,31 @@ export async function scrapeFourDayWeek() {
   const $ = cheerio.load(html)
 
   // Job cards are <article> blocks inside main listing (tune selector if needed)
-  const cards = $('article, .job-card, .job').toArray()
+  let cards = $('article, .job-card, .job').toArray()
+  // Fallback: parse any JobPosting JSON-LD blocks
+  if (cards.length === 0) {
+    $('script[type="application/ld+json"]').each((_i, node) => {
+      try {
+        const raw = $(node).contents().text()
+        const parsed = JSON.parse(raw)
+        const items = Array.isArray(parsed) ? parsed : parsed?.@type === 'JobPosting' ? [parsed] : parsed?.['@graph']
+        if (Array.isArray(items)) {
+          items.forEach((item: any) => {
+            if (item['@type'] !== 'JobPosting') return
+            const synthetic = $('<div class="job">')
+            synthetic.append(`<a href="${item.url || item.identifier?.value || '#'}"></a>`)
+            synthetic.append(`<h3>${item.title || ''}</h3>`)
+            synthetic.append(`<h4>${item.hiringOrganization?.name || ''}</h4>`)
+            synthetic.append(`<span>${item.jobLocation?.address?.addressLocality || item.jobLocationType || ''}</span>`)
+            synthetic.append(`<span>${item.baseSalary?.value?.value || ''}</span>`)
+            cards = [...cards, synthetic.get(0)]
+          })
+        }
+      } catch {
+        /* ignore JSON parse errors */
+      }
+    })
+  }
   console.log(`  Found ${cards.length} potential job cards`)
 
   let created = 0

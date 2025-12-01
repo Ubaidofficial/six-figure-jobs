@@ -50,12 +50,40 @@ export async function scrapeTrawle(): Promise<void> {
   const $ = cheerio.load(html)
 
   // Initial guess at job cards
-  const cards = $('.job-card, .job, article').toArray()
+  let cards = $('.job-card, .job, article').toArray()
 
   if (cards.length === 0) {
     // Fallback: links under /jobs/
     $('a[href^="/jobs/"]').each((_i, el) => {
-      cards.push(el)
+      cards = [...cards, el]
+    })
+  }
+
+  if (cards.length === 0) {
+    $('script[type="application/ld+json"]').each((_i, node) => {
+      try {
+        const raw = $(node).contents().text()
+        const parsed = JSON.parse(raw)
+        const items = Array.isArray(parsed) ? parsed : parsed?.['@graph']
+        if (Array.isArray(items)) {
+          items.forEach((item: any) => {
+            if (item['@type'] !== 'JobPosting') return
+            const synthetic = $('<div class="job">')
+            synthetic.append(`<a href="${item.url || '#'}"></a>`)
+            synthetic.append(`<h3>${item.title || ''}</h3>`)
+            synthetic.append(`<h4>${item.hiringOrganization?.name || ''}</h4>`)
+            synthetic.append(
+              `<span>${item.jobLocation?.address?.addressLocality || item.jobLocationType || ''}</span>`,
+            )
+            synthetic.append(
+              `<span>${item.baseSalary?.value?.value || ''}</span>`,
+            )
+            cards = [...cards, synthetic.get(0)]
+          })
+        }
+      } catch {
+        /* ignore */
+      }
     })
   }
 

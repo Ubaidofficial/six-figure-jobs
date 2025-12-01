@@ -2,7 +2,11 @@
 import { upsertBoardJob } from './_boardHelpers'
 
 const BOARD = 'justjoin'
-const OFFERS_API = 'https://justjoin.it/api/offers' // Confirm in DevTools
+const OFFERS_API = 'https://justjoin.it/api/offers' // primary API
+const OFFER_FALLBACKS = [
+  'https://justjoin.it/api/offers/',
+  'https://justjoin.it/api/offers?sort=date',
+]
 
 type JustJoinOffer = {
   id: string | number
@@ -27,16 +31,26 @@ type JustJoinOffer = {
 }
 
 async function fetchOffers(): Promise<JustJoinOffer[]> {
-  const res = await fetch(OFFERS_API, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; Remote100kBot/1.0)',
-      Accept: 'application/json',
-    },
-  })
-  if (!res.ok) {
-    throw new Error(`Failed to fetch JustJoin offers: ${res.status}`)
+  const urls = [OFFERS_API, ...OFFER_FALLBACKS]
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; Remote100kBot/1.0)',
+          Accept: 'application/json',
+          Referer: 'https://justjoin.it/',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      })
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+      return await res.json()
+    } catch (err) {
+      console.warn(`[${BOARD}] Failed ${url}: ${(err as any)?.message || err}`)
+    }
   }
-  return res.json()
+  throw new Error('Failed to fetch JustJoin offers from all endpoints')
 }
 
 export async function scrapeJustJoin() {

@@ -6,14 +6,11 @@ import { upsertBoardJob } from './_boardHelpers'
 const BOARD = 'ycombinator'
 const BASE_URL = 'https://www.ycombinator.com'
 
-export default async function scrapeYCombinator() {
+async function fetchCompanies(attempt = 1): Promise<any | null> {
+  const maxAttempts = 3
+  const backoffMs = 2000 * attempt
   try {
-    console.log('▶ Scraping Y Combinator Startup Jobs…')
-
-    // NOTE: old URL `/companies/jobs?include=jobs` now 404s.
-    // YC exposes jobs attached to companies via the main companies endpoint.
     const url = `${BASE_URL}/companies?include=jobs`
-
     const response = await axios.get(url, {
       headers: {
         'User-Agent':
@@ -21,9 +18,36 @@ export default async function scrapeYCombinator() {
         Accept: 'application/json',
       },
       timeout: 20000,
+      validateStatus: (s) => s >= 200 && s < 500, // allow 429/500 handling below
     })
 
-    const data = response.data as any
+    if (response.status >= 500) {
+      if (attempt >= maxAttempts) return null
+      await new Promise((r) => setTimeout(r, backoffMs))
+      return fetchCompanies(attempt + 1)
+    }
+
+    if (response.status >= 400) {
+      console.warn(`YC returned ${response.status}, skipping.`)
+      return null
+    }
+
+    return response.data
+  } catch (err: any) {
+    if (attempt >= 3) return null
+    await new Promise((r) => setTimeout(r, backoffMs))
+    return fetchCompanies(attempt + 1)
+  }
+}
+
+export default async function scrapeYCombinator() {
+  try {
+    console.log('▶ Scraping Y Combinator Startup Jobs…')
+
+    const data = (await fetchCompanies()) as any
+    if (!data) {
+      return { board: BOARD, found: 0, stored: 0, error: 'Failed to fetch YC data' }
+    }
 
     if (!data || !Array.isArray(data.companies)) {
       console.log('YC returned unexpected format for companies:')
