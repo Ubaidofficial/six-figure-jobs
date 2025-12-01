@@ -140,29 +140,29 @@ export async function rebuildAllSlices(): Promise<SliceRebuildSummary> {
   }
 
   // ---------------------------------------------------------------------------
-  // 4b) Role + Country + Salary bands (100k/200k/300k/400k)
-  // ---------------------------------------------------------------------------
-  const salaryBands = [100_000, 200_000, 300_000, 400_000]
-  for (const rc of roleCountryRows) {
-    if (!rc.roleSlug || !rc.country) continue
-    for (const band of salaryBands) {
-      await upsertRoleCountrySalarySlice({
-        roleSlug: rc.roleSlug,
-        country: rc.country,
-        minSalaryUsd: band,
-      })
+// 4b) Role + Country + Salary bands (100k/200k/300k/400k)
+// ---------------------------------------------------------------------------
+const roleSalaryBands = [100_000, 200_000, 300_000, 400_000]
+for (const rc of roleCountryRows) {
+  if (!rc.roleSlug || !rc.country) continue
+  for (const band of roleSalaryBands) {
+    await upsertRoleCountrySalarySlice({
+      roleSlug: rc.roleSlug,
+      country: rc.country,
+      minSalaryUsd: band,
+    })
       summary.roleCountrySalarySlices++
     }
-  }
-  // 4c) Role + Remote + Salary bands
-  for (const rr of remoteRoleRows) {
-    if (!rr.roleSlug) continue
-    for (const band of salaryBands) {
-      await upsertRoleRemoteSalarySlice({
-        roleSlug: rr.roleSlug,
-        minSalaryUsd: band,
-      })
-      summary.roleRemoteSalarySlices++
+}
+// 4c) Role + Remote + Salary bands
+for (const rr of remoteRoleRows) {
+  if (!rr.roleSlug) continue
+  for (const band of roleSalaryBands) {
+    await upsertRoleRemoteSalarySlice({
+      roleSlug: rr.roleSlug,
+      minSalaryUsd: band,
+    })
+    summary.roleRemoteSalarySlices++
     }
   }
 
@@ -213,11 +213,11 @@ export async function rebuildAllSlices(): Promise<SliceRebuildSummary> {
     summary.companyRoleSlices++
   }
 
-  // ---------------------------------------------------------------------------
-  // 7) Salary band slices (static bands in USD)
-  //    Assumes salaryMin is annual USD (or at least comparable).
-  // ---------------------------------------------------------------------------
-  const salaryBands = [
+// ---------------------------------------------------------------------------
+// 7) Salary band slices (static bands in USD)
+//    Assumes salaryMin is annual USD (or at least comparable).
+// ---------------------------------------------------------------------------
+const salaryBands = [
     { min: 100_000, max: 150_000 },
     { min: 150_000, max: 200_000 },
     { min: 200_000, max: null },
