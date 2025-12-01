@@ -15,7 +15,9 @@ export default function FilterBar() {
         </select>
         <select>
           <option>Min: $100k</option>
-          <option>Min: $150k</option>
+          <option>Min: $200k</option>
+          <option>Min: $300k</option>
+          <option>Min: $400k</option>
         </select>
       </div>
     </div>

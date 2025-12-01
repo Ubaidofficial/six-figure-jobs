@@ -388,7 +388,7 @@ function extractSalary(
   } else if (titleLower.includes('senior') || titleLower.includes('lead')) {
     return { salary: '$130k - $220k (est.)', minSalary: 130, maxSalary: 220 }
   } else if (titleLower.includes('director') || titleLower.includes('head')) {
-    return { salary: '$200k - $350k (est.)', minSalary: 200, maxSalary: 350 }
+    return { salary: '$200k - $300k (est.)', minSalary: 200, maxSalary: 300 }
   } else if (titleLower.includes('manager')) {
     return { salary: '$140k - $200k (est.)', minSalary: 140, maxSalary: 200 }
   }

@@ -68,8 +68,8 @@ function buildTitle(sp: SearchParams): string {
   const minSalary = Number(getParam(sp, 'minSalary') || '100000') || 100000
 
   const salaryLabel =
-    minSalary >= 250000
-      ? '$250k+'
+    minSalary >= 300000
+      ? '$300k+'
       : minSalary >= 200000
       ? '$200k+'
       : '$100k+'
@@ -294,9 +294,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
               >
                 <option value="100000">$100k+</option>
               <option value="200000">$200k+</option>
-              <option value="250000">$250k+</option>
-                <option value="300000">$300k+</option>
-                <option value="400000">$400k+</option>
+              <option value="300000">$300k+</option>
+              <option value="400000">$400k+</option>
               </select>
             </div>
 

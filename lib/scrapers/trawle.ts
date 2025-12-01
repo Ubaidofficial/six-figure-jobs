@@ -78,7 +78,10 @@ export async function scrapeTrawle(): Promise<void> {
             synthetic.append(
               `<span>${item.baseSalary?.value?.value || ''}</span>`,
             )
-            cards = [...cards, synthetic.get(0)]
+            const elem = synthetic.get(0) as any
+            if (elem && elem.type === 'tag') {
+              cards = [...cards, elem]
+            }
           })
         }
       } catch {
