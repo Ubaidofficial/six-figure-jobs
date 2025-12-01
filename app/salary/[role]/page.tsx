@@ -287,11 +287,46 @@ export default async function SalaryRolePage(props: PageProps) {
     ],
   }
 
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `How much does a ${roleName} make?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Live six-figure salary data for ${roleName} roles based on $100k+ job listings. Typical ranges update as new jobs are published.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Are remote or hybrid ${roleName} jobs included?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Listings are tagged remote, hybrid, or on-site, and remote roles include region filters (US-only, EMEA, APAC, global).',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Do you show local currencies?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'We normalize to USD for bands like $100k+, and display local currency when provided (e.g., CHF, GBP, EUR, CAD, AUD, SGD).',
+        },
+      },
+    ],
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       {/* Breadcrumb */}
       <nav
