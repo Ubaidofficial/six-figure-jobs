@@ -751,19 +751,40 @@ function buildHeuristicSummary(
   seniority: string | null,
 ) {
   const summary: string[] = []
+  const companyDesc =
+    (job.companyRef as any)?.description ??
+    (job as any)?.companyDescription ??
+    null
+  const descSentence = companyDesc
+    ? firstSentence(stripTags(decodeHtmlEntities(companyDesc)))
+    : null
+
+  if (descSentence) {
+    summary.push(descSentence)
+  }
+
   if (salaryText) {
-    summary.push(`Comp is six-figure (${salaryText}); salary is shown to candidates.`)
+    summary.push(`Salary: ${salaryText} (shown to candidates).`)
   }
-  if (seniority) {
-    summary.push(`Tagged ${seniority}—aimed at experienced talent.`)
-  }
+
   if (locationText) {
-    summary.push(`Work arrangement: ${locationText}${job.remote ? ' (remote available)' : ''}.`)
+    const mode = job.remote
+      ? 'Remote'
+      : job.remoteMode === 'hybrid'
+      ? 'Hybrid'
+      : 'On-site'
+    summary.push(`Location: ${locationText} · ${mode}.`)
   }
-  const reqs = parseArray(job.requirementsJson).filter(Boolean).slice(0, 2)
+
+  if (seniority) {
+    summary.push(`Level: ${seniority.replace('⭐ ', '')}.`)
+  }
+
+  const reqs = parseArray(job.requirementsJson).filter(Boolean).slice(0, 1)
   if (reqs.length) {
-    summary.push(`Key requirements: ${reqs.join('; ')}.`)
+    summary.push(`Top requirement: ${reqs[0]}.`)
   }
+
   return summary.length ? summary.slice(0, 3) : null
 }
 
@@ -839,6 +860,14 @@ function truncateText(str: string, maxChars: number): string {
       : maxChars
 
   return truncated.slice(0, cutoff) + ' …'
+}
+
+function firstSentence(text: string): string {
+  const trimmed = text.trim()
+  if (!trimmed) return ''
+  const match = trimmed.match(/(.+?[.!?])\s/)
+  if (match && match[1]) return match[1].trim()
+  return trimmed.slice(0, 200)
 }
 
 function inferSeniorityFromTitle(title: string): string | null {

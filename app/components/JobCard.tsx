@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
 import { buildSalaryText } from '../../lib/jobs/salary' // ← unified helper
@@ -20,6 +20,7 @@ export type JobCardJob = JobWithCompany & {
 /* -------------------------------------------------------------------------- */
 
 export default function JobCard({ job }: { job: JobCardJob }) {
+  const [logoFailed, setLogoFailed] = useState(false)
   const companyName =
     job.companyRef?.name ?? job.company ?? 'Unknown company'
 
@@ -34,10 +35,12 @@ export default function JobCard({ job }: { job: JobCardJob }) {
     job.companyRef?.logoUrl ?? job.companyLogo ?? null,
     job.companyRef?.website ?? null,
   )
+  const showLogo = logo && !logoFailed
 
   const companySlug = job.companyRef?.slug ?? null
   const companySize = job.companyRef?.sizeBucket || null
   const companyTags = parseJsonArray(job.companyRef?.tagsJson)
+  const companyDesc = getCompanyBlurb(job.companyRef?.description)
 
   const location = buildLocation(job)
   const salaryText = buildSalaryText(job) // ← UNIFIED salary logic
@@ -45,7 +48,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
     salaryText && /\d/.test(salaryText) && !salaryText.includes('<')
       ? salaryText
       : null
-  const snippet = buildSnippet(job)
+  const snippet = buildSnippet(job, companyDesc)
 
   const seniority = inferSeniorityFromTitle(job.title)
   const category = inferCategoryFromRoleSlug(job.roleSlug)
@@ -84,19 +87,15 @@ export default function JobCard({ job }: { job: JobCardJob }) {
             href={`/company/${companySlug}`}
             className="mt-1 flex-shrink-0"
           >
-            {logo ? (
+            {showLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logo}
                 alt={companyName}
                 className="h-10 w-10 rounded-full bg-slate-900 object-contain p-1 hover:ring-2 hover:ring-slate-600"
                 onError={(e) => {
+                  setLogoFailed(true)
                   e.currentTarget.style.display = 'none'
-                  const fallback =
-                    e.currentTarget.parentElement?.querySelector(
-                      '.fallback-logo',
-                    ) as HTMLElement | null
-                  if (fallback) fallback.classList.remove('hidden')
                 }}
               />
             ) : (
@@ -104,18 +103,16 @@ export default function JobCard({ job }: { job: JobCardJob }) {
                 {companyName?.charAt(0) ?? '?'}
               </div>
             )}
-            <div className="fallback-logo hidden flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300 hover:ring-2 hover:ring-slate-600">
-              {companyName?.charAt(0) ?? '?'}
-            </div>
           </Link>
         ) : (
           <div className="mt-1 flex-shrink-0">
-            {logo ? (
+            {showLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logo}
                 alt={companyName}
                 className="h-10 w-10 rounded-full bg-slate-900 object-contain p-1"
+                onError={() => setLogoFailed(true)}
               />
             ) : (
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300">
@@ -305,8 +302,10 @@ function buildLocation(job: JobCardJob): string | null {
   return null
 }
 
-function buildSnippet(job: JobCardJob): string | null {
-  const raw = job.snippet ?? job.descriptionHtml ?? null
+function buildSnippet(job: JobCardJob, companyDesc?: string | null): string | null {
+  const rawPrimary = job.snippet ?? job.descriptionHtml ?? null
+  const rawSecondary = job.description ?? null
+  const raw = rawPrimary || rawSecondary || companyDesc || null
   if (!raw) return null
   return truncateText(stripTags(decodeHtmlEntities(raw)), 160)
 }
@@ -384,4 +383,16 @@ function parseJsonArray(raw?: string | null): string[] {
     return []
   }
   return []
+}
+
+function getCompanyBlurb(description?: string | null): string | null {
+  if (!description) return null
+  const clean = stripTags(decodeHtmlEntities(description)).trim()
+  if (!clean) return null
+  // take first sentence-ish
+  const cutoff = clean.indexOf('.')
+  if (cutoff > 50 && cutoff < 220) {
+    return clean.slice(0, cutoff + 1)
+  }
+  return clean.slice(0, 220)
 }
