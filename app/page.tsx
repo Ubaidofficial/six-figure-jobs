@@ -207,7 +207,7 @@ export default async function HomePage() {
 
         <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-4">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-50 md:text-[2.7rem]">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-50 md:text-[2.9rem] lg:text-[3rem]">
               Find remote &amp; hybrid tech jobs paying $100k+ 💰
             </h1>
             <p className="text-sm leading-relaxed text-slate-300">
