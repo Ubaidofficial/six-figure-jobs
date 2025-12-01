@@ -27,7 +27,7 @@ export default function RootLayout({
               </Link>
               <nav className="flex items-center gap-4 text-sm text-slate-300">
                 <Link
-                  href="/jobs/100k-plus"
+                  href="/jobs"
                   className="hover:text-white"
                 >
                   Browse jobs

@@ -36,6 +36,7 @@ export default async function scrapeGenericSources() {
 
   const browser = await puppeteer.launch({
     headless: true,
+    // @ts-expect-error: ignoreHTTPSErrors is available at runtime but missing in our bundled types
     ignoreHTTPSErrors: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
   })
