@@ -21,6 +21,12 @@ export function buildLogoUrl(
   const domain = extractDomain(website ?? null)
   if (!domain) return null
 
+  // Prefer logo.dev (requires API key), fall back to Clearbit
+  const logoDevKey = process.env.LOGODEV_API_KEY
+  if (logoDevKey) {
+    return `https://img.logo.dev/${domain}?apikey=${logoDevKey}`
+  }
+
   // Clearbit logo endpoint – public, no token required for basic usage
   return `https://logo.clearbit.com/${domain}`
 }
