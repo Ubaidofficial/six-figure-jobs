@@ -37,9 +37,6 @@ export interface BoardJobInput {
   /** Optional website */
   companyWebsiteUrl?: string | null
 
-  /** Optional LinkedIn URL */
-  companyLinkedInUrl?: string | null
-
   /** Optional "best guess" location text ("Remote – US", "London, UK", etc.) */
   locationText?: string | null
 
@@ -62,7 +59,6 @@ export interface BoardJobInput {
   descriptionText?: string | null
 
   /** Optional extra metadata */
-  companyWebsiteUrl?: string | null
   applyUrl?: string | null
 
   /** Optional ATS hints discovered on the board */
