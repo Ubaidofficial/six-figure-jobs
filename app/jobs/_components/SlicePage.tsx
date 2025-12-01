@@ -94,6 +94,37 @@ export function SlicePage({ slice, data }: Props) {
     })),
   }
 
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `Are these ${salaryBand} ${roleLabel || 'tech'} jobs verified?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. We ingest directly from company ATS feeds and trusted boards, then filter to $100k+ (or local equivalent) and dedupe.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Can I find remote or hybrid ${roleLabel || 'tech'} roles here?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Each listing is tagged remote, hybrid, or on-site. Remote roles also indicate region (US-only, EMEA, APAC, or global).',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Do salaries include local currencies?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'We normalize to USD for bands like $100k+, but also display local currency when provided (e.g., CHF, GBP, EUR, CAD, AUD, SGD).',
+        },
+      },
+    ],
+  }
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
       {/* JSON-LD for breadcrumbs and list */}
@@ -104,6 +135,10 @@ export function SlicePage({ slice, data }: Props) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
       <nav className="flex flex-wrap items-center gap-2 text-xs text-slate-400">

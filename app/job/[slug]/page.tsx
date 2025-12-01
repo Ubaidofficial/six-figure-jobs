@@ -151,6 +151,12 @@ export default async function JobPage({
   const jsonLd = buildJobJsonLd(typedJob)
   const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, slug)
   const internalLinks = buildInternalLinks(typedJob)
+  const aiSummary = buildHeuristicSummary(
+    typedJob,
+    salaryText,
+    locationText,
+    seniority,
+  )
 
   /* --------------------------- Similar jobs -------------------------------- */
 
@@ -306,6 +312,19 @@ export default async function JobPage({
                   1200,
                 )}
               </div>
+            </div>
+          )}
+
+          {aiSummary && (
+            <div className="mt-3 space-y-2 rounded-xl border border-slate-800 bg-slate-900/50 p-3 text-left text-xs leading-relaxed text-slate-200">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-400">
+                Why this is a six-figure role
+              </p>
+              <ul className="list-disc space-y-1 pl-4 text-slate-200">
+                {aiSummary.map((line, idx) => (
+                  <li key={idx}>{line}</li>
+                ))}
+              </ul>
             </div>
           )}
         </aside>
@@ -713,6 +732,29 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   }
 
   return links
+}
+
+function buildHeuristicSummary(
+  job: JobWithCompany,
+  salaryText: string | null,
+  locationText: string | null,
+  seniority: string | null,
+) {
+  const summary: string[] = []
+  if (salaryText) {
+    summary.push(`Comp is six-figure (${salaryText}); salary is shown to candidates.`)
+  }
+  if (seniority) {
+    summary.push(`Tagged ${seniority}—aimed at experienced talent.`)
+  }
+  if (locationText) {
+    summary.push(`Work arrangement: ${locationText}${job.remote ? ' (remote available)' : ''}.`)
+  }
+  const reqs = parseArray(job.requirementsJson).filter(Boolean).slice(0, 2)
+  if (reqs.length) {
+    summary.push(`Key requirements: ${reqs.join('; ')}.`)
+  }
+  return summary.length ? summary.slice(0, 3) : null
 }
 
 function buildJobBreadcrumbJsonLd(job: JobWithCompany, slug: string): any {
