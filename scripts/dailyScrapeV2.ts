@@ -38,8 +38,7 @@ import { scrapeFourDayWeek } from '../lib/scrapers/fourdayweek'
 
 // “API style” board scrapers / extra sources
 import scrapeRemotive from '../lib/scrapers/remotive'
-// YC disabled for now – endpoint returning 404s, will revisit later
-// import scrapeYCombinator from '../lib/scrapers/ycombinator'
+import scrapeYCombinator from '../lib/scrapers/ycombinator'
 
 // ATS scrapers
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
@@ -81,10 +80,57 @@ function parseCliArgs(): CliOptions {
   return { mode, fast, concurrency }
 }
 
+/**
+ * Seed generic career sources for companies that have a website but no ATS.
+ * This lets the generic puppeteer scraper pick them up.
+ */
+async function seedGenericSourcesForNonAts() {
+  const candidates = await prisma.company.findMany({
+    where: {
+      atsProvider: null,
+      atsUrl: null,
+      website: { not: null },
+    },
+    select: { id: true, website: true },
+  })
+
+  if (!candidates.length) return
+
+  let created = 0
+  for (const c of candidates) {
+    const existing = await prisma.companySource.findFirst({
+      where: {
+        companyId: c.id,
+        url: c.website!,
+      },
+      select: { id: true },
+    })
+    if (existing) continue
+
+    await prisma.companySource.create({
+      data: {
+        companyId: c.id,
+        url: c.website!,
+        sourceType: 'generic_careers_page',
+        isActive: true,
+        priority: 200, // lower priority than ATS/board
+      },
+    })
+    created++
+  }
+
+  if (created > 0) {
+    console.log(`🌱 Seeded ${created} generic career sources for non-ATS companies.`)
+  }
+}
+
 async function runBoardScrapers(options: CliOptions) {
   const { fast } = options
 
   console.log('🌐 Running BOARD scrapers…\n')
+
+  // Ensure generic scraper has sources to work with (non-ATS companies from seed)
+  await seedGenericSourcesForNonAts()
 
   // Ordered so we hit “core” boards first
   const allScrapers: Array<[string, () => Promise<unknown>]> = [
@@ -100,8 +146,8 @@ async function runBoardScrapers(options: CliOptions) {
     ['Trawle', scrapeTrawle],
     ['FourDayWeek', scrapeFourDayWeek],
     ['Remotive', scrapeRemotive],
+    ['YCombinator', scrapeYCombinator],
     ['RemoteAI (companies only)', scrapeRemoteAI],
-    // ['YCombinator', scrapeYCombinator], // disabled for now
     ['GenericSources', scrapeGenericSources],
   ]
 

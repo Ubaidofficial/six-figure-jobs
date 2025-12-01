@@ -37,7 +37,11 @@ export async function scrapeFourDayWeek() {
       try {
         const raw = $(node).contents().text()
         const parsed = JSON.parse(raw)
-        const items = Array.isArray(parsed) ? parsed : parsed?.@type === 'JobPosting' ? [parsed] : parsed?.['@graph']
+        const items = Array.isArray(parsed)
+          ? parsed
+          : parsed && parsed['@type'] === 'JobPosting'
+          ? [parsed]
+          : parsed?.['@graph']
         if (Array.isArray(items)) {
           items.forEach((item: any) => {
             if (item['@type'] !== 'JobPosting') return
