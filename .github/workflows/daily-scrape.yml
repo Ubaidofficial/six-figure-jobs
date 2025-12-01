@@ -23,8 +23,10 @@ jobs:
 
       - name: Run daily scraper (boards + ATS)
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
-          CLEARBIT_API_KEY: ${{ secrets.CLEARBIT_API_KEY }}
+         DATABASE_URL: ${{ secrets.DATABASE_URL }}
+         POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+         NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+         CLEARBIT_API_KEY: ${{ secrets.CLEARBIT_API_KEY }}
+         LOGODEV_API_KEY: ${{ secrets.LOGODEV_API_KEY }}
           # add other required env vars as needed
         run: npx tsx scripts/dailyScrapeV2.ts --mode=all --concurrency=6
