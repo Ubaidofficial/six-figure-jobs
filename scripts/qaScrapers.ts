@@ -11,7 +11,7 @@ import { scrapeRealWorkFromAnywhere } from '../lib/scrapers/realworkfromanywhere
 import { scrapeTrawle } from '../lib/scrapers/trawle'
 import { scrapeFourDayWeek } from '../lib/scrapers/fourdayweek'
 import scrapeRemoteRocketship from '../lib/scrapers/remoterocketship'
-import scrapeJustJoin from '../lib/scrapers/justjoin'
+import { scrapeJustJoin } from '../lib/scrapers/justjoin'
 import scrapeYCombinator from '../lib/scrapers/ycombinator'
 
 type Scraper = {
