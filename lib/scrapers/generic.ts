@@ -36,7 +36,8 @@ export default async function scrapeGenericSources() {
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    ignoreHTTPSErrors: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
   })
 
   const stats = { created: 0, updated: 0, skipped: 0, errors: 0 }
@@ -48,8 +49,9 @@ export default async function scrapeGenericSources() {
       
       try {
         await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-        
-        await page.goto(source.url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+        page.setDefaultNavigationTimeout(45000)
+
+        await page.goto(source.url, { waitUntil: 'domcontentloaded', timeout: 45000 })
         
         // Scan page for links that look like jobs
         const jobs = await scanPageForJobs(page)
@@ -104,6 +106,9 @@ export default async function scrapeGenericSources() {
 
 async function scanPageForJobs(page: Page) {
   return await page.evaluate((keywords) => {
+    // Some sites throw ReferenceError for __name helper; ensure it exists
+    ;(globalThis as any).__name = (v: any) => v
+
     const links = Array.from(document.querySelectorAll('a'))
     const results: { title: string, url: string }[] = []
     
