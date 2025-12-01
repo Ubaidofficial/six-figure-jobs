@@ -50,6 +50,9 @@ export interface BoardJobInput {
   isRemote?: boolean | null
   employmentType?: string | null
 
+  /** Optional LinkedIn URL */
+  companyLinkedInUrl?: string | null
+
   /** Timestamps if the board exposes them */
   postedAt?: Date | null
   updatedAt?: Date | null
