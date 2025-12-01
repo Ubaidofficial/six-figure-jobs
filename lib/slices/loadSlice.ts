@@ -110,6 +110,11 @@ export async function loadSliceFromParams(
   })
 
   if (!slice) {
+    const fallback = buildFallbackSlice(segments)
+    if (fallback) {
+      return parseSliceFilters(fallback)
+    }
+
     console.error('JobSlice not found. Tried slugs:', candidateSlugs)
     notFound()
     throw new Error(
@@ -118,4 +123,41 @@ export async function loadSliceFromParams(
   }
 
   return parseSliceFilters(slice)
+}
+
+function buildFallbackSlice(segments: string[]): JobSlice | null {
+  // Support role/country/band pattern even if not pre-seeded
+  if (segments.length === 3) {
+    const [roleSlug, countryCodeRaw, bandSlug] = segments
+    const bandMap: Record<string, number> = {
+      '100k-plus': 100_000,
+      '200k-plus': 200_000,
+      '300k-plus': 300_000,
+      '400k-plus': 400_000,
+    }
+    const minAnnual = bandMap[bandSlug]
+    if (minAnnual) {
+      const countryCode = countryCodeRaw.toUpperCase()
+      const slug = `jobs/${segments.join('/')}`
+      return {
+        id: slug,
+        slug: `jobs/${segments.join('/')}`,
+        type: 'role-country',
+        filtersJson: JSON.stringify({
+          roleSlugs: [roleSlug],
+          countryCode,
+          minAnnual,
+          isHundredKLocal: true,
+        }),
+        jobCount: 0,
+        title: null,
+        description: null,
+        h1: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    }
+  }
+
+  return null
 }
