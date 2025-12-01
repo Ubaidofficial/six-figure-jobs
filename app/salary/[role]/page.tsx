@@ -275,8 +275,24 @@ export default async function SalaryRolePage(props: PageProps) {
       ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
       : 1
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || 'https://six-figure-jobs.vercel.app'
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${siteUrl}/` },
+      { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${siteUrl}/jobs/100k-plus` },
+      { '@type': 'ListItem', position: 3, name: `${roleName} salary`, item: `${siteUrl}/salary/${roleSlug}` },
+    ],
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       {/* Breadcrumb */}
       <nav
         aria-label="Breadcrumb"
