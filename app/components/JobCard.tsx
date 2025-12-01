@@ -47,6 +47,9 @@ export default function JobCard({ job }: { job: JobCardJob }) {
   const postedLabel = formatRelativeTime(
     job.postedAt ?? job.createdAt ?? job.updatedAt ?? null,
   )
+  const isNew =
+    !!(job.postedAt ?? job.createdAt) &&
+    Date.now() - new Date(job.postedAt ?? job.createdAt as any).getTime() < 1000 * 60 * 60 * 48
 
   const benefits = parseJsonArray(job.benefitsJson).slice(0, 3)
 
@@ -157,8 +160,9 @@ export default function JobCard({ job }: { job: JobCardJob }) {
             {/* Right side actions */}
             <div className="flex flex-col items-end gap-2 text-xs">
               {postedLabel && (
-                <span className="text-[11px] text-slate-400">
-                  Posted {postedLabel}
+                <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                  {isNew && <span className="rounded-full bg-emerald-600/20 px-2 py-0.5 text-emerald-200 ring-1 ring-emerald-600/60">New</span>}
+                  <span>Posted {postedLabel}</span>
                 </span>
               )}
               <div className="flex flex-wrap justify-end gap-2">

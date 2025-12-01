@@ -6,6 +6,7 @@ import type { JobQueryResult } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import { TARGET_COUNTRIES } from '../../../lib/seo/regions'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
+import { formatNumberCompact } from '../../../lib/utils/number'
 
 type SliceForPage = JobSlice
 
@@ -100,8 +101,8 @@ export function SlicePage({ slice, data }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
-      <nav className="flex items-center gap-2 text-xs text-slate-400">
+    <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
+      <nav className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
         <Link href="/" className="hover:underline">
           Home
         </Link>
@@ -112,22 +113,46 @@ export function SlicePage({ slice, data }: Props) {
         <span>/</span>
         <span className="text-slate-200">{heading}</span>
       </nav>
-      {/* Header */}
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold text-slate-50">
-          {heading}
-        </h1>
-        {description && (
-          <p className="max-w-2xl text-sm text-slate-300">
-            {description}
-          </p>
-        )}
 
-        {showingLabel && (
-          <p className="text-xs text-slate-400">
-            {showingLabel}
-          </p>
-        )}
+      {/* Hero */}
+      <header className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 md:p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold leading-tight text-slate-50 md:text-3xl">
+              {heading}
+            </h1>
+            {description && (
+              <p className="max-w-3xl text-sm text-slate-300">
+                {description}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2 text-[11px] text-slate-200">
+              <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                {showingLabel || `${formatNumberCompact(total)} roles`}
+              </span>
+              <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                Verified companies
+              </span>
+              <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                Updated daily
+              </span>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Link
+              href="#jobs"
+              className="inline-flex flex-1 items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500"
+            >
+              Browse $100k+ jobs
+            </Link>
+            <Link
+              href="/jobs/100k-plus"
+              className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-slate-500"
+            >
+              View all $100k+ →
+            </Link>
+          </div>
+        </div>
       </header>
 
       <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
@@ -139,7 +164,7 @@ export function SlicePage({ slice, data }: Props) {
       </section>
 
       {/* Job list */}
-      <section>
+      <section id="jobs" className="scroll-mt-20">
         <JobList jobs={jobs} />
 
         {jobs.length === 0 && (
