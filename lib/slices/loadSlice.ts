@@ -125,7 +125,7 @@ export async function loadSliceFromParams(
   return parseSliceFilters(slice)
 }
 
-function buildFallbackSlice(segments: string[]): JobSlice | null {
+function buildFallbackSlice(segments: string[]): JobSliceRow | null {
   // Support role/country/band pattern even if not pre-seeded
   if (segments.length === 3) {
     const [roleSlug, countryCodeRaw, bandSlug] = segments
