@@ -2,7 +2,7 @@
 /**
  * Seed high-value JobSlice records for programmatic SEO.
  *
- * - Creates band-only slices: /jobs/100k-plus, /jobs/150k-plus, /jobs/200k-plus
+ * - Creates band-only slices: /jobs/100k-plus, /jobs/200k-plus, /jobs/300k-plus, /jobs/400k-plus
  * - Creates band + role + country slices when there are enough jobs:
  *     /jobs/100k-plus/software-engineer/us
  *
@@ -14,7 +14,7 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-const SALARY_BANDS = [100_000, 150_000, 200_000]
+const SALARY_BANDS = [100_000, 200_000, 300_000, 400_000]
 const MIN_JOBS_FOR_SLICE = 3
 
 type Band = (typeof SALARY_BANDS)[number]

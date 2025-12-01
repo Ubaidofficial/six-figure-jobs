@@ -51,7 +51,10 @@ export async function scrapeFourDayWeek() {
             synthetic.append(`<h4>${item.hiringOrganization?.name || ''}</h4>`)
             synthetic.append(`<span>${item.jobLocation?.address?.addressLocality || item.jobLocationType || ''}</span>`)
             synthetic.append(`<span>${item.baseSalary?.value?.value || ''}</span>`)
-            cards = [...cards, synthetic.get(0)]
+            const elem = synthetic.get(0)
+            if (elem) {
+              cards = [...cards, elem]
+            }
           })
         }
       } catch {

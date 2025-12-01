@@ -6,8 +6,8 @@ const prisma = new PrismaClient()
 // Avoid thin content pages
 const MIN_JOBS_FOR_SLICE = 5
 
-// You can expand this later to [100_000, 150_000, 200_000, 300_000, ...]
-const SALARY_BANDS = [100_000, 150_000, 200_000]
+// Salary bands we support
+const SALARY_BANDS = [100_000, 200_000, 300_000, 400_000]
 
 // Treat a job as ">= band" if either:
 // - we have a normalized maxAnnual >= band, OR
@@ -38,7 +38,7 @@ async function main() {
 /* -------------------------------------------------------
    1) GLOBAL SALARY PAGES
    /jobs/100k-plus
-   /jobs/150k-plus
+   /jobs/200k-plus
 ------------------------------------------------------- */
 async function generateGlobalSalarySlices() {
   for (const band of SALARY_BANDS) {
@@ -65,7 +65,7 @@ async function generateGlobalSalarySlices() {
 /* -------------------------------------------------------
    2) ROLE + COUNTRY + SALARY
    /jobs/100k-plus/data-scientist/us
-   /jobs/150k-plus/software-engineer/ca
+   /jobs/200k-plus/software-engineer/ca
 ------------------------------------------------------- */
 async function generateRoleCountrySlices() {
   for (const band of SALARY_BANDS) {
@@ -109,7 +109,7 @@ async function generateRoleCountrySlices() {
 /* -------------------------------------------------------
    3) COUNTRY ALL-ROLES + SALARY
    /jobs/100k-plus/all-roles/us
-   /jobs/150k-plus/all-roles/ca
+   /jobs/200k-plus/all-roles/ca
 ------------------------------------------------------- */
 async function generateCountryAllRolesSlices() {
   for (const band of SALARY_BANDS) {

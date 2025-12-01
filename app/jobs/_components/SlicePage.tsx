@@ -101,6 +101,17 @@ export function SlicePage({ slice, data }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
+      <nav className="flex items-center gap-2 text-xs text-slate-400">
+        <Link href="/" className="hover:underline">
+          Home
+        </Link>
+        <span>/</span>
+        <Link href="/jobs/100k-plus" className="hover:underline">
+          $100k+ jobs
+        </Link>
+        <span>/</span>
+        <span className="text-slate-200">{heading}</span>
+      </nav>
       {/* Header */}
       <header className="space-y-2">
         <h1 className="text-3xl font-bold text-slate-50">

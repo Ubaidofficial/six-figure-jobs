@@ -437,12 +437,6 @@ export default async function HomePage() {
           >
             🇺🇸 $200k+ in US
           </Link>
-          <Link
-            href="/jobs/location/gb?min=150000"
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500"
-          >
-            🇬🇧 £150k+ in UK
-          </Link>
         </div>
       </section>
 

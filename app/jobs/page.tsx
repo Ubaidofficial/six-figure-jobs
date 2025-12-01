@@ -12,14 +12,14 @@ const SITE_URL =
 export const metadata: Metadata = {
   title: 'High-paying tech jobs by salary band | Remote100k',
   description:
-    'Browse $100k+, $150k+, and $200k+ tech jobs indexed from ATS-powered company job boards. Explore popular role & country combinations.',
+    'Browse $100k+, $200k+, $300k+, and $400k+ tech jobs indexed from ATS-powered company job boards. Explore popular role & country combinations.',
   alternates: {
     canonical: `${SITE_URL}/jobs`,
   },
   openGraph: {
     title: 'High-paying tech jobs by salary band | Remote100k',
     description:
-      'Explore $100k+, $150k+, and $200k+ salary bands and popular role/country slices for top-paying tech jobs.',
+      'Explore $100k+, $200k+, $300k+, and $400k+ salary bands and popular role/country slices for top-paying tech jobs.',
     url: `${SITE_URL}/jobs`,
     siteName: 'Remote100k',
     type: 'website',
@@ -28,12 +28,12 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'High-paying tech jobs by salary band | Remote100k',
     description:
-      'Curated $100k+, $150k+, and $200k+ tech roles from ATS-powered company boards.',
+      'Curated $100k+, $200k+, $300k+, and $400k+ tech roles from ATS-powered company boards.',
   },
 }
 
 type BandConfig = {
-  id: '100k' | '150k' | '200k'
+  id: '100k' | '200k' | '300k' | '400k'
   label: string
   blurb: string
   href: string
@@ -50,20 +50,26 @@ const BANDS: BandConfig[] = [
     slugPrefix: 'jobs/100k-plus',
   },
   {
-    id: '150k',
-    label: '$150k+ tech jobs from top companies',
-    blurb:
-      'Hand-picked $150k+ senior and staff roles across engineering, product, and GTM.',
-    href: '/jobs/150k-plus',
-    slugPrefix: 'jobs/150k-plus',
-  },
-  {
     id: '200k',
     label: '$200k+ tech jobs from top companies',
     blurb:
       'Principal, leadership, and specialist roles with $200k+ compensation.',
     href: '/jobs/200k-plus',
     slugPrefix: 'jobs/200k-plus',
+  },
+  {
+    id: '300k',
+    label: '$300k+ tech jobs',
+    blurb: 'Executive-track and top-comp principal roles with $300k+ packages.',
+    href: '/jobs/300k-plus',
+    slugPrefix: 'jobs/300k-plus',
+  },
+  {
+    id: '400k',
+    label: '$400k+ executive tech jobs',
+    blurb: 'Executive and top-comp band roles with $400k+ compensation.',
+    href: '/jobs/400k-plus',
+    slugPrefix: 'jobs/400k-plus',
   },
 ]
 
@@ -145,9 +151,10 @@ export default async function JobsIndexPage() {
           High-paying tech jobs by salary band
         </h1>
         <p className="max-w-2xl text-sm text-slate-300">
-          Explore live $100k+, $150k+, and $200k+ roles indexed directly
-          from ATS-powered company boards. Each page combines role, country,
-          and salary data to surface the strongest compensation opportunities.
+          Explore live $100k+, $200k+, $300k+, and $400k+ roles indexed
+          directly from ATS-powered company boards. Each page combines role,
+          country, and salary data to surface the strongest compensation
+          opportunities.
         </p>
       </header>
 
@@ -163,9 +170,11 @@ export default async function JobsIndexPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                 {band.id === '100k'
                   ? 'Core band'
-                  : band.id === '150k'
+                  : band.id === '200k'
                   ? 'Senior band'
-                  : 'Top band'}
+                  : band.id === '300k'
+                  ? 'Principal band'
+                  : 'Executive band'}
               </p>
               <h2 className="mt-2 text-sm font-semibold text-slate-50">
                 {band.label}

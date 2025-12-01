@@ -71,10 +71,8 @@ function buildTitle(sp: SearchParams): string {
     minSalary >= 250000
       ? '$250k+'
       : minSalary >= 200000
-        ? '$200k+'
-        : minSalary >= 150000
-          ? '$150k+'
-          : '$100k+'
+      ? '$200k+'
+      : '$100k+'
 
   if (q && location) {
     return `${salaryLabel} ${q} jobs in ${location.toUpperCase()} | Remote100k`
@@ -295,9 +293,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="100000">$100k+</option>
-                <option value="150000">$150k+</option>
-                <option value="200000">$200k+</option>
-                <option value="250000">$250k+</option>
+              <option value="200000">$200k+</option>
+              <option value="250000">$250k+</option>
                 <option value="300000">$300k+</option>
                 <option value="400000">$400k+</option>
               </select>
