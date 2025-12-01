@@ -7,6 +7,7 @@ import JobList from '../../components/JobList'
 import { TARGET_COUNTRIES } from '../../../lib/seo/regions'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { formatNumberCompact } from '../../../lib/utils/number'
+import { formatSalaryBandLabel } from '../../../lib/utils/salaryLabels'
 
 type SliceForPage = JobSlice
 
@@ -34,14 +35,7 @@ export function SlicePage({ slice, data }: Props) {
     TARGET_COUNTRIES.find((c) => c.code.toLowerCase() === (countryCode ?? '').toLowerCase())?.label ||
     countryCode ||
     null
-  const salaryBand =
-    minAnnual && minAnnual >= 400_000
-      ? '$400k+'
-      : minAnnual && minAnnual >= 300_000
-      ? '$300k+'
-      : minAnnual && minAnnual >= 200_000
-      ? '$200k+'
-      : '$100k+'
+  const salaryBand = formatSalaryBandLabel(minAnnual ?? 100_000, countryCode)
   const roleLabel = roleSlug ? prettyRole(roleSlug) : null
 
   const companyCounts = new Map<string, { name: string; count: number; slug?: string | null }>()
@@ -207,37 +201,37 @@ export function SlicePage({ slice, data }: Props) {
             Explore salary bands
           </h2>
           <div className="flex flex-wrap gap-2 text-xs text-slate-300">
-            {relatedSalaryBands.map((band) => {
-              const slug =
-                band === 100_000
-                  ? '100k-plus'
-                  : band === 200_000
-                  ? '200k-plus'
-                  : band === 300_000
-                  ? '300k-plus'
-                  : '400k-plus'
-              const basePath = roleSlug
-                ? countryCode
-                  ? `/jobs/${roleSlug}/${countryCode}/${slug}`
-                  : (slice.filters as any)?.remoteOnly || (slice.filters as any)?.remoteRegion
-                  ? `/jobs/${roleSlug}/remote/${slug}`
-                  : `/jobs/${roleSlug}/${slug}`
-                : countryCode
-                ? `/jobs/${countryCode}/${slug}`
-                : `/jobs/${slug}`
+              {relatedSalaryBands.map((band) => {
+                const slug =
+                  band === 100_000
+                    ? '100k-plus'
+                    : band === 200_000
+                    ? '200k-plus'
+                    : band === 300_000
+                    ? '300k-plus'
+                    : '400k-plus'
+                const basePath = roleSlug
+                  ? countryCode
+                    ? `/jobs/${roleSlug}/${countryCode}/${slug}`
+                    : (slice.filters as any)?.remoteOnly || (slice.filters as any)?.remoteRegion
+                    ? `/jobs/${roleSlug}/remote/${slug}`
+                    : `/jobs/${roleSlug}/${slug}`
+                  : countryCode
+                    ? `/jobs/${countryCode}/${slug}`
+                    : `/jobs/${slug}`
 
-              return (
-                <Link
-                  key={band}
-                  href={basePath}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 hover:border-slate-600"
-                >
-                  💵 {band >= 1000 ? `$${band / 1000}k+` : `$${band}+`}
-                </Link>
-              )
-            })}
-          </div>
-        </section>
+                return (
+                  <Link
+                    key={band}
+                    href={basePath}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 hover:border-slate-600"
+                  >
+                    💵 {formatSalaryBandLabel(band, countryCode)}
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
       )}
 
       {topCompanies.length > 0 && (
