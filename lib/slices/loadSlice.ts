@@ -2,6 +2,7 @@
 import { notFound } from 'next/navigation'
 import { prisma } from '../prisma'
 import { JobSlice, parseSliceFilters } from './types'
+import type { JobSlice as JobSliceRow } from '@prisma/client'
 import { parseJobsSlug } from '../jobs/searchSlug'
 
 /**
