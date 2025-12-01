@@ -210,9 +210,9 @@ export default async function HomePage() {
               Find remote &amp; hybrid tech jobs paying $100k+ 💰
             </h1>
             <p className="text-sm leading-relaxed text-slate-300">
-              Six Figure Jobs surfaces high-paying roles directly from ATS-powered
-              company job boards. No lowball ranges, no spam. Just verified
-              $100k+ opportunities across engineering, product, data, and more.
+              Six Figure Jobs surfaces high-paying, six-figure roles directly from ATS-powered
+              company job boards. No lowball ranges, no spam. Just verified $100k+ (and $200k+)
+              opportunities across engineering, product, data, and more—remote, hybrid, and on-site.
             </p>
 
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">

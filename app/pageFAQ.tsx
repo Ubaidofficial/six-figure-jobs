@@ -15,6 +15,14 @@ export function HomeFAQ() {
       q: 'How fresh is the job data?',
       a: 'We refresh twice daily, expire stale roles, and prioritize the newest high-paying openings.',
     },
+    {
+      q: 'Can I find six-figure jobs without a degree?',
+      a: 'Many six-figure roles value experience and portfolio over formal degrees—especially in software, product, data, design, and sales. Filter by role and location to see $100k+ jobs that fit your background.',
+    },
+    {
+      q: 'How do I find $100k jobs near me?',
+      a: 'Browse by country or city pages, or search by location on the homepage. We also show local-currency equivalents (CHF, GBP, EUR, CAD, AUD) to compare offers in your market.',
+    },
   ]
 
   return (
