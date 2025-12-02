@@ -1,6 +1,17 @@
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+// Use pooled URL with a longer pool timeout to avoid P2024 timeouts
+const baseUrl =
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.DATABASE_URL ||
+  ''
+const dbUrl = baseUrl.includes('?')
+  ? `${baseUrl}&pool_timeout=30`
+  : `${baseUrl}?pool_timeout=30`
+
+const prisma = new PrismaClient({
+  datasources: { db: { url: dbUrl } },
+})
 
 // Common careers page paths to check
 const CAREERS_PATHS = [

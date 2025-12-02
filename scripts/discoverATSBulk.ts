@@ -1,5 +1,17 @@
 import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+
+// Use pooled URL with longer timeout to avoid connection pool timeouts
+const baseUrl =
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.DATABASE_URL ||
+  ''
+const dbUrl = baseUrl.includes('?')
+  ? `${baseUrl}&pool_timeout=30`
+  : `${baseUrl}?pool_timeout=30`
+
+const prisma = new PrismaClient({
+  datasources: { db: { url: dbUrl } },
+})
 
 // Broader ATS patterns (Greenhouse, Lever, Ashby, Workday, SmartRecruiters, Teamtailor, Breezy, Recruitee, Workable)
 const ATS_PATTERNS = [
