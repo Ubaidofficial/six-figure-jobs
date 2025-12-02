@@ -135,7 +135,10 @@ export default async function CompanyPage({
 
   // Parse tags
   const tags = parseTags(company.tagsJson)
-  const heroLogo = buildLogoUrl(company.logoUrl, company.website ?? null)
+  const heroLogo = buildLogoUrl(
+    company.logoUrl ?? null,
+    company.website ?? null,
+  )
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
@@ -192,6 +195,13 @@ export default async function CompanyPage({
                   stripTags(decodeHtmlEntities(company.description)),
                   400
                 )}
+              </p>
+            )}
+            {!company.description && (
+              <p className="mt-4 text-sm leading-relaxed text-slate-300">
+                {company.name} is hiring $100k+ talent across{' '}
+                {company.industry ?? 'multiple teams'}. Explore roles in{' '}
+                {highSalaryJobs.length > 0 ? 'high-compensation' : 'their latest'} postings and discover remote and on-site opportunities.
               </p>
             )}
 
@@ -252,6 +262,21 @@ export default async function CompanyPage({
           </div>
         </div>
       </header>
+
+      {/* SEO body copy */}
+      <section className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
+        <h2 className="text-sm font-semibold text-slate-50">
+          Why $100k+ roles at {company.name}?
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+          {company.name} is actively hiring experienced talent for $100k+ roles across{' '}
+          {tags.length ? tags.slice(0, 3).join(', ') : 'multiple teams'}. These positions include high-impact
+          remote, hybrid, and on-site opportunities, with compensation shown up front where available.
+          Explore engineering, product, data, sales, and operations openings, or browse all open jobs to
+          find a six-figure role that matches your skills and location. We refresh this page frequently as
+          new jobs are added from the company’s ATS and careers feeds.
+        </p>
+      </section>
 
       {/* Job Listings */}
       <section>

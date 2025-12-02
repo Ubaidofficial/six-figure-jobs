@@ -33,6 +33,12 @@ export function SlicePage({ slice, data }: Props) {
   const description =
     slice.description ||
     defaultDescriptionFromSlug(slice.slug, slice.filters?.minAnnual ?? null, countryLabel)
+  const seoBody = buildSeoBodyCopy({
+    heading,
+    roleLabel,
+    countryLabel,
+    salaryBand,
+  })
 
   const showingLabel = buildShowingLabel(total, slice.jobCount ?? null)
   const salaryBand = formatSalaryBandLabel(minAnnual ?? 100_000, countryCode)
@@ -223,6 +229,12 @@ export function SlicePage({ slice, data }: Props) {
           </div>
         </div>
       </header>
+
+      {seoBody && (
+        <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm leading-relaxed text-slate-300">
+          {seoBody}
+        </section>
+      )}
 
       <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
         <p>
@@ -492,4 +504,25 @@ function buildFaqs(
       a: 'We refresh ATS sources daily, expire stale jobs, and rank the newest high-paying openings first.',
     },
   ]
+}
+
+function buildSeoBodyCopy({
+  heading,
+  roleLabel,
+  countryLabel,
+  salaryBand,
+}: {
+  heading: string
+  roleLabel: string | null
+  countryLabel: string | null
+  salaryBand: string
+}) {
+  const roleText = roleLabel ?? 'tech'
+  const locationText = countryLabel ? `in ${countryLabel}` : 'worldwide'
+  return (
+    `${heading} curates verified ${salaryBand} ${roleText} roles ${locationText}. ` +
+    `Listings come directly from company ATS feeds and trusted boards, with compensation shown when provided. ` +
+    `Use the filters above to focus on remote, hybrid, or on-site jobs and adjust the salary band to explore senior, staff, or principal opportunities. ` +
+    `We refresh this page frequently—bookmark it to track new six-figure openings across engineering, product, data, design, sales, and more.`
+  )
 }

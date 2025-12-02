@@ -32,6 +32,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
       : false
 
   // Prefer DB logo first, fallback to Clearbit from website
+  // Stronger logo fallback: prefer stored logo → Clearbit/logo.dev → initials
   const logo = buildLogoUrl(
     job.companyRef?.logoUrl ?? job.companyLogo ?? null,
     job.companyRef?.website ?? null,
