@@ -133,6 +133,7 @@ export default async function JobPage({
 
   const requirements = parseArray(typedJob.requirementsJson)
   const benefits = parseArray(typedJob.benefitsJson)
+  const showApply = isValidUrl(typedJob.applyUrl)
 
   // Prefer rich HTML, fallback to raw text
   const rawDescriptionHtml =
@@ -247,9 +248,9 @@ export default async function JobPage({
             )}
 
             <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
-              {company?.website && (
+              {isValidUrl(company?.website) && (
                 <a
-                  href={company.website}
+                  href={cleanUrl(company!.website!)}
                   target="_blank"
                   rel="nofollow noreferrer"
                   className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
@@ -259,9 +260,9 @@ export default async function JobPage({
               )}
 
               {/* NEW: LinkedIn */}
-              {companyLinkedIn && (
+              {isValidUrl(companyLinkedIn) && (
                 <a
-                  href={companyLinkedIn}
+                  href={cleanUrl(companyLinkedIn!)}
                   target="_blank"
                   rel="nofollow noreferrer"
                   className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
@@ -415,10 +416,10 @@ export default async function JobPage({
                 </div>
               </div>
 
-              {typedJob.applyUrl && (
+              {showApply && (
                 <div className="flex-shrink-0">
                   <a
-                    href={typedJob.applyUrl}
+                    href={cleanUrl(typedJob.applyUrl!)}
                     target="_blank"
                     rel="nofollow sponsored"
                     className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/30 hover:bg-blue-500"
@@ -460,9 +461,9 @@ export default async function JobPage({
                 careers site.
               </p>
 
-              {typedJob.applyUrl && (
+              {showApply && (
                 <a
-                  href={typedJob.applyUrl}
+                  href={cleanUrl(typedJob.applyUrl!)}
                   target="_blank"
                   rel="nofollow sponsored"
                   className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-100 ring-1 ring-slate-700 hover:bg-slate-800"
@@ -470,6 +471,25 @@ export default async function JobPage({
                   View full description &amp; apply
                 </a>
               )}
+
+              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm leading-relaxed text-slate-200">
+                <p className="mb-2 font-semibold text-slate-50">
+                  Why this $100k+ role matters
+                </p>
+                <p className="mb-2">
+                  {companyName} is hiring for {typedJob.title} in{' '}
+                  {locationText || 'a remote-friendly location'}. This role is
+                  tagged {seniority ? seniority.replace('⭐ ', '') : 'experienced'} and
+                  targets compensation in the {salaryText || '$100k+ band'}. We ingest jobs
+                  directly from company ATS feeds, filter to verified six-figure roles,
+                  dedupe, and refresh daily so you see current openings.
+                </p>
+                <p className="mb-0">
+                  Browse related $100k+ pages below to explore more roles by region,
+                  salary band, or company. Each listing shows work arrangement
+                  (remote, hybrid, on-site), seniority, and a direct apply link.
+                </p>
+              </div>
             </section>
           )}
 
@@ -753,6 +773,16 @@ function cleanUrl(url: string): string {
   if (!url) return '#'
   if (url.startsWith('http://') || url.startsWith('https://')) return url
   return `https://${url}`
+}
+
+function isValidUrl(url?: string | null): boolean {
+  if (!url) return false
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch {
+    return false
+  }
 }
 
 function buildHeuristicSummary(
