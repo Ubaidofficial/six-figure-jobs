@@ -8,6 +8,7 @@ import {
   type JobWithCompany,
 } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
+import type { Job } from '@prisma/client'
 
 export const revalidate = 1800
 
@@ -133,7 +134,7 @@ export async function generateMetadata({
   })
 
   let description =
-    `Explore real-time ${roleName} salary data from ${bandLabel} tech jobs. ` +
+    `Explore ${roleName} salary data from ${bandLabel} tech jobs. ` +
     `See current ranges based on live ATS-powered job listings.`
 
   if (raw.length > 0) {
@@ -159,7 +160,7 @@ export async function generateMetadata({
   }
 
   const allowIndex = raw.length >= 3
-  const title = `${roleName} Salary Guide (${bandLabel} Tech Jobs) | Remote100k`
+  const title = `${roleName} salary guide (${bandLabel}) | Six Figure Jobs`
   const canonical = `${SITE_URL}/salary/${roleSlug}${bandSlug ? `?band=${bandSlug}` : ''}`
 
   return {
@@ -191,6 +192,54 @@ export async function generateMetadata({
 type PageProps = {
   params: Promise<{ role: string }>
   searchParams?: SearchParams | Promise<SearchParams>
+}
+
+function StructuredData({
+  jobs,
+  roleName,
+}: {
+  jobs: (JobWithCompany | Job)[]
+  roleName: string
+}) {
+  if (!jobs.length) return null
+  const items = jobs.slice(0, 10).map((job) => ({
+    '@type': 'JobPosting',
+    title: job.title,
+    description: job.descriptionHtml
+      ? job.descriptionHtml.slice(0, 1000)
+      : undefined,
+    hiringOrganization: {
+      '@type': 'Organization',
+      name: job.company || job.companyRef?.name || 'Unknown company',
+    },
+    datePosted: job.postedAt || job.createdAt,
+    employmentType: job.type || 'FULL_TIME',
+    jobLocationType: job.remote === true ? 'TELECOMMUTE' : undefined,
+    applicantLocationRequirements: job.remote === true ? 'REMOTE' : undefined,
+    identifier: {
+      '@type': 'PropertyValue',
+      name: job.source,
+      value: job.id,
+    },
+  }))
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${roleName} job openings`,
+    itemListElement: items.map((item, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      item,
+    })),
+  }
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  )
 }
 
 export default async function SalaryRolePage(props: PageProps) {
@@ -264,7 +313,7 @@ export default async function SalaryRolePage(props: PageProps) {
   // Jobs list for this role (live $100k+)
   const data = await queryJobs({
     roleSlugs: [roleSlug],
-    minAnnual: 100_000,
+    minAnnual,
     page,
     pageSize: PAGE_SIZE,
   })
@@ -320,6 +369,7 @@ export default async function SalaryRolePage(props: PageProps) {
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      <StructuredData jobs={jobs} roleName={roleName} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
@@ -361,7 +411,7 @@ export default async function SalaryRolePage(props: PageProps) {
       {/* Header + stats */}
       <header className="mb-8 space-y-4">
         <h1 className="text-2xl font-semibold text-slate-50">
-          {roleName} salary guide using $100k+ tech jobs
+          {roleName} salary guide
         </h1>
         <p className="max-w-2xl text-sm text-slate-300">
           Live six-figure salary ranges for {roleName.toLowerCase()} roles, based on verified $100k+ job listings from top tech and SaaS companies. Remote, hybrid, and on-site pay data—across USD and local currencies—updated regularly.
@@ -449,7 +499,7 @@ export default async function SalaryRolePage(props: PageProps) {
       {/* Job list */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-slate-50">
-          Live $100k+ {roleName.toLowerCase()} jobs
+          {roleName} job openings ({bandLabel})
         </h2>
         {!allowIndex && (
           <p className="text-xs text-amber-300">

@@ -15,22 +15,25 @@ const COUNTRY_KEYWORDS: Record<string, string[]> = {
 }
 
 const ROLE_KEYWORDS: Record<string, string[]> = {
-  'software-engineer': ['software engineer', 'swe', 'developer', 'dev'],
-  'ai-engineer': ['ai engineer', 'gen ai', 'generative ai'],
+  'software-engineer': ['software engineer', 'swe', 'developer', 'dev', 'backend', 'front end', 'frontend', 'full stack'],
+  'ai-engineer': ['ai engineer', 'gen ai', 'generative ai', 'llm'],
   'ml-engineer': ['ml engineer', 'machine learning'],
-  'data-engineer': ['data engineer'],
-  'data-scientist': ['data scientist'],
+  'data-engineer': ['data engineer', 'data platform'],
+  'data-scientist': ['data scientist', 'ml scientist'],
   'product-manager': ['product manager', 'pm'],
-  'designer': ['designer', 'product designer', 'ux', 'ui'],
-  'devops': ['devops', 'site reliability', 'sre', 'platform engineer'],
+  'designer': ['designer', 'product designer', 'ux', 'ui', 'design lead'],
+  'devops': ['devops', 'site reliability', 'sre', 'platform engineer', 'infra'],
+  'security-engineer': ['security engineer', 'appsec', 'security'],
+  'sales': ['sales', 'account executive', 'ae', 'sales engineer'],
+  'marketing': ['marketing', 'growth'],
 }
 
 const SENIORITY_KEYWORDS: Record<string, string[]> = {
-  entry: ['entry', 'junior', 'jr'],
+  entry: ['entry', 'junior', 'jr', 'associate'],
   mid: ['mid', 'midlevel', 'mid-level'],
   senior: ['senior', 'sr'],
-  lead: ['lead', 'staff', 'principal'],
-  executive: ['director', 'vp', 'c-suite', 'cto', 'chief'],
+  lead: ['lead', 'staff', 'principal', 'staff+'],
+  executive: ['director', 'vp', 'c-suite', 'cto', 'chief', 'head of'],
 }
 
 export function parseSearchQuery(
@@ -64,7 +67,7 @@ export function parseSearchQuery(
   if (/\bapac\b/.test(text)) filters.remoteRegion = 'apac'
   if (/\bemea\b/.test(text)) filters.remoteRegion = 'emea'
   if (/\b(us only|us-only)\b/.test(text)) filters.remoteRegion = 'us-only'
-  if (/\bglobal\b/.test(text)) filters.remoteRegion = 'global'
+  if (/\bglobal\b/.test(text) || /\banywhere\b/.test(text)) filters.remoteRegion = 'global'
 
   // Countries
   for (const [code, keywords] of Object.entries(COUNTRY_KEYWORDS)) {

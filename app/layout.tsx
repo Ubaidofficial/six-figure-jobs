@@ -33,7 +33,7 @@ export default function RootLayout({
                   Browse jobs
                 </Link>
                 <Link
-                  href="/salary/software-engineer"
+                  href="/salary"
                   className="hover:text-white"
                 >
                   Salary guides

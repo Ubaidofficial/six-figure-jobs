@@ -8,6 +8,7 @@ import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { formatSalaryBandLabel } from '../../../../lib/utils/salaryLabels'
 import { formatNumberCompact } from '../../../../lib/utils/number'
+import type { Job } from '@prisma/client'
 
 export const revalidate = 1800
 
@@ -160,13 +161,13 @@ export async function generateMetadata({
     bandSlug && BAND_MAP[bandSlug] ? BAND_MAP[bandSlug] : 100_000
   const bandLabel = formatSalaryBandLabel(minAnnual, countryCode)
 
-  const title = `${roleName} salary guide in ${locationLabel || 'your region'} (${bandLabel} tech jobs) | Remote100k`
+  const title = `${roleName} salary in ${locationLabel || 'your region'}`
   const canonicalBase = `${SITE_URL}/salary/${roleSlug}${loc.length ? `/${loc.join('/')}` : ''}`
   const canonical = `${canonicalBase}${bandSlug ? `?band=${bandSlug}` : ''}`
 
   return {
     title,
-    description: `Live ${roleName} salary insights in ${locationLabel || 'top regions'} from ${bandLabel} tech jobs. Verified, updated daily with remote, hybrid, and on-site roles.`,
+    description: `Live ${roleName} salary data in ${locationLabel || 'top regions'} using verified ${bandLabel} tech jobs. Includes remote, hybrid, and on-site roles with real pay ranges.`,
     alternates: { canonical },
     openGraph: {
       title,
@@ -273,6 +274,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-8 space-y-8">
+      <StructuredData jobs={jobsResult.jobs} roleName={roleName} locationLabel={locationLabel} />
       <nav
         aria-label="Breadcrumb"
         className="text-xs text-slate-400"
@@ -309,7 +311,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
               {roleName} salary in {locationLabel || 'top regions'}
             </h1>
             <p className="max-w-3xl text-sm text-slate-300">
-              Live salary signals from verified {bandLabel} roles. Remote, hybrid, and on-site jobs included; refreshed daily.
+              Live salary signals from verified {bandLabel} roles. Remote, hybrid, and on-site jobs included; refreshed daily with $100k+ openings.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-[11px] text-slate-200">
@@ -405,7 +407,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
       {/* Job list */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-slate-50">
-          Live {bandLabel} {roleName} jobs {locationLabel ? `in ${locationLabel}` : ''}
+          {roleName} job openings in {locationLabel || 'top regions'}
         </h2>
         <JobList jobs={jobsResult.jobs as JobWithCompany[]} />
       </section>
@@ -437,5 +439,61 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
         </nav>
       )}
     </main>
+  )
+}
+
+function StructuredData({
+  jobs,
+  roleName,
+  locationLabel,
+}: {
+  jobs: (JobWithCompany | Job)[]
+  roleName: string
+  locationLabel: string | null
+}) {
+  if (!jobs.length) return null
+  const items = jobs.slice(0, 10).map((job) => ({
+    '@type': 'JobPosting',
+    title: job.title,
+    description: job.descriptionHtml
+      ? job.descriptionHtml.slice(0, 1000)
+      : undefined,
+    hiringOrganization: {
+      '@type': 'Organization',
+      name: job.company || (job as any).companyRef?.name || 'Unknown company',
+    },
+    datePosted: job.postedAt || job.createdAt,
+    employmentType: job.type || 'FULL_TIME',
+    jobLocationType: job.remote === true ? 'TELECOMMUTE' : undefined,
+    applicantLocationRequirements: job.remote === true ? 'REMOTE' : undefined,
+    jobLocation: job.countryCode
+      ? {
+          '@type': 'Country',
+          addressCountry: job.countryCode,
+        }
+      : undefined,
+    identifier: {
+      '@type': 'PropertyValue',
+      name: job.source,
+      value: job.id,
+    },
+  }))
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${roleName} job openings${locationLabel ? ` in ${locationLabel}` : ''}`,
+    itemListElement: items.map((item, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      item,
+    })),
+  }
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
   )
 }
