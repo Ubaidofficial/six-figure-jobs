@@ -460,7 +460,10 @@ function StructuredData({
       : undefined,
     hiringOrganization: {
       '@type': 'Organization',
-      name: job.company || (job as any).companyRef?.name || 'Unknown company',
+      name:
+        job.company ||
+        (job as any).companyRef?.name ||
+        'Unknown company',
     },
     datePosted: job.postedAt || job.createdAt,
     employmentType: job.type || 'FULL_TIME',
