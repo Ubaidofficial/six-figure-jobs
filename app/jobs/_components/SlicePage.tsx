@@ -33,6 +33,9 @@ export function SlicePage({ slice, data }: Props) {
   const description =
     slice.description ||
     defaultDescriptionFromSlug(slice.slug, slice.filters?.minAnnual ?? null, countryLabel)
+  const salaryBand = formatSalaryBandLabel(minAnnual ?? 100_000, countryCode)
+  const roleLabel = roleSlug ? prettyRole(roleSlug) : null
+
   const seoBody = buildSeoBodyCopy({
     heading,
     roleLabel,
@@ -41,8 +44,6 @@ export function SlicePage({ slice, data }: Props) {
   })
 
   const showingLabel = buildShowingLabel(total, slice.jobCount ?? null)
-  const salaryBand = formatSalaryBandLabel(minAnnual ?? 100_000, countryCode)
-  const roleLabel = roleSlug ? prettyRole(roleSlug) : null
 
   const companyCounts = new Map<string, { name: string; count: number; slug?: string | null }>()
   jobs.forEach((job: any) => {
