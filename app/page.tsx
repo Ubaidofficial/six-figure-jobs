@@ -207,16 +207,14 @@ export default async function HomePage() {
 
         <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-4">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-50 md:text-[2.9rem] lg:text-[3rem]">
+            <h1 className="text-4xl font-extrabold tracking-tight text-slate-50 md:text-[3.2rem] lg:text-[3.4rem]">
               Find remote &amp; hybrid tech jobs paying $100k+ 💰
             </h1>
-            <p className="text-sm leading-relaxed text-slate-300">
-              Six Figure Jobs surfaces high-paying, six-figure roles directly from ATS-powered
-              company job boards. AI-ranked and human-reviewed—no lowball ranges, no spam.
-              Verified $100k+ (and $200k+) opportunities across engineering, product, data, and more—remote, hybrid, and on-site.
+            <p className="text-[15px] leading-relaxed text-slate-200 md:text-base">
+              Six Figure Jobs surfaces verified six-figure roles directly from ATS-powered company job boards. AI-ranked and human-reviewed—no lowball ranges, no spam. Remote, hybrid, and on-site roles across engineering, product, data, design, and more.
             </p>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 shadow-lg shadow-slate-900/60">
               <form action="/search" method="get" className="space-y-4">
                 <div>
                   <label

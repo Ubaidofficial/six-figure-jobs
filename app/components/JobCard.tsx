@@ -175,7 +175,16 @@ export default function JobCard({ job }: { job: JobCardJob }) {
             <div className="flex flex-col items-end gap-2 text-xs">
               {postedLabel && (
                 <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                  {isNew && <span className="rounded-full bg-emerald-600/20 px-2 py-0.5 text-emerald-200 ring-1 ring-emerald-600/60">New</span>}
+                  {isFeatured && (
+                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-200 ring-1 ring-amber-500/60">
+                      Featured
+                    </span>
+                  )}
+                  {isNew && (
+                    <span className="rounded-full bg-emerald-600/20 px-2 py-0.5 text-emerald-200 ring-1 ring-emerald-600/60">
+                      New
+                    </span>
+                  )}
                   <span>Posted {postedLabel}</span>
                 </span>
               )}
