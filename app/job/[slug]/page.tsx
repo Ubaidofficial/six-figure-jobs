@@ -281,41 +281,62 @@ export default async function JobPage({
             </div>
           </div>
 
-          {/* Company metadata badges */}
-          <div className="flex flex-wrap justify-center gap-2 text-[11px] text-slate-200">
-            {company?.sizeBucket && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
-                👥 {company.sizeBucket} employees
-              </span>
-            )}
-            {company?.foundedYear && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
-                🏛️ Founded {company.foundedYear}
-              </span>
-            )}
-            {company?.industry && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
-                🏷️ {company.industry}
-              </span>
-            )}
-          </div>
-
-          {/* Company description */}
-          {company?.description && (
-            <div className="mt-2 space-y-2 rounded-xl border border-slate-800 bg-slate-900/50 p-3 text-left text-xs leading-relaxed text-slate-200">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                About {companyName}
+          {/* Company snapshot */}
+          <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-left text-xs leading-relaxed text-slate-200 shadow-inner shadow-slate-900/30">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-400">
+                Company snapshot
               </p>
-              <div className="whitespace-pre-line">
-                {truncateText(
-                  stripTags(decodeHtmlEntities(company.description)),
-                  1200,
-                )}
-              </div>
+              {company?.website && (
+                <a
+                  href={cleanUrl(company.website)}
+                  target="_blank"
+                  rel="nofollow noreferrer"
+                  className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-semibold text-slate-100 hover:border-slate-500"
+                >
+                  Visit site
+                </a>
+              )}
             </div>
-          )}
-
-          {/* Snapshot removed to avoid duplication with badges */}
+            <div className="flex flex-wrap justify-center gap-2 text-[11px] text-slate-200">
+              {company?.sizeBucket && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                  👥 {company.sizeBucket} employees
+                </span>
+              )}
+              {company?.foundedYear && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                  🏛️ Founded {company.foundedYear}
+                </span>
+              )}
+              {company?.industry && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                  🏷️ {company.industry}
+                </span>
+              )}
+              {company?.headquarters && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                  📍 {company.headquarters}
+                </span>
+              )}
+              {companyTags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800"
+                >
+                  # {tag}
+                </span>
+              ))}
+            </div>
+            <div className="text-[12px] leading-relaxed text-slate-200">
+              {company?.description
+                ? truncateText(
+                    stripTags(decodeHtmlEntities(company.description)),
+                    600,
+                  )
+                : `${companyName} is hiring $100k+ talent across multiple teams. Explore their open roles below.`}
+            </div>
+          </div>
         </aside>
 
         {/* --------------------------- Job Content --------------------------- */}
@@ -726,6 +747,12 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   }
 
   return links
+}
+
+function cleanUrl(url: string): string {
+  if (!url) return '#'
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `https://${url}`
 }
 
 function buildHeuristicSummary(
