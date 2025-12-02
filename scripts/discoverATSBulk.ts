@@ -1,10 +1,19 @@
 import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
+// Broader ATS patterns (Greenhouse, Lever, Ashby, Workday, SmartRecruiters, Teamtailor, Breezy, Recruitee, Workable)
 const ATS_PATTERNS = [
-  { name: 'greenhouse', pattern: /boards\.greenhouse\.io\/(\w+)/i, template: 'https://boards.greenhouse.io/$1' },
+  { name: 'greenhouse', pattern: /boards\.greenhouse\.io\/([\w-]+)/i, template: 'https://boards.greenhouse.io/$1' },
+  { name: 'greenhouse', pattern: /greenhouse\.io\/(?:embed\/)?job_board\?.*for=([\w-]+)/i, template: 'https://boards.greenhouse.io/$1' },
   { name: 'lever', pattern: /jobs\.lever\.co\/([^\/\s"']+)/i, template: 'https://jobs.lever.co/$1' },
   { name: 'ashby', pattern: /jobs\.ashbyhq\.com\/([^\/\s"']+)/i, template: 'https://jobs.ashbyhq.com/$1' },
+  { name: 'workday', pattern: /https?:\/\/([^\.]+)\.wd\d+\.myworkdayjobs\.com\/[^"']+/i, template: 'https://$1.wd5.myworkdayjobs.com' },
+  { name: 'workday', pattern: /https?:\/\/([^\.]+)\.myworkdayjobs\.com\/[^"']+/i, template: 'https://$1.myworkdayjobs.com' },
+  { name: 'smartrecruiters', pattern: /careers\.smartrecruiters\.com\/([^\/\s"']+)/i, template: 'https://careers.smartrecruiters.com/$1' },
+  { name: 'teamtailor', pattern: /jobs\.teamtailor\.com\/companies\/([^\/\s"']+)/i, template: 'https://jobs.teamtailor.com/companies/$1' },
+  { name: 'breezy', pattern: /breezy\.hr\/companies\/([^\/\s"']+)/i, template: 'https://breezy.hr/companies/$1' },
+  { name: 'recruitee', pattern: /recruitee\.com\/o\/([^\/\s"']+)/i, template: 'https://$1.recruitee.com' },
+  { name: 'workable', pattern: /apply\.workable\.com\/([^\/\s"']+)/i, template: 'https://apply.workable.com/$1' },
 ]
 
 async function fetchPage(url: string): Promise<string | null> {
@@ -48,32 +57,44 @@ async function findATS(name: string, website?: string | null) {
 }
 
 async function main() {
-  // Focus on companies with websites first (more likely to succeed)
-  const companies = await prisma.company.findMany({
-    where: { atsUrl: null, website: { not: null }, name: { not: 'Add Your Company' } },
-    take: 50
-  })
-  
-  console.log(`\n🔍 Scanning ${companies.length} companies with websites...\n`)
-  
-  let found = 0
-  for (const c of companies) {
-    process.stdout.write(`${c.name.slice(0,30).padEnd(30)} `)
-    const result = await findATS(c.name, c.website)
-    
-    if (result) {
-      await prisma.company.update({ where: { id: c.id }, data: { atsUrl: result.url } })
-      console.log(`✓ ${result.ats}`)
-      found++
-    } else {
-      console.log('✗')
+  const batch = 500
+  let skip = 0
+  let foundTotal = 0
+  let processedTotal = 0
+
+  while (true) {
+    const companies = await prisma.company.findMany({
+      where: { atsUrl: null, website: { not: null }, name: { not: 'Add Your Company' } },
+      take: batch,
+      skip,
+    })
+
+    if (companies.length === 0) break
+
+    console.log(`\n🔍 Scanning ${companies.length} companies (skip=${skip})...\n`)
+
+    for (const c of companies) {
+      processedTotal++
+      process.stdout.write(`${c.name.slice(0,30).padEnd(30)} `)
+      const result = await findATS(c.name, c.website)
+
+      if (result) {
+        await prisma.company.update({ where: { id: c.id }, data: { atsUrl: result.url, atsProvider: result.ats } })
+        console.log(`✓ ${result.ats}`)
+        foundTotal++
+      } else {
+        console.log('✗')
+      }
     }
+
+    skip += companies.length
+    if (companies.length < batch) break
   }
-  
-  console.log(`\n✅ Found ${found} new ATS URLs`)
+
+  console.log(`\n✅ Found ${foundTotal} new ATS URLs (processed ${processedTotal})`)
   const total = await prisma.company.count({ where: { atsUrl: { not: null } } })
   console.log(`Total with ATS: ${total}\n`)
-  
+
   await prisma.$disconnect()
 }
 main()

@@ -27,5 +27,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Discover ATS URLs from seed companies
+        run: |
+          npx tsx scripts/discoverATSBulk.ts || true
+          npx tsx scripts/discoverATS.ts || true
+
       - name: Run daily scraper (boards + ATS)
         run: npx tsx scripts/dailyScrapeV2.ts --mode=all --concurrency=6
