@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { prisma } from '../../lib/prisma'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
 import JobList from '../components/JobList'
+import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 
 export const dynamic = "force-dynamic"
 
@@ -134,7 +135,23 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const minSalaryRaw = Number(getParam(sp, 'minSalary') || '100000')
   const page = Math.max(1, Number(getParam(sp, 'page') || '1') || 1)
 
-  const minAnnual = Math.max(100_000, isNaN(minSalaryRaw) ? 100_000 : minSalaryRaw)
+  const aiFilters = parseSearchQuery(q)
+
+  const minAnnual = Math.max(
+    100_000,
+    isNaN(minSalaryRaw) ? 100_000 : minSalaryRaw,
+    aiFilters.minAnnual ?? 0,
+  )
+
+  const resolvedLocation = location || aiFilters.countryCode || ''
+  const resolvedRemoteMode = remoteMode || aiFilters.remoteMode || ''
+  const resolvedRemoteRegion = remoteRegion || aiFilters.remoteRegion || ''
+  const resolvedSeniority = seniority || aiFilters.experienceLevel || ''
+  const roleSlugs = aiFilters.roleSlugs?.length
+    ? aiFilters.roleSlugs
+    : role
+    ? [role]
+    : []
 
   const andConditions: any[] = []
 
@@ -157,36 +174,46 @@ export default async function SearchPage({ searchParams }: PageProps) {
     })
   }
 
-  if (role) {
+  if (roleSlugs.length) {
     andConditions.push({
-      roleSlug: { contains: role },
+      OR: roleSlugs.map((slug) => ({ roleSlug: { contains: slug } })),
     })
   }
 
-  if (location) {
-    if (location === 'remote') {
+  if (resolvedLocation) {
+    if (resolvedLocation === 'remote') {
       andConditions.push({
         OR: [{ remote: true }, { remoteMode: 'remote' }],
       })
-    } else if (location.length === 2) {
+    } else if (resolvedLocation.length === 2) {
       andConditions.push({
-        countryCode: location.toUpperCase(),
+        countryCode: resolvedLocation.toUpperCase(),
       })
     }
   }
 
-  if (remoteMode === 'remote' || remoteMode === 'hybrid' || remoteMode === 'onsite') {
-    andConditions.push({ remoteMode })
+  if (aiFilters.remoteOnly && !resolvedRemoteMode) {
+    andConditions.push({
+      OR: [{ remote: true }, { remoteMode: 'remote' }],
+    })
   }
 
-  if (remoteRegion) {
-    andConditions.push({ remoteRegion })
+  if (
+    resolvedRemoteMode === 'remote' ||
+    resolvedRemoteMode === 'hybrid' ||
+    resolvedRemoteMode === 'onsite'
+  ) {
+    andConditions.push({ remoteMode: resolvedRemoteMode })
   }
 
-  if (seniority) {
+  if (resolvedRemoteRegion) {
+    andConditions.push({ remoteRegion: resolvedRemoteRegion })
+  }
+
+  if (resolvedSeniority) {
     andConditions.push({
       roleInference: {
-        seniority: seniority,
+        seniority: resolvedSeniority,
       },
     })
   }
@@ -214,6 +241,15 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const jobs = jobsRaw as JobWithCompany[]
   const hasNextPage = page * PAGE_SIZE < total
   const hasPrevPage = page > 1
+  const paginationState: SearchParams = {
+    ...sp,
+    ...(resolvedLocation ? { location: resolvedLocation } : {}),
+    ...(resolvedRemoteMode ? { remoteMode: resolvedRemoteMode } : {}),
+    ...(resolvedRemoteRegion ? { remoteRegion: resolvedRemoteRegion } : {}),
+    ...(resolvedSeniority ? { seniority: resolvedSeniority } : {}),
+    ...(roleSlugs.length === 1 ? { role: roleSlugs[0] } : {}),
+    minSalary: String(minAnnual),
+  }
 
   const title = buildTitle(sp)
 
@@ -246,7 +282,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <select
                 id="location"
                 name="location"
-                defaultValue={location}
+                defaultValue={resolvedLocation}
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="">All locations</option>
@@ -271,7 +307,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <select
                 id="remoteMode"
                 name="remoteMode"
-                defaultValue={remoteMode}
+                defaultValue={resolvedRemoteMode}
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="">Any</option>
@@ -307,7 +343,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <select
                 id="remoteRegion"
                 name="remoteRegion"
-                defaultValue={remoteRegion}
+                defaultValue={resolvedRemoteRegion}
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="">Any</option>
@@ -328,7 +364,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <select
                 id="seniority"
                 name="seniority"
-                defaultValue={seniority}
+                defaultValue={resolvedSeniority}
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="">Any</option>
@@ -370,7 +406,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
             </h1>
             <p className="mt-1 text-sm text-slate-400">
               {total.toLocaleString()} jobs found
-              {location && ` in ${location === 'remote' ? 'Remote' : location.toUpperCase()}`}
+              {resolvedLocation &&
+                ` in ${resolvedLocation === 'remote' ? 'Remote' : resolvedLocation.toUpperCase()}`}
               {minAnnual > 100000 && ` paying $${(minAnnual / 1000).toFixed(0)}k+`}
             </p>
           </div>
@@ -409,7 +446,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             <div className="flex gap-2">
               {hasPrevPage && (
                 <Link
-                  href={buildSearchHref(sp, page - 1)}
+                  href={buildSearchHref(paginationState, page - 1)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 hover:border-slate-500"
                 >
                   ← Previous
@@ -417,7 +454,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               )}
               {hasNextPage && (
                 <Link
-                  href={buildSearchHref(sp, page + 1)}
+                  href={buildSearchHref(paginationState, page + 1)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 hover:border-slate-500"
                 >
                   Next →

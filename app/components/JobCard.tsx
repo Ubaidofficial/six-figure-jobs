@@ -14,6 +14,8 @@ export type JobCardJob = JobWithCompany & {
   description?: string | null
   benefitsJson?: string | null
   postedAt?: string | Date | null
+  requirementsJson?: string | null
+  techStack?: string | null
 }
 
 /* -------------------------------------------------------------------------- */
@@ -76,6 +78,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
     Date.now() - new Date(job.postedAt ?? job.createdAt as any).getTime() < 1000 * 60 * 60 * 48
 
   const benefits = parseJsonArray(job.benefitsJson).slice(0, 3)
+  const techStack = parseJsonArray(job.techStack).slice(0, 3)
 
   const isHighSalary =
     job.isHighSalary ||
@@ -253,6 +256,19 @@ export default function JobCard({ job }: { job: JobCardJob }) {
               {snippet}
             </p>
           )}
+
+          {techStack.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+              {techStack.map((tech) => (
+                <span
+                  key={tech}
+                  className="rounded-full bg-slate-900 px-2 py-1 text-slate-300 ring-1 ring-slate-700"
+                >
+                  {tech}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </article>
@@ -323,6 +339,9 @@ function buildLocation(job: JobCardJob): string | null {
 }
 
 function buildSnippet(job: JobCardJob, companyDesc?: string | null): string | null {
+  const aiSummary = extractSummary(job.requirementsJson)
+  if (aiSummary) return aiSummary
+
   const rawPrimary = job.snippet ?? job.descriptionHtml ?? null
   const rawSecondary = job.description ?? null
   const raw = rawPrimary || rawSecondary || companyDesc || null
@@ -412,6 +431,19 @@ function parseJsonArray(raw?: string | null): string[] {
     return []
   }
   return []
+}
+
+function extractSummary(requirementsJson?: string | null): string | null {
+  if (!requirementsJson) return null
+  try {
+    const parsed = JSON.parse(requirementsJson)
+    if (typeof parsed?.summary === 'string' && parsed.summary.trim()) {
+      return parsed.summary.trim()
+    }
+  } catch {
+    return null
+  }
+  return null
 }
 
 function getCompanyBlurb(description?: string | null): string | null {

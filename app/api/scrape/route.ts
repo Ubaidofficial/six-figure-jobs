@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server'
 
 import scrapeRemoteOK from '../../../lib/scrapers/remoteok'
 import scrapeWeWorkRemotely from '../../../lib/scrapers/weworkremotely'
+import scrapeNodesk from '../../../lib/scrapers/nodesk'
 import scrapeRemoteAI from '../../../lib/scrapers/remoteai'
 import scrapeRemotive from '../../../lib/scrapers/remotive'
 import scrapeBuiltIn from '../../../lib/scrapers/builtin'
@@ -22,13 +23,18 @@ import { scrapeRealWorkFromAnywhere } from '../../../lib/scrapers/realworkfroman
 import { scrapeJustJoin } from '../../../lib/scrapers/justjoin'
 import { scrapeRemoteOtter } from '../../../lib/scrapers/remoteotter'
 import { scrapeTrawle } from '../../../lib/scrapers/trawle'
+import { scrapeFourDayWeek } from '../../../lib/scrapers/fourdayweek'
+import scrapeYCombinator from '../../../lib/scrapers/ycombinator'
+import scrapeGenericSources from '../../../lib/scrapers/generic'
 
 // ------------------------------------------
 // ATS scrapers (default exports)
 // ------------------------------------------
 
-import scrapeGreenhouse from '../../../lib/scrapers/greenhouse'
-// TODO: add Ashby / Lever / Workday scrapers here when ready
+import { prisma } from '../../../lib/prisma'
+import { scrapeCompanyAtsJobs } from '../../../lib/scrapers/ats'
+import { upsertJobsForCompanyFromAts } from '../../../lib/jobs/ingestFromAts'
+import type { AtsProvider } from '../../../lib/scrapers/ats/types'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -50,6 +56,7 @@ export async function GET(req: Request) {
 
     boardResults.push(await scrapeRemoteOK())
     boardResults.push(await scrapeWeWorkRemotely())
+    boardResults.push(await scrapeNodesk())
     boardResults.push(await scrapeRemoteAI())
     boardResults.push(await scrapeRemotive())
     boardResults.push(await scrapeBuiltIn())
@@ -61,13 +68,56 @@ export async function GET(req: Request) {
     boardResults.push(await scrapeJustJoin())
     boardResults.push(await scrapeRemoteOtter())
     boardResults.push(await scrapeTrawle())
+    boardResults.push(await scrapeFourDayWeek())
+    boardResults.push(await scrapeYCombinator())
+    boardResults.push(await scrapeGenericSources())
   }
 
   if (runATS) {
     console.log('▶ Scraping ATS sources…')
 
-    atsResults.push(await scrapeGreenhouse())
-    // add Ashby / Lever / Workday here when you have them
+    const companies = await prisma.company.findMany({
+      where: {
+        atsProvider: { not: null },
+        atsUrl: { not: null },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        atsProvider: true,
+        atsUrl: true,
+      },
+    })
+
+    for (const company of companies) {
+      try {
+        const provider = company.atsProvider as AtsProvider
+        const rawJobs = await scrapeCompanyAtsJobs(
+          provider,
+          company.atsUrl as string,
+        )
+        const result = await upsertJobsForCompanyFromAts(
+          company,
+          rawJobs,
+        )
+        atsResults.push({
+          company: company.slug,
+          provider,
+          ...result,
+        })
+      } catch (err: any) {
+        console.error(
+          `[ATS] ${company.slug} (${company.atsProvider}) failed`,
+          err?.message || err,
+        )
+        atsResults.push({
+          company: company.slug,
+          provider: company.atsProvider,
+          error: err?.message || 'Unknown ATS error',
+        })
+      }
+    }
   }
 
   return NextResponse.json({

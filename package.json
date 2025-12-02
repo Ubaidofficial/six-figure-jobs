@@ -7,7 +7,8 @@
     "build": "npx prisma generate && next build",
     "lint": "next lint",
     "jobs:audit:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=audit --dry-run",
-    "jobs:repair:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=repair"
+    "jobs:repair:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=repair",
+    "jobs:annotate:ai": "tsx scripts/aiAnnotateJobs.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.16.1",
