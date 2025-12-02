@@ -66,7 +66,7 @@ async function main() {
     `\n🔍 Scraping companies without ATS (batch ${batchSize}, max batches ${maxBatches})...\n`,
   )
 
-  const browser = await puppeteer.launch({ headless: 'new' })
+  const browser = await puppeteer.launch({ headless: true })
 
   while (batches < maxBatches) {
     const companies = await prisma.company.findMany({
