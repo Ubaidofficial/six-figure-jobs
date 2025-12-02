@@ -2,7 +2,18 @@ import { PrismaClient } from '@prisma/client'
 import puppeteer from 'puppeteer'
 import { ingestJob } from '../lib/ingest/index.js'
 
-const prisma = new PrismaClient()
+// Use pooled URL with longer timeout to avoid connection pool timeouts
+const baseUrl =
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.DATABASE_URL ||
+  ''
+const dbUrl = baseUrl.includes('?')
+  ? `${baseUrl}&pool_timeout=30`
+  : `${baseUrl}?pool_timeout=30`
+
+const prisma = new PrismaClient({
+  datasources: { db: { url: dbUrl } },
+})
 
 const JOB_LINK_PATTERNS = [/\/jobs?\//i, /\/careers?\//i, /\/positions?\//i, /\/openings?\//i, /apply/i]
 const CAREER_PATHS = ['/careers', '/jobs', '/about/careers', '/join-us', '/open-positions']
@@ -44,58 +55,84 @@ async function scrapeCareerPage(browser: any, website: string): Promise<{title: 
 }
 
 async function main() {
-  const companies = await prisma.company.findMany({
-    where: { atsUrl: null, website: { not: null }, name: { not: 'Add Your Company' } },
-    take: 20
-  })
-  
-  console.log(`\n🔍 Scraping ${companies.length} companies...\n`)
-  const browser = await puppeteer.launch({ headless: true })
-  let totalJobs = 0, success = 0
-  
-  for (const c of companies) {
-    if (!c.website) continue
-    process.stdout.write(`${c.name.slice(0, 25).padEnd(25)} `)
-    try {
-      const jobs = await scrapeCareerPage(browser, c.website)
-      if (jobs.length > 0) {
-        console.log(`✓ ${jobs.length} jobs`)
-        success++
-        for (const job of jobs) {
-          try {
-            const result = await ingestJob({
-              externalId: `career-${Buffer.from(job.url).toString('base64').slice(0, 20)}`,
-              title: job.title,
-              rawCompanyName: c.name,  // Fixed!
-              companyWebsiteUrl: c.website,
-              locationText: job.location || 'Remote',
-              url: job.url,
-              applyUrl: job.url,
-              descriptionText: null,
-              descriptionHtml: null,
-              postedAt: new Date(),
-              source: 'board:career-page',
-              isRemote: /remote/i.test(job.location || job.title),
-              salaryMin: null,
-              salaryMax: null,
-              salaryCurrency: null,
-              salaryInterval: null,
-              employmentType: null
-            })
-            if (result.status === 'created') totalJobs++
-          } catch (e) { console.log(`    Error: ${e}`) }
-        }
-      } else console.log('✗')
-    } catch (e: any) { console.log(`✗ ${e.message?.slice(0, 30)}`) }
+  const batchSize = Number(process.env.CAREER_BATCH || 20)
+  const maxBatches = Number(process.env.CAREER_MAX_BATCHES || 1)
+  let skip = 0
+  let batches = 0
+  let totalJobs = 0
+  let success = 0
+
+  console.log(
+    `\n🔍 Scraping companies without ATS (batch ${batchSize}, max batches ${maxBatches})...\n`,
+  )
+
+  const browser = await puppeteer.launch({ headless: 'new' })
+
+  while (batches < maxBatches) {
+    const companies = await prisma.company.findMany({
+      where: { atsUrl: null, website: { not: null }, name: { not: 'Add Your Company' } },
+      take: batchSize,
+      skip,
+    })
+
+    if (companies.length === 0) break
+    console.log(`\nBatch ${batches + 1}: ${companies.length} companies (skip=${skip})`)
+
+    for (const c of companies) {
+      if (!c.website) continue
+      process.stdout.write(`${c.name.slice(0, 25).padEnd(25)} `)
+      try {
+        const jobs = await scrapeCareerPage(browser, c.website)
+        if (jobs.length > 0) {
+          console.log(`✓ ${jobs.length} jobs`)
+          success++
+          for (const job of jobs) {
+            try {
+              const result = await ingestJob({
+                externalId: `career-${Buffer.from(job.url).toString('base64').slice(0, 20)}`,
+                title: job.title,
+                rawCompanyName: c.name,
+                companyWebsiteUrl: c.website,
+                locationText: job.location || 'Remote',
+                url: job.url,
+                applyUrl: job.url,
+                descriptionText: null,
+                descriptionHtml: null,
+                postedAt: new Date(),
+                source: 'board:career-page',
+                isRemote: /remote/i.test(job.location || job.title),
+                salaryMin: null,
+                salaryMax: null,
+                salaryCurrency: null,
+                salaryInterval: null,
+                employmentType: null,
+              })
+              if (result.status === 'created') totalJobs++
+            } catch (e) {
+              console.log(`    Error: ${e}`)
+            }
+          }
+        } else console.log('✗')
+      } catch (e: any) {
+        console.log(`✗ ${e.message?.slice(0, 30)}`)
+      }
+    }
+
+    skip += companies.length
+    batches++
+    if (companies.length < batchSize) break
   }
-  
+
   await browser.close()
   console.log(`\n✅ ${success} companies, ${totalJobs} NEW jobs ingested`)
-  
+
   const total = await prisma.job.count({ where: { isExpired: false } })
   const careerJobs = await prisma.job.count({ where: { source: 'board:career-page' } })
   console.log(`Total: ${total} | Career page: ${careerJobs}\n`)
-  
+
   await prisma.$disconnect()
 }
-main()
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

@@ -32,5 +32,11 @@ jobs:
           npx tsx scripts/discoverATSBulk.ts || true
           npx tsx scripts/discoverATS.ts || true
 
+      - name: Scrape careers for companies without ATS
+        env:
+          CAREER_BATCH: 20
+          CAREER_MAX_BATCHES: 1
+        run: npx tsx scripts/scrapeCareerPages.ts || true
+
       - name: Run daily scraper (boards + ATS)
         run: npx tsx scripts/dailyScrapeV2.ts --mode=all --concurrency=6

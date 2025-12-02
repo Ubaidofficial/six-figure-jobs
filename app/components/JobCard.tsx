@@ -11,6 +11,7 @@ import { buildLogoUrl } from '../../lib/companies/logo'
 /** Extend queryJobs result with UI-only optional fields */
 export type JobCardJob = JobWithCompany & {
   snippet?: string | null
+  description?: string | null
   benefitsJson?: string | null
   postedAt?: string | Date | null
 }
