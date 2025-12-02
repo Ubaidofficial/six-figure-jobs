@@ -24,6 +24,12 @@ export default function JobCard({ job }: { job: JobCardJob }) {
   const [logoFailed, setLogoFailed] = useState(false)
   const companyName =
     job.companyRef?.name ?? job.company ?? 'Unknown company'
+  const companyInitials = companyName
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 
   const isFeatured =
     Boolean((job as any)?.featured) ||
@@ -47,7 +53,10 @@ export default function JobCard({ job }: { job: JobCardJob }) {
   const location = buildLocation(job)
   const salaryText = buildSalaryText(job) // ← UNIFIED salary logic
   const salaryDisplay =
-    salaryText && /\d/.test(salaryText) && !salaryText.includes('<')
+    salaryText &&
+    /\d/.test(salaryText) &&
+    !salaryText.includes('<') &&
+    isReasonableSalary(job)
       ? salaryText
       : null
   const snippet = buildSnippet(job, companyDesc)
@@ -102,7 +111,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
               />
             ) : (
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300 hover:ring-2 hover:ring-slate-600">
-                {companyName?.charAt(0) ?? '?'}
+                {companyInitials || '?'}
               </div>
             )}
           </Link>
@@ -118,7 +127,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
               />
             ) : (
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300">
-                {companyName?.charAt(0) ?? '?'}
+                {companyInitials || '?'}
               </div>
             )}
           </div>
@@ -190,9 +199,9 @@ export default function JobCard({ job }: { job: JobCardJob }) {
                 </span>
               )}
               <div className="flex flex-wrap justify-end gap-2">
-                {job.companyRef?.website && (
+                {isValidUrl(job.companyRef?.website) && (
                   <a
-                    href={job.companyRef.website}
+                    href={cleanUrl(job.companyRef!.website!)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-100 hover:border-slate-500"
@@ -321,6 +330,15 @@ function buildSnippet(job: JobCardJob, companyDesc?: string | null): string | nu
   return truncateText(stripTags(decodeHtmlEntities(raw)), 160)
 }
 
+function isReasonableSalary(job: JobCardJob) {
+  const min = Number(job.minAnnual ?? 0)
+  const max = Number(job.maxAnnual ?? 0)
+  if (max && max > 1_000_000) return false
+  if (min && min > 1_000_000) return false
+  if (min && max && max < min) return false
+  return true
+}
+
 function decodeHtmlEntities(str: string) {
   return str
     .replace(/&amp;/g, '&')
@@ -376,10 +394,10 @@ function inferCategoryFromRoleSlug(roleSlug?: string | null) {
 
 function getRemoteMode(job: JobCardJob): string | null {
   const mode = job.remoteMode ?? null
+  if (job.remote === true) return 'Remote'
   if (mode === 'remote') return 'Remote'
   if (mode === 'hybrid') return 'Hybrid'
   if (mode === 'onsite') return 'On-site'
-  if (job.remote === true) return 'Remote'
   return null
 }
 
@@ -406,4 +424,21 @@ function getCompanyBlurb(description?: string | null): string | null {
     return clean.slice(0, cutoff + 1)
   }
   return clean.slice(0, 220)
+}
+
+function isValidUrl(url?: string | null) {
+  if (!url) return false
+  try {
+    // new URL will throw if invalid; we also reject localhost/file protocols
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch {
+    return false
+  }
+}
+
+function cleanUrl(url: string) {
+  if (!url) return '#'
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `https://${url}`
 }
