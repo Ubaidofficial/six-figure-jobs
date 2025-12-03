@@ -567,6 +567,15 @@ export default async function SalaryRolePage(props: PageProps) {
           </>
         )}
       </section>
+
+      <section className="mt-10 rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
+        <h2 className="mb-2 text-sm font-semibold text-slate-100">
+          How this {roleName.toLowerCase()} salary guide is built
+        </h2>
+        <p className="text-sm leading-relaxed text-slate-300">
+          We source only verified $100k+ {roleName.toLowerCase()} roles directly from ATS-powered company job boards. Every listing is normalized for salary, role slug, country, and remote mode, then deduped and expired when it goes stale. The medians and ranges on this page are computed from live openings rather than historical surveys, so the data reflects current hiring demand. When a company publishes a new {roleName.toLowerCase()} job with a clear range, it feeds into the stats; when the job is filled or closed, it disappears from the sample. Remote and hybrid roles are labeled, and local currencies are preserved wherever possible. This approach keeps the guide aligned with what hiring managers are paying today, not last year. Use the band toggles to see how compensation shifts at $200k, $300k, and $400k, then scroll the job list to apply to the exact roles behind the numbers.
+        </p>
+      </section>
     </main>
   )
 }

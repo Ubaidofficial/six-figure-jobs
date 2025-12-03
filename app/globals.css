@@ -2,7 +2,7 @@
 /* FONTS — MUST BE FIRST                                                     */
 /* -------------------------------------------------------------------------- */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 /* -------------------------------------------------------------------------- */
 /* TAILWIND LAYERS                                                            */
@@ -22,11 +22,26 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg: #0b0f1a;
+  --panel: #121826;
+  --panel-2: #1b2234;
+  --stroke: #1f2a3d;
+  --text: #e8ecf5;
+  --text-muted: #9aa7bd;
+  --accent: #19c4c8;
+  --accent-2: #f7b733;
+  --glow: rgba(25, 196, 200, 0.28);
+  --radius: 14px;
+}
+
 html,
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(135deg, #0a0e27 0%, #181c35 100%);
-  color: #e5e7eb;
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at 20% 20%, rgba(25, 196, 200, 0.08), transparent 32%),
+    radial-gradient(circle at 80% 10%, rgba(247, 183, 51, 0.08), transparent 30%),
+    linear-gradient(135deg, #0b0f1a 0%, #0e1424 50%, #0c1320 100%);
+  color: var(--text);
   line-height: 1.65;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -42,55 +57,23 @@ body {
 /* -------------------------------------------------------------------------- */
 /* HEADER                                                                     */
 /* -------------------------------------------------------------------------- */
-
-header {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(71, 85, 105, 0.3);
-  padding: 28px 0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-header h1 {
-  font-size: 38px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: -0.02em;
-}
-
-header p {
-  color: #94a3b8;
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 24px;
-}
+/* Header styling is handled via Tailwind classes inside layout */
 
 /* -------------------------------------------------------------------------- */
 /* BUTTONS                                                                    */
 /* -------------------------------------------------------------------------- */
 
 button {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  padding: 14px 32px;
-  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent) 0%, #0ed1b8 100%);
+  color: #06101c;
+  padding: 13px 28px;
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   border: none;
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
-  transition: all 0.3s ease;
+  box-shadow: 0 10px 40px var(--glow);
+  transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
 }
@@ -116,8 +99,8 @@ button:hover::before {
 }
 
 button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 30px rgba(59, 130, 246, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 42px var(--glow);
 }
 
 button:active {
@@ -155,11 +138,11 @@ button:disabled {
 
 input,
 select {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(71, 85, 105, 0.35);
-  color: #e5e7eb;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  color: var(--text);
   padding: 13px 18px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 15px;
   font-weight: 500;
   transition: all 0.2s;
@@ -167,15 +150,15 @@ select {
 }
 
 input::placeholder {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 input:focus,
 select:focus {
   outline: none;
-  border-color: #3b82f6;
-  background: rgba(15, 23, 42, 0.85);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  border-color: var(--accent);
+  background: #0f1625;
+  box-shadow: 0 0 0 3px rgba(25, 196, 200, 0.18);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -187,7 +170,7 @@ select:focus {
 }
 
 .pill-gray {
-  @apply bg-slate-900 text-slate-300 ring-1 ring-slate-700;
+  @apply bg-slate-900 text-slate-200 ring-1 ring-slate-800;
 }
 
 .pill-green {
@@ -239,11 +222,11 @@ select:focus {
   display: flex;
   gap: 32px;
   align-items: start;
-  background: rgba(30, 41, 59, 0.5);
+  background: rgba(18, 24, 38, 0.7);
   backdrop-filter: blur(10px);
   padding: 40px;
   border-radius: 20px;
-  border: 1px solid rgba(71, 85, 105, 0.3);
+  border: 1px solid rgba(31, 42, 61, 0.8);
 }
 
 .company-logo-large {

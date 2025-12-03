@@ -438,6 +438,15 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
           </div>
         </nav>
       )}
+
+      <section className="mt-10 rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
+        <h2 className="mb-2 text-sm font-semibold text-slate-100">
+          How this {roleName.toLowerCase()} salary guide uses local data
+        </h2>
+        <p className="text-sm leading-relaxed text-slate-300">
+          This page pulls live $100k+ {roleName.toLowerCase()} roles filtered to {locationLabel || 'the selected region'}, including remote and hybrid openings tagged for this market. Salary ranges are shown in local currency where provided, and converted bands (like €90k+/£75k+/CHF 120k+) are used to align with regional expectations. Every listing comes from an ATS-powered company board and is expired when it goes stale, keeping the sample fresh. As new roles are published, medians and ranges update automatically. Use the salary band toggles to see how compensation shifts at higher thresholds and explore the live openings below to move from research to application in one click.
+        </p>
+      </section>
     </main>
   )
 }

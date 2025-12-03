@@ -88,10 +88,10 @@ export default function JobCard({ job }: { job: JobCardJob }) {
 
   return (
     <article
-      className={`group rounded-2xl border px-4 py-4 shadow-sm transition hover:border-slate-500/80 hover:bg-slate-900/80 ${
+      className={`group rounded-3xl border px-5 py-5 shadow-[0_16px_50px_rgba(0,0,0,0.35)] transition-all ${
         isFeatured
-          ? 'border-amber-500/60 bg-slate-950/90 shadow-amber-500/20'
-          : 'border-slate-800 bg-slate-950/80'
+          ? 'border-amber-400/70 bg-[#151a2c] ring-1 ring-amber-300/30'
+          : 'border-slate-800/70 bg-[#11172a] hover:border-slate-700 hover:bg-[#141d31]'
       }`}
     >
       <div className="flex gap-4">
@@ -140,7 +140,7 @@ export default function JobCard({ job }: { job: JobCardJob }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="truncate text-[15px] font-semibold text-slate-50 group-hover:text-slate-100">
+              <h3 className="truncate text-[15px] font-semibold text-slate-50 group-hover:text-white">
                 <Link href={buildJobSlugHref(job)}>{job.title}</Link>
               </h3>
 
@@ -237,18 +237,18 @@ export default function JobCard({ job }: { job: JobCardJob }) {
             {category && <Badge>{category}</Badge>}
             {seniority && <Badge>{seniority}</Badge>}
 
-              {salaryDisplay && (
-                <Badge highlight={isHighSalary || isFeatured}>
-                  💵 {salaryDisplay}
-                </Badge>
-              )}
+            {salaryDisplay && (
+              <Badge highlight={isHighSalary || isFeatured}>
+                💵 {salaryDisplay}
+              </Badge>
+            )}
 
-              {isFeatured && <Badge strong>⭐ Featured</Badge>}
+            {isFeatured && <Badge strong>⭐ Featured</Badge>}
 
-              {benefits.map((b) => (
-                <Badge key={b}>🎁 {b}</Badge>
-              ))}
-            </div>
+            {benefits.map((b) => (
+              <Badge key={b}>🎁 {b}</Badge>
+            ))}
+          </div>
 
           {/* Snippet */}
           {snippet && (
@@ -293,11 +293,11 @@ function Badge({
 
   if (highlight) {
     classes +=
-      ' bg-emerald-500/15 text-emerald-200 ring-emerald-500/60 font-semibold'
+      ' bg-emerald-500/15 text-emerald-200 ring-emerald-400/60 font-semibold'
   } else if (strong) {
-    classes += ' bg-slate-900 text-slate-50 ring-slate-500 font-semibold'
+    classes += ' bg-[#0f1625] text-slate-50 ring-1 ring-slate-600 font-semibold'
   } else {
-    classes += ' bg-slate-900 text-slate-300 ring-slate-700'
+    classes += ' bg-[#0e1524] text-slate-200 ring-slate-800'
   }
 
   return <span className={classes}>{children}</span>

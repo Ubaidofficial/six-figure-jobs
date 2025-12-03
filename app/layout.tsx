@@ -17,30 +17,30 @@ export default function RootLayout({
     <html lang="en" className="h-full bg-slate-950">
       <body className="min-h-full bg-slate-950 text-slate-50">
         <div className="flex min-h-screen flex-col">
-          <header className="border-b border-slate-900/70 bg-slate-950/80 backdrop-blur">
+          <header className="border-b border-slate-800/60 bg-[#0d1321]/80 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
               <Link
                 href="/"
-                className="text-sm font-semibold text-slate-50 hover:text-white"
+                className="text-sm font-semibold text-slate-50 hover:text-white tracking-tight"
               >
                 Six Figure Jobs
               </Link>
               <nav className="flex items-center gap-4 text-sm text-slate-300">
                 <Link
                   href="/jobs"
-                  className="hover:text-white"
+                  className="rounded-full border border-transparent px-3 py-1.5 transition hover:border-slate-700 hover:bg-white/5 hover:text-white"
                 >
                   Browse jobs
                 </Link>
                 <Link
                   href="/salary"
-                  className="hover:text-white"
+                  className="rounded-full border border-transparent px-3 py-1.5 transition hover:border-slate-700 hover:bg-white/5 hover:text-white"
                 >
                   Salary guides
                 </Link>
                 <Link
                   href="/post-a-job"
-                  className="rounded-full border border-emerald-600 px-3 py-1.5 font-semibold text-emerald-200 transition-colors hover:border-emerald-400 hover:text-white"
+                  className="rounded-full border border-[#19c4c8] bg-[#19c4c8] px-3 py-1.5 font-semibold text-[#05202a] shadow-[0_10px_30px_rgba(25,196,200,0.35)] transition hover:border-[#0ed1b8] hover:bg-[#0ed1b8]"
                 >
                   Post a Job
                 </Link>
@@ -50,10 +50,10 @@ export default function RootLayout({
 
           <div className="flex-1">{children}</div>
 
-          <footer className="border-t border-slate-900/70 bg-slate-950/90">
+          <footer className="border-t border-slate-800/70 bg-[#0d1321]/90">
             <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-xs text-slate-400 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-200">
+                <p className="text-sm font-semibold text-slate-100">
                   Search $100k+ by location
                 </p>
                 <Link href="/jobs/us/100k-plus" className="block hover:text-slate-100">
@@ -77,7 +77,7 @@ export default function RootLayout({
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-200">
+                <p className="text-sm font-semibold text-slate-100">
                   Popular $100k+ roles
                 </p>
                 <Link href="/jobs/software-engineer/100k-plus" className="block hover:text-slate-100">
@@ -101,7 +101,7 @@ export default function RootLayout({
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-200">
+                <p className="text-sm font-semibold text-slate-100">
                   Salary guides
                 </p>
                 <Link href="/salary/software-engineer" className="block hover:text-slate-100">
@@ -125,7 +125,7 @@ export default function RootLayout({
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-200">
+                <p className="text-sm font-semibold text-slate-100">
                   Resources
                 </p>
                 <Link href="/post-a-job" className="block hover:text-slate-100">
