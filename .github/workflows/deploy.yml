@@ -11,6 +11,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check SSH_KEY presence
+        run: |
+          if [ -z "$HAS_KEY" ]; then
+            echo "DEBUG: SSH_KEY is EMPTY"
+          else
+            echo "DEBUG: SSH_KEY is PRESENT"
+            echo "DEBUG: length=${#HAS_KEY}"
+          fi
+        env:
+          HAS_KEY: ${{ secrets.SSH_KEY }}
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
