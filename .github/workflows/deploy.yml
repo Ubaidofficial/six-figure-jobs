@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check SSH_KEY presence
+      - name: Debug SSH_KEY
         run: |
-          if [ -z "$HAS_KEY" ]; then
+          if [ -z "${SSH_KEY}" ]; then
             echo "DEBUG: SSH_KEY is EMPTY"
           else
             echo "DEBUG: SSH_KEY is PRESENT"
-            echo "DEBUG: length=${#HAS_KEY}"
+            echo "DEBUG: length=${#SSH_KEY}"
           fi
         env:
-          HAS_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.0
@@ -30,7 +30,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             echo "Branch: ${GITHUB_REF_NAME}"
-
             if [ "${GITHUB_REF_NAME}" = "main" ]; then
               bash /opt/deploy/deploy_prod.sh
             elif [ "${GITHUB_REF_NAME}" = "develop" ]; then
