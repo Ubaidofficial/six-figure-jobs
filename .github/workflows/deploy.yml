@@ -1,0 +1,29 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "Branch: ${GITHUB_REF_NAME}"
+
+            if [ "${GITHUB_REF_NAME}" = "main" ]; then
+              bash /opt/deploy/deploy_prod.sh
+            elif [ "${GITHUB_REF_NAME}" = "develop" ]; then
+              bash /opt/deploy/deploy_staging.sh
+            else
+              echo "No deployment configured for this branch."
+            fi
