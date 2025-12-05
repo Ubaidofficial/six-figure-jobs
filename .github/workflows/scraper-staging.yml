@@ -1,0 +1,56 @@
+name: Scraper Smoke (Staging)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run-smoke:
+        description: "Run board/ATS smoke checks"
+        required: false
+        default: "true"
+      run-ats-report:
+        description: "Run ATS coverage report"
+        required: false
+        default: "true"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.run-smoke != 'false' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Smoke test scrapers (read-only)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: npm run scraper:smoke
+
+  ats-report:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.run-ats-report != 'false' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ATS coverage report
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: npm run scraper:ats:report
