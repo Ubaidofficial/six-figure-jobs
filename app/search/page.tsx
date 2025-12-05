@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { prisma } from '../../lib/prisma'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
 import JobList from '../components/JobList'
@@ -94,8 +95,7 @@ function buildTitle(sp: SearchParams): string {
   return `${salaryLabel} tech jobs search | ${SITE_NAME}`
 }
 
-function buildCanonical(sp: SearchParams): string {
-  const origin = getSiteUrl()
+function buildCanonicalPath(sp: SearchParams): string {
   const params = new URLSearchParams()
 
   const q = getParam(sp, 'q')
@@ -117,7 +117,7 @@ function buildCanonical(sp: SearchParams): string {
   if (page > 1) params.set('page', String(page))
 
   const qs = params.toString()
-  return qs ? `${origin}/search?${qs}` : `${origin}/search`
+  return qs ? `/search?${qs}` : `/search`
 }
 
 /* -------------------------------------------------------------------------- */
@@ -131,7 +131,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const sp = await resolveSearchParams(searchParams)
   const title = buildTitle(sp)
-  const canonical = buildCanonical(sp)
+  const canonical = `${getSiteUrl()}${buildCanonicalPath(sp)}`
 
   const description =
     'Search curated $100k+ tech jobs from top companies. Filter by role, location, and salary band across remote, hybrid, and on-site roles.'
@@ -161,6 +161,22 @@ export async function generateMetadata({
 
 export default async function SearchPage({ searchParams }: PageProps) {
   const sp = await resolveSearchParams(searchParams)
+  const canonicalPath = buildCanonicalPath(sp)
+
+  const requestedParams = new URLSearchParams()
+  Object.entries(sp).forEach(([k, v]) => {
+    if (Array.isArray(v)) v.forEach((val) => val != null && requestedParams.append(k, val))
+    else if (v != null) requestedParams.set(k, v)
+  })
+  const rawPage = getParam(sp, 'page')
+  if (!rawPage || Number(rawPage) <= 1) requestedParams.delete('page')
+  const requestedPath = (() => {
+    const qs = requestedParams.toString()
+    return qs ? `/search?${qs}` : '/search'
+  })()
+  if (requestedPath !== canonicalPath) {
+    redirect(canonicalPath)
+  }
 
   const q = getParam(sp, 'q')?.trim() || ''
   const role = getParam(sp, 'role')?.trim() || ''

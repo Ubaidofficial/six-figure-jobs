@@ -2,7 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
 import type { JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
@@ -30,6 +30,24 @@ function parsePage(searchParams?: SearchParams): number {
   const raw = (searchParams?.page ?? '1') as string
   const n = Number(raw || '1') || 1
   return Math.max(1, n)
+}
+
+function buildCanonicalPath(roleSlug: string, cityParam: string, sp: SearchParams | undefined) {
+  const base = `/remote/${roleSlug}/${cityParam}`
+  const params = new URLSearchParams()
+
+  const minParam = normalizeStringParam(sp?.min)
+  const minAnnual =
+    minParam && !Number.isNaN(Number(minParam))
+      ? Math.max(100_000, Number(minParam))
+      : null
+  if (minAnnual) params.set('min', String(minAnnual))
+
+  const page = parsePage(sp)
+  if (page > 1) params.set('page', String(page))
+
+  const qs = params.toString()
+  return qs ? `${base}?${qs}` : base
 }
 
 function normalizeStringParam(
@@ -284,6 +302,8 @@ export async function generateMetadata({
   const baseTitle = `Remote ${prettyRole(
     roleSlug
   )} jobs in ${cityName} paying $100k+`
+  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, searchParams)
+  const canonicalUrl = `${SITE_URL}${canonicalPath}`
 
   return {
     title:
@@ -294,14 +314,14 @@ export async function generateMetadata({
       roleSlug
     )} jobs in ${cityName} paying $100k+ at leading tech and SaaS companies.`,
     alternates: {
-      canonical: `${SITE_URL}/remote/${roleSlug}/${cityParam}`,
+      canonical: canonicalUrl,
     },
     openGraph: {
       title: `${baseTitle} | ${SITE_NAME}`,
       description: `Find remote ${prettyRole(
         roleSlug
       )} roles in ${cityName} with at least $100k total compensation.`,
-      url: `${SITE_URL}/remote/${roleSlug}/${cityParam}`,
+      url: canonicalUrl,
       siteName: SITE_NAME,
       type: 'website',
     },
@@ -329,6 +349,23 @@ export default async function RemoteRoleCityPage({
 
   const page = parsePage(searchParams)
   const basePath = `/remote/${roleSlug}/${cityParam}`
+  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, searchParams)
+  const requestedParams = new URLSearchParams()
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([k, v]) => {
+      if (Array.isArray(v)) v.forEach((val) => val != null && requestedParams.append(k, val))
+      else if (v != null) requestedParams.set(k, v)
+    })
+  }
+  const rawPage = searchParams ? (Array.isArray(searchParams.page) ? searchParams.page[0] : searchParams.page) : null
+  if (!rawPage || Number(rawPage) <= 1) requestedParams.delete('page')
+  const requested = (() => {
+    const qs = requestedParams.toString()
+    return qs ? `${basePath}?${qs}` : basePath
+  })()
+  if (requested !== canonicalPath) {
+    redirect(canonicalPath)
+  }
 
   const minParam = normalizeStringParam(searchParams?.min)
   const minAnnual =

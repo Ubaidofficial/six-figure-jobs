@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { prisma } from '../../../lib/prisma'
 import {
   queryJobs,
@@ -34,6 +35,20 @@ function parsePage(sp: SearchParams): number {
   const raw = (sp.page ?? '1') as string
   const n = Number(raw || '1') || 1
   return Math.max(1, n)
+}
+
+function buildCanonicalPath(roleSlug: string, page: number) {
+  const base = `/remote/${roleSlug}`
+  return page > 1 ? `${base}?page=${page}` : base
+}
+
+function buildRequestedPath(roleSlug: string, sp: SearchParams) {
+  const base = `/remote/${roleSlug}`
+  const params = new URLSearchParams()
+  const page = parsePage(sp)
+  if (page > 1) params.set('page', String(page))
+  const query = params.toString()
+  return query ? `${base}?${query}` : base
 }
 
 function normalizeStringParam(
@@ -211,6 +226,11 @@ export async function generateMetadata({
   const roleSlug = p.role
   const roleName = prettyRole(roleSlug)
   const page = parsePage(sp)
+  const requestedPath = buildRequestedPath(roleSlug, sp)
+  const canonicalPath = buildCanonicalPath(roleSlug, page)
+  if (requestedPath !== canonicalPath) {
+    redirect(canonicalPath)
+  }
 
   const selectedCountry = normalizeStringParam(sp.country)
   const selectedRegion = normalizeStringParam(sp.remoteRegion)
