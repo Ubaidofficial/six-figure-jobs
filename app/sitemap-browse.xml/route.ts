@@ -3,10 +3,11 @@
 
 import { NextResponse } from 'next/server'
 import { CATEGORY_LINKS, LOCATIONS } from '../page'
+import { getSiteUrl } from '../../lib/seo/site'
 
 export const revalidate = 3600
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 export async function GET() {
   const urls: string[] = []

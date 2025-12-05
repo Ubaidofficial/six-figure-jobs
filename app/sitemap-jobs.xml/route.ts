@@ -4,9 +4,9 @@
 import { prisma } from '../../lib/prisma'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
+import { getSiteUrl } from '../../lib/seo/site'
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 export const dynamic = "force-static"
 

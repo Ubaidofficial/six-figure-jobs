@@ -3,11 +3,11 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '../../lib/prisma'
+import { getSiteUrl } from '../../lib/seo/site'
 
 export const revalidate = 3600
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 export async function GET() {
   const slices = await prisma.jobSlice.findMany({

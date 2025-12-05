@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import JobCard from '../../components/JobCard'
+import { getSiteUrl } from '../../../lib/seo/site'
 
 export const revalidate = 300
 
 const MIN_SALARY = 300_000
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://sixfigurejobs.com'
+const SITE_URL = getSiteUrl()
 
 export async function generateMetadata(): Promise<Metadata> {
   const { total } = await queryJobs({ minAnnual: MIN_SALARY, pageSize: 1 })

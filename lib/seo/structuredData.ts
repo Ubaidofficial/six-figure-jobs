@@ -2,9 +2,10 @@
 import type { JobSlice } from '../slices/types'
 import type { JobQueryResult } from '../jobs/queryJobs'
 import { buildCanonicalUrl } from './meta'
+import { getSiteUrl } from './site'
+import { buildJobSlugHref } from '../jobs/jobSlug'
 
-const SITE_ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+const SITE_ORIGIN = getSiteUrl()
 
 export function buildJobListJsonLd(
   slice: JobSlice,
@@ -13,7 +14,7 @@ export function buildJobListJsonLd(
   const url = buildCanonicalUrl(slice, data.page)
 
   const itemListElement = data.jobs.map((job, index) => {
-    const jobUrl = `${SITE_ORIGIN}/job/${job.id}`
+    const jobUrl = `${SITE_ORIGIN}${buildJobSlugHref(job)}`
 
     return {
       '@type': 'ListItem',

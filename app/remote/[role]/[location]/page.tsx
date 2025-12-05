@@ -7,11 +7,11 @@ import { prisma } from '../../../../lib/prisma'
 import type { JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import JobList from '../../../components/JobList'
+import { SITE_NAME, getSiteUrl } from '../../../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 20
 
@@ -274,7 +274,7 @@ export async function generateMetadata({
 
   if (!sampleJob && totalJobs === 0) {
     return {
-      title: 'Page not found – Remote100k',
+      title: `Page not found – ${SITE_NAME}`,
       description: 'This page does not exist.',
     }
   }
@@ -288,8 +288,8 @@ export async function generateMetadata({
   return {
     title:
       totalJobs > 0
-        ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | Remote100k`
-        : `${baseTitle} | Remote100k`,
+        ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
+        : `${baseTitle} | ${SITE_NAME}`,
     description: `Search remote ${prettyRole(
       roleSlug
     )} jobs in ${cityName} paying $100k+ at leading tech and SaaS companies.`,
@@ -297,17 +297,17 @@ export async function generateMetadata({
       canonical: `${SITE_URL}/remote/${roleSlug}/${cityParam}`,
     },
     openGraph: {
-      title: `${baseTitle} | Remote100k`,
+      title: `${baseTitle} | ${SITE_NAME}`,
       description: `Find remote ${prettyRole(
         roleSlug
       )} roles in ${cityName} with at least $100k total compensation.`,
       url: `${SITE_URL}/remote/${roleSlug}/${cityParam}`,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${baseTitle} | Remote100k`,
+      title: `${baseTitle} | ${SITE_NAME}`,
       description: `Remote ${prettyRole(
         roleSlug
       )} jobs in ${cityName} paying $100k+.`,

@@ -7,10 +7,11 @@ import {
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { ALL_SALARY_ROLES } from '../../../lib/roles/salaryRoles'
 import JobList from '../../components/JobList'
+import { getSiteUrl } from '../../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sixfigurejobs.com'
+const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20
 
 type SearchParams = Record<string, string | string[] | undefined>

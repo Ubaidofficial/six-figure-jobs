@@ -8,6 +8,7 @@ import { TARGET_COUNTRIES } from '../../../lib/seo/regions'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { formatNumberCompact } from '../../../lib/utils/number'
 import { formatSalaryBandLabel } from '../../../lib/utils/salaryLabels'
+import { getSiteUrl } from '../../../lib/seo/site'
 
 type SliceForPage = JobSlice
 
@@ -18,8 +19,7 @@ type Props = {
 
 export function SlicePage({ slice, data }: Props) {
   const { jobs, total, page, totalPages } = data
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://six-figure-jobs.vercel.app'
+  const siteUrl = getSiteUrl()
 
   const roleSlug = slice.filters?.roleSlugs?.[0]
   const countryCode = (slice.filters as any)?.countryCode || (slice.filters as any)?.country

@@ -10,11 +10,11 @@ import {
 } from '../../../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../../../lib/jobs/jobSlug'
 import JobList from '../../../../components/JobList'
+import { SITE_NAME, getSiteUrl } from '../../../../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 20
 
@@ -214,22 +214,22 @@ export async function generateMetadata({
   return {
     title:
       totalJobs > 0
-        ? `${titleBase} (${totalJobs.toLocaleString()} roles) | Remote100k`
-        : `${titleBase} | Remote100k`,
+        ? `${titleBase} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
+        : `${titleBase} | ${SITE_NAME}`,
     description: `Search remote ${roleName} jobs in ${countryCode} paying $100k+ across top companies. Filter by salary bands and explore the best high-paying roles.`,
     alternates: {
       canonical: `${SITE_URL}/remote/${roleSlug}/country/${countryParam}`,
     },
     openGraph: {
-      title: `${titleBase} | Remote100k`,
+      title: `${titleBase} | ${SITE_NAME}`,
       description: `Find remote ${roleName} roles in ${countryCode} with at least $100k total compensation.`,
       url: `${SITE_URL}/remote/${roleSlug}/country/${countryParam}`,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${titleBase} | Remote100k`,
+      title: `${titleBase} | ${SITE_NAME}`,
       description: `Remote ${roleName} jobs in ${countryCode} paying $100k+.`,
     },
   }

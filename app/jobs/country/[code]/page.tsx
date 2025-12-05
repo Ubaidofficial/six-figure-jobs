@@ -3,10 +3,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
+import { getSiteUrl } from '../../../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sixfigurejobs.com'
+const SITE_URL = getSiteUrl()
 
 const COUNTRIES: Record<string, { name: string; flag: string }> = {
   us: { name: 'United States', flag: '🇺🇸' },

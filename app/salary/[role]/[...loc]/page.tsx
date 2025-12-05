@@ -9,11 +9,11 @@ import JobList from '../../../components/JobList'
 import { formatSalaryBandLabel } from '../../../../lib/utils/salaryLabels'
 import { formatNumberCompact } from '../../../../lib/utils/number'
 import type { Job } from '@prisma/client'
+import { SITE_NAME, getSiteUrl } from '../../../../lib/seo/site'
 
 export const revalidate = 1800
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 40
 
@@ -173,7 +173,7 @@ export async function generateMetadata({
       title,
       description: `Median and range for ${roleName} in ${locationLabel || 'top regions'} using live ${bandLabel} job data.`,
       url: canonical,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {

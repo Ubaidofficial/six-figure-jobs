@@ -6,9 +6,9 @@
 // Only includes live, remote, $100k+ oriented jobs.
 
 import { prisma } from '../../lib/prisma'
+import { getSiteUrl } from '../../lib/seo/site'
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 export const dynamic = "force-static"
 

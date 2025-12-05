@@ -14,6 +14,7 @@ import {
   buildJobListJsonLd,
   buildBreadcrumbJsonLd,
 } from '../../../lib/seo/structuredData'
+import { SITE_NAME } from '../../../lib/seo/site'
 
 import { buildSliceInternalLinks } from '../../../lib/navigation/internalLinks'
 
@@ -32,7 +33,7 @@ export async function generateMetadata(
   const slice = await loadSliceFromParams([params.slug])
   if (!slice) {
     return {
-      title: 'Page not found – Remote100k',
+      title: `Page not found – ${SITE_NAME}`,
       description: 'This page does not exist.',
     }
   }

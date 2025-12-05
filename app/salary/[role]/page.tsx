@@ -9,11 +9,11 @@ import {
 } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import type { Job } from '@prisma/client'
+import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 
 export const revalidate = 1800
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 50
 
@@ -174,7 +174,7 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
@@ -327,8 +327,7 @@ export default async function SalaryRolePage(props: PageProps) {
       ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
       : 1
 
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://six-figure-jobs.vercel.app'
+  const siteUrl = SITE_URL
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',

@@ -8,10 +8,11 @@ import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
+import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 
 export const revalidate = 3600
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -54,7 +55,7 @@ export async function generateMetadata({
   const company = await getCompanyWithJobs(slug)
 
   if (!company) {
-    return { title: 'Company not found | Remote100k' }
+    return { title: `Company not found | ${SITE_NAME}` }
   }
 
   const jobCount = company.jobs.length
@@ -62,7 +63,7 @@ export async function generateMetadata({
     (j: JobWithFlags) => j.isHighSalary
   ).length
 
-  const title = `${company.name} Jobs - ${jobCount} Open Positions | Remote100k`
+  const title = `${company.name} Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
   const description =
     highSalaryCount > 0
       ? `Browse ${jobCount} jobs at ${company.name}, including ${highSalaryCount} high-salary positions paying $100k+. ${
@@ -86,7 +87,7 @@ export async function generateMetadata({
       title,
       description,
       url: canonicalUrl,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
       images: company.logoUrl
         ? [

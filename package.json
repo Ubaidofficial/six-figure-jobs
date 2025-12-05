@@ -4,8 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:staging": "dotenv -e .env.staging.local -- next dev -p 3001",
+    "dev:prod": "dotenv -e .env.production.local -- next dev -p 3000",
+
     "build": "npx prisma generate && next build",
+    "start": "next start -p 3000",
     "lint": "next lint",
+
+    "db:push:staging": "dotenv -e .env.staging.local -- npx prisma db push",
+    "db:migrate:staging": "dotenv -e .env.staging.local -- npx prisma migrate dev",
+    "db:studio:staging": "dotenv -e .env.staging.local -- npx prisma studio",
+
     "jobs:audit:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=audit --dry-run",
     "jobs:repair:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=repair",
     "jobs:annotate:ai": "tsx scripts/aiAnnotateJobs.ts"

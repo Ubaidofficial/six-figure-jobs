@@ -1,6 +1,7 @@
 // lib/seo/meta.ts
 import type { Metadata } from 'next'
 import type { JobSlice } from '../slices/types'
+import { SITE_NAME, getSiteUrl } from './site'
 
 type MetaContext = {
   page: number
@@ -8,7 +9,7 @@ type MetaContext = {
 }
 
 function siteName() {
-  return 'Remote100k'
+  return SITE_NAME
 }
 
 function countryNameFromCode(code?: string): string {
@@ -109,8 +110,7 @@ export function buildSliceDescription(
 ---------------------------------------------------- */
 
 export function buildCanonicalUrl(slice: JobSlice, page: number): string {
-  const origin =
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const origin = getSiteUrl()
   const basePath = '/' + slice.slug.replace(/^\/+/, '')
 
   if (page <= 1) return origin + basePath

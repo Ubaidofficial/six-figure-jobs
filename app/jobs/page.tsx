@@ -3,30 +3,30 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '../../lib/prisma'
+import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 
 export const revalidate = 600
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 export const metadata: Metadata = {
-  title: 'High-paying tech jobs by salary band | Remote100k',
+  title: `High-paying tech jobs by salary band | ${SITE_NAME}`,
   description:
     'Browse $100k+, $200k+, $300k+, and $400k+ tech jobs indexed from ATS-powered company job boards. Explore popular role & country combinations.',
   alternates: {
     canonical: `${SITE_URL}/jobs`,
   },
   openGraph: {
-    title: 'High-paying tech jobs by salary band | Remote100k',
+    title: `High-paying tech jobs by salary band | ${SITE_NAME}`,
     description:
       'Explore $100k+, $200k+, $300k+, and $400k+ salary bands and popular role/country slices for top-paying tech jobs.',
     url: `${SITE_URL}/jobs`,
-    siteName: 'Remote100k',
+    siteName: SITE_NAME,
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'High-paying tech jobs by salary band | Remote100k',
+    title: `High-paying tech jobs by salary band | ${SITE_NAME}`,
     description:
       'Curated $100k+, $200k+, $300k+, and $400k+ tech roles from ATS-powered company boards.',
   },

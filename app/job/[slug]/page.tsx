@@ -17,11 +17,11 @@ import {
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { buildSalaryText } from '../../../lib/jobs/salary'
+import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 
 export const revalidate = 3600
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 /* -------------------------------------------------------------------------- */
 /* Metadata                                                                   */
@@ -36,7 +36,7 @@ export async function generateMetadata({
   const { jobId, externalId } = parseJobSlugParam(slug)
 
   if (!jobId && !externalId) {
-    return { title: 'Job not found | Remote100k' }
+    return { title: `Job not found | ${SITE_NAME}` }
   }
 
   const where: any = (() => {
@@ -50,7 +50,7 @@ export async function generateMetadata({
   })()
 
   if (!where) {
-    return { title: 'Job not found | Remote100k' }
+    return { title: `Job not found | ${SITE_NAME}` }
   }
 
   const job = await prisma.job.findFirst({
@@ -58,7 +58,7 @@ export async function generateMetadata({
     include: { companyRef: true },
   })
 
-  if (!job) return { title: 'Job not found | Remote100k' }
+  if (!job) return { title: `Job not found | ${SITE_NAME}` }
 
   return buildJobMetadata(job as JobWithCompany)
 }

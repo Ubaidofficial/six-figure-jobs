@@ -1,11 +1,11 @@
 // lib/seo/jobJsonLd.ts
 
 import type { Job, Company } from '@prisma/client'
+import { getSiteUrl } from './site'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 export function buildJobJsonLd(job: JobWithCompany): any {
   const company = job.companyRef

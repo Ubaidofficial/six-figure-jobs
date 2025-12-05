@@ -29,6 +29,28 @@ type PageProps = {
 
 const PAGE_SIZE = 20
 
+function buildCanonicalPath(sliceSlug: string, page: number): string {
+  const base = sliceSlug.startsWith('/') ? sliceSlug : `/${sliceSlug}`
+  if (page > 1) return `${base}?page=${page}`
+  return base
+}
+
+function buildRequestedPath(
+  slugSegments: string[] | undefined,
+  sp: PageSearchParams
+): string {
+  const base = '/' + (slugSegments ?? []).join('/')
+  const rawPage = Array.isArray(sp.page) ? sp.page[0] : sp.page
+  if (rawPage) return `${base}?page=${rawPage}`
+  return base
+}
+
+function normalizePathWithQuery(path: string): string {
+  const [pathname, query] = path.split('?')
+  const cleanPath = pathname.replace(/\/+$/, '') || '/'
+  return query ? `${cleanPath}?${query}` : cleanPath
+}
+
 // Redirect salary pages to their dedicated routes
 function checkSalaryPageRedirect(slug?: string[]) {
   if (!slug || slug.length === 0) return
@@ -94,6 +116,17 @@ export default async function JobsSlicePage({
   const slice = await loadSliceFromParams(resolvedParams.slug)
   const sp = await resolveSearchParams(searchParams)
   const page = getPageFromSearchParams(sp)
+
+  // Enforce canonical slice URL (slug normalization + dropping page=1)
+  const canonicalPath = normalizePathWithQuery(
+    buildCanonicalPath(slice.slug, page)
+  )
+  const requestedPath = normalizePathWithQuery(
+    buildRequestedPath(resolvedParams.slug, sp)
+  )
+  if (requestedPath !== canonicalPath) {
+    redirect(canonicalPath)
+  }
 
   const data = await queryJobs({
     ...slice.filters,

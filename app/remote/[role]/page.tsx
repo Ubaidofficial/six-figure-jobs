@@ -9,11 +9,11 @@ import {
 } from '../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import JobList from '../../components/JobList'
+import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 20
 
@@ -234,8 +234,8 @@ export async function generateMetadata({
   const baseTitle = `Remote ${roleName} jobs paying $100k+`
   const title =
     totalJobs > 0
-      ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | Remote100k`
-      : `${baseTitle} | Remote100k`
+      ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
+      : `${baseTitle} | ${SITE_NAME}`
 
   const description = `Search remote ${roleName} jobs paying $100k+ across top tech and SaaS companies. Filter by country, remote region, and salary band.`
 
@@ -246,15 +246,15 @@ export async function generateMetadata({
       canonical: `${SITE_URL}/remote/${roleSlug}`,
     },
     openGraph: {
-      title: `${baseTitle} | Remote100k`,
+      title: `${baseTitle} | ${SITE_NAME}`,
       description,
       url: `${SITE_URL}/remote/${roleSlug}`,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${baseTitle} | Remote100k`,
+      title: `${baseTitle} | ${SITE_NAME}`,
       description,
     },
   }
