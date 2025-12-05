@@ -19,7 +19,7 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
   let html = ''
   try {
     const res = await fetch(htmlUrl, {
-      headers: { 'User-Agent': 'Remote100k/1.0 (+job-board-scraper)' },
+      headers: { 'User-Agent': 'SixFigureJobs/1.0 (+job-board-scraper)' },
       cache: 'no-store',
     })
 

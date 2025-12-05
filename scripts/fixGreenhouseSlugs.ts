@@ -37,7 +37,7 @@ async function resolveFinalUrl(url: string): Promise<string | null> {
     const res = await fetch(url, {
       redirect: 'follow',
       headers: {
-        'User-Agent': 'Remote100k/1.0 (+greenhouse-fix)',
+        'User-Agent': 'SixFigureJobs/1.0 (+greenhouse-fix)',
       },
       cache: 'no-store',
     })
@@ -56,7 +56,7 @@ async function checkBoardsApi(slug: string): Promise<number | null> {
   try {
     const res = await fetch(apiUrl, {
       headers: {
-        'User-Agent': 'Remote100k/1.0 (+greenhouse-fix)',
+        'User-Agent': 'SixFigureJobs/1.0 (+greenhouse-fix)',
       },
       cache: 'no-store',
     })

@@ -12,7 +12,7 @@ const prisma = new PrismaClient()
 // Greenhouse API scraper
 async function scrapeGreenhouse(slug: string): Promise<any[]> {
   const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${slug}/jobs?content=true`, {
-    headers: { 'User-Agent': 'Remote100kBot/1.0' },
+    headers: { 'User-Agent': 'SixFigureJobsBot/1.0' },
     signal: AbortSignal.timeout(15000)
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -30,7 +30,7 @@ async function scrapeGreenhouse(slug: string): Promise<any[]> {
 // Lever API scraper
 async function scrapeLever(slug: string): Promise<any[]> {
   const res = await fetch(`https://api.lever.co/v0/postings/${slug}?mode=json`, {
-    headers: { 'User-Agent': 'Remote100kBot/1.0' },
+    headers: { 'User-Agent': 'SixFigureJobsBot/1.0' },
     signal: AbortSignal.timeout(15000)
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -48,7 +48,7 @@ async function scrapeLever(slug: string): Promise<any[]> {
 // Ashby API scraper  
 async function scrapeAshbyAPI(slug: string): Promise<any[]> {
   const res = await fetch(`https://api.ashbyhq.com/posting-api/job-board/${slug}`, {
-    headers: { 'User-Agent': 'Remote100kBot/1.0' },
+    headers: { 'User-Agent': 'SixFigureJobsBot/1.0' },
     signal: AbortSignal.timeout(15000)
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

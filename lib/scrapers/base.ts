@@ -11,7 +11,7 @@ export async function fetchJson<T>(
   const res = await fetch(url, {
     ...init,
     headers: {
-      'user-agent': 'Remote100kBot/1.0 (+https://remote100k.com)',
+      'user-agent': 'SixFigureJobsBot/1.0 (+https://6figjobs.com)',
       accept: 'application/json',
       ...(init?.headers ?? {}),
     },

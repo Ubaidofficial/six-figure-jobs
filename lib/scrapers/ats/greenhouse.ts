@@ -94,7 +94,7 @@ async function fetchJsonWithRetry<T>(
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          'User-Agent': 'Remote100k/1.0 (+job-board-scraper)',
+          'User-Agent': 'SixFigureJobs/1.0 (+job-board-scraper)',
         },
         cache: 'no-store',
         signal: controller.signal,

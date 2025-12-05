@@ -9,7 +9,7 @@ const LIST_URL = `${BASE_URL}/remote-jobs`
 async function fetchHtml(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; Remote100kBot/1.0)',
+      'User-Agent': 'Mozilla/5.0 (compatible; SixFigureJobsBot/1.0)',
     },
   })
   if (!res.ok) {

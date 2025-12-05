@@ -21,7 +21,7 @@ export async function scrapeAshby(atsSlugOrUrl: string): Promise<any[]> {
     try {
       const res = await fetch(url, {
         headers: {
-          'User-Agent': 'Remote100k/1.0 (+ashby-scraper)',
+          'User-Agent': 'SixFigureJobs/1.0 (+ashby-scraper)',
           Accept: 'text/html,application/xhtml+xml',
         },
         cache: 'no-store',

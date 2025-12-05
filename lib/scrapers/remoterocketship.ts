@@ -27,7 +27,7 @@ async function fetchWithBackoff(url: string, attempt = 1): Promise<Response | nu
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Remote100k/1.0 (+remoterocketship-scraper)',
+        'User-Agent': 'SixFigureJobs/1.0 (+remoterocketship-scraper)',
         Accept: 'text/html,application/xhtml+xml',
       },
       cache: 'no-store',
