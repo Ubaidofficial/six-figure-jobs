@@ -1,0 +1,66 @@
+# -------------------------------------------------
+# SIXFIGJOBS — ChatGPT Command Snippets (v1.0)
+# -------------------------------------------------
+
+# 1) Audit entire workspace SEO
+/audit-pseo
+Analyze the whole project for:
+- URL structure
+- PSEO readiness
+- metadata quality
+- structured data gaps
+- internal linking opportunities
+- high-paying salary consistency
+Provide a prioritized list of fixes.
+
+# 2) Improve metadata for open route
+/improve-metadata
+Analyze the open file. Improve metadata using rules and templates from .chatgpt-rules.
+Respect high-paying positioning and user intent.
+
+/improve-metadata-ask
+Propose metadata changes but DO NOT modify the file until I confirm.
+
+# 3) Add JSON-LD schema to job detail
+/add-job-schema
+Analyze job detail page. Add a safe JobPosting schema with available salary, role, and location data.
+
+# 4) Add JSON-LD to slice/list page
+/add-itemlist-schema
+Generate an ItemList schema referencing job URLs or slice URLs for the open file.
+
+# 5) Strengthen on-page SEO content
+/optimize-content
+Analyze on-page content for:
+- user intent,
+- keyword alignment,
+- LSI keywords,
+- structure (H1/H2),
+- internal linking.
+Propose improved content following .chatgpt-rules.
+
+/rewrite-content
+Rewrite content inline using SEO best practices, high-pay positioning, and LSI keywords.
+
+# 6) Propose PSEO routes (safe mode)
+/suggest-pseo
+List potential new role/salary/geo/company slices that follow the rules.
+DO NOT modify code until I approve.
+
+# 7) Safe code refactor
+/safe-refactor-open-file
+Analyze open file. Suggest minimal, safe improvements.
+Make NO changes until I confirm.
+
+/apply-refactor
+After confirmation, rewrite the file safely.
+
+# 8) i18n planning
+/plan-i18n
+Propose a localization strategy based on current routes, without editing code.
+
+# 9) Internal linking improvement
+/improve-links
+Analyze open page and propose internal links that strengthen PSEO without disrupting layout.
+
+# END OF COMMANDS (v1.0)

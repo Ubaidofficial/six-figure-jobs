@@ -8,6 +8,7 @@ import type { JobWithCompany } from '../../lib/jobs/queryJobs'
 import JobList from '../components/JobList'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
+import { countrySlugToCode } from '../../lib/seo/countrySlug'
 
 export const dynamic = "force-dynamic"
 
@@ -239,7 +240,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
       })
     } else if (resolvedLocation.length === 2) {
       andConditions.push({
-        countryCode: resolvedLocation.toUpperCase(),
+    countryCode: resolvedLocation
+      ? countrySlugToCode(resolvedLocation).toUpperCase()
+      : undefined,
       })
     }
   }

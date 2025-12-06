@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
+import { countryCodeToSlug } from '../../lib/seo/countrySlug'
 
 export default function UKRedirect() {
-  redirect('/jobs/country/gb')
+  const slug = countryCodeToSlug('GB')
+  redirect(`/jobs/country/${slug}`)
 }

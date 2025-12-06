@@ -1,5 +1,6 @@
 // lib/navigation/internalLinks.ts
 import type { JobSlice } from '../slices/types'
+import { countryCodeToSlug } from '../seo/countrySlug'
 
 export type InternalLink = {
   href: string
@@ -42,13 +43,14 @@ export function buildSliceInternalLinks(slice: JobSlice): InternalLink[] {
   const role = roleSlug ? humanize(roleSlug) : null
   const countryCode = f.countryCode
   const country = countryCode ? countryNameFromCode(countryCode) : null
+  const countrySlug = countryCode ? countryCodeToSlug(countryCode) : null
 
   // If we have salary + role + country, suggest other salary bands
   if (roleSlug && countryCode && f.minAnnual) {
     for (const band of SALARY_BANDS) {
       if (band === f.minAnnual) continue
       const bandSlug = `${band / 1000}k-plus`
-      const href = `/jobs/${bandSlug}/${roleSlug}/${countryCode.toLowerCase()}`
+      const href = `/jobs/${bandSlug}/${roleSlug}/${countrySlug}`
       links.push({
         href,
         label: `${Math.round(band / 1000)}k+ ${role} jobs in ${country}`,
@@ -59,7 +61,7 @@ export function buildSliceInternalLinks(slice: JobSlice): InternalLink[] {
   // If we have salary + country, suggest "all roles in country"
   if (countryCode && f.minAnnual) {
     const bandSlug = `${f.minAnnual / 1000}k-plus`
-    const href = `/jobs/${bandSlug}/all-roles/${countryCode.toLowerCase()}`
+    const href = `/jobs/${bandSlug}/all-roles/${countrySlug}`
     links.push({
       href,
       label: `${Math.round(f.minAnnual / 1000)}k+ jobs in ${country}`,

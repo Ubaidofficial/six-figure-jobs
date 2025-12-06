@@ -4,6 +4,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '../../../lib/prisma'
 import { getSiteUrl } from '../../../lib/seo/site'
+import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
+import type { SliceFilters } from '../../../lib/slices/types'
 
 export const revalidate = 3600
 
@@ -11,7 +13,12 @@ const SITE_URL = getSiteUrl()
 
 export async function GET() {
   const slices = await prisma.jobSlice.findMany({
-    select: { slug: true, updatedAt: true, jobCount: true },
+    select: {
+      slug: true,
+      updatedAt: true,
+      jobCount: true,
+      filtersJson: true,
+    },
     where: {
       jobCount: { gte: 5, lt: 20 },
     },
@@ -20,7 +27,19 @@ export async function GET() {
   })
 
   const urls = slices.map((s) => {
-    const loc = `${SITE_URL}/${s.slug}`
+    const filters: SliceFilters | null = (() => {
+      if (!s.filtersJson) return null
+      try {
+        return JSON.parse(s.filtersJson)
+      } catch {
+        return null
+      }
+    })()
+
+    const path = filters
+      ? resolveSliceCanonicalPath(filters, s.slug)
+      : `/${s.slug}`
+    const loc = `${SITE_URL}${path}`
     const lastmod = s.updatedAt?.toISOString() ?? new Date().toISOString()
     return `<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod><changefreq>weekly</changefreq></url>`
   })

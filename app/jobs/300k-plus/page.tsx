@@ -164,7 +164,7 @@ export default async function Jobs300kPage() {
             Engineering Jobs $300k+
           </Link>
           <Link
-            href="/jobs/country/us"
+            href="/jobs/country/united-states"
             className="text-blue-400 hover:underline"
           >
             $300k+ Jobs in USA

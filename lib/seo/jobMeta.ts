@@ -69,6 +69,7 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
     alternates: {
       canonical: url,
     },
+    robots: job.isExpired ? { index: false, follow: true } : undefined,
     openGraph: {
       title,
       description,

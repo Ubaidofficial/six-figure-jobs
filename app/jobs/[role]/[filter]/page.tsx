@@ -1,23 +1,24 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl } from '../../../../lib/seo/site'
+import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 
 export const revalidate = 300
 
 const SITE_URL = getSiteUrl()
 
 const LOCATIONS: Record<string, string> = {
-  us: 'United States',
-  gb: 'United Kingdom',
-  ca: 'Canada',
-  de: 'Germany',
-  au: 'Australia',
-  fr: 'France',
-  nl: 'Netherlands',
-  se: 'Sweden',
+  'united-states': 'United States',
+  'united-kingdom': 'United Kingdom',
+  canada: 'Canada',
+  germany: 'Germany',
+  australia: 'Australia',
+  france: 'France',
+  netherlands: 'Netherlands',
+  sweden: 'Sweden',
 }
 
 const SALARY_TIERS: Record<string, number> = {
@@ -40,7 +41,13 @@ function formatRoleTitle(slug: string): string {
 // Determine if filter is location or salary
 function parseFilter(filter: string): { type: 'location' | 'salary'; value: string | number; label: string } {
   if (LOCATIONS[filter]) {
-    return { type: 'location', value: filter.toUpperCase(), label: LOCATIONS[filter] }
+    return { type: 'location', value: countrySlugToCode(filter), label: LOCATIONS[filter] }
+  }
+  if (filter.length === 2) {
+    const slug = countryCodeToSlug(filter.toUpperCase())
+    if (LOCATIONS[slug]) {
+      return { type: 'location', value: countrySlugToCode(slug), label: LOCATIONS[slug] }
+    }
   }
   if (SALARY_TIERS[filter]) {
     return { type: 'salary', value: SALARY_TIERS[filter], label: filter.replace('-plus', '+').toUpperCase() }
@@ -133,6 +140,13 @@ export default async function RoleFilterPage({
   params: Promise<{ role: string; filter: string }> 
 }) {
   const { role, filter } = await params
+
+  if (filter.length === 2) {
+    const slug = countryCodeToSlug(filter.toUpperCase())
+    if (LOCATIONS[slug]) {
+      redirect(`/jobs/${role}/${slug}`)
+    }
+  }
   
   let parsed: { type: 'location' | 'salary'; value: string | number; label: string }
   
@@ -197,13 +211,16 @@ export default async function RoleFilterPage({
               <Link href={`/jobs/${role}/200k-plus`} className="text-blue-400 hover:underline">
                 $200k+ {roleTitle} in {parsed.label}
               </Link>
-              <Link href={`/jobs/country/${filter}`} className="text-blue-400 hover:underline">
+              <Link
+                href={`/jobs/country/${countryCodeToSlug(parsed.value as string)}`}
+                className="text-blue-400 hover:underline"
+              >
                 All Jobs in {parsed.label}
               </Link>
             </>
           ) : (
             <>
-              <Link href={`/jobs/${role}/us`} className="text-blue-400 hover:underline">
+              <Link href={`/jobs/${role}/united-states`} className="text-blue-400 hover:underline">
                 {roleTitle} {parsed.label} in USA
               </Link>
               <Link href={`/jobs/${parsed.value === 200_000 ? '300k-plus' : '200k-plus'}`} className="text-blue-400 hover:underline">

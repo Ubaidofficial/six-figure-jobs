@@ -8,7 +8,10 @@ import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { formatRelativeTime } from '../../../../lib/utils/time'
 import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
+import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
+import { redirect } from 'next/navigation'
 import { SALARY_BANDS } from '../../../page'
+import { getSiteUrl } from '../../../../lib/seo/site'
 
 const PAGE_SIZE = 40
 
@@ -16,11 +19,11 @@ const LOCATION_MAP: Record<
   string,
   { label: string; countryCode?: string; remoteOnly?: boolean }
 > = {
-  remote: { label: 'Remote only', remoteOnly: true },
+  remote: { label: 'Remote only', remoteOnly: true, slug: 'remote' as const },
 }
 
 for (const c of TARGET_COUNTRIES) {
-  LOCATION_MAP[c.code.toLowerCase()] = {
+  LOCATION_MAP[countryCodeToSlug(c.code)] = {
     label: c.label,
     countryCode: c.code,
   }
@@ -28,7 +31,17 @@ for (const c of TARGET_COUNTRIES) {
 
 function resolveLocation(slug: string) {
   const key = slug.toLowerCase()
-  return LOCATION_MAP[key]
+  if (LOCATION_MAP[key]) return { ...LOCATION_MAP[key], slug: key }
+
+  // Legacy code support
+  if (key.length === 2) {
+    const slugFromCode = countryCodeToSlug(key.toUpperCase())
+    if (LOCATION_MAP[slugFromCode]) {
+      return { ...LOCATION_MAP[slugFromCode], slug: slugFromCode, legacy: true }
+    }
+  }
+
+  return null
 }
 
 function faqItems(label: string) {
@@ -57,6 +70,17 @@ export async function generateMetadata({
   const loc = resolveLocation(country)
   if (!loc) return { title: 'Jobs | Six Figure Jobs' }
 
+  if ((loc as any).legacy) {
+    redirect(`/jobs/location/${(loc as any).slug}`)
+  }
+
+  const { total } = await queryJobs({
+    minAnnual: 100_000,
+    countryCode: loc.countryCode ?? undefined,
+    remoteMode: loc.remoteOnly ? 'remote' : undefined,
+    pageSize: 1,
+  })
+
   const title = loc.remoteOnly
     ? 'Remote jobs paying $100k+ | Six Figure Jobs'
     : `${loc.label} jobs paying $100k+ | Six Figure Jobs`
@@ -65,12 +89,18 @@ export async function generateMetadata({
     ? 'Browse remote $100k+ roles across engineering, product, data, and more.'
     : `Browse $100k+ roles in ${loc.label} across engineering, product, data, and more.`
 
+  const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
+  const allowIndex = total >= 3
+
   return {
     title,
     description,
+    alternates: { canonical },
+    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,
       description,
+      url: canonical,
     },
   }
 }
@@ -93,11 +123,17 @@ export default async function LocationPage({
     )
   }
 
+  if ((loc as any).legacy) {
+    redirect(`/jobs/location/${(loc as any).slug}`)
+  }
+
   const sp = (await searchParams) || {}
   const page = Math.max(1, Number(sp.page || '1') || 1)
+  const minParam = sp.min ? Number(sp.min) : 100_000
+  const minAnnual = Number.isFinite(minParam) ? Math.max(100_000, minParam) : 100_000
 
   const filters: any = {
-    minAnnual: 100_000,
+    minAnnual,
     page,
     pageSize: PAGE_SIZE,
     sortBy: 'date',

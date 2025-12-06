@@ -62,15 +62,15 @@ const ROLE_OPTIONS = (() => {
 })()
 
 export const LOCATIONS = [
-  { code: 'us', label: 'United States', flag: '🇺🇸' },
-  { code: 'gb', label: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'ca', label: 'Canada', flag: '🇨🇦' },
-  { code: 'de', label: 'Germany', flag: '🇩🇪' },
-  { code: 'ie', label: 'Ireland', flag: '🇮🇪' },
-  { code: 'ch', label: 'Switzerland', flag: '🇨🇭' },
-  { code: 'sg', label: 'Singapore', flag: '🇸🇬' },
-  { code: 'au', label: 'Australia', flag: '🇦🇺' },
-  { code: 'nz', label: 'New Zealand', flag: '🇳🇿' },
+  { code: 'united-states', label: 'United States', flag: '🇺🇸' },
+  { code: 'united-kingdom', label: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'canada', label: 'Canada', flag: '🇨🇦' },
+  { code: 'germany', label: 'Germany', flag: '🇩🇪' },
+  { code: 'ireland', label: 'Ireland', flag: '🇮🇪' },
+  { code: 'switzerland', label: 'Switzerland', flag: '🇨🇭' },
+  { code: 'singapore', label: 'Singapore', flag: '🇸🇬' },
+  { code: 'australia', label: 'Australia', flag: '🇦🇺' },
+  { code: 'new-zealand', label: 'New Zealand', flag: '🇳🇿' },
   { code: 'remote', label: 'Remote Only', flag: '🌍' },
 ] as const
 
@@ -428,7 +428,7 @@ export default async function HomePage() {
           ))}
           {/* Salary band quick links */}
           <Link
-            href="/jobs/location/us?min=200000"
+            href="/jobs/location/united-states?min=200000"
             className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500"
           >
             🇺🇸 $200k+ in US

@@ -316,6 +316,10 @@ export async function generateMetadata({
     alternates: {
       canonical: canonicalUrl,
     },
+    robots:
+      totalJobs >= 3
+        ? { index: true, follow: true }
+        : { index: false, follow: true },
     openGraph: {
       title: `${baseTitle} | ${SITE_NAME}`,
       description: `Find remote ${prettyRole(
@@ -419,6 +423,41 @@ export default async function RemoteRoleCityPage({
     cityParam,
     cityName
   )
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `Are these ${prettyRole(roleSlug)} jobs really $100k+?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. We only include remote roles with published or inferred $100k+ compensation (or local equivalent) from ATS feeds and trusted boards.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How often do you refresh remote ${prettyRole(roleSlug)} jobs in ${cityName}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Listings refresh frequently and expire automatically when closed, so stale postings are removed.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Do you tag remote eligibility and currency?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. We surface remote/hybrid signals and keep local currency where provided for transparent salary context.',
+        },
+      },
+    ],
+  }
+  const speakableJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SpeakableSpecification',
+    cssSelector: ['main h1', '[data-speakable="summary"]'],
+  }
 
   const salaryOptions = [100_000, 150_000, 200_000]
 
@@ -469,12 +508,23 @@ export default async function RemoteRoleCityPage({
           Remote {prettyRole(roleSlug)} jobs in {cityName} paying
           $100k+
         </h1>
-        <p className="text-sm text-slate-300">
+        <p className="text-sm text-slate-300" data-speakable="summary">
           Browse high-paying remote {prettyRole(
             roleSlug
           )} roles based in {cityName}. All jobs are filtered for
           at least $100k local total compensation.
         </p>
+        <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Salary-first: $100k+ roles only, pulled from ATS and vetted boards.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Eligibility clarity: remote/hybrid flagged; local currency kept when provided.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Freshness: stale roles expire automatically to avoid dead applies.
+          </li>
+        </ul>
       </header>
 
       {/* --------------------------------- Filters --------------------------------- */}
@@ -504,6 +554,34 @@ export default async function RemoteRoleCityPage({
             compensation.
           </p>
         </div>
+      </section>
+
+      <section className="mb-6 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          Explore related high-paying pages
+        </h2>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
+          <li>
+            <Link href={`/jobs/100k-plus/${roleSlug}`} className="hover:underline">
+              $100k+ {prettyRole(roleSlug)} jobs →
+            </Link>
+          </li>
+          <li>
+            <Link href={`/jobs/200k-plus/${roleSlug}`} className="hover:underline">
+              $200k+ {prettyRole(roleSlug)} jobs →
+            </Link>
+          </li>
+          <li>
+            <Link href={`/salary/${roleSlug}`} className="hover:underline">
+              {prettyRole(roleSlug)} salary guide →
+            </Link>
+          </li>
+          <li>
+            <Link href={`/remote/${roleSlug}`} className="hover:underline">
+              Remote {prettyRole(roleSlug)} jobs (all regions) →
+            </Link>
+          </li>
+        </ul>
       </section>
 
       {/* -------------------------------- Job list -------------------------------- */}
@@ -577,6 +655,18 @@ export default async function RemoteRoleCityPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(breadcrumbJsonLd),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(speakableJsonLd),
         }}
       />
     </main>

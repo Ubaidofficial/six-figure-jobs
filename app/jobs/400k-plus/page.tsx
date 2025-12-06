@@ -111,7 +111,7 @@ export default async function Jobs400kPage() {
             Distinguished Engineer Jobs
           </Link>
           <Link
-            href="/jobs/country/us"
+            href="/jobs/country/united-states"
             className="text-blue-400 hover:underline"
           >
             $400k+ Jobs in USA
