@@ -1,18 +1,17 @@
 // prisma/schema.prisma
-// UPDATED: Configured for Vercel Postgres (Neon)
+// V1 — Cleaned for standard Postgres (Hetzner), single DATABASE_URL
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")      // Uses connection pooling
-  directUrl = env("POSTGRES_URL_NON_POOLING") // Uses direct connection
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Job {
-  id        String  @id
+  id          String  @id
   title       String
   company     String
   companyLogo String?
@@ -68,10 +67,10 @@ model Job {
   updatedAt  DateTime  @updatedAt
 
   // Relations
-  companyId    String?
-  companyRef   Company?       @relation(fields: [companyId], references: [id])
-  locationId   String?
-  locationRef  Location?      @relation(fields: [locationId], references: [id])
+  companyId     String?
+  companyRef    Company?       @relation(fields: [companyId], references: [id])
+  locationId    String?
+  locationRef   Location?      @relation(fields: [locationId], references: [id])
   roleInference RoleInference?
 
   // Deduplication fields
@@ -119,7 +118,7 @@ model Company {
   description String?
 
   // NEW: Social / profiles
-  linkedinUrl String?   // ← added field
+  linkedinUrl String?
 
   // Company meta
   sizeBucket     String?
