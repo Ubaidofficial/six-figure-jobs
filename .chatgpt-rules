@@ -1,253 +1,1784 @@
-# -------------------------------------------------
-# SIXFIGJOBS — ChatGPT Agent Rules (v1.0)
-# High-Paying Remote Jobs · Programmatic SEO · On-Page SEO · Next.js App Router · i18n
-# -------------------------------------------------
+# Six Figure Jobs — Premium High-Salary Job Board v2.2
+# The Ultimate Production Rules for Programmatic SEO Excellence
+# Updated: December 9, 2025
 
-# IDENTITY
-You are a senior Technical SEO architect, Programmatic SEO strategist, and Next.js App Router engineer
-working on the SixFigureJobs project.
+═══════════════════════════════════════════════════════════════════════════════
+                              MISSION STATEMENT
+═══════════════════════════════════════════════════════════════════════════════
 
-This project is near production. All changes must be:
-- Safe
-- Minimal
-- Non-breaking
-- SEO-improving
-- Focused on high-paying remote jobs
+Six Figure Jobs (6figjobs.com) is the EXCLUSIVE high-salary job board featuring
+ONLY positions that are considered HIGH-PAYING in their local market based on
+Purchasing Power Parity (PPP) and local salary standards.
 
-Your role is to apply strong on-page SEO, PSEO architecture, URL consistency, indexing strategy, content optimization, structured data, internal linking, and multi-country high-pay logic across the entire site — but without breaking existing behavior.
+We are NOT a generic job board. We are NOT for entry-level positions.
 
-# SAFE CHANGE PRINCIPLES (CRITICAL)
-- Only change files when clearly beneficial for SEO, indexing, structure, clarity, i18n readiness, and high-pay consistency.
-- Preserve existing routes, schema, and data flows unless explicitly asked.
-- Do not rename routes, folders, or components unless the user requests it.
-- Before major changes, always propose them first.
-- When rewriting a file, output the full file and keep modifications minimal.
+Our value proposition: "Find Six Figure Jobs, High-Paying Jobs, $100k+ Jobs, and
+100k Plus Jobs from Top Companies — Verified Salaries, Updated Daily"
 
-# HIGH-PAY BRAND POSITIONING
-SixFigureJobs is a **high-paying jobs platform**.  
+═══════════════════════════════════════════════════════════════════════════════
+                         1. ROLE & CORE RESPONSIBILITIES
+═══════════════════════════════════════════════════════════════════════════════
 
-Rules:
-- All indexable job listings, pages, and slices **must reflect high-paying thresholds**.
-- Junior or entry-level roles **must be excluded** unless the salary is demonstrably high.
-- All on-page copy (titles, H1s, descriptions, body text) must reinforce:
-  - “high-paying remote jobs”
-  - “six-figure roles”
-  - “competitive salary”
-  - local equivalents in other currencies (£, €, CHF, AUD, NZD)
-- Any slice or page branded as “high-paying” MUST filter jobs accordingly.
+The AI acts as a Senior Staff Engineer, Technical SEO Architect, pSEO Specialist,
+and Full-Stack Developer responsible for:
 
-# ON-PAGE SEO PRINCIPLES (MANDATORY FOR ALL PAGES)
-Every indexable page must implement strong, modern on-page SEO with:
+✅ Maintaining production stability on 4GB server (Hetzner)
+✅ Outputting complete files only (NEVER snippets or placeholders)
+✅ Implementing world-class programmatic SEO (pSEO)
+✅ Managing ATS integrations across all providers
+✅ Enforcing high-salary filtering (PPP-adjusted per country)
+✅ Building conversion-optimized UI/UX
+✅ Creating SEO templates for all page types
+✅ Optimizing for both human users and AI search engines
+✅ Producing error-free code on first compile
+✅ Managing deployment and server operations
+✅ Conducting implementation audits against these rules
 
-1) **Primary Keyword Targeting**
-   - e.g., “Remote Data Analyst Jobs,” “$100k+ Software Engineer Jobs,”
-     “High-Paying Remote Jobs in Switzerland.”
+═══════════════════════════════════════════════════════════════════════════════
+              2. HIGH-SALARY JOB BOARD RULES (PPP-ADJUSTED)
+═══════════════════════════════════════════════════════════════════════════════
 
-2) **User Intent Alignment**
-   - Titles and descriptions must answer the exact intent.
-   - Content must address:
-     * What this role is,
-     * Why it's high-paying,
-     * Top companies hiring,
-     * Salary expectations,
-     * Locations served.
+## 2.1 Salary Threshold Strategy (LOCAL HIGH-PAYING JOBS)
 
-3) **LSI / Semantic Keyword Usage**
-   - Use natural semantically related keywords inside content blocks, such as:
-     “remote tech roles,” “six-figure compensation,” “competitive salary,”
-     “distributed teams,” “remote-friendly companies,”
-     “senior-level engineering roles,” etc.
-   - These must be woven into content minimally — no keyword stuffing.
+**PHILOSOPHY**: We don't convert USD to other currencies. Instead, we identify
+what constitutes a HIGH-PAYING job in EACH local market based on:
+- Purchasing Power Parity (PPP)
+- Cost of living
+- Local salary standards
+- Top 20% earners in that country
 
-4) **Clear, descriptive H1 and H2 structure**
-   Examples:
-   - H1: “Remote Senior Machine Learning Engineer Jobs Paying $200k+”
-   - H2s:
-     * “Top High-Paying [ROLE] Jobs”
-     * “Remote Work Eligibility”
-     * “Salary Ranges and Compensation Insights”
-     * “Companies Hiring [ROLE] Professionals”
-     * “Related High-Paying Roles”
+**SALARY THRESHOLDS BY COUNTRY (Annual, Local Currency):**
 
-5) **SEO-Friendly Content Blocks**
-   Pages should include (where appropriate):
-   - Overview paragraph
-   - Salary insights
-   - Required skills / responsibilities (general)
-   - Remote eligibility notes
-   - Country relevance
-   - Company highlights
-   - Similar roles
+| Country           | Currency | Threshold  | Local Context               | % of Earners  |
+|-------------------|----------|------------|-----------------------------|---------------|
+| United States     | USD      | $100,000   | Six figures                 | Top 20%       |
+| Canada            | CAD      | C$100,000  | Six figures CAD             | Top 20%       |
+| United Kingdom    | GBP      | £75,000    | High professional salary    | Top 15%       |
+| Ireland           | EUR      | €85,000    | High professional salary    | Top 15%       |
+| Germany           | EUR      | €80,000    | High professional salary    | Top 20%       |
+| Netherlands       | EUR      | €85,000    | High professional salary    | Top 18%       |
+| Switzerland       | CHF      | CHF 110,000| High professional salary    | Top 25%       |
+| Australia         | AUD      | A$140,000  | High professional salary    | Top 15%       |
+| New Zealand       | NZD      | NZ$120,000 | High professional salary    | Top 15%       |
+| Singapore         | SGD      | S$120,000  | High professional salary    | Top 20%       |
+| India (Tech Hubs) | INR      | ₹3,500,000 | Top tech/startup salary     | Top 5%        |
+| Poland            | PLN      | zł 250,000 | High professional salary    | Top 10%       |
+| Portugal          | EUR      | €60,000    | High professional salary    | Top 10%       |
+| Spain             | EUR      | €65,000    | High professional salary    | Top 12%       |
+| France            | EUR      | €75,000    | High professional salary    | Top 18%       |
+| Japan             | JPY      | ¥10,000,000| High professional salary    | Top 15%       |
+| South Korea       | KRW      | ₩80,000,000| High professional salary    | Top 18%       |
+| UAE (Dubai)       | AED      | AED 300,000| High professional salary    | Top 20%       |
+| Brazil            | BRL      | R$250,000  | Top professional salary     | Top 8%        |
+| Mexico            | MXN      | MXN 800,000| Top professional salary     | Top 10%       |
 
-These blocks should be auto-generated or template-driven by the agent when editing route files.
+**CRITICAL RULES:**
+- ✅ Each country has its OWN threshold based on LOCAL standards
+- ✅ Display salaries in ORIGINAL LOCAL CURRENCY only
+- ✅ NEVER convert USD to GBP or vice versa
+- ✅ Mark jobs as `isHighSalaryLocal = true` when they meet threshold
+- ❌ REJECT all entry-level, junior, intern, graduate positions
+- ✅ Focus on mid-level, senior, staff, principal, director, VP, C-level
 
-# STRONG CONTENT REQUIREMENTS
-When working on any role, geo, salary, or company slice, ensure the page contains:
+## 2.2 Salary Display Rules (Local Currency Only)
 
-- An introductory paragraph with:
-  * primary keyword,
-  * high-paying positioning,
-  * location or role context.
-- A short paragraph describing:
-  * salary expectations,
-  * remote/hybrid flexibility,
-  * typical seniority levels.
-- Internal links to:
-  * salary tiers,
-  * related roles,
-  * relevant country pages,
-  * company pages.
+**Format Pattern (NEVER CONVERT):**
+```typescript
+// US job: "$120,000-$180,000/yr" or "$150,000+/yr"
+// UK job: "£85,000-£120,000/yr" or "£90,000+/yr"
+// German job: "€95,000-€130,000/yr" or "€100,000+/yr"
+// Australian job: "A$160,000-A$210,000/yr" or "A$175,000+/yr"
+```
 
-# COUNTRY SLUG POLICY (FULL NAMES)
-Use **full country names**, not codes, for SEO clarity:
+**Implementation:**
+```typescript
+function formatSalary(job: Job): string {
+  const currency = getCurrencySymbol(job.salaryCurrency)
+  const min = job.minAnnual ? formatNumber(job.minAnnual) : null
+  const max = job.maxAnnual ? formatNumber(job.maxAnnual) : null
+  
+  if (min && max && min !== max) {
+    return `${currency}${min}-${currency}${max}/yr`
+  }
+  if (min) {
+    return `${currency}${min}+/yr`
+  }
+  return null
+}
 
-- united-states
-- united-kingdom
-- ireland
-- switzerland
-- netherlands
-- australia
-- new-zealand
+function formatNumber(num: number): string {
+  // US: $120,000 or $120k
+  // UK: £85,000 or £85k
+  if (num >= 1000) {
+    return `${Math.round(num / 1000)}k`
+  }
+  return num.toLocaleString()
+}
+```
 
-URLs remain in English even for multilingual/localized content.
+**Salary Badges (Universal Context):**
+- 🟢 **High-Paying**: Meets local threshold
+- 🔵 **Very High-Paying**: 1.5x local threshold
+- 🟣 **Elite Comp**: 2x local threshold
+- 🔴 **Top 1% Comp**: 3x local threshold
 
-# PSEO ARCHITECTURE REQUIREMENTS
-SixFigureJobs must have clean, predictable, scalable slices:
+## 2.3 Job Quality Filtering (MANDATORY)
 
-1) ROLE SLICES
-   - /jobs/[role]
-   - /jobs/senior-[role]
-   - /jobs/lead-[role]
-   Junior slices only if salary >= high-pay threshold.
+**REJECT jobs that:**
+- ❌ Contain "entry-level", "junior", "graduate", "intern", "trainee"
+- ❌ Have salary < local threshold for that country
+- ❌ Show "competitive salary" with no range
+- ❌ Are clearly misclassified
+- ❌ Have suspicious data (e.g., $10M/year obvious errors)
 
-2) SALARY SLICES
-   - /100k-jobs
-   - /200k-jobs
-   - /300k-jobs
-   - /400k-jobs
-   (No $150k bucket unless requested.)
+**ACCEPT jobs that:**
+- ✅ Have verified salary ≥ local threshold
+- ✅ Are mid-level, senior, staff, principal, director, VP, C-level
+- ✅ Have clear role title and description
+- ✅ Come from verified company ATS or board sources
+- ✅ Match high-paying role patterns
 
-   Sub-slices:
-   - /100k-jobs/[role]
-   - /100k-jobs/country/[country]
+═══════════════════════════════════════════════════════════════════════════════
+           3. COMPREHENSIVE ROLE SYNONYMS (ALL JOB CATEGORIES)
+═══════════════════════════════════════════════════════════════════════════════
 
-3) REMOTE / GEO SLICES
-   - /remote-jobs/[country]
-   - /remote-jobs/[country]/[role]
+## 3.1 Engineering & Technical Roles
+```typescript
+const ENGINEERING_SYNONYMS = {
+  'software-engineer': [
+    'swe', 'developer', 'programmer', 'coder', 'software dev', 'engineer',
+    'coding', 'development engineer', 'application developer'
+  ],
+  'frontend-engineer': [
+    'frontend', 'front-end', 'fe', 'ui engineer', 'react developer',
+    'vue developer', 'angular developer', 'web developer', 'javascript developer',
+    'frontend dev', 'ui developer', 'web engineer'
+  ],
+  'backend-engineer': [
+    'backend', 'back-end', 'be', 'server engineer', 'api engineer',
+    'backend dev', 'server developer', 'api developer', 'microservices',
+    'java developer', 'python developer', 'node developer', 'go developer'
+  ],
+  'full-stack-engineer': [
+    'fullstack', 'full-stack', 'full stack developer', 'fullstack dev',
+    'web developer', 'application developer', 'stack engineer'
+  ],
+  'mobile-engineer': [
+    'mobile developer', 'ios developer', 'android developer', 'mobile dev',
+    'ios engineer', 'android engineer', 'react native', 'flutter developer',
+    'swift developer', 'kotlin developer'
+  ],
+  'devops-engineer': [
+    'devops', 'sre', 'site reliability engineer', 'infrastructure engineer',
+    'platform engineer', 'cloud engineer', 'systems engineer', 'deployment',
+    'kubernetes', 'docker', 'aws engineer', 'gcp engineer', 'azure engineer'
+  ],
+  'data-engineer': [
+    'data engineering', 'etl engineer', 'data pipeline', 'big data engineer',
+    'analytics engineer', 'data infrastructure', 'spark engineer',
+    'kafka engineer', 'airflow engineer', 'snowflake engineer'
+  ],
+  'machine-learning-engineer': [
+    'ml engineer', 'mle', 'machine learning', 'ai engineer', 'mlops',
+    'deep learning engineer', 'ai/ml', 'tensorflow', 'pytorch', 'nlp engineer'
+  ],
+  'security-engineer': [
+    'infosec', 'cybersecurity engineer', 'appsec', 'security', 'penetration tester',
+    'security analyst', 'security architect', 'devsecops', 'cloud security'
+  ],
+  'qa-engineer': [
+    'qa', 'quality assurance', 'test engineer', 'sdet', 'automation engineer',
+    'test automation', 'testing', 'quality engineer', 'qae'
+  ],
+  'embedded-engineer': [
+    'embedded', 'firmware engineer', 'embedded systems', 'iot engineer',
+    'hardware engineer', 'embedded software', 'rtos', 'c++ embedded'
+  ]
+}
+```
 
-4) COMPANY SLICES
-   - /company/[slug]
-   - /company/[slug]/jobs
+## 3.2 Data & Analytics Roles
+```typescript
+const DATA_SYNONYMS = {
+  'data-scientist': [
+    'ds', 'data science', 'ml scientist', 'research scientist', 'applied scientist',
+    'analytics scientist', 'quantitative researcher', 'statistician'
+  ],
+  'data-analyst': [
+    'analyst', 'business analyst', 'analytics', 'bi analyst', 'reporting analyst',
+    'insights analyst', 'sql analyst', 'tableau analyst', 'power bi'
+  ],
+  'business-intelligence': [
+    'bi', 'business intelligence analyst', 'bi developer', 'data analyst',
+    'reporting', 'analytics engineer', 'bi engineer'
+  ],
+  'research-scientist': [
+    'researcher', 'ai researcher', 'ml researcher', 'phd researcher',
+    'research engineer', 'applied research', 'computer vision researcher'
+  ]
+}
+```
 
-5) ADVANCED COMBINATION SLICES (only when volumetric data supports it)
-   - /100k-jobs/software-engineer/united-states
-   - /200k-jobs/data-analyst/united-kingdom
+## 3.3 Product & Design Roles
+```typescript
+const PRODUCT_SYNONYMS = {
+  'product-manager': [
+    'pm', 'product', 'pmo', 'product owner', 'technical pm', 'senior pm',
+    'staff pm', 'principal pm', 'group pm', 'director of product'
+  ],
+  'product-designer': [
+    'designer', 'ux designer', 'ui designer', 'ui/ux', 'product design',
+    'interaction designer', 'visual designer', 'digital designer'
+  ],
+  'ux-researcher': [
+    'user researcher', 'ux research', 'user experience researcher',
+    'design researcher', 'usability researcher', 'research designer'
+  ],
+  'product-marketing-manager': [
+    'pmm', 'product marketing', 'go-to-market', 'gtm', 'growth pm',
+    'marketing manager', 'product marketer'
+  ]
+}
+```
 
-Use **noindex** when slices have low content volume.
+## 3.4 Marketing & Content Roles
+```typescript
+const MARKETING_SYNONYMS = {
+  'content-writer': [
+    'writer', 'content creator', 'copywriter', 'content marketing',
+    'blog writer', 'technical writer', 'content specialist', 'editor',
+    'editorial', 'content strategist', 'journalist', 'communications'
+  ],
+  'copywriter': [
+    'copy writer', 'creative writer', 'advertising copywriter', 'marketing writer',
+    'content writer', 'brand copywriter', 'copy', 'creative copywriter'
+  ],
+  'seo-specialist': [
+    'seo', 'search engine optimization', 'seo manager', 'seo strategist',
+    'organic search', 'seo analyst', 'search marketing', 'technical seo'
+  ],
+  'content-marketing-manager': [
+    'content marketing', 'content manager', 'content strategy', 'content lead',
+    'content director', 'editorial manager', 'content ops'
+  ],
+  'marketing-manager': [
+    'marketer', 'marketing', 'digital marketing', 'growth marketing',
+    'performance marketing', 'marketing lead', 'brand manager'
+  ],
+  'social-media-manager': [
+    'social media', 'community manager', 'social marketing', 'social strategist',
+    'social media strategist', 'social content', 'community lead'
+  ],
+  'growth-marketer': [
+    'growth', 'growth hacker', 'growth marketing', 'user acquisition',
+    'performance marketing', 'demand gen', 'growth lead'
+  ],
+  'email-marketing': [
+    'email marketer', 'crm marketing', 'lifecycle marketing', 'retention marketing',
+    'email specialist', 'marketing automation', 'drip campaigns'
+  ]
+}
+```
 
-# URL & SLUG RULES
-- lowercase, hyphens, ASCII only.
-- deterministic and stable.
-- never include currency or symbols in slugs.
-- readable role/geo terms preferred.
+## 3.5 Sales & Business Development
+```typescript
+const SALES_SYNONYMS = {
+  'sales-engineer': [
+    'se', 'solutions engineer', 'pre-sales', 'technical sales', 'sales engineering',
+    'solution architect', 'customer engineer', 'field engineer'
+  ],
+  'account-executive': [
+    'ae', 'sales rep', 'sales representative', 'account manager', 'sales',
+    'enterprise sales', 'b2b sales', 'saas sales', 'sales specialist'
+  ],
+  'business-development': [
+    'bd', 'bdr', 'business development rep', 'partnerships', 'partnerships manager',
+    'strategic partnerships', 'alliances', 'channel sales'
+  ],
+  'sales-manager': [
+    'sales lead', 'sales director', 'head of sales', 'vp sales', 'sales leadership'
+  ],
+  'customer-success': [
+    'csm', 'customer success manager', 'account manager', 'client success',
+    'customer success engineer', 'technical account manager', 'tam'
+  ],
+  'account-manager': [
+    'am', 'client manager', 'relationship manager', 'key account manager',
+    'strategic account manager', 'enterprise account manager'
+  ]
+}
+```
 
-# METADATA TEMPLATES
-Use the following templates as defaults when creating or improving metadata:
+## 3.6 Operations & Finance
+```typescript
+const OPERATIONS_SYNONYMS = {
+  'operations-manager': [
+    'ops', 'operations', 'business operations', 'program manager',
+    'ops lead', 'operations lead', 'chief of staff', 'biz ops'
+  ],
+  'financial-analyst': [
+    'finance analyst', 'fp&a', 'financial planning', 'corporate finance',
+    'investment analyst', 'finance', 'financial modeling'
+  ],
+  'accountant': [
+    'accounting', 'cpa', 'senior accountant', 'staff accountant',
+    'accounting manager', 'controller', 'financial accountant'
+  ],
+  'program-manager': [
+    'pmo', 'program', 'project manager', 'tpm', 'technical program manager',
+    'delivery manager', 'program lead', 'project lead'
+  ],
+  'strategy-consultant': [
+    'consultant', 'management consultant', 'strategy', 'strategic advisor',
+    'business consultant', 'strategy manager', 'strategic planning'
+  ]
+}
+```
 
-1) Home
-   Title:
-     “[BRAND] – High-Paying Remote Tech & Startup Jobs”
-   Description:
-     “Find high-paying remote jobs in tech, product, data, engineering, and design. Explore roles by salary, country, and seniority.”
+## 3.7 Human Resources & Legal
+```typescript
+const HR_LEGAL_SYNONYMS = {
+  'recruiter': [
+    'talent acquisition', 'technical recruiter', 'recruiting', 'hr recruiter',
+    'sourcer', 'talent', 'hiring manager', 'recruitment specialist'
+  ],
+  'hr-manager': [
+    'human resources', 'hr', 'people operations', 'people ops', 'hrbp',
+    'hr business partner', 'people manager', 'talent manager'
+  ],
+  'compensation-analyst': [
+    'compensation', 'total rewards', 'benefits analyst', 'comp analyst',
+    'rewards analyst', 'comp & benefits'
+  ],
+  'legal-counsel': [
+    'lawyer', 'attorney', 'corporate counsel', 'general counsel', 'legal',
+    'in-house counsel', 'corporate lawyer', 'legal advisor'
+  ],
+  'compliance-manager': [
+    'compliance', 'risk manager', 'regulatory', 'compliance officer',
+    'governance', 'risk and compliance', 'audit'
+  ]
+}
+```
 
-2) Role Slice
-   Title:
-     “Remote [ROLE] Jobs – High-Paying Opportunities | [BRAND]”
-   Description:
-     “Explore vetted high-paying remote [ROLE] jobs. Discover senior and six-figure roles across top companies.”
+## 3.8 Executive & Leadership
+```typescript
+const EXECUTIVE_SYNONYMS = {
+  'chief-technology-officer': [
+    'cto', 'vp engineering', 'head of engineering', 'engineering director',
+    'vp technology', 'technical director', 'chief engineer'
+  ],
+  'chief-product-officer': [
+    'cpo', 'vp product', 'head of product', 'product director',
+    'chief product', 'product leadership'
+  ],
+  'chief-executive-officer': [
+    'ceo', 'chief executive', 'founder', 'co-founder', 'president',
+    'managing director', 'general manager'
+  ],
+  'chief-financial-officer': [
+    'cfo', 'vp finance', 'finance director', 'head of finance',
+    'chief financial', 'financial director'
+  ],
+  'chief-marketing-officer': [
+    'cmo', 'vp marketing', 'head of marketing', 'marketing director',
+    'chief marketing', 'marketing leadership'
+  ],
+  'engineering-manager': [
+    'eng manager', 'engineering lead', 'tech lead manager', 'team lead',
+    'development manager', 'software engineering manager', 'em'
+  ],
+  'director-of-engineering': [
+    'engineering director', 'director engineering', 'head of engineering',
+    'senior engineering manager', 'engineering leadership'
+  ]
+}
+```
 
-3) Salary Slice
-   Title:
-     “[CURRENCY][MIN_SALARY]+ [ROLE] Jobs – Remote High-Paying Roles | [BRAND]”
-   Description:
-     “Browse remote [ROLE] jobs paying [CURRENCY][MIN_SALARY]+ yearly. See compensation insights and top companies.”
+## 3.9 Creative & Miscellaneous
+```typescript
+const CREATIVE_SYNONYMS = {
+  'graphic-designer': [
+    'designer', 'visual designer', 'brand designer', 'digital designer',
+    'creative designer', 'art director', 'design lead'
+  ],
+  'video-editor': [
+    'editor', 'video producer', 'motion graphics', 'post-production',
+    'multimedia editor', 'content producer', 'videographer'
+  ],
+  'project-manager': [
+    'pm', 'project lead', 'delivery manager', 'scrum master', 'agile coach',
+    'project coordinator', 'program coordinator'
+  ]
+}
+```
 
-4) Remote Country Slice
-   Title:
-     “High-Paying Remote Jobs in [COUNTRY] | [BRAND]”
-   Description:
-     “Find high-paying remote jobs available to workers in [COUNTRY]. Compare salaries and apply today.”
+═══════════════════════════════════════════════════════════════════════════════
+                  4. HOMEPAGE SEO KEYWORD STRATEGY
+═══════════════════════════════════════════════════════════════════════════════
 
-5) Company Page
-   Title:
-     “[COMPANY] – High-Paying Remote Jobs & Salaries | [BRAND]”
-   Description:
-     “View high-paying roles at [COMPANY], including compensation ranges and remote eligibility.”
+## 4.1 Primary Keywords (Target on Homepage)
 
-6) Job Detail
-   Title:
-     “[JOB_TITLE] – [COMPANY] ([CURRENCY][MIN]–[MAX], Remote) | [BRAND]”
-   Description:
-     “Apply for [JOB_TITLE]. This high-paying remote role offers compensation around [CURRENCY][MIN]–[MAX].”
+**Main Brand Keywords:**
+- Six figure jobs (PRIMARY)
+- Six-figure jobs
+- 6 figure jobs
+- 6figjobs
 
-# INTERNAL LINKING (MANDATORY)
-Every major slice should link to:
+**High-Intent Keywords:**
+- High paying jobs
+- High-paying jobs
+- $100k jobs
+- 100k plus jobs
+- 100k+ jobs
+- Jobs paying 100k
+- Jobs over 100k
+- Six figure salary jobs
 
-- Role slices
-- Salary slices
-- Geo slices
-- Related roles
-- Company pages
-- High-paying seniority levels
+**Supporting Keywords:**
+- High salary jobs
+- Top paying jobs
+- Highest paying jobs
+- Well paid jobs
+- High income jobs
+- Premium jobs
+- Executive jobs
 
-Job detail pages must include links to:
-- role slice
-- salary slice
-- remote country slice
-- company page
-- similar jobs
+## 4.2 Homepage Title Tag Strategy
 
-Internal linking should be:
-- prominent,
-- natural,
-- intent-reinforcing,
-- semantically relevant.
+**Primary Title Option 1:**
+```
+Six Figure Jobs: Find $100k+ High-Paying Jobs | 6figjobs.com
+```
 
-# STRUCTURED DATA (JSON-LD)
-Use schema only when safe and data is present:
+**Primary Title Option 2:**
+```
+High-Paying Jobs: $100k+ Six Figure Jobs from Top Companies | 6figjobs
+```
 
-- JobPosting for job detail pages
-- ItemList for slice/list pages
-- Organization for company pages
-- BreadcrumbList on hierarchical pages
+**Testing Variants:**
+```
+A) Six Figure Jobs & High-Paying Positions | $100k+ Jobs Daily
+B) Find $100k Plus Jobs: High-Paying Six Figure Positions | 6figjobs
+C) 100k Plus Jobs: High-Paying Six Figure Careers | Updated Daily
+```
 
-Never invent data — only use what exists.
+## 4.3 Homepage Meta Description
 
-# NEW SITE INDEXING STRATEGY
-- Prioritize indexation for:
-  * home,
-  * core salary slices,
-  * top roles,
-  * key countries,
-  * strong company pages,
-  * selected high-value jobs.
-- Use noindex on thin pages (0–1 items).
-- Avoid bloating sitemaps with low-content slices.
+**Primary Description (158 chars):**
+```
+Find verified six figure jobs and high-paying positions paying $100k+. 2,847 
+100k plus jobs from top companies. Updated daily with real salary data.
+```
 
-# INTERNATIONALIZATION RULES
-- URLs remain English.
-- Titles, descriptions, and content may be localized per region/language.
-- Auto-translation should maintain:
-  * clarity,
-  * professional tone,
-  * high-pay emphasis,
-  * remote culture.
-- Use hreflang only when multiple language versions exist.
+**Alternative Descriptions:**
+```
+A) Discover high-paying six figure jobs paying $100k or more. Browse 2,800+ 
+   verified 100k plus jobs from top companies. Apply directly with real salaries.
 
-# FILE EDITING RULES (REMINDER)
-- Only edit files explicitly referenced by user.
-- When unsure, ask instead of assuming.
-- Maintain TypeScript safety.
-- Keep all SEO-related code minimal, safe, and intentional.
+B) Search $100k+ jobs and six figure positions from leading companies. High-paying 
+   jobs in tech, sales, marketing & more. Updated daily with verified salaries.
+```
 
-# END OF RULES (v1.0)
+## 4.4 Homepage H1 Strategy
+
+**Primary H1:**
+```html
+<h1>Find Six Figure Jobs & High-Paying Positions Paying $100k+</h1>
+```
+
+**Alternative H1s:**
+```html
+<h1>High-Paying Jobs: $100k Plus Six Figure Positions</h1>
+<h1>Six Figure Jobs from Top Companies — $100k+ Verified Salaries</h1>
+```
+
+## 4.5 Homepage Content Structure (SEO-Optimized)
+```html
+<main>
+  <header class="hero">
+    <h1>Find Six Figure Jobs & High-Paying Positions Paying $100k+</h1>
+    <p class="lead">
+      Browse <strong>2,847 verified $100k plus jobs</strong> from top companies 
+      including Google, Meta, Stripe, and Anthropic. All <strong>high-paying 
+      six figure jobs</strong> updated daily with real salary data.
+    </p>
+    
+    <!-- RoleTypeahead Search Component -->
+    <SearchInput placeholder="Search for high-paying jobs (e.g., Software Engineer, Product Manager)" />
+  </header>
+  
+  <section aria-labelledby="featured-jobs">
+    <h2 id="featured-jobs">Featured $100k+ Jobs</h2>
+    <p>
+      Explore our curated <strong>six figure jobs</strong> and <strong>high-paying 
+      positions</strong> across engineering, product, data, sales, and marketing.
+    </p>
+    <!-- Job cards -->
+  </section>
+  
+  <section aria-labelledby="salary-tiers">
+    <h2 id="salary-tiers">Browse by Salary Tier</h2>
+    <ul>
+      <li><a href="/jobs/100k-plus-jobs">$100k-199k Jobs (1,284 jobs)</a></li>
+      <li><a href="/jobs/200k-plus-jobs">$200k-299k Jobs (847 jobs)</a></li>
+      <li><a href="/jobs/300k-plus-jobs">$300k+ Elite Jobs (421 jobs)</a></li>
+    </ul>
+  </section>
+  
+  <section aria-labelledby="categories">
+    <h2 id="categories">Popular <strong>High-Paying Job</strong> Categories</h2>
+    <div class="category-grid">
+      <a href="/jobs/100k-plus-software-engineer-jobs">
+        Software Engineer Jobs ($120k-350k)
+      </a>
+      <a href="/jobs/100k-plus-product-manager-jobs">
+        Product Manager Jobs ($130k-280k)
+      </a>
+      <!-- More categories -->
+    </div>
+  </section>
+  
+  <section aria-labelledby="why-us">
+    <h2 id="why-us">Why Choose 6figjobs for Your <strong>Six Figure Job</strong> Search?</h2>
+    <ul>
+      <li>✓ <strong>100% Verified Salaries</strong> — All jobs show real salary ranges</li>
+      <li>✓ <strong>$100k+ Only</strong> — No entry-level or low-paying positions</li>
+      <li>✓ <strong>Updated Daily</strong> — Fresh high-paying jobs every day</li>
+      <li>✓ <strong>Direct Applications</strong> — Apply directly to companies</li>
+    </ul>
+  </section>
+  
+  <section aria-labelledby="faq">
+    <h2 id="faq">Frequently Asked Questions About <strong>Six Figure Jobs</strong></h2>
+    <!-- FAQ with schema markup -->
+  </section>
+</main>
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+              5. PROGRAMMATIC SEO (pSEO) TEMPLATES — WORLD-CLASS
+═══════════════════════════════════════════════════════════════════════════════
+
+## 5.1 pSEO URL Structure (SEO-Friendly, Not Too Long)
+
+**URL Pattern Philosophy:**
+- ✅ Keep URLs under 75 characters when possible
+- ✅ Use hyphens (-) not underscores (_)
+- ✅ Include primary keyword early in URL
+- ✅ Avoid unnecessary nesting
+- ✅ Make URLs readable and shareable
+
+**URL Patterns:**
+```
+Homepage:
+/
+
+Browse All:
+/jobs
+
+Salary Tier Pages:
+/jobs/100k-plus-jobs
+/jobs/200k-plus-jobs
+/jobs/300k-plus-jobs
+
+Role Pages:
+/jobs/software-engineer-jobs
+/jobs/product-manager-jobs
+/jobs/data-scientist-jobs
+
+Salary + Role:
+/jobs/100k-plus-software-engineer-jobs
+/jobs/200k-plus-product-manager-jobs
+
+Country + Role:
+/jobs/us-software-engineer-jobs
+/jobs/uk-product-manager-jobs
+
+Remote Jobs:
+/jobs/remote-jobs
+/jobs/remote-software-engineer-jobs
+/jobs/remote-100k-plus-jobs
+
+City + Role:
+/jobs/san-francisco-software-engineer-jobs
+/jobs/london-product-manager-jobs
+
+Salary + Country + Role (MAXIMUM NESTING):
+/jobs/us-100k-plus-software-engineer-jobs
+/jobs/uk-100k-plus-product-manager-jobs
+
+Job Detail:
+/job/[slug]
+Example: /job/senior-software-engineer-google-sf
+
+Company Pages:
+/company/[slug]
+Example: /company/google
+
+Salary Guides:
+/salary/software-engineer
+/salary/software-engineer-us
+/salary/software-engineer-san-francisco
+```
+
+**CRITICAL URL RULES:**
+- ❌ NO: `/jobs/united-states/100k-plus/software-engineer-jobs` (too long, 53 chars)
+- ✅ YES: `/jobs/us-100k-plus-software-engineer-jobs` (42 chars)
+- ❌ NO: `/jobs/category/engineering/software-engineer` (unnecessary nesting)
+- ✅ YES: `/jobs/software-engineer-jobs` (direct, clean)
+
+## 5.2 Title Tag Templates for All Page Types
+
+### 5.2.1 Salary Tier Pages
+```typescript
+// Pattern: [Salary Tier] Jobs | [Job Count] High-Paying Positions | 6figjobs
+function generateSalaryTierTitle(tier: string, count: number): string {
+  const tierLabels = {
+    '100k': '$100k Plus',
+    '200k': '$200k Plus',
+    '300k': '$300k Plus',
+    '400k': '$400k Plus'
+  }
+  
+  return `${tierLabels[tier]} Jobs | ${count.toLocaleString()} High-Paying Positions | 6figjobs`
+}
+
+// Examples:
+// "$100k Plus Jobs | 2,847 High-Paying Positions | 6figjobs"
+// "$200k Plus Jobs | 847 Elite Salary Positions | 6figjobs"
+```
+
+### 5.2.2 Role Pages
+```typescript
+// Pattern: [Role] Jobs [Salary Range] | [Count] Positions | 6figjobs
+function generateRoleTitle(role: string, count: number, salaryRange: string): string {
+  return `${role} Jobs ${salaryRange} | ${count.toLocaleString()} High-Paying Positions | 6figjobs`
+}
+
+// Examples:
+// "Software Engineer Jobs $120k-350k | 1,284 Positions | 6figjobs"
+// "Product Manager Jobs $130k-280k | 428 Positions | 6figjobs"
+```
+
+### 5.2.3 Salary + Role Pages
+```typescript
+// Pattern: $[X]k+ [Role] Jobs | [Count] Positions | 6figjobs
+function generateSalaryRoleTitle(salary: string, role: string, count: number): string {
+  return `$${salary}k+ ${role} Jobs | ${count.toLocaleString()} High-Paying Positions | 6figjobs`
+}
+
+// Examples:
+// "$100k+ Software Engineer Jobs | 1,284 Positions | 6figjobs"
+// "$200k+ Product Manager Jobs | 247 Elite Positions | 6figjobs"
+```
+
+### 5.2.4 Country + Role Pages
+```typescript
+// Pattern: [Role] Jobs in [Country] [Salary] | [Count] Positions | 6figjobs
+function generateCountryRoleTitle(
+  role: string, 
+  country: string, 
+  count: number, 
+  salaryRange: string
+): string {
+  return `${role} Jobs in ${country} ${salaryRange} | ${count.toLocaleString()} Positions | 6figjobs`
+}
+
+// Examples:
+// "Software Engineer Jobs in United States $100k+ | 1,842 Positions | 6figjobs"
+// "Product Manager Jobs in UK £75k+ | 214 Positions | 6figjobs"
+```
+
+### 5.2.5 City + Role Pages
+```typescript
+// Pattern: [Role] Jobs in [City] [Salary] | [Count] Positions | 6figjobs
+function generateCityRoleTitle(
+  role: string, 
+  city: string, 
+  count: number, 
+  salaryRange: string
+): string {
+  return `${role} Jobs in ${city} ${salaryRange} | ${count.toLocaleString()} Positions | 6figjobs`
+}
+
+// Examples:
+// "Software Engineer Jobs in San Francisco $150k-400k | 428 Positions | 6figjobs"
+// "Product Manager Jobs in London £90k-150k | 87 Positions | 6figjobs"
+```
+
+### 5.2.6 Remote Pages
+```typescript
+// Pattern: Remote [Role] Jobs [Salary] | [Count] Positions | 6figjobs
+function generateRemoteTitle(role: string, count: number, salaryRange: string): string {
+  return `Remote ${role} Jobs ${salaryRange} | ${count.toLocaleString()} Positions Worldwide | 6figjobs`
+}
+
+// Examples:
+// "Remote Software Engineer Jobs $100k-350k | 847 Positions Worldwide | 6figjobs"
+// "Remote Product Manager Jobs $120k-280k | 312 Positions Worldwide | 6figjobs"
+```
+
+### 5.2.7 Job Detail Pages
+```typescript
+// Pattern: [Title] at [Company] [Salary] | 6figjobs
+function generateJobTitle(job: Job): string {
+  const salary = formatSalary(job)
+  return `${job.title} at ${job.company} ${salary ? salary : ''} | 6figjobs`
+}
+
+// Examples:
+// "Senior Software Engineer at Google $180k-250k | 6figjobs"
+// "Staff Product Manager at Stripe $220k-350k | 6figjobs"
+```
+
+### 5.2.8 Company Pages
+```typescript
+// Pattern: [Company] Jobs [Salary Range] | [Count] Open Positions | 6figjobs
+function generateCompanyTitle(company: Company, count: number, salaryRange: string): string {
+  return `${company.name} Jobs ${salaryRange} | ${count} Open Positions | 6figjobs`
+}
+
+// Examples:
+// "Google Jobs $120k-450k | 87 Open Positions | 6figjobs"
+// "Stripe Jobs $150k-380k | 42 Open Positions | 6figjobs"
+```
+
+### 5.2.9 Salary Guide Pages
+```typescript
+// Pattern: [Role] Salary Guide [Location] | Average Pay & Ranges | 6figjobs
+function generateSalaryGuideTitle(role: string, location?: string): string {
+  const loc = location ? ` in ${location}` : ''
+  return `${role} Salary Guide${loc} | Average Pay & Ranges | 6figjobs`
+}
+
+// Examples:
+// "Software Engineer Salary Guide | Average Pay & Ranges | 6figjobs"
+// "Product Manager Salary Guide in San Francisco | Average Pay | 6figjobs"
+```
+
+## 5.3 Meta Description Templates for All Page Types
+
+### 5.3.1 Salary Tier Pages
+```typescript
+function generateSalaryTierDescription(tier: string, count: number): string {
+  return `Find ${count.toLocaleString()} verified $${tier}k+ jobs from top companies. High-paying six figure positions in tech, sales, marketing & more. Apply directly with real salary data.`
+}
+
+// Examples:
+// "Find 2,847 verified $100k+ jobs from top companies. High-paying six figure positions in tech, sales, marketing & more. Apply directly with real salary data."
+```
+
+### 5.3.2 Role Pages
+```typescript
+function generateRoleDescription(role: string, count: number, salaryRange: string): string {
+  return `Explore ${count.toLocaleString()} ${role} jobs paying ${salaryRange}. Verified high-paying positions from top companies. Updated daily with real salary ranges.`
+}
+
+// Examples:
+// "Explore 1,284 Software Engineer jobs paying $120k-350k. Verified high-paying positions from top companies. Updated daily with real salary ranges."
+```
+
+### 5.3.3 Salary + Role Pages
+```typescript
+function generateSalaryRoleDescription(salary: string, role: string, count: number): string {
+  return `Browse ${count.toLocaleString()} $${salary}k+ ${role} jobs from leading companies. High-paying six figure positions with verified salaries. Apply directly, updated daily.`
+}
+
+// Examples:
+// "Browse 1,284 $100k+ Software Engineer jobs from leading companies. High-paying six figure positions with verified salaries. Apply directly, updated daily."
+```
+
+### 5.3.4 Country + Role Pages
+```typescript
+function generateCountryRoleDescription(
+  role: string, 
+  country: string, 
+  count: number, 
+  localSalary: string
+): string {
+  return `Find ${count.toLocaleString()} ${role} jobs in ${country} paying ${localSalary}+. High-paying positions from top local and international companies. Real salary data.`
+}
+
+// Examples:
+// "Find 1,842 Software Engineer jobs in United States paying $100k+. High-paying positions from top local and international companies. Real salary data."
+// "Find 214 Product Manager jobs in UK paying £75k+. High-paying positions from top local and international companies. Real salary data."
+```
+
+### 5.3.5 City + Role Pages
+```typescript
+function generateCityRoleDescription(
+  role: string, 
+  city: string, 
+  count: number, 
+  salaryRange: string
+): string {
+  return `Discover ${count.toLocaleString()} ${role} jobs in ${city} with salaries from ${salaryRange}. High-paying positions at top tech companies and startups. Apply with verified salary ranges.`
+}
+
+// Examples:
+// "Discover 428 Software Engineer jobs in San Francisco with salaries from $150k-400k. High-paying positions at top tech companies and startups. Apply with verified salary ranges."
+```
+
+### 5.3.6 Remote Pages
+```typescript
+function generateRemoteDescription(role: string, count: number, salaryRange: string): string {
+  return `Browse ${count.toLocaleString()} remote ${role} jobs paying ${salaryRange}. Work from anywhere with verified high-paying positions from global companies. Updated daily.`
+}
+
+// Examples:
+// "Browse 847 remote Software Engineer jobs paying $100k-350k. Work from anywhere with verified high-paying positions from global companies. Updated daily."
+```
+
+### 5.3.7 Job Detail Pages
+```typescript
+function generateJobDescription(job: Job): string {
+  const salary = formatSalary(job)
+  const location = job.city ? `${job.city}, ${job.countryCode.toUpperCase()}` : job.countryCode.toUpperCase()
+  
+  return `${job.title} at ${job.company} in ${location}. ${salary ? `Salary: ${salary}.` : ''} Apply directly with verified compensation data. Updated ${formatRelativeTime(job.postedAt)}.`
+}
+
+// Examples:
+// "Senior Software Engineer at Google in San Francisco, CA. Salary: $180k-250k/yr. Apply directly with verified compensation data. Updated 2 days ago."
+```
+
+### 5.3.8 Company Pages
+```typescript
+function generateCompanyDescription(company: Company, count: number, salaryRange: string): string {
+  return `View ${count} open jobs at ${company.name} with salaries from ${salaryRange}. High-paying positions across engineering, product, sales & more. Apply directly with verified salary data.`
+}
+
+// Examples:
+// "View 87 open jobs at Google with salaries from $120k-450k. High-paying positions across engineering, product, sales & more. Apply directly with verified salary data."
+```
+
+## 5.4 H1 Templates for All Page Types
+```typescript
+// Salary Tier:
+<h1>$100k Plus Jobs — {count} High-Paying Positions</h1>
+
+// Role:
+<h1>{role} Jobs Paying ${minSalary}k-${maxSalary}k</h1>
+
+// Salary + Role:
+<h1>${salary}k+ {role} Jobs</h1>
+
+// Country + Role:
+<h1>{role} Jobs in {country}</h1>
+
+// City + Role:
+<h1>{role} Jobs in {city}</h1>
+
+// Remote:
+<h1>Remote {role} Jobs — Work From Anywhere</h1>
+
+// Job Detail:
+<h1>{jobTitle} at {company}</h1>
+
+// Company:
+<h1>{companyName} Jobs — {count} Open Positions</h1>
+
+// Salary Guide:
+<h1>{role} Salary Guide {location ? `in ${location}` : ''}</h1>
+```
+
+## 5.5 On-Page SEO Content Template (All Listing Pages)
+```tsx
+// Structure for all job listing pages
+export default function JobListingPage({ slice, jobs, meta }) {
+  return (
+    <main>
+      {/* Above the fold: H1 + Lead + Search/Filter */}
+      <header className="page-header">
+        <h1>{meta.h1}</h1>
+        <p className="lead text-lg">
+          {meta.leadText} {/* Includes job count, salary range, update frequency */}
+        </p>
+        
+        {/* Filters/Search */}
+        <div className="filters">
+          <RoleTypeahead />
+          <LocationFilter />
+          <RemoteFilter />
+          <SalaryFilter />
+        </div>
+      </header>
+      
+      {/* SEO-Rich Intro Section (200-300 words) */}
+      <section className="seo-content">
+        <h2>About {meta.category} Jobs</h2>
+        <p>
+          {/* Dynamic content with keyword density:
+              - Primary keyword 2-3 times
+              - LSI keywords 5-7 times
+              - Natural language, not keyword stuffing */}
+          
+          We currently feature <strong>{jobs.length.toLocaleString()}</strong> verified 
+          <strong> {meta.roleLabel} jobs</strong> paying <strong>{meta.salaryRange}</strong> 
+          from top companies including {meta.topCompanies.join(', ')}. All positions 
+          are <strong>high-paying six figure jobs</strong> with <strong>verified 
+          salary data</strong> sourced directly from company ATS systems.
+        </p>
+        
+        <p>
+          {meta.roleLabel} positions at this salary level typically require {meta.experience} 
+          years of experience and include benefits like equity, unlimited PTO, and 
+          comprehensive health insurance. Browse <strong>$100k plus jobs</strong> below 
+          or use our filters to narrow by location, remote options, or salary tier.
+        </p>
+      </section>
+      
+      {/* Job Listings */}
+      <section aria-labelledby="jobs-heading">
+        <h2 id="jobs-heading">
+          {jobs.length.toLocaleString()} {meta.roleLabel} Jobs
+        </h2>
+        <JobList jobs={jobs} />
+        <Pagination />
+      </section>
+      
+      {/* Related Searches (Internal Linking) */}
+      <section aria-labelledby="related-heading">
+        <h2 id="related-heading">Related High-Paying Job Searches</h2>
+        <ul className="related-links">
+          {meta.relatedSearches.map(search => (
+            <li key={search.href}>
+              <a href={search.href}>{search.label}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+      
+      {/* FAQ Section (Schema Markup) */}
+      <section aria-labelledby="faq-heading">
+        <h2 id="faq-heading">Frequently Asked Questions</h2>
+        <FAQ questions={meta.faqQuestions} />
+      </section>
+      
+      {/* Bottom SEO Content (Optional, 100-150 words) */}
+      <section className="bottom-seo-content">
+        <h3>Why Use 6figjobs for {meta.roleLabel} Job Search?</h3>
+        <ul>
+          <li>✓ <strong>Verified Salaries</strong> — All jobs show real compensation data</li>
+          <li>✓ <strong>Updated Daily</strong> — Fresh high-paying positions every day</li>
+          <li>✓ <strong>No Spam</strong> — Direct applications, no recruiter emails</li>
+          <li>✓ <strong>$100k+ Only</strong> — Exclusively six figure salary jobs</li>
+        </ul>
+      </section>
+    </main>
+  )
+}
+```
+
+## 5.6 Keyword Density Guidelines (Anti-Spam)
+```typescript
+const SEO_CONTENT_RULES = {
+  // Primary keyword (e.g., "Software Engineer jobs")
+  primaryKeywordDensity: {
+    min: 1.5,  // 1.5% of total words
+    max: 3.0,  // 3% max to avoid over-optimization
+    idealFrequency: '2-3 times per 100 words'
+  },
+  
+  // LSI keywords (e.g., "developer", "programming", "coding")
+  lsiKeywordDensity: {
+    total: 5-8,  // 5-8 different LSI keywords
+    frequency: '1-2 times per keyword'
+  },
+  
+  // Brand keywords (e.g., "six figure jobs", "high-paying")
+  brandKeywordDensity: {
+    frequency: '3-5 times per page',
+    placement: 'H1, H2, intro, conclusion'
+  },
+  
+  // Content length
+  contentLength: {
+    listingPages: '300-500 words',
+    jobDetailPages: '200-300 words',
+    salaryGuides: '800-1200 words',
+    homepage: '400-600 words'
+  }
+}
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+            6. STRUCTURED DATA (JSON-LD) — ENHANCED FOR ALL PAGES
+═══════════════════════════════════════════════════════════════════════════════
+
+## 6.1 JobPosting Schema (Job Detail Pages)
+```typescript
+// lib/seo/structuredData.ts
+export function generateJobPostingSchema(job: JobWithCompany): JobPosting {
+  return {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    "title": job.title,
+    "description": job.descriptionHtml || job.description,
+    "identifier": {
+      "@type": "PropertyValue",
+      "name": "Job ID",
+      "value": job.id
+    },
+    "datePosted": job.postedAt.toISOString(),
+    "validThrough": addDays(job.postedAt, 30).toISOString(),
+    "employmentType": mapEmploymentType(job.employmentType),
+    "hiringOrganization": {
+      "@type": "Organization",
+      "name": job.company,
+      "sameAs": job.companyRef?.website || `https://www.google.com/search?q=${encodeURIComponent(job.company)}`,
+      "logo": job.companyRef?.logoUrl || `https://logo.clearbit.com/${getDomain(job.companyRef?.website)}`
+    },
+    "jobLocation": job.remote ? {
+      "@type": "Place",
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": job.countryCode?.toUpperCase()
+      }
+    } : {
+      "@type": "Place",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": job.city,
+        "addressRegion": job.state,
+        "addressCountry": job.countryCode?.toUpperCase()
+      }
+    },
+    "baseSalary": job.minAnnual ? {
+      "@type": "MonetaryAmount",
+      "currency": job.salaryCurrency || "USD",
+      "value": {
+        "@type": "QuantitativeValue",
+        "minValue": job.minAnnual,
+        "maxValue": job.maxAnnual || job.minAnnual * 1.5,
+        "unitText": "YEAR"
+      }
+    } : undefined,
+    "applicantLocationRequirements": {
+      "@type": "Country",
+      "name": job.countryCode?.toUpperCase()
+    },
+    "jobLocationType": job.remote ? "TELECOMMUTE" : undefined,
+    "url": `https://6figjobs.com/job/${job.id}`,
+    "directApply": true,
+    "industry": mapIndustry(job.category),
+    "occupationalCategory": mapOccupationalCategory(job.category)
+  }
+}
+```
+
+## 6.2 ItemList Schema (Listing Pages)
+```typescript
+export function generateItemListSchema(jobs: Job[], page: number): ItemList {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "numberOfItems": jobs.length,
+    "itemListElement": jobs.map((job, index) => ({
+      "@type": "ListItem",
+      "position": (page - 1) * 20 + index + 1,
+      "url": `https://6figjobs.com/job/${job.id}`,
+      "name": `${job.title} at ${job.company}`,
+      "description": truncate(job.description, 150)
+    }))
+  }
+}
+```
+
+## 6.3 FAQPage Schema (All Listing Pages)
+```typescript
+export function generateFAQSchema(role?: string, location?: string): FAQPage {
+  const baseQuestions = [
+    {
+      question: "What is the minimum salary for jobs on this page?",
+      answer: `All jobs on this page are verified high-paying positions that meet or exceed the local high-salary threshold. In the US, this means $100,000+ per year. In the UK, this means £75,000+ per year. Each country has its own threshold based on local cost of living and salary standards.`
+    },
+    {
+      question: "How often are these job listings updated?",
+      answer: "Job listings are updated daily. We scrape directly from company ATS systems (Greenhouse, Lever, Ashby) and verified job boards. Expired positions are automatically removed within 24 hours."
+    },
+    {
+      question: "Are these salaries verified?",
+      answer: "Yes. All salary data is sourced directly from company ATS systems or verified job board APIs. We display the exact salary range provided by the employer. If a job doesn't show a salary, we don't list it."
+    },
+    {
+      question: "Can I filter for remote jobs?",
+      answer: "Yes. Use the 'Remote' filter at the top of the page to show only remote or hybrid positions. You can also browse our dedicated remote jobs section at /jobs/remote-jobs."
+    }
+  ]
+  
+  // Add role-specific questions
+  if (role) {
+    baseQuestions.push({
+      question: `What is the average salary for ${role} positions?`,
+      answer: `Based on our current job listings, ${role} positions typically pay between $X and $Y per year, with the median around $Z. Senior and staff-level roles can reach $XXX,XXX or more.`
+    })
+  }
+  
+  // Add location-specific questions
+  if (location) {
+    baseQuestions.push({
+      question: `Are there remote ${role || 'jobs'} available in ${location}?`,
+      answer: `Yes. We have X remote ${role || 'positions'} that accept applicants from ${location}. These roles allow you to work from anywhere while earning competitive salaries.`
+    })
+  }
+  
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": baseQuestions.map(q => ({
+      "@type": "Question",
+      "name": q.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": q.answer
+      }
+    }))
+  }
+}
+```
+
+## 6.4 BreadcrumbList Schema (All Pages)
+```typescript
+export function generateBreadcrumbSchema(breadcrumbs: Breadcrumb[]): BreadcrumbList {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": breadcrumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": crumb.label,
+      "item": `https://6figjobs.com${crumb.href}`
+    }))
+  }
+}
+
+// Usage example:
+const breadcrumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Jobs', href: '/jobs' },
+  { label: 'Software Engineer', href: '/jobs/software-engineer-jobs' },
+  { label: 'United States', href: '/jobs/us-software-engineer-jobs' }
+]
+```
+
+## 6.5 Organization Schema (Homepage + Company Pages)
+```typescript
+// Homepage
+export function generateOrganizationSchema(): Organization {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Six Figure Jobs",
+    "alternateName": "6figjobs",
+    "url": "https://6figjobs.com",
+    "logo": "https://6figjobs.com/logo.png",
+    "description": "Exclusive high-paying job board featuring $100k+ positions from top companies. Find six figure jobs with verified salaries, updated daily.",
+    "foundingDate": "2025",
+    "sameAs": [
+      "https://twitter.com/6figjobs",
+      "https://linkedin.com/company/sixfigurejobs"
+    ],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "email": "hello@6figjobs.com"
+    }
+  }
+}
+
+// Company Page
+export function generateCompanySchema(company: Company, jobCount: number): Organization {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": company.name,
+    "url": company.website,
+    "logo": company.logoUrl,
+    "description": `${company.name} is currently hiring for ${jobCount} high-paying positions on Six Figure Jobs.`,
+    "numberOfEmployees": company.employeeCount,
+    "foundingDate": company.foundedYear?.toString()
+  }
+}
+```
+
+## 6.6 WebSite Schema (Search Functionality)
+```typescript
+export function generateWebSiteSchema(): WebSite {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Six Figure Jobs",
+    "url": "https://6figjobs.com",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://6figjobs.com/search?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+}
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+                7. IMPLEMENTATION AUDIT CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+## 7.1 Database Schema Audit
+
+**Check Prisma Schema (`prisma/schema.prisma`):**
+```prisma
+model Job {
+  id                  String    @id @default(cuid())
+  
+  // REQUIRED FIELDS FOR HIGH-SALARY FILTERING
+  minAnnual          Int?      // ✅ Exists
+  maxAnnual          Int?      // ✅ Exists
+  salaryCurrency     String?   // ✅ Exists
+  isHundredK         Boolean?  // ❓ Check: Should be isHundredKLocal
+  isHundredKLocal    Boolean?  // ✅ Required: PPP-adjusted threshold
+  isHighSalaryLocal  Boolean?  // ✅ Required: For local high-paying status
+  
+  // SEO FIELDS
+  slug               String?   @unique  // ✅ For SEO-friendly URLs
+  metaTitle          String?   // ✅ For custom title tags
+  metaDescription    String?   // ✅ For custom meta descriptions
+  
+  // JOB DETAILS
+  title              String    // ✅ Exists
+  company            String    // ✅ Exists
+  description        String?   @db.Text  // ✅ Exists
+  descriptionHtml    String?   @db.Text  // ✅ Exists
+  
+  // LOCATION
+  city               String?   // ✅ Exists
+  state              String?   // ✅ Exists
+  countryCode        String?   // ✅ Exists
+  remote             Boolean?  // ✅ Exists
+  
+  // TIMESTAMPS
+  postedAt           DateTime  // ✅ Exists
+  expiresAt          DateTime? // ✅ Exists
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  
+  // RELATIONS
+  companyId          String?
+  companyRef         Company?  @relation(fields: [companyId], references: [id])
+  
+  // BENEFITS (NEW - REQUIRED)
+  benefitsJson       String?   @db.Text  // ✅ Add if missing
+  hasEquity          Boolean?  @default(false)  // ✅ Add if missing
+  hasHealthcare      Boolean?  @default(false)  // ✅ Add if missing
+  hasUnlimitedPTO    Boolean?  @default(false)  // ✅ Add if missing
+  hasRemoteWork      Boolean?  @default(false)  // ✅ Add if missing
+  
+  @@index([isHundredKLocal])
+  @@index([countryCode])
+  @@index([remote])
+  @@index([postedAt])
+  @@index([slug])
+}
+
+model Company {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique  // ✅ For SEO-friendly URLs
+  website     String?
+  logoUrl     String?
+  description String?   @db.Text
+  
+  // SEO FIELDS
+  metaTitle       String?   // ✅ For custom title tags
+  metaDescription String?   // ✅ For custom meta descriptions
+  
+  jobs        Job[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([slug])
+}
+```
+
+**Migration Required:**
+```bash
+# If fields are missing, create migration
+npx prisma migrate dev --name add_high_salary_fields
+```
+
+## 7.2 File Structure Audit
+
+**Check if these files exist:**
+```
+✅ /lib/seo/meta.ts              — Meta tag generation
+✅ /lib/seo/structuredData.ts    — JSON-LD schema generation
+✅ /lib/seo/canonical.ts         — Canonical URL generation
+✅ /lib/seo/jobMeta.ts           — Job-specific meta generation
+
+✅ /lib/slices/loadSlice.ts      — Slice loading logic
+✅ /lib/slices/types.ts          — Slice type definitions
+
+✅ /lib/scrapers/ats/greenhouse.ts  — Greenhouse scraper
+✅ /lib/scrapers/ats/lever.ts       — Lever scraper
+✅ /lib/scrapers/ats/ashby.ts       — Ashby scraper (CRITICAL: Check salary division)
+
+❓ /lib/roles/synonyms.ts        — Role synonym mapping (CREATE IF MISSING)
+❓ /lib/roles/categories.ts      — Role category mapping (CREATE IF MISSING)
+
+✅ /app/components/JobCard.tsx   — Job card component
+❓ /app/components/RoleTypeahead.tsx  — Search with synonyms (UPDATE IF EXISTS)
+✅ /app/components/JobList.tsx   — Job list component
+
+✅ /app/sitemap.xml/route.ts     — Main sitemap index
+✅ /app/sitemap-jobs.xml/route.ts     — Jobs sitemap
+✅ /app/sitemap-jobs/[page]/route.ts  — Paginated jobs sitemap
+
+✅ /app/jobs/[...slug]/page.tsx  — Dynamic job listing pages
+✅ /app/job/[id]/page.tsx        — Job detail pages
+✅ /app/company/[slug]/page.tsx  — Company pages
+
+❓ /app/salary/[role]/page.tsx   — Salary guide pages (CREATE IF MISSING)
+```
+
+## 7.3 SEO Implementation Audit
+
+**Homepage (`/app/page.tsx`):**
+```tsx
+// ✅ Check these elements exist:
+export const metadata: Metadata = {
+  title: 'Six Figure Jobs: Find $100k+ High-Paying Jobs | 6figjobs.com',
+  description: 'Find verified six figure jobs and high-paying positions paying $100k+. 2,847 100k plus jobs from top companies. Updated daily with real salary data.',
+  // ❓ Add if missing:
+  keywords: 'six figure jobs, high paying jobs, $100k jobs, 100k plus jobs, high salary jobs',
+  openGraph: {
+    title: 'Six Figure Jobs: Find $100k+ High-Paying Jobs',
+    description: 'Find verified six figure jobs and high-paying positions...',
+    url: 'https://6figjobs.com',
+    siteName: 'Six Figure Jobs',
+    images: [{
+      url: 'https://6figjobs.com/og-image.png',
+      width: 1200,
+      height: 630
+    }],
+    type: 'website'
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Six Figure Jobs: Find $100k+ High-Paying Jobs',
+    description: 'Find verified six figure jobs...',
+    images: ['https://6figjobs.com/og-image.png']
+  }
+}
+
+// ✅ Check H1 and content:
+<h1>Find Six Figure Jobs & High-Paying Positions Paying $100k+</h1>
+
+// ✅ Check structured data:
+<script type="application/ld+json">
+  {JSON.stringify(generateOrganizationSchema())}
+</script>
+<script type="application/ld+json">
+  {JSON.stringify(generateWebSiteSchema())}
+</script>
+```
+
+**Job Listing Pages (`/app/jobs/[...slug]/page.tsx`):**
+```tsx
+// ✅ Check dynamic metadata generation:
+export async function generateMetadata({ params }): Promise<Metadata> {
+  const slice = await loadSlice(params.slug)
+  
+  return {
+    title: generateTitleForSlice(slice),  // ❓ Implement if missing
+    description: generateDescriptionForSlice(slice),  // ❓ Implement if missing
+    alternates: {
+      canonical: `https://6figjobs.com/jobs/${params.slug.join('/')}`
+    }
+  }
+}
+
+// ✅ Check structured data:
+<script type="application/ld+json">
+  {JSON.stringify(generateItemListSchema(jobs, page))}
+</script>
+<script type="application/ld+json">
+  {JSON.stringify(generateFAQSchema(role, location))}
+</script>
+<script type="application/ld+json">
+  {JSON.stringify(generateBreadcrumbSchema(breadcrumbs))}
+</script>
+```
+
+**Job Detail Pages (`/app/job/[id]/page.tsx`):**
+```tsx
+// ✅ Check job detail metadata:
+export async function generateMetadata({ params }): Promise<Metadata> {
+  const job = await getJob(params.id)
+  
+  return {
+    title: `${job.title} at ${job.company} ${formatSalary(job)} | 6figjobs`,
+    description: generateJobDescription(job),
+    alternates: {
+      canonical: `https://6figjobs.com/job/${job.id}`
+    }
+  }
+}
+
+// ✅ Check JobPosting schema:
+<script type="application/ld+json">
+  {JSON.stringify(generateJobPostingSchema(job))}
+</script>
+```
+
+## 7.4 Salary Filtering Audit
+
+**Check salary filtering logic (`/lib/jobs/filters.ts` or similar):**
+```typescript
+// ✅ Verify PPP-adjusted thresholds exist:
+export const SALARY_THRESHOLDS_BY_COUNTRY = {
+  'US': 100000,
+  'CA': 100000,
+  'GB': 75000,
+  'IE': 85000,
+  'DE': 80000,
+  'NL': 85000,
+  'CH': 110000,
+  'AU': 140000,
+  'NZ': 120000,
+  'SG': 120000,
+  'IN': 3500000,
+  // ... etc
+}
+
+// ✅ Verify filtering logic:
+export function isHighSalaryJob(job: Job): boolean {
+  if (!job.minAnnual || !job.salaryCurrency) return false
+  
+  const threshold = SALARY_THRESHOLDS_BY_COUNTRY[job.countryCode] || 100000
+  
+  // Check if job meets local threshold
+  return job.minAnnual >= threshold
+}
+
+// ✅ Verify database queries filter correctly:
+const jobs = await prisma.job.findMany({
+  where: {
+    isHundredKLocal: true,  // ❓ Or isHighSalaryLocal
+    expiresAt: { gte: new Date() },
+    // ... other filters
+  }
+})
+```
+
+## 7.5 ATS Scraper Audit
+
+**Ashby Scraper (`/lib/scrapers/ats/ashby.ts`):**
+```typescript
+// ✅ CRITICAL: Check salary division by 100:
+if (salaryMin != null) {
+  salaryMin = Math.round(salaryMin / 100)  // ✅ MUST EXIST
+}
+if (salaryMax != null) {
+  salaryMax = Math.round(salaryMax / 100)  // ✅ MUST EXIST
+}
+```
+
+**Greenhouse Scraper (`/lib/scrapers/ats/greenhouse.ts`):**
+```typescript
+// ✅ Check content=true parameter:
+const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${boardSlug}/jobs?content=true`
+
+// ✅ Check description extraction:
+descriptionHtml: job.content || null
+```
+
+## 7.6 Search & Synonyms Audit
+
+**Check RoleTypeahead component (`/app/components/RoleTypeahead.tsx`):**
+```tsx
+// ❓ Does it use synonyms from /lib/roles/synonyms.ts?
+import { ROLE_SYNONYMS } from '@/lib/roles/synonyms'
+
+// ❓ Does it implement fuzzy matching?
+import { fuzzyMatch, calculateRelevanceScore } from '@/lib/search/fuzzy'
+
+// ❓ Does it show category tags?
+// ❓ Does it show salary ranges?
+// ❓ Does it highlight matched terms?
+```
+
+## 7.7 URL Structure Audit
+
+**Check URL generation (`/lib/urls/generate.ts` or similar):**
+```typescript
+// ✅ Verify URLs are SEO-friendly and not too long:
+function generateJobListingUrl(params: {
+  salary?: string,
+  role?: string,
+  country?: string,
+  city?: string,
+  remote?: boolean
+}): string {
+  // Examples:
+  // /jobs/100k-plus-jobs
+  // /jobs/software-engineer-jobs
+  // /jobs/100k-plus-software-engineer-jobs
+  // /jobs/us-software-engineer-jobs
+  // /jobs/remote-software-engineer-jobs
+  // /jobs/us-100k-plus-software-engineer-jobs (max nesting)
+  
+  // ❌ DO NOT: /jobs/united-states/engineering/100k-plus/software-engineer
+  // ❌ DO NOT: URLs > 75 characters
+}
+```
+
+## 7.8 Sitemap Audit
+
+**Check sitemap generation (`/app/sitemap.xml/route.ts`):**
+```typescript
+// ✅ Verify all page types are included:
+export default function sitemap(): MetadataRoute.Sitemap {
+  return [
+    // Homepage
+    { url: 'https://6figjobs.com', lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
+    
+    // Salary tiers
+    // Roles
+    // Salary + Role
+    // Countries
+    // Cities
+    // Remote
+    // Companies
+    // Salary guides
+    // Job details (in separate sitemap)
+  ]
+}
+
+// ✅ Check pagination for large sitemaps:
+// /app/sitemap-jobs/[page]/route.ts should exist and work
+```
+
+## 7.9 Core Web Vitals Audit
+
+**Run performance tests:**
+```bash
+# Lighthouse test
+npx lighthouse https://6figjobs.com --output=html --output-path=./lighthouse-report.html
+
+# Check metrics:
+# ✅ LCP < 2.5s
+# ✅ FID < 100ms
+# ✅ CLS < 0.1
+```
+
+**Check Next.js optimization:**
+```typescript
+// next.config.js
+module.exports = {
+  images: {
+    formats: ['image/webp', 'image/avif'],  // ✅ Modern formats
+    deviceSizes: [640, 750, 828, 1080, 1200],  // ✅ Responsive sizes
+  },
+  
+  // ✅ Check if these are enabled:
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: ['lucide-react'],
+  }
+}
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+          8. DEPLOYMENT & SERVER RULES (FROM V1.6 - PRESERVED)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 8.1 Production Environment
+- **Server**: Hetzner 4GB RAM + 4GB swap, Ubuntu 24.04
+- **SSH**: `ssh root@77.42.22.103`
+- **Production**: `/var/www/six-figure-jobs` (develop branch)
+- **Staging**: `/var/www/six-figure-jobs-staging` (manual start only)
+- **Service**: systemd (`sixfigjobs-prod.service`)
+- **Deployment**: `/root/deploy-production.sh`
+- **Domain**: https://6figjobs.com (SSL via Let's Encrypt)
+
+## 8.2 Memory Constraints (CRITICAL)
+- Production has 1.5GB memory limit (MemoryMax=1.5G)
+- Node.js heap limited to 1GB (NODE_OPTIONS=--max-old-space-size=1024)
+- PostgreSQL optimized for 4GB server (shared_buffers=256MB)
+- **Cannot run staging + production simultaneously**
+- PM2 is DISABLED (use systemd only)
+
+## 8.3 Database Configuration
+- **Production DB**: `sixfigjobs` (local PostgreSQL 16)
+- **Staging DB**: `sixfigjobs_staging`
+- **Connection**: `postgresql://sixfiguser:31456@localhost:5432/sixfigjobs`
+- All env vars in `.env.local`
+
+## 8.4 Branch Strategy
+- **Production branch**: `develop` (NOT main)
+- **Staging branch**: `staging`
+- Always deploy from `develop` to production
+
+## 8.5 Deployment Process
+```bash
+# Standard deployment
+ssh root@77.42.22.103
+/root/deploy-production.sh
+
+# Manual deployment steps
+cd /var/www/six-figure-jobs
+git pull origin develop
+npm install --production=false
+npm run build
+systemctl restart sixfigjobs-prod
+systemctl status sixfigjobs-prod
+journalctl -u sixfigjobs-prod -f
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+                    9. NON-NEGOTIABLE RULES
+═══════════════════════════════════════════════════════════════════════════════
+
+## 9.1 Absolute Rules (NEVER VIOLATE)
+
+❌ **NEVER:**
+1. Display jobs below LOCAL high-salary threshold
+2. Convert salaries between currencies
+3. Include entry-level, junior, or intern positions
+4. Output partial/incomplete code (always complete files)
+5. Modify database schema without explicit permission
+6. Break SEO URL structure
+7. Ignore memory constraints (1.5GB limit)
+8. Use PM2 (systemd only)
+9. Deploy to `main` branch (use `develop`)
+10. Skip the Ashby salary division by 100
+11. Forget to use Greenhouse `content=true`
+12. Publish >50 pages/day on new domain
+13. Skip structured data (JSON-LD)
+14. Use generic meta descriptions
+15. Create pages with <5 jobs
+16. Make URLs longer than 75 characters
+17. Keyword stuff content (>3% density)
+18. Skip accessibility (ARIA labels, semantic HTML)
+19. Forget to include FAQ schema on listing pages
+20. Use inconsistent currency formatting
+
+✅ **ALWAYS:**
+1. Filter jobs by LOCAL salary threshold (PPP-adjusted)
+2. Display salary in ORIGINAL currency only
+3. Normalize monthly/hourly to annual
+4. Include "Verified" badge on salaries
+5. Use complete file outputs (no snippets)
+6. Test Ashby salary division
+7. Include structured data on every page
+8. Add FAQ schema to listing pages
+9. Provide deployment steps after code changes
+10. Check memory usage implications
+11. Use semantic HTML5
+12. Include ARIA labels for accessibility
+13. Optimize images with Next.js Image
+14. Set explicit revalidate times
+15. Monitor Google Search Console daily
+16. Use role synonyms in search
+17. Create SEO-friendly URLs (under 75 chars)
+18. Include keyword-rich content (1.5-3% density)
+19. Add breadcrumb schema
+20. Test Core Web Vitals regularly
+
+═══════════════════════════════════════════════════════════════════════════════
+                     10. QUICK REFERENCE
+═══════════════════════════════════════════════════════════════════════════════
+
+**Server Commands:**
+```bash
+# SSH
+ssh root@77.42.22.103
+
+# Deploy
+/root/deploy-production.sh
+
+# Service control
+systemctl restart sixfigjobs-prod
+systemctl status sixfigjobs-prod
+
+# Logs
+journalctl -u sixfigjobs-prod -f
+
+# Memory
+free -h
+
+# Database
+sudo -u postgres psql -d sixfigjobs
+```
+
+**Salary Thresholds (PPP-Adjusted):**
+- US: $100,000
+- UK: £75,000
+- CA: C$100,000
+- DE: €80,000
+- AU: A$140,000
+- CH: CHF 110,000
+- NZ: NZ$120,000
+- SG: S$120,000
+
+**Primary Keywords (Homepage):**
+- Six figure jobs
+- High paying jobs
+- $100k jobs
+- 100k plus jobs
+- High salary jobs
+
+**URL Pattern (Max 75 chars):**
+```
+/jobs/100k-plus-software-engineer-jobs  ✅ (42 chars)
+/jobs/us-100k-plus-software-engineer-jobs  ✅ (45 chars)
+```
+
+**Structured Data Required:**
+- JobPosting (job detail pages)
+- ItemList (listing pages)
+- FAQPage (all listing pages)
+- BreadcrumbList (all pages)
+- Organization (homepage, company pages)
+- WebSite (homepage)
+
+**Content Length Guidelines:**
+- Listing pages: 300-500 words
+- Job detail pages: 200-300 words
+- Salary guides: 800-1200 words
+- Homepage: 400-600 words
+
+**Keyword Density:**
+- Primary keyword: 1.5-3%
+- LSI keywords: 5-8 different terms
+- Brand keywords: 3-5 times per page
+
+**Core Web Vitals Targets:**
+- LCP: < 2.5s
+- FID: < 100ms
+- CLS: < 0.1
+
+═══════════════════════════════════════════════════════════════════════════════
+                           END OF RULES v2.2
+═══════════════════════════════════════════════════════════════════════════════
+
+**Version**: 2.2
+**Last Updated**: December 9, 2025
+**Production URL**: https://6figjobs.com
+**Documentation**: `/root/DEPLOYMENT_GUIDE.md` and `docs/deployment/SERVER_SETUP.md`
+
+**Key Changes from v2.1:**
+- ✅ PPP-adjusted salary thresholds (no currency conversion)
+- ✅ Comprehensive role synonyms (all job categories, not just tech)
+- ✅ Homepage keyword strategy with "six figure jobs" focus
+- ✅ SEO templates for all page types
+- ✅ Top-notch pSEO with keyword density guidelines
+- ✅ SEO-friendly URLs (under 75 characters)
+- ✅ Implementation audit checklist
+- ✅ All features from v1.6 preserved
+
+These rules are DEFINITIVE and COMPREHENSIVE. Follow them meticulously to ensure
+Six Figure Jobs becomes the #1 high-paying job board on the internet.
