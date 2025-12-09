@@ -3,24 +3,27 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
+import { getSiteUrl } from '../../../../lib/seo/site'
+import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
+import { redirect } from 'next/navigation'
 
 export const revalidate = 300
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sixfigurejobs.com'
+const SITE_URL = getSiteUrl()
 
 const COUNTRIES: Record<string, { name: string; flag: string }> = {
-  us: { name: 'United States', flag: '🇺🇸' },
-  gb: { name: 'United Kingdom', flag: '🇬🇧' },
-  ca: { name: 'Canada', flag: '🇨🇦' },
-  de: { name: 'Germany', flag: '🇩🇪' },
-  au: { name: 'Australia', flag: '🇦🇺' },
-  fr: { name: 'France', flag: '🇫🇷' },
-  nl: { name: 'Netherlands', flag: '🇳🇱' },
-  se: { name: 'Sweden', flag: '🇸🇪' },
+  'united-states': { name: 'United States', flag: '🇺🇸' },
+  'united-kingdom': { name: 'United Kingdom', flag: '🇬🇧' },
+  canada: { name: 'Canada', flag: '🇨🇦' },
+  germany: { name: 'Germany', flag: '🇩🇪' },
+  australia: { name: 'Australia', flag: '🇦🇺' },
+  france: { name: 'France', flag: '🇫🇷' },
+  netherlands: { name: 'Netherlands', flag: '🇳🇱' },
+  sweden: { name: 'Sweden', flag: '🇸🇪' },
 }
 
 export async function generateStaticParams() {
-  return Object.keys(COUNTRIES).map(code => ({ code }))
+  return Object.keys(COUNTRIES).map((code) => ({ code }))
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
@@ -28,8 +31,14 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
   const country = COUNTRIES[code.toLowerCase()]
   if (!country) return { title: 'Not Found' }
 
+  // Support legacy code-based slugs by redirecting
+  const legacyCode = countrySlugToCode(code)
+  if (legacyCode && COUNTRIES[countryCodeToSlug(legacyCode).toLowerCase()]) {
+    // canonical will use the full-name slug
+  }
+
   const { total } = await queryJobs({
-    countryCode: code.toUpperCase(),
+    countryCode: countrySlugToCode(code).toUpperCase(),
     minAnnual: 100_000,
     pageSize: 1,
   })
@@ -42,14 +51,18 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     ? `Find ${total.toLocaleString()} high-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions paying $100k+. Engineering, product, data roles. Updated daily.`
     : `High-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions paying $100k+ at top companies.`
 
+  const allowIndex = total >= 3
+  const canonical = `${SITE_URL}/jobs/country/${code.toLowerCase()}`
+
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/jobs/country/${code.toLowerCase()}` },
+    alternates: { canonical },
+    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}/jobs/country/${code.toLowerCase()}`,
+      url: canonical,
       siteName: 'Six Figure Jobs',
       type: 'website',
       images: [
@@ -72,11 +85,23 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 
 export default async function CountryPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
-  const country = COUNTRIES[code.toLowerCase()]
-  if (!country) notFound()
+  const normalizedSlug = code.toLowerCase()
+  const country = COUNTRIES[normalizedSlug]
+
+  // Redirect legacy code slugs (us/gb/ca) to full-name slug if present
+  if (!country) {
+    const asCode = code.toUpperCase()
+    const slugFromCode = countryCodeToSlug(asCode)
+    if (COUNTRIES[slugFromCode]) {
+      redirect(`/jobs/country/${slugFromCode}`)
+    }
+    notFound()
+  }
+
+  const countryCode = countrySlugToCode(code)
 
   const { jobs, total } = await queryJobs({
-    countryCode: code.toUpperCase(),
+    countryCode: countryCode.toUpperCase(),
     minAnnual: 100_000,
     pageSize: 40,
   })

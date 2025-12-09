@@ -1,21 +1,14 @@
-name: Daily Scrape
+name: Daily Scrape (Manual Only)
 
 on:
-  schedule:
-    - cron: "0 2,14 * * *" # twice daily UTC
-  workflow_dispatch:
+  workflow_dispatch:   # Only runs when manually triggered
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
-      NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
-      CLEARBIT_API_KEY: ${{ secrets.CLEARBIT_API_KEY }}
-      LOGODEV_API_KEY: ${{ secrets.LOGODEV_API_KEY }}
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -27,16 +20,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # ATS discovery (optional)
       - name: Discover ATS URLs from seed companies
         run: |
           npx tsx scripts/discoverATSBulk.ts || true
           npx tsx scripts/discoverATS.ts || true
 
+      # Generic career page scraper (optional)
       - name: Scrape careers for companies without ATS
         env:
           CAREER_BATCH: 20
           CAREER_MAX_BATCHES: 1
         run: npx tsx scripts/scrapeCareerPages.ts || true
 
-      - name: Run daily scraper (boards + ATS)
-        run: npx tsx scripts/dailyScrapeV2.ts --mode=all --concurrency=6
+      # ⚠️ IMPORTANT:
+      # This version does NOT include DATABASE_URL because
+      # GitHub should NOT run production scrapers anymore.
+      - name: MANUAL Run daily scraper (local DB ONLY if configured)
+        run: npx tsx scripts/dailyScrapeV2.ts --mode=all --concurrency=6 || true

@@ -3,32 +3,32 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '../../lib/prisma'
+import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 40
 
 export const metadata: Metadata = {
-  title: 'Top companies hiring $100k+ roles | Remote100k',
+  title: `Top companies hiring $100k+ roles | ${SITE_NAME}`,
   description:
-    'Browse companies that are actively hiring for remote, hybrid, and on-site jobs paying $100k+ on Remote100k.',
+    `Browse companies that are actively hiring for remote, hybrid, and on-site jobs paying $100k+ on ${SITE_NAME}.`,
   alternates: {
     canonical: `${SITE_URL}/company`,
   },
   openGraph: {
-    title: 'Top companies hiring $100k+ roles | Remote100k',
+    title: `Top companies hiring $100k+ roles | ${SITE_NAME}`,
     description:
       'Directory of companies currently hiring for jobs paying $100k+.',
     url: `${SITE_URL}/company`,
-    siteName: 'Remote100k',
+    siteName: SITE_NAME,
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Top companies hiring $100k+ roles | Remote100k',
+    title: `Top companies hiring $100k+ roles | ${SITE_NAME}`,
     description:
       'See companies hiring for $100k+ remote, hybrid, and on-site jobs.',
   },

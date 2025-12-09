@@ -18,7 +18,7 @@ export default async function scrapeRemoteOK() {
   try {
     const res = await fetch(API_URL, {
       headers: {
-        'User-Agent': 'Remote100k/1.0 (+remoteok-scraper)',
+        'User-Agent': 'SixFigureJobs/1.0 (+remoteok-scraper)',
         Accept: 'application/json',
       },
       cache: 'no-store',

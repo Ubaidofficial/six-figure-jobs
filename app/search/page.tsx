@@ -2,10 +2,13 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { prisma } from '../../lib/prisma'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
 import JobList from '../components/JobList'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
+import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
+import { countrySlugToCode } from '../../lib/seo/countrySlug'
 
 export const dynamic = "force-dynamic"
 
@@ -76,21 +79,46 @@ function buildTitle(sp: SearchParams): string {
       : '$100k+'
 
   if (q && location) {
-    return `${salaryLabel} ${q} jobs in ${location.toUpperCase()} | Remote100k`
+    return `${salaryLabel} ${q} jobs in ${location.toUpperCase()} | ${SITE_NAME}`
   }
   if (q && remoteRegion) {
-    return `${salaryLabel} ${q} jobs (${remoteRegion}) | Remote100k`
+    return `${salaryLabel} ${q} jobs (${remoteRegion}) | ${SITE_NAME}`
   }
   if (q) {
-    return `${salaryLabel} ${q} jobs | Remote100k`
+    return `${salaryLabel} ${q} jobs | ${SITE_NAME}`
   }
   if (location) {
-    return `${salaryLabel} jobs in ${location.toUpperCase()} | Remote100k`
+    return `${salaryLabel} jobs in ${location.toUpperCase()} | ${SITE_NAME}`
   }
   if (remoteRegion) {
-    return `${salaryLabel} remote jobs (${remoteRegion}) | Remote100k`
+    return `${salaryLabel} remote jobs (${remoteRegion}) | ${SITE_NAME}`
   }
-  return `${salaryLabel} tech jobs search | Remote100k`
+  return `${salaryLabel} tech jobs search | ${SITE_NAME}`
+}
+
+function buildCanonicalPath(sp: SearchParams): string {
+  const params = new URLSearchParams()
+
+  const q = getParam(sp, 'q')
+  const role = getParam(sp, 'role')
+  const location = getParam(sp, 'location')
+  const remoteMode = getParam(sp, 'remoteMode')
+  const minSalary = getParam(sp, 'minSalary')
+  const remoteRegion = getParam(sp, 'remoteRegion')
+  const seniority = getParam(sp, 'seniority')
+  const page = Math.max(1, Number(getParam(sp, 'page') || '1') || 1)
+
+  if (q) params.set('q', q)
+  if (role) params.set('role', role)
+  if (location) params.set('location', location)
+  if (remoteMode) params.set('remoteMode', remoteMode)
+  if (remoteRegion) params.set('remoteRegion', remoteRegion)
+  if (seniority) params.set('seniority', seniority)
+  if (minSalary) params.set('minSalary', minSalary)
+  if (page > 1) params.set('page', String(page))
+
+  const qs = params.toString()
+  return qs ? `/search?${qs}` : `/search`
 }
 
 /* -------------------------------------------------------------------------- */
@@ -104,6 +132,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const sp = await resolveSearchParams(searchParams)
   const title = buildTitle(sp)
+  const canonical = `${getSiteUrl()}${buildCanonicalPath(sp)}`
 
   const description =
     'Search curated $100k+ tech jobs from top companies. Filter by role, location, and salary band across remote, hybrid, and on-site roles.'
@@ -111,10 +140,18 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: {
+      canonical,
+    },
+    robots: {
+      index: false,
+      follow: true,
+    },
     openGraph: {
       title,
       description,
       type: 'website',
+      url: canonical,
     },
   }
 }
@@ -125,6 +162,22 @@ export async function generateMetadata({
 
 export default async function SearchPage({ searchParams }: PageProps) {
   const sp = await resolveSearchParams(searchParams)
+  const canonicalPath = buildCanonicalPath(sp)
+
+  const requestedParams = new URLSearchParams()
+  Object.entries(sp).forEach(([k, v]) => {
+    if (Array.isArray(v)) v.forEach((val) => val != null && requestedParams.append(k, val))
+    else if (v != null) requestedParams.set(k, v)
+  })
+  const rawPage = getParam(sp, 'page')
+  if (!rawPage || Number(rawPage) <= 1) requestedParams.delete('page')
+  const requestedPath = (() => {
+    const qs = requestedParams.toString()
+    return qs ? `/search?${qs}` : '/search'
+  })()
+  if (requestedPath !== canonicalPath) {
+    redirect(canonicalPath)
+  }
 
   const q = getParam(sp, 'q')?.trim() || ''
   const role = getParam(sp, 'role')?.trim() || ''
@@ -187,7 +240,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
       })
     } else if (resolvedLocation.length === 2) {
       andConditions.push({
-        countryCode: resolvedLocation.toUpperCase(),
+    countryCode: resolvedLocation
+      ? countrySlugToCode(resolvedLocation).toUpperCase()
+      : undefined,
       })
     }
   }

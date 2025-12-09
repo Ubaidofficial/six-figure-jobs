@@ -1,14 +1,29 @@
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sixfigurejobs.com'
+import { getSiteUrl } from '../../lib/seo/site'
+import { buildSliceCanonicalPath } from '../../lib/seo/canonical'
+
+const SITE_URL = getSiteUrl()
 
 export async function GET() {
-  const tiers = ['100k-plus', '200k-plus', '300k-plus', '400k-plus']
+  const tiers: Array<{ slug: string; min: number }> = [
+    { slug: '100k-plus', min: 100_000 },
+    { slug: '200k-plus', min: 200_000 },
+    { slug: '300k-plus', min: 300_000 },
+    { slug: '400k-plus', min: 400_000 },
+  ]
 
-  const urls = tiers.map(tier => ({
-    url: `${SITE_URL}/jobs/${tier}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'daily',
-    priority: 0.9,
-  }))
+  const urls = tiers.map((tier) => {
+    const path = buildSliceCanonicalPath({
+      minAnnual: tier.min,
+      isHundredKLocal: true,
+    } as any)
+
+    return {
+      url: `${SITE_URL}${path}`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: 'daily',
+      priority: 0.9,
+    }
+  })
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

@@ -2,7 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { prisma } from '../../../../../lib/prisma'
 import {
   queryJobs,
@@ -10,11 +10,11 @@ import {
 } from '../../../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../../../lib/jobs/jobSlug'
 import JobList from '../../../../components/JobList'
+import { SITE_NAME, getSiteUrl } from '../../../../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 20
 
@@ -35,6 +35,24 @@ function parsePage(sp: SearchParams): number {
   const raw = (sp.page ?? '1') as string
   const n = Number(raw || '1') || 1
   return Math.max(1, n)
+}
+
+function buildCanonicalPath(roleSlug: string, countryParam: string, sp: SearchParams) {
+  const base = `/remote/${roleSlug}/country/${countryParam}`
+  const params = new URLSearchParams()
+
+  const minParam = normalizeStringParam(sp.min)
+  const minAnnual =
+    minParam && !Number.isNaN(Number(minParam))
+      ? Math.max(100_000, Number(minParam))
+      : null
+  if (minAnnual) params.set('min', String(minAnnual))
+
+  const page = parsePage(sp)
+  if (page > 1) params.set('page', String(page))
+
+  const qs = params.toString()
+  return qs ? `${base}?${qs}` : base
 }
 
 function normalizeStringParam(
@@ -193,6 +211,24 @@ export async function generateMetadata({
   const countryParam = p.country
   const countryCode = prettyCountryCode(countryParam)
   const page = parsePage(sp)
+  const canonicalPath = buildCanonicalPath(roleSlug, countryParam, sp)
+  const requestedParams = new URLSearchParams()
+  Object.entries(sp).forEach(([k, v]) => {
+    if (Array.isArray(v)) {
+      v.forEach((val) => val != null && requestedParams.append(k, val))
+    } else if (v != null) {
+      requestedParams.set(k, v)
+    }
+  })
+  const rawPage = Array.isArray(sp.page) ? sp.page[0] : sp.page
+  if (!rawPage || Number(rawPage) <= 1) requestedParams.delete('page')
+  const requested = (() => {
+    const qs = requestedParams.toString()
+    return qs ? `/remote/${roleSlug}/country/${countryParam}?${qs}` : `/remote/${roleSlug}/country/${countryParam}`
+  })()
+  if (requested !== canonicalPath) {
+    redirect(canonicalPath)
+  }
 
   const minParam = normalizeStringParam(sp.min)
   const minAnnual =
@@ -210,26 +246,28 @@ export async function generateMetadata({
 
   const totalJobs = result.total
   const titleBase = `Remote ${roleName} jobs in ${countryCode} paying $100k+`
+  const canonicalPath = buildCanonicalPath(roleSlug, countryParam, sp)
+  const canonicalUrl = `${SITE_URL}${canonicalPath}`
 
   return {
     title:
       totalJobs > 0
-        ? `${titleBase} (${totalJobs.toLocaleString()} roles) | Remote100k`
-        : `${titleBase} | Remote100k`,
+        ? `${titleBase} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
+        : `${titleBase} | ${SITE_NAME}`,
     description: `Search remote ${roleName} jobs in ${countryCode} paying $100k+ across top companies. Filter by salary bands and explore the best high-paying roles.`,
     alternates: {
-      canonical: `${SITE_URL}/remote/${roleSlug}/country/${countryParam}`,
+      canonical: canonicalUrl,
     },
     openGraph: {
-      title: `${titleBase} | Remote100k`,
+      title: `${titleBase} | ${SITE_NAME}`,
       description: `Find remote ${roleName} roles in ${countryCode} with at least $100k total compensation.`,
-      url: `${SITE_URL}/remote/${roleSlug}/country/${countryParam}`,
-      siteName: 'Remote100k',
+      url: canonicalUrl,
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${titleBase} | Remote100k`,
+      title: `${titleBase} | ${SITE_NAME}`,
       description: `Remote ${roleName} jobs in ${countryCode} paying $100k+.`,
     },
   }

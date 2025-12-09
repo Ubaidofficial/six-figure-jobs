@@ -1,35 +1,31 @@
 // app/sitemap-slices.xml/route.ts
-// Sitemap for seeded role/country/remote salary slices (JobSlice)
+// Sitemap index for slice shards (priority + longtail)
 
-import { NextResponse } from 'next/server'
-import { prisma } from '../../lib/prisma'
+import { getSiteUrl } from '../../lib/seo/site'
 
-export const revalidate = 3600
+const SITE_URL = getSiteUrl()
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+export const revalidate = 1800
 
 export async function GET() {
-  const slices = await prisma.jobSlice.findMany({
-    select: { slug: true, updatedAt: true, jobCount: true },
-    where: {
-      jobCount: { gt: 0 },
-    },
-    take: 5000,
-  })
-
-  const urls = slices.map((s) => {
-    const loc = `${SITE_URL}/${s.slug}`
-    const lastmod = s.updatedAt?.toISOString() ?? new Date().toISOString()
-    return `<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod><changefreq>daily</changefreq></url>`
-  })
+  const entries = [
+    'sitemap-slices/priority',
+    'sitemap-slices/longtail',
+  ]
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.join('\n')}
-</urlset>`
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries
+  .map(
+    (loc) => `  <sitemap>
+    <loc>${SITE_URL}/${loc}</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+  </sitemap>`,
+  )
+  .join('\n')}
+</sitemapindex>`
 
-  return new NextResponse(body, {
+  return new Response(body, {
     status: 200,
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',

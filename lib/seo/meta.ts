@@ -1,14 +1,17 @@
 // lib/seo/meta.ts
 import type { Metadata } from 'next'
 import type { JobSlice } from '../slices/types'
+import { SITE_NAME } from './site'
+import { buildSliceCanonicalUrl } from './canonical'
 
 type MetaContext = {
   page: number
   totalJobs?: number
+  pageSize?: number
 }
 
 function siteName() {
-  return 'Remote100k'
+  return SITE_NAME
 }
 
 function countryNameFromCode(code?: string): string {
@@ -109,12 +112,7 @@ export function buildSliceDescription(
 ---------------------------------------------------- */
 
 export function buildCanonicalUrl(slice: JobSlice, page: number): string {
-  const origin =
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
-  const basePath = '/' + slice.slug.replace(/^\/+/, '')
-
-  if (page <= 1) return origin + basePath
-  return `${origin}${basePath}?page=${page}`
+  return buildSliceCanonicalUrl(slice.filters, page, slice.slug)
 }
 
 export function buildSliceMetadata(
@@ -124,16 +122,47 @@ export function buildSliceMetadata(
   const title = buildSliceTitle(slice, ctx)
   const description = buildSliceDescription(slice, ctx)
   const canonical = buildCanonicalUrl(slice, ctx.page)
-  const allowIndex = typeof ctx.totalJobs === 'number' ? ctx.totalJobs >= 3 : true
+  const allowIndex =
+    typeof ctx.totalJobs === 'number'
+      ? ctx.totalJobs >= 5 && ctx.page <= 5
+      : ctx.page <= 5
+
+  const totalPages =
+    typeof ctx.totalJobs === 'number'
+      ? Math.max(
+          1,
+          Math.ceil(ctx.totalJobs / Math.max(ctx.pageSize ?? 20, 1))
+        )
+      : null
+
+  const prev =
+    totalPages && ctx.page > 1
+      ? buildCanonicalUrl(slice, ctx.page - 1)
+      : null
+  const next =
+    totalPages && ctx.page < totalPages
+      ? buildCanonicalUrl(slice, ctx.page + 1)
+      : null
+
+  const countryCode = slice.filters.countryCode?.toUpperCase()
+  const hreflang =
+    countryCode != null
+      ? { [`en-${countryCode}`]: canonical, 'x-default': canonical }
+      : undefined
 
   return {
     title,
     description,
     alternates: {
       canonical,
+      languages: hreflang,
+    },
+    other: {
+      ...(prev ? { 'link:prev': prev } : {}),
+      ...(next ? { 'link:next': next } : {}),
     },
     robots: allowIndex
-      ? { index: true, follow: true }
+      ? { index: true, follow: true, maxSnippet: -1, maxImagePreview: 'large' }
       : { index: false, follow: true },
     openGraph: {
       title,

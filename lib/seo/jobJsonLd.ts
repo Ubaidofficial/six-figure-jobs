@@ -1,17 +1,19 @@
 // lib/seo/jobJsonLd.ts
 
 import type { Job, Company } from '@prisma/client'
+import { getSiteUrl } from './site'
+import { buildJobSlug } from '../jobs/jobSlug'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 export function buildJobJsonLd(job: JobWithCompany): any {
   const company = job.companyRef
   const companyName = company?.name || job.company
   const companyUrl = company?.website || SITE_URL
   const logo = company?.logoUrl || job.companyLogo || undefined
+  const url = `${SITE_URL}/job/${buildJobSlug(job)}`
 
   const datePosted =
     job.postedAt?.toISOString() || job.createdAt.toISOString()
@@ -53,6 +55,7 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     '@context': 'https://schema.org',
     '@type': 'JobPosting',
     title: job.title,
+    url,
     description,
     datePosted,
     validThrough,
@@ -66,6 +69,11 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     jobLocationType,
     jobLocation,
     baseSalary,
+    identifier: {
+      '@type': 'PropertyValue',
+      name: job.source || 'SixFigureJobs',
+      value: job.id,
+    },
     applicantLocationRequirements: job.remote
       ? [
           {

@@ -3,10 +3,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
+import { getSiteUrl } from '../../../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sixfigurejobs.com'
+const SITE_URL = getSiteUrl()
 
 const LEVELS: Record<string, { label: string; description: string }> = {
   entry: { label: 'Entry Level', description: 'Early career and entry-level positions' },
@@ -31,6 +32,9 @@ export async function generateMetadata({ params }: { params: Promise<{ level: st
     pageSize: 1,
   })
 
+  const allowIndex = total >= 3
+  const canonical = `${SITE_URL}/jobs/level/${level}`
+
   const title = total > 0
     ? `${info.label} $100k+ Jobs - ${total.toLocaleString()} Positions | Six Figure Jobs`
     : `${info.label} $100k+ Jobs | Six Figure Jobs`
@@ -42,11 +46,12 @@ export async function generateMetadata({ params }: { params: Promise<{ level: st
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/jobs/level/${level}` },
+    alternates: { canonical },
+    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}/jobs/level/${level}`,
+      url: canonical,
       siteName: 'Six Figure Jobs',
       type: 'website',
       images: [
@@ -110,7 +115,7 @@ export default async function LevelPage({ params }: { params: Promise<{ level: s
           <Link href="/jobs/category/product" className="text-blue-400 hover:underline">
             {info.label} Product Jobs
           </Link>
-          <Link href="/jobs/country/us" className="text-blue-400 hover:underline">
+          <Link href="/jobs/country/united-states" className="text-blue-400 hover:underline">
             {info.label} Jobs in USA
           </Link>
           <Link href="/jobs/200k-plus" className="text-blue-400 hover:underline">

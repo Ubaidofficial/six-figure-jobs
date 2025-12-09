@@ -4,11 +4,13 @@
 // Canonical patterns (under /jobs):
 //   /jobs/100k-plus-jobs
 //   /jobs/100k-plus-software-engineer-jobs
-//   /jobs/us/100k-plus-jobs
-//   /jobs/us/100k-plus-software-engineer-jobs
-//   /jobs/us/chicago/100k-plus-software-engineer-jobs
+//   /jobs/united-states/100k-plus-jobs
+//   /jobs/united-states/100k-plus-software-engineer-jobs
+//   /jobs/united-states/chicago/100k-plus-software-engineer-jobs
 //   /jobs/remote/100k-plus-jobs
 //   /jobs/remote/100k-plus-software-engineer-jobs
+
+import { countryCodeToSlug, countrySlugToCode } from '../seo/countrySlug'
 
 const SALARY_SLUG_TO_MIN: Record<string, number> = {
   '100k-plus': 100_000,
@@ -58,7 +60,7 @@ export function buildJobsPath(params: BuildJobsUrlParams): string {
   if (remoteOnly) {
     segments.push('remote')
   } else if (countryCode) {
-    segments.push(countryCode.toLowerCase())
+    segments.push(countryCodeToSlug(countryCode))
     if (citySlug) {
       segments.push(citySlug.toLowerCase())
     }
@@ -111,15 +113,22 @@ export function parseJobsSlug(
   if (parts[0] === 'remote') {
     result.remoteOnly = true
     idx = 1
-  } else if (parts[0].length === 2) {
-    // Country code: /jobs/us/... or /jobs/ca/...
-    result.countryCode = parts[0].toUpperCase()
-    idx = 1
+  } else {
+    // Country slug or code
+    const maybeCode =
+      parts[0].length === 2
+        ? parts[0].toUpperCase()
+        : countrySlugToCode(parts[0]) || null
 
-    // Optional city: /jobs/us/chicago/...
-    if (parts.length >= 3) {
-      result.citySlug = parts[1]
-      idx = 2
+    if (maybeCode) {
+      result.countryCode = maybeCode
+      idx = 1
+
+      // Optional city: /jobs/{country}/city/...
+      if (parts.length >= 3) {
+        result.citySlug = parts[1]
+        idx = 2
+      }
     }
   }
 

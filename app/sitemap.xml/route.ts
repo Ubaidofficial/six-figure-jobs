@@ -1,4 +1,6 @@
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sixfigurejobs.com'
+import { getSiteUrl } from '../../lib/seo/site'
+
+const SITE_URL = getSiteUrl()
 
 export async function GET() {
   const sitemaps = [
@@ -9,6 +11,8 @@ export async function GET() {
     'sitemap-country.xml',
     'sitemap-category.xml',
     'sitemap-level.xml',
+    'sitemap-browse.xml',
+    'sitemap-slices.xml',
   ]
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

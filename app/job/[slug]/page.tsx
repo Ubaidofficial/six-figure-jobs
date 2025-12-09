@@ -7,6 +7,7 @@ import { prisma } from '../../../lib/prisma'
 import {
   parseJobSlugParam,
   buildJobSlugHref,
+  buildJobSlug,
 } from '../../../lib/jobs/jobSlug'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
@@ -17,11 +18,13 @@ import {
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { buildSalaryText } from '../../../lib/jobs/salary'
+import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
+import Link from 'next/link'
 
 export const revalidate = 3600
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 /* -------------------------------------------------------------------------- */
 /* Metadata                                                                   */
@@ -36,7 +39,7 @@ export async function generateMetadata({
   const { jobId, externalId } = parseJobSlugParam(slug)
 
   if (!jobId && !externalId) {
-    return { title: 'Job not found | Remote100k' }
+    return { title: `Job not found | ${SITE_NAME}` }
   }
 
   const where: any = (() => {
@@ -45,12 +48,12 @@ export async function generateMetadata({
     if (externalId) ors.push({ externalId })
 
     if (ors.length === 0) return null
-    if (ors.length === 1) return ors[0]
-    return { OR: ors }
+    if (ors.length === 1) return { ...ors[0], isExpired: false }
+    return { OR: ors, isExpired: false }
   })()
 
   if (!where) {
-    return { title: 'Job not found | Remote100k' }
+    return { title: `Job not found | ${SITE_NAME}` }
   }
 
   const job = await prisma.job.findFirst({
@@ -58,7 +61,7 @@ export async function generateMetadata({
     include: { companyRef: true },
   })
 
-  if (!job) return { title: 'Job not found | Remote100k' }
+  if (!job) return { title: `Job not found | ${SITE_NAME}` }
 
   return buildJobMetadata(job as JobWithCompany)
 }
@@ -81,8 +84,8 @@ export default async function JobPage({
     if (externalId) ors.push({ externalId })
 
     if (ors.length === 0) return null
-    if (ors.length === 1) return ors[0]
-    return { OR: ors }
+    if (ors.length === 1) return { ...ors[0], isExpired: false }
+    return { OR: ors, isExpired: false }
   })()
 
   if (!where) return notFound()
@@ -95,6 +98,10 @@ export default async function JobPage({
   if (!job) return notFound()
 
   const typedJob = job as JobWithCompany
+  const canonicalSlug = buildJobSlug(typedJob)
+  if (slug !== canonicalSlug) {
+    redirect(`/job/${canonicalSlug}`)
+  }
   const company = typedJob.companyRef
 
   // Clean company name - take only the first part before description
@@ -733,19 +740,20 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   const companyName = cleanCompanyName(
     job.companyRef?.name || job.company || '',
   )
+  const countrySlug = job.countryCode ? countryCodeToSlug(job.countryCode) : null
 
   if (job.roleSlug && job.countryCode) {
     const roleLabel = prettyRole(job.roleSlug)
-    const ccLower = job.countryCode.toLowerCase()
+    const ccSlug = countrySlug
 
     links.push({
-      href: `/jobs/${job.roleSlug}/${ccLower}/100k-plus`,
-      label: `$100k+ ${roleLabel} jobs in ${job.countryCode}`,
+      href: `/jobs/${job.roleSlug}/${ccSlug}/100k-plus`,
+      label: `$100k+ ${roleLabel} jobs in ${countryCodeToName(job.countryCode)}`,
     })
 
     links.push({
-      href: `/jobs/${ccLower}/100k-plus`,
-      label: `$100k+ jobs in ${job.countryCode}`,
+      href: `/jobs/${ccSlug}/100k-plus`,
+      label: `$100k+ jobs in ${countryCodeToName(job.countryCode)}`,
     })
 
     links.push({
@@ -758,6 +766,13 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
     href: '/jobs/100k-plus',
     label: 'All $100k+ jobs',
   })
+
+  if (job.roleSlug) {
+    links.push({
+      href: `/salary/${job.roleSlug}`,
+      label: `${prettyRole(job.roleSlug)} salary guide`,
+    })
+  }
 
   if (job.companyRef?.slug) {
     links.push({

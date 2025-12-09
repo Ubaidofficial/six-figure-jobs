@@ -2,16 +2,16 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
 import type { JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import JobList from '../../../components/JobList'
+import { SITE_NAME, getSiteUrl } from '../../../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 20
 
@@ -30,6 +30,24 @@ function parsePage(searchParams?: SearchParams): number {
   const raw = (searchParams?.page ?? '1') as string
   const n = Number(raw || '1') || 1
   return Math.max(1, n)
+}
+
+function buildCanonicalPath(roleSlug: string, cityParam: string, sp: SearchParams | undefined) {
+  const base = `/remote/${roleSlug}/${cityParam}`
+  const params = new URLSearchParams()
+
+  const minParam = normalizeStringParam(sp?.min)
+  const minAnnual =
+    minParam && !Number.isNaN(Number(minParam))
+      ? Math.max(100_000, Number(minParam))
+      : null
+  if (minAnnual) params.set('min', String(minAnnual))
+
+  const page = parsePage(sp)
+  if (page > 1) params.set('page', String(page))
+
+  const qs = params.toString()
+  return qs ? `${base}?${qs}` : base
 }
 
 function normalizeStringParam(
@@ -274,7 +292,7 @@ export async function generateMetadata({
 
   if (!sampleJob && totalJobs === 0) {
     return {
-      title: 'Page not found – Remote100k',
+      title: `Page not found – ${SITE_NAME}`,
       description: 'This page does not exist.',
     }
   }
@@ -284,30 +302,36 @@ export async function generateMetadata({
   const baseTitle = `Remote ${prettyRole(
     roleSlug
   )} jobs in ${cityName} paying $100k+`
+  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, searchParams)
+  const canonicalUrl = `${SITE_URL}${canonicalPath}`
 
   return {
     title:
       totalJobs > 0
-        ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | Remote100k`
-        : `${baseTitle} | Remote100k`,
+        ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
+        : `${baseTitle} | ${SITE_NAME}`,
     description: `Search remote ${prettyRole(
       roleSlug
     )} jobs in ${cityName} paying $100k+ at leading tech and SaaS companies.`,
     alternates: {
-      canonical: `${SITE_URL}/remote/${roleSlug}/${cityParam}`,
+      canonical: canonicalUrl,
     },
+    robots:
+      totalJobs >= 3
+        ? { index: true, follow: true }
+        : { index: false, follow: true },
     openGraph: {
-      title: `${baseTitle} | Remote100k`,
+      title: `${baseTitle} | ${SITE_NAME}`,
       description: `Find remote ${prettyRole(
         roleSlug
       )} roles in ${cityName} with at least $100k total compensation.`,
-      url: `${SITE_URL}/remote/${roleSlug}/${cityParam}`,
-      siteName: 'Remote100k',
+      url: canonicalUrl,
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${baseTitle} | Remote100k`,
+      title: `${baseTitle} | ${SITE_NAME}`,
       description: `Remote ${prettyRole(
         roleSlug
       )} jobs in ${cityName} paying $100k+.`,
@@ -329,6 +353,23 @@ export default async function RemoteRoleCityPage({
 
   const page = parsePage(searchParams)
   const basePath = `/remote/${roleSlug}/${cityParam}`
+  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, searchParams)
+  const requestedParams = new URLSearchParams()
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([k, v]) => {
+      if (Array.isArray(v)) v.forEach((val) => val != null && requestedParams.append(k, val))
+      else if (v != null) requestedParams.set(k, v)
+    })
+  }
+  const rawPage = searchParams ? (Array.isArray(searchParams.page) ? searchParams.page[0] : searchParams.page) : null
+  if (!rawPage || Number(rawPage) <= 1) requestedParams.delete('page')
+  const requested = (() => {
+    const qs = requestedParams.toString()
+    return qs ? `${basePath}?${qs}` : basePath
+  })()
+  if (requested !== canonicalPath) {
+    redirect(canonicalPath)
+  }
 
   const minParam = normalizeStringParam(searchParams?.min)
   const minAnnual =
@@ -382,6 +423,41 @@ export default async function RemoteRoleCityPage({
     cityParam,
     cityName
   )
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `Are these ${prettyRole(roleSlug)} jobs really $100k+?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. We only include remote roles with published or inferred $100k+ compensation (or local equivalent) from ATS feeds and trusted boards.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How often do you refresh remote ${prettyRole(roleSlug)} jobs in ${cityName}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Listings refresh frequently and expire automatically when closed, so stale postings are removed.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Do you tag remote eligibility and currency?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. We surface remote/hybrid signals and keep local currency where provided for transparent salary context.',
+        },
+      },
+    ],
+  }
+  const speakableJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SpeakableSpecification',
+    cssSelector: ['main h1', '[data-speakable="summary"]'],
+  }
 
   const salaryOptions = [100_000, 150_000, 200_000]
 
@@ -432,12 +508,23 @@ export default async function RemoteRoleCityPage({
           Remote {prettyRole(roleSlug)} jobs in {cityName} paying
           $100k+
         </h1>
-        <p className="text-sm text-slate-300">
+        <p className="text-sm text-slate-300" data-speakable="summary">
           Browse high-paying remote {prettyRole(
             roleSlug
           )} roles based in {cityName}. All jobs are filtered for
           at least $100k local total compensation.
         </p>
+        <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Salary-first: $100k+ roles only, pulled from ATS and vetted boards.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Eligibility clarity: remote/hybrid flagged; local currency kept when provided.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Freshness: stale roles expire automatically to avoid dead applies.
+          </li>
+        </ul>
       </header>
 
       {/* --------------------------------- Filters --------------------------------- */}
@@ -467,6 +554,34 @@ export default async function RemoteRoleCityPage({
             compensation.
           </p>
         </div>
+      </section>
+
+      <section className="mb-6 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          Explore related high-paying pages
+        </h2>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
+          <li>
+            <Link href={`/jobs/100k-plus/${roleSlug}`} className="hover:underline">
+              $100k+ {prettyRole(roleSlug)} jobs →
+            </Link>
+          </li>
+          <li>
+            <Link href={`/jobs/200k-plus/${roleSlug}`} className="hover:underline">
+              $200k+ {prettyRole(roleSlug)} jobs →
+            </Link>
+          </li>
+          <li>
+            <Link href={`/salary/${roleSlug}`} className="hover:underline">
+              {prettyRole(roleSlug)} salary guide →
+            </Link>
+          </li>
+          <li>
+            <Link href={`/remote/${roleSlug}`} className="hover:underline">
+              Remote {prettyRole(roleSlug)} jobs (all regions) →
+            </Link>
+          </li>
+        </ul>
       </section>
 
       {/* -------------------------------- Job list -------------------------------- */}
@@ -540,6 +655,18 @@ export default async function RemoteRoleCityPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(breadcrumbJsonLd),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(speakableJsonLd),
         }}
       />
     </main>

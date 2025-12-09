@@ -8,10 +8,12 @@ import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
+import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 
 export const revalidate = 3600
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -54,15 +56,16 @@ export async function generateMetadata({
   const company = await getCompanyWithJobs(slug)
 
   if (!company) {
-    return { title: 'Company not found | Remote100k' }
+    return { title: `Company not found | ${SITE_NAME}` }
   }
 
   const jobCount = company.jobs.length
   const highSalaryCount = company.jobs.filter(
     (j: JobWithFlags) => j.isHighSalary
   ).length
+  const allowIndex = jobCount >= 3
 
-  const title = `${company.name} Jobs - ${jobCount} Open Positions | Remote100k`
+  const title = `${company.name} Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
   const description =
     highSalaryCount > 0
       ? `Browse ${jobCount} jobs at ${company.name}, including ${highSalaryCount} high-salary positions paying $100k+. ${
@@ -82,11 +85,12 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: canonicalUrl },
+    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,
       description,
       url: canonicalUrl,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
       images: company.logoUrl
         ? [
@@ -128,6 +132,8 @@ export default async function CompanyPage({
   const otherJobs: JobWithFlags[] = jobs.filter(
     (j: JobWithFlags) => !j.isHighSalary
   )
+  const countrySlug =
+    company.countryCode ? countryCodeToSlug(company.countryCode) : null
 
   // Build JSON-LD
   const organizationJsonLd = buildOrganizationJsonLd(company)
@@ -276,6 +282,39 @@ export default async function CompanyPage({
           find a six-figure role that matches your skills and location. We refresh this page frequently as
           new jobs are added from the company’s ATS and careers feeds.
         </p>
+      </section>
+
+      <section className="mb-8 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          Explore related high-paying pages
+        </h2>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
+          {countrySlug && (
+            <li>
+              <Link
+                href={`/jobs/${countrySlug}/100k-plus`}
+                className="hover:underline"
+              >
+                $100k+ jobs in {company.countryCode}
+              </Link>
+            </li>
+          )}
+          <li>
+            <Link href="/jobs/200k-plus" className="hover:underline">
+              $200k+ tech jobs →
+            </Link>
+          </li>
+          <li>
+            <Link href="/jobs/remote/100k-plus" className="hover:underline">
+              Remote $100k+ roles →
+            </Link>
+          </li>
+          <li>
+            <Link href="/salary/software-engineer" className="hover:underline">
+              Software Engineer salary guide →
+            </Link>
+          </li>
+        </ul>
       </section>
 
       {/* Job Listings */}

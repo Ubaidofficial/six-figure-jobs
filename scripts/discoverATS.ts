@@ -46,7 +46,7 @@ async function fetchWithTimeout(url: string, timeout = 10000): Promise<string | 
   
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Remote100kBot/1.0)' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SixFigureJobsBot/1.0)' },
       signal: controller.signal,
       redirect: 'follow'
     })

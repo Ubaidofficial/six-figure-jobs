@@ -4,6 +4,8 @@ import { prisma } from '../prisma'
 import { JobSlice, parseSliceFilters } from './types'
 import type { JobSlice as JobSliceRow } from '@prisma/client'
 import { parseJobsSlug } from '../jobs/searchSlug'
+import { countryCodeToSlug, countrySlugToCode } from '../seo/countrySlug'
+import { countrySlugToCode } from '../seo/countrySlug'
 
 /**
  * Load a JobSlice for /jobs/[...slug] URLs.
@@ -46,7 +48,9 @@ export async function loadSliceFromParams(
     else if (parsed.salaryMin === 400_000) salarySlug = '400k-plus'
 
     const role = parsed.roleSlug
-    const country = parsed.countryCode?.toLowerCase()
+    const countryCode = parsed.countryCode
+    const country = countryCode?.toLowerCase()
+    const countrySlug = countryCode ? countryCodeToSlug(countryCode) : null
     const city = parsed.citySlug
     const isRemote = parsed.remoteOnly
 
@@ -69,24 +73,40 @@ export async function loadSliceFromParams(
     if (!role && country && !city && !isRemote) {
       candidates.add(`jobs/${country}/${salarySlug}`)
       candidates.add(`jobs/${salarySlug}/${country}`)
+      if (countrySlug && countrySlug !== country) {
+        candidates.add(`jobs/${countrySlug}/${salarySlug}`)
+        candidates.add(`jobs/${salarySlug}/${countrySlug}`)
+      }
     }
 
     // --- Country + role + salary: /jobs/us/100k-plus-software-engineer-jobs ---
     if (role && country && !city && !isRemote) {
       candidates.add(`jobs/${role}/${country}/${salarySlug}`)
       candidates.add(`jobs/${salarySlug}/${role}/${country}`)
+      if (countrySlug && countrySlug !== country) {
+        candidates.add(`jobs/${role}/${countrySlug}/${salarySlug}`)
+        candidates.add(`jobs/${salarySlug}/${role}/${countrySlug}`)
+      }
     }
 
     // --- Country + city + salary (no role): /jobs/us/chicago/100k-plus-jobs ---
     if (!role && country && city && !isRemote) {
       candidates.add(`jobs/${country}/${city}/${salarySlug}`)
       candidates.add(`jobs/${salarySlug}/${country}/${city}`)
+      if (countrySlug && countrySlug !== country) {
+        candidates.add(`jobs/${countrySlug}/${city}/${salarySlug}`)
+        candidates.add(`jobs/${salarySlug}/${countrySlug}/${city}`)
+      }
     }
 
     // --- Country + city + role + salary: /jobs/us/chicago/100k-plus-software-engineer-jobs ---
     if (role && country && city && !isRemote) {
       candidates.add(`jobs/${role}/${country}/${city}/${salarySlug}`)
       candidates.add(`jobs/${salarySlug}/${role}/${country}/${city}`)
+      if (countrySlug && countrySlug !== country) {
+        candidates.add(`jobs/${role}/${countrySlug}/${city}/${salarySlug}`)
+        candidates.add(`jobs/${salarySlug}/${role}/${countrySlug}/${city}`)
+      }
     }
 
     // --- Remote slices (future-friendly) ---
@@ -129,21 +149,24 @@ export async function loadSliceFromParams(
 function buildFallbackSlice(segments: string[]): JobSliceRow | null {
   // Support role/country/band pattern even if not pre-seeded
   if (segments.length === 3) {
-    const [roleSlug, countryCodeRaw, bandSlug] = segments
-    const bandMap: Record<string, number> = {
-      '100k-plus': 100_000,
-      '200k-plus': 200_000,
-      '300k-plus': 300_000,
-      '400k-plus': 400_000,
-    }
-    const minAnnual = bandMap[bandSlug]
-    if (minAnnual) {
-      const countryCode = countryCodeRaw.toUpperCase()
-      const slug = `jobs/${segments.join('/')}`
-      return {
-        id: slug,
-        slug: `jobs/${segments.join('/')}`,
-        type: 'role-country',
+        const [roleSlug, countryCodeRaw, bandSlug] = segments
+        const bandMap: Record<string, number> = {
+          '100k-plus': 100_000,
+          '200k-plus': 200_000,
+          '300k-plus': 300_000,
+          '400k-plus': 400_000,
+        }
+        const minAnnual = bandMap[bandSlug]
+        if (minAnnual) {
+      const countryCode =
+        countryCodeRaw.length === 2
+          ? countryCodeRaw.toUpperCase()
+          : countrySlugToCode(countryCodeRaw) || countryCodeRaw.toUpperCase()
+          const slug = `jobs/${segments.join('/')}`
+          return {
+            id: slug,
+            slug: `jobs/${segments.join('/')}`,
+            type: 'role-country',
         filtersJson: JSON.stringify({
           roleSlugs: [roleSlug],
           countryCode,

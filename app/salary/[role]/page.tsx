@@ -9,11 +9,12 @@ import {
 } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import type { Job } from '@prisma/client'
+import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 
 export const revalidate = 1800
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 50
 
@@ -174,7 +175,7 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
@@ -192,6 +193,13 @@ export async function generateMetadata({
 type PageProps = {
   params: Promise<{ role: string }>
   searchParams?: SearchParams | Promise<SearchParams>
+}
+
+function bandLabel(minAnnual: number): string {
+  if (minAnnual >= 400_000) return '$400k+'
+  if (minAnnual >= 300_000) return '$300k+'
+  if (minAnnual >= 200_000) return '$200k+'
+  return '$100k+'
 }
 
 function StructuredData({
@@ -327,8 +335,7 @@ export default async function SalaryRolePage(props: PageProps) {
       ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
       : 1
 
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://six-figure-jobs.vercel.app'
+  const siteUrl = SITE_URL
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -375,6 +382,16 @@ export default async function SalaryRolePage(props: PageProps) {
       <StructuredData jobs={jobs} roleName={roleName} />
       <script
         type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SpeakableSpecification',
+            cssSelector: ['main h1', '[data-speakable="summary"]'],
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <script
@@ -416,12 +433,54 @@ export default async function SalaryRolePage(props: PageProps) {
         <h1 className="text-2xl font-semibold text-slate-50">
           {roleName} salary guide
         </h1>
-        <p className="max-w-2xl text-sm text-slate-300">
+        <p
+          className="max-w-2xl text-sm text-slate-300"
+          data-speakable="summary"
+        >
           Live six-figure salary ranges for {roleName.toLowerCase()} roles, based on verified $100k+ job listings from top tech and SaaS companies. Remote, hybrid, and on-site pay data—across USD and local currencies—updated regularly.
         </p>
         <p className="text-xs text-slate-400">
           Data freshness: updated from live $100k+ listings; thin pages stay noindex until more roles are available.
         </p>
+        <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Salary-first: {bandLabel(minAnnual)} compensation sourced from ATS feeds.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Remote eligibility noted; local currency kept where provided for transparency.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Seniority focus: mid-to-senior and leadership roles; junior only when six-figure.
+          </li>
+        </ul>
+        <div className="flex flex-wrap gap-2 text-xs text-blue-300">
+          {[100_000, 200_000, 300_000, 400_000].map((band) => {
+            const href =
+              band === 100_000
+                ? basePath
+                : `${basePath}?band=${band / 1000}k-plus`
+            const label = bandLabel(band)
+            return (
+              <Link
+                key={band}
+                href={href}
+                className={`rounded-full border px-3 py-1 ${
+                  minAnnual === band
+                    ? 'border-blue-500/50 bg-blue-500/10 text-blue-100'
+                    : 'border-slate-800 bg-slate-900 text-blue-300 hover:border-slate-600'
+                }`}
+              >
+                {label} band
+              </Link>
+            )
+          })}
+          <Link
+            href={`/jobs/${minAnnual / 1000}k-plus/${roleSlug}`}
+            className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-blue-300 hover:border-slate-600"
+          >
+            Browse {bandLabel(minAnnual)} {roleName} jobs →
+          </Link>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
@@ -498,6 +557,48 @@ export default async function SalaryRolePage(props: PageProps) {
           </div>
         </section>
       )}
+
+      <section className="mb-8 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          Explore related high-paying pages
+        </h2>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
+          <li>
+            <Link
+              href={`/jobs/${minAnnual / 1000}k-plus/${roleSlug}`}
+              className="hover:underline"
+            >
+              {bandLabel(minAnnual)} {roleName} jobs →
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={`/remote/${roleSlug}`}
+              className="hover:underline"
+            >
+              Remote {roleName} jobs (filter by region) →
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={`/jobs/${roleSlug}/100k-plus`}
+              className="hover:underline"
+            >
+              All $100k+ {roleName} jobs →
+            </Link>
+          </li>
+          {Object.keys(byCountry).slice(0, 3).map((cc) => (
+            <li key={cc}>
+              <Link
+                href={`/jobs/${minAnnual / 1000}k-plus/${roleSlug}/${countryCodeToSlug(cc)}`}
+                className="hover:underline"
+              >
+                {bandLabel(minAnnual)} {roleName} jobs in {cc} →
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {/* Job list */}
       <section className="space-y-4">

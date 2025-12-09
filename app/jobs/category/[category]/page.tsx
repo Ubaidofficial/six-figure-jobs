@@ -8,6 +8,7 @@ import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { formatRelativeTime } from '../../../../lib/utils/time'
 import { LOCATIONS } from '../../../page'
+import { getSiteUrl } from '../../../../lib/seo/site'
 
 const PAGE_SIZE = 40
 
@@ -96,9 +97,28 @@ export async function generateMetadata({
   const cfg = resolveCategory(category)
   if (!cfg) return { title: 'Jobs | Six Figure Jobs' }
 
+  const { total } = await queryJobs({
+    roleSlugs: cfg.roleSlugs,
+    minAnnual: 100_000,
+    page: 1,
+    pageSize: 1,
+  })
+
+  const allowIndex = total >= 3
+  const canonical = `${getSiteUrl()}/jobs/category/${category}`
+
   return {
     title: `${cfg.label} jobs paying $100k+ | Six Figure Jobs`,
     description: `Browse curated ${cfg.label.toLowerCase()} roles paying $100k+ across top companies. Remote, hybrid, and on-site.`,
+    alternates: { canonical },
+    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+    openGraph: {
+      title: `${cfg.label} jobs paying $100k+ | Six Figure Jobs`,
+      description: `Curated ${cfg.label.toLowerCase()} roles paying $100k+ across top companies. Remote, hybrid, and on-site.`,
+      url: canonical,
+      siteName: 'Six Figure Jobs',
+      type: 'website',
+    },
   }
 }
 
@@ -131,6 +151,7 @@ export default async function CategoryPage({
   })
 
   const totalPages = total === 0 ? 1 : Math.ceil(total / PAGE_SIZE)
+  const allowIndex = total >= 3
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">

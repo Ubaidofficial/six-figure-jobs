@@ -4,7 +4,7 @@ import type { AtsJob } from './types'
 
 async function fetchJson(url: string): Promise<any> {
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'Remote100k/1.0 (+job-board-scraper)' },
+    headers: { 'User-Agent': 'SixFigureJobs/1.0 (+job-board-scraper)' },
     cache: 'no-store',
   })
   if (!res.ok) throw new Error(`Lever fetch failed: ${res.status}`)

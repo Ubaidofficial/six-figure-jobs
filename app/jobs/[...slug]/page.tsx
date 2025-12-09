@@ -1,5 +1,7 @@
+// app/jobs/_components/[Slug]/page.tsx
+
 import type { Metadata } from 'next'
-import { notFound, redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { loadSliceFromParams } from '../../../lib/slices/loadSlice'
 import { queryJobs } from '../../../lib/jobs/queryJobs'
 import { SlicePage } from '../_components/SlicePage'
@@ -7,8 +9,12 @@ import { buildSliceMetadata } from '../../../lib/seo/meta'
 import {
   buildJobListJsonLd,
   buildBreadcrumbJsonLd,
+  buildSliceWebPageJsonLd,
+  buildSliceFaqJsonLd,
+  buildSliceSpeakableJsonLd,
 } from '../../../lib/seo/structuredData'
 import { buildSliceInternalLinks } from '../../../lib/navigation/internalLinks'
+import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
 
 export const revalidate = 3600
 
@@ -28,6 +34,37 @@ type PageProps = {
 }
 
 const PAGE_SIZE = 20
+
+function humanizeRole(slug?: string | null): string | null {
+  if (!slug) return null
+  return slug
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function countryNameFromCode(code?: string | null): string | null {
+  if (!code) return null
+  const upper = code.toUpperCase()
+  const map: Record<string, string> = {
+    US: 'United States',
+    CA: 'Canada',
+    GB: 'United Kingdom',
+    DE: 'Germany',
+    ES: 'Spain',
+    IE: 'Ireland',
+    AU: 'Australia',
+    IN: 'India',
+  }
+  return map[upper] ?? upper
+}
+
+function bandLabel(minAnnual?: number | null): string {
+  if (!minAnnual) return '$100k+'
+  if (minAnnual >= 400_000) return '$400k+'
+  if (minAnnual >= 300_000) return '$300k+'
+  if (minAnnual >= 200_000) return '$200k+'
+  return '$100k+'
+}
 
 // Redirect salary pages to their dedicated routes
 function checkSalaryPageRedirect(slug?: string[]) {
@@ -75,12 +112,13 @@ export async function generateMetadata({
   const data = await queryJobs({
     ...slice.filters,
     page,
-    pageSize: 1,
+    pageSize: PAGE_SIZE,
   })
 
   return buildSliceMetadata(slice, {
     page,
     totalJobs: data.total,
+    pageSize: PAGE_SIZE,
   })
 }
 
@@ -95,6 +133,16 @@ export default async function JobsSlicePage({
   const sp = await resolveSearchParams(searchParams)
   const page = getPageFromSearchParams(sp)
 
+  const canonicalPath = resolveSliceCanonicalPath(
+    slice.filters,
+    slice.slug
+  )
+  const requestedPath = `/jobs/${(resolvedParams.slug || []).join('/')}`
+  if (requestedPath.replace(/\/+$/, '') !== canonicalPath.replace(/\/+$/, '')) {
+    const search = page > 1 ? `?page=${page}` : ''
+    redirect(`${canonicalPath}${search}`)
+  }
+
   const data = await queryJobs({
     ...slice.filters,
     page,
@@ -103,11 +151,41 @@ export default async function JobsSlicePage({
 
   const jobListJsonLd = buildJobListJsonLd(slice, data)
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(slice)
+  const webPageJsonLd = buildSliceWebPageJsonLd(slice, data)
+  const faqJsonLd = buildSliceFaqJsonLd(slice, data.total)
+  const speakableJsonLd = buildSliceSpeakableJsonLd()
   const internalLinks = buildSliceInternalLinks(slice)
+  const roleName = humanizeRole(slice.filters.roleSlugs?.[0])
+  const band = bandLabel(slice.filters.minAnnual)
+  const countryName = countryNameFromCode(slice.filters.countryCode)
+  const remoteLabel = slice.filters.remoteOnly ? 'Remote-first' : null
 
   return (
     <>
       <SlicePage slice={slice} data={data} />
+
+      <section className="mx-auto mt-10 max-w-5xl px-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          High-paying {roleName ? `${roleName} ` : ''}jobs {countryName ? `in ${countryName} ` : ''}{band}
+        </h2>
+        <p
+          className="mt-2 text-sm leading-relaxed text-slate-200"
+          data-speakable="summary"
+        >
+          {band} roles are curated from verified company ATS feeds with salary evidence and six-figure positioning. Listings highlight compensation upfront, note remote or hybrid eligibility{remoteLabel ? ` (${remoteLabel})` : ''}, and stay live only while hiring teams keep them open.
+        </p>
+        <ul className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Salary focus: {band} tech and product roles with pay transparency.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Location clarity: {slice.filters.remoteOnly ? 'Remote-eligible first' : countryName ? `Open to ${countryName}` : 'Global-friendly where stated'}; hybrid/on-site tagged.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Freshness: refreshed frequently; expired postings are removed to avoid stale clicks.
+          </li>
+        </ul>
+      </section>
 
       <script
         type="application/ld+json"
@@ -120,6 +198,27 @@ export default async function JobsSlicePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(breadcrumbJsonLd),
+        }}
+      />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(webPageJsonLd),
+        }}
+      />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd),
+        }}
+      />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(speakableJsonLd),
         }}
       />
 

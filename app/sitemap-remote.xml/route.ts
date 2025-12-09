@@ -6,9 +6,10 @@
 // Only includes live, remote, $100k+ oriented jobs.
 
 import { prisma } from '../../lib/prisma'
+import { getSiteUrl } from '../../lib/seo/site'
+import { countryCodeToSlug } from '../../lib/seo/countrySlug'
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 export const dynamic = "force-static"
 
@@ -77,7 +78,7 @@ export async function GET() {
   /* ------------------------ /remote/[role]/[country] ------------------------ */
   for (const row of roleCountries) {
     if (!row.roleSlug || !row.countryCode) continue
-    const loc = `${SITE_URL}/remote/${row.roleSlug}/${row.countryCode.toLowerCase()}`
+    const loc = `${SITE_URL}/remote/${row.roleSlug}/${countryCodeToSlug(row.countryCode)}`
     const lastmod = (row.updatedAt ?? new Date()).toISOString()
     urlSet.add(`<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`)
   }

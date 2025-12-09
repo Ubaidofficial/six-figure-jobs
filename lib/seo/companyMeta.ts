@@ -1,14 +1,15 @@
 // lib/seo/companyMeta.ts
 import type { Metadata } from "next";
 import type { Company } from "@prisma/client";
+import { getSiteUrl, SITE_NAME } from "./site";
 
 export function buildCompanyCanonical(slug: string) {
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://remote100k.com";
+  const origin = getSiteUrl();
   return `${origin}/company/${slug}`;
 }
 
 export function buildCompanyTitle(company: Company): string {
-  return `${company.name} – $100k+ Jobs, Hiring Info, Careers | Remote100k`;
+  return `${company.name} – $100k+ Jobs, Hiring Info, Careers | ${SITE_NAME}`;
 }
 
 export function buildCompanyDescription(company: Company, jobCount: number): string {
@@ -33,7 +34,7 @@ export function buildCompanyMetadata(params: {
       title,
       description,
       url: canonical,
-      siteName: "Remote100k",
+      siteName: SITE_NAME,
       type: "website",
       images: company.logoUrl ? [company.logoUrl] : undefined
     },

@@ -64,7 +64,7 @@ async function resolveFinalUrl(url: string): Promise<string | null> {
     const res = await fetch(url, {
       redirect: 'follow',
       headers: {
-        'User-Agent': 'Remote100k/1.0 (+lever-fix)',
+        'User-Agent': 'SixFigureJobs/1.0 (+lever-fix)',
       },
       cache: 'no-store',
     })

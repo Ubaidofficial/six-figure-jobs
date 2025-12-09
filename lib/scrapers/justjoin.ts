@@ -36,7 +36,7 @@ async function fetchOffers(): Promise<JustJoinOffer[]> {
     try {
       const res = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; Remote100kBot/1.0)',
+          'User-Agent': 'Mozilla/5.0 (compatible; SixFigureJobsBot/1.0)',
           Accept: 'application/json',
           Referer: 'https://justjoin.it/',
           'Accept-Language': 'en-US,en;q=0.9',

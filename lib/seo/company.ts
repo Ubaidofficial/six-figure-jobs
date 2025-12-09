@@ -1,10 +1,9 @@
 // lib/seo/company.ts
 import type { Metadata } from 'next'
 import type { Company } from '@prisma/client'
+import { SITE_NAME, getSiteUrl } from './site'
 
-const SITE_NAME = 'Remote100k'
-const ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://remote100k.com'
+const ORIGIN = getSiteUrl()
 
 export type CompanyMetaContext = {
   page: number

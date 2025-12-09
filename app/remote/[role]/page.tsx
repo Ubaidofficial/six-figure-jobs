@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { prisma } from '../../../lib/prisma'
 import {
   queryJobs,
@@ -9,11 +10,11 @@ import {
 } from '../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import JobList from '../../components/JobList'
+import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 
 export const revalidate = 300
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 const PAGE_SIZE = 20
 
@@ -34,6 +35,20 @@ function parsePage(sp: SearchParams): number {
   const raw = (sp.page ?? '1') as string
   const n = Number(raw || '1') || 1
   return Math.max(1, n)
+}
+
+function buildCanonicalPath(roleSlug: string, page: number) {
+  const base = `/remote/${roleSlug}`
+  return page > 1 ? `${base}?page=${page}` : base
+}
+
+function buildRequestedPath(roleSlug: string, sp: SearchParams) {
+  const base = `/remote/${roleSlug}`
+  const params = new URLSearchParams()
+  const page = parsePage(sp)
+  if (page > 1) params.set('page', String(page))
+  const query = params.toString()
+  return query ? `${base}?${query}` : base
 }
 
 function normalizeStringParam(
@@ -211,6 +226,11 @@ export async function generateMetadata({
   const roleSlug = p.role
   const roleName = prettyRole(roleSlug)
   const page = parsePage(sp)
+  const requestedPath = buildRequestedPath(roleSlug, sp)
+  const canonicalPath = buildCanonicalPath(roleSlug, page)
+  if (requestedPath !== canonicalPath) {
+    redirect(canonicalPath)
+  }
 
   const selectedCountry = normalizeStringParam(sp.country)
   const selectedRegion = normalizeStringParam(sp.remoteRegion)
@@ -230,12 +250,13 @@ export async function generateMetadata({
   })
 
   const totalJobs = result.total
+  const allowIndex = totalJobs >= 3
 
   const baseTitle = `Remote ${roleName} jobs paying $100k+`
   const title =
     totalJobs > 0
-      ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | Remote100k`
-      : `${baseTitle} | Remote100k`
+      ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
+      : `${baseTitle} | ${SITE_NAME}`
 
   const description = `Search remote ${roleName} jobs paying $100k+ across top tech and SaaS companies. Filter by country, remote region, and salary band.`
 
@@ -245,16 +266,19 @@ export async function generateMetadata({
     alternates: {
       canonical: `${SITE_URL}/remote/${roleSlug}`,
     },
+    robots: allowIndex
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
     openGraph: {
-      title: `${baseTitle} | Remote100k`,
+      title: `${baseTitle} | ${SITE_NAME}`,
       description,
       url: `${SITE_URL}/remote/${roleSlug}`,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${baseTitle} | Remote100k`,
+      title: `${baseTitle} | ${SITE_NAME}`,
       description,
     },
   }
@@ -303,6 +327,21 @@ export default async function RemoteRolePage({
       : 1
 
   const jsonLd = buildJobListJsonLd(roleSlug, jobs, page)
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems(roleName).map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  }
+
+  const speakableJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SpeakableSpecification',
+    cssSelector: ['main h1', '[data-speakable="summary"]'],
+  }
 
   const availableCountries = Array.from(
     new Set(
@@ -369,11 +408,25 @@ export default async function RemoteRolePage({
         <h1 className="text-2xl font-semibold text-slate-50">
           Remote {roleName} jobs paying $100k+
         </h1>
-        <p className="text-sm text-slate-300">
+        <p
+          className="text-sm text-slate-300"
+          data-speakable="summary"
+        >
           Find remote and flexible {roleName} roles paying at least
           $100k in local currency. Filter by country, remote region,
           and salary band.
         </p>
+        <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Salary-first: $100k+ compensation only, verified from ATS/boards.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Eligibility clarity: remote region filters (global, US-only, EMEA, APAC) and country tags.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            Fresh listings: stale roles expire automatically to avoid dead applies.
+          </li>
+        </ul>
       </header>
 
       {/* --------------------------------- Filters --------------------------------- */}
@@ -467,6 +520,34 @@ export default async function RemoteRolePage({
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="mb-6 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h2 className="text-sm font-semibold text-slate-50">
+          Explore related high-paying pages
+        </h2>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
+          <li>
+            <Link href={`/jobs/100k-plus/${roleSlug}`} className="hover:underline">
+              $100k+ {roleName} jobs →
+            </Link>
+          </li>
+          <li>
+            <Link href={`/jobs/200k-plus/${roleSlug}`} className="hover:underline">
+              $200k+ {roleName} jobs →
+            </Link>
+          </li>
+          <li>
+            <Link href={`/salary/${roleSlug}`} className="hover:underline">
+              {roleName} salary guide →
+            </Link>
+          </li>
+          <li>
+            <Link href={`/jobs/${roleSlug}/100k-plus`} className="hover:underline">
+              On-site & hybrid {roleName} jobs ($100k+) →
+            </Link>
+          </li>
+        </ul>
       </section>
 
       <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
@@ -576,6 +657,18 @@ export default async function RemoteRolePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(jsonLd),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(speakableJsonLd),
         }}
       />
     </main>

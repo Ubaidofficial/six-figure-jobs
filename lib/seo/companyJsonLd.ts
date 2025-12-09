@@ -1,9 +1,9 @@
 // lib/seo/companyJsonLd.ts
 import type { Company } from '@prisma/client'
 import type { JobWithCompany } from '../jobs/queryJobs'
+import { getSiteUrl } from './site'
 
-const ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://remote100k.com'
+const ORIGIN = getSiteUrl()
 
 export function buildCompanyJsonLd(
   company: Company,

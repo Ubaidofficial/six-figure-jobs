@@ -3,11 +3,11 @@
 import type { Metadata } from 'next'
 import type { Job, Company } from '@prisma/client'
 import { buildJobSlugHref } from '../jobs/jobSlug'
+import { getSiteUrl, SITE_NAME } from './site'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://remote100k.com'
+const SITE_URL = getSiteUrl()
 
 export function buildJobMetadata(job: JobWithCompany): Metadata {
   const companyName =
@@ -20,8 +20,8 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
       : buildLocation(job) || 'Location not specified'
 
   const title = salary
-    ? `${job.title} at ${companyName} — ${salary} | Remote100k`
-    : `${job.title} at ${companyName} | Remote100k`
+    ? `${job.title} at ${companyName} — ${salary} | ${SITE_NAME}`
+    : `${job.title} at ${companyName} | ${SITE_NAME}`
 
   const bits: string[] = []
 
@@ -69,11 +69,12 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
     alternates: {
       canonical: url,
     },
+    robots: job.isExpired ? { index: false, follow: true } : undefined,
     openGraph: {
       title,
       description,
       url,
-      siteName: 'Remote100k',
+      siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {

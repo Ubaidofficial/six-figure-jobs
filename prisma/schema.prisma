@@ -1,98 +1,67 @@
-// prisma/schema.prisma
-// UPDATED: Configured for Vercel Postgres (Neon)
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")      // Uses connection pooling
-  directUrl = env("POSTGRES_URL_NON_POOLING") // Uses direct connection
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Job {
-  id        String  @id
-  title       String
-  company     String
-  companyLogo String?
-
-  // Location / remote
-  locationRaw  String?
-  city         String?
-  citySlug     String?
-  countryCode  String?
-  remote       Boolean?
-  remoteRegion String?
-  remoteMode   String? // "remote" | "hybrid" | "onsite"
-
-  // Original scraped salary text
-  salaryRaw String?
-
-  // Full HTML job description
-  descriptionHtml String?
-
-  // Parsed salary (original values from source)
-  salaryMin      BigInt?
-  salaryMax      BigInt?
-  salaryCurrency String?
-  salaryPeriod   String?
-
-  // Normalized annual in LOCAL currency (not converted)
-  minAnnual BigInt?
-  maxAnnual BigInt?
-  currency  String? // "USD" | "EUR" | "GBP" | "AUD" | "CAD"
-
-  // Flag for high-salary jobs (meets local threshold)
-  isHighSalary    Boolean @default(false)
-  isHundredKLocal Boolean @default(false)
-
-  // Job meta
-  type     String?
-  source   String
-  applyUrl String?
-  url      String?
-  roleSlug String?
-
-  // Additional JSON meta
-  skillsJson       String?
-  requirementsJson String?
-  benefitsJson     String?
-
-  // ATS-specific
-  externalId String?
-  isExpired  Boolean   @default(false)
-  lastSeenAt DateTime?
-  postedAt   DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  // Relations
-  companyId    String?
-  companyRef   Company?       @relation(fields: [companyId], references: [id])
-  locationId   String?
-  locationRef  Location?      @relation(fields: [locationId], references: [id])
-  roleInference RoleInference?
-
-  // Deduplication fields
+  id                   String         @id
+  title                String
+  company              String
+  companyLogo          String?
+  locationRaw          String?
+  city                 String?
+  citySlug             String?
+  countryCode          String?
+  remote               Boolean?
+  remoteRegion         String?
+  remoteMode           String?
+  salaryRaw            String?
+  descriptionHtml      String?
+  salaryMin            BigInt?
+  salaryMax            BigInt?
+  salaryCurrency       String?
+  salaryPeriod         String?
+  minAnnual            BigInt?
+  maxAnnual            BigInt?
+  currency             String?
+  isHighSalary         Boolean        @default(false)
+  isHundredKLocal      Boolean        @default(false)
+  type                 String?
+  source               String
+  applyUrl             String?
+  url                  String?
+  roleSlug             String?
+  skillsJson           String?
+  requirementsJson     String?
+  benefitsJson         String?
+  externalId           String?
+  isExpired            Boolean        @default(false)
+  lastSeenAt           DateTime?
+  postedAt             DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  companyId            String?
+  locationId           String?
   dedupeKey            String?
-  sourcePriority       Int     @default(20)
-  isUnverifiedBoardJob Boolean @default(false)
+  sourcePriority       Int            @default(20)
+  isUnverifiedBoardJob Boolean        @default(false)
+  experienceLevel      String?        @default("mid")
+  employmentType       String?        @default("full-time")
+  workArrangement      String?
+  visaSponsorship      Boolean        @default(false)
+  techStack            String?
+  industry             String?
+  stateCode            String?
+  companyRef           Company?       @relation(fields: [companyId], references: [id])
+  locationRef          Location?      @relation(fields: [locationId], references: [id])
+  roleInference        RoleInference?
 
-  // NEW: SEO & filtering fields
-  experienceLevel String?  @default("mid")       // entry, mid, senior, lead, executive
-  employmentType  String?  @default("full-time") // full-time, contract, part-time
-  workArrangement String?  // remote, hybrid, onsite
-  visaSponsorship Boolean  @default(false)
-  techStack       String?  // JSON array: ["python", "react"]
-  industry        String?  // engineering, product, design, data
-  stateCode       String?  // ca, ny, tx
-
-  // Unique constraints
   @@unique([externalId, source], name: "externalId_source")
   @@unique([companyId, dedupeKey], name: "company_dedupeKey")
-
-  // Indexes
   @@index([source])
   @@index([roleSlug])
   @@index([countryCode])
@@ -111,52 +80,35 @@ model Job {
 }
 
 model Company {
-  id          String  @id @default(cuid())
-  name        String
-  slug        String  @unique
-  website     String?
-  logoUrl     String?
-  description String?
-
-  // NEW: Social / profiles
-  linkedinUrl String?   // ← added field
-
-  // Company meta
-  sizeBucket     String?
-  tagsJson       String?
-  fundingSummary String?
-  industry       String?
-
-  // ATS info
-  atsProvider String?
-  atsUrl      String?
-  atsSlug     String?
-
-  // Scraping status
-  lastScrapedAt DateTime?
-  scrapeStatus  String?
-  scrapeError   String?
-  jobCount      Int        @default(0)
-
-  // Career-site metrics
+  id                 String          @id @default(cuid())
+  name               String
+  slug               String          @unique
+  website            String?
+  logoUrl            String?
+  description        String?
+  linkedinUrl        String?
+  sizeBucket         String?
+  tagsJson           String?
+  fundingSummary     String?
+  industry           String?
+  atsProvider        String?
+  atsUrl             String?
+  atsSlug            String?
+  lastScrapedAt      DateTime?
+  scrapeStatus       String?
+  scrapeError        String?
+  jobCount           Int             @default(0)
   totalJobCount      Int?
   lastJobCountSyncAt DateTime?
-
-  // Location
-  countryCode  String?
-  headquarters String?
-
-  // NEW: Additional company fields
-  employeeCount Int?
-  fundingStage  String? // seed, series-a, series-b, public
-  foundedYear   Int?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  jobs    Job[]
-  sources CompanySource[]
+  countryCode        String?
+  headquarters       String?
+  employeeCount      Int?
+  fundingStage       String?
+  foundedYear        Int?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  sources            CompanySource[]
+  jobs               Job[]
 
   @@index([atsProvider])
   @@index([scrapeStatus])
@@ -166,24 +118,20 @@ model Company {
 }
 
 model CompanySource {
-  id        String  @id @default(cuid())
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  sourceType  String
-  url         String
-  atsProvider String?
-
+  id            String    @id @default(cuid())
+  companyId     String
+  sourceType    String
+  url           String
+  atsProvider   String?
   isActive      Boolean   @default(true)
   lastScrapedAt DateTime?
   lastJobCount  Int       @default(0)
   scrapeStatus  String?
   scrapeError   String?
-
-  priority Int @default(100)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  priority      Int       @default(100)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, url])
   @@index([atsProvider])
@@ -193,18 +141,16 @@ model CompanySource {
 }
 
 model JobSlice {
-  id          String @id @default(cuid())
-  slug        String @unique
+  id          String   @id @default(cuid())
+  slug        String   @unique
   type        String
   filtersJson String
-  jobCount    Int    @default(0)
-
+  jobCount    Int      @default(0)
   title       String?
   description String?
   h1          String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([type])
   @@index([jobCount])
@@ -219,53 +165,44 @@ model Location {
   countryCode  String?
   isRemote     Boolean? @default(false)
   remoteRegion String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  jobs Job[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  jobs         Job[]
 }
 
 model Skill {
-  id   String @id @default(cuid())
-  name String
-  slug String @unique
-
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 }
 
 model RoleInference {
-  id        String  @id @default(cuid())
-  jobId     String  @unique
+  id        String   @id @default(cuid())
+  jobId     String   @unique
   roleSlug  String?
   seniority String?
   tagsJson  String?
-
-  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
 
 model ScrapeRun {
-  id          String    @id @default(cuid())
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-
-  companiesTotal   Int @default(0)
-  companiesScraped Int @default(0)
-  companiesFailed  Int @default(0)
-
-  jobsFound   Int @default(0)
-  jobsNew     Int @default(0)
-  jobsUpdated Int @default(0)
-  jobsExpired Int @default(0)
-
-  status   String  @default("running")
-  errorLog String?
-
-  triggerType String?
+  id               String    @id @default(cuid())
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  companiesTotal   Int       @default(0)
+  companiesScraped Int       @default(0)
+  companiesFailed  Int       @default(0)
+  jobsFound        Int       @default(0)
+  jobsNew          Int       @default(0)
+  jobsUpdated      Int       @default(0)
+  jobsExpired      Int       @default(0)
+  status           String    @default("running")
+  errorLog         String?
+  triggerType      String?
 
   @@index([status])
   @@index([startedAt])
