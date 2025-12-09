@@ -8,7 +8,7 @@ echo "=========================================="
 cd /var/www/six-figure-jobs
 
 echo "📥 Pulling latest code..."
-git pull origin main
+git pull origin develop
 
 echo "📦 Installing dependencies..."
 npm install --production=false
