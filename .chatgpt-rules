@@ -1782,3 +1782,150 @@ sudo -u postgres psql -d sixfigjobs
 
 These rules are DEFINITIVE and COMPREHENSIVE. Follow them meticulously to ensure
 Six Figure Jobs becomes the #1 high-paying job board on the internet.
+
+## 🚀 DEPLOYMENT & STAGING WORKFLOW
+
+### Critical Rule: ALWAYS TEST ON STAGING FIRST
+**NEVER make changes directly to production.** All changes must go through staging first.
+
+### Server Infrastructure
+- **Production:** `/var/www/six-figure-jobs` → `6figjobs.com` (port 3000)
+- **Staging:** `/var/www/six-figure-jobs-staging` → `staging.6figjobs.com` (port 3001)
+- **Server:** root@77.42.22.103
+
+### Database Configuration
+Both staging and production use the **same database**:
+```
+DATABASE_URL="postgresql://sixfiguser:31456@localhost:5432/sixfigjobs"
+```
+
+**Important:** Both `.env` and `.env.local` must have identical DATABASE_URL values.
+`.env.local` takes precedence over `.env`.
+
+### Deployment Workflow
+
+#### Step 1: Development (Local Mac)
+```bash
+cd ~/Desktop/six-figure-jobs
+# Make changes
+git add -A
+git commit -m "Description"
+git push origin develop
+```
+
+#### Step 2: Deploy to Staging
+```bash
+ssh root@77.42.22.103
+cd /var/www/six-figure-jobs-staging
+
+# Pull latest
+git pull origin develop
+
+# Install dependencies if package.json changed
+npm install
+
+# Build
+npm run build
+
+# Restart staging
+systemctl restart sixfigjobs-staging
+systemctl status sixfigjobs-staging
+
+# Test at staging.6figjobs.com
+```
+
+#### Step 3: Test Staging Thoroughly
+- Test all new features on `staging.6figjobs.com`
+- Verify database changes work
+- Check for any errors in logs: `journalctl -u sixfigjobs-staging -f`
+- **Only proceed if staging works perfectly**
+
+#### Step 4: Deploy to Production
+```bash
+cd /var/www/six-figure-jobs
+
+# Pull latest (same code that's on staging)
+git pull origin develop
+
+# Install dependencies if package.json changed
+npm install
+
+# Build
+npm run build
+
+# Restart production
+systemctl restart sixfigjobs-prod
+systemctl status sixfigjobs-prod
+
+# Monitor logs
+journalctl -u sixfigjobs-prod -f
+```
+
+### Database Migrations
+
+**CRITICAL:** Run migrations on production database (staging will inherit them automatically).
+```bash
+cd /var/www/six-figure-jobs
+
+# Run migration
+npx prisma migrate deploy
+
+# Or for dev migrations
+npx prisma migrate dev --name migration_name
+
+# Generate Prisma Client
+npx prisma generate
+
+# Update staging
+cd /var/www/six-figure-jobs-staging
+npx prisma generate
+```
+
+### Common Issues & Solutions
+
+#### Issue: Staging shows "Table does not exist"
+**Solution:** Check `.env.local` and `.env` both point to production database:
+```bash
+cat .env .env.local | grep DATABASE_URL
+# Both should show: postgresql://sixfiguser:31456@localhost:5432/sixfigjobs
+```
+
+#### Issue: Build fails with TypeScript errors
+**Solution:** Fix errors on local Mac first, test compilation locally before pushing
+
+#### Issue: Service won't restart
+**Solution:** 
+```bash
+systemctl reset-failed sixfigjobs-staging
+systemctl start sixfigjobs-staging
+```
+
+### Never Do These:
+❌ Skip staging and deploy directly to production
+❌ Make database changes without migrations
+❌ Edit production files directly on server
+❌ Use different databases for staging/production (causes schema mismatches)
+❌ Forget to run `npm run build` after pulling code
+
+### Emergency Rollback
+If production breaks:
+```bash
+cd /var/www/six-figure-jobs
+git log --oneline -5  # Find last working commit
+git checkout <commit-hash>
+npm run build
+systemctl restart sixfigjobs-prod
+```
+
+### Monitoring
+```bash
+# Check production logs
+journalctl -u sixfigjobs-prod -f
+
+# Check staging logs  
+journalctl -u sixfigjobs-staging -f
+
+# Check if site is up
+curl -I http://localhost:3000  # production
+curl -I http://localhost:3001  # staging
+```
