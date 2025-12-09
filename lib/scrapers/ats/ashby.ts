@@ -1,3 +1,5 @@
+// lib/scrapers/ats/ashby.ts
+
 import type { AtsJob } from './types'
 import * as cheerio from 'cheerio'
 
@@ -62,8 +64,10 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
           const salaryCurrency = salary.currency || salary.value?.currency || null
           const salaryInterval = salary.unitText || salary.value?.unitText || null
 
-          // CRITICAL FIX: Ashby ALWAYS provides salary in cents
-          // Always divide by 100 to convert cents to dollars
+          // ═══════════════════════════════════════════════════════════════
+          // CRITICAL FIX: Ashby ALWAYS provides salary in CENTS
+          // ALWAYS divide by 100 to convert cents to dollars
+          // ═══════════════════════════════════════════════════════════════
           if (salaryMin != null) {
             salaryMin = Math.round(salaryMin / 100)
           }
@@ -91,6 +95,7 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
             salaryInterval,
 
             employmentType: p.employmentType ?? null,
+            descriptionHtml: p.description ?? null,
 
             roleSlug: null,
             baseRoleSlug: null,
@@ -168,6 +173,7 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
       salaryInterval: salaryMin || salaryMax ? 'YEAR' : null,
 
       employmentType: null,
+      descriptionHtml: null,
 
       roleSlug: null,
       baseRoleSlug: null,

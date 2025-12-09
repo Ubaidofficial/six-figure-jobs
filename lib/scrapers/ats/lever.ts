@@ -93,6 +93,8 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
       salaryInterval,
 
       employmentType: commitment,
+      descriptionHtml: item.description ?? item.descriptionPlain ?? null,
+      
       roleSlug: null,
       baseRoleSlug: null,
       seniority: null,

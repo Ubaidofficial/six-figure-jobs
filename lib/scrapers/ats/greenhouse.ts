@@ -189,7 +189,7 @@ export async function scrapeGreenhouse(atsUrl: string): Promise<AtsJob[]> {
         salaryInterval: null,
 
         employmentType: null,
-        descriptionHtml: job.content || null,  // ADDED: Extract description from Greenhouse content field
+        descriptionHtml: job.content || null,  // EXTRACT FULL DESCRIPTION
         roleSlug: null,
         baseRoleSlug: null,
         seniority: 'unknown',

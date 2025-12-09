@@ -18,6 +18,8 @@
     "jobs:audit:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=audit --dry-run",
     "jobs:repair:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=repair",
     "jobs:annotate:ai": "tsx scripts/aiAnnotateJobs.ts",
+    "jobs:backfill:salary": "tsx scripts/backfill-high-salary-local.ts",
+    
     "scraper:smoke": "tsx scripts/smokeScrapers.ts",
     "scraper:ats:report": "tsx scripts/reportAtsCoverage.ts"
   },
