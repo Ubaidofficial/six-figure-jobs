@@ -30,6 +30,7 @@ model Job {
   currency             String?
   isHighSalary         Boolean        @default(false)
   isHundredKLocal      Boolean        @default(false)
+  isHighSalaryLocal    Boolean        @default(false)  // NEW: PPP-adjusted high salary (1.5x+ local threshold)
   type                 String?
   source               String
   applyUrl             String?
@@ -67,6 +68,7 @@ model Job {
   @@index([countryCode])
   @@index([isHighSalary])
   @@index([isHundredKLocal])
+  @@index([isHighSalaryLocal])  // NEW: Index for filtering
   @@index([companyId])
   @@index([externalId])
   @@index([remoteMode])
