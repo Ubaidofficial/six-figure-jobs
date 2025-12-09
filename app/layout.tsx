@@ -102,25 +102,25 @@ export default function RootLayout({
 
               <div className="space-y-2">
                 <p className="text-sm font-semibold text-slate-100">
-                  Salary guides
+                  Remote $100k+ jobs
                 </p>
-                <Link href="/salary/software-engineer" className="block hover:text-slate-100">
-                  Software Engineer salary
+                <Link href="/remote/software-engineer" className="block hover:text-slate-100">
+                  Remote Software Engineer
                 </Link>
-                <Link href="/salary/senior-software-engineer" className="block hover:text-slate-100">
-                  Senior Engineer salary
+                <Link href="/remote/senior-software-engineer" className="block hover:text-slate-100">
+                  Remote Senior Engineer
                 </Link>
-                <Link href="/salary/lead-software-engineer" className="block hover:text-slate-100">
-                  Lead Engineer salary
+                <Link href="/remote/product-manager" className="block hover:text-slate-100">
+                  Remote Product Manager
                 </Link>
-                <Link href="/salary/product-manager" className="block hover:text-slate-100">
-                  Product Manager salary
+                <Link href="/remote/data-engineer" className="block hover:text-slate-100">
+                  Remote Data Engineer
                 </Link>
-                <Link href="/salary/data-scientist" className="block hover:text-slate-100">
-                  Data Scientist salary
+                <Link href="/remote/devops" className="block hover:text-slate-100">
+                  Remote DevOps / SRE
                 </Link>
-                <Link href="/salary/devops" className="block hover:text-slate-100">
-                  DevOps / SRE salary
+                <Link href="/remote" className="block hover:text-slate-100">
+                  View all remote jobs →
                 </Link>
               </div>
 

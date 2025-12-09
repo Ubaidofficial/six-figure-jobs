@@ -1,6 +1,7 @@
 // lib/jobs/nlToFilters.ts
 
 import type { JobQueryInput } from './queryJobs'
+import { findMatchingRoles } from '../roles/synonyms'
 
 const COUNTRY_KEYWORDS: Record<string, string[]> = {
   us: ['us', 'usa', 'united states', 'america'],
@@ -14,19 +15,6 @@ const COUNTRY_KEYWORDS: Record<string, string[]> = {
   nz: ['new zealand', 'nz'],
 }
 
-const ROLE_KEYWORDS: Record<string, string[]> = {
-  'software-engineer': ['software engineer', 'swe', 'developer', 'dev', 'backend', 'front end', 'frontend', 'full stack'],
-  'ai-engineer': ['ai engineer', 'gen ai', 'generative ai', 'llm'],
-  'ml-engineer': ['ml engineer', 'machine learning'],
-  'data-engineer': ['data engineer', 'data platform'],
-  'data-scientist': ['data scientist', 'ml scientist'],
-  'product-manager': ['product manager', 'pm'],
-  'designer': ['designer', 'product designer', 'ux', 'ui', 'design lead'],
-  'devops': ['devops', 'site reliability', 'sre', 'platform engineer', 'infra'],
-  'security-engineer': ['security engineer', 'appsec', 'security'],
-  'sales': ['sales', 'account executive', 'ae', 'sales engineer'],
-  'marketing': ['marketing', 'growth'],
-}
 
 const SENIORITY_KEYWORDS: Record<string, string[]> = {
   entry: ['entry', 'junior', 'jr', 'associate'],
@@ -77,15 +65,10 @@ export function parseSearchQuery(
     }
   }
 
-  // Roles
-  const roleSlugs: string[] = []
-  for (const [slug, keywords] of Object.entries(ROLE_KEYWORDS)) {
-    if (keywords.some((kw) => text.includes(kw))) {
-      roleSlugs.push(slug)
-    }
-  }
-  if (roleSlugs.length) {
-    filters.roleSlugs = roleSlugs
+  // Roles - Use our comprehensive role synonyms system
+  const matchedRoles = findMatchingRoles(text)
+  if (matchedRoles.length > 0) {
+    filters.roleSlugs = matchedRoles
   }
 
   // Seniority
