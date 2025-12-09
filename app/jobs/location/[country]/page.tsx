@@ -17,7 +17,7 @@ const PAGE_SIZE = 40
 
 const LOCATION_MAP: Record<
   string,
-  { label: string; countryCode?: string; remoteOnly?: boolean }
+  { label: string; countryCode?: string; remoteOnly?: boolean; slug?: string }
 > = {
   remote: { label: 'Remote only', remoteOnly: true, slug: 'remote' as const },
 }

@@ -22,9 +22,10 @@ function buildHundredKWhereBase() {
 
 export async function GET(
   _req: Request,
-  ctx: { params: { page: string } }
+  ctx: { params: Promise<{ page: string }> }
 ) {
-  const pageNum = Math.max(1, Number(ctx.params.page) || 1)
+  const params = await ctx.params
+  const pageNum = Math.max(1, Number(params.page) || 1)
   const where = buildHundredKWhereBase()
 
   const jobs = await prisma.job.findMany({
@@ -33,36 +34,30 @@ export async function GET(
       id: true,
       title: true,
       company: true,
-      companyRef: { select: { slug: true } },
-      postedAt: true,
-      lastSeenAt: true,
+      updatedAt: true,
     },
-    orderBy: [
-      { postedAt: 'desc' },
-      { createdAt: 'desc' },
-    ],
+    orderBy: { updatedAt: 'desc' },
     skip: (pageNum - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
   })
 
-  const urls = jobs
-    .map((job: any) => {
-      const href = buildJobSlugHref(job as JobWithCompany)
-      const lastmodSource = job.lastSeenAt || job.postedAt
-      const lastmod = (lastmodSource || new Date()).toISOString()
-      return `<url><loc>${SITE_URL}${href}</loc><lastmod>${lastmod}</lastmod></url>`
-    })
-    .join('\n')
+  const urlSet = jobs.map((job) => {
+    const href = buildJobSlugHref(job as unknown as JobWithCompany)
+    return {
+      url: `${SITE_URL}${href}`,
+      lastModified: job.updatedAt?.toISOString() ?? new Date().toISOString(),
+    }
+  })
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
+${urlSet.map((u) => `  <url>
+    <loc>${u.url}</loc>
+    <lastmod>${u.lastModified}</lastmod>
+  </url>`).join('\n')}
 </urlset>`
 
   return new Response(xml, {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-    },
+    headers: { 'Content-Type': 'application/xml' },
   })
 }

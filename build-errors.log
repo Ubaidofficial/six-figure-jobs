@@ -1,0 +1,202 @@
+
+> job-board-scraper@1.0.0 build
+> npx prisma generate && next build
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v5.16.1) to ./node_modules/@prisma/client in 380ms
+
+Start using Prisma Client in Node.js (See: https://pris.ly/d/client)
+```
+import { PrismaClient } from '@prisma/client'
+const prisma = new PrismaClient()
+```
+or start using Prisma Client at the edge (See: https://pris.ly/d/accelerate)
+```
+import { PrismaClient } from '@prisma/client/edge'
+const prisma = new PrismaClient()
+```
+
+See other ways of importing Prisma Client: http://pris.ly/d/importing-client
+
+┌─────────────────────────────────────────────────────────────┐
+│  Deploying your app to serverless or edge functions?        │
+│  Try Prisma Accelerate for connection pooling and caching.  │
+│  https://pris.ly/cli/--accelerate                           │
+└─────────────────────────────────────────────────────────────┘
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.4 (Turbopack)
+   - Environments: .env.local, .env
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+> Build error occurred
+Error: Turbopack build failed with 9 errors:
+./app/job/[slug]/page.tsx:23:8
+Ecmascript file had an error
+[0m [90m 21 |[39m [36mimport[39m { [33mSITE_NAME[39m[33m,[39m getSiteUrl } [36mfrom[39m [32m'../../../lib/seo/site'[39m
+ [90m 22 |[39m [36mimport[39m { countryCodeToSlug } [36mfrom[39m [32m'../../../lib/seo/countrySlug'[39m
+[31m[1m>[22m[39m[90m 23 |[39m [36mimport[39m [33mLink[39m [36mfrom[39m [32m'next/link'[39m
+ [90m    |[39m        [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 24 |[39m
+ [90m 25 |[39m [36mexport[39m [36mconst[39m revalidate [33m=[39m [35m3600[39m
+ [90m 26 |[39m[0m
+
+the name `Link` is defined multiple times
+
+
+./app/remote/[role]/country/[country]/page.tsx:249:9
+Ecmascript file had an error
+[0m [90m 247 |[39m   [36mconst[39m totalJobs [33m=[39m result[33m.[39mtotal
+ [90m 248 |[39m   [36mconst[39m titleBase [33m=[39m [32m`Remote ${roleName} jobs in ${countryCode} paying $100k+`[39m
+[31m[1m>[22m[39m[90m 249 |[39m   [36mconst[39m canonicalPath [33m=[39m buildCanonicalPath(roleSlug[33m,[39m countryParam[33m,[39m sp)
+ [90m     |[39m         [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 250 |[39m   [36mconst[39m canonicalUrl [33m=[39m [32m`${SITE_URL}${canonicalPath}`[39m
+ [90m 251 |[39m
+ [90m 252 |[39m   [36mreturn[39m {[0m
+
+the name `canonicalPath` is defined multiple times
+
+
+./lib/slices/loadSlice.ts:8:10
+Ecmascript file had an error
+[0m [90m  6 |[39m [36mimport[39m { parseJobsSlug } [36mfrom[39m [32m'../jobs/searchSlug'[39m
+ [90m  7 |[39m [36mimport[39m { countryCodeToSlug[33m,[39m countrySlugToCode } [36mfrom[39m [32m'../seo/countrySlug'[39m
+[31m[1m>[22m[39m[90m  8 |[39m [36mimport[39m { countrySlugToCode } [36mfrom[39m [32m'../seo/countrySlug'[39m
+ [90m    |[39m          [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m  9 |[39m
+ [90m 10 |[39m [90m/**[39m
+ [90m 11 |[39m [90m * Load a JobSlice for /jobs/[...slug] URLs.[39m[0m
+
+the name `countrySlugToCode` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./lib/slices/loadSlice.ts
+    ./app/jobs/[...slug]/page.tsx
+
+
+./app/jobs/canada/page.tsx:2:1
+Module not found: Can't resolve '../../lib/seo/countrySlug'
+[0m [90m 1 |[39m [36mimport[39m { redirect } [36mfrom[39m [32m'next/navigation'[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { countryCodeToSlug } [36mfrom[39m [32m'../../lib/seo/countrySlug'[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 3 |[39m
+ [90m 4 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mCanadaRedirect[39m() {
+ [90m 5 |[39m   [36mconst[39m slug [33m=[39m countryCodeToSlug([32m'CA'[39m)[0m
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./app/jobs/germany/page.tsx:2:1
+Module not found: Can't resolve '../../lib/seo/countrySlug'
+[0m [90m 1 |[39m [36mimport[39m { redirect } [36mfrom[39m [32m'next/navigation'[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { countryCodeToSlug } [36mfrom[39m [32m'../../lib/seo/countrySlug'[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 3 |[39m
+ [90m 4 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mGermanyRedirect[39m() {
+ [90m 5 |[39m   [36mconst[39m slug [33m=[39m countryCodeToSlug([32m'DE'[39m)[0m
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./app/jobs/uk/page.tsx:2:1
+Module not found: Can't resolve '../../lib/seo/countrySlug'
+[0m [90m 1 |[39m [36mimport[39m { redirect } [36mfrom[39m [32m'next/navigation'[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { countryCodeToSlug } [36mfrom[39m [32m'../../lib/seo/countrySlug'[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 3 |[39m
+ [90m 4 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mUKRedirect[39m() {
+ [90m 5 |[39m   [36mconst[39m slug [33m=[39m countryCodeToSlug([32m'GB'[39m)[0m
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./app/jobs/usa/page.tsx:2:1
+Module not found: Can't resolve '../../lib/seo/countrySlug'
+[0m [90m 1 |[39m [36mimport[39m { redirect } [36mfrom[39m [32m'next/navigation'[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { countryCodeToSlug } [36mfrom[39m [32m'../../lib/seo/countrySlug'[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 3 |[39m
+ [90m 4 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mUSARedirect[39m() {
+ [90m 5 |[39m   [36mconst[39m slug [33m=[39m countryCodeToSlug([32m'US'[39m)[0m
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./app/components/RoleTypeahead.tsx:5:1
+Export searchRolesWithSynonyms doesn't exist in target module
+[0m [90m 3 |[39m [36mimport[39m { useMemo[33m,[39m useState[33m,[39m useEffect[33m,[39m useRef } [36mfrom[39m [32m'react'[39m
+ [90m 4 |[39m [36mimport[39m type { [33mSearchRoleOption[39m } [36mfrom[39m [32m'../../lib/roles/searchRoles'[39m
+[31m[1m>[22m[39m[90m 5 |[39m [36mimport[39m { searchRolesWithSynonyms } [36mfrom[39m [32m'../../lib/roles/searchRoles'[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 6 |[39m
+ [90m 7 |[39m type [33mProps[39m [33m=[39m {
+ [90m 8 |[39m   options[33m:[39m [33mSearchRoleOption[39m[][0m
+
+The export searchRolesWithSynonyms was not found in module [project]/lib/roles/searchRoles.ts [app-client] (ecmascript).
+Did you mean to import SEARCH_ROLE_OPTIONS?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Server Component:
+    ./app/components/RoleTypeahead.tsx
+    ./app/page.tsx
+
+  App Route:
+    ./app/components/RoleTypeahead.tsx
+    ./app/page.tsx
+    ./app/sitemap-browse.xml/route.ts
+
+
+./app/components/RoleTypeahead.tsx:5:1
+Export searchRolesWithSynonyms doesn't exist in target module
+[0m [90m 3 |[39m [36mimport[39m { useMemo[33m,[39m useState[33m,[39m useEffect[33m,[39m useRef } [36mfrom[39m [32m'react'[39m
+ [90m 4 |[39m [36mimport[39m type { [33mSearchRoleOption[39m } [36mfrom[39m [32m'../../lib/roles/searchRoles'[39m
+[31m[1m>[22m[39m[90m 5 |[39m [36mimport[39m { searchRolesWithSynonyms } [36mfrom[39m [32m'../../lib/roles/searchRoles'[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 6 |[39m
+ [90m 7 |[39m type [33mProps[39m [33m=[39m {
+ [90m 8 |[39m   options[33m:[39m [33mSearchRoleOption[39m[][0m
+
+The export searchRolesWithSynonyms was not found in module [project]/lib/roles/searchRoles.ts [app-ssr] (ecmascript).
+Did you mean to import SEARCH_ROLE_OPTIONS?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Server Component:
+    ./app/components/RoleTypeahead.tsx
+    ./app/page.tsx
+
+  App Route:
+    ./app/components/RoleTypeahead.tsx
+    ./app/page.tsx
+    ./app/sitemap-browse.xml/route.ts
+
+
+    at <unknown> (./app/job/[slug]/page.tsx:23:8)
+    at <unknown> (./app/remote/[role]/country/[country]/page.tsx:249:9)
+    at <unknown> (./lib/slices/loadSlice.ts:8:10)
+    at <unknown> (./app/jobs/canada/page.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./app/jobs/germany/page.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./app/jobs/uk/page.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./app/jobs/usa/page.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./app/components/RoleTypeahead.tsx:5:1)
+    at <unknown> (./app/components/RoleTypeahead.tsx:5:1)

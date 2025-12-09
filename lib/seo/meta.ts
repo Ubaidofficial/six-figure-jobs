@@ -162,7 +162,7 @@ export function buildSliceMetadata(
       ...(next ? { 'link:next': next } : {}),
     },
     robots: allowIndex
-      ? { index: true, follow: true, maxSnippet: -1, maxImagePreview: 'large' }
+      ? { index: true, follow: true, 'max-snippet': -1, 'max-image-preview': 'large' }
       : { index: false, follow: true },
     openGraph: {
       title,

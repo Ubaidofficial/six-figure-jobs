@@ -1,6 +1,7 @@
 // app/remote/[role]/head.tsx
 // Canonical + prev/next for remote role slices.
 
+import type { ReactElement } from 'react'
 import { getSiteUrl } from '../../../lib/seo/site'
 import { queryJobs } from '../../../lib/jobs/queryJobs'
 
@@ -78,7 +79,7 @@ export default async function Head({
   const canonicalPath = buildCanonicalPath(p.role, page, sp)
   const canonicalHref = `${SITE_URL}${canonicalPath}`
 
-  const links: JSX.Element[] = [
+  const links: ReactElement[] = [
     <link key="canonical" rel="canonical" href={canonicalHref} />,
   ]
 

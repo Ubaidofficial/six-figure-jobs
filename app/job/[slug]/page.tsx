@@ -2,7 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { prisma } from '../../../lib/prisma'
 import {
   parseJobSlugParam,
@@ -19,8 +19,7 @@ import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
-import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
-import Link from 'next/link'
+import { countryCodeToSlug, countryCodeToName } from '../../../lib/seo/countrySlug'
 
 export const revalidate = 3600
 
@@ -100,7 +99,7 @@ export default async function JobPage({
   const typedJob = job as JobWithCompany
   const canonicalSlug = buildJobSlug(typedJob)
   if (slug !== canonicalSlug) {
-    redirect(`/job/${canonicalSlug}`)
+    redirect("/job/${canonicalSlug}")
   }
   const company = typedJob.companyRef
 

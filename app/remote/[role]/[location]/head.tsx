@@ -1,6 +1,7 @@
 // app/remote/[role]/[city]/head.tsx
 // Canonical + prev/next for remote city role slices.
 
+import type { ReactElement } from 'react'
 import { prisma } from '../../../../lib/prisma'
 import { getSiteUrl } from '../../../../lib/seo/site'
 
@@ -71,7 +72,7 @@ export default async function Head({
         { minAnnual: { gte: BigInt(minAnnual) } },
         { isHundredKLocal: true },
       ],
-      OR: [{ remote: true }, { remoteMode: 'remote' }],
+      AND: [{ OR: [{ remote: true }, { remoteMode: 'remote' }] }],
     },
   })
 
@@ -81,7 +82,7 @@ export default async function Head({
   const canonicalPath = buildCanonicalPath(role, city, sp)
   const canonicalHref = `${SITE_URL}${canonicalPath}`
 
-  const links: JSX.Element[] = [
+  const links: ReactElement[] = [
     <link key="canonical" rel="canonical" href={canonicalHref} />,
   ]
 

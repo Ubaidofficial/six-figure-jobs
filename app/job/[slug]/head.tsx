@@ -2,6 +2,7 @@
 // Explicit canonical link and noindex on expired jobs.
 
 import { prisma } from '../../../lib/prisma'
+import type { ReactElement } from 'react'
 import { parseJobSlugParam, buildJobSlug } from '../../../lib/jobs/jobSlug'
 import { getSiteUrl } from '../../../lib/seo/site'
 
@@ -36,7 +37,7 @@ export default async function Head({
   const canonicalSlug = buildJobSlug(job)
   const canonicalHref = `${SITE_URL}/job/${canonicalSlug}`
 
-  const links: JSX.Element[] = [
+  const links: ReactElement[] = [
     <link key="canonical" rel="canonical" href={canonicalHref} />,
   ]
 

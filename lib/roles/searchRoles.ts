@@ -1,10 +1,12 @@
 // lib/roles/searchRoles.ts
 // Broad role/type list for search dropdowns (mirrors examples in the provided UI screenshots)
-
+import { findMatchingRoles, getRoleTitleFromSlug } from './synonyms'
 export type SearchRoleOption = {
   slug: string
   label: string
   emoji: string
+  category?: string
+  salaryRange?: string
 }
 
 export const SEARCH_ROLE_OPTIONS: SearchRoleOption[] = [
@@ -239,3 +241,43 @@ export const SEARCH_ROLE_OPTIONS: SearchRoleOption[] = [
   { slug: 'ux-researcher', label: 'UX Researcher', emoji: '🧪' },
   { slug: 'web3', label: 'Web3', emoji: '🌐' },
 ]
+
+/**
+ * Search roles with synonym matching
+ * Uses the ROLE_SYNONYMS from synonyms.ts for intelligent matching
+ */
+export function searchRolesWithSynonyms(
+  query: string,
+  options: SearchRoleOption[]
+): Array<SearchRoleOption & { matchedSynonym?: string }> {
+  const q = query.toLowerCase().trim()
+  
+  if (!q) return []
+  
+  // First, try exact slug match
+  const exactMatch = options.filter(opt => 
+    opt.slug.includes(q) || opt.label.toLowerCase().includes(q)
+  )
+  
+  // Then try synonym matching
+  const matchingSlugs = findMatchingRoles(q)
+  const synonymMatches = options
+    .filter(opt => matchingSlugs.includes(opt.slug))
+    .map(opt => ({
+      ...opt,
+      matchedSynonym: q
+    }))
+  
+  // Combine and deduplicate
+  const seen = new Set<string>()
+  const results: Array<SearchRoleOption & { matchedSynonym?: string }> = []
+  
+  for (const item of [...exactMatch, ...synonymMatches]) {
+    if (!seen.has(item.slug)) {
+      seen.add(item.slug)
+      results.push(item)
+    }
+  }
+  
+  return results.slice(0, 20)
+}

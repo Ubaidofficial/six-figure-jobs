@@ -39,3 +39,29 @@ export function countrySlugToCode(slug: string): string {
   const lower = slug.toLowerCase()
   return SLUG_TO_CODE[lower] ?? slug.toUpperCase()
 }
+
+const CODE_TO_NAME: Record<string, string> = {
+  US: 'United States',
+  CA: 'Canada',
+  GB: 'United Kingdom',
+  IE: 'Ireland',
+  DE: 'Germany',
+  FR: 'France',
+  ES: 'Spain',
+  NL: 'Netherlands',
+  SE: 'Sweden',
+  NO: 'Norway',
+  DK: 'Denmark',
+  BE: 'Belgium',
+  AT: 'Austria',
+  FI: 'Finland',
+  CH: 'Switzerland',
+  SG: 'Singapore',
+  AU: 'Australia',
+  NZ: 'New Zealand',
+}
+
+export function countryCodeToName(code: string): string {
+  const upper = code.toUpperCase()
+  return CODE_TO_NAME[upper] ?? code
+}

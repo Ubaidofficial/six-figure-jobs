@@ -5,7 +5,6 @@ import { JobSlice, parseSliceFilters } from './types'
 import type { JobSlice as JobSliceRow } from '@prisma/client'
 import { parseJobsSlug } from '../jobs/searchSlug'
 import { countryCodeToSlug, countrySlugToCode } from '../seo/countrySlug'
-import { countrySlugToCode } from '../seo/countrySlug'
 
 /**
  * Load a JobSlice for /jobs/[...slug] URLs.

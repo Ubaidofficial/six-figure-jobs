@@ -1,6 +1,7 @@
 // app/salary/[role]/head.tsx
 // Emit canonical + prev/next for salary role guides.
 
+import type { ReactElement } from 'react'
 import type { PageProps } from './page'
 import { buildSliceCanonicalUrl } from '../../../lib/seo/canonical'
 import { prisma } from '../../../lib/prisma'
@@ -53,7 +54,7 @@ export default async function Head({
     isHundredKLocal: true,
   } as any
 
-  const links: JSX.Element[] = [
+  const links: ReactElement[] = [
     <link
       key="canonical"
       rel="canonical"

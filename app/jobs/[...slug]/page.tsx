@@ -18,7 +18,7 @@ import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
 
 export const revalidate = 3600
 
-type PageSearchParams = {
+export type PageSearchParams = {
   page?: string | string[]
   [key: string]: string | string[] | undefined
 }

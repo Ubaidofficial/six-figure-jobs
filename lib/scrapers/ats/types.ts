@@ -5,6 +5,13 @@ export type AtsProvider =
   | 'lever'
   | 'ashby'
   | 'workday'
+  | 'bamboohr'
+  | 'smartrecruiters'
+  | 'recruitee'
+  | 'teamtailor'
+  | 'workable'
+  | 'workable'
+  | 'breezy'
 
 export interface AtsJob {
   externalId: string
@@ -19,7 +26,8 @@ export interface AtsJob {
   salaryInterval?: string | null
 
   employmentType?: string | null
-  descriptionHtml?: string | null  // ADDED: for ATS scrapers to extract descriptions
+  descriptionHtml?: string | null
+
   roleSlug?: string | null
   baseRoleSlug?: string | null
   seniority?: string | null
@@ -31,5 +39,3 @@ export interface AtsJob {
 
   raw?: any
 }
-
-export type AtsScraperFn = (atsUrl: string) => Promise<AtsJob[]>

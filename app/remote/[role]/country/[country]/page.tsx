@@ -246,7 +246,6 @@ export async function generateMetadata({
 
   const totalJobs = result.total
   const titleBase = `Remote ${roleName} jobs in ${countryCode} paying $100k+`
-  const canonicalPath = buildCanonicalPath(roleSlug, countryParam, sp)
   const canonicalUrl = `${SITE_URL}${canonicalPath}`
 
   return {

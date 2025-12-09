@@ -107,7 +107,7 @@ export async function generateMetadata({
   const bandSlug = typeof sp.band === 'string' ? sp.band : undefined
   const minAnnual =
     bandSlug && BAND_MAP[bandSlug] ? BAND_MAP[bandSlug] : 100_000
-  const bandLabel =
+  const salaryBand =
     minAnnual >= 400_000
       ? '$400k+'
       : minAnnual >= 300_000
@@ -135,7 +135,7 @@ export async function generateMetadata({
   })
 
   let description =
-    `Explore ${roleName} salary data from ${bandLabel} tech jobs. ` +
+    `Explore ${roleName} salary data from ${salaryBand} tech jobs. ` +
     `See current ranges based on live ATS-powered job listings.`
 
   if (raw.length > 0) {
@@ -150,7 +150,7 @@ export async function generateMetadata({
       const max = values[values.length - 1]
       const mid = values[Math.floor(values.length / 2)]
       description =
-        `${roleName} salary guide using live ${bandLabel} jobs. ` +
+        `${roleName} salary guide using live ${salaryBand} jobs. ` +
         `Typical base ranges from about ${formatMoney(
           min,
         )} to ${formatMoney(max)} / year, ` +
@@ -161,7 +161,7 @@ export async function generateMetadata({
   }
 
   const allowIndex = raw.length >= 3
-  const title = `${roleName} salary guide (${bandLabel}) | Six Figure Jobs`
+  const title = `${roleName} salary guide (${salaryBand}) | Six Figure Jobs`
   const canonical = `${SITE_URL}/salary/${roleSlug}${bandSlug ? `?band=${bandSlug}` : ''}`
 
   return {
@@ -190,12 +190,12 @@ export async function generateMetadata({
 /* Page                                                                       */
 /* -------------------------------------------------------------------------- */
 
-type PageProps = {
+export type PageProps = {
   params: Promise<{ role: string }>
   searchParams?: SearchParams | Promise<SearchParams>
 }
 
-function bandLabel(minAnnual: number): string {
+function getBandLabel(minAnnual: number): string {
   if (minAnnual >= 400_000) return '$400k+'
   if (minAnnual >= 300_000) return '$300k+'
   if (minAnnual >= 200_000) return '$200k+'
@@ -444,7 +444,7 @@ export default async function SalaryRolePage(props: PageProps) {
         </p>
         <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
           <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            Salary-first: {bandLabel(minAnnual)} compensation sourced from ATS feeds.
+            Salary-first: {getBandLabel(minAnnual)} compensation sourced from ATS feeds.
           </li>
           <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
             Remote eligibility noted; local currency kept where provided for transparency.
@@ -459,7 +459,7 @@ export default async function SalaryRolePage(props: PageProps) {
               band === 100_000
                 ? basePath
                 : `${basePath}?band=${band / 1000}k-plus`
-            const label = bandLabel(band)
+            const label = getBandLabel(band)
             return (
               <Link
                 key={band}
@@ -478,7 +478,7 @@ export default async function SalaryRolePage(props: PageProps) {
             href={`/jobs/${minAnnual / 1000}k-plus/${roleSlug}`}
             className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-blue-300 hover:border-slate-600"
           >
-            Browse {bandLabel(minAnnual)} {roleName} jobs →
+            Browse {getBandLabel(minAnnual)} {roleName} jobs →
           </Link>
         </div>
 
@@ -568,7 +568,7 @@ export default async function SalaryRolePage(props: PageProps) {
               href={`/jobs/${minAnnual / 1000}k-plus/${roleSlug}`}
               className="hover:underline"
             >
-              {bandLabel(minAnnual)} {roleName} jobs →
+              {getBandLabel(minAnnual)} {roleName} jobs →
             </Link>
           </li>
           <li>
@@ -593,7 +593,7 @@ export default async function SalaryRolePage(props: PageProps) {
                 href={`/jobs/${minAnnual / 1000}k-plus/${roleSlug}/${countryCodeToSlug(cc)}`}
                 className="hover:underline"
               >
-                {bandLabel(minAnnual)} {roleName} jobs in {cc} →
+                {getBandLabel(minAnnual)} {roleName} jobs in {cc} →
               </Link>
             </li>
           ))}

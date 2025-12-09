@@ -1,6 +1,7 @@
 // app/jobs/[...slug]/head.tsx
 // Emit prev/next link tags for pagination to reinforce canonical signals.
 
+import type { ReactElement } from 'react'
 import { loadSliceFromParams } from '../../../lib/slices/loadSlice'
 import { buildSliceCanonicalUrl } from '../../../lib/seo/canonical'
 import type { PageSearchParams } from './page'
@@ -41,7 +42,7 @@ export default async function Head({
   const totalPages =
     total > 0 ? Math.max(1, Math.ceil(total / PAGE_SIZE)) : null
 
-  const links: JSX.Element[] = []
+  const links: ReactElement[] = []
 
   if (totalPages && page > 1) {
     const href = buildSliceCanonicalUrl(slice.filters, page - 1, slice.slug)
