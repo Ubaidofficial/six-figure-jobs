@@ -82,3 +82,7 @@ export function isKnownCountryCode(code?: string | null): boolean {
   if (!code) return false
   return !!COUNTRY_CODE_TO_NAME[code.toUpperCase()]
 }
+// Backwards-compatible alias used throughout the app
+export function countrySlugToCode(slug?: string | null): string | null {
+  return slugToCountryCode(slug)
+}
