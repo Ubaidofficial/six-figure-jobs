@@ -98,11 +98,12 @@ export default async function JobPage({
 
   const typedJob = job as JobWithCompany
   const canonicalSlug = buildJobSlug(typedJob)
-
-  // ✅ Canonical redirect using corrected slug
-  if (slug !== canonicalSlug) {
-    redirect(`/job/${canonicalSlug}`)
-  }
+  // NOTE:
+  // We don't hard-redirect here anymore because some historic slugs
+  // were generated with slightly different rules (encoding, title
+  // differences, etc.), which caused redirect loops.
+  // Canonicalization is now handled in app/job/[slug]/head.tsx via
+  // <link rel="canonical">, which is enough for SEO.
 
   const company = typedJob.companyRef
 
