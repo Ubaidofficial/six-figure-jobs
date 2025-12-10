@@ -19,7 +19,11 @@ import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
-import { countryCodeToSlug, countryCodeToName } from '../../../lib/seo/countrySlug'
+import {
+  countryCodeToSlug,
+  countryCodeToName,
+  COUNTRY_CODE_TO_NAME,
+} from '../../../lib/seo/countrySlug'
 
 export const revalidate = 3600
 
@@ -126,12 +130,13 @@ export default async function JobPage({
   /* ------------------------------ Helpers ---------------------------------- */
 
   const salaryText = buildSalaryText(typedJob)
-  const isRemote =
-    typedJob.remote === true || typedJob.remoteMode === 'remote'
   const locationText = buildLocationText(typedJob)
   const seniority = inferSeniorityFromTitle(typedJob.title)
   const category = inferCategoryFromRoleSlug(typedJob.roleSlug)
   const remoteModeLabel = getRemoteModeLabel(typedJob)
+  const showRemoteBadge =
+    remoteModeLabel === 'Remote' || remoteModeLabel === 'Hybrid'
+  const showLocationBadge = remoteModeLabel !== 'Remote'
   const postedLabel = formatRelativeTime(
     typedJob.postedAt ?? typedJob.createdAt ?? typedJob.updatedAt ?? null,
   )
@@ -142,7 +147,9 @@ export default async function JobPage({
       : false)
 
   const requirements = parseArray(typedJob.requirementsJson)
-  const benefits = parseArray(typedJob.benefitsJson)
+  const benefitItems = parseArray(typedJob.benefitsJson)
+    .map((b) => b.trim())
+    .filter((b): b is string => b.length > 0)
   const showApply = isValidUrl(typedJob.applyUrl)
 
   // Prefer rich HTML, fallback to raw text
@@ -183,7 +190,9 @@ export default async function JobPage({
     .filter((j) => j.id !== typedJob.id)
     .slice(0, 4)
 
-  const companyTags = parseTags(company?.tagsJson)
+  const companyTags = parseTags(company?.tagsJson).filter(
+    (tag) => tag && tag.trim().length > 0,
+  )
 
   /* ------------------------------ Render ----------------------------------- */
 
@@ -349,6 +358,23 @@ export default async function JobPage({
                   : `${companyName} is hiring $100k+ talent across multiple teams. Explore their open roles below.`}
               </div>
             </div>
+            {benefitItems.length > 0 && (
+              <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-200 shadow-inner shadow-slate-900/30">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-400">
+                  Benefits the company offers
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {benefitItems.slice(0, 6).map((benefit, idx) => (
+                    <span
+                      key={`${benefit}-${idx}`}
+                      className="inline-flex max-w-[14rem] items-center rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-slate-200 ring-1 ring-slate-800"
+                    >
+                      {formatBenefitPill(benefit)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </aside>
 
           {/* --------------------------- Job Content --------------------------- */}
@@ -387,19 +413,19 @@ export default async function JobPage({
                       </span>
                     )}
 
-                    {/* Only show location badge if NOT remote */}
-                    {!isRemote && locationText && (
-                      <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                        📍 {locationText}
-                      </span>
-                    )}
+                  {/* Location badge (unless remote-only) */}
+                  {showLocationBadge && locationText && (
+                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
+                      📍 {locationText}
+                    </span>
+                  )}
 
-                    {/* Show remote mode badge */}
-                    {remoteModeLabel && (
-                      <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                        🌎 {remoteModeLabel}
-                      </span>
-                    )}
+                  {/* Show remote/hybrid badge */}
+                  {showRemoteBadge && remoteModeLabel && (
+                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
+                      🌎 {remoteModeLabel}
+                    </span>
+                  )}
 
                     {typedJob.type && (
                       <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
@@ -516,14 +542,14 @@ export default async function JobPage({
             )}
 
             {/* Benefits */}
-            {benefits.length > 0 && (
+            {benefitItems.length > 0 && (
               <section className="space-y-2">
                 <h2 className="text-sm font-semibold text-slate-50">
                   Benefits
                 </h2>
 
                 <ul className="list-disc pl-5 text-sm text-slate-200">
-                  {benefits.map((b, i) => (
+                  {benefitItems.map((b, i) => (
                     <li key={i}>{b}</li>
                   ))}
                 </ul>
@@ -566,12 +592,28 @@ export default async function JobPage({
                     const sjPosted = formatRelativeTime(
                       sj.postedAt ?? sj.createdAt ?? sj.updatedAt ?? null,
                     )
+                    const roleSlug = sj.roleSlug
+                    const countryCode = sj.countryCode?.toUpperCase() ?? null
+                    const countryName = countryCode
+                      ? countryCodeToName(countryCode)
+                      : null
+                    const hasCountryInfo = Boolean(countryCode && countryName)
+                    const isCountryMismatch =
+                      countryName && countryCode
+                        ? countryName.toUpperCase() !== countryCode
+                        : false
+                    const hasValidCountry = hasCountryInfo && isCountryMismatch
+                    const countrySlug =
+                      hasValidCountry && countryCode
+                        ? countryCodeToSlug(countryCode)
+                        : null
                     const sliceHref =
-                      sj.roleSlug && sj.countryCode
-                        ? `/jobs/${sj.roleSlug}/${sj.countryCode.toLowerCase()}/100k-plus`
-                        : sj.roleSlug
-                        ? `/jobs/${sj.roleSlug}/100k-plus`
+                      roleSlug && hasValidCountry && countrySlug
+                        ? `/jobs/${roleSlug}/${countrySlug}/100k-plus`
+                        : roleSlug
+                        ? `/jobs/${roleSlug}/100k-plus`
                         : '/jobs/100k-plus'
+                    const snippet = buildSafeSnippet(sj)
 
                     return (
                       <li
@@ -618,6 +660,11 @@ export default async function JobPage({
                                 </span>
                               )}
                             </div>
+                            {snippet && (
+                              <p className="mt-2 text-[12px] text-slate-400">
+                                {snippet}
+                              </p>
+                            )}
                           </div>
                           <Link
                             href={buildJobSlugHref(sj)}
@@ -711,24 +758,28 @@ function buildLocationText(job: any): string {
     if (job.countryCode) {
       return `Remote (${job.countryCode})`
     }
-    return 'Remote'
+    return 'Remote (International)'
   }
 
-  if (job.city && job.countryCode) return `${job.city}, ${job.countryCode}`
-  if (job.countryCode) return job.countryCode
+  const hasValidCityAndCountry =
+    job.city &&
+    job.countryCode &&
+    isLocationValid(job.city, job.countryCode, job.locationRaw)
+
+  if (hasValidCityAndCountry) {
+    return `${job.city}, ${job.countryCode}`
+  }
+
   if (job.locationRaw) return job.locationRaw
+  if (job.countryCode) return job.countryCode
   return 'Location not specified'
 }
 
-/**
- * Get remote mode label - returns null if not remote to avoid duplicates
- */
-function getRemoteModeLabel(job: any): string | null {
+function getRemoteModeLabel(job: any): 'Remote' | 'Hybrid' | null {
   const mode = job.remoteMode as 'remote' | 'hybrid' | 'onsite' | null
 
   if (mode === 'remote' || job.remote === true) return 'Remote'
   if (mode === 'hybrid') return 'Hybrid'
-  if (mode === 'onsite') return 'On-site'
 
   return null
 }
@@ -744,24 +795,40 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   const companyName = cleanCompanyName(
     job.companyRef?.name || job.company || '',
   )
-  const countrySlug = job.countryCode ? countryCodeToSlug(job.countryCode) : null
+  const countryCode = job.countryCode?.toUpperCase() ?? null
+  const countryName = countryCode ? countryCodeToName(countryCode) : null
+  const hasCountryInfo = Boolean(countryCode && countryName)
+  const isCountryMismatch =
+    countryName && countryCode
+      ? countryName.toUpperCase() !== countryCode
+      : false
+  const isCountryRecognized = hasCountryInfo && isCountryMismatch
+  const countrySlug =
+    isCountryRecognized && countryCode
+      ? countryCodeToSlug(countryCode)
+      : null
+  const roleSlug = job.roleSlug
+  const roleLabel = roleSlug ? prettyRole(roleSlug) : ''
 
-  if (job.roleSlug && job.countryCode) {
-    const roleLabel = prettyRole(job.roleSlug)
-    const ccSlug = countrySlug
-
+  if (roleSlug && isCountryRecognized && countrySlug) {
     links.push({
-      href: `/jobs/${job.roleSlug}/${ccSlug}/100k-plus`,
-      label: `$100k+ ${roleLabel} jobs in ${countryCodeToName(job.countryCode)}`,
+      href: `/jobs/${roleSlug}/${countrySlug}/100k-plus`,
+      label: `$100k+ ${roleLabel} jobs in ${
+        countryName ?? countryCode ?? 'this country'
+      }`,
     })
+  }
 
+  if (isCountryRecognized && countrySlug) {
     links.push({
-      href: `/jobs/${ccSlug}/100k-plus`,
-      label: `$100k+ jobs in ${countryCodeToName(job.countryCode)}`,
+      href: `/jobs/${countrySlug}/100k-plus`,
+      label: `$100k+ jobs in ${countryName}`,
     })
+  }
 
+  if (roleSlug) {
     links.push({
-      href: `/jobs/${job.roleSlug}/remote/100k-plus`,
+      href: `/jobs/${roleSlug}/remote/100k-plus`,
       label: `Remote $100k+ ${roleLabel} jobs`,
     })
   }
@@ -771,10 +838,10 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
     label: 'All $100k+ jobs',
   })
 
-  if (job.roleSlug) {
+  if (roleSlug) {
     links.push({
-      href: `/salary/${job.roleSlug}`,
-      label: `${prettyRole(job.roleSlug)} salary guide`,
+      href: `/salary/${roleSlug}`,
+      label: `${roleLabel} salary guide`,
     })
   }
 
@@ -979,5 +1046,74 @@ function sanitizeDescriptionHtml(html: string): string {
     /<script[^>]*>[\s\S]*?<\/script>/gi,
     '',
   )
-  return decodeHtmlEntities(withoutScripts)
+  const withoutStyles = withoutScripts.replace(
+    /<style[^>]*>[\s\S]*?<\/style>/gi,
+    '',
+  )
+  const withoutComments = withoutStyles.replace(/<!--[\s\S]*?-->/g, '')
+  const allowedTags = ['p', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'br']
+  const filtered = withoutComments.replace(
+    /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi,
+    (match, tag) => {
+      const lower = tag.toLowerCase()
+      if (allowedTags.includes(lower)) {
+        return `<${match.startsWith('</') ? '/' : ''}${lower}>`
+      }
+      return ''
+    },
+  )
+  const withBreaks = filtered
+    .replace(/\r\n|\r/g, '\n')
+    .replace(/\n/g, '<br />')
+    .replace(/(<br\s*\/?>\s*){2,}/gi, '</p><p>')
+  const trimmed = withBreaks.trim()
+  if (!trimmed) return ''
+  const hasParagraph = /<p[\s>]/i.test(trimmed)
+  const normalized = hasParagraph ? trimmed : `<p>${trimmed}</p>`
+  return decodeHtmlEntities(normalized)
+}
+
+function detectCountryFromText(raw?: string | null): string | null {
+  if (!raw) return null
+  const lower = raw.toLowerCase()
+  for (const [code, name] of Object.entries(COUNTRY_CODE_TO_NAME)) {
+    if (lower.includes(name.toLowerCase())) {
+      return code
+    }
+  }
+  return null
+}
+
+function isLocationValid(
+  city?: string | null,
+  countryCode?: string | null,
+  locationRaw?: string | null,
+): boolean {
+  if (!city || !countryCode) return false
+  if (!locationRaw) return true
+  const normalizedCountry = countryCodeToName(countryCode).toLowerCase()
+  const rawLower = locationRaw.toLowerCase()
+  if (rawLower.includes(normalizedCountry)) return true
+  const detected = detectCountryFromText(locationRaw)
+  if (detected && detected !== countryCode.toUpperCase()) {
+    return false
+  }
+  return true
+}
+
+function buildSafeSnippet(job: JobWithCompany): string {
+  const rawDescription =
+    (job as any).descriptionHtml ??
+    (job as any).description ??
+    (job as any).body ??
+    ''
+  const trimmed = stripTags(rawDescription)
+    .replace(/\s+/g, ' ')
+    .trim()
+  return trimmed ? truncateText(trimmed, 120) : ''
+}
+
+function formatBenefitPill(benefit: string): string {
+  const text = stripTags(benefit).trim()
+  return truncateText(text, 90)
 }
