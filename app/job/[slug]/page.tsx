@@ -98,9 +98,12 @@ export default async function JobPage({
 
   const typedJob = job as JobWithCompany
   const canonicalSlug = buildJobSlug(typedJob)
+
+  // ✅ Canonical redirect using corrected slug
   if (slug !== canonicalSlug) {
     redirect(`/job/${canonicalSlug}`)
   }
+
   const company = typedJob.companyRef
 
   // Clean company name - take only the first part before description
@@ -184,465 +187,466 @@ export default async function JobPage({
   /* ------------------------------ Render ----------------------------------- */
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      {/* Breadcrumbs */}
-      <nav className="mb-4 text-xs text-slate-400" aria-label="Breadcrumb">
-        <ol className="flex flex-wrap items-center gap-1">
-          <li>
-            <Link href="/" className="hover:text-slate-200 hover:underline">
-              Home
-            </Link>
-          </li>
-          <li className="px-1 text-slate-600">/</li>
-          <li>
-            <Link
-              href="/jobs/100k-plus"
-              className="hover:text-slate-200 hover:underline"
-            >
-              $100k+ jobs
-            </Link>
-          </li>
-          <li className="px-1 text-slate-600">/</li>
-          <li aria-current="page" className="text-slate-200">
-            {typedJob.title}
-          </li>
-        </ol>
-      </nav>
+    <main className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+        {/* Breadcrumbs */}
+        <nav className="mb-4 text-xs text-slate-400" aria-label="Breadcrumb">
+          <ol className="flex flex-wrap items-center gap-1">
+            <li>
+              <Link href="/" className="hover:text-slate-200 hover:underline">
+                Home
+              </Link>
+            </li>
+            <li className="px-1 text-slate-600">/</li>
+            <li>
+              <Link
+                href="/jobs/100k-plus"
+                className="hover:text-slate-200 hover:underline"
+              >
+                $100k+ jobs
+              </Link>
+            </li>
+            <li className="px-1 text-slate-600">/</li>
+            <li aria-current="page" className="text-slate-200">
+              {typedJob.title}
+            </li>
+          </ol>
+        </nav>
 
-      <div className="grid gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        {/* ----------------------------- Sidebar ----------------------------- */}
-        <aside className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-5">
-          <div className="flex flex-col items-center text-center">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt={companyName}
-                className="h-16 w-16 rounded-full bg-slate-900 object-contain p-2"
-              />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-lg font-semibold text-slate-100">
-                {companyName.charAt(0).toUpperCase()}
-              </div>
-            )}
+        <div className="grid gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          {/* ----------------------------- Sidebar ----------------------------- */}
+          <aside className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-5">
+            <div className="flex flex-col items-center text-center">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt={companyName}
+                  className="h-16 w-16 rounded-full bg-slate-900 object-contain p-2"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-lg font-semibold text-slate-100">
+                  {companyName.charAt(0).toUpperCase()}
+                </div>
+              )}
 
-            <h2 className="mt-3 text-base font-semibold text-slate-50">
-              {companyName}
-            </h2>
+              <h2 className="mt-3 text-base font-semibold text-slate-50">
+                {companyName}
+              </h2>
 
-            <p className="text-xs text-slate-400">
-              {company?.countryCode || typedJob.countryCode || 'Global'}
-            </p>
-
-            {company?.sizeBucket && (
-              <p className="text-[11px] text-slate-400">
-                {company.sizeBucket} employees
+              <p className="text-xs text-slate-400">
+                {company?.countryCode || typedJob.countryCode || 'Global'}
               </p>
-            )}
 
-            {companyTags.length > 0 && (
-              <div className="mt-3 flex flex-wrap justify-center gap-1">
-                {companyTags.slice(0, 8).map((tag) => (
+              {company?.sizeBucket && (
+                <p className="text-[11px] text-slate-400">
+                  {company.sizeBucket} employees
+                </p>
+              )}
+
+              {companyTags.length > 0 && (
+                <div className="mt-3 flex flex-wrap justify-center gap-1">
+                  {companyTags.slice(0, 8).map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-slate-200"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
+                {isValidUrl(company?.website) && (
+                  <a
+                    href={cleanUrl(company!.website!)}
+                    target="_blank"
+                    rel="nofollow noreferrer"
+                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
+                  >
+                    Website
+                  </a>
+                )}
+
+                {/* LinkedIn */}
+                {isValidUrl(companyLinkedIn) && (
+                  <a
+                    href={cleanUrl(companyLinkedIn!)}
+                    target="_blank"
+                    rel="nofollow noreferrer"
+                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
+                  >
+                    LinkedIn
+                  </a>
+                )}
+
+                {company?.slug && (
+                  <Link
+                    href={`/company/${company.slug}`}
+                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
+                  >
+                    All job openings
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* Company snapshot */}
+            <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-left text-xs leading-relaxed text-slate-200 shadow-inner shadow-slate-900/30">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-400">
+                  Company snapshot
+                </p>
+                {company?.website && (
+                  <a
+                    href={cleanUrl(company.website)}
+                    target="_blank"
+                    rel="nofollow noreferrer"
+                    className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-semibold text-slate-100 hover:border-slate-500"
+                  >
+                    Visit site
+                  </a>
+                )}
+              </div>
+              <div className="flex flex-wrap justify-center gap-2 text-[11px] text-slate-200">
+                {company?.sizeBucket && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                    👥 {company.sizeBucket} employees
+                  </span>
+                )}
+                {company?.foundedYear && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                    🏛️ Founded {company.foundedYear}
+                  </span>
+                )}
+                {company?.industry && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                    🏷️ {company.industry}
+                  </span>
+                )}
+                {company?.headquarters && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+                    📍 {company.headquarters}
+                  </span>
+                )}
+                {companyTags.slice(0, 4).map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-slate-200"
+                    className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800"
                   >
-                    {tag}
+                    # {tag}
                   </span>
                 ))}
               </div>
-            )}
-
-            <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
-              {isValidUrl(company?.website) && (
-                <a
-                  href={cleanUrl(company!.website!)}
-                  target="_blank"
-                  rel="nofollow noreferrer"
-                  className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
-                >
-                  Website
-                </a>
-              )}
-
-              {/* NEW: LinkedIn */}
-              {isValidUrl(companyLinkedIn) && (
-                <a
-                  href={cleanUrl(companyLinkedIn!)}
-                  target="_blank"
-                  rel="nofollow noreferrer"
-                  className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
-                >
-                  LinkedIn
-                </a>
-              )}
-
-              {company?.slug && (
-                <Link
-                  href={`/company/${company.slug}`}
-                  className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
-                >
-                  All job openings
-                </Link>
-              )}
+              <div className="text-[12px] leading-relaxed text-slate-200">
+                {company?.description
+                  ? truncateText(
+                      stripTags(decodeHtmlEntities(company.description)),
+                      600,
+                    )
+                  : `${companyName} is hiring $100k+ talent across multiple teams. Explore their open roles below.`}
+              </div>
             </div>
-          </div>
+          </aside>
 
-          {/* Company snapshot */}
-          <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-left text-xs leading-relaxed text-slate-200 shadow-inner shadow-slate-900/30">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-400">
-                Company snapshot
-              </p>
-              {company?.website && (
-                <a
-                  href={cleanUrl(company.website)}
-                  target="_blank"
-                  rel="nofollow noreferrer"
-                  className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-semibold text-slate-100 hover:border-slate-500"
-                >
-                  Visit site
-                </a>
-              )}
-            </div>
-            <div className="flex flex-wrap justify-center gap-2 text-[11px] text-slate-200">
-              {company?.sizeBucket && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
-                  👥 {company.sizeBucket} employees
-                </span>
-              )}
-              {company?.foundedYear && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
-                  🏛️ Founded {company.foundedYear}
-                </span>
-              )}
-              {company?.industry && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
-                  🏷️ {company.industry}
-                </span>
-              )}
-              {company?.headquarters && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
-                  📍 {company.headquarters}
-                </span>
-              )}
-              {companyTags.slice(0, 4).map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800"
-                >
-                  # {tag}
-                </span>
-              ))}
-            </div>
-            <div className="text-[12px] leading-relaxed text-slate-200">
-              {company?.description
-                ? truncateText(
-                    stripTags(decodeHtmlEntities(company.description)),
-                    600,
-                  )
-                : `${companyName} is hiring $100k+ talent across multiple teams. Explore their open roles below.`}
-            </div>
-          </div>
-        </aside>
+          {/* --------------------------- Job Content --------------------------- */}
+          <section className="space-y-8">
+            {/* Hero */}
+            <section className="rounded-2xl border border-slate-800 bg-slate-950/80 px-6 py-6 shadow-lg shadow-slate-900/40">
+              <div className="flex items-start justify-between gap-6">
+                <div className="flex-1">
+                  <h1 className="text-2xl font-semibold tracking-tight text-slate-50">
+                    {typedJob.title}
+                  </h1>
 
-        {/* --------------------------- Job Content --------------------------- */}
-        <section className="space-y-8">
-          {/* Hero */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-950/80 px-6 py-6 shadow-lg">
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex-1">
-                <h1 className="text-2xl font-semibold tracking-tight text-slate-50">
-                  {typedJob.title}
-                </h1>
+                  <div className="mt-2 text-xs text-slate-300">
+                    <div className="font-medium">
+                      {company?.slug ? (
+                        <Link
+                          href={`/company/${company.slug}`}
+                          className="hover:underline"
+                        >
+                          {companyName}
+                        </Link>
+                      ) : (
+                        companyName
+                      )}
+                    </div>
 
-                <div className="mt-2 text-xs text-slate-300">
-                  <div className="font-medium">
-                    {company?.slug ? (
-                      <Link
-                        href={`/company/${company.slug}`}
-                        className="hover:underline"
-                      >
-                        {companyName}
-                      </Link>
-                    ) : (
-                      companyName
+                    {locationText && (
+                      <p className="mt-0.5 text-slate-400">{locationText}</p>
                     )}
                   </div>
 
-                  {locationText && (
-                    <p className="mt-0.5 text-slate-400">{locationText}</p>
-                  )}
+                  <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
+                    {salaryText && (
+                      <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
+                        💵 {salaryText}
+                      </span>
+                    )}
+
+                    {/* Only show location badge if NOT remote */}
+                    {!isRemote && locationText && (
+                      <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
+                        📍 {locationText}
+                      </span>
+                    )}
+
+                    {/* Show remote mode badge */}
+                    {remoteModeLabel && (
+                      <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
+                        🌎 {remoteModeLabel}
+                      </span>
+                    )}
+
+                    {typedJob.type && (
+                      <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
+                        ⏱ {typedJob.type}
+                      </span>
+                    )}
+
+                    {category && (
+                      <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
+                        {category}
+                      </span>
+                    )}
+
+                    {seniority && (
+                      <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
+                        {seniority}
+                      </span>
+                    )}
+
+                    {postedLabel && (
+                      <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
+                        📅 Posted {postedLabel}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
-                  {salaryText && (
-                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                      💵 {salaryText}
-                    </span>
-                  )}
-
-                  {/* Only show location badge if NOT remote */}
-                  {!isRemote && locationText && (
-                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                      📍 {locationText}
-                    </span>
-                  )}
-
-                  {/* Show remote mode badge */}
-                  {remoteModeLabel && (
-                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                      🌎 {remoteModeLabel}
-                    </span>
-                  )}
-
-                  {typedJob.type && (
-                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                      ⏱ {typedJob.type}
-                    </span>
-                  )}
-
-                  {category && (
-                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                      {category}
-                    </span>
-                  )}
-
-                  {seniority && (
-                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                      {seniority}
-                    </span>
-                  )}
-
-                  {postedLabel && (
-                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-slate-200 ring-1 ring-slate-700">
-                      📅 Posted {postedLabel}
-                    </span>
-                  )}
-                </div>
+                {showApply && (
+                  <div className="flex-shrink-0">
+                    <a
+                      href={cleanUrl(typedJob.applyUrl!)}
+                      target="_blank"
+                      rel="nofollow sponsored"
+                      className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/30 hover:bg-blue-500"
+                    >
+                      Apply Now
+                    </a>
+                  </div>
+                )}
+                {isFeatured && (
+                  <div className="ml-4 inline-flex items-center rounded-full border border-amber-500/70 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold text-amber-200">
+                    ⭐ Featured listing
+                  </div>
+                )}
               </div>
+            </section>
 
-              {showApply && (
-                <div className="flex-shrink-0">
+            {/* AI-ish summary card (uses existing heuristic) */}
+            {aiSummary && (
+              <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-sm leading-relaxed text-slate-200">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">
+                  Why this $100k+ role stands out
+                </p>
+                <ul className="list-disc space-y-1 pl-5">
+                  {aiSummary.map((line, idx) => (
+                    <li key={idx}>{line}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* Description */}
+            {hasDescription ? (
+              <section className="space-y-3">
+                <h2 className="text-sm font-semibold text-slate-50">
+                  About the role
+                </h2>
+
+                <div
+                  className="prose prose-invert max-w-none text-sm leading-relaxed text-slate-200 prose-ul:list-disc prose-ul:pl-5 prose-li:mb-1"
+                  dangerouslySetInnerHTML={{
+                    __html: safeDescriptionHtml!,
+                  }}
+                />
+              </section>
+            ) : (
+              <section className="space-y-3">
+                <h2 className="text-sm font-semibold text-slate-50">
+                  About the role
+                </h2>
+
+                <p className="text-sm leading-relaxed text-slate-200">
+                  This role is sourced directly from the employer&apos;s
+                  careers site. The full job description is available on their
+                  ATS.
+                </p>
+
+                {showApply && (
                   <a
                     href={cleanUrl(typedJob.applyUrl!)}
                     target="_blank"
                     rel="nofollow sponsored"
-                    className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/30 hover:bg-blue-500"
+                    className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-100 ring-1 ring-slate-700 hover:bg-slate-800"
                   >
-                    Apply Now
+                    View full description &amp; apply
                   </a>
-                </div>
-              )}
-              {isFeatured && (
-                <div className="ml-4 inline-flex items-center rounded-full border border-amber-500/70 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold text-amber-200">
-                  ⭐ Featured listing
-                </div>
-              )}
-            </div>
-          </section>
+                )}
+              </section>
+            )}
 
-          {/* Description */}
-          {hasDescription ? (
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-slate-50">
-                About the role
-              </h2>
+            {/* Requirements */}
+            {requirements.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="text-sm font-semibold text-slate-50">
+                  Requirements
+                </h2>
 
-              <div
-                className="prose prose-invert max-w-none text-sm leading-relaxed text-slate-200 prose-ul:list-disc prose-ul:pl-5 prose-li:mb-1"
-                dangerouslySetInnerHTML={{
-                  __html: safeDescriptionHtml!,
-                }}
-              />
-            </section>
-          ) : (
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-slate-50">
-                About the role
-              </h2>
+                <ul className="list-disc pl-5 text-sm text-slate-200">
+                  {requirements.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
-              <p className="text-sm leading-relaxed text-slate-200">
-                The full job description is available on the employer's
-                careers site.
-              </p>
+            {/* Benefits */}
+            {benefits.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="text-sm font-semibold text-slate-50">
+                  Benefits
+                </h2>
 
-              {showApply && (
-                <a
-                  href={cleanUrl(typedJob.applyUrl!)}
-                  target="_blank"
-                  rel="nofollow sponsored"
-                  className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-100 ring-1 ring-slate-700 hover:bg-slate-800"
-                >
-                  View full description &amp; apply
-                </a>
-              )}
+                <ul className="list-disc pl-5 text-sm text-slate-200">
+                  {benefits.map((b, i) => (
+                    <li key={i}>{b}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
-              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm leading-relaxed text-slate-200">
-                <p className="mb-2 font-semibold text-slate-50">
-                  Why this $100k+ role matters
+            {/* Internal Links */}
+            {internalLinks.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="text-sm font-semibold text-slate-50">
+                  Explore related $100k+ pages
+                </h2>
+
+                <ul className="list-disc pl-5 text-sm text-blue-400">
+                  {internalLinks.map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href} className="hover:underline">
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* Similar Jobs */}
+            {similarJobs.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-sm font-semibold text-slate-50">
+                  Similar $100k+ jobs
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Based on role, country and salary band
                 </p>
-                <p className="mb-2">
-                  {companyName} is hiring for {typedJob.title} in{' '}
-                  {locationText || 'a remote-friendly location'}. This role is
-                  tagged {seniority ? seniority.replace('⭐ ', '') : 'experienced'} and
-                  targets compensation in the {salaryText || '$100k+ band'}. We ingest jobs
-                  directly from company ATS feeds, filter to verified six-figure roles,
-                  dedupe, and refresh daily so you see current openings.
-                </p>
-                <p className="mb-0">
-                  Browse related $100k+ pages below to explore more roles by region,
-                  salary band, or company. Each listing shows work arrangement
-                  (remote, hybrid, on-site), seniority, and a direct apply link.
-                </p>
-              </div>
-            </section>
-          )}
 
-          {/* Requirements */}
-          {requirements.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-slate-50">
-                Requirements
-              </h2>
+                <ul className="space-y-3 text-sm">
+                  {similarJobs.map((sj) => {
+                    const sjSalary = buildSalaryText(sj)
+                    const sjLocation = buildLocationText(sj)
+                    const sjPosted = formatRelativeTime(
+                      sj.postedAt ?? sj.createdAt ?? sj.updatedAt ?? null,
+                    )
+                    const sliceHref =
+                      sj.roleSlug && sj.countryCode
+                        ? `/jobs/${sj.roleSlug}/${sj.countryCode.toLowerCase()}/100k-plus`
+                        : sj.roleSlug
+                        ? `/jobs/${sj.roleSlug}/100k-plus`
+                        : '/jobs/100k-plus'
 
-              <ul className="list-disc pl-5 text-sm text-slate-200">
-                {requirements.map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ul>
-            </section>
-          )}
+                    return (
+                      <li
+                        key={sj.id}
+                        className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <Link
+                              href={buildJobSlugHref(sj)}
+                              className="font-semibold text-slate-100 hover:underline"
+                            >
+                              {sj.title}
+                            </Link>
 
-          {/* Benefits */}
-          {benefits.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-slate-50">
-                Benefits
-              </h2>
+                            <div className="text-slate-300">
+                              {cleanCompanyName(
+                                sj.companyRef?.name || sj.company || '',
+                              )}
+                            </div>
 
-              <ul className="list-disc pl-5 text-sm text-slate-200">
-                {benefits.map((b, i) => (
-                  <li key={i}>{b}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* Internal Links */}
-          {internalLinks.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-slate-50">
-                Explore related $100k+ pages
-              </h2>
-
-              <ul className="list-disc pl-5 text-sm text-blue-400">
-                {internalLinks.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} className="hover:underline">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* Similar Jobs */}
-          {similarJobs.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-slate-50">
-                Similar $100k+ jobs
-              </h2>
-
-              <ul className="space-y-3 text-sm">
-                {similarJobs.map((sj) => {
-                  const sjSalary = buildSalaryText(sj)
-                  const sjLocation = buildLocationText(sj)
-                  const sjPosted = formatRelativeTime(
-                    sj.postedAt ?? sj.createdAt ?? sj.updatedAt ?? null,
-                  )
-                  const sliceHref =
-                    sj.roleSlug && sj.countryCode
-                      ? `/jobs/${sj.roleSlug}/${sj.countryCode.toLowerCase()}/100k-plus`
-                      : sj.roleSlug
-                      ? `/jobs/${sj.roleSlug}/100k-plus`
-                      : '/jobs/100k-plus'
-
-                  return (
-                    <li
-                      key={sj.id}
-                      className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+                              {sjLocation && (
+                                <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
+                                  📍 {sjLocation}
+                                </span>
+                              )}
+                              {sjSalary && (
+                                <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
+                                  💵 {sjSalary}
+                                </span>
+                              )}
+                              {sj.roleSlug && (
+                                <Link
+                                  href={sliceHref}
+                                  className="rounded-full bg-slate-900 px-2 py-0.5 text-blue-300 ring-1 ring-slate-800 hover:text-blue-200"
+                                >
+                                  {prettyRole(sj.roleSlug)} roles →
+                                </Link>
+                              )}
+                              {sjPosted && (
+                                <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
+                                  Posted {sjPosted}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                           <Link
                             href={buildJobSlugHref(sj)}
-                            className="font-semibold text-slate-100 hover:underline"
+                            className="inline-flex items-center justify-center rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold text-slate-100 hover:border-slate-500"
                           >
-                            {sj.title}
+                            View role
                           </Link>
-
-                          <div className="text-slate-300">
-                            {cleanCompanyName(
-                              sj.companyRef?.name || sj.company || '',
-                            )}
-                          </div>
-
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
-                            {sjLocation && (
-                              <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
-                                📍 {sjLocation}
-                              </span>
-                            )}
-                            {sjSalary && (
-                              <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
-                                💵 {sjSalary}
-                              </span>
-                            )}
-                            {sj.roleSlug && (
-                              <Link
-                                href={sliceHref}
-                                className="rounded-full bg-slate-900 px-2 py-0.5 text-blue-300 ring-1 ring-slate-800 hover:text-blue-200"
-                              >
-                                {prettyRole(sj.roleSlug)} roles →
-                              </Link>
-                            )}
-                            {sjPosted && (
-                              <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
-                                Posted {sjPosted}
-                              </span>
-                            )}
-                          </div>
                         </div>
-                        <Link
-                          href={buildJobSlugHref(sj)}
-                          className="inline-flex items-center justify-center rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold text-slate-100 hover:border-slate-500"
-                        >
-                          View role
-                        </Link>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </section>
-          )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            )}
 
-          {/* JSON-LD */}
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify(jsonLd),
-            }}
-          />
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify(breadcrumbJsonLd),
-            }}
-          />
-        </section>
+            {/* JSON-LD */}
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify(jsonLd),
+              }}
+            />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify(breadcrumbJsonLd),
+              }}
+            />
+          </section>
+        </div>
       </div>
     </main>
   )
@@ -906,7 +910,6 @@ function truncateText(str: string, maxChars: number): string {
   const lastDot = truncated.lastIndexOf('.')
   const lastSpace = truncated.lastIndexOf(' ')
 
-  // All branches return a number – no boolean union
   const cutoff: number =
     lastDot !== -1 && lastDot > maxChars * 0.6
       ? lastDot + 1
