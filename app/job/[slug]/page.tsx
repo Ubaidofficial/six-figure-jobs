@@ -99,7 +99,7 @@ export default async function JobPage({
   const typedJob = job as JobWithCompany
   const canonicalSlug = buildJobSlug(typedJob)
   if (slug !== canonicalSlug) {
-    redirect("/job/${canonicalSlug}")
+    redirect(`/job/${canonicalSlug}`)
   }
   const company = typedJob.companyRef
 
