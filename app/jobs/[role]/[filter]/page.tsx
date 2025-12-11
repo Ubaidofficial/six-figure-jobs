@@ -147,7 +147,7 @@ export default async function RoleFilterPage({
 
   if (filter.length === 2) {
     const slug = countryCodeToSlug(filter.toUpperCase())
-    if (LOCATIONS[slug]) {
+    if (slug && LOCATIONS[slug]) {
       redirect(`/jobs/${role}/${slug}`)
     }
   }
