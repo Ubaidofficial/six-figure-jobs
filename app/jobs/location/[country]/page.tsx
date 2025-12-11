@@ -38,7 +38,7 @@ function resolveLocation(slug: string) {
   // Legacy code support
   if (key.length === 2) {
     const slugFromCode = countryCodeToSlug(key.toUpperCase())
-    if (LOCATION_MAP[slugFromCode]) {
+    if (slugFromCode && LOCATION_MAP[slugFromCode]) {
       return { ...LOCATION_MAP[slugFromCode], slug: slugFromCode, legacy: true }
     }
   }
