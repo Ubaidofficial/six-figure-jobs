@@ -40,8 +40,11 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     }
   }
 
+  const resolvedCode = countrySlugToCode(code)
+  if (!resolvedCode) return { title: 'Not Found' }
+
   const { total } = await queryJobs({
-    countryCode: countrySlugToCode(code).toUpperCase(),
+    countryCode: resolvedCode.toUpperCase(),
     minAnnual: 100_000,
     pageSize: 1,
   })
@@ -102,6 +105,7 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
   }
 
   const countryCode = countrySlugToCode(code)
+  if (!countryCode) notFound()
 
   const { jobs, total } = await queryJobs({
     countryCode: countryCode.toUpperCase(),
