@@ -239,11 +239,15 @@ export default async function SearchPage({ searchParams }: PageProps) {
         OR: [{ remote: true }, { remoteMode: 'remote' }],
       })
     } else if (resolvedLocation.length === 2) {
-      andConditions.push({
-    countryCode: resolvedLocation
-      ? countrySlugToCode(resolvedLocation).toUpperCase()
-      : undefined,
-      })
+      const slugFromCode = countryCodeToSlug(resolvedLocation.toUpperCase())
+      if (slugFromCode) {
+        const code = countrySlugToCode(slugFromCode)
+        if (code) {
+          andConditions.push({
+            countryCode: code.toUpperCase(),
+          })
+        }
+      }
     }
   }
 
