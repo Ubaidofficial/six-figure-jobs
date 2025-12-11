@@ -60,9 +60,12 @@ export function buildJobsPath(params: BuildJobsUrlParams): string {
   if (remoteOnly) {
     segments.push('remote')
   } else if (countryCode) {
-    segments.push(countryCodeToSlug(countryCode))
-    if (citySlug) {
-      segments.push(citySlug.toLowerCase())
+    const countrySlug = countryCodeToSlug(countryCode)
+    if (countrySlug) {
+      segments.push(countrySlug)
+      if (citySlug) {
+        segments.push(citySlug.toLowerCase())
+      }
     }
   }
 
