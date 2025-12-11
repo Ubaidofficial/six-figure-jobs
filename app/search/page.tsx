@@ -8,7 +8,7 @@ import type { JobWithCompany } from '../../lib/jobs/queryJobs'
 import JobList from '../components/JobList'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
-import { countrySlugToCode } from '../../lib/seo/countrySlug'
+import { countryCodeToSlug, countrySlugToCode } from '../../lib/seo/countrySlug'
 
 export const dynamic = "force-dynamic"
 
