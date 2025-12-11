@@ -41,12 +41,16 @@ function formatRoleTitle(slug: string): string {
 // Determine if filter is location or salary
 function parseFilter(filter: string): { type: 'location' | 'salary'; value: string | number; label: string } {
   if (LOCATIONS[filter]) {
-    return { type: 'location', value: countrySlugToCode(filter), label: LOCATIONS[filter] }
+    const code = countrySlugToCode(filter)
+    if (!code) throw new Error('Unknown location filter')
+    return { type: 'location', value: code, label: LOCATIONS[filter] }
   }
   if (filter.length === 2) {
     const slug = countryCodeToSlug(filter.toUpperCase())
     if (LOCATIONS[slug]) {
-      return { type: 'location', value: countrySlugToCode(slug), label: LOCATIONS[slug] }
+      const code = countrySlugToCode(slug)
+      if (!code) throw new Error('Unknown location filter')
+      return { type: 'location', value: code, label: LOCATIONS[slug] }
     }
   }
   if (SALARY_TIERS[filter]) {
