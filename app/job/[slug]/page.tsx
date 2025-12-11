@@ -1,7 +1,7 @@
 // app/job/[slug]/page.tsx
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import NextLink from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { prisma } from '../../../lib/prisma'
 import {
@@ -203,18 +203,18 @@ export default async function JobPage({
         <nav className="mb-4 text-xs text-slate-400" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1">
             <li>
-              <Link href="/" className="hover:text-slate-200 hover:underline">
+              <NextLink href="/" className="hover:text-slate-200 hover:underline">
                 Home
-              </Link>
+              </NextLink>
             </li>
             <li className="px-1 text-slate-600">/</li>
             <li>
-              <Link
+              <NextLink
                 href="/jobs/100k-plus"
                 className="hover:text-slate-200 hover:underline"
               >
                 $100k+ jobs
-              </Link>
+              </NextLink>
             </li>
             <li className="px-1 text-slate-600">/</li>
             <li aria-current="page" className="text-slate-200">
@@ -292,12 +292,12 @@ export default async function JobPage({
                 )}
 
                 {company?.slug && (
-                  <Link
+                  <NextLink
                     href={`/company/${company.slug}`}
                     className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-100 hover:border-slate-500"
                   >
                     All job openings
-                  </Link>
+                  </NextLink>
                 )}
               </div>
             </div>
@@ -390,12 +390,12 @@ export default async function JobPage({
                   <div className="mt-2 text-xs text-slate-300">
                     <div className="font-medium">
                       {company?.slug ? (
-                        <Link
+                        <NextLink
                           href={`/company/${company.slug}`}
                           className="hover:underline"
                         >
                           {companyName}
-                        </Link>
+                        </NextLink>
                       ) : (
                         companyName
                       )}
@@ -566,9 +566,9 @@ export default async function JobPage({
                 <ul className="list-disc pl-5 text-sm text-blue-400">
                   {internalLinks.map((link) => (
                     <li key={link.href}>
-                      <Link href={link.href} className="hover:underline">
+                      <NextLink href={link.href} className="hover:underline">
                         {link.label}
-                      </Link>
+                      </NextLink>
                     </li>
                   ))}
                 </ul>
@@ -622,12 +622,12 @@ export default async function JobPage({
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <Link
+                            <NextLink
                               href={buildJobSlugHref(sj)}
                               className="font-semibold text-slate-100 hover:underline"
                             >
                               {sj.title}
-                            </Link>
+                            </NextLink>
 
                             <div className="text-slate-300">
                               {cleanCompanyName(
@@ -647,12 +647,12 @@ export default async function JobPage({
                                 </span>
                               )}
                               {sj.roleSlug && (
-                                <Link
+                                <NextLink
                                   href={sliceHref}
                                   className="rounded-full bg-slate-900 px-2 py-0.5 text-blue-300 ring-1 ring-slate-800 hover:text-blue-200"
                                 >
                                   {prettyRole(sj.roleSlug)} roles →
-                                </Link>
+                                </NextLink>
                               )}
                               {sjPosted && (
                                 <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
@@ -666,12 +666,12 @@ export default async function JobPage({
                               </p>
                             )}
                           </div>
-                          <Link
+                          <NextLink
                             href={buildJobSlugHref(sj)}
                             className="inline-flex items-center justify-center rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold text-slate-100 hover:border-slate-500"
                           >
                             View role
-                          </Link>
+                          </NextLink>
                         </div>
                       </li>
                     )

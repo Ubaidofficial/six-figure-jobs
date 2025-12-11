@@ -211,7 +211,7 @@ export async function generateMetadata({
   const countryParam = p.country
   const countryCode = prettyCountryCode(countryParam)
   const page = parsePage(sp)
-  const canonicalPath = buildCanonicalPath(roleSlug, countryParam, sp)
+  const canonicalPathname = buildCanonicalPath(roleSlug, countryParam, sp)
   const requestedParams = new URLSearchParams()
   Object.entries(sp).forEach(([k, v]) => {
     if (Array.isArray(v)) {
@@ -226,8 +226,8 @@ export async function generateMetadata({
     const qs = requestedParams.toString()
     return qs ? `/remote/${roleSlug}/country/${countryParam}?${qs}` : `/remote/${roleSlug}/country/${countryParam}`
   })()
-  if (requested !== canonicalPath) {
-    redirect(canonicalPath)
+  if (requested !== canonicalPathname) {
+    redirect(canonicalPathname)
   }
 
   const minParam = normalizeStringParam(sp.min)
@@ -246,7 +246,7 @@ export async function generateMetadata({
 
   const totalJobs = result.total
   const titleBase = `Remote ${roleName} jobs in ${countryCode} paying $100k+`
-  const canonicalUrl = `${SITE_URL}${canonicalPath}`
+  const canonicalUrl = `${SITE_URL}${canonicalPathname}`
 
   return {
     title:
