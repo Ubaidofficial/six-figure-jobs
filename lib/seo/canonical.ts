@@ -53,7 +53,10 @@ export function buildSliceCanonicalPath(filters: SliceFilters): string {
   const parts: string[] = ['jobs', band]
 
   if (role) parts.push(role)
-  if (country) parts.push(countryCodeToSlug(country))
+  if (country) {
+    const countrySlug = countryCodeToSlug(country)
+    if (countrySlug) parts.push(countrySlug)
+  }
   if (city) parts.push(city.toLowerCase())
 
   return '/' + parts.join('/')
