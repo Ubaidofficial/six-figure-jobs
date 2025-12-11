@@ -23,7 +23,9 @@ const LOCATION_MAP: Record<
 }
 
 for (const c of TARGET_COUNTRIES) {
-  LOCATION_MAP[countryCodeToSlug(c.code)] = {
+  const slug = countryCodeToSlug(c.code)
+  if (!slug) continue
+  LOCATION_MAP[slug] = {
     label: c.label,
     countryCode: c.code,
   }
