@@ -47,7 +47,7 @@ function parseFilter(filter: string): { type: 'location' | 'salary'; value: stri
   }
   if (filter.length === 2) {
     const slug = countryCodeToSlug(filter.toUpperCase())
-    if (LOCATIONS[slug]) {
+    if (slug && LOCATIONS[slug]) {
       const code = countrySlugToCode(slug)
       if (!code) throw new Error('Unknown location filter')
       return { type: 'location', value: code, label: LOCATIONS[slug] }
