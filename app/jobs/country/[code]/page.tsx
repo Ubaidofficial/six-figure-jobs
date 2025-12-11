@@ -33,8 +33,11 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 
   // Support legacy code-based slugs by redirecting
   const legacyCode = countrySlugToCode(code)
-  if (legacyCode && COUNTRIES[countryCodeToSlug(legacyCode).toLowerCase()]) {
-    // canonical will use the full-name slug
+  if (legacyCode) {
+    const legacySlug = countryCodeToSlug(legacyCode)
+    if (legacySlug && COUNTRIES[legacySlug.toLowerCase()]) {
+      // canonical will use the full-name slug
+    }
   }
 
   const { total } = await queryJobs({
@@ -92,7 +95,7 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
   if (!country) {
     const asCode = code.toUpperCase()
     const slugFromCode = countryCodeToSlug(asCode)
-    if (COUNTRIES[slugFromCode]) {
+    if (slugFromCode && COUNTRIES[slugFromCode]) {
       redirect(`/jobs/country/${slugFromCode}`)
     }
     notFound()
