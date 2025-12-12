@@ -104,13 +104,15 @@ function HomepageSchemas({
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Six Figure Jobs',
+    alternateName: '$100k+ Jobs',
     url: 'https://www.6figjobs.com',
-    description: 'The exclusive job board for $100k+ positions',
+    description:
+      'The exclusive job board for $100k+ positions. Find high-paying jobs from top companies.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://www.6figjobs.com/search?q={search_term_string}',
+        urlTemplate: 'https://www.6figjobs.com/jobs?q={search_term_string}',
       },
       'query-input': 'required name=search_term_string',
     },
@@ -120,17 +122,20 @@ function HomepageSchemas({
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Six Figure Jobs',
+    legalName: 'Six Figure Jobs LLC',
     url: 'https://www.6figjobs.com',
     logo: 'https://www.6figjobs.com/logo.png',
-    description: `Premium job board featuring ${jobCount.toLocaleString()}+ $100k+ positions from ${companyCount.toLocaleString()}+ companies`,
+    description: `Premium job board featuring ${jobCount.toLocaleString()}+ $100k+ positions from ${companyCount.toLocaleString()}+ top companies. Remote, hybrid, and on-site opportunities updated daily.`,
+    foundingDate: '2025-12-05',
     sameAs: [
-      'https://twitter.com/sixfigjobs',
+      'https://twitter.com/6figjobs',
       'https://linkedin.com/company/sixfigjobs',
     ],
     contactPoint: {
       '@type': 'ContactPoint',
-      email: 'hello@6figjobs.com',
       contactType: 'customer service',
+      email: 'hello@6figjobs.com',
+      availableLanguage: 'English',
     },
   }
 
@@ -149,95 +154,123 @@ function HomepageSchemas({
 }
 
 export default async function HomePage() {
-  const [jobsData, totalJobs, totalCompanies, salaryBandCounts, roleCounts] =
-    await Promise.all([
-      queryJobs({
-        minAnnual: 100_000,
-        page: 1,
-        pageSize: PAGE_SIZE,
-        sortBy: 'date', // newest first
-        excludeInternships: true, // explicit
-      }),
-      prisma.job.count({
-        where: {
-          isExpired: false,
-          OR: [
-            { maxAnnual: { gte: BigInt(100_000) } },
-            { minAnnual: { gte: BigInt(100_000) } },
-            { isHighSalary: true },
-            { isHundredKLocal: true },
-          ],
-        },
-      }),
-      prisma.company.count({
-        where: {
-          jobs: {
-            some: {
-              isExpired: false,
-              OR: [
-                { maxAnnual: { gte: BigInt(100_000) } },
-                { minAnnual: { gte: BigInt(100_000) } },
-                { isHighSalary: true },
-                { isHundredKLocal: true },
-              ],
-            },
+  const [
+    jobsData,
+    totalJobs,
+    totalCompanies,
+    salaryBandCounts,
+    roleCounts,
+    schemaTotalJobs,
+    schemaTotalCompanies,
+    schemaNewThisWeek,
+  ] = await Promise.all([
+    queryJobs({
+      minAnnual: 100_000,
+      page: 1,
+      pageSize: PAGE_SIZE,
+      sortBy: 'date', // newest first
+      excludeInternships: true, // explicit
+    }),
+    prisma.job.count({
+      where: {
+        isExpired: false,
+        OR: [
+          { maxAnnual: { gte: BigInt(100_000) } },
+          { minAnnual: { gte: BigInt(100_000) } },
+          { isHighSalary: true },
+          { isHundredKLocal: true },
+        ],
+      },
+    }),
+    prisma.company.count({
+      where: {
+        jobs: {
+          some: {
+            isExpired: false,
+            OR: [
+              { maxAnnual: { gte: BigInt(100_000) } },
+              { minAnnual: { gte: BigInt(100_000) } },
+              { isHighSalary: true },
+              { isHundredKLocal: true },
+            ],
           },
         },
-      }),
-      // UPDATED: make 100k+ band use isHighSalary / isHundredKLocal as well,
-      // so it matches QA + our currency-aware thresholds.
-      Promise.all(
-        SALARY_BANDS.map(async (band) => {
-          let count: number
+      },
+    }),
+    // UPDATED: make 100k+ band use isHighSalary / isHundredKLocal as well,
+    // so it matches QA + our currency-aware thresholds.
+    Promise.all(
+      SALARY_BANDS.map(async (band) => {
+        let count: number
 
-          if (band.min === 100_000) {
-            // $100k+ band: treat as "high-salary" in any local currency
-            count = await prisma.job.count({
-              where: {
-                isExpired: false,
-                OR: [
-                  { isHighSalary: true },
-                  { isHundredKLocal: true },
-                  { maxAnnual: { gte: BigInt(100_000) } },
-                  { minAnnual: { gte: BigInt(100_000) } },
-                ],
-              },
-            })
-          } else {
-            // Higher bands rely on normalized annual fields
-            count = await prisma.job.count({
-              where: {
-                isExpired: false,
-                OR: [
-                  { maxAnnual: { gte: BigInt(band.min) } },
-                  { minAnnual: { gte: BigInt(band.min) } },
-                ],
-              },
-            })
-          }
-
-          return { ...band, count }
-        }),
-      ),
-      Promise.all(
-        ROLE_CATEGORIES.map(async (role) => ({
-          ...role,
-          count: await prisma.job.count({
+        if (band.min === 100_000) {
+          // $100k+ band: treat as "high-salary" in any local currency
+          count = await prisma.job.count({
             where: {
               isExpired: false,
-              isHighSalary: true,
-              roleSlug: { contains: role.slug },
+              OR: [
+                { isHighSalary: true },
+                { isHundredKLocal: true },
+                { maxAnnual: { gte: BigInt(100_000) } },
+                { minAnnual: { gte: BigInt(100_000) } },
+              ],
             },
-          }),
-        })),
-      ),
-    ])
+          })
+        } else {
+          // Higher bands rely on normalized annual fields
+          count = await prisma.job.count({
+            where: {
+              isExpired: false,
+              OR: [
+                { maxAnnual: { gte: BigInt(band.min) } },
+                { minAnnual: { gte: BigInt(band.min) } },
+              ],
+            },
+          })
+        }
+
+        return { ...band, count }
+      })
+    ),
+    Promise.all(
+      ROLE_CATEGORIES.map(async (role) => ({
+        ...role,
+        count: await prisma.job.count({
+          where: {
+            isExpired: false,
+            isHighSalary: true,
+            roleSlug: { contains: role.slug },
+          },
+        }),
+      }))
+    ),
+    prisma.job.count({
+      where: { isHighSalaryLocal: true, isExpired: false },
+    }),
+    prisma.company.count(),
+    prisma.job.count({
+      where: {
+        isHighSalaryLocal: true,
+        isExpired: false,
+        postedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      },
+    }),
+  ])
+
+  const stats = {
+    totalJobs: schemaTotalJobs,
+    totalCompanies: schemaTotalCompanies,
+    newThisWeek: schemaNewThisWeek,
+  }
 
   const jobs = jobsData.jobs as JobWithCompany[]
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
-      <HomepageSchemas jobCount={totalJobs} companyCount={totalCompanies} />
+      <HomepageSchemas
+        jobCount={stats.totalJobs}
+        companyCount={stats.totalCompanies}
+      />
       <section className="mb-10">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
           CURATED JOBS PAYING $100K+ ONLY
