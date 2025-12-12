@@ -1,0 +1,11 @@
+# Six Figure Jobs
+> $100k+ tech jobs platform
+
+## About
+Curated high-paying jobs ($100k+) in tech, engineering, product, data, and design.
+
+## Pages
+- /jobs - Browse all $100k+ jobs
+- /jobs/[role] - Jobs by role
+- /salary/[role] - Salary guides
+- /company/[slug] - Company profiles

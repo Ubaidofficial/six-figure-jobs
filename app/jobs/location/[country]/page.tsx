@@ -11,7 +11,7 @@ import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { redirect } from 'next/navigation'
 import { SALARY_BANDS } from '../../../page'
-import { getSiteUrl } from '../../../../lib/seo/site'
+import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 
 const PAGE_SIZE = 40
 
@@ -84,12 +84,12 @@ export async function generateMetadata({
   })
 
   const title = loc.remoteOnly
-    ? 'Remote jobs paying $100k+ | Six Figure Jobs'
-    : `${loc.label} jobs paying $100k+ | Six Figure Jobs`
+    ? `Remote $100k+ jobs (${total.toLocaleString()}) | ${SITE_NAME}`
+    : `${loc.label} $100k+ jobs (${total.toLocaleString()}) | ${SITE_NAME}`
 
   const description = loc.remoteOnly
-    ? 'Browse remote $100k+ roles across engineering, product, data, and more.'
-    : `Browse $100k+ roles in ${loc.label} across engineering, product, data, and more.`
+    ? `Browse ${total.toLocaleString()} remote $100k jobs, remote high paying jobs, six figure remote jobs across engineering, product, and data.`
+    : `Browse ${total.toLocaleString()} $100k jobs in ${loc.label}. ${loc.label} $100k jobs, high paying jobs ${loc.label}, six figure ${loc.label} roles with verified pay.`
 
   const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
   const allowIndex = total >= 3
@@ -151,6 +151,41 @@ export default async function LocationPage({
 
   const totalPages = total === 0 ? 1 : Math.ceil(total / PAGE_SIZE)
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${getSiteUrl()}/` },
+      { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${getSiteUrl()}/jobs/100k-plus` },
+      { '@type': 'ListItem', position: 3, name: `${loc.label} jobs`, item: `${getSiteUrl()}/jobs/location/${loc.slug ?? country}` },
+    ],
+  }
+
+  const itemListJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${loc.label} $100k+ jobs`,
+    itemListElement: (jobs as JobWithCompany[]).slice(0, 40).map((job, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'JobPosting',
+        title: job.title,
+        hiringOrganization: {
+          '@type': 'Organization',
+          name: job.companyRef?.name || job.company,
+        },
+        jobLocation: job.countryCode
+          ? {
+              '@type': 'Country',
+              addressCountry: job.countryCode,
+            }
+          : undefined,
+        url: `${getSiteUrl()}/job/${job.id}`,
+      },
+    })),
+  }
+
   const companyCounts = new Map<string, { name: string; count: number; slug?: string | null }>()
   jobs.forEach((job: any) => {
     const key = job.companyId || job.company || job.companyRef?.name
@@ -175,6 +210,14 @@ export default async function LocationPage({
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
       <header className="mb-6 space-y-2">
         <h1 className="text-2xl font-semibold text-slate-50">{title}</h1>
         <p className="text-sm text-slate-300">

@@ -246,19 +246,20 @@ export async function generateMetadata({
 
   const totalJobs = result.total
   const titleBase = `Remote ${roleName} jobs in ${countryCode} paying $100k+`
+  const title =
+    totalJobs > 0
+      ? `${titleBase} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
+      : `${titleBase} | ${SITE_NAME}`
   const canonicalUrl = `${SITE_URL}${canonicalPathname}`
 
   return {
-    title:
-      totalJobs > 0
-        ? `${titleBase} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
-        : `${titleBase} | ${SITE_NAME}`,
-    description: `Search remote ${roleName} jobs in ${countryCode} paying $100k+ across top companies. Filter by salary bands and explore the best high-paying roles.`,
+    title,
+    description: `Search remote ${roleName} jobs in ${countryCode} paying $100k+ across top companies. ${totalJobs.toLocaleString()} remote ${roleName} roles with transparent pay.`,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `${titleBase} | ${SITE_NAME}`,
+      title,
       description: `Find remote ${roleName} roles in ${countryCode} with at least $100k total compensation.`,
       url: canonicalUrl,
       siteName: SITE_NAME,
@@ -266,7 +267,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${titleBase} | ${SITE_NAME}`,
+      title,
       description: `Remote ${roleName} jobs in ${countryCode} paying $100k+.`,
     },
   }
@@ -374,7 +375,7 @@ export default async function RemoteRoleCountryPage({
       {/* --------------------------------- Header ---------------------------------- */}
       <header className="mb-6 space-y-3">
         <h1 className="text-2xl font-semibold text-slate-50">
-          Remote {roleName} jobs in {countryCode} paying $100k+
+          Remote {roleName} jobs in {countryCode} paying $100k+ ({data.total.toLocaleString()})
         </h1>
         <p className="text-sm text-slate-300">
           Browse high-paying remote {roleName} roles based in{' '}

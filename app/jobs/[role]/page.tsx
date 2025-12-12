@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
-import { getSiteUrl } from '../../../lib/seo/site'
+import { getSiteUrl, SITE_NAME } from '../../../lib/seo/site'
 
 export const revalidate = 300
 
@@ -54,8 +54,8 @@ export async function generateMetadata({
   const isRemote = remoteCount > total * 0.5
   
   const title = isRemote
-    ? `${roleTitle} Jobs (${salaryRange}) - ${total} Remote Roles | $100k+`
-    : `${roleTitle} Jobs - ${total} Positions Paying ${salaryRange} | $100k+`
+    ? `${roleTitle} Jobs (${salaryRange}) - ${total.toLocaleString()} Remote $100k+ Roles | Six Figure Jobs`
+    : `${roleTitle} Jobs - ${total.toLocaleString()} $100k+ Roles (${salaryRange}) | Six Figure Jobs`
   
   const description = `Find ${total} ${roleTitle.toLowerCase()} jobs paying ${salaryRange}, verified at $100k+ (or local equivalent). Remote, hybrid, and on-site positions at top tech companies. Updated daily.`
 
@@ -67,7 +67,7 @@ export async function generateMetadata({
       title: `${roleTitle} Jobs - ${total} High-Paying Positions`,
       description,
       url: `${SITE_URL}/jobs/${role}`,
-      siteName: 'Six Figure Jobs',
+      siteName: SITE_NAME,
       type: 'website',
     },
   }
@@ -139,8 +139,51 @@ export default async function RolePage({
     },
   ]
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${SITE_URL}/jobs/100k-plus` },
+      { '@type': 'ListItem', position: 3, name: `${roleTitle} jobs`, item: `${SITE_URL}/jobs/${role}` },
+    ],
+  }
+
+  const itemListJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${roleTitle} jobs paying $100k+`,
+    itemListElement: (jobs as JobWithCompany[]).slice(0, 40).map((job, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'JobPosting',
+        title: job.title,
+        hiringOrganization: {
+          '@type': 'Organization',
+          name: job.companyRef?.name || job.company,
+        },
+        jobLocation: job.countryCode
+          ? {
+              '@type': 'Country',
+              addressCountry: job.countryCode,
+            }
+          : undefined,
+        url: `${SITE_URL}/job/${job.id}`,
+      },
+    })),
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
       <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
         <ol className="flex items-center gap-1">
           <li><Link href="/">Home</Link></li>

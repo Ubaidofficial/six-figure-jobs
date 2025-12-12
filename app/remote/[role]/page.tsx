@@ -270,7 +270,7 @@ export async function generateMetadata({
       ? { index: true, follow: true }
       : { index: false, follow: true },
     openGraph: {
-      title: `${baseTitle} | ${SITE_NAME}`,
+      title,
       description,
       url: `${SITE_URL}/remote/${roleSlug}`,
       siteName: SITE_NAME,
@@ -278,7 +278,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${baseTitle} | ${SITE_NAME}`,
+      title,
       description,
     },
   }
@@ -406,7 +406,7 @@ export default async function RemoteRolePage({
       {/* --------------------------------- Header ---------------------------------- */}
       <header className="mb-6 space-y-3">
         <h1 className="text-2xl font-semibold text-slate-50">
-          Remote {roleName} jobs paying $100k+
+          Remote {roleName} jobs paying $100k+ ({data.total.toLocaleString()})
         </h1>
         <p
           className="text-sm text-slate-300"

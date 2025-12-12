@@ -12,6 +12,7 @@ export type JobQueryInput = {
 
   roleSlugs?: string[]
   skillSlugs?: string[]
+  stateCode?: string
   minAnnual?: number
   maxAnnual?: number
   countryCode?: string
@@ -151,6 +152,10 @@ export function buildWhere(
 
   if (filters.countryCode) {
     where.countryCode = filters.countryCode.toUpperCase()
+  }
+
+  if (filters.stateCode) {
+    where.stateCode = filters.stateCode.toUpperCase()
   }
 
   if (filters.citySlug) {

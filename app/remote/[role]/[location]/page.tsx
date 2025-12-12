@@ -304,13 +304,14 @@ export async function generateMetadata({
   )} jobs in ${cityName} paying $100k+`
   const canonicalPath = buildCanonicalPath(roleSlug, cityParam, searchParams)
   const canonicalUrl = `${SITE_URL}${canonicalPath}`
+  const title =
+    totalJobs > 0
+      ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
+      : `${baseTitle} | ${SITE_NAME}`
 
   return {
-    title:
-      totalJobs > 0
-        ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
-        : `${baseTitle} | ${SITE_NAME}`,
-    description: `Search remote ${prettyRole(
+    title,
+    description: `Search ${totalJobs.toLocaleString()} remote ${prettyRole(
       roleSlug
     )} jobs in ${cityName} paying $100k+ at leading tech and SaaS companies.`,
     alternates: {
@@ -321,7 +322,7 @@ export async function generateMetadata({
         ? { index: true, follow: true }
         : { index: false, follow: true },
     openGraph: {
-      title: `${baseTitle} | ${SITE_NAME}`,
+      title,
       description: `Find remote ${prettyRole(
         roleSlug
       )} roles in ${cityName} with at least $100k total compensation.`,
@@ -331,7 +332,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${baseTitle} | ${SITE_NAME}`,
+      title,
       description: `Remote ${prettyRole(
         roleSlug
       )} jobs in ${cityName} paying $100k+.`,
@@ -505,8 +506,7 @@ export default async function RemoteRoleCityPage({
       {/* --------------------------------- Header ---------------------------------- */}
       <header className="mb-6 space-y-3">
         <h1 className="text-2xl font-semibold text-slate-50">
-          Remote {prettyRole(roleSlug)} jobs in {cityName} paying
-          $100k+
+          Remote {prettyRole(roleSlug)} jobs in {cityName} paying $100k+ ({totalJobs.toLocaleString()})
         </h1>
         <p className="text-sm text-slate-300" data-speakable="summary">
           Browse high-paying remote {prettyRole(

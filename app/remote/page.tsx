@@ -1,16 +1,45 @@
-import { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '../../lib/prisma'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 
 const SITE_URL = getSiteUrl()
 
-export const metadata: Metadata = {
-  title: `Remote $100k+ Jobs | ${SITE_NAME}`,
-  description: 'Browse remote six-figure jobs across all roles. Software engineers, product managers, data scientists, and more. Work from anywhere with $100k+ salary.',
-  alternates: {
-    canonical: `${SITE_URL}/remote`,
-  },
+export async function generateMetadata() {
+  const total = await prisma.job.count({
+    where: {
+      isExpired: false,
+      OR: [
+        { minAnnual: { gte: BigInt(100_000) } },
+        { maxAnnual: { gte: BigInt(100_000) } },
+        { isHundredKLocal: true },
+        { isHighSalaryLocal: true },
+      ],
+      OR: [{ remote: true }, { remoteMode: 'remote' }],
+    },
+  })
+
+  const title = `Remote $100k+ Jobs (${total.toLocaleString()}) | ${SITE_NAME}`
+  const description = `Browse ${total.toLocaleString()} remote six-figure jobs across engineering, product, data, and more. $100k+ remote jobs, remote high paying jobs, six figure remote jobs.`
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `${SITE_URL}/remote`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}/remote`,
+      siteName: SITE_NAME,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+  }
 }
 
 export default async function RemoteJobsPage() {
@@ -44,13 +73,15 @@ export default async function RemoteJobsPage() {
       title: r.roleSlug!.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
     }))
 
+  const totalCount = roleList.reduce((sum, r) => sum + r.count, 0)
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
       <h1 className="mb-4 text-4xl font-bold text-white">
-        Remote $100k+ Jobs
+        Remote $100k+ Jobs ({totalCount.toLocaleString()})
       </h1>
       <p className="mb-8 text-lg text-slate-300">
-        Browse {roleList.reduce((sum, r) => sum + r.count, 0).toLocaleString()} remote six-figure jobs across all roles. 
+        Browse {totalCount.toLocaleString()} remote six-figure jobs across all roles. 
         Work from anywhere with premium compensation.
       </p>
 

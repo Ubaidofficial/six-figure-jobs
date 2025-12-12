@@ -161,7 +161,7 @@ export async function generateMetadata({
   }
 
   const allowIndex = raw.length >= 3
-  const title = `${roleName} salary guide (${salaryBand}) | Six Figure Jobs`
+  const title = `${salaryBand} ${roleName} salary guide | Six Figure Jobs`
   const canonical = `${SITE_URL}/salary/${roleSlug}${bandSlug ? `?band=${bandSlug}` : ''}`
 
   return {
@@ -377,6 +377,20 @@ export default async function SalaryRolePage(props: PageProps) {
     ],
   }
 
+  const occupationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Occupation',
+    name: `${roleName} salary`,
+    description: `${bandLabel} ${roleName} salary data from live $100k+ roles.`,
+    estimatedSalary: {
+      '@type': 'MonetaryAmountDistribution',
+      currency: 'USD',
+      median: statMedian ?? undefined,
+      percentile10: statMin ?? undefined,
+      percentile90: statMax ?? undefined,
+    },
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       <StructuredData jobs={jobs} roleName={roleName} />
@@ -397,6 +411,10 @@ export default async function SalaryRolePage(props: PageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(occupationJsonLd) }}
       />
       {/* Breadcrumb */}
       <nav

@@ -161,13 +161,13 @@ export async function generateMetadata({
     bandSlug && BAND_MAP[bandSlug] ? BAND_MAP[bandSlug] : 100_000
   const bandLabel = formatSalaryBandLabel(minAnnual, countryCode)
 
-  const title = `${roleName} salary in ${locationLabel || 'your region'}`
+  const title = `${bandLabel} ${roleName} salary in ${locationLabel || 'top regions'} | ${SITE_NAME}`
   const canonicalBase = `${SITE_URL}/salary/${roleSlug}${loc.length ? `/${loc.join('/')}` : ''}`
   const canonical = `${canonicalBase}${bandSlug ? `?band=${bandSlug}` : ''}`
 
   return {
     title,
-    description: `Live ${roleName} salary data in ${locationLabel || 'top regions'} using verified ${bandLabel} tech jobs. Includes remote, hybrid, and on-site roles with real pay ranges.`,
+    description: `Live ${roleName} salary data in ${locationLabel || 'top regions'} using verified ${bandLabel} tech jobs. $100k+ ${roleName} salaries, high paying ${roleName} jobs, six figure ${roleName} roles with real pay ranges.`,
     alternates: { canonical },
     openGraph: {
       title,
@@ -272,9 +272,65 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
     pageSize: PAGE_SIZE,
   })
 
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `What is the ${roleName} salary in ${locationLabel || 'this region'}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Median ${roleName} salary is ${median ? formatMoney(median) : 'not enough data'} with a typical range of ${minVal && maxVal ? `${formatMoney(minVal)}–${formatMoney(maxVal)}` : 'insufficient data'} for $100k+ roles.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Are remote or hybrid ${roleName} roles included?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Remote and hybrid roles tagged for this market are included alongside on-site positions.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Do these salaries reflect live jobs?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'All figures come from live $100k+ job listings sourced from company ATS feeds and trusted boards.',
+        },
+      },
+    ],
+  }
+
+  const occupationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Occupation',
+    name: `${roleName} salary in ${locationLabel || 'this region'}`,
+    description: `${bandLabel} ${roleName} salary data from live $100k+ roles.`,
+    occupationLocation: locationLabel
+      ? [{ '@type': 'City', name: locationLabel }]
+      : undefined,
+    estimatedSalary: {
+      '@type': 'MonetaryAmountDistribution',
+      currency: 'USD',
+      median: median ?? undefined,
+      percentile10: minVal ?? undefined,
+      percentile90: maxVal ?? undefined,
+    },
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-8 space-y-8">
       <StructuredData jobs={jobsResult.jobs} roleName={roleName} locationLabel={locationLabel} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(occupationJsonLd) }}
+      />
       <nav
         aria-label="Breadcrumb"
         className="text-xs text-slate-400"
