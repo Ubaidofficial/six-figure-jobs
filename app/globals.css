@@ -22,31 +22,6 @@
   box-sizing: border-box;
 }
 
-:root {
-  --bg: #0b0f1a;
-  --panel: #121826;
-  --panel-2: #1b2234;
-  --stroke: #1f2a3d;
-  --text: #e8ecf5;
-  --text-muted: #9aa7bd;
-  --accent: #19c4c8;
-  --accent-2: #f7b733;
-  --glow: rgba(25, 196, 200, 0.28);
-  --radius: 14px;
-}
-
-html,
-body {
-  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at 20% 20%, rgba(25, 196, 200, 0.08), transparent 32%),
-    radial-gradient(circle at 80% 10%, rgba(247, 183, 51, 0.08), transparent 30%),
-    linear-gradient(135deg, #0b0f1a 0%, #0e1424 50%, #0c1320 100%);
-  color: var(--text);
-  line-height: 1.65;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-}
-
 /* Optional container */
 .container {
   max-width: 1400px;
@@ -58,59 +33,6 @@ body {
 /* HEADER                                                                     */
 /* -------------------------------------------------------------------------- */
 /* Header styling is handled via Tailwind classes inside layout */
-
-/* -------------------------------------------------------------------------- */
-/* BUTTONS                                                                    */
-/* -------------------------------------------------------------------------- */
-
-button {
-  background: linear-gradient(135deg, var(--accent) 0%, #0ed1b8 100%);
-  color: #06101c;
-  padding: 13px 28px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 600;
-  border: none;
-  box-shadow: 0 10px 40px var(--glow);
-  transition: all 0.25s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.25),
-    transparent
-  );
-  transition: left 0.5s;
-}
-
-button:hover::before {
-  left: 100%;
-}
-
-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 42px var(--glow);
-}
-
-button:active {
-  transform: translateY(0);
-}
-
-button:disabled {
-  background: linear-gradient(135deg, #475569 0%, #334155 100%);
-  cursor: not-allowed;
-}
 
 /* -------------------------------------------------------------------------- */
 /* MESSAGE BANNER                                                             */
@@ -130,35 +52,6 @@ button:disabled {
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-/* -------------------------------------------------------------------------- */
-/* INPUTS                                                                     */
-/* -------------------------------------------------------------------------- */
-
-input,
-select {
-  background: var(--panel);
-  border: 1px solid var(--stroke);
-  color: var(--text);
-  padding: 13px 18px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 500;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-input::placeholder {
-  color: var(--text-muted);
-}
-
-input:focus,
-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: #0f1625;
-  box-shadow: 0 0 0 3px rgba(25, 196, 200, 0.18);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -263,4 +156,48 @@ select:focus {
 
 .company-meta a:hover {
   text-decoration: underline;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 142 76% 36%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 142 76% 36%;
+    --chart-1: 142 76% 36%;
+    --chart-2: 220 70% 50%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    line-height: 1.65;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
 }

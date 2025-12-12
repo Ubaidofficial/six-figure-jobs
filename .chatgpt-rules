@@ -3902,28 +3902,420 @@ CREATE INDEX idx_companies_ats ON companies(ats_provider, ats_token);
 ```
 
 ═══════════════════════════════════════════════════════════════════════════════
-                           END OF RULES v2.5
+    24. SAFE pSEO EXPANSION STRATEGY - AVOID GOOGLE PENALTIES
 ═══════════════════════════════════════════════════════════════════════════════
 
-**Version**: 2.5 (FINAL SEO EDITION)
-**Last Updated**: December 12, 2025
-**Implementation Status**: 95%
-**Production URL**: https://www.6figjobs.com
-**Hosting**: Railway.app
+## 24.1 Phased Rollout Schedule (12-Week Plan)
 
-**Key Changes from v2.4:**
-- ✅ **NEW: Section 20** - Complete pSEO templates for every page type
-- ✅ **NEW: Section 21** - Advanced SEO checklist & data validation
-- ✅ **NEW: Section 22** - Internal linking strategy with anchor text rules
-- ✅ **NEW: Section 23** - Project management & technical debt tracking
-- ✅ Homepage schemas complete (WebSite + Organization)
-- ✅ Open Graph & Twitter Cards for all page types
-- ✅ Data validation functions with error detection
-- ✅ Comprehensive breadcrumb and footer linking
-- ✅ File organization standard
-- ✅ Code quality standards
+### Phase 1: Foundation (Weeks 1-2) - 20 pages total
+- Week 1: Top 10 roles (Software Engineer, Product Manager, Data Scientist, etc.) - 100+ jobs each
+- Week 2: Top 10 states (California, Texas, New York, Washington, etc.) - 200+ jobs each
+- **Publishing Rate:** 10 pages/week
+- **Quality Gate:** >100 jobs per page, full metadata, 3+ schemas
 
-**Total Lines**: ~3,100
-**Total Sections**: 23
+### Phase 2: Expansion (Weeks 3-6) - 80 more pages (100 total)
+- Week 3: Top 15 skills (Python, React, TypeScript, AWS, etc.) - 50+ jobs each
+- Week 4: Top 10 cities (San Francisco, NYC, Seattle, Austin, etc.) - 100+ jobs each
+- Week 5: Remaining 15 roles - 30+ jobs each
+- Week 6: Remaining 40 states - 10+ jobs each
+- **Publishing Rate:** 20 pages/week
+- **Quality Gate:** >30 jobs per page
 
-This is the FINAL comprehensive rules file covering ALL aspects of the project.
+### Phase 3: Combinations (Weeks 7-10) - 120 more pages (220 total)
+- Week 7-8: Top 5 roles × Top 10 cities (50 pages) - 20+ jobs each
+- Week 9: Top 10 roles × Remote (10 pages) - 50+ jobs each
+- Week 10: Top 10 skills × Remote (10 pages) + Role × State combos (50 pages)
+- **Publishing Rate:** 30 pages/week
+- **Quality Gate:** >20 jobs per combo page
+
+### Phase 4: Completion (Weeks 11-12) - 100 more pages (320 total)
+- Week 11-12: Industry pages, deep combos, skill variations
+- **Publishing Rate:** 50 pages/week (maximum safe rate)
+- **Quality Gate:** >10 jobs per page (strict minimum)
+
+## 24.2 Quality Gates (MANDATORY CHECKS)
+
+**Minimum Requirements per Page:**
+- ✅ At least 5 jobs (absolute minimum) - 10+ recommended
+- ✅ 200+ characters of unique content
+- ✅ <30% similarity with other pages
+- ✅ H1 tag with "$100k" keyword
+- ✅ Unique title tag (<60 chars) + description (<160 chars)
+- ✅ Canonical URL, OpenGraph, Twitter Card
+- ✅ ItemList + BreadcrumbList + FAQPage schemas
+- ✅ 5+ internal links to related pages
+- ✅ <2.5s page load time (LCP)
+- ✅ "Updated X ago" timestamp
+- ✅ "X new jobs this week" counter
+
+**Auto-Skip Logic:**
+```typescript
+// Skip publishing if:
+if (jobCount < 5) return false;  // Too few jobs
+if (uniqueContent.length < 200) return false;  // Content too short
+if (!hasH1 || !hasMetadata || !hasSchema) return false;  // Missing SEO elements
+```
+
+## 24.3 Red Flags to STOP Publishing
+
+**CRITICAL (Auto-disable publishing):**
+- 🚨 Google Search Console manual action detected
+- 🚨 GSC coverage drops >10% in one week
+
+**WARNINGS (Review but continue):**
+- ⚠️ GSC coverage below 70%
+- ⚠️ Average jobs per page <15
+- ⚠️ Page load time >3s
+- ⚠️ Over weekly publishing limit
+
+## 24.4 Success Criteria by Week
+
+| Week | Pages Total | Min GSC Indexed | Coverage % | Avg Jobs/Page |
+|------|-------------|-----------------|------------|---------------|
+| 2    | 20          | 15              | 75%        | 100+          |
+| 6    | 100         | 80              | 80%        | 50+           |
+| 10   | 220         | 180             | 82%        | 35+           |
+| 12   | 320         | 260             | 80%        | 30+           |
+
+## 24.5 Rollback Plan (If Manual Action Occurs)
+
+**Day 1:** STOP publishing immediately. Document manual action from GSC.
+**Days 2-7:** Add noindex to pages <5 jobs. Remove from sitemap pages <10 jobs. Submit reconsideration request.
+**Weeks 2-4:** Wait for Google response. Monitor GSC daily. Do NOT publish new pages.
+**Week 5+:** Restart at Phase 1 rates with doubled minimums (20 jobs/page). Max 5 pages/day for 2 weeks.
+
+═══════════════════════════════════════════════════════════════════════════════
+    14.13 CORE WEB VITALS OPTIMIZATION
+═══════════════════════════════════════════════════════════════════════════════
+
+## 14.13.1 Largest Contentful Paint (LCP) - Target: < 2.5s
+
+**Priority 1: Preload Critical Resources**
+```tsx
+// app/layout.tsx - Add to <head>
+<link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+<link rel="preconnect" href="https://img.logo.dev" />
+<link rel="dns-prefetch" href="https://img.logo.dev" />
+```
+
+**Priority 2: Optimize Above-Fold Images**
+```tsx
+// First 3 job cards only
+<Image
+  src={job.company.logo}
+  alt={`${job.company.name} logo`}
+  width={48}
+  height={48}
+  priority={index < 3}  // Only first 3 cards
+  loading={index < 3 ? 'eager' : 'lazy'}
+/>
+```
+
+**Priority 3: Lazy Load Heavy Components**
+```tsx
+// Lazy load filters and non-critical UI
+const JobFilters = dynamic(() => import('@/components/JobFilters'), {
+  loading: () => <FilterSkeleton />,
+  ssr: false,  // Client-side only
+});
+```
+
+## 14.13.2 First Input Delay (FID) - Target: < 100ms
+
+**Priority 1: Debounce Search Input**
+```tsx
+import { useDebouncedCallback } from 'use-debounce'
+
+const debouncedSearch = useDebouncedCallback((value: string) => {
+  setSearch(value);
+}, 300);  // 300ms delay
+```
+
+**Priority 2: Virtualize Long Lists (100+ items)**
+```tsx
+import { useVirtualizer } from '@tanstack/react-virtual'
+
+// Only render visible job cards
+const virtualizer = useVirtualizer({
+  count: jobs.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 200,  // Job card height
+});
+```
+
+## 14.13.3 Cumulative Layout Shift (CLS) - Target: < 0.1
+
+**Priority 1: Reserve Space for Images**
+```tsx
+// WRONG (causes layout shift):
+<img src={logo} alt="" />
+
+// RIGHT (reserves space):
+<div className="w-12 h-12 bg-zinc-800 rounded-lg">
+  <Image src={logo} alt={company.name} width={48} height={48} />
+</div>
+```
+
+**Priority 2: Use Skeleton Loaders**
+```tsx
+export function JobCardSkeleton() {
+  return (
+    <article className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+      <div className="flex gap-4">
+        <div className="w-12 h-12 bg-zinc-800 rounded-lg animate-pulse" />
+        <div className="flex-1 space-y-2">
+          <div className="h-5 bg-zinc-800 rounded w-3/4 animate-pulse" />
+          <div className="h-4 bg-zinc-800 rounded w-1/2 animate-pulse" />
+        </div>
+      </div>
+    </article>
+  );
+}
+```
+
+**Priority 3: Prevent Font Layout Shifts**
+```css
+/* app/globals.css */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter-var.woff2') format('woff2');
+  font-display: swap;  /* Prevent invisible text flash */
+}
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+    4.6 ADVANCED KEYWORD OPTIMIZATION
+═══════════════════════════════════════════════════════════════════════════════
+
+## 4.6.1 LSI Keywords (Latent Semantic Indexing)
+
+**Primary: "$100k jobs" → LSI variants:**
+- six figure jobs, six figure salary, high paying jobs, high compensation, top paying roles, premium positions, competitive salary, lucrative opportunities, well-paid positions
+
+**Primary: "software engineer" → LSI variants:**
+- SWE, software developer, developer, engineer, programmer, coder, software engineering, development engineer
+
+**Primary: "remote" → LSI variants:**
+- work from home, WFH, distributed, remote-first, remote-friendly, work from anywhere, location independent, virtual position, telecommute
+
+## 4.6.2 Enhanced First Paragraph Template
+
+**CURRENT (Good):**
+```
+Browse 3,240 software engineer $100k jobs with verified six figure salaries. 
+Find high paying software engineer jobs from $120k to $500k at top tech companies.
+127 new $100k software engineer positions posted this week.
+```
+
+**ENHANCED (Better - More LSI):**
+```
+Browse 3,240 software engineer $100k jobs with verified six figure salaries. 
+Find high paying software developer positions paying $120,000 to $500,000 per year 
+from top tech companies like Google, Stripe, and Anthropic. These premium SWE roles 
+offer competitive compensation packages including equity, bonuses, and comprehensive benefits. 
+127 new $100k software engineering jobs posted this week across remote, hybrid, and onsite opportunities.
+```
+
+**Improvements:**
+- ✅ Added LSI: "software developer", "premium SWE roles", "competitive compensation"
+- ✅ More natural language flow
+- ✅ Mentioned benefits (equity, bonuses) for relevance
+- ✅ Added work arrangements (remote, hybrid, onsite)
+
+## 4.6.3 Section Headers (H2) - Keyword-Rich
+
+**BEFORE (Generic):**
+```tsx
+<h2>Latest Jobs</h2>
+<h2>Top Companies</h2>
+```
+
+**AFTER (Keyword-Rich):**
+```tsx
+<h2>Latest $100k+ Software Engineer Jobs</h2>
+<h2>Top Companies Hiring $100k+ Engineers</h2>
+<h2>Related $100k+ Software Engineering Positions</h2>
+<h2>Remote $100k+ Software Developer Opportunities</h2>
+<h2>Six Figure Software Engineer Salaries by Location</h2>
+```
+
+**Rule:** Every H2 MUST include at least ONE of: "$100k", "high paying", "six figure"
+
+## 4.6.4 Image Alt Tags (CURRENTLY MISSING - ADD THIS)
+
+**Company Logos:**
+```tsx
+// WRONG:
+<Image src={company.logo} alt={company.name} />
+
+// RIGHT:
+<Image 
+  src={company.logo} 
+  alt={`${company.name} logo - Hiring $100k+ ${role} jobs`}
+  width={48}
+  height={48}
+/>
+```
+
+**Hero Images:**
+```tsx
+<Image
+  src="/hero-bg.webp"
+  alt="Browse 13,000+ high-paying six figure jobs - $100k to $500k positions from top tech companies"
+  width={1200}
+  height={600}
+  priority
+/>
+```
+
+## 4.6.5 Meta Description Enhancement
+
+**BEFORE:**
+```typescript
+description: `Find ${count} $100k+ ${role} jobs. Browse high-paying positions.`
+```
+
+**AFTER (More Compelling + LSI):**
+```typescript
+description: `Browse ${count.toLocaleString()} $100k+ ${role} jobs with verified six figure salaries. Find high-paying ${role.toLowerCase()} positions from $${minK}k to $${maxK}k at top companies. ${newCount} new jobs this week.`
+```
+
+**Key Improvements:**
+- ✅ Include exact job count (social proof)
+- ✅ Mention salary range (value prop)
+- ✅ Include "verified" (trust signal)
+- ✅ Add urgency ("X new this week")
+- ✅ Use LSI keywords naturally
+
+═══════════════════════════════════════════════════════════════════════════════
+    25. CONTENT FRESHNESS & RECRAWL SIGNALS
+═══════════════════════════════════════════════════════════════════════════════
+
+## 25.1 Dynamic Update Timestamps
+
+**Display Last Update Time on ALL listing pages:**
+```tsx
+// components/PageHeader.tsx
+export function PageHeader({ title, count, lastUpdated, newThisWeek }) {
+  return (
+    <header>
+      <h1 className="text-4xl font-bold">{title}</h1>
+      
+      <div className="flex items-center gap-4 mt-4 text-sm text-zinc-500">
+        <span className="flex items-center gap-2">
+          <ClockIcon className="w-4 h-4" />
+          Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+        </span>
+        
+        {newThisWeek > 0 && (
+          <span className="flex items-center gap-2 text-green-400">
+            <TrendingUpIcon className="w-4 h-4" />
+            {newThisWeek} new jobs this week
+          </span>
+        )}
+      </div>
+    </header>
+  );
+}
+```
+
+## 25.2 Sitemap LastMod (UPGRADE FROM LOW TO HIGH PRIORITY)
+
+**CURRENT ISSUE:** Sitemap lastmod always shows "now" (not accurate)
+
+**FIX:** Use actual page update timestamp
+```typescript
+// app/sitemap.xml/route.ts
+export async function GET() {
+  const pages = await prisma.pseoPage.findMany({
+    select: { url: true, updatedAt: true, priority: true },
+  });
+  
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${pages.map(page => `
+  <url>
+    <loc>${page.url}</loc>
+    <lastmod>${page.updatedAt.toISOString()}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>${page.priority}</priority>
+  </url>
+  `).join('')}
+</urlset>`;
+  
+  return new Response(sitemap, {
+    headers: { 'Content-Type': 'application/xml' },
+  });
+}
+```
+
+**Update Triggers - When to update page.updatedAt:**
+1. New jobs added to category → Update timestamp
+2. Jobs removed (expired/filled) → Update timestamp
+3. Salary stats changed >10% → Update timestamp
+4. Content enhanced (FAQ added, description updated) → Update timestamp
+
+## 25.3 Job Cards - Highlight NEW/HOT
+```tsx
+// components/job/JobCard.tsx
+export function JobCard({ job }) {
+  const isNew = daysSince(job.postedAt) <= 3;
+  const isHot = daysSince(job.postedAt) <= 1;
+  
+  return (
+    <article className="relative ...">
+      {isNew && (
+        <span className="absolute top-3 right-3 bg-green-500/10 text-green-400 
+                         border border-green-500/20 px-2 py-0.5 rounded-full text-xs font-medium">
+          {isHot ? '🔥 HOT' : 'NEW'}
+        </span>
+      )}
+      
+      {/* ... rest of card */}
+      
+      <div className="flex items-center gap-2 mt-4 text-xs text-zinc-500">
+        <ClockIcon className="w-3.5 h-3.5" />
+        <span>Posted {formatRelativeTime(job.postedAt)}</span>
+      </div>
+    </article>
+  );
+}
+```
+
+## 25.4 Homepage Stats Bar (Real-Time Updates)
+```tsx
+// components/StatsBar.tsx
+export function StatsBar() {
+  const stats = useRealtimeStats(); // Updates every 5 minutes
+  
+  return (
+    <div className="grid grid-cols-4 gap-4 py-8">
+      <Stat
+        value={stats.totalJobs.toLocaleString()}
+        label="$100k+ Jobs"
+        trend={`+${stats.newThisWeek} this week`}
+        trendUp={true}
+      />
+      <Stat
+        value={stats.companies.toLocaleString()}
+        label="Companies"
+        subtext="Actively hiring"
+      />
+      <Stat
+        value={`$${Math.round(stats.avgSalary / 1000)}k`}
+        label="Avg. Salary"
+      />
+      <Stat
+        value="Updated 2 min ago"
+        label="Data Freshness"
+        highlight={true}
+      />
+    </div>
+  );
+}
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+    END OF v2.6 ADDITIONS
+═══════════════════════════════════════════════════════════════════════════════
+
