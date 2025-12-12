@@ -17,7 +17,7 @@ const PAGE_SIZE = 20
 type SearchParams = Record<string, string | string[] | undefined>
 
 type PageProps = {
-  searchParams?: SearchParams | Promise<SearchParams>
+  searchParams?: Promise<SearchParams>
 }
 
 type SalaryBand = {
@@ -62,14 +62,9 @@ function resolveSalaryBand(
 }
 
 async function resolveSearchParams(
-  input?: SearchParams | Promise<SearchParams>
+  input?: Promise<SearchParams>
 ): Promise<SearchParams> {
-  if (!input) return {}
-  if (typeof (input as any).then === 'function') {
-    const resolved = (await input) || {}
-    return resolved as SearchParams
-  }
-  return input as SearchParams
+  return (await input) || {}
 }
 
 function parsePage(sp: SearchParams): number {

@@ -7,7 +7,7 @@ import { prisma } from '../../../../lib/prisma'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { formatRelativeTime } from '../../../../lib/utils/time'
-import { LOCATIONS } from '../../../page'
+import { LOCATIONS } from '@/lib/constants/homepage'
 import { getSiteUrl } from '../../../../lib/seo/site'
 
 const PAGE_SIZE = 40

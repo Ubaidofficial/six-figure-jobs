@@ -25,10 +25,9 @@ type SearchParams = Record<string, string | string[] | undefined>
 /* -------------------------------------------------------------------------- */
 
 async function resolveSearchParams(
-  searchParams: SearchParams | Promise<SearchParams>
+  searchParams?: Promise<SearchParams>
 ): Promise<SearchParams> {
-  // Works whether searchParams is already resolved or a Promise (Next 16)
-  return await searchParams
+  return (await searchParams) || {}
 }
 
 function parsePage(sp: SearchParams): number {
@@ -217,8 +216,8 @@ export async function generateMetadata({
   params,
   searchParams,
 }: {
-  params: { role: string } | Promise<{ role: string }>
-  searchParams: SearchParams | Promise<SearchParams>
+  params: Promise<{ role: string }>
+  searchParams?: Promise<SearchParams>
 }): Promise<Metadata> {
   const p = await params
   const sp = await resolveSearchParams(searchParams)
@@ -292,8 +291,8 @@ export default async function RemoteRolePage({
   params,
   searchParams,
 }: {
-  params: { role: string } | Promise<{ role: string }>
-  searchParams: SearchParams | Promise<SearchParams>
+  params: Promise<{ role: string }>
+  searchParams?: Promise<SearchParams>
 }) {
   const p = await params
   const sp = await resolveSearchParams(searchParams)

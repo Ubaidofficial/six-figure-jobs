@@ -10,7 +10,7 @@ import { formatRelativeTime } from '../../../../lib/utils/time'
 import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { redirect } from 'next/navigation'
-import { SALARY_BANDS } from '../../../page'
+import { SALARY_BANDS } from '@/lib/constants/homepage'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 
 const PAGE_SIZE = 40

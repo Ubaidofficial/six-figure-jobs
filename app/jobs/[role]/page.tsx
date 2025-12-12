@@ -19,6 +19,68 @@ function formatRoleTitle(slug: string): string {
     .replace(/^Manager Manager /, 'Manager ')
 }
 
+function RoleFAQSchema({
+  role,
+  roleTitle,
+  count,
+  avgMin,
+  avgMax,
+}: {
+  role: string
+  roleTitle: string
+  count: number
+  avgMin: number
+  avgMax: number
+}) {
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `What is the average salary for $100k+ ${roleTitle} jobs?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `The average salary for $100k+ ${roleTitle.toLowerCase()} positions ranges from $${Math.round(
+            avgMin / 1000,
+          )}k to $${Math.round(avgMax / 1000)}k per year based on ${count} verified job postings.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How many $100k+ ${roleTitle} jobs are available?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `There are currently ${count.toLocaleString()} $100k+ ${roleTitle.toLowerCase()} positions available on Six Figure Jobs.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Are there remote ${roleTitle} jobs paying $100k+?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Yes! Many $100k+ ${roleTitle.toLowerCase()} positions offer remote work. Filter by "Remote" to see all remote ${roleTitle.toLowerCase()} jobs.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What companies hire $100k+ ${roleTitle}s?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Top companies hiring $100k+ ${roleTitle.toLowerCase()}s include Google, Meta, Stripe, OpenAI, Anthropic, Netflix, and many more leading tech companies.`,
+        },
+      },
+    ],
+  }
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+    />
+  )
+}
+
 export async function generateMetadata({ 
   params 
 }: { 
@@ -89,6 +151,23 @@ export default async function RolePage({
   if (total === 0) notFound()
 
   const roleTitle = formatRoleTitle(role)
+  const jobCount = total
+
+  const minAnnualValues = jobs
+    .map((j) => (j.minAnnual != null ? Number(j.minAnnual) : null))
+    .filter((v): v is number => v != null && v > 0)
+  const maxAnnualValues = jobs
+    .map((j) => (j.maxAnnual != null ? Number(j.maxAnnual) : null))
+    .filter((v): v is number => v != null && v > 0)
+
+  const avgSalaryMin =
+    minAnnualValues.length > 0
+      ? minAnnualValues.reduce((sum, v) => sum + v, 0) / minAnnualValues.length
+      : 100_000
+  const avgSalaryMax =
+    maxAnnualValues.length > 0
+      ? maxAnnualValues.reduce((sum, v) => sum + v, 0) / maxAnnualValues.length
+      : Math.max(avgSalaryMin, 200_000)
 
   const locationCounts = new Map<string, number>()
   jobs.forEach(job => {
@@ -183,6 +262,13 @@ export default async function RolePage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <RoleFAQSchema
+        role={role}
+        roleTitle={roleTitle}
+        count={jobCount}
+        avgMin={avgSalaryMin}
+        avgMax={avgSalaryMax}
       />
       <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
         <ol className="flex items-center gap-1">

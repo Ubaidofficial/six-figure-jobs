@@ -2,7 +2,8 @@
 // Sitemap for category + location browse pages (programmatic SEO)
 
 import { NextResponse } from 'next/server'
-import { CATEGORY_LINKS, LOCATIONS } from '../page'
+import { CATEGORY_LINKS } from '@/lib/constants/category-links'
+import { LOCATIONS } from '@/lib/constants/homepage'
 import {
   STATE_TARGETS,
   SKILL_TARGETS,
@@ -18,7 +19,13 @@ const SITE_URL = getSiteUrl()
 export async function GET() {
   const urls: string[] = []
 
-  CATEGORY_LINKS.forEach((cat) => {
+  CATEGORY_LINKS.roles.forEach((cat) => {
+    urls.push(`${SITE_URL}${cat.href}`)
+  })
+  CATEGORY_LINKS.locations.forEach((cat) => {
+    urls.push(`${SITE_URL}${cat.href}`)
+  })
+  CATEGORY_LINKS.salaryTiers.forEach((cat) => {
     urls.push(`${SITE_URL}${cat.href}`)
   })
 

@@ -1,8 +1,30 @@
 // app/pricing/page.tsx
 
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const revalidate = 3600
+
+export const metadata: Metadata = {
+  title: 'Pricing | Post $100k+ Jobs | Six Figure Jobs',
+  description:
+    'Affordable job posting packages for $100k+ positions. Reach qualified candidates actively seeking high-paying roles. Starting at $299/post.',
+  alternates: {
+    canonical: 'https://6figjobs.com/pricing',
+  },
+  openGraph: {
+    title: 'Pricing | Post $100k+ Jobs | Six Figure Jobs',
+    description: 'Affordable job posting packages for $100k+ positions.',
+    url: 'https://6figjobs.com/pricing',
+    siteName: 'Six Figure Jobs',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Pricing | Six Figure Jobs',
+    description: 'Affordable job posting packages for $100k+ positions.',
+  },
+}
 
 const tiers = [
   {

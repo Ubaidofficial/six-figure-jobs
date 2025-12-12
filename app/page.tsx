@@ -10,18 +10,51 @@ import { SEARCH_ROLE_OPTIONS } from '../lib/roles/searchRoles'
 import { TARGET_COUNTRIES } from '../lib/seo/regions'
 import { HomeFAQ } from './pageFAQ'
 import RoleTypeahead from './components/RoleTypeahead'
+import { CATEGORY_LINKS } from '@/lib/constants/category-links'
+import { LOCATIONS, SALARY_BANDS } from '@/lib/constants/homepage'
 
 export const revalidate = 600
 
 export const metadata: Metadata = {
-  title: 'Verified $100k+ Remote & Hybrid Tech Jobs | Six Figure Jobs',
+  title: '$100k+ Jobs | 13,000+ High-Paying Six Figure Positions | Six Figure Jobs',
   description:
-    'Only verified $100k+ (or local equivalent) tech roles from ATS and trusted boards. Remote, hybrid, and on-site openings across engineering, product, data, design, and more. Updated daily.',
+    'Find $100k+ jobs and high-paying six figure positions from top companies. Browse 13,000+ verified salary positions in engineering, product, data, and more. Updated daily.',
+  keywords:
+    '$100k jobs, high paying jobs, six figure jobs, $100k+ jobs, 100k salary jobs, high paying remote jobs',
+  alternates: {
+    canonical: 'https://6figjobs.com',
+  },
   openGraph: {
-    title: 'Verified $100k+ Remote & Hybrid Tech Jobs | Six Figure Jobs',
-    description:
-      'Curated high-salary tech jobs from top companies. No lowball ranges, no spam.',
+    title: '$100k+ Jobs | High-Paying Six Figure Positions',
+    description: 'Find $100k+ jobs from top companies. 13,000+ verified salary positions.',
+    url: 'https://6figjobs.com',
+    siteName: 'Six Figure Jobs',
     type: 'website',
+    images: [
+      {
+        url: 'https://6figjobs.com/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Six Figure Jobs - $100k+ Positions',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '$100k+ Jobs | High-Paying Six Figure Positions',
+    description: 'Find $100k+ jobs from top companies. 13,000+ verified salary positions.',
+    images: ['https://6figjobs.com/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 }
 
@@ -38,17 +71,6 @@ const ROLE_CATEGORIES = [
   { slug: 'marketing', label: 'Marketing', emoji: '📣', color: 'red' },
 ] as const
 
-export const CATEGORY_LINKS = [
-  { href: '/jobs/category/engineering', label: 'Engineering', emoji: '💻' },
-  { href: '/jobs/category/product', label: 'Product', emoji: '🧭' },
-  { href: '/jobs/category/data', label: 'Data', emoji: '📊' },
-  { href: '/jobs/category/design', label: 'Design', emoji: '🎨' },
-  { href: '/jobs/category/devops', label: 'DevOps', emoji: '⚙️' },
-  { href: '/jobs/category/mlai', label: 'ML / AI', emoji: '🤖' },
-  { href: '/jobs/category/sales', label: 'Sales', emoji: '💼' },
-  { href: '/jobs/category/marketing', label: 'Marketing', emoji: '📣' },
-] as const
-
 // Deduped, extended role list for the search dropdown
 const ROLE_OPTIONS = (() => {
   const seen = new Set<string>()
@@ -61,19 +83,6 @@ const ROLE_OPTIONS = (() => {
   return result
 })()
 
-export const LOCATIONS = [
-  { code: 'united-states', label: 'United States', flag: '🇺🇸' },
-  { code: 'united-kingdom', label: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'canada', label: 'Canada', flag: '🇨🇦' },
-  { code: 'germany', label: 'Germany', flag: '🇩🇪' },
-  { code: 'ireland', label: 'Ireland', flag: '🇮🇪' },
-  { code: 'switzerland', label: 'Switzerland', flag: '🇨🇭' },
-  { code: 'singapore', label: 'Singapore', flag: '🇸🇬' },
-  { code: 'australia', label: 'Australia', flag: '🇦🇺' },
-  { code: 'new-zealand', label: 'New Zealand', flag: '🇳🇿' },
-  { code: 'remote', label: 'Remote Only', flag: '🌍' },
-] as const
-
 const REMOTE_REGIONS = [
   { value: '', label: 'Any remote region' },
   { value: 'global', label: 'Global' },
@@ -84,32 +93,60 @@ const REMOTE_REGIONS = [
   { value: 'uk-ireland', label: 'UK & Ireland' },
 ] as const
 
-export const SALARY_BANDS = [
-  {
-    min: 100_000,
-    label: '$100k+',
-    slug: '100k-plus',
-    description: 'Entry to mid-level high-salary roles',
-  },
-  {
-    min: 200_000,
-    label: '$200k+',
-    slug: '200k-plus',
-    description: 'Senior & staff-level positions',
-  },
-  {
-    min: 300_000,
-    label: '$300k+',
-    slug: '300k-plus',
-    description: 'Principal & lead roles',
-  },
-  {
-    min: 400_000,
-    label: '$400k+',
-    slug: '400k-plus',
-    description: 'Executive & top-comp band',
-  },
-] as const
+function HomepageSchemas({
+  jobCount,
+  companyCount,
+}: {
+  jobCount: number
+  companyCount: number
+}) {
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Six Figure Jobs',
+    url: 'https://6figjobs.com',
+    description: 'The exclusive job board for $100k+ positions',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: 'https://6figjobs.com/search?q={search_term_string}',
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Six Figure Jobs',
+    url: 'https://6figjobs.com',
+    logo: 'https://6figjobs.com/logo.png',
+    description: `Premium job board featuring ${jobCount.toLocaleString()}+ $100k+ positions from ${companyCount.toLocaleString()}+ companies`,
+    sameAs: [
+      'https://twitter.com/sixfigjobs',
+      'https://linkedin.com/company/sixfigjobs',
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'hello@6figjobs.com',
+      contactType: 'customer service',
+    },
+  }
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+    </>
+  )
+}
 
 export default async function HomePage() {
   const [jobsData, totalJobs, totalCompanies, salaryBandCounts, roleCounts] =
@@ -200,6 +237,7 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+      <HomepageSchemas jobCount={totalJobs} companyCount={totalCompanies} />
       <section className="mb-10">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
           CURATED JOBS PAYING $100K+ ONLY
@@ -380,15 +418,14 @@ export default async function HomePage() {
           Browse by role
         </h2>
           <div className="flex flex-wrap gap-2">
-            {CATEGORY_LINKS.map((role) => (
+            {CATEGORY_LINKS.roles.map((role) => (
               <Link
                 key={role.href}
                 href={role.href}
                 className="group inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-slate-600 hover:bg-slate-900"
               >
-                <span>{role.emoji}</span>
                 <span className="text-slate-200 group-hover:text-white">
-                  {role.label}
+                  {role.name}
                 </span>
               </Link>
             ))}

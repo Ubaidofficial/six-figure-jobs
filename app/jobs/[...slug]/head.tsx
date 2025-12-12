@@ -16,14 +16,9 @@ function getPageFromSearchParams(sp: PageSearchParams): number {
 }
 
 async function resolveSearchParams(
-  input?: PageSearchParams | Promise<PageSearchParams>
+  input?: Promise<PageSearchParams>
 ): Promise<PageSearchParams> {
-  if (!input) return {}
-  if (typeof (input as any).then === 'function') {
-    const resolved = (await input) || {}
-    return resolved as PageSearchParams
-  }
-  return input as PageSearchParams
+  return (await input) || {}
 }
 
 export default async function Head({
@@ -31,7 +26,7 @@ export default async function Head({
   searchParams,
 }: {
   params: Promise<{ slug?: string[] }>
-  searchParams?: PageSearchParams | Promise<PageSearchParams>
+  searchParams?: Promise<PageSearchParams>
 }) {
   const resolvedParams = await params
   const slice = await loadSliceFromParams(resolvedParams.slug)

@@ -32,14 +32,9 @@ const BAND_MAP: Record<string, number> = {
 /* -------------------------------------------------------------------------- */
 
 async function resolveSearchParams(
-  input?: SearchParams | Promise<SearchParams>,
+  input?: Promise<SearchParams>,
 ): Promise<SearchParams> {
-  if (!input) return {}
-  if (typeof (input as any).then === 'function') {
-    const resolved = (await input) || {}
-    return resolved as SearchParams
-  }
-  return input as SearchParams
+  return (await input) || {}
 }
 
 function parsePage(searchParams?: SearchParams): number {
@@ -192,7 +187,7 @@ export async function generateMetadata({
 
 export type PageProps = {
   params: Promise<{ role: string }>
-  searchParams?: SearchParams | Promise<SearchParams>
+  searchParams?: Promise<SearchParams>
 }
 
 function getBandLabel(minAnnual: number): string {

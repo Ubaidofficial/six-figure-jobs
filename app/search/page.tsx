@@ -17,7 +17,7 @@ const PAGE_SIZE = 40
 type SearchParams = Record<string, string | string[] | undefined>
 
 type PageProps = {
-  searchParams?: SearchParams | Promise<SearchParams>
+  searchParams?: Promise<SearchParams>
 }
 
 /* -------------------------------------------------------------------------- */
@@ -25,13 +25,9 @@ type PageProps = {
 /* -------------------------------------------------------------------------- */
 
 async function resolveSearchParams(
-  input?: SearchParams | Promise<SearchParams>
+  input?: Promise<SearchParams>
 ): Promise<SearchParams> {
-  if (!input) return {}
-  if (typeof (input as any).then === 'function') {
-    return (input as Promise<SearchParams>) || {}
-  }
-  return input as SearchParams
+  return (await input) || {}
 }
 
 function getParam(sp: SearchParams, key: string): string | undefined {

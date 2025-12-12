@@ -1,8 +1,30 @@
 // app/post-a-job/page.tsx
 
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const revalidate = 3600
+
+export const metadata: Metadata = {
+  title: 'Post a $100k+ Job | Reach Top Talent | Six Figure Jobs',
+  description:
+    'Post your $100k+ job opening and reach qualified candidates actively seeking high-paying positions. Get your role in front of senior engineers, product managers, and executives.',
+  alternates: {
+    canonical: 'https://6figjobs.com/post-a-job',
+  },
+  openGraph: {
+    title: 'Post a $100k+ Job | Six Figure Jobs',
+    description: 'Reach top talent seeking $100k+ positions.',
+    url: 'https://6figjobs.com/post-a-job',
+    siteName: 'Six Figure Jobs',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Post a $100k+ Job | Six Figure Jobs',
+    description: 'Reach top talent seeking $100k+ positions.',
+  },
+}
 
 export default function PostJobPage() {
   return (

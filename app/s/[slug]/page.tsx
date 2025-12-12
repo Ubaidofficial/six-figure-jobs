@@ -19,8 +19,8 @@ import { SITE_NAME } from '../../../lib/seo/site'
 import { buildSliceInternalLinks } from '../../../lib/navigation/internalLinks'
 
 type PageProps = {
-  params: { slug: string }
-  searchParams?: Record<string, string | string[] | undefined>
+  params: Promise<{ slug: string }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 /* -------------------------------------------------------------------------- */
@@ -30,7 +30,8 @@ type PageProps = {
 export async function generateMetadata(
   { params, searchParams }: PageProps
 ): Promise<Metadata> {
-  const slice = await loadSliceFromParams([params.slug])
+  const { slug } = await params
+  const slice = await loadSliceFromParams([slug])
   if (!slice) {
     return {
       title: `Page not found – ${SITE_NAME}`,
@@ -38,7 +39,9 @@ export async function generateMetadata(
     }
   }
 
-  const pageParam = (searchParams?.page ?? '1') as string
+  const sp = (await searchParams) || {}
+  const rawPage = sp.page
+  const pageParam = (Array.isArray(rawPage) ? rawPage[0] : rawPage) || '1'
   const page = Number(pageParam || '1') || 1
 
   const preview = await queryJobs({
@@ -61,10 +64,13 @@ export default async function SliceSeoPage({
   params,
   searchParams,
 }: PageProps) {
-  const slice = await loadSliceFromParams([params.slug])
+  const { slug } = await params
+  const slice = await loadSliceFromParams([slug])
   if (!slice) return notFound()
 
-  const pageParam = (searchParams?.page ?? '1') as string
+  const sp = (await searchParams) || {}
+  const rawPage = sp.page
+  const pageParam = (Array.isArray(rawPage) ? rawPage[0] : rawPage) || '1'
   const page = Number(pageParam || '1') || 1
 
   const data = await queryJobs({

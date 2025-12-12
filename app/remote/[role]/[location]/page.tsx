@@ -18,8 +18,8 @@ const PAGE_SIZE = 20
 type SearchParams = Record<string, string | string[] | undefined>
 
 type PageProps = {
-  params: { role: string; city: string }
-  searchParams?: SearchParams
+  params: Promise<{ role: string; location: string }>
+  searchParams?: Promise<SearchParams>
 }
 
 /* -------------------------------------------------------------------------- */
@@ -266,12 +266,12 @@ export async function generateMetadata({
   params,
   searchParams,
 }: PageProps): Promise<Metadata> {
-  const roleSlug = params.role
-  const cityParam = params.city
+  const { role: roleSlug, location: cityParam } = await params
+  const sp = (await searchParams) || {}
   const citySlug = cityParam.toLowerCase()
-  const page = parsePage(searchParams)
+  const page = parsePage(sp)
 
-  const minParam = normalizeStringParam(searchParams?.min)
+  const minParam = normalizeStringParam(sp.min)
   const minAnnual =
     minParam && !Number.isNaN(Number(minParam))
       ? Math.max(100_000, Number(minParam))
@@ -302,7 +302,7 @@ export async function generateMetadata({
   const baseTitle = `Remote ${prettyRole(
     roleSlug
   )} jobs in ${cityName} paying $100k+`
-  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, searchParams)
+  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, sp)
   const canonicalUrl = `${SITE_URL}${canonicalPath}`
   const title =
     totalJobs > 0
@@ -348,21 +348,20 @@ export default async function RemoteRoleCityPage({
   params,
   searchParams,
 }: PageProps) {
-  const roleSlug = params.role
-  const cityParam = params.city
+  const { role: roleSlug, location: cityParam } = await params
+  const sp = (await searchParams) || {}
   const citySlug = cityParam.toLowerCase()
 
-  const page = parsePage(searchParams)
+  const page = parsePage(sp)
   const basePath = `/remote/${roleSlug}/${cityParam}`
-  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, searchParams)
+  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, sp)
   const requestedParams = new URLSearchParams()
-  if (searchParams) {
-    Object.entries(searchParams).forEach(([k, v]) => {
-      if (Array.isArray(v)) v.forEach((val) => val != null && requestedParams.append(k, val))
-      else if (v != null) requestedParams.set(k, v)
-    })
-  }
-  const rawPage = searchParams ? (Array.isArray(searchParams.page) ? searchParams.page[0] : searchParams.page) : null
+  Object.entries(sp).forEach(([k, v]) => {
+    if (Array.isArray(v))
+      v.forEach((val) => val != null && requestedParams.append(k, val))
+    else if (v != null) requestedParams.set(k, v)
+  })
+  const rawPage = sp.page ? (Array.isArray(sp.page) ? sp.page[0] : sp.page) : null
   if (!rawPage || Number(rawPage) <= 1) requestedParams.delete('page')
   const requested = (() => {
     const qs = requestedParams.toString()
@@ -372,7 +371,7 @@ export default async function RemoteRoleCityPage({
     redirect(canonicalPath)
   }
 
-  const minParam = normalizeStringParam(searchParams?.min)
+  const minParam = normalizeStringParam(sp.min)
   const minAnnual =
     minParam && !Number.isNaN(Number(minParam))
       ? Math.max(100_000, Number(minParam))
@@ -536,7 +535,7 @@ export default async function RemoteRoleCityPage({
             {salaryOptions.map((s) => (
               <Link
                 key={s}
-                href={buildFilterHref(basePath, searchParams, {
+                href={buildFilterHref(basePath, sp, {
                   min: s,
                 })}
                 className={`rounded-full px-2 py-1 ${
@@ -618,7 +617,7 @@ export default async function RemoteRoleCityPage({
                   <Link
                     href={buildPageHref(
                       basePath,
-                      searchParams,
+                      sp,
                       page - 1
                     )}
                     className="rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-1.5 text-slate-200 hover:border-slate-700 hover:bg-slate-900"
@@ -631,7 +630,7 @@ export default async function RemoteRoleCityPage({
                   <Link
                     href={buildPageHref(
                       basePath,
-                      searchParams,
+                      sp,
                       page + 1
                     )}
                     className="rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-1.5 text-slate-200 hover:border-slate-700 hover:bg-slate-900"

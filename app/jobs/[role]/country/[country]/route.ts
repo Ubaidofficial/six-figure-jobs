@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 
 export async function GET(
   _request: NextRequest,
-  context: { params: { role: string; country: string } | Promise<{ role: string; country: string }> },
+  context: { params: Promise<{ role: string; country: string }> },
 ) {
   const params = await context.params
   redirect(`/jobs/${params.role}/${params.country}/100k-plus`)

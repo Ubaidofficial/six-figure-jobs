@@ -41,13 +41,9 @@ export const metadata: Metadata = {
 type SearchParams = Record<string, string | string[] | undefined>
 
 async function resolveSearchParams(
-  searchParams: SearchParams | Promise<SearchParams> | undefined
+  searchParams?: Promise<SearchParams>
 ): Promise<SearchParams> {
-  if (!searchParams) return {}
-  if (typeof (searchParams as any).then === 'function') {
-    return (searchParams as Promise<SearchParams>)
-  }
-  return searchParams as SearchParams
+  return (await searchParams) || {}
 }
 
 function parsePage(searchParams?: SearchParams) {
@@ -86,7 +82,7 @@ function buildPageHref(
 /* -------------------------------------------------------------------------- */
 
 type PageProps = {
-  searchParams?: SearchParams | Promise<SearchParams>
+  searchParams?: Promise<SearchParams>
 }
 
 export default async function CompanyIndexPage({ searchParams }: PageProps) {

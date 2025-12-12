@@ -25,12 +25,12 @@ export type PageSearchParams = {
 
 type MetadataProps = {
   params: Promise<{ slug?: string[] }>
-  searchParams?: PageSearchParams | Promise<PageSearchParams>
+  searchParams?: Promise<PageSearchParams>
 }
 
 type PageProps = {
   params: Promise<{ slug?: string[] }>
-  searchParams?: PageSearchParams | Promise<PageSearchParams>
+  searchParams?: Promise<PageSearchParams>
 }
 
 const PAGE_SIZE = 20
@@ -81,14 +81,9 @@ function checkSalaryPageRedirect(slug?: string[]) {
 }
 
 async function resolveSearchParams(
-  input?: PageSearchParams | Promise<PageSearchParams>
+  input?: Promise<PageSearchParams>
 ): Promise<PageSearchParams> {
-  if (!input) return {}
-  if (typeof (input as any).then === 'function') {
-    const resolved = (await input) || {}
-    return resolved as PageSearchParams
-  }
-  return input as PageSearchParams
+  return (await input) || {}
 }
 
 function getPageFromSearchParams(sp: PageSearchParams): number {
