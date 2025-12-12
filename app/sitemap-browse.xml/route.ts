@@ -10,11 +10,12 @@ import {
   INDUSTRY_TARGETS,
   CITY_TARGETS,
 } from '../../lib/seo/pseoTargets'
-import { getSiteUrl } from '../../lib/seo/site'
+
+const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : 'https://www.6figjobs.com'
 
 export const revalidate = 3600
-
-const SITE_URL = getSiteUrl()
 
 export async function GET() {
   const urls: string[] = []

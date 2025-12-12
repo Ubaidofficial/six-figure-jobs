@@ -1,7 +1,8 @@
-import { getSiteUrl } from '../../lib/seo/site'
 import { countryCodeToSlug } from '../../lib/seo/countrySlug'
 
-const SITE_URL = getSiteUrl()
+const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : 'https://www.6figjobs.com'
 
 export async function GET() {
   const countries = ['us', 'gb', 'ca', 'de', 'au', 'fr', 'nl', 'se']

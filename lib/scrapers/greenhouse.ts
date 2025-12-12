@@ -40,7 +40,7 @@ async function fetchGreenhouseJobsForCompany(slug: string) {
     method: 'GET',
     cache: 'no-store',
     headers: {
-      'user-agent': 'SixFigureJobsBot/1.0 (+https://6figjobs.com)',
+      'user-agent': 'SixFigureJobsBot/1.0 (+https://www.6figjobs.com)',
       accept: 'application/json',
     },
   })

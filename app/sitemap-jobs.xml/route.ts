@@ -2,9 +2,10 @@
 // Sitemap index for job shards (100k+ focus)
 
 import { prisma } from '../../lib/prisma'
-import { getSiteUrl } from '../../lib/seo/site'
 
-const SITE_URL = getSiteUrl()
+const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : 'https://www.6figjobs.com'
 const PAGE_SIZE = 20000
 
 export const dynamic = "force-static"

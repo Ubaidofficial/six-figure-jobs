@@ -1,9 +1,9 @@
 // app/sitemap-slices.xml/route.ts
 // Sitemap index for slice shards (priority + longtail)
 
-import { getSiteUrl } from '../../lib/seo/site'
-
-const SITE_URL = getSiteUrl()
+const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : 'https://www.6figjobs.com'
 
 export const revalidate = 1800
 

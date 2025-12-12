@@ -19,4 +19,4 @@ systemctl status sixfigjobs-prod --no-pager
 
 echo ""
 echo "✅ Production is back online!"
-echo "🌐 Check: https://6figjobs.com"
+echo "🌐 Check: https://www.6figjobs.com"

@@ -127,7 +127,7 @@ async function fetchHtml(url: string): Promise<string | null> {
 
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'SixFigureJobsBot/1.0 (+https://6figjobs.com)',
+        'User-Agent': 'SixFigureJobsBot/1.0 (+https://www.6figjobs.com)',
         Accept: 'text/html,application/xhtml+xml',
       },
       signal: controller.signal,

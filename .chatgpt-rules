@@ -496,7 +496,7 @@ Based on [COUNT] verified $100k+ job postings. Last updated: [DATE].
 
 ### metadataBase (next.config.js)
 ```javascript
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://6figjobs.com'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.6figjobs.com'
 
 module.exports = {
   // ... other config
@@ -529,7 +529,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `...`,
     description: `...`,
-    alternates: { canonical: `https://6figjobs.com/...` },
+    alternates: { canonical: `https://www.6figjobs.com/...` },
     openGraph: { ... },
     twitter: { ... },
   }
@@ -760,7 +760,7 @@ const BUSINESS_SYNONYMS = {
 
 ## 11.1 Production Environment (Railway)
 - **Platform**: Railway.app (Free Trial → Hobby $5/mo)
-- **Production URL**: https://6figjobs.com
+- **Production URL**: https://www.6figjobs.com
 - **Staging URL**: https://staging.6figjobs.com (if configured)
 - **Database**: Railway PostgreSQL or external (Neon/Supabase)
 - **Deployment**: Auto-deploy on git push to `main` branch
@@ -779,7 +779,7 @@ const BUSINESS_SYNONYMS = {
 ```bash
 # Required
 DATABASE_URL=postgresql://...
-NEXT_PUBLIC_SITE_URL=https://6figjobs.com
+NEXT_PUBLIC_SITE_URL=https://www.6figjobs.com
 
 # Optional
 NODE_ENV=production
@@ -797,7 +797,7 @@ git push origin main
 # Check Railway dashboard for build logs
 
 # Step 4: Verify production
-curl -I https://6figjobs.com
+curl -I https://www.6figjobs.com
 ```
 
 ## 11.5 Railway CLI Commands
@@ -1802,7 +1802,7 @@ interface GreenhouseConfig {
 async function scrapeGreenhouseCompany(boardToken: string) {
   const url = `https://boards-api.greenhouse.io/v1/boards/${boardToken}/jobs?content=true`;
   const response = await fetch(url, { 
-    headers: { 'User-Agent': 'SixFigJobs/1.0 (+https://6figjobs.com)' }
+    headers: { 'User-Agent': 'SixFigJobs/1.0 (+https://www.6figjobs.com)' }
   });
   const data = await response.json();
   return data.jobs.filter(job => meetsHighSalaryThreshold(job));
@@ -2597,16 +2597,16 @@ export const metadata: Metadata = {
   description: 'Find $100k+ jobs and high-paying six figure positions from top companies. Browse 13,000+ verified salary positions in engineering, product, data, and more. Updated daily.',
   keywords: '$100k jobs, high paying jobs, six figure jobs, $100k+ jobs, 100k salary jobs, high paying remote jobs',
   alternates: {
-    canonical: 'https://6figjobs.com',
+    canonical: 'https://www.6figjobs.com',
   },
   openGraph: {
     title: '$100k+ Jobs | High-Paying Six Figure Positions',
     description: 'Find $100k+ jobs from top companies. 13,000+ verified salary positions.',
-    url: 'https://6figjobs.com',
+    url: 'https://www.6figjobs.com',
     siteName: 'Six Figure Jobs',
     type: 'website',
     images: [{
-      url: 'https://6figjobs.com/og-image.png',
+      url: 'https://www.6figjobs.com/og-image.png',
       width: 1200,
       height: 630,
       alt: 'Six Figure Jobs - $100k+ Positions'
@@ -2616,7 +2616,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: '$100k+ Jobs | High-Paying Six Figure Positions',
     description: 'Find $100k+ jobs from top companies. 13,000+ verified salary positions.',
-    images: ['https://6figjobs.com/og-image.png'],
+    images: ['https://www.6figjobs.com/og-image.png'],
   },
   robots: {
     index: true,
@@ -2637,13 +2637,13 @@ function HomepageSchemas({ jobCount, companyCount }: { jobCount: number; company
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Six Figure Jobs',
-    url: 'https://6figjobs.com',
+    url: 'https://www.6figjobs.com',
     description: 'The exclusive job board for $100k+ positions',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://6figjobs.com/search?q={search_term_string}'
+        urlTemplate: 'https://www.6figjobs.com/search?q={search_term_string}'
       },
       'query-input': 'required name=search_term_string'
     }
@@ -2653,8 +2653,8 @@ function HomepageSchemas({ jobCount, companyCount }: { jobCount: number; company
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Six Figure Jobs',
-    url: 'https://6figjobs.com',
-    logo: 'https://6figjobs.com/logo.png',
+    url: 'https://www.6figjobs.com',
+    logo: 'https://www.6figjobs.com/logo.png',
     description: `Premium job board featuring ${jobCount.toLocaleString()}+ $100k+ positions from ${companyCount.toLocaleString()}+ companies`,
     sameAs: [
       'https://twitter.com/sixfigjobs',
@@ -2716,12 +2716,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     keywords: `${config.title} $100k jobs, $100k ${config.title.toLowerCase()} jobs, high paying ${config.title.toLowerCase()} jobs, six figure ${config.title.toLowerCase()} positions, ${config.title.toLowerCase()} salary $100k`,
     alternates: {
-      canonical: `https://6figjobs.com/jobs/${role}`,
+      canonical: `https://www.6figjobs.com/jobs/${role}`,
     },
     openGraph: {
       title: `${count.toLocaleString()} $100k+ ${config.title} Jobs`,
       description,
-      url: `https://6figjobs.com/jobs/${role}`,
+      url: `https://www.6figjobs.com/jobs/${role}`,
       siteName: 'Six Figure Jobs',
       type: 'website',
     },
@@ -2769,7 +2769,7 @@ function RolePageSchemas({ role, jobs, count }: { role: string; jobs: any[]; cou
           '@type': 'Place',
           address: job.location
         },
-        url: `https://6figjobs.com/job/${job.slug}`
+        url: `https://www.6figjobs.com/job/${job.slug}`
       }
     }))
   }
@@ -2783,19 +2783,19 @@ function RolePageSchemas({ role, jobs, count }: { role: string; jobs: any[]; cou
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://6figjobs.com'
+        item: 'https://www.6figjobs.com'
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Jobs',
-        item: 'https://6figjobs.com/jobs'
+        item: 'https://www.6figjobs.com/jobs'
       },
       {
         '@type': 'ListItem',
         position: 3,
         name: `${config.title} Jobs`,
-        item: `https://6figjobs.com/jobs/${role}`
+        item: `https://www.6figjobs.com/jobs/${role}`
       }
     ]
   }
@@ -2890,12 +2890,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     keywords: `$100k jobs ${config.name}, ${config.name} $100k jobs, ${config.abbr} high paying jobs, ${config.name} tech jobs $100k, six figure jobs ${config.name}, $100k salary ${config.name}`,
     alternates: {
-      canonical: `https://6figjobs.com/jobs/state/${state}`,
+      canonical: `https://www.6figjobs.com/jobs/state/${state}`,
     },
     openGraph: {
       title: `${count.toLocaleString()} $100k+ Jobs in ${config.name}`,
       description,
-      url: `https://6figjobs.com/jobs/state/${state}`,
+      url: `https://www.6figjobs.com/jobs/state/${state}`,
     },
   }
 }
@@ -2934,12 +2934,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     keywords: `$100k jobs ${config.name}, ${config.name} $100k jobs, ${config.name} high paying jobs, ${config.name} tech jobs $100k, six figure jobs ${config.name}`,
     alternates: {
-      canonical: `https://6figjobs.com/jobs/city/${city}`,
+      canonical: `https://www.6figjobs.com/jobs/city/${city}`,
     },
     openGraph: {
       title: `${count.toLocaleString()} $100k+ Jobs in ${config.name}`,
       description,
-      url: `https://6figjobs.com/jobs/city/${city}`,
+      url: `https://www.6figjobs.com/jobs/city/${city}`,
     },
   }
 }
@@ -2964,7 +2964,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     keywords: `${config.name.toLowerCase()} $100k jobs, $100k ${config.name.toLowerCase()} developer jobs, high paying ${config.name.toLowerCase()} jobs, ${config.name.toLowerCase()} salary $100k, six figure ${config.name.toLowerCase()} positions`,
     alternates: {
-      canonical: `https://6figjobs.com/jobs/skills/${skill}`,
+      canonical: `https://www.6figjobs.com/jobs/skills/${skill}`,
     },
   }
 }
@@ -2989,7 +2989,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     keywords: `remote ${roleConfig.title.toLowerCase()} $100k jobs, work from home ${roleConfig.title.toLowerCase()}, remote ${roleConfig.title.toLowerCase()} jobs $100k, ${roleConfig.title.toLowerCase()} remote jobs six figure`,
     alternates: {
-      canonical: `https://6figjobs.com/jobs/${role}/remote`,
+      canonical: `https://www.6figjobs.com/jobs/${role}/remote`,
     },
   }
 }
@@ -3027,12 +3027,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: {
-      canonical: `https://6figjobs.com/job/${slug}`,
+      canonical: `https://www.6figjobs.com/job/${slug}`,
     },
     openGraph: {
       title: `${job.title} at ${job.company.name} | ${salary}`,
       description,
-      url: `https://6figjobs.com/job/${slug}`,
+      url: `https://www.6figjobs.com/job/${slug}`,
       type: 'website',
     },
   }
@@ -3086,7 +3086,7 @@ function JobDetailSchema({ job }: { job: any }) {
       }
     },
     directApply: true,
-    url: `https://6figjobs.com/job/${job.slug}`,
+    url: `https://www.6figjobs.com/job/${job.slug}`,
     applicationContact: {
       '@type': 'ContactPoint',
       url: job.applyUrl
@@ -3120,12 +3120,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: {
-      canonical: `https://6figjobs.com/company/${slug}`,
+      canonical: `https://www.6figjobs.com/company/${slug}`,
     },
     openGraph: {
       title: `${company.name} $100k+ Jobs`,
       description,
-      url: `https://6figjobs.com/company/${slug}`,
+      url: `https://www.6figjobs.com/company/${slug}`,
       images: company.logo ? [{ url: company.logo }] : undefined,
     },
   }
@@ -3175,7 +3175,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     keywords: `${config.title.toLowerCase()} salary, ${config.title.toLowerCase()} salary $100k, how much do ${config.title.toLowerCase()}s make, ${config.title.toLowerCase()} compensation, ${config.title.toLowerCase()} pay`,
     alternates: {
-      canonical: `https://6figjobs.com/salary/${role}`,
+      canonical: `https://www.6figjobs.com/salary/${role}`,
     },
   }
 }
@@ -3908,7 +3908,7 @@ CREATE INDEX idx_companies_ats ON companies(ats_provider, ats_token);
 **Version**: 2.5 (FINAL SEO EDITION)
 **Last Updated**: December 12, 2025
 **Implementation Status**: 95%
-**Production URL**: https://6figjobs.com
+**Production URL**: https://www.6figjobs.com
 **Hosting**: Railway.app
 
 **Key Changes from v2.4:**

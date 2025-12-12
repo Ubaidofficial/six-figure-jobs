@@ -3,7 +3,7 @@ import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
 import type { AtsProvider } from '../lib/scrapers/ats/types'
 
 const prisma = new PrismaClient()
-const UA = 'SixFigureJobsBot/1.0 (+https://6figjobs.com)'
+const UA = 'SixFigureJobsBot/1.0 (+https://www.6figjobs.com)'
 
 async function fetchWithTimeout(url: string, timeoutMs = 8000) {
   const controller = new AbortController()

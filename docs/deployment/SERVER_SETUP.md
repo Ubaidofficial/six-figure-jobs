@@ -7,7 +7,7 @@
 - **OS**: Ubuntu 24.04 LTS
 
 ## Architecture
-- **Production**: Systemd service on port 3000 → https://6figjobs.com
+- **Production**: Systemd service on port 3000 → https://www.6figjobs.com
 - **Staging**: Manual start on port 3001 → http://staging.6figjobs.com
 - **Database**: PostgreSQL 16 (local)
 - **Web Server**: Nginx with SSL (Let's Encrypt)

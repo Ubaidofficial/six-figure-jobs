@@ -22,17 +22,17 @@ export const metadata: Metadata = {
   keywords:
     '$100k jobs, high paying jobs, six figure jobs, $100k+ jobs, 100k salary jobs, high paying remote jobs',
   alternates: {
-    canonical: 'https://6figjobs.com',
+    canonical: 'https://www.6figjobs.com',
   },
   openGraph: {
     title: '$100k+ Jobs | High-Paying Six Figure Positions',
     description: 'Find $100k+ jobs from top companies. 13,000+ verified salary positions.',
-    url: 'https://6figjobs.com',
+    url: 'https://www.6figjobs.com',
     siteName: 'Six Figure Jobs',
     type: 'website',
     images: [
       {
-        url: 'https://6figjobs.com/og-image.png',
+        url: 'https://www.6figjobs.com/og-image.png',
         width: 1200,
         height: 630,
         alt: 'Six Figure Jobs - $100k+ Positions',
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: '$100k+ Jobs | High-Paying Six Figure Positions',
     description: 'Find $100k+ jobs from top companies. 13,000+ verified salary positions.',
-    images: ['https://6figjobs.com/og-image.png'],
+    images: ['https://www.6figjobs.com/og-image.png'],
   },
   robots: {
     index: true,
@@ -104,13 +104,13 @@ function HomepageSchemas({
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Six Figure Jobs',
-    url: 'https://6figjobs.com',
+    url: 'https://www.6figjobs.com',
     description: 'The exclusive job board for $100k+ positions',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://6figjobs.com/search?q={search_term_string}',
+        urlTemplate: 'https://www.6figjobs.com/search?q={search_term_string}',
       },
       'query-input': 'required name=search_term_string',
     },
@@ -120,8 +120,8 @@ function HomepageSchemas({
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Six Figure Jobs',
-    url: 'https://6figjobs.com',
-    logo: 'https://6figjobs.com/logo.png',
+    url: 'https://www.6figjobs.com',
+    logo: 'https://www.6figjobs.com/logo.png',
     description: `Premium job board featuring ${jobCount.toLocaleString()}+ $100k+ positions from ${companyCount.toLocaleString()}+ companies`,
     sameAs: [
       'https://twitter.com/sixfigjobs',

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://6figjobs.com').replace(/\/+$/, '')
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.6figjobs.com').replace(/\/+$/, '')
 
 const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },

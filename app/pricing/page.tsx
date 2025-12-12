@@ -10,12 +10,12 @@ export const metadata: Metadata = {
   description:
     'Affordable job posting packages for $100k+ positions. Reach qualified candidates actively seeking high-paying roles. Starting at $299/post.',
   alternates: {
-    canonical: 'https://6figjobs.com/pricing',
+    canonical: 'https://www.6figjobs.com/pricing',
   },
   openGraph: {
     title: 'Pricing | Post $100k+ Jobs | Six Figure Jobs',
     description: 'Affordable job posting packages for $100k+ positions.',
-    url: 'https://6figjobs.com/pricing',
+    url: 'https://www.6figjobs.com/pricing',
     siteName: 'Six Figure Jobs',
     type: 'website',
   },

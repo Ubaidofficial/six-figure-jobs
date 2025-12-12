@@ -10,12 +10,12 @@ export const metadata: Metadata = {
   description:
     'Post your $100k+ job opening and reach qualified candidates actively seeking high-paying positions. Get your role in front of senior engineers, product managers, and executives.',
   alternates: {
-    canonical: 'https://6figjobs.com/post-a-job',
+    canonical: 'https://www.6figjobs.com/post-a-job',
   },
   openGraph: {
     title: 'Post a $100k+ Job | Six Figure Jobs',
     description: 'Reach top talent seeking $100k+ positions.',
-    url: 'https://6figjobs.com/post-a-job',
+    url: 'https://www.6figjobs.com/post-a-job',
     siteName: 'Six Figure Jobs',
     type: 'website',
   },

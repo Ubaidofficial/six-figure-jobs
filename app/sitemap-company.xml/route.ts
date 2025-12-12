@@ -2,9 +2,10 @@
 // Sitemap for all /company/[slug] pages
 
 import { prisma } from '../../lib/prisma'
-import { getSiteUrl } from '../../lib/seo/site'
 
-const SITE_URL = getSiteUrl()
+const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : 'https://www.6figjobs.com'
 
 export const dynamic = "force-static"
 

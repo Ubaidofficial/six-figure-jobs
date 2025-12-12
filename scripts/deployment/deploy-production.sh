@@ -27,4 +27,4 @@ systemctl status sixfigjobs-prod --no-pager
 
 echo ""
 echo "🎉 Deployment complete!"
-echo "🌐 Check: https://6figjobs.com"
+echo "🌐 Check: https://www.6figjobs.com"
