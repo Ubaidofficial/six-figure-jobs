@@ -16,7 +16,6 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
-  metadataBase: new URL(siteUrl),
 
   images: {
     remotePatterns: [

@@ -8,13 +8,17 @@ export async function generateMetadata() {
   const total = await prisma.job.count({
     where: {
       isExpired: false,
-      OR: [
-        { minAnnual: { gte: BigInt(100_000) } },
-        { maxAnnual: { gte: BigInt(100_000) } },
-        { isHundredKLocal: true },
-        { isHighSalaryLocal: true },
+      AND: [
+        {
+          OR: [
+            { minAnnual: { gte: BigInt(100_000) } },
+            { maxAnnual: { gte: BigInt(100_000) } },
+            { isHundredKLocal: true },
+            { isHighSalaryLocal: true },
+          ],
+        },
+        { OR: [{ remote: true }, { remoteMode: 'remote' }] },
       ],
-      OR: [{ remote: true }, { remoteMode: 'remote' }],
     },
   })
 
@@ -48,12 +52,16 @@ export default async function RemoteJobsPage() {
     by: ['roleSlug'],
     where: {
       isExpired: false,
-      remote: true,
-      OR: [
-        { minAnnual: { gte: BigInt(100_000) } },
-        { maxAnnual: { gte: BigInt(100_000) } },
-        { isHundredKLocal: true },
-        { isHighSalaryLocal: true },
+      AND: [
+        { OR: [{ remote: true }, { remoteMode: 'remote' }] },
+        {
+          OR: [
+            { minAnnual: { gte: BigInt(100_000) } },
+            { maxAnnual: { gte: BigInt(100_000) } },
+            { isHundredKLocal: true },
+            { isHighSalaryLocal: true },
+          ],
+        },
       ],
     },
     _count: true,
