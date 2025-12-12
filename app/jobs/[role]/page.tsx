@@ -95,42 +95,41 @@ export async function generateMetadata({
   })
 
   if (total === 0) {
-    return { title: 'Jobs Not Found | Six Figure Jobs' }
+    return { title: 'Not Found' }
   }
 
   const roleTitle = formatRoleTitle(role)
-  
-  const salaries = jobs
-    .map(j => Number(j.minAnnual || 0))
-    .filter(s => s > 0)
-    .sort((a, b) => a - b)
-  
-  const minSalary = salaries[0] || 100000
-  const maxSalary = salaries[salaries.length - 1] || 200000
-  
-  const salaryRange = maxSalary >= 200000 
-    ? `$${Math.floor(minSalary / 1000)}k-$${Math.floor(maxSalary / 1000)}k`
-    : `$${Math.floor(minSalary / 1000)}k+`
-  
-  const remoteCount = jobs.filter(j => j.remote || j.remoteMode === 'remote').length
-  const isRemote = remoteCount > total * 0.5
-  
-  const title = isRemote
-    ? `${roleTitle} Jobs (${salaryRange}) - ${total.toLocaleString()} Remote $100k+ Roles | Six Figure Jobs`
-    : `${roleTitle} Jobs - ${total.toLocaleString()} $100k+ Roles (${salaryRange}) | Six Figure Jobs`
-  
-  const description = `Find ${total} ${roleTitle.toLowerCase()} jobs paying ${salaryRange}, verified at $100k+ (or local equivalent). Remote, hybrid, and on-site positions at top tech companies. Updated daily.`
+  const jobCount = total
+  const title = `${roleTitle} Jobs Paying $100k+ | ${jobCount.toLocaleString()} Positions`
+  const description = `Find ${jobCount.toLocaleString()} verified ${roleTitle} jobs paying $100k+ USD. Remote, hybrid, and on-site six-figure positions. Updated daily.`
+  const imageUrl = 'https://www.6figjobs.com/og-image.png'
 
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/jobs/${role}` },
+    alternates: {
+      canonical: `https://www.6figjobs.com/jobs/${role}`,
+    },
     openGraph: {
-      title: `${roleTitle} Jobs - ${total} High-Paying Positions`,
+      title,
       description,
-      url: `${SITE_URL}/jobs/${role}`,
+      url: `https://www.6figjobs.com/jobs/${role}`,
       siteName: SITE_NAME,
       type: 'website',
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${roleTitle} Jobs Paying $100k+`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [imageUrl],
     },
   }
 }
@@ -284,7 +283,12 @@ export default async function RolePage({
         {roleTitle} Jobs ({total.toLocaleString()}) — $100k+
       </h1>
       <p className="mb-6 text-sm text-slate-300">
-        Verified high-salary {roleTitle.toLowerCase()} positions paying $100k+ (or local equivalent) from ATS and trusted boards.
+        Discover {jobCount} verified <strong>high paying</strong>{' '}
+        {roleTitle.toLowerCase()} jobs paying{' '}
+        <strong className="text-green-500">$100k+</strong> USD (or local
+        equivalent). Every <strong>six figure</strong> position is from top
+        companies with transparent compensation. Remote, hybrid, and on-site
+        opportunities updated daily.
       </p>
 
       <section className="mb-6 rounded-xl border border-slate-800 bg-slate-950/50 p-4">

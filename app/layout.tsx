@@ -4,10 +4,18 @@ import type { Viewport } from 'next'
 import Link from 'next/link'
 import { ThemeProvider } from '@/components/theme-provider'
 
+function getSiteUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://www.6figjobs.com'
+}
+
 export const metadata: Metadata = {
-  title: 'Six Figure Jobs – $100k+ jobs only',
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: '$100k+ Jobs | High-Paying Six Figure Positions',
+    template: '%s | Six Figure Jobs',
+  },
   description:
-    'Six Figure Jobs curates only $100k+ jobs from top companies. Remote, hybrid, and on-site roles with real salary data.',
+    'Find 7,280+ verified jobs paying $100k+ USD. Remote, hybrid, and on-site six-figure positions from 309+ companies. Updated daily.',
   robots: process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')
     ? { index: false, follow: false }
     : undefined,

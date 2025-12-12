@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -10,6 +11,13 @@ import { Badge } from '@/components/ui/badge'
 import { JobCardV2 } from '@/components/jobs/JobCardV2'
 import { JobCardSkeleton } from '@/components/jobs/JobCardSkeleton'
 import { SearchInput } from '@/components/search/SearchInput'
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default function TestShadcnPage() {
   const mockJob = {
@@ -75,4 +83,3 @@ export default function TestShadcnPage() {
     </div>
   )
 }
-

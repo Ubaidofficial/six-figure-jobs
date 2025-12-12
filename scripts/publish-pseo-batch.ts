@@ -25,50 +25,8 @@ interface PhaseConfig {
   maxPagesPerDay: number
   maxPagesPerWeek: number
   minJobsPerPage: number
-  minUniqueContent: number
-  requireAllSchemas: boolean
+  description: string
 }
-
-const PHASE_CONFIGS: PhaseConfig[] = [
-  {
-    phase: 1,
-    weeks: '1-2',
-    maxPagesPerDay: 10,
-    maxPagesPerWeek: 10,
-    minJobsPerPage: 100,
-    minUniqueContent: 250,
-    requireAllSchemas: true,
-  },
-  {
-    phase: 2,
-    weeks: '3-6',
-    maxPagesPerDay: 20,
-    maxPagesPerWeek: 20,
-    minJobsPerPage: 30,
-    minUniqueContent: 200,
-    requireAllSchemas: true,
-  },
-  {
-    phase: 3,
-    weeks: '7-10',
-    maxPagesPerDay: 30,
-    maxPagesPerWeek: 30,
-    minJobsPerPage: 20,
-    minUniqueContent: 200,
-    requireAllSchemas: true,
-  },
-  {
-    phase: 4,
-    weeks: '11-12',
-    maxPagesPerDay: 50,
-    maxPagesPerWeek: 50,
-    minJobsPerPage: 10,
-    minUniqueContent: 200,
-    requireAllSchemas: true,
-  },
-]
-
-const START_DATE = new Date('2025-12-16') // ADJUST THIS TO YOUR START DATE
 
 // ============================================================================
 // TYPES
@@ -79,6 +37,10 @@ interface PageCandidate {
   type: string
   priority: number
   jobCount: number
+  url: string
+  title: string
+  description: string
+  canonical: string
 }
 
 interface PublishingBudget {
@@ -103,34 +65,167 @@ interface QualityFilterResult {
 // ============================================================================
 
 async function main() {
-  console.log('='.repeat(80))
-  console.log('Six Figure Jobs - pSEO Batch Publishing')
-  console.log('='.repeat(80))
-  console.log(`Started at: ${new Date().toISOString()}`)
-  console.log('')
+  console.log('📊 Six Figure Jobs - pSEO Publishing Script v2.0')
+  console.log('================================================\n')
 
   try {
-    // Step 1: Get current phase
-    const phaseConfig = getCurrentPhaseConfig()
-    console.log(`📊 Current Phase: ${phaseConfig.phase} (Weeks ${phaseConfig.weeks})`)
-    console.log(`   Max pages/day: ${phaseConfig.maxPagesPerDay}`)
-    console.log(`   Min jobs/page: ${phaseConfig.minJobsPerPage}`)
-    console.log('')
+    // ============================================================================
+    // PHASE 1: DOMAIN AGE CHECK (CRITICAL SAFETY GATE)
+    // ============================================================================
 
-    // Step 2: Check publishing budget
-    const budget = await getPublishingBudget(phaseConfig)
-    console.log(`💰 Publishing Budget:`)
-    console.log(`   Today: ${budget.remainingToday} pages remaining (${budget.publishedToday} published)`)
-    console.log(`   This week: ${budget.remainingThisWeek} pages remaining`)
-    console.log('')
+    const domainAgeWeeks = parseInt(process.env.DOMAIN_AGE_WEEKS || '0', 10)
+    console.log(`📅 Domain Age: ${domainAgeWeeks} weeks`)
 
-    if (budget.remainingToday <= 0) {
-      console.log(`✋ Daily limit reached. Come back tomorrow!`)
+    if (domainAgeWeeks < 2) {
+      console.log('\n🚨 DOMAIN TOO NEW (<2 weeks old)')
+      console.log('⚠️  Publishing is DISABLED for new domains')
+      console.log('📊 Current Strategy: Monitor GSC indexing only')
+      console.log('\n✅ What to do:')
+      console.log('   1. Check GSC → Pages → Coverage daily')
+      console.log('   2. Wait for 30-50% coverage (2-5k pages)')
+      console.log('   3. Set DOMAIN_AGE_WEEKS=3 on Dec 19')
+      console.log('   4. Set PSEO_ENABLED=true when ready')
+      console.log('\n🎯 Target: Week 3 (Dec 27) for first publishing\n')
       return
     }
 
-    // Step 3: Get candidate pages to publish
-    const candidates = await getCandidatePages(phaseConfig)
+    if (domainAgeWeeks < 4) {
+      console.log('⚠️  ULTRA CONSERVATIVE MODE (Domain 2-4 weeks)')
+      console.log('📊 Max Rate: 2 pages/day, 10 pages/week')
+      console.log('🎯 Min Quality: 100+ jobs per page only\n')
+    }
+
+    // ============================================================================
+    // PHASE 2: MASTER KILL SWITCH (USER CONTROL)
+    // ============================================================================
+
+    if (process.env.PSEO_ENABLED !== 'true') {
+      console.log('❌ Publishing DISABLED (PSEO_ENABLED=false)\n')
+      console.log('Before enabling, verify ALL of the following:')
+      console.log('  ✅ Domain age: ≥3 weeks')
+      console.log('  ✅ GSC Manual Actions: 0 (zero)')
+      console.log('  ✅ GSC Coverage: >30%')
+      console.log('  ✅ Coverage trend: Stable or growing')
+      console.log('  ✅ No sudden drops (>10%) in past week')
+      console.log('  ✅ Quality gates tested on staging\n')
+      console.log('📋 Steps to enable:')
+      console.log('  1. Set DOMAIN_AGE_WEEKS=3 (or higher)')
+      console.log('  2. Set PSEO_ENABLED=true in .env.local')
+      console.log('  3. Run this script')
+      console.log('  4. Monitor GSC closely for 3 days\n')
+      return
+    }
+
+    // ============================================================================
+    // PHASE 3: CONFIGURATION (ULTRA-CONSERVATIVE FOR NEW DOMAIN)
+    // ============================================================================
+
+    const PHASE_CONFIG: PhaseConfig[] = [
+      // Week 3: First cautious batch
+      {
+        phase: 1,
+        weeks: '3-4',
+        maxPagesPerDay: 2,
+        maxPagesPerWeek: 10,
+        minJobsPerPage: 100,
+        description: 'Ultra-conservative start for new domain',
+      },
+
+      // Week 5-6: Still very cautious
+      {
+        phase: 2,
+        weeks: '5-6',
+        maxPagesPerDay: 3,
+        maxPagesPerWeek: 15,
+        minJobsPerPage: 80,
+        description: 'Gradual increase with high quality bar',
+      },
+
+      // Week 7-8: Moderate growth
+      {
+        phase: 3,
+        weeks: '7-8',
+        maxPagesPerDay: 5,
+        maxPagesPerWeek: 25,
+        minJobsPerPage: 60,
+        description: 'Moderate growth if no issues',
+      },
+
+      // Week 9-12: Steady scaling
+      {
+        phase: 4,
+        weeks: '9-12',
+        maxPagesPerDay: 10,
+        maxPagesPerWeek: 50,
+        minJobsPerPage: 40,
+        description: 'Steady scaling with monitoring',
+      },
+
+      // Month 4+: Can increase if healthy
+      {
+        phase: 5,
+        weeks: '13+',
+        maxPagesPerDay: 15,
+        maxPagesPerWeek: 75,
+        minJobsPerPage: 30,
+        description: 'Normal operations if GSC stays healthy',
+      },
+    ]
+
+    // Determine current phase based on domain age
+    let currentPhase = PHASE_CONFIG[0]
+
+    if (domainAgeWeeks >= 13) {
+      currentPhase = PHASE_CONFIG[4]
+    } else if (domainAgeWeeks >= 9) {
+      currentPhase = PHASE_CONFIG[3]
+    } else if (domainAgeWeeks >= 7) {
+      currentPhase = PHASE_CONFIG[2]
+    } else if (domainAgeWeeks >= 5) {
+      currentPhase = PHASE_CONFIG[1]
+    }
+
+    console.log(`\n📈 Current Phase: ${currentPhase.phase}`)
+    console.log(`   Weeks: ${currentPhase.weeks}`)
+    console.log(`   Description: ${currentPhase.description}`)
+    console.log(`   Max per day: ${currentPhase.maxPagesPerDay} pages`)
+    console.log(`   Max per week: ${currentPhase.maxPagesPerWeek} pages`)
+    console.log(`   Min jobs/page: ${currentPhase.minJobsPerPage}\n`)
+
+    // ============================================================================
+    // PHASE 4: REAL TRACKING (Replace placeholder "0" values)
+    // ============================================================================
+
+    const budget = await getPublishingBudget(currentPhase)
+
+    console.log('📊 Publishing Activity:')
+    console.log(`   Today: ${budget.publishedToday} / ${currentPhase.maxPagesPerDay}`)
+    console.log(
+      `   This week: ${budget.publishedThisWeek} / ${currentPhase.maxPagesPerWeek}\n`,
+    )
+
+    if (budget.remainingToday <= 0) {
+      console.log('❌ Daily limit reached. Stopping.')
+      console.log(
+        `   Come back tomorrow (max ${currentPhase.maxPagesPerDay}/day)\n`,
+      )
+      return
+    }
+
+    if (budget.remainingThisWeek <= 0) {
+      console.log('❌ Weekly limit reached. Stopping.')
+      console.log(
+        `   Wait until next week (max ${currentPhase.maxPagesPerWeek}/week)\n`,
+      )
+      return
+    }
+
+    const batchSize = Math.min(budget.remainingToday, budget.remainingThisWeek)
+
+    console.log(`✅ Can publish up to ${batchSize} pages today\n`)
+
+    // Step 1: Get candidate pages to publish
+    const candidates = await getCandidatePages(currentPhase)
     console.log(`📋 Found ${candidates.length} candidate pages`)
 
     if (candidates.length === 0) {
@@ -138,8 +233,8 @@ async function main() {
       return
     }
 
-    // Step 4: Filter by quality gates
-    const qualified = await filterByQuality(candidates, phaseConfig)
+    // Step 2: Filter by quality gates
+    const qualified = await filterByQuality(candidates, currentPhase)
     console.log(`✅ ${qualified.passed.length} pages passed quality gates`)
     console.log(`❌ ${qualified.failed.length} pages failed quality gates`)
 
@@ -152,15 +247,15 @@ async function main() {
     }
     console.log('')
 
-    // Step 5: Publish pages (up to daily limit)
-    const toPublish = qualified.passed.slice(0, budget.remainingToday)
+    // Step 3: Publish pages (up to daily + weekly limit)
+    const toPublish = qualified.passed.slice(0, batchSize)
     console.log(`🚀 Publishing ${toPublish.length} pages today`)
     console.log('')
 
     let published = 0
     for (const page of toPublish) {
       try {
-        console.log(`   Publishing: ${page.type}/${page.slug}`)
+        console.log(`   Publishing: ${page.url}`)
         await publishPage(page)
         published++
       } catch (error) {
@@ -188,35 +283,24 @@ async function main() {
 }
 
 // ============================================================================
-// PHASE MANAGEMENT
-// ============================================================================
-
-function getCurrentPhaseConfig(): PhaseConfig {
-  const weeksSinceStart = Math.floor(
-    (Date.now() - START_DATE.getTime()) / (7 * 24 * 60 * 60 * 1000)
-  )
-
-  if (weeksSinceStart < 2) return PHASE_CONFIGS[0]
-  if (weeksSinceStart < 6) return PHASE_CONFIGS[1]
-  if (weeksSinceStart < 10) return PHASE_CONFIGS[2]
-  return PHASE_CONFIGS[3]
-}
-
-// ============================================================================
 // PUBLISHING BUDGET
 // ============================================================================
 
+async function getPublishedCount(since: Date): Promise<number> {
+  return await prisma.jobSlice.count({
+    where: {
+      updatedAt: { gte: since },
+    },
+  })
+}
+
 async function getPublishingBudget(config: PhaseConfig): Promise<PublishingBudget> {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-  const thisWeek = new Date(today)
-  thisWeek.setDate(today.getDate() - today.getDay())
-
-  // For now, we'll track by checking when pages were created
-  // In production, add a `publishedAt` field to track this properly
-  const publishedToday = 0  // TODO: Implement proper tracking
-  const publishedThisWeek = 0  // TODO: Implement proper tracking
+  const publishedToday = await getPublishedCount(todayStart)
+  const publishedThisWeek = await getPublishedCount(weekStart)
 
   return {
     publishedToday,
@@ -229,6 +313,13 @@ async function getPublishingBudget(config: PhaseConfig): Promise<PublishingBudge
 // ============================================================================
 // CANDIDATE SELECTION
 // ============================================================================
+
+function toTitleCase(slug: string): string {
+  return slug
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
 
 async function getCandidatePages(config: PhaseConfig): Promise<PageCandidate[]> {
   const candidates: PageCandidate[] = []
@@ -257,11 +348,21 @@ async function getCandidatePages(config: PhaseConfig): Promise<PageCandidate[]> 
         },
       })
 
+      const roleTitle = toTitleCase(role)
+      const url = `/jobs/${role}`
+      const canonical = `https://www.6figjobs.com/jobs/${role}`
+      const title = `${roleTitle} Jobs Paying $100k+ | ${jobCount.toLocaleString()} Positions`
+      const description = `Find ${jobCount.toLocaleString()} verified ${roleTitle} jobs paying $100k+ USD. Browse high paying six figure roles from top companies with transparent compensation. Remote, hybrid, and on-site opportunities updated daily.`
+
       candidates.push({
         slug: role,
         type: 'role',
         priority: 1.0,
         jobCount,
+        url,
+        title,
+        description,
+        canonical,
       })
     }
   }
@@ -272,6 +373,53 @@ async function getCandidatePages(config: PhaseConfig): Promise<PageCandidate[]> 
 // ============================================================================
 // QUALITY GATES
 // ============================================================================
+
+function validatePageQuality(page: any, minJobs: number): { 
+  valid: boolean; 
+  reason?: string 
+} {
+  // Gate 1: Minimum job count
+  if (page.jobCount < minJobs) {
+    return { 
+      valid: false, 
+      reason: `Only ${page.jobCount} jobs (min ${minJobs} required)` 
+    }
+  }
+  
+  // Gate 2: Has title and description
+  if (!page.title || page.title.length < 20) {
+    return { 
+      valid: false, 
+      reason: 'Missing or too-short title' 
+    }
+  }
+  
+  if (!page.description || page.description.length < 100) {
+    return { 
+      valid: false, 
+      reason: 'Missing or too-short description' 
+    }
+  }
+  
+  // Gate 3: Has canonical URL
+  if (!page.canonical) {
+    return { 
+      valid: false, 
+      reason: 'Missing canonical URL' 
+    }
+  }
+  
+  // Gate 4: Content length check (estimated)
+  const contentLength = page.title.length + page.description.length
+  if (contentLength < 200) {
+    return { 
+      valid: false, 
+      reason: `Content too short (${contentLength} chars, min 200)` 
+    }
+  }
+  
+  return { valid: true }
+}
 
 async function filterByQuality(
   candidates: PageCandidate[],
@@ -299,16 +447,10 @@ async function filterByQuality(
 function checkQualityGate(page: PageCandidate, config: PhaseConfig): QualityCheck {
   const reasons: string[] = []
 
-  // Check job count
-  if (page.jobCount < config.minJobsPerPage) {
-    reasons.push(`Only ${page.jobCount} jobs (min: ${config.minJobsPerPage})`)
+  const validation = validatePageQuality(page, config.minJobsPerPage)
+  if (!validation.valid) {
+    reasons.push(validation.reason ?? 'Failed quality gates')
   }
-
-  // Add more checks here as needed
-  // - Content uniqueness
-  // - Has metadata
-  // - Has schemas
-  // etc.
 
   return {
     passed: reasons.length === 0,
