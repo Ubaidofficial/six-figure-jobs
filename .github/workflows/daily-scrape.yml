@@ -1,40 +1,44 @@
-name: Daily Scrape (Manual Only)
+name: Daily Job Scraper
 
 on:
-  workflow_dispatch:   # Only runs when manually triggered
+  schedule:
+    - cron: '0 6,18 * * *'  # 6 AM and 6 PM UTC (twice daily)
+  workflow_dispatch:  # Manual trigger button in GitHub UI
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      # ATS discovery (optional)
-      - name: Discover ATS URLs from seed companies
+      - name: Trigger Railway Scraper API
         run: |
-          npx tsx scripts/discoverATSBulk.ts || true
-          npx tsx scripts/discoverATS.ts || true
-
-      # Generic career page scraper (optional)
-      - name: Scrape careers for companies without ATS
-        env:
-          CAREER_BATCH: 20
-          CAREER_MAX_BATCHES: 1
-        run: npx tsx scripts/scrapeCareerPages.ts || true
-
-      # ⚠️ IMPORTANT:
-      # This version does NOT include DATABASE_URL because
-      # GitHub should NOT run production scrapers anymore.
-      - name: MANUAL Run daily scraper (local DB ONLY if configured)
-        run: npx tsx scripts/dailyScrapeV2.ts --mode=all --concurrency=6 || true
+          echo "🚀 Triggering job scraper on Railway..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            https://www.6figjobs.com/api/cron/scrape \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 600 \
+            --retry 2 \
+            --retry-delay 30)
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          echo "📊 Response Code: $HTTP_CODE"
+          echo "📄 Response Body: $BODY"
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Scraper triggered successfully"
+            exit 0
+          else
+            echo "❌ Scraper failed with code $HTTP_CODE"
+            exit 1
+          fi
+      
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "⚠️ Scraper failed!"
+          echo "🔍 Check Railway logs: https://railway.app/project/your-project/deployments"
+          echo "📧 Consider setting up alerts for production"
