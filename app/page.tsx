@@ -271,35 +271,42 @@ export default async function HomePage() {
         jobCount={stats.totalJobs}
         companyCount={stats.totalCompanies}
       />
-      <section className="mb-10">
+      <section className="premium-gradient soft-shadow mb-12 rounded-3xl border border-slate-800/70 bg-slate-950/40 p-6 md:p-10">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
           CURATED JOBS PAYING $100K+ ONLY
         </p>
 
-        <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl space-y-4">
+        <div className="mt-5 flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-2xl space-y-5">
             <h1 className="text-4xl font-extrabold tracking-tight text-slate-50 md:text-[3.2rem] lg:text-[3.4rem]">
-              Find remote &amp; hybrid tech jobs paying $100k+ 💰
+              Land your next <span className="text-emerald-300">$100k+</span>{' '}
+              role
             </h1>
-            <p className="text-[15px] leading-relaxed text-slate-200 md:text-base">
-              Six Figure Jobs surfaces verified six-figure roles directly from ATS-powered company job boards. AI-ranked and human-reviewed—no lowball ranges, no spam. Remote, hybrid, and on-site roles across engineering, product, data, design, and more.
+            <p className="text-lg leading-relaxed text-slate-200 md:text-xl">
+              Verified salaries. No lowball offers. No wasted applications.
+            </p>
+            <p className="text-sm leading-relaxed text-slate-400 md:text-base">
+              Curated six-figure roles from real company postings. Updated daily.
+            </p>
+            <p className="text-xs text-slate-400">
+              ✅ Salaries shown • 🛡️ Source-linked • ↗️ Apply on company site
             </p>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 shadow-lg shadow-slate-900/60">
+            <div className="surface soft-shadow p-5">
               <form action="/search" method="get" className="space-y-4">
                 <div>
                   <label
                     htmlFor="q"
                     className="mb-1.5 block text-[11px] font-medium text-slate-400"
                   >
-                    Search jobs
+                    Search $100k+ roles
                   </label>
                   <input
                     id="q"
                     name="q"
                     type="text"
                     placeholder="e.g. Senior ML Engineer, Stripe, React..."
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500"
                   />
                 </div>
 
@@ -328,7 +335,7 @@ export default async function HomePage() {
                     <select
                       id="location"
                       name="location"
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
+                      className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
                     >
                       <option value="">All locations</option>
                       {LOCATIONS.map((loc) => (
@@ -349,7 +356,7 @@ export default async function HomePage() {
                     <select
                       id="remoteMode"
                       name="remoteMode"
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
+                      className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
                     >
                       <option value="">Any</option>
                       <option value="remote">Remote</option>
@@ -368,7 +375,7 @@ export default async function HomePage() {
                     <select
                       id="remoteRegion"
                       name="remoteRegion"
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
+                      className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
                     >
                       {REMOTE_REGIONS.map((r) => (
                         <option key={r.value} value={r.value}>
@@ -388,7 +395,7 @@ export default async function HomePage() {
                     <select
                       id="salary"
                       name="minSalary"
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
+                      className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
                     >
                       <option value="100000">$100k+</option>
                       <option value="200000">$200k+</option>
@@ -398,12 +405,21 @@ export default async function HomePage() {
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-500 sm:w-auto"
-                >
-                  Search $100k+ jobs
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <button
+                    type="submit"
+                    className="focus-ring inline-flex w-full items-center justify-center rounded-xl bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300 sm:w-auto"
+                  >
+                    Find my $100k+ job
+                  </button>
+
+                  <Link
+                    href="/jobs/100k-plus"
+                    className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-6 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/5 sm:w-auto"
+                  >
+                    Browse premium roles
+                  </Link>
+                </div>
 
                 <div className="text-xs text-slate-400">
                   AI search tips: Try “remote $100k engineer”, “$200k staff roles”, or “no-degree $100k jobs” to see curated results.
@@ -412,7 +428,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="w-full max-w-xs rounded-2xl border border-slate-800 bg-slate-950/80 p-5">
+          <div className="surface w-full max-w-xs p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               Live on Six Figure Jobs
             </p>
@@ -427,6 +443,12 @@ export default async function HomePage() {
                 <span className="text-sm text-slate-400">Companies</span>
                 <span className="text-xl font-bold text-slate-50">
                   {totalCompanies.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm text-slate-400">New this week</span>
+                <span className="text-xl font-bold text-emerald-300">
+                  {stats.newThisWeek.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-baseline justify-between">

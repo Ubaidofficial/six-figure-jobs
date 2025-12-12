@@ -311,7 +311,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       {/* Search Form */}
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/80 p-6">
+      <div className="glass soft-shadow mb-10 rounded-2xl p-6 md:sticky md:top-24 md:z-30">
         <form action="/search" method="GET" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-6">
             {/* Search Query */}
@@ -436,14 +436,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <div className="flex items-center justify-between">
             <button
               type="submit"
-              className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-emerald-400 px-6 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300"
             >
-              Search Jobs
+              Find $100k+ roles
             </button>
             {(q || role || location || minSalaryRaw > 100000) && (
               <Link
                 href="/search"
-                className="text-xs text-slate-400 hover:text-slate-200"
+                className="focus-ring rounded-md text-xs text-slate-400 underline-offset-4 hover:text-slate-200 hover:underline"
               >
                 Clear filters
               </Link>
@@ -456,11 +456,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
       <header className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-50 md:text-2xl">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-50 md:text-3xl">
               {q ? `Results for "${q}"` : 'All $100k+ Jobs'}
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
-              {total.toLocaleString()} jobs found
+            <p className="mt-2 text-sm text-slate-400">
+              <span className="font-semibold text-slate-100">
+                {total.toLocaleString()}
+              </span>{' '}
+              roles found
               {resolvedLocation &&
                 ` in ${resolvedLocation === 'remote' ? 'Remote' : resolvedLocation.toUpperCase()}`}
               {minAnnual > 100000 && ` paying $${(minAnnual / 1000).toFixed(0)}k+`}
@@ -471,17 +474,25 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
       {/* Results */}
       {jobs.length === 0 ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-8 text-center">
-          <p className="text-slate-300">No jobs matched your search.</p>
-          <p className="mt-2 text-sm text-slate-500">
-            Try a different keyword, broaden your location, or reduce the minimum salary.
+        <div className="surface p-10 text-center">
+          <p className="text-base font-semibold text-slate-100">
+            No matches — try removing one filter.
           </p>
-          <div className="mt-4">
+          <p className="mt-2 text-sm text-slate-400">
+            Clear filters to broaden results, or jump to the newest $100k+ roles.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/search"
-              className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-200 hover:border-slate-500"
+              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-6 text-sm font-semibold text-slate-100 transition hover:bg-white/5"
             >
-              Clear all filters
+              Clear filters
+            </Link>
+            <Link
+              href="/"
+              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-emerald-400 px-6 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300"
+            >
+              Show newest jobs
             </Link>
           </div>
         </div>
@@ -502,7 +513,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               {hasPrevPage && (
                 <Link
                   href={buildSearchHref(paginationState, page - 1)}
-                  className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 hover:border-slate-500"
+                  className="focus-ring inline-flex h-11 items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-sm font-semibold text-slate-100 transition hover:bg-white/5"
                 >
                   ← Previous
                 </Link>
@@ -510,7 +521,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               {hasNextPage && (
                 <Link
                   href={buildSearchHref(paginationState, page + 1)}
-                  className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 hover:border-slate-500"
+                  className="focus-ring inline-flex h-11 items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-sm font-semibold text-slate-100 transition hover:bg-white/5"
                 >
                   Next →
                 </Link>

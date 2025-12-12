@@ -67,9 +67,6 @@ export default function JobCard({ job }: { job: JobCardJob }) {
   const category = inferCategoryFromRoleSlug(job.roleSlug)
   const remoteMode = getRemoteMode(job)
 
-  const isRemotePrimary =
-    job.remote === true || job.remoteMode === 'remote'
-
   const postedLabel = formatRelativeTime(
     job.postedAt ?? job.createdAt ?? job.updatedAt ?? null,
   )
@@ -77,90 +74,82 @@ export default function JobCard({ job }: { job: JobCardJob }) {
     !!(job.postedAt ?? job.createdAt) &&
     Date.now() - new Date(job.postedAt ?? job.createdAt as any).getTime() < 1000 * 60 * 60 * 48
 
-  const benefits = parseJsonArray(job.benefitsJson).slice(0, 3)
   const techStack = parseJsonArray(job.techStack).slice(0, 3)
-
-  const isHighSalary =
-    job.isHighSalary ||
-    Number(job.minAnnual ?? 0) >= 100_000 ||
-    Number(job.maxAnnual ?? 0) >= 100_000 ||
-    false
 
   return (
     <article
-      className={`group rounded-3xl border px-5 py-5 shadow-[0_16px_50px_rgba(0,0,0,0.35)] transition-all ${
+      className={`group relative rounded-3xl border p-5 transition-all duration-200 focus-within:ring-2 focus-within:ring-emerald-400/70 focus-within:ring-offset-2 focus-within:ring-offset-background ${
         isFeatured
-          ? 'border-amber-400/70 bg-[#151a2c] ring-1 ring-amber-300/30'
-          : 'border-slate-800/70 bg-[#11172a] hover:border-slate-700 hover:bg-[#141d31]'
+          ? 'border-amber-400/50 bg-slate-950/55 ring-1 ring-amber-300/20 hover:-translate-y-0.5 hover:border-amber-300/60 hover:shadow-[0_18px_60px_rgba(251,191,36,0.12)]'
+          : 'border-slate-800/70 bg-slate-950/55 hover:-translate-y-0.5 hover:border-emerald-400/30 hover:shadow-[0_18px_60px_rgba(16,185,129,0.12)]'
       }`}
     >
       <div className="flex gap-4">
-        {/* Logo — click→company */}
         {companySlug ? (
           <Link
             href={`/company/${companySlug}`}
-            className="mt-1 flex-shrink-0"
+            className="focus-ring mt-0.5 inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900/60 ring-1 ring-slate-800/70"
           >
             {showLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={logo}
-                alt={companyName}
-                className="h-10 w-10 rounded-full bg-slate-900 object-contain p-1 hover:ring-2 hover:ring-slate-600"
-                onError={(e) => {
-                  setLogoFailed(true)
-                  e.currentTarget.style.display = 'none'
-                }}
-              />
-            ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300 hover:ring-2 hover:ring-slate-600">
-                {companyInitials || '?'}
-              </div>
-            )}
-          </Link>
-        ) : (
-          <div className="mt-1 flex-shrink-0">
-            {showLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logo}
-                alt={companyName}
-                className="h-10 w-10 rounded-full bg-slate-900 object-contain p-1"
+                src={logo ?? ''}
+                alt={`${companyName} logo`}
+                className="h-12 w-12 rounded-xl object-contain p-2"
                 onError={() => setLogoFailed(true)}
               />
             ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-slate-300">
+              <span className="text-xs font-semibold text-slate-200">
                 {companyInitials || '?'}
-              </div>
+              </span>
+            )}
+          </Link>
+        ) : (
+          <div className="mt-0.5 inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900/60 ring-1 ring-slate-800/70">
+            {showLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logo ?? ''}
+                alt={`${companyName} logo`}
+                className="h-12 w-12 rounded-xl object-contain p-2"
+                onError={() => setLogoFailed(true)}
+              />
+            ) : (
+              <span className="text-xs font-semibold text-slate-200">
+                {companyInitials || '?'}
+              </span>
             )}
           </div>
         )}
 
-        {/* Main */}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h3 className="truncate text-[15px] font-semibold text-slate-50 group-hover:text-white">
-                <Link href={buildJobSlugHref(job)}>{job.title}</Link>
+              <h3 className="line-clamp-2 text-base font-semibold text-slate-50">
+                <Link
+                  href={buildJobSlugHref(job)}
+                  className="focus-ring rounded-md text-slate-50 transition-colors hover:text-white"
+                >
+                  {job.title}
+                </Link>
               </h3>
 
-              {/* Company info */}
-              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-300">
                 {companySlug ? (
                   <Link
                     href={`/company/${companySlug}`}
-                    className="font-medium hover:underline"
+                    className="focus-ring rounded-md font-medium text-slate-200 hover:text-white hover:underline"
                   >
                     {companyName}
                   </Link>
                 ) : (
-                  <span className="font-medium">{companyName}</span>
+                  <span className="font-medium text-slate-200">{companyName}</span>
                 )}
 
                 {companySize && (
                   <>
-                    <span className="text-slate-500">•</span>
-                    <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-slate-300">
+                    <span className="text-slate-600">•</span>
+                    <span className="text-xs text-slate-400">
                       {companySize} employees
                     </span>
                   </>
@@ -168,107 +157,113 @@ export default function JobCard({ job }: { job: JobCardJob }) {
 
                 {companyTags.length > 0 && (
                   <>
-                    <span className="text-slate-500">•</span>
-                    <span className="flex flex-wrap gap-1">
-                      {companyTags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-slate-300"
-                        >
-                          {tag}
-                        </span>
-                      ))}
+                    <span className="text-slate-600">•</span>
+                    <span className="text-xs text-slate-400">
+                      {companyTags.slice(0, 2).join(' • ')}
                     </span>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
+                {remoteMode && <span>{remoteMode}</span>}
+                {location && (
+                  <>
+                    {remoteMode && <span className="text-slate-600">•</span>}
+                    <span>{location}</span>
+                  </>
+                )}
+                {job.type && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span>{job.type}</span>
+                  </>
+                )}
+                {category && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span>{category}</span>
+                  </>
+                )}
+                {seniority && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span>{seniority}</span>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Right side actions */}
-            <div className="flex flex-col items-end gap-2 text-xs">
-              {postedLabel && (
-                <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                  {isFeatured && (
-                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-200 ring-1 ring-amber-500/60">
-                      Featured
-                    </span>
-                  )}
-                  {isNew && (
-                    <span className="rounded-full bg-emerald-600/20 px-2 py-0.5 text-emerald-200 ring-1 ring-emerald-600/60">
-                      New
-                    </span>
-                  )}
-                  <span>Posted {postedLabel}</span>
-                </span>
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              {salaryDisplay ? (
+                <div className="inline-flex rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 font-mono text-lg font-semibold text-emerald-200">
+                  {salaryDisplay}
+                </div>
+              ) : (
+                <div className="text-xs text-slate-500">Salary disclosed in posting</div>
               )}
-              <div className="flex flex-wrap justify-end gap-2">
-                {isValidUrl(job.companyRef?.website) && (
-                  <a
-                    href={cleanUrl(job.companyRef!.website!)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-100 hover:border-slate-500"
-                  >
-                    Website
-                  </a>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {salaryDisplay && (
+                  <StatusPill tone="success">VERIFIED SALARY</StatusPill>
                 )}
-                {companySlug && (
-                  <Link
-                    href={`/company/${companySlug}`}
-                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-100 hover:border-slate-500"
-                  >
-                    All job openings
-                  </Link>
-                )}
+                {isNew && <StatusPill tone="neutral">NEW</StatusPill>}
+                {isFeatured && <StatusPill tone="warning">FEATURED</StatusPill>}
               </div>
             </div>
           </div>
 
-          {/* Badges */}
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-            {location && <Badge>📍 {location}</Badge>}
-
-            {/* Avoid duplicating Remote */}
-            {remoteMode && (!isRemotePrimary || remoteMode !== 'Remote') && (
-              <Badge>🌎 {remoteMode}</Badge>
-            )}
-
-            {job.type && <Badge>⏱️ {job.type}</Badge>}
-            {category && <Badge>{category}</Badge>}
-            {seniority && <Badge>{seniority}</Badge>}
-
-            {salaryDisplay && (
-              <Badge highlight={isHighSalary || isFeatured}>
-                💵 {salaryDisplay}
-              </Badge>
-            )}
-
-            {isFeatured && <Badge strong>⭐ Featured</Badge>}
-
-            {benefits.map((b) => (
-              <Badge key={b}>🎁 {b}</Badge>
-            ))}
-          </div>
-
-          {/* Snippet */}
           {snippet && (
-            <p className="mt-2 line-clamp-2 text-[13px] leading-snug text-slate-300">
+            <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-slate-300">
               {snippet}
             </p>
           )}
 
           {techStack.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
               {techStack.map((tech) => (
                 <span
                   key={tech}
-                  className="rounded-full bg-slate-900 px-2 py-1 text-slate-300 ring-1 ring-slate-700"
+                  className="rounded-full bg-slate-900/60 px-3 py-1 text-slate-300 ring-1 ring-slate-800/70"
                 >
                   {tech}
                 </span>
               ))}
             </div>
           )}
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/60 pt-4">
+            <p className="text-xs text-slate-400">
+              Apply on company site
+              {postedLabel ? (
+                <>
+                  <span className="text-slate-600"> • </span>
+                  Posted {postedLabel}
+                </>
+              ) : null}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {isValidUrl(job.companyRef?.website) && (
+                <a
+                  href={cleanUrl(job.companyRef!.website!)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="focus-ring inline-flex h-11 items-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
+                >
+                  Company site
+                </a>
+              )}
+              {companySlug && (
+                <Link
+                  href={`/company/${companySlug}`}
+                  className="focus-ring inline-flex h-11 items-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
+                >
+                  More roles
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </article>
@@ -276,29 +271,25 @@ export default function JobCard({ job }: { job: JobCardJob }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Badge Component                                                             */
+/* Status Pill                                                                 */
 /* -------------------------------------------------------------------------- */
 
-function Badge({
+function StatusPill({
   children,
-  strong,
-  highlight,
+  tone = 'neutral',
 }: {
   children: ReactNode
-  strong?: boolean
-  highlight?: boolean
+  tone?: 'neutral' | 'success' | 'warning'
 }) {
-  let classes =
-    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 ring-1 text-[11px]'
+  const base =
+    'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ring-1'
 
-  if (highlight) {
-    classes +=
-      ' bg-emerald-500/15 text-emerald-200 ring-emerald-400/60 font-semibold'
-  } else if (strong) {
-    classes += ' bg-[#0f1625] text-slate-50 ring-1 ring-slate-600 font-semibold'
-  } else {
-    classes += ' bg-[#0e1524] text-slate-200 ring-slate-800'
-  }
+  const classes =
+    tone === 'success'
+      ? `${base} bg-emerald-500/10 text-emerald-300 ring-emerald-500/20`
+      : tone === 'warning'
+      ? `${base} bg-amber-500/10 text-amber-300 ring-amber-500/20`
+      : `${base} bg-slate-900/60 text-slate-200 ring-slate-800/70`
 
   return <span className={classes}>{children}</span>
 }
@@ -307,32 +298,19 @@ function Badge({
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  US: '🇺🇸',
-  CA: '🇨🇦',
-  GB: '🇬🇧',
-  UK: '🇬🇧',
-  DE: '🇩🇪',
-  NL: '🇳🇱',
-  AU: '🇦🇺',
-  IE: '🇮🇪',
-}
-
 function buildLocation(job: JobCardJob): string | null {
   const rawCode = job.countryCode
   const code = rawCode ? rawCode.toString().toUpperCase() : null
   const city = job.city ?? null
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
-  const flag = code ? COUNTRY_FLAGS[code] : undefined
-
   if (isRemote) {
-    if (code) return `Remote · ${flag ?? '🌍'} ${code}`
-    return 'Remote · 🌍 Worldwide'
+    if (code) return code
+    return 'Worldwide'
   }
 
-  if (city && code) return `${city}, ${flag ? `${flag} ${code}` : code}`
-  if (code) return flag ? `${flag} ${code}` : code
+  if (city && code) return `${city}, ${code}`
+  if (code) return code
   if (job.locationRaw) return String(job.locationRaw)
 
   return null
@@ -387,27 +365,26 @@ function truncateText(str: string, maxChars: number) {
 
 function inferSeniorityFromTitle(title: string): string | null {
   const t = title.toLowerCase()
-  if (t.includes('intern')) return '🧑‍🎓 Internship'
-  if (t.includes('principal') || t.includes('staff'))
-    return '⭐ Staff / Principal'
-  if (t.includes('lead') || t.includes('head')) return '⭐ Lead'
-  if (t.includes('senior') || t.includes('sr')) return '⭐ Senior'
-  if (t.includes('junior') || t.includes('jr')) return '🌱 Junior'
+  if (t.includes('intern')) return 'Internship'
+  if (t.includes('principal') || t.includes('staff')) return 'Staff / Principal'
+  if (t.includes('lead') || t.includes('head')) return 'Lead'
+  if (t.includes('senior') || t.includes('sr')) return 'Senior'
+  if (t.includes('junior') || t.includes('jr')) return 'Junior'
   return null
 }
 
 function inferCategoryFromRoleSlug(roleSlug?: string | null) {
   if (!roleSlug) return null
   const s = roleSlug.toLowerCase()
-  if (s.includes('data')) return '📊 Data'
-  if (s.includes('ml') || s.includes('machine-learning')) return '🤖 ML / AI'
-  if (s.includes('engineer') || s.includes('developer')) return '💻 Engineering'
-  if (s.includes('product')) return '🧭 Product'
-  if (s.includes('design')) return '🎨 Design'
-  if (s.includes('ops') || s.includes('operations')) return '⚙️ Operations'
-  if (s.includes('sales')) return '💼 Sales'
-  if (s.includes('marketing')) return '📣 Marketing'
-  if (s.includes('legal') || s.includes('counsel')) return '⚖️ Legal'
+  if (s.includes('data')) return 'Data'
+  if (s.includes('ml') || s.includes('machine-learning')) return 'ML / AI'
+  if (s.includes('engineer') || s.includes('developer')) return 'Engineering'
+  if (s.includes('product')) return 'Product'
+  if (s.includes('design')) return 'Design'
+  if (s.includes('ops') || s.includes('operations')) return 'Operations'
+  if (s.includes('sales')) return 'Sales'
+  if (s.includes('marketing')) return 'Marketing'
+  if (s.includes('legal') || s.includes('counsel')) return 'Legal'
   return null
 }
 
