@@ -54,7 +54,7 @@ export async function GET() {
   TOP_ROLE_SLUGS.forEach((roleSlug) => {
     urls.push(`${SITE_URL}/jobs/${roleSlug}/remote`)
     TOP_CITIES.forEach((city) => {
-      urls.push(`${SITE_URL}/jobs/${roleSlug}/${city.slug}`)
+      urls.push(`${SITE_URL}/jobs/${roleSlug}/city/${city.slug}`)
     })
   })
 
