@@ -407,6 +407,7 @@ export default async function RemoteRoleCityPage({
   const jobs = rows as JobWithCompany[]
   const totalPages =
     total > 0 ? Math.max(1, Math.ceil(total / PAGE_SIZE)) : 1
+  const totalJobs = total
 
   const sampleJob = jobs[0] ?? null
   const cityName = prettyCity(sampleJob?.city || citySlug)
