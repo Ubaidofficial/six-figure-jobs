@@ -112,6 +112,20 @@ export default async function StatePage({ params }: { params: Params }) {
     pageSize: PAGE_SIZE,
   })
 
+  const minAnnualValues = jobs
+    .map((j) => (j.minAnnual != null ? Number(j.minAnnual) : null))
+    .filter((v): v is number => v != null && v > 0)
+  const maxAnnualValues = jobs
+    .map((j) => (j.maxAnnual != null ? Number(j.maxAnnual) : null))
+    .filter((v): v is number => v != null && v > 0)
+
+  const salaryMin =
+    minAnnualValues.length > 0 ? Math.min(...minAnnualValues) : 100_000
+  const salaryMax =
+    maxAnnualValues.length > 0
+      ? Math.max(...maxAnnualValues)
+      : Math.max(salaryMin, 200_000)
+
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(resolved.slug, resolved.name)
   const itemListJsonLd = buildItemListJsonLd(jobs as JobWithCompany[], resolved.name)
   const faqJsonLd = {
@@ -161,7 +175,14 @@ export default async function StatePage({ params }: { params: Params }) {
         {resolved.name} $100k+ jobs ({total.toLocaleString()})
       </h1>
       <p className="mb-4 text-sm text-slate-300">
-        $100k jobs {resolved.name} • {resolved.name} $100k jobs • high paying jobs {resolved.name} • six figure {resolved.name.toLowerCase()} jobs refreshed frequently.
+        Find <strong className="text-white">{total.toLocaleString()}</strong>{' '}
+        <strong className="text-white">high paying</strong>{' '}
+        <strong className="text-green-500">$100k</strong> jobs in {resolved.name}{' '}
+        with verified{' '}
+        <strong className="text-green-500">six figure salaries</strong>. Browse{' '}
+        <strong className="text-green-500">$100k+</strong> roles from $
+        {salaryMin.toLocaleString()} to ${salaryMax.toLocaleString()} across
+        remote, hybrid, and on-site teams.
       </p>
       <p className="mb-6 text-xs text-slate-400">
         Showing page {page} of {totalPages}. Remote, hybrid, and on-site roles included; only mid-level and above, filtered for verified compensation.

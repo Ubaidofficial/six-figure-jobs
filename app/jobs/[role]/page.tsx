@@ -283,12 +283,21 @@ export default async function RolePage({
         {roleTitle} Jobs ({total.toLocaleString()}) — $100k+
       </h1>
       <p className="mb-6 text-sm text-slate-300">
-        Discover {jobCount} verified <strong>high paying</strong>{' '}
-        {roleTitle.toLowerCase()} jobs paying{' '}
-        <strong className="text-green-500">$100k+</strong> USD (or local
-        equivalent). Every <strong>six figure</strong> position is from top
-        companies with transparent compensation. Remote, hybrid, and on-site
-        opportunities updated daily.
+        Browse{' '}
+        <strong className="text-white">{jobCount.toLocaleString()}</strong>{' '}
+        {roleTitle.toLowerCase()} <strong className="text-green-500">$100k</strong>{' '}
+        jobs with verified{' '}
+        <strong className="text-green-500">six figure salaries</strong>. Find{' '}
+        <strong className="text-white">high paying</strong>{' '}
+        {roleTitle.toLowerCase()} positions paying{' '}
+        <strong className="text-green-500">$100k+</strong> from $
+        {Math.round(avgSalaryMin).toLocaleString()} to $
+        {Math.round(avgSalaryMax).toLocaleString()} at top companies like{' '}
+        {topCompanies
+          .slice(0, 3)
+          .map((company) => company.name)
+          .join(', ')}
+        .
       </p>
 
       <section className="mb-6 rounded-xl border border-slate-800 bg-slate-950/50 p-4">
