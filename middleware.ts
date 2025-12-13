@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
   const host = request.headers.get('host')
 
-  // Redirect apex → www (except localhost)
+  // 1) Redirect ALL /jobs/150k-plus URLs (including deep paths) → /jobs/100k-plus
+  if (pathname.startsWith('/jobs/150k-plus')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/jobs/100k-plus'
+    url.search = ''
+    return NextResponse.redirect(url, 301)
+  }
+
+  // 2) Redirect apex → www (except localhost)
   const hostname = host ? host.split(':')[0] : null
   if (host && hostname === '6figjobs.com' && !host.startsWith('localhost')) {
     const url = request.nextUrl.clone()
@@ -17,12 +26,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }
