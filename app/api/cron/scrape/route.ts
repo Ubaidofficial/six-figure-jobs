@@ -1,31 +1,46 @@
 // app/api/cron/scrape/route.ts
-// Vercel Cron endpoint for daily job scraping
-// Configure in vercel.json: { "crons": [{ "path": "/api/cron/scrape", "schedule": "0 6 * * *" }] }
-
 import { NextResponse } from 'next/server'
+import { spawn } from 'node:child_process'
 
-// Vercel Serverless Function config
-export const maxDuration = 300 // 5 minutes max
+export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
-  // Security: Verify cron secret
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
+function isAuthorized(req: Request) {
+  const auth = req.headers.get('authorization')
+  const secret = process.env.CRON_SECRET
+  if (!secret) return false
+  return auth === `Bearer ${secret}`
+}
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+function runDailyScrapeV2() {
+  // fire-and-forget: run in background
+  const child = spawn(
+    'npx',
+    ['tsx', 'scripts/dailyScrapeV2.ts', '--mode=all', '--concurrency=5'],
+    { stdio: 'inherit', env: process.env }
+  )
+
+  child.on('error', (err) => console.error('[cron] spawn error', err))
+  child.on('exit', (code) => console.log('[cron] scraper exit code', code))
+}
+
+export async function POST(req: Request) {
+  if (!isAuthorized(req)) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  // For Vercel cron, we just return success
-  // The actual scraping should be done via a separate long-running process
-  // or triggered externally (GitHub Actions, etc.)
+  runDailyScrapeV2()
+
   return NextResponse.json({
     success: true,
-    message: 'Cron endpoint ready. Use scripts/dailyScrape.ts for actual scraping.',
+    message: 'Started dailyScrapeV2 in background',
   })
 }
 
-export async function POST(request: Request) {
-  return GET(request)
+// Optional: allow GET for quick auth test
+export async function GET(req: Request) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+  }
+  return NextResponse.json({ success: true, message: 'OK' })
 }
