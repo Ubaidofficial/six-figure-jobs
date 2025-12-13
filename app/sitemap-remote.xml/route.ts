@@ -7,6 +7,7 @@
 
 import { prisma } from '../../lib/prisma'
 import { countryCodeToSlug } from '../../lib/seo/countrySlug'
+import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 
 const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
   ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
@@ -71,6 +72,8 @@ export async function GET() {
   /* ----------------------------- /remote/[role] ----------------------------- */
   for (const row of roles) {
     if (!row.roleSlug) continue
+    if (!isCanonicalSlug(row.roleSlug)) continue
+    if (!isTier1Role(row.roleSlug)) continue
     const loc = `${SITE_URL}/remote/${row.roleSlug}`
     const lastmod = (row.updatedAt ?? new Date()).toISOString()
     urlSet.add(`<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`)
@@ -79,6 +82,8 @@ export async function GET() {
   /* ------------------------ /remote/[role]/[country] ------------------------ */
   for (const row of roleCountries) {
     if (!row.roleSlug || !row.countryCode) continue
+    if (!isCanonicalSlug(row.roleSlug)) continue
+    if (!isTier1Role(row.roleSlug)) continue
     const loc = `${SITE_URL}/remote/${row.roleSlug}/${countryCodeToSlug(row.countryCode)}`
     const lastmod = (row.updatedAt ?? new Date()).toISOString()
     urlSet.add(`<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`)
@@ -87,6 +92,8 @@ export async function GET() {
   /* -------------------------- /remote/[role]/[city] ------------------------- */
   for (const row of roleCities) {
     if (!row.roleSlug || !row.citySlug) continue
+    if (!isCanonicalSlug(row.roleSlug)) continue
+    if (!isTier1Role(row.roleSlug)) continue
     const loc = `${SITE_URL}/remote/${row.roleSlug}/${row.citySlug}`
     const lastmod = (row.updatedAt ?? new Date()).toISOString()
     urlSet.add(`<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`)

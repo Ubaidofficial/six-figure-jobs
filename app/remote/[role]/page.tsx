@@ -2,8 +2,9 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { prisma } from '../../../lib/prisma'
+import { notFound, permanentRedirect, redirect } from 'next/navigation'
+import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
+import { findBestMatchingRole, slugToLabel } from '@/lib/roles/slugMatcher'
 import {
   queryJobs,
   type JobWithCompany,
@@ -19,6 +20,11 @@ const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20
 
 type SearchParams = Record<string, string | string[] | undefined>
+
+type Props = {
+  params: Promise<{ role: string }>
+  searchParams?: Promise<SearchParams>
+}
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -59,9 +65,7 @@ function normalizeStringParam(
 
 function prettyRole(slug: string | undefined): string {
   if (!slug) return ''
-  return slug
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+  return slugToLabel(slug)
 }
 
 function buildPageHref(
@@ -215,14 +219,20 @@ function buildJobListJsonLd(
 export async function generateMetadata({
   params,
   searchParams,
-}: {
-  params: Promise<{ role: string }>
-  searchParams?: Promise<SearchParams>
-}): Promise<Metadata> {
+}: Props): Promise<Metadata> {
   const p = await params
   const sp = await resolveSearchParams(searchParams)
 
   const roleSlug = p.role
+
+  // Validate role slug
+  if (!isCanonicalSlug(roleSlug)) {
+    return {
+      title: 'Not Found',
+      robots: { index: false, follow: false },
+    }
+  }
+
   const roleName = prettyRole(roleSlug)
   const page = parsePage(sp)
   const requestedPath = buildRequestedPath(roleSlug, sp)
@@ -248,16 +258,11 @@ export async function generateMetadata({
     pageSize: 1,
   })
 
-  const totalJobs = result.total
-  const allowIndex = totalJobs >= 3
+  const jobCount = result.total
+  const shouldIndex = isTier1Role(roleSlug)
 
-  const baseTitle = `Remote ${roleName} jobs paying $100k+`
-  const title =
-    totalJobs > 0
-      ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
-      : `${baseTitle} | ${SITE_NAME}`
-
-  const description = `Search remote ${roleName} jobs paying $100k+ across top tech and SaaS companies. Filter by country, remote region, and salary band.`
+  const title = `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs | ${SITE_NAME}`
+  const description = `Find ${jobCount.toLocaleString()} remote ${roleName} jobs paying $100k+. Browse high paying remote ${roleName.toLowerCase()} positions with verified six figure salaries.`
 
   return {
     title,
@@ -265,12 +270,12 @@ export async function generateMetadata({
     alternates: {
       canonical: `${SITE_URL}/remote/${roleSlug}`,
     },
-    robots: allowIndex
+    robots: shouldIndex
       ? { index: true, follow: true }
-      : { index: false, follow: true },
+      : { index: false, follow: true }, // Tier-2: noindex but follow links
     openGraph: {
-      title,
-      description,
+      title: `Remote ${roleName} $100k+ Jobs`,
+      description: `${jobCount.toLocaleString()} remote ${roleName} jobs with verified $100k+ salaries.`,
       url: `${SITE_URL}/remote/${roleSlug}`,
       siteName: SITE_NAME,
       type: 'website',
@@ -290,14 +295,30 @@ export async function generateMetadata({
 export default async function RemoteRolePage({
   params,
   searchParams,
-}: {
-  params: Promise<{ role: string }>
-  searchParams?: Promise<SearchParams>
-}) {
+}: Props) {
   const p = await params
   const sp = await resolveSearchParams(searchParams)
 
   const roleSlug = p.role
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // URL VALIDATION (v2.7)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 1. Check if it's a canonical slug
+  if (!isCanonicalSlug(roleSlug)) {
+    // 2. Try to find a matching canonical slug for redirect
+    const matchedRole = findBestMatchingRole(roleSlug)
+
+    if (matchedRole) {
+      // Permanent redirect to canonical URL
+      permanentRedirect(`/remote/${matchedRole}`)
+    }
+
+    // 3. No match - return 404
+    notFound()
+  }
+
   const roleName = prettyRole(roleSlug)
   const page = parsePage(sp)
   const basePath = `/remote/${roleSlug}`
@@ -350,7 +371,7 @@ export default async function RemoteRolePage({
     )
   )
 
-  const salaryOptions = [100_000, 150_000, 200_000]
+  const salaryOptions = [100_000, 200_000, 300_000, 400_000]
 
   const companyCounts = new Map<string, { name: string; count: number; slug?: string | null }>()
   jobs.forEach((job: any) => {
@@ -672,4 +693,13 @@ export default async function RemoteRolePage({
       />
     </main>
   )
+}
+
+export async function generateStaticParams() {
+  // Only generate pages for Tier-1 roles (indexed pages)
+  const { TIER_1_ROLES } = await import('@/lib/roles/canonicalSlugs')
+
+  return TIER_1_ROLES.map((role) => ({
+    role,
+  }))
 }

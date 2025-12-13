@@ -16,33 +16,40 @@ import { LOCATIONS, SALARY_BANDS } from '@/lib/constants/homepage'
 export const revalidate = 600
 
 export const metadata: Metadata = {
-  title: '$100k+ Jobs | 13,000+ High-Paying Six Figure Positions | Six Figure Jobs',
+  title: 'Six Figure Jobs | 6 Figure Jobs & High Paying $100k+ Positions | 6FigJobs',
   description:
-    'Find $100k+ jobs and high-paying six figure positions from top companies. Browse 13,000+ verified salary positions in engineering, product, data, and more. Updated daily.',
+    'Find six figure jobs and 6 figure jobs paying $100k+ with verified salaries. ' +
+    'Browse 21,000+ high paying jobs from top companies. The #1 job board for ' +
+    'lucrative, well-paying positions. Updated daily.',
   keywords:
-    '$100k jobs, high paying jobs, six figure jobs, $100k+ jobs, 100k salary jobs, high paying remote jobs',
+    'six figure jobs, 6 figure jobs, high paying jobs, $100k jobs, 100k jobs, ' +
+    'six figure salary, high paying careers, lucrative jobs, well paying jobs, ' +
+    '$100k+ jobs, six figure positions, high salary jobs',
   alternates: {
     canonical: 'https://www.6figjobs.com',
   },
   openGraph: {
-    title: '$100k+ Jobs | High-Paying Six Figure Positions',
-    description: 'Find $100k+ jobs from top companies. 13,000+ verified salary positions.',
+    title: 'Six Figure Jobs & High Paying $100k+ Positions',
+    description:
+      'Find 6 figure jobs and high paying positions with verified $100k+ salaries. ' +
+      '21,000+ lucrative jobs from top companies.',
     url: 'https://www.6figjobs.com',
-    siteName: 'Six Figure Jobs',
+    siteName: '6FigJobs - Six Figure Jobs',
     type: 'website',
     images: [
       {
         url: 'https://www.6figjobs.com/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Six Figure Jobs - $100k+ Positions',
+        alt: 'Six Figure Jobs - Find High Paying $100k+ Positions',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '$100k+ Jobs | High-Paying Six Figure Positions',
-    description: 'Find $100k+ jobs from top companies. 13,000+ verified salary positions.',
+    title: 'Six Figure Jobs | High Paying $100k+ Positions',
+    description:
+      'Find 6 figure jobs with verified salaries. 21,000+ high paying positions.',
     images: ['https://www.6figjobs.com/og-image.png'],
   },
   robots: {
@@ -104,15 +111,16 @@ function HomepageSchemas({
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Six Figure Jobs',
-    alternateName: '$100k+ Jobs',
+    alternateName: ['6FigJobs', '6 Figure Jobs', 'SixFigJobs'],
     url: 'https://www.6figjobs.com',
     description:
-      'The exclusive job board for $100k+ positions. Find high-paying jobs from top companies.',
+      'The exclusive job board for six figure jobs and high paying $100k+ positions. ' +
+      'Find lucrative careers with verified salaries.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://www.6figjobs.com/jobs?q={search_term_string}',
+        urlTemplate: 'https://www.6figjobs.com/search?q={search_term_string}',
       },
       'query-input': 'required name=search_term_string',
     },
@@ -123,9 +131,10 @@ function HomepageSchemas({
     '@type': 'Organization',
     name: 'Six Figure Jobs',
     legalName: 'Six Figure Jobs LLC',
+    alternateName: ['6FigJobs', '6 Figure Jobs'],
     url: 'https://www.6figjobs.com',
     logo: 'https://www.6figjobs.com/logo.png',
-    description: `Premium job board featuring ${jobCount.toLocaleString()}+ $100k+ positions from ${companyCount.toLocaleString()}+ top companies. Remote, hybrid, and on-site opportunities updated daily.`,
+    description: `Premium job board featuring ${jobCount.toLocaleString()}+ six figure jobs and high paying $100k+ positions from ${companyCount.toLocaleString()}+ top companies. The #1 destination for lucrative careers.`,
     foundingDate: '2025-12-05',
     sameAs: [
       'https://twitter.com/6figjobs',
@@ -273,23 +282,27 @@ export default async function HomePage() {
       />
       <section className="premium-gradient soft-shadow mb-12 rounded-3xl border border-slate-800/70 bg-slate-950/40 p-6 md:p-10">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
-          CURATED JOBS PAYING $100K+ ONLY
+          THE #1 JOB BOARD FOR SIX FIGURE & HIGH PAYING POSITIONS
         </p>
 
         <div className="mt-5 flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-5">
             <h1 className="text-4xl font-extrabold tracking-tight text-slate-50 md:text-[3.2rem] lg:text-[3.4rem]">
-              Land your next <span className="text-emerald-300">$100k+</span>{' '}
-              role
+              Find <span className="text-emerald-300">Six Figure Jobs</span> &{' '}
+              High Paying <span className="text-emerald-300">$100k+</span>{' '}
+              Careers
             </h1>
             <p className="text-lg leading-relaxed text-slate-200 md:text-xl">
-              Verified salaries. No lowball offers. No wasted applications.
+              Browse <strong>{totalJobs.toLocaleString()}</strong> six figure jobs and 6 figure jobs
+              with verified high paying salaries from $100k to $500k+.
+              Find lucrative, well-paying positions at top companies.
             </p>
             <p className="text-sm leading-relaxed text-slate-400 md:text-base">
-              Curated six-figure roles from real company postings. Updated daily.
+              Curated high paying careers from real company postings.
+              Only six figure salary positions. Updated daily.
             </p>
             <p className="text-xs text-slate-400">
-              ✅ Salaries shown • 🛡️ Source-linked • ↗️ Apply on company site
+              ✅ Verified six figure salaries • 🛡️ No entry-level jobs • ↗️ Direct company applications
             </p>
 
             <div className="surface soft-shadow p-5">
@@ -299,7 +312,7 @@ export default async function HomePage() {
                     htmlFor="q"
                     className="mb-1.5 block text-[11px] font-medium text-slate-400"
                   >
-                    Search $100k+ roles
+                    Search six figure jobs & high paying positions
                   </label>
                   <input
                     id="q"
@@ -410,7 +423,7 @@ export default async function HomePage() {
                     type="submit"
                     className="focus-ring inline-flex w-full items-center justify-center rounded-xl bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300 sm:w-auto"
                   >
-                    Find my $100k+ job
+                    Find My Six Figure Job
                   </button>
 
                   <Link
@@ -430,17 +443,17 @@ export default async function HomePage() {
 
           <div className="surface w-full max-w-xs p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              Live on Six Figure Jobs
+              Live Six Figure Jobs Stats
             </p>
             <div className="mt-4 space-y-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-sm text-slate-400">$100k+ jobs</span>
+                <span className="text-sm text-slate-400">Six figure jobs</span>
                 <span className="text-xl font-bold text-slate-50">
                   {totalJobs.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-baseline justify-between">
-                <span className="text-sm text-slate-400">Companies</span>
+                <span className="text-sm text-slate-400">High paying companies</span>
                 <span className="text-xl font-bold text-slate-50">
                   {totalCompanies.toLocaleString()}
                 </span>
@@ -470,7 +483,7 @@ export default async function HomePage() {
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-semibold text-slate-50">
-          Browse by role
+          Browse Six Figure Jobs by Role
         </h2>
           <div className="flex flex-wrap gap-2">
             {CATEGORY_LINKS.roles.map((role) => (
@@ -501,7 +514,7 @@ export default async function HomePage() {
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-semibold text-slate-50">
-          Browse by location
+          High Paying Jobs by Location
         </h2>
         <div className="flex flex-wrap gap-2">
           {LOCATIONS.map((loc) => (
@@ -531,7 +544,7 @@ export default async function HomePage() {
       <section className="mb-10">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-50">
-            Explore by salary
+            Explore Six Figure Salaries
           </h2>
           <Link
             href={buildJobsPath({ salaryMin: 100_000 })}
@@ -592,7 +605,7 @@ export default async function HomePage() {
       <section className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-sm font-semibold text-slate-50">
-            Latest $100k+ jobs
+            Latest High Paying $100k+ Jobs
           </h2>
           <p className="text-[11px] text-slate-400">
             Showing{' '}
@@ -629,7 +642,7 @@ export default async function HomePage() {
 
       <section className="mt-16 border-t border-slate-800 pt-8">
         <h2 className="mb-4 text-sm font-semibold text-slate-400">
-          Popular $100k+ searches (remote, hybrid, on-site)
+          Popular Six Figure Job Searches
         </h2>
         <div className="grid gap-x-8 gap-y-2 text-xs text-slate-500 sm:grid-cols-2 md:grid-cols-4">
           <div className="space-y-2">

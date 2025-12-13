@@ -17,25 +17,24 @@ export const SALARY_BANDS = [
     min: 100_000,
     label: '$100k+',
     slug: '100k-plus',
-    description: 'Entry to mid-level high-salary roles',
+    description: 'Six figure jobs',
   },
   {
     min: 200_000,
     label: '$200k+',
     slug: '200k-plus',
-    description: 'Senior & staff-level positions',
+    description: 'High six figure jobs',
   },
   {
     min: 300_000,
     label: '$300k+',
     slug: '300k-plus',
-    description: 'Principal & lead roles',
+    description: 'Premium positions',
   },
   {
     min: 400_000,
     label: '$400k+',
     slug: '400k-plus',
-    description: 'Executive & top-comp band',
+    description: 'Executive compensation',
   },
 ] as const
-

@@ -95,14 +95,14 @@ ${urls
 }
 const TOP_ROLE_SLUGS = [
   'software-engineer',
-  'senior-software-engineer',
-  'staff-software-engineer',
   'product-manager',
   'data-scientist',
   'data-engineer',
-  'devops',
   'backend-engineer',
   'frontend-engineer',
+  'full-stack-engineer',
+  'devops-engineer',
+  'machine-learning-engineer',
   'engineering-manager',
 ]
 

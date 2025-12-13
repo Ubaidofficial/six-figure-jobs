@@ -1,17 +1,36 @@
-# Six Figure Jobs — Premium High-Salary Job Board v2.5
+# Six Figure Jobs — Premium High-Salary Job Board v2.7
 # The Ultimate Production Rules for Programmatic SEO Excellence
-# Updated: December 12, 2025
-# 
+# Updated: December 13, 2025
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# v2.7 CHANGES (URL SLUG & SEO OPTIMIZATION EDITION):
+# ═══════════════════════════════════════════════════════════════════════════════
+# - NEW: Section 28 - Canonical Role Slug System (CRITICAL FIX)
+# - NEW: Section 29 - Homepage SEO for "Six Figure Jobs" & "High Paying Jobs"
+# - NEW: Section 30 - URL Validation & Redirect Strategy
+# - NEW: Section 31 - Route Canonicalization (/remote/* is primary)
+# - NEW: Section 32 - Footer Cleanup (13 → 9 sections)
+# - NEW: Section 33 - Tiered Indexing Strategy
+# - NEW: Section 34 - v2.7 Implementation Checklist
+# - NEW: Section 35 - Final v2.7 Non-Negotiables
+# - UPDATED: Section 3.1 - Clarified 150 slugs vs 25 indexed distinction
+# - UPDATED: Section 4.3 - Keyword density reduced (5-7 → 3-5 per 500 words)
+# - UPDATED: Section 8 - Footer reduced to 9 sections, no $150k, no "Senior" prefix
+# - REMOVED: $150k salary tier (dilutes premium positioning)
+# - PRESERVED: All publishing safety rules from v2.6 (Sections 24, 26)
+#
+# CRITICAL: Publishing strategy in Sections 24 & 26 MUST NOT be modified
+# without explicit approval. These prevent Google penalties.
+# ═══════════════════════════════════════════════════════════════════════════════
+#
 # v2.5 CHANGES (FINAL SEO EDITION):
-# - NEW: Section 20 - Complete pSEO Templates (Every Page Type)
-# - NEW: Section 21 - Advanced SEO Checklist & Data Validation
-# - NEW: Section 22 - Internal Linking Strategy
-# - NEW: Section 23 - Project Management & Technical Debt
-# - UPDATED: Homepage schemas (WebSite + Organization)
-# - UPDATED: Open Graph & Twitter Cards for all pages
-# - UPDATED: hreflang for international pages
-# - NEW: Core Web Vitals optimization rules
-# - NEW: Comprehensive audit prompt for VSCode
+# - Section 20 - Complete pSEO Templates (Every Page Type)
+# - Section 21 - Advanced SEO Checklist & Data Validation
+# - Section 22 - Internal Linking Strategy
+# - Section 23 - Project Management & Technical Debt
+# - Homepage schemas (WebSite + Organization)
+# - Open Graph & Twitter Cards for all pages
+# - Core Web Vitals optimization rules
 
 ═══════════════════════════════════════════════════════════════════════════════
                               MISSION STATEMENT
@@ -23,24 +42,33 @@ Purchasing Power Parity (PPP) and local salary standards.
 
 We are NOT a generic job board. We are NOT for entry-level positions.
 
-Our value proposition: "Find Six Figure Jobs, High-Paying Jobs, $100k+ Jobs, and
-100k Plus Jobs from Top Companies — Verified Salaries, Updated Daily"
+Our value proposition: "Find Six Figure Jobs, 6 Figure Jobs, High-Paying Jobs,
+$100k+ Jobs, and 100k Plus Jobs from Top Companies — Verified Salaries, Updated Daily"
+
+PRIMARY TARGET KEYWORDS (in order of priority):
+1. "six figure jobs" (2,900 search volume)
+2. "6 figure jobs" (3,200 search volume) ← Domain matches this!
+3. "high paying jobs" (49,500 search volume)
+4. "$100k jobs" (8,100 search volume)
+5. "100k jobs" (4,400 search volume)
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         IMPLEMENTATION STATUS: 95%
+                         IMPLEMENTATION STATUS: 60%
 ═══════════════════════════════════════════════════════════════════════════════
 
-## Current Completion (as of December 12, 2025)
+## Current Completion (as of December 13, 2025)
 
 | Category | Status | Score |
 |----------|--------|-------|
 | pSEO Pages | States/skills/industry/city + combos live | 92% |
 | SEO Metadata | Brand/$100k/count on all major pages | 95% |
+| **URL Slug System** | **NEEDS FIX - Canonical slug implementation** | **40%** |
+| **Homepage SEO** | **NEEDS "six figure jobs" optimization** | **50%** |
 | Long-tail Keywords | Implemented on new pages | 90% |
 | Structured Data | ItemList+Breadcrumb+FAQ+Occupation+WebSite | 95% |
 | Technical SEO | Headers, staging block, AI crawlers | 95% |
 | Next.js 16 | Async params, metadataBase, viewport | 98% |
-| Footer Links | Rich $100k sections implemented | 95% |
+| **Footer Links** | **NEEDS cleanup (13 → 9 sections)** | **70%** |
 | Salary Guides | Occupation+FAQ added | 88% |
 | Database | Fields present, indexes optimized | 95% |
 | Scrapers | ATS integrations optimized | 92% |
@@ -48,11 +76,13 @@ Our value proposition: "Find Six Figure Jobs, High-Paying Jobs, $100k+ Jobs, and
 | Internal Linking | Cross-page linking strategy | 90% |
 | Data Validation | Salary/URL/content validation | 95% |
 
-**Remaining 5%:** 
-- Homepage UI final polish
-- Salary percentile tables with BLS data
-- Additional ATS integrations (Workday, iCIMS)
-- Email alerts feature
+**v2.7 Focus Areas:**
+- [ ] Fix URL slug system (canonical slugs only)
+- [ ] Homepage SEO for "six figure jobs" / "6 figure jobs"
+- [ ] Footer cleanup (13 → 9 sections)
+- [ ] Remove $150k salary tier completely
+- [ ] Route canonicalization (/remote/* primary)
+- [ ] Tiered indexing for Role+City pages
 
 ═══════════════════════════════════════════════════════════════════════════════
                          1. ROLE & CORE RESPONSIBILITIES
@@ -72,6 +102,8 @@ and Full-Stack Developer responsible for:
 ✅ Producing error-free code on first compile
 ✅ Managing deployment and server operations
 ✅ Conducting implementation audits against these rules
+✅ Enforcing canonical URL slug validation (v2.7)
+✅ Optimizing for "six figure jobs" and "high paying jobs" keywords (v2.7)
 
 ═══════════════════════════════════════════════════════════════════════════════
               2. HIGH-SALARY JOB BOARD RULES (PPP-ADJUSTED)
@@ -137,25 +169,34 @@ what constitutes a HIGH-PAYING job in EACH local market based on:
            3. PROGRAMMATIC SEO (pSEO) — COMPLETE ROUTE STRUCTURE
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 3.1 PSEO Page Count Summary
+## 3.1 PSEO Page Count Summary (UPDATED v2.7)
+
+**IMPORTANT DISTINCTION (v2.7):**
+- **~150 canonical role slugs** are supported for URL validation & redirects
+- **~25-30 Tier-1 role hubs** are actively indexed at any time
+- All other canonical slugs are valid for job normalization but remain 
+  non-indexed (noindex) unless explicitly promoted to Tier-1
 
 | Page Type | Count | Route | Status |
 |-----------|-------|-------|--------|
 | US State Pages | 50 | `/jobs/state/[state]` | ✅ Live |
 | Skills/Tech Pages | 30 | `/jobs/skills/[skill]` | ✅ Live |
 | Industry Pages | 10 | `/jobs/industry/[industry]` | ✅ Live |
-| City Pages | 19 | `/jobs/city/[city]` | ✅ Live |
+| City Pages | 44 | `/jobs/city/[city]` | ✅ Live |
 | Country Pages | 10 | `/jobs/location/[country]` | ✅ Live |
-| Role Pages | 25+ | `/jobs/[role]` | ✅ Live |
-| Salary Tier Pages | 5 | `/jobs/[tier]-plus` | ✅ Live |
-| Remote Pages | 10+ | `/remote/*` | ✅ Live |
+| **Role Pages (Tier-1)** | **25-30** | `/jobs/[role]` | ✅ Indexed |
+| Role Pages (Tier-2+) | ~120 | `/jobs/[role]` | noindex |
+| Salary Tier Pages | **4** | `/jobs/[tier]-plus` | ✅ Live (NO $150k) |
+| **Remote Pages** | 25-30 | `/remote/[role]` | ✅ **CANONICAL** |
 | Company Pages | Dynamic | `/company/[slug]` | ✅ Live |
 | Salary Guides | 50+ | `/salary/[role]/*` | ✅ Live |
-| **Combo: Role+Remote** | 25+ | `/jobs/[role]/remote` | ✅ Live |
-| **Combo: Role+City** | 100+ | `/jobs/[role]/[city]` | ✅ Live |
+| **Role+City (Tier-1 only)** | ~300 | `/jobs/[role]/[city]` | ✅ Indexed |
+| Role+City (others) | - | - | noindex |
 | **Combo: Role+Skill** | 50+ | `/jobs/[role]/skills/[skill]` | ✅ Live |
 | **Combo: Skill+Remote** | 15+ | `/jobs/skills/[skill]/remote` | ✅ Live |
-| **TOTAL** | **400+ pages** | | |
+| **TOTAL INDEXED** | **~500 pages** | | |
+
+**v2.7 REDIRECT RULE:** All `/jobs/[role]/remote` URLs MUST 301 redirect to `/remote/[role]`.
 
 ## 3.2 US State Pages (All 50 States)
 
@@ -370,10 +411,13 @@ $100k python developer jobs
 3. **First Paragraph**: All 3 primary keywords naturally
 4. **Body**: 3-5 long-tail variations
 
-### Keyword Density Targets (per 500 words)
-- "$100k" or "$100k+": 5-7 mentions
-- "high paying": 3-4 mentions
+### Keyword Density Targets (UPDATED v2.7 - per 500 words)
+- "$100k" or "$100k+": **3-5 mentions** (was 5-7, reduced to avoid over-optimization)
+- "high paying": 2-3 mentions
 - "six figure": 2-3 mentions
+
+**Note:** Post-2024 Google is less tolerant of keyword stuffing. Let long-tail 
+and LSI keywords do the heavy lifting naturally.
 
 ## 4.4 First Paragraph Templates
 
@@ -608,81 +652,89 @@ Curated high-paying jobs ($100k+) in tech, engineering, product, data, and desig
 ```
 
 ═══════════════════════════════════════════════════════════════════════════════
-              8. FOOTER STRUCTURE (13 SECTIONS)
+              8. FOOTER STRUCTURE (9 SECTIONS — UPDATED v2.7)
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 8.1 Required Footer Sections ✅
+**Goal:** Keep footer lean and pSEO-useful. No redundant location lists.
 
-### Section 1: $100k+ Jobs by Role (15-20 links)
-- Software Engineer $100k+ jobs
-- Senior Software Engineer jobs
-- Product Manager $100k+ jobs
-- Data Scientist $100k+ jobs
-- DevOps Engineer $100k+ jobs
-- (etc.)
+## 8.0 REMOVED in v2.7
+- ❌ $100k+ Jobs by Location (redundant with state/city pages)
+- ❌ For Job Seekers (generic, not SEO-valuable)
+- ❌ For Employers (not current focus)
+- ❌ DMCA from Legal section
+- ❌ Any $150k tier links (NO $150k ANYWHERE)
+- ❌ "Senior Software Engineer" anchors (senior is modifier, not canonical)
 
-### Section 2: $100k+ Jobs by Location (10 links)
-- $100k+ jobs in USA
-- £80k+ jobs in UK
-- C$100k+ jobs in Canada
-- (etc.)
+## 8.1 Final Footer Sections (exactly 9)
 
-### Section 3: $100k+ Jobs by State (7+ links)
-- $100k+ jobs in California
-- $100k+ jobs in Texas
-- $100k+ jobs in New York
-- (etc.)
+### Section 1: $100k+ Jobs by Role
+- Software Engineer $100k+ Jobs
+- Product Manager $100k+ Jobs
+- Data Scientist $100k+ Jobs
+- DevOps Engineer $100k+ Jobs
+- Data Engineer $100k+ Jobs
+- View All Roles
 
-### Section 4: $100k+ Jobs by City (10 links)
-- $100k+ jobs in San Francisco
-- $100k+ jobs in New York City
-- $100k+ jobs in Seattle
-- (etc.)
+**NOTE:** No "Senior" prefix in anchor text. Link to canonical role hubs only.
 
-### Section 5: $100k+ Jobs by Salary Band (5 links)
-- $100k+ jobs
-- $150k+ jobs
-- $200k+ jobs
-- $300k+ jobs
-- $400k+ jobs
+### Section 2: Six Figure Jobs by Salary
+- $100k+ Jobs (`/jobs/100k-plus`)
+- $200k+ Jobs (`/jobs/200k-plus`)
+- $300k+ Jobs (`/jobs/300k-plus`)
+- $400k+ Jobs (`/jobs/400k-plus`)
 
-### Section 6: $100k+ Jobs by Skills (7+ links)
-- Python $100k+ jobs
-- React $100k+ jobs
-- AWS $100k+ jobs
-- (etc.)
+**NOTE:** NO $150k tier. It does not exist.
 
-### Section 7: $100k+ Jobs by Industry (7+ links)
-- Fintech $100k+ jobs
-- AI/ML $100k+ jobs
-- SaaS $100k+ jobs
-- (etc.)
+### Section 3: High Paying Jobs by Skill
+- Python $100k+ Jobs
+- React $100k+ Jobs
+- AWS $100k+ Jobs
+- TypeScript $100k+ Jobs
+- View All Skills
 
-### Section 8: Remote $100k+ Jobs
-- Remote $100k+ jobs
-- Remote Software Engineer jobs
-- Work from Anywhere jobs
+### Section 4: Six Figure Jobs by Industry
+- Fintech $100k+ Jobs
+- AI/ML $100k+ Jobs
+- SaaS $100k+ Jobs
+- Cybersecurity $100k+ Jobs
+- View All Industries
 
-### Section 9: Salary Guides
-- Software Engineer Salary
-- Product Manager Salary
-- Data Scientist Salary
+### Section 5: Top Companies Hiring
+- Google Jobs
+- Stripe Jobs
+- Anthropic Jobs
+- View All Companies
 
-### Section 10: Top Companies
-- Stripe jobs
-- Google jobs
-- Anthropic jobs
+### Section 6: Salary Guides
+- Software Engineer Salary Guide
+- Product Manager Salary Guide
+- Data Scientist Salary Guide
+- View All Salary Guides
 
-### Section 11: Resources
-- Post a Job
-- About
-- Blog
+### Section 7: Remote Six Figure Jobs
+- Remote Software Engineer Jobs
+- Remote Product Manager Jobs
+- Remote Data Scientist Jobs
+- All Remote Jobs (`/remote`)
+
+### Section 8: Company
+- About Us (ONLY)
+
+### Section 9: Legal
+- Privacy Policy
+- Terms of Service
+- Cookie Policy
 
 ## 8.2 Anchor Text Rules
 
-✅ **ALWAYS** include "$100k" in anchor text:
-- "Software Engineer $100k+ jobs" ✅
-- "Software Engineer" ❌
+✅ **ALWAYS** include "$100k", "Six Figure", or "High Paying" in anchor text:
+- "Software Engineer $100k+ Jobs" ✅
+- "Six Figure Software Engineer Jobs" ✅
+
+❌ **NEVER** use:
+- "Software Engineer" alone (no salary context)
+- "Senior Software Engineer Jobs" (senior is a modifier, not canonical)
+- Any $150k links
 
 ═══════════════════════════════════════════════════════════════════════════════
               9. SITEMAPS — COMPREHENSIVE COVERAGE
@@ -4533,3 +4585,1589 @@ git push origin main   # Auto-deploy
 "high paying": 3-4 per 500 words
 "six figure": 2-3 per 500 words
 ```
+
+
+# Six Figure Jobs — Premium High-Salary Job Board v2.7
+# The Ultimate Production Rules for Programmatic SEO Excellence
+# Updated: December 13, 2025
+#
+# v2.7 CHANGES (URL SLUG & SEO OPTIMIZATION EDITION):
+# - NEW: Section 28 - Canonical Role Slug System (CRITICAL FIX)
+# - NEW: Section 29 - Homepage SEO for "Six Figure Jobs" & "High Paying Jobs"
+# - NEW: Section 30 - URL Validation & Redirect Strategy
+# - NEW: Section 31 - Route Canonicalization (/remote/* is primary)
+# - NEW: Section 32 - Footer Cleanup (13 → 9 sections)
+# - NEW: Section 33 - Tiered Indexing Strategy
+# - UPDATED: Keyword density reduced (5-7 → 3-5 per 500 words)
+# - UPDATED: Role+City pages restricted to Tier-1 only
+# - REMOVED: $150k salary tier (dilutes premium positioning)
+# - PRESERVED: All publishing safety rules from v2.6 (Sections 24, 26)
+#
+# CRITICAL: Publishing strategy in Sections 24 & 26 MUST NOT be modified
+# without explicit approval. These prevent Google penalties.
+
+═══════════════════════════════════════════════════════════════════════════════
+                              MISSION STATEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+Six Figure Jobs (6figjobs.com) is the EXCLUSIVE high-salary job board featuring
+ONLY positions that are considered HIGH-PAYING in their local market based on
+Purchasing Power Parity (PPP) and local salary standards.
+
+We are NOT a generic job board. We are NOT for entry-level positions.
+
+Our value proposition: "Find Six Figure Jobs, 6 Figure Jobs, High-Paying Jobs,
+$100k+ Jobs, and 100k Plus Jobs from Top Companies — Verified Salaries, Updated Daily"
+
+PRIMARY TARGET KEYWORDS (in order of priority):
+1. "six figure jobs" (2,900 search volume)
+2. "6 figure jobs" (3,200 search volume) ← Domain matches this!
+3. "high paying jobs" (49,500 search volume)
+4. "$100k jobs" (8,100 search volume)
+5. "100k jobs" (4,400 search volume)
+
+═══════════════════════════════════════════════════════════════════════════════
+                         IMPLEMENTATION STATUS: 60%
+═══════════════════════════════════════════════════════════════════════════════
+
+## Current Completion (as of December 13, 2025)
+
+| Category | Status | Score |
+|----------|--------|-------|
+| pSEO Pages | States/skills/industry/city + combos live | 92% |
+| SEO Metadata | Brand/$100k/count on all major pages | 95% |
+| **URL Slug System** | **NEEDS FIX - Canonical slug implementation** | **40%** |
+| **Homepage SEO** | **NEEDS "six figure jobs" optimization** | **50%** |
+| Long-tail Keywords | Implemented on new pages | 90% |
+| Structured Data | ItemList+Breadcrumb+FAQ+Occupation+WebSite | 95% |
+| Technical SEO | Headers, staging block, AI crawlers | 95% |
+| Next.js 16 | Async params, metadataBase, viewport | 98% |
+| **Footer Links** | **NEEDS cleanup (13 → 9 sections)** | **70%** |
+| Salary Guides | Occupation+FAQ added | 88% |
+| Database | Fields present, indexes optimized | 95% |
+| Scrapers | ATS integrations optimized | 92% |
+| UI/UX | Homepage redesign in progress | 80% |
+| Internal Linking | Cross-page linking strategy | 90% |
+| Data Validation | Salary/URL/content validation | 95% |
+
+**v2.7 Focus Areas:**
+- [ ] Fix URL slug system (canonical slugs only)
+- [ ] Homepage SEO for "six figure jobs" / "6 figure jobs"
+- [ ] Footer cleanup (remove 4 sections)
+- [ ] Remove $150k salary tier
+- [ ] Route canonicalization (/remote/* primary)
+- [ ] Tiered indexing for Role+City pages
+
+═══════════════════════════════════════════════════════════════════════════════
+                         1. ROLE & CORE RESPONSIBILITIES
+═══════════════════════════════════════════════════════════════════════════════
+
+The AI acts as a Senior Staff Engineer, Technical SEO Architect, pSEO Specialist,
+and Full-Stack Developer responsible for:
+
+✅ Maintaining production stability on 4GB server (Hetzner)
+✅ Outputting complete files only (NEVER snippets or placeholders)
+✅ Implementing world-class programmatic SEO (pSEO)
+✅ Managing ATS integrations across all providers
+✅ Enforcing high-salary filtering (PPP-adjusted per country)
+✅ Building conversion-optimized UI/UX
+✅ Creating SEO templates for all page types
+✅ Optimizing for both human users and AI search engines
+✅ Producing error-free code on first compile
+✅ Managing deployment and server operations
+✅ Conducting implementation audits against these rules
+✅ Enforcing canonical URL slug validation
+✅ Optimizing for "six figure jobs" and "high paying jobs" keywords
+
+═══════════════════════════════════════════════════════════════════════════════
+              2. HIGH-SALARY JOB BOARD RULES (PPP-ADJUSTED)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 2.1 Salary Threshold Strategy (LOCAL HIGH-PAYING JOBS)
+
+**PHILOSOPHY**: We don't convert USD to other currencies. Instead, we identify
+what constitutes a HIGH-PAYING job in EACH local market based on:
+- Purchasing Power Parity (PPP)
+- Cost of living
+- Local salary standards
+- Top 20% earners in that country
+
+**SALARY THRESHOLDS BY COUNTRY (Annual, Local Currency):**
+
+| Country           | Currency | Threshold  | Local Context               | % of Earners  |
+|-------------------|----------|------------|-----------------------------|---------------|
+| United States     | USD      | $100,000   | Six figures                 | Top 20%       |
+| Canada            | CAD      | C$100,000  | Six figures CAD             | Top 20%       |
+| United Kingdom    | GBP      | £75,000    | High professional salary    | Top 15%       |
+| Ireland           | EUR      | €85,000    | High professional salary    | Top 15%       |
+| Germany           | EUR      | €80,000    | High professional salary    | Top 20%       |
+| Netherlands       | EUR      | €85,000    | High professional salary    | Top 18%       |
+| Switzerland       | CHF      | CHF 110,000| High professional salary    | Top 25%       |
+| Australia         | AUD      | A$140,000  | High professional salary    | Top 15%       |
+| New Zealand       | NZD      | NZ$120,000 | High professional salary    | Top 15%       |
+| Singapore         | SGD      | S$120,000  | High professional salary    | Top 20%       |
+
+**SALARY BANDS (UPDATED v2.7 - Removed $150k):**
+```typescript
+const SALARY_BANDS = [
+  { min: 100_000, label: '$100k+', slug: '100k-plus', description: 'Six figure jobs' },
+  { min: 200_000, label: '$200k+', slug: '200k-plus', description: 'High six figure jobs' },
+  { min: 300_000, label: '$300k+', slug: '300k-plus', description: 'Premium positions' },
+  { min: 400_000, label: '$400k+', slug: '400k-plus', description: 'Executive compensation' },
+]
+// NOTE: $150k tier REMOVED in v2.7 - dilutes premium positioning
+// /jobs/150k-plus MUST 301 redirect to /jobs/100k-plus
+```
+
+**CRITICAL RULES:**
+- ✅ Each country has its OWN threshold based on LOCAL standards
+- ✅ Display salaries in ORIGINAL LOCAL CURRENCY only
+- ✅ NEVER convert USD to GBP or vice versa
+- ✅ Mark jobs as `isHighSalaryLocal = true` when they meet threshold
+- ❌ REJECT all entry-level, junior, intern, graduate positions
+- ✅ Focus on mid-level, senior, staff, principal, director, VP, C-level
+
+## 2.2 Salary Display Rules (Local Currency Only)
+
+**Format Pattern (NEVER CONVERT):**
+```typescript
+// US job: "$120,000-$180,000/yr" or "$150,000+/yr"
+// UK job: "£85,000-£120,000/yr" or "£90,000+/yr"
+// German job: "€95,000-€130,000/yr" or "€100,000+/yr"
+```
+
+## 2.3 Job Quality Filtering (MANDATORY)
+
+**REJECT jobs that:**
+- ❌ Contain "entry-level", "junior", "graduate", "intern", "trainee"
+- ❌ Have salary < local threshold for that country
+- ❌ Show "competitive salary" with no range
+- ❌ Are clearly misclassified
+- ❌ Have suspicious data (e.g., $10M/year obvious errors)
+
+**ACCEPT jobs that:**
+- ✅ Have verified salary ≥ local threshold
+- ✅ Are mid-level, senior, staff, principal, director, VP, C-level
+- ✅ Have clear role title and description
+- ✅ Come from verified company ATS or board sources
+
+═══════════════════════════════════════════════════════════════════════════════
+           3. PROGRAMMATIC SEO (pSEO) — COMPLETE ROUTE STRUCTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+## 3.1 PSEO Page Count Summary (UPDATED v2.7)
+
+**IMPORTANT DISTINCTION (v2.7):**
+- **~150 canonical role slugs** are supported for URL validation & redirects
+- **~25-30 Tier-1 role hubs** are actively indexed at any time
+- All other canonical slugs are valid for job normalization but remain 
+  non-indexed (noindex) unless explicitly promoted to Tier-1
+
+| Page Type | Count | Route | Status |
+|-----------|-------|-------|--------|
+| US State Pages | 50 | `/jobs/state/[state]` | ✅ Live |
+| Skills/Tech Pages | 30 | `/jobs/skills/[skill]` | ✅ Live |
+| Industry Pages | 10 | `/jobs/industry/[industry]` | ✅ Live |
+| City Pages | 44 | `/jobs/city/[city]` | ✅ Live |
+| Country Pages | 10 | `/jobs/location/[country]` | ✅ Live |
+| **Role Pages (Tier-1)** | **25-30** | `/jobs/[role]` | ✅ Indexed |
+| Role Pages (Tier-2+) | ~120 | `/jobs/[role]` | noindex |
+| Salary Tier Pages | 4 | `/jobs/[tier]-plus` | ✅ Live |
+| **Remote Pages** | 25-30 | `/remote/[role]` | ✅ **CANONICAL** |
+| Company Pages | Dynamic | `/company/[slug]` | ✅ Live |
+| Salary Guides | 50+ | `/salary/[role]/*` | ✅ Live |
+| **Role+City (Tier-1 only)** | ~250 | `/jobs/[role]/[city]` | ✅ Indexed |
+| Role+City (others) | - | - | noindex |
+| **TOTAL INDEXED** | **~500 pages** | | |
+
+## 3.2 US State Pages (All 50 States)
+
+**Route:** `app/jobs/state/[state]/page.tsx`
+**URL Pattern:** `/jobs/state/[state-slug]`
+
+### Tier 1: Major Tech Hubs (10 states)
+| Slug | State | Long-Tail Keywords |
+|------|-------|-------------------|
+| california | California | $100k jobs California, CA tech jobs |
+| texas | Texas | $100k jobs Texas, TX tech jobs |
+| new-york | New York | $100k jobs New York State, NY tech jobs |
+| washington | Washington | $100k jobs Washington, WA tech jobs |
+| massachusetts | Massachusetts | $100k jobs Massachusetts, Boston area |
+| colorado | Colorado | $100k jobs Colorado, Denver tech |
+| georgia | Georgia | $100k jobs Georgia, Atlanta tech |
+| illinois | Illinois | $100k jobs Illinois, Chicago tech |
+| florida | Florida | $100k jobs Florida, Miami tech |
+| virginia | Virginia | $100k jobs Virginia, DC area |
+
+### Tier 2: Growing Markets (15 states)
+north-carolina, pennsylvania, oregon, arizona, utah, maryland, new-jersey, 
+minnesota, michigan, ohio, tennessee, indiana, missouri, wisconsin, connecticut
+
+### Tier 3: All Other States (25 states)
+alabama, alaska, arkansas, delaware, hawaii, idaho, iowa, kansas, kentucky,
+louisiana, maine, mississippi, montana, nebraska, nevada, new-hampshire,
+new-mexico, north-dakota, oklahoma, rhode-island, south-carolina, south-dakota,
+vermont, west-virginia, wyoming
+
+**H1 Pattern:** `[COUNT] $100k+ Jobs in [State]`
+**Title Pattern:** `$100k+ Jobs in [State] | [COUNT] High-Paying Positions | Six Figure Jobs`
+
+## 3.3 Skills/Tech Stack Pages (30 Skills)
+
+**Route:** `app/jobs/skills/[skill]/page.tsx`
+**URL Pattern:** `/jobs/skills/[skill-slug]`
+
+### Programming Languages (11)
+| Slug | Skill | Long-Tail Keywords |
+|------|-------|-------------------|
+| python | Python | python $100k jobs, python developer $100k |
+| javascript | JavaScript | javascript $100k jobs, JS developer |
+| typescript | TypeScript | typescript $100k jobs, TS developer |
+| java | Java | java $100k jobs, java developer |
+| golang | Go/Golang | golang $100k jobs, go developer |
+| rust | Rust | rust $100k jobs, rust developer |
+| c-plus-plus | C++ | c++ $100k jobs, cpp developer |
+| scala | Scala | scala $100k jobs |
+| kotlin | Kotlin | kotlin $100k jobs |
+| swift | Swift | swift $100k jobs, iOS developer |
+| ruby | Ruby | ruby $100k jobs, rails developer |
+
+### Frontend Frameworks (4)
+| Slug | Skill | Long-Tail Keywords |
+|------|-------|-------------------|
+| react | React | react $100k jobs, react developer |
+| vue | Vue.js | vue $100k jobs, vuejs developer |
+| angular | Angular | angular $100k jobs |
+| nextjs | Next.js | nextjs $100k jobs |
+
+### Backend & Infrastructure (7)
+| Slug | Skill | Long-Tail Keywords |
+|------|-------|-------------------|
+| node-js | Node.js | nodejs $100k jobs, node developer |
+| aws | AWS | aws $100k jobs, aws engineer |
+| gcp | Google Cloud | gcp $100k jobs, google cloud |
+| azure | Azure | azure $100k jobs |
+| kubernetes | Kubernetes | kubernetes $100k jobs, k8s |
+| docker | Docker | docker $100k jobs |
+| terraform | Terraform | terraform $100k jobs, IaC |
+
+### Data & AI/ML (8)
+| Slug | Skill | Long-Tail Keywords |
+|------|-------|-------------------|
+| sql | SQL | sql $100k jobs, database |
+| postgresql | PostgreSQL | postgresql $100k jobs |
+| mongodb | MongoDB | mongodb $100k jobs, nosql |
+| redis | Redis | redis $100k jobs |
+| pytorch | PyTorch | pytorch $100k jobs, deep learning |
+| tensorflow | TensorFlow | tensorflow $100k jobs, ML |
+| spark | Apache Spark | spark $100k jobs, big data |
+| figma | Figma | figma $100k jobs, design |
+
+**H1 Pattern:** `[COUNT] $100k+ [Skill] Jobs`
+**Title Pattern:** `$100k+ [Skill] Jobs | [COUNT] High-Paying Positions | Six Figure Jobs`
+
+## 3.4 Industry Pages (10 Industries)
+
+**Route:** `app/jobs/industry/[industry]/page.tsx`
+**URL Pattern:** `/jobs/industry/[industry-slug]`
+
+| Slug | Industry | Long-Tail Keywords |
+|------|----------|-------------------|
+| fintech | Fintech | fintech $100k jobs, financial technology |
+| ai-ml | AI/ML | AI $100k jobs, machine learning |
+| saas | SaaS | SaaS $100k jobs |
+| crypto | Crypto/Web3 | crypto $100k jobs, web3, blockchain |
+| healthcare-tech | Healthcare Tech | healthtech $100k jobs |
+| cybersecurity | Cybersecurity | cybersecurity $100k jobs, infosec |
+| edtech | EdTech | edtech $100k jobs |
+| climate-tech | Climate Tech | climate tech $100k jobs, green tech |
+| gaming | Gaming | gaming $100k jobs, game developer |
+| ecommerce | E-commerce | ecommerce $100k jobs |
+
+## 3.5 City Pages (44 Cities - Tier System)
+
+**Route:** `app/jobs/city/[city]/page.tsx`
+**URL Pattern:** `/jobs/city/[city-slug]`
+
+### Tier-1 Cities (12) - Always Indexed
+san-francisco, new-york, seattle, austin, boston, los-angeles, denver,
+chicago, london, toronto, sydney, berlin
+
+### Tier-2 Cities (12) - Indexed if >50 jobs
+miami, atlanta, washington-dc, san-diego, amsterdam, dublin, zurich,
+vancouver, melbourne, singapore, paris, munich
+
+### Tier-3 Cities (20) - Indexed if >100 jobs
+All others - noindex by default until promoted
+
+**H1 Pattern:** `[COUNT] $100k+ Jobs in [City]`
+
+## 3.6 Combination Routes (UPDATED v2.7 - Tiered)
+
+### Role + City (RESTRICTED - Tier-1 Only)
+**Route:** `app/jobs/[role]/[city]/page.tsx`
+**URL Pattern:** `/jobs/[role]/[city]`
+
+**v2.7 RESTRICTION:** Role+City pages are allowed ONLY for:
+- Tier-1 roles (~25 roles) × Tier-1 cities (12 cities) = ~300 pages max
+- All other combinations MUST render with `noindex` and be excluded from sitemaps
+
+**Example (Indexed):** `/jobs/software-engineer/san-francisco`
+**Example (noindex):** `/jobs/tax-manager/phoenix`
+
+### Role + Skill
+**Route:** `app/jobs/[role]/skills/[skill]/page.tsx`
+**URL Pattern:** `/jobs/[role]/skills/[skill]`
+**Example:** `/jobs/software-engineer/skills/python`
+**Status:** Tier-1 roles only
+
+### Skill + Remote
+**Route:** `app/jobs/skills/[skill]/remote/page.tsx`
+**URL Pattern:** `/jobs/skills/[skill]/remote`
+**Example:** `/jobs/skills/python/remote`
+
+## 3.7 Remote Pages — CANONICAL NAMESPACE (v2.7)
+
+**CRITICAL (v2.7):** `/remote/*` is the CANONICAL remote namespace.
+
+**Route:** `app/remote/[role]/page.tsx`
+**URL Pattern:** `/remote/[role]`
+
+| URL | H1 | Status |
+|-----|----| ------|
+| /remote | Remote Six Figure Jobs | ✅ Canonical |
+| /remote/[role] | Remote [Role] $100k+ Jobs | ✅ Canonical |
+| /remote/[role]/country/[country] | Remote [Role] Jobs in [Country] | ✅ |
+| /remote/[role]/city/[city] | Remote [Role] Jobs in [City] | ✅ |
+
+**REDIRECT RULE (v2.7):**
+All `/jobs/[role]/remote` URLs MUST 301 redirect to `/remote/[role]`.
+This prevents duplicate intent paths and consolidates ranking signals.
+
+```typescript
+// app/jobs/[role]/remote/page.tsx
+import { redirect } from 'next/navigation'
+
+export default async function Page({ params }: Props) {
+  const { role } = await params
+  redirect(`/remote/${role}`, 301)
+}
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+              4. LONG-TAIL KEYWORD STRATEGY
+═══════════════════════════════════════════════════════════════════════════════
+
+## 4.1 Primary Keywords (Use on ALL Pages)
+
+| Keyword | Volume | Use In |
+|---------|--------|--------|
+| six figure jobs | 2,900 | H1, Title, Body |
+| 6 figure jobs | 3,200 | Title, Body |
+| high paying jobs | 49,500 | H1, Title, Body |
+| $100k jobs | 8,100 | H1, Title, Body |
+
+## 4.2 LSI Keywords
+
+**Use these naturally throughout content:**
+- six figure salary, six figure income, six figure careers
+- high paying careers, lucrative jobs, lucrative positions
+- well-paying jobs, well-paid positions
+- high compensation, premium positions, top paying roles
+- high salary jobs, high-earning jobs
+- $100k+ positions, 100k salary jobs
+
+## 4.3 Long-Tail Keyword Patterns
+
+### Pattern 1: [Role] + $100k
+```
+software engineer $100k jobs
+$100k software engineer jobs
+```
+
+### Pattern 2: [Role] + High Paying / Six Figure
+```
+software engineer high paying jobs
+six figure software engineer jobs
+```
+
+### Pattern 3: [Location] + $100k
+```
+$100k jobs San Francisco
+San Francisco $100k jobs
+$100k jobs California
+```
+
+### Pattern 4: Remote + $100k / Six Figure
+```
+remote $100k jobs
+$100k remote jobs
+remote six figure jobs
+work from home $100k jobs
+```
+
+### Pattern 5: [Skill] + $100k
+```
+python $100k jobs
+$100k python developer jobs
+```
+
+## 4.4 Keyword Placement Rules
+
+### Every Page MUST Include:
+1. **Title Tag**: Primary keyword + count + brand
+2. **H1**: Primary keyword + job count
+3. **First Paragraph**: All primary keywords naturally
+4. **Body**: 3-5 long-tail variations + LSI keywords
+
+### Keyword Density Targets (UPDATED v2.7 - per 500 words)
+- "$100k" or "$100k+": **3-5 mentions** (was 5-7, reduced to avoid over-optimization)
+- "high paying": 2-3 mentions
+- "six figure": 2-3 mentions
+
+**Note:** Post-2024 Google is less tolerant of keyword stuffing. Let long-tail 
+and LSI keywords do the heavy lifting naturally.
+
+## 4.5 First Paragraph Templates
+
+### Homepage:
+```
+Browse [COUNT] six figure jobs and 6 figure jobs with verified high paying 
+salaries from $100k to $500k+. Find lucrative, well-paying positions at top 
+companies like [COMPANY_1], [COMPANY_2], and [COMPANY_3]. [NEW_COUNT] new 
+$100k+ positions posted this week.
+```
+
+### Role Pages:
+```
+Browse [COUNT] [role] $100k jobs with verified six figure salaries.
+Find high paying [role] jobs from $[MIN] to $[MAX] at top tech
+companies like [COMPANY_1], [COMPANY_2], and [COMPANY_3]. [NEW_COUNT] new
+$100k [role] positions posted this week.
+```
+
+### Location Pages:
+```
+Find [COUNT] high paying $100k jobs in [Location] with verified six figure
+salaries. Browse $100k+ positions in [Location] across engineering, product,
+data, and more. [NEW_COUNT] new $100k jobs in [Location] posted this week.
+```
+
+### Skill Pages:
+```
+Browse [COUNT] $100k+ jobs requiring [Skill]. Find high paying [skill]
+developer jobs with salaries from $[MIN] to $[MAX]. Top companies hiring
+[skill] engineers include [COMPANY_1], [COMPANY_2], and [COMPANY_3].
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+              5. SALARY GUIDE PAGES
+═══════════════════════════════════════════════════════════════════════════════
+
+## 5.1 URL Structure
+```
+/salary/[role]
+/salary/[role]/[country]
+/salary/[role]/[city]
+```
+
+## 5.2 H1 Pattern
+```
+$100k+ [Role] Salaries in [Location]
+```
+
+## 5.3 Subhead Pattern
+```
+Explore salary ranges for $100k+ [Role] jobs in [Location].
+```
+
+## 5.4 First Paragraph Template
+```
+In [Location] a [Role] can expect to earn a median salary of $[MEDIAN] per year
+for $100k+ positions, which is equivalent to $[MONTHLY] per month. This figure
+is based on [COUNT] verified high paying job postings. The salary range generally
+lies between $[MIN] and $[MAX]. Additional compensation like equity, bonuses,
+and RSUs can increase total compensation significantly.
+```
+
+## 5.5 Required Schema
+- ✅ Occupation schema
+- ✅ FAQPage schema
+- ✅ BreadcrumbList schema
+
+═══════════════════════════════════════════════════════════════════════════════
+              6. STRUCTURED DATA (JSON-LD) — COMPLETE
+═══════════════════════════════════════════════════════════════════════════════
+
+## 6.1 Schema by Page Type
+
+| Page Type | Required Schemas | Status |
+|-----------|-----------------|--------|
+| Homepage | WebSite, Organization, BreadcrumbList | ✅ |
+| Job Detail | JobPosting, BreadcrumbList | ✅ |
+| Role Listings | ItemList, BreadcrumbList, FAQPage | ✅ |
+| Location Listings | ItemList, BreadcrumbList, FAQPage | ✅ |
+| State Pages | ItemList, BreadcrumbList, FAQPage | ✅ |
+| City Pages | ItemList, BreadcrumbList, FAQPage | ✅ |
+| Skill Pages | ItemList, BreadcrumbList, FAQPage | ✅ |
+| Industry Pages | ItemList, BreadcrumbList, FAQPage | ✅ |
+| Combo Pages | ItemList, BreadcrumbList, FAQPage | ✅ |
+| Company Pages | Organization, ItemList | ✅ |
+| Salary Guides | Occupation, FAQPage, BreadcrumbList | ✅ |
+
+## 6.2 Homepage Schemas (UPDATED v2.7)
+
+```typescript
+// WebSite Schema
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Six Figure Jobs',
+  alternateName: ['6FigJobs', '6 Figure Jobs', 'SixFigJobs'],
+  url: 'https://www.6figjobs.com',
+  description: 'The exclusive job board for six figure jobs and high paying $100k+ positions.',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: 'https://www.6figjobs.com/search?q={search_term_string}'
+    },
+    'query-input': 'required name=search_term_string'
+  }
+}
+
+// Organization Schema
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Six Figure Jobs',
+  legalName: 'Six Figure Jobs LLC',
+  alternateName: ['6FigJobs', '6 Figure Jobs'],
+  url: 'https://www.6figjobs.com',
+  logo: 'https://www.6figjobs.com/logo.png',
+  description: `Premium job board featuring ${jobCount}+ six figure jobs and high paying $100k+ positions from ${companyCount}+ companies.`,
+  foundingDate: '2025-12-05',
+  sameAs: [
+    'https://twitter.com/6figjobs',
+    'https://linkedin.com/company/sixfigjobs'
+  ]
+}
+
+// BreadcrumbList for Homepage (NEW v2.7)
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [{
+    '@type': 'ListItem',
+    position: 1,
+    name: 'Home',
+    item: 'https://www.6figjobs.com'
+  }]
+}
+```
+
+## 6.3 FAQ Questions per Page Type
+
+### Role/Listing Pages:
+1. "What is the average salary for [role] jobs?"
+2. "How many $100k+ [role] jobs are available?"
+3. "What skills are needed for $100k+ [role] positions?"
+4. "Are there remote [role] jobs paying $100k+?"
+5. "What companies hire $100k+ [role]s?"
+
+### Location Pages:
+1. "What is the average salary for $100k+ jobs in [location]?"
+2. "How many high-paying jobs are in [location]?"
+3. "What industries hire $100k+ in [location]?"
+4. "Are there remote jobs for [location] residents?"
+
+═══════════════════════════════════════════════════════════════════════════════
+              7. TECHNICAL SEO — NEXT.JS 16 IMPLEMENTATION
+═══════════════════════════════════════════════════════════════════════════════
+
+## 7.1 Next.js 16 Requirements (All Implemented ✅)
+
+### Async Params/SearchParams
+```typescript
+// CORRECT (Next.js 16):
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  // ...
+}
+```
+
+### generateMetadata Pattern
+```typescript
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  return {
+    title: `...`,
+    description: `...`,
+    alternates: { canonical: `https://www.6figjobs.com/...` },
+    openGraph: { ... },
+    twitter: { ... },
+  }
+}
+```
+
+## 7.2 Security Headers (next.config.js) ✅
+
+```javascript
+headers() {
+  return [
+    {
+      source: '/(.*)',
+      headers: [
+        { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'X-XSS-Protection', value: '1; mode=block' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      ],
+    },
+  ]
+}
+```
+
+## 7.3 Staging Protection ✅
+
+### robots.txt (app/robots.txt/route.ts)
+```typescript
+if (process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')) {
+  return new Response('User-agent: *\nDisallow: /')
+}
+```
+
+## 7.4 AI Crawler Rules (robots.txt) ✅
+
+```
+User-agent: GPTBot
+Disallow: /api/
+
+User-agent: anthropic-ai
+Disallow: /api/
+
+User-agent: ClaudeBot
+Disallow: /api/
+
+User-agent: CCBot
+Disallow: /api/
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+              8. FOOTER STRUCTURE (9 SECTIONS - UPDATED v2.7)
+═══════════════════════════════════════════════════════════════════════════════
+
+**Goal:** Keep footer lean and pSEO-useful. No redundant location lists.
+
+## 8.1 REMOVED in v2.7
+- ❌ $100k+ Jobs by Location (redundant with state/city pages)
+- ❌ For Job Seekers (generic, not SEO-valuable)
+- ❌ For Employers (not current focus)
+- ❌ DMCA from Legal section
+- ❌ Any $150k tier links (NO $150k ANYWHERE)
+
+## 8.2 Final Footer Sections (exactly 9)
+
+### Section 1: $100k+ Jobs by Role
+- Software Engineer $100k+ Jobs
+- Product Manager $100k+ Jobs
+- Data Scientist $100k+ Jobs
+- DevOps Engineer $100k+ Jobs
+- Data Engineer $100k+ Jobs
+- View All Roles
+
+**NOTE:** No "Senior" prefix in anchor text. Link to canonical role hubs only.
+
+### Section 2: Six Figure Jobs by Salary
+- $100k+ Jobs (`/jobs/100k-plus`)
+- $200k+ Jobs (`/jobs/200k-plus`)
+- $300k+ Jobs (`/jobs/300k-plus`)
+- $400k+ Jobs (`/jobs/400k-plus`)
+
+**NOTE:** NO $150k tier. It does not exist.
+
+### Section 3: High Paying Jobs by Skill
+- Python $100k+ Jobs
+- React $100k+ Jobs
+- AWS $100k+ Jobs
+- TypeScript $100k+ Jobs
+- View All Skills
+
+### Section 4: Six Figure Jobs by Industry
+- Fintech $100k+ Jobs
+- AI/ML $100k+ Jobs
+- SaaS $100k+ Jobs
+- View All Industries
+
+### Section 5: Top Companies Hiring
+- Google Jobs
+- Stripe Jobs
+- Anthropic Jobs
+- View All Companies
+
+### Section 6: Salary Guides
+- Software Engineer Salary
+- Product Manager Salary
+- Data Scientist Salary
+- View All Guides
+
+### Section 7: Remote Six Figure Jobs
+- Remote Software Engineer Jobs
+- Remote Product Manager Jobs
+- Remote Data Scientist Jobs
+- All Remote Jobs (`/remote`)
+
+### Section 8: Company
+- About Us (ONLY)
+
+### Section 9: Legal
+- Privacy Policy
+- Terms of Service
+- Cookie Policy
+
+## 8.3 Footer Anchor Text Rules
+
+✅ **ALWAYS** include "$100k", "Six Figure", or "High Paying" in anchor text:
+- "Software Engineer $100k+ Jobs" ✅
+- "Six Figure Software Engineer Jobs" ✅
+
+❌ **NEVER** use:
+- "Software Engineer" alone (no salary context)
+- "Senior Software Engineer Jobs" (senior is a modifier, not canonical)
+- Any $150k links
+
+═══════════════════════════════════════════════════════════════════════════════
+              9. SITEMAPS — COMPREHENSIVE COVERAGE
+═══════════════════════════════════════════════════════════════════════════════
+
+## 9.1 Sitemap Structure
+
+| Sitemap | Contents | Status |
+|---------|----------|--------|
+| sitemap.xml | Index of all sitemaps | ✅ |
+| sitemap-jobs.xml | Job detail pages | ✅ |
+| sitemap-browse.xml | All pSEO pages | ✅ |
+| sitemap-companies.xml | Company pages | ✅ |
+| sitemap-remote.xml | Remote role pages | ✅ |
+
+## 9.2 Sitemap Filtering (UPDATED v2.7)
+
+**CRITICAL:** Sitemaps must ONLY include:
+- Canonical role slugs (Tier-1 indexed pages)
+- Pages meeting quality gates (min job count)
+- NO `/jobs/150k-plus`
+- NO non-canonical role slugs
+- NO thin pages below thresholds
+
+```typescript
+// In sitemap generation:
+import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
+
+// Filter: Only Tier-1 canonical slugs in sitemap
+if (!isCanonicalSlug(row.roleSlug)) continue
+if (!isTier1Role(row.roleSlug)) continue // Optional: for strict control
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+              10. ROLE SYNONYMS (COMPREHENSIVE)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 10.1 Engineering Roles
+```typescript
+const ENGINEERING_SYNONYMS = {
+  'software-engineer': ['swe', 'developer', 'programmer', 'coder', 'engineer'],
+  'frontend-engineer': ['frontend', 'front-end', 'ui engineer', 'react developer'],
+  'backend-engineer': ['backend', 'back-end', 'server engineer', 'api engineer'],
+  'full-stack-engineer': ['fullstack', 'full-stack', 'full stack developer'],
+  'devops-engineer': ['devops', 'sre', 'site reliability', 'platform engineer'],
+  'data-engineer': ['data engineering', 'etl engineer', 'analytics engineer'],
+  'machine-learning-engineer': ['ml engineer', 'mle', 'ai engineer'],
+}
+```
+
+## 10.2 Product & Design Roles
+```typescript
+const PRODUCT_SYNONYMS = {
+  'product-manager': ['pm', 'product', 'product owner'],
+  'product-designer': ['designer', 'ux designer', 'ui designer'],
+  'ux-researcher': ['user researcher', 'design researcher'],
+}
+```
+
+## 10.3 Data & Analytics Roles
+```typescript
+const DATA_SYNONYMS = {
+  'data-scientist': ['ds', 'data science', 'ml scientist'],
+  'data-analyst': ['analyst', 'business analyst', 'bi analyst'],
+}
+```
+
+## 10.4 Business Roles
+```typescript
+const BUSINESS_SYNONYMS = {
+  'sales-engineer': ['se', 'solutions engineer', 'pre-sales'],
+  'account-executive': ['ae', 'sales rep', 'account manager'],
+  'marketing-manager': ['marketer', 'growth marketing'],
+}
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+          11. DEPLOYMENT & SERVER RULES (RAILWAY)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 11.1 Production Environment (Railway)
+- **Platform**: Railway.app
+- **Production URL**: https://www.6figjobs.com
+- **Dashboard**: https://railway.app/dashboard
+
+## 11.2 Deployment Workflow
+```bash
+# Step 1: Local development
+git add . && git commit -m "feat: description"
+
+# Step 2: Push to deploy (auto-deploys)
+git push origin main
+
+# Step 3: Monitor deployment in Railway dashboard
+
+# Step 4: Verify production
+curl -I https://www.6figjobs.com
+```
+
+## 11.3 Railway CLI Commands
+```bash
+railway login
+railway link
+railway logs
+railway run npx prisma migrate deploy
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+                    12. NON-NEGOTIABLE RULES
+═══════════════════════════════════════════════════════════════════════════════
+
+## 12.1 Absolute Rules (NEVER VIOLATE)
+
+❌ **NEVER:**
+1. Display jobs below LOCAL high-salary threshold
+2. Convert salaries between currencies
+3. Include entry-level, junior, or intern positions
+4. Output partial/incomplete code
+5. Skip structured data (JSON-LD)
+6. Use generic meta descriptions
+7. Create pages with <5 jobs
+8. Make URLs longer than 75 characters
+9. Skip FAQ schema on listing pages
+10. Deploy without testing on staging first
+11. Create non-canonical role slug URLs
+12. Publish Role+City pages for non-Tier-1 combinations
+13. Create any $150k tier pages or links
+14. Use `/jobs/[role]/remote` instead of `/remote/[role]`
+
+✅ **ALWAYS:**
+1. Filter jobs by LOCAL salary threshold (PPP-adjusted)
+2. Display salary in ORIGINAL currency only
+3. Include brand + count + $100k in titles
+4. Add FAQ schema to all listing pages
+5. Use long-tail keywords in first paragraph
+6. Include BreadcrumbList on all pages
+7. Test on staging before production
+8. Monitor Google Search Console
+9. Validate role slugs against canonical list
+10. Include "six figure jobs" keywords on homepage
+11. 301 redirect `/jobs/[role]/remote` to `/remote/[role]`
+12. Use noindex on non-Tier-1 Role+City pages
+
+═══════════════════════════════════════════════════════════════════════════════
+                     13. IMPLEMENTATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+## 13.1 Completed ✅
+
+- [x] State pages (50 states)
+- [x] Skills pages (30 skills)
+- [x] Industry pages (10 industries)
+- [x] City pages (19 cities)
+- [x] Role + Remote combos
+- [x] Role + City combos
+- [x] Role + Skill combos
+- [x] Skill + Remote combos
+- [x] metadataBase configuration
+- [x] Security headers
+- [x] Staging noindex/robots block
+- [x] AI crawler rules
+- [x] llms.txt
+- [x] Viewport export
+- [x] ItemList + Breadcrumb + FAQ on listings
+- [x] Occupation + FAQ on salary guides
+- [x] Sitemaps expanded
+
+## 13.2 v2.7 Tasks
+
+- [ ] Canonical role slug system implementation
+- [ ] URL validation on /remote/[role] pages
+- [ ] Homepage "six figure jobs" SEO optimization
+- [ ] Footer cleanup (13 → 9 sections)
+- [ ] Remove $150k salary tier completely
+- [ ] 301 redirect /jobs/[role]/remote → /remote/[role]
+- [ ] Tiered indexing for Role+City pages
+- [ ] Database cleanup script for bad slugs
+- [ ] Sitemap canonical filtering
+- [ ] Homepage stats caching
+
+═══════════════════════════════════════════════════════════════════════════════
+              14. HOMEPAGE UI/UX (UPDATED v2.7)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 14.1 Hero Section
+
+### H1
+```
+Find Six Figure Jobs & High Paying $100k+ Careers
+```
+
+### Subhead
+```
+Browse [COUNT] six figure jobs and 6 figure jobs with verified high paying 
+salaries from $100k to $500k+. Find lucrative, well-paying positions at top companies.
+```
+
+### Trust Signals
+```
+✅ Verified six figure salaries • 🛡️ No entry-level jobs • ↗️ Direct company applications
+```
+
+### Stats Sidebar Labels
+- "Six figure jobs" (not "$100k+ jobs")
+- "High paying companies" (not "Companies")
+
+**IMPORTANT (v2.7):** Homepage stats must be CACHED and not fluctuate on every 
+request. Rapidly changing numbers can trigger quality signals.
+
+```typescript
+// Cache stats for 1 hour minimum
+const stats = await unstable_cache(
+  async () => getHomepageStats(),
+  ['homepage-stats'],
+  { revalidate: 3600 }
+)()
+```
+
+## 14.2 Section Headers (H2s)
+
+All H2s must include keywords:
+- "Browse Six Figure Jobs by Role"
+- "High Paying Jobs by Location"
+- "Explore Six Figure Salaries"
+- "Latest High Paying $100k+ Jobs"
+- "Popular Six Figure Job Searches"
+
+## 14.3 Why Six Figure Jobs Section (NEW v2.7 - EEAT)
+
+Add a brief section explaining differentiation:
+
+```tsx
+<section className="why-us">
+  <h2>Why Six Figure Jobs?</h2>
+  <p>
+    Unlike generic job boards, we exclusively feature high-paying positions 
+    with verified six figure salaries. Every job meets our strict $100k+ 
+    threshold using PPP-adjusted standards for each country. No junior roles. 
+    No "competitive salary" listings. Just premium, well-paying positions 
+    from top companies.
+  </p>
+</section>
+```
+
+This helps with E-E-A-T signals.
+
+═══════════════════════════════════════════════════════════════════════════════
+    15-23. [PRESERVED FROM v2.6 - See original documentation]
+═══════════════════════════════════════════════════════════════════════════════
+
+Sections 15-23 remain unchanged from v2.6:
+- Section 15: Quick Reference
+- Section 16: Competitor Feature Analysis
+- Section 17: Reserved
+- Section 18: Scraper Optimization
+- Section 19: ATS Integration Best Practices
+- Section 20: Complete pSEO Templates
+- Section 21: Advanced SEO Checklist
+- Section 22: Internal Linking Strategy
+- Section 23: Project Management & Technical Debt
+
+═══════════════════════════════════════════════════════════════════════════════
+    24. SAFE pSEO EXPANSION STRATEGY - PRESERVED (DO NOT MODIFY)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 24.1 Phased Rollout Schedule (12-Week Plan)
+
+### Phase 1: Foundation (Weeks 1-2) - 20 pages total
+- Week 1: Top 10 roles - 100+ jobs each
+- Week 2: Top 10 states - 200+ jobs each
+- **Publishing Rate:** 10 pages/week
+- **Quality Gate:** >100 jobs per page
+
+### Phase 2: Expansion (Weeks 3-6) - 80 more pages
+- Week 3-6: Skills, cities, remaining roles/states
+- **Publishing Rate:** 20 pages/week
+- **Quality Gate:** >30 jobs per page
+
+### Phase 3: Combinations (Weeks 7-10) - 120 more pages
+- Role × City, Role × Remote, Skill × Remote
+- **Publishing Rate:** 30 pages/week
+- **Quality Gate:** >20 jobs per combo page
+
+### Phase 4: Completion (Weeks 11-12) - 100 more pages
+- Industry pages, deep combos
+- **Publishing Rate:** 50 pages/week (maximum)
+- **Quality Gate:** >10 jobs per page
+
+## 24.2 Quality Gates (MANDATORY)
+
+**Minimum Requirements per Page:**
+- ✅ At least 5 jobs (absolute minimum) - 10+ recommended
+- ✅ 200+ characters of unique content
+- ✅ H1 tag with "$100k" keyword
+- ✅ Unique title tag + description
+- ✅ Canonical URL, OpenGraph, Twitter Card
+- ✅ ItemList + BreadcrumbList + FAQPage schemas
+- ✅ 5+ internal links to related pages
+
+## 24.3 Red Flags to STOP Publishing
+
+**CRITICAL (Auto-disable publishing):**
+- 🚨 Google Search Console manual action detected
+- 🚨 GSC coverage drops >10% in one week
+
+**WARNINGS (Review but continue):**
+- ⚠️ GSC coverage below 70%
+- ⚠️ Average jobs per page <15
+
+═══════════════════════════════════════════════════════════════════════════════
+    25. CONTENT FRESHNESS - PRESERVED
+═══════════════════════════════════════════════════════════════════════════════
+
+Content freshness rules from v2.6 remain in effect.
+
+═══════════════════════════════════════════════════════════════════════════════
+    26. PUBLISHING SAFETY & GOOGLE PENALTY PREVENTION - PRESERVED (DO NOT MODIFY)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 26.1 Publishing Configuration (MANDATORY)
+
+```bash
+# Master kill switch - MUST be false until Week 3
+PSEO_ENABLED=false
+
+# Domain age tracking
+DOMAIN_AGE_WEEKS=1
+
+# First publishing date (Week 3 start)
+PUBLISHING_START_DATE=2025-12-27
+```
+
+## 26.2 Publishing Rate Limits
+
+| Domain Age | Daily Max | Weekly Max | Min Jobs/Page |
+|------------|-----------|------------|---------------|
+| Week 1-2   | 0         | 0          | N/A           |
+| Week 3-4   | 2         | 10         | 100+          |
+| Week 5-8   | 5         | 25         | 50+           |
+| Week 9-12  | 10        | 50         | 30+           |
+| Month 4+   | 20        | 100        | 20+           |
+
+## 26.3 Rollback Plan
+
+**Location:** `docs/ROLLBACK-PLAN.md`
+
+**Trigger Conditions:**
+- Any GSC manual action
+- Coverage drop >10% in one week
+
+**Immediate Actions:**
+```bash
+# Day 1: STOP
+export PSEO_ENABLED=false
+
+# Days 2-7: Add noindex to thin pages
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+    27. QUICK REFERENCE - UPDATED v2.7
+═══════════════════════════════════════════════════════════════════════════════
+
+## Primary Keywords
+```
+1. "six figure jobs" (2,900) - H1, title, first paragraph
+2. "6 figure jobs" (3,200) - Domain match! Meta & content
+3. "high paying jobs" (49,500) - All page types
+4. "$100k jobs" (8,100) - Core brand term
+```
+
+## Keyword Density (UPDATED v2.7)
+```
+"$100k": 3-5 per 500 words (was 5-7)
+"high paying": 2-3 per 500 words
+"six figure": 2-3 per 500 words
+```
+
+## Valid URL Patterns
+```
+/remote/[canonical-role]              ✅ CANONICAL for remote
+/jobs/[canonical-role]                ✅ Tier-1 roles only indexed
+/jobs/[100k|200k|300k|400k]-plus      ✅ 4 tiers (NO $150k)
+/jobs/[role]/[city]                   ✅ Tier-1 × Tier-1 only
+```
+
+## Invalid URLs (Redirect or 404)
+```
+/remote/staff-ux-designer-ai → 301 to /remote/ux-designer
+/remote/garbage-slug         → 404
+/jobs/150k-plus              → 301 to /jobs/100k-plus
+/jobs/[role]/remote          → 301 to /remote/[role]
+```
+
+## H1 Patterns
+```
+Homepage: "Find Six Figure Jobs & High Paying $100k+ Careers"
+Role:     "[COUNT] $100k+ [Role] Jobs | Six Figure Positions"
+Remote:   "[COUNT] Remote Six Figure [Role] Jobs"
+```
+
+## Publishing Limits (DO NOT EXCEED)
+```
+Week 1-2:  0 pages/day (monitoring only)
+Week 3-4:  2 pages/day, min 100 jobs/page
+Week 5-8:  5 pages/day, min 50 jobs/page
+Week 9+:   10 pages/day, min 30 jobs/page
+```
+
+## Footer (9 sections)
+```
+1. $100k+ Jobs by Role (no "Senior" prefix)
+2. Six Figure Jobs by Salary (NO $150k)
+3. High Paying Jobs by Skill
+4. Six Figure Jobs by Industry
+5. Top Companies Hiring
+6. Salary Guides
+7. Remote Six Figure Jobs
+8. Company (About Us only)
+9. Legal (Privacy, Terms, Cookies)
+```
+
+## Schemas
+```
+Homepage: WebSite + Organization + BreadcrumbList
+Listings: ItemList + BreadcrumbList + FAQPage
+Jobs:     JobPosting + BreadcrumbList
+Company:  Organization + ItemList
+Salary:   Occupation + FAQPage + BreadcrumbList
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+    28. CANONICAL ROLE SLUG SYSTEM (CRITICAL FIX — v2.7)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 28.1 The Problem
+
+Current `inferRoleSlugFromTitle` falls back to `slugify(title)`, creating:
+- `/remote/staff-ux-designer-ai-investment` ❌
+- `/remote/manager-engineering-manager` ❌
+
+These URLs are not keyword-focused, create duplicate intent, and bloat sitemaps.
+
+## 28.2 The Solution (Two-Tier System)
+
+**~150 canonical role slugs** are supported for URL validation & redirects.
+**~25-30 Tier-1 role hubs** are actively indexed at any time.
+
+All other canonical slugs are valid for job normalization but remain 
+non-indexed (noindex) unless explicitly promoted to Tier-1.
+
+## 28.3 Tier-1 Roles (Always Indexed) — ~25
+
+These roles have highest search volume and competitor traffic:
+
+```typescript
+const TIER_1_ROLES = [
+  // Engineering (10)
+  'software-engineer',
+  'frontend-engineer', 
+  'backend-engineer',
+  'full-stack-engineer',
+  'devops-engineer',
+  'data-engineer',
+  'machine-learning-engineer',
+  'ios-engineer',
+  'android-engineer',
+  'security-engineer',
+  
+  // Data (3)
+  'data-scientist',
+  'data-analyst',
+  'analytics-engineer',
+  
+  // Product & Design (4)
+  'product-manager',
+  'product-designer',
+  'ux-designer',
+  'ux-researcher',
+  
+  // Management (3)
+  'engineering-manager',
+  'technical-program-manager',
+  'technical-lead',
+  
+  // Business (3)
+  'account-executive',
+  'customer-success-manager',
+  'sales-engineer',
+  
+  // Executive (2)
+  'vp-engineering',
+  'cto',
+] as const
+```
+
+## 28.4 Tier-2 Roles (Valid but noindex) — ~125
+
+All other canonical slugs. Valid for:
+- Job normalization (roleSlug field)
+- 301 redirects from garbage URLs
+- Future promotion to Tier-1
+
+```typescript
+const TIER_2_ROLES = [
+  'senior-software-engineer',
+  'staff-software-engineer',
+  'principal-software-engineer',
+  'site-reliability-engineer',
+  'platform-engineer',
+  'qa-engineer',
+  // ... ~120 more
+] as const
+```
+
+## 28.5 Required API
+
+File: `lib/roles/canonicalSlugs.ts`
+
+```typescript
+export const TIER_1_ROLES = [...] as const
+export const TIER_2_ROLES = [...] as const
+export const CANONICAL_ROLE_SLUGS = [...TIER_1_ROLES, ...TIER_2_ROLES] as const
+
+export type CanonicalRoleSlug = typeof CANONICAL_ROLE_SLUGS[number]
+export type Tier1RoleSlug = typeof TIER_1_ROLES[number]
+
+export const CANONICAL_ROLE_SET = new Set<string>(CANONICAL_ROLE_SLUGS)
+export const TIER_1_ROLE_SET = new Set<string>(TIER_1_ROLES)
+
+export function isCanonicalSlug(slug: string): slug is CanonicalRoleSlug {
+  return CANONICAL_ROLE_SET.has(slug)
+}
+
+export function isTier1Role(slug: string): slug is Tier1RoleSlug {
+  return TIER_1_ROLE_SET.has(slug)
+}
+
+export function shouldIndex(slug: string): boolean {
+  return TIER_1_ROLE_SET.has(slug)
+}
+```
+
+## 28.6 Updated inferRoleSlugFromTitle
+
+**CRITICAL:** NO FALLBACK TO `slugify(title)`!
+
+```typescript
+function inferRoleSlugFromTitle(title: string): CanonicalRoleSlug | null {
+  // Pattern matching to canonical slugs...
+  
+  // If no match, return NULL (not slugified title)
+  // Jobs without roleSlug are still queryable by other filters
+  return null
+}
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+    29. HOMEPAGE SEO FOR "SIX FIGURE JOBS" (v2.7)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 29.1 Target Keywords
+
+| Keyword | Volume | Priority |
+|---------|--------|----------|
+| 6 figure jobs | 3,200 | 🔥 HIGHEST (domain match!) |
+| six figure jobs | 2,900 | 🔥 HIGHEST |
+| high paying jobs | 49,500 | HIGH |
+| $100k jobs | 8,100 | HIGH |
+
+## 29.2 Homepage Metadata
+
+```typescript
+export const metadata: Metadata = {
+  title: 'Six Figure Jobs | 6 Figure Jobs & High Paying $100k+ Positions | 6FigJobs',
+  description: 
+    'Find six figure jobs and 6 figure jobs paying $100k+ with verified salaries. ' +
+    'Browse 21,000+ high paying jobs from top companies. The #1 job board for ' +
+    'lucrative, well-paying positions. Updated daily.',
+  keywords: 'six figure jobs, 6 figure jobs, high paying jobs, $100k jobs...',
+}
+```
+
+## 29.3 Homepage H1
+
+```
+Find Six Figure Jobs & High Paying $100k+ Careers
+```
+
+## 29.4 Homepage First Paragraph
+
+```
+Browse [COUNT] six figure jobs and 6 figure jobs with verified high paying 
+salaries from $100k to $500k+. Find lucrative, well-paying positions at top companies.
+```
+
+## 29.5 Stats Caching (NEW v2.7)
+
+Homepage stats MUST be cached to prevent fluctuation:
+
+```typescript
+import { unstable_cache } from 'next/cache'
+
+const getStats = unstable_cache(
+  async () => ({
+    jobCount: await prisma.job.count({ where: { isHighSalaryLocal: true } }),
+    companyCount: await prisma.company.count(),
+    newThisWeek: await prisma.job.count({ 
+      where: { createdAt: { gte: oneWeekAgo } } 
+    }),
+  }),
+  ['homepage-stats'],
+  { revalidate: 3600 } // 1 hour
+)
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+    30. URL VALIDATION & REDIRECT STRATEGY (v2.7)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 30.1 Validation Flow
+
+```typescript
+// In app/remote/[role]/page.tsx:
+
+1. Check if isCanonicalSlug(role) → Continue
+2. Try findBestMatchingRole(role) → 301 redirect
+3. No match → 404 notFound()
+
+// Additional for indexing:
+4. If !isTier1Role(role) → Add noindex meta tag
+```
+
+## 30.2 Redirect Examples
+
+| Bad URL | Action | Target |
+|---------|--------|--------|
+| /remote/staff-ux-designer-ai | 301 redirect | /remote/ux-designer |
+| /remote/senior-swe-platform | 301 redirect | /remote/software-engineer |
+| /remote/random-garbage | 404 | - |
+| /jobs/150k-plus | 301 redirect | /jobs/100k-plus |
+| /jobs/software-engineer/remote | 301 redirect | /remote/software-engineer |
+
+## 30.3 Redirect Rules
+
+- 301 only when the target intent is a clear match
+- Do NOT 301 random garbage to the homepage (soft-404 risk)
+- Preserve query params when safe
+- Log redirects for analysis
+
+═══════════════════════════════════════════════════════════════════════════════
+    31. ROUTE CANONICALIZATION (v2.7)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 31.1 The Problem
+
+Two parallel remote systems create duplicate intent paths:
+- `/jobs/[role]/remote`
+- `/remote/[role]`
+
+Google sees multiple URLs for "remote software engineer $100k jobs".
+
+## 31.2 The Solution
+
+**`/remote/*` is the CANONICAL remote namespace.**
+
+All `/jobs/[role]/remote` URLs MUST 301 redirect to `/remote/[role]`.
+
+```typescript
+// app/jobs/[role]/remote/page.tsx
+import { redirect } from 'next/navigation'
+
+export default async function Page({ params }: Props) {
+  const { role } = await params
+  redirect(`/remote/${role}`, 301)
+}
+```
+
+## 31.3 Why This Matters
+
+- Simplifies crawl graph
+- Consolidates ranking signals
+- Aligns with competitor patterns (RemoteRocketship uses /remote-jobs/*)
+- Reduces index bloat
+
+═══════════════════════════════════════════════════════════════════════════════
+    32. FOOTER CLEANUP (v2.7)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 32.1 Changes Summary
+
+| Before (v2.6) | After (v2.7) |
+|---------------|--------------|
+| 13 sections | 9 sections |
+| $150k in salary links | Removed |
+| Location section | Removed (redundant) |
+| For Job Seekers | Removed |
+| For Employers | Removed |
+| DMCA in Legal | Removed |
+| "Senior Software Engineer" anchor | Changed to "Software Engineer $100k+" |
+
+## 32.2 Anchor Text Fix
+
+**WRONG:** "Senior Software Engineer jobs"
+- senior ≠ canonical role
+- senior is a seniority modifier
+- violates slug rules
+
+**RIGHT:** "Software Engineer $100k+ Jobs"
+- Links to canonical hub
+- Includes salary keyword
+
+Footer must only link to canonical Tier-1 role hubs.
+
+═══════════════════════════════════════════════════════════════════════════════
+    33. TIERED INDEXING STRATEGY (v2.7)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 33.1 Why Tiered Indexing?
+
+Role+City pages can explode: 150 roles × 44 cities = 6,600 pages.
+Many will be thin or near-duplicate. This risks Google penalties.
+
+## 33.2 Tier Definitions
+
+### Tier-1 Cities (12) — Always indexable
+```typescript
+const TIER_1_CITIES = [
+  'san-francisco', 'new-york', 'seattle', 'austin', 'boston', 
+  'los-angeles', 'denver', 'chicago', 'london', 'toronto', 
+  'sydney', 'berlin'
+] as const
+```
+
+### Tier-1 Roles (~25) — Always indexable
+(See Section 28.3)
+
+## 33.3 Indexing Rules
+
+| Page Type | Condition | Action |
+|-----------|-----------|--------|
+| /jobs/[role] | Tier-1 role | index |
+| /jobs/[role] | Tier-2 role | noindex |
+| /remote/[role] | Tier-1 role | index |
+| /remote/[role] | Tier-2 role | noindex |
+| /jobs/[role]/[city] | Both Tier-1 | index |
+| /jobs/[role]/[city] | Either Tier-2 | noindex |
+
+## 33.4 Implementation
+
+```typescript
+// In page component:
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { role, city } = await params
+  
+  const shouldIndex = isTier1Role(role) && (!city || isTier1City(city))
+  
+  return {
+    robots: shouldIndex 
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
+    // ... rest
+  }
+}
+```
+
+## 33.5 Sitemap Filtering
+
+Only Tier-1 pages appear in sitemaps:
+
+```typescript
+// sitemap generation
+for (const role of roles) {
+  if (!isTier1Role(role.slug)) continue // Skip Tier-2
+  urls.push(`/jobs/${role.slug}`)
+}
+
+for (const combo of roleCityCombos) {
+  if (!isTier1Role(combo.role) || !isTier1City(combo.city)) continue
+  urls.push(`/jobs/${combo.role}/${combo.city}`)
+}
+```
+
+## 33.6 Benefits
+
+- ~500 indexed pages (not 6,600)
+- All pages meet quality gates
+- Clear promotion path for Tier-2
+- No thin content penalties
+
+═══════════════════════════════════════════════════════════════════════════════
+    34. v2.7 IMPLEMENTATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+## Files to Create
+
+- [ ] `lib/roles/canonicalSlugs.ts` — Tier-1/Tier-2 role lists
+- [ ] `lib/roles/slugMatcher.ts` — Fuzzy matching for redirects
+- [ ] `scripts/cleanupRoleSlugs.ts` — Database cleanup
+
+## Files to Update
+
+- [ ] `lib/jobs/ingestFromAts.ts` — Fix inferRoleSlugFromTitle
+- [ ] `app/remote/[role]/page.tsx` — Add validation + tiered indexing
+- [ ] `app/jobs/[role]/page.tsx` — Add tiered indexing
+- [ ] `app/jobs/[role]/[city]/page.tsx` — Add tiered indexing
+- [ ] `app/jobs/[role]/remote/page.tsx` — 301 redirect to /remote/[role]
+- [ ] `app/jobs/150k-plus/page.tsx` — 301 redirect to /jobs/100k-plus
+- [ ] `app/page.tsx` — Homepage SEO + stats caching
+- [ ] `components/layout/Footer.tsx` — 9 sections, fix anchors
+- [ ] `lib/constants/homepage.ts` — Remove $150k tier
+- [ ] `app/sitemap-*.xml/route.ts` — Filter to Tier-1 only
+
+## Post-Deployment
+
+- [ ] Run `npx tsx scripts/cleanupRoleSlugs.ts`
+- [ ] Resubmit sitemap index in GSC
+- [ ] Monitor coverage for 1 week
+- [ ] Verify no 404 spikes
+
+═══════════════════════════════════════════════════════════════════════════════
+    35. FINAL v2.7 NON-NEGOTIABLES
+═══════════════════════════════════════════════════════════════════════════════
+
+1. NO `/jobs/150k-plus` pages, links, or sitemap entries — ever
+2. NO listing page for non-canonical role slugs
+3. NO indexing of Tier-2 role pages or non-Tier-1 combos
+4. `/remote/*` is canonical; `/jobs/[role]/remote` must 301 redirect
+5. Footer links to canonical hubs only (no "Senior" prefix)
+6. Keyword density: 3-5 per 500 words (not 5-7)
+7. Homepage stats must be cached (no fluctuation)
+8. Sections 24 & 26 (publishing safety) are PRESERVED — do not modify
+
+═══════════════════════════════════════════════════════════════════════════════
+                         END OF RULES v2.7
+═══════════════════════════════════════════════════════════════════════════════

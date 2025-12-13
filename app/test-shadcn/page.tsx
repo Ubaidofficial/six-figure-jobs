@@ -63,7 +63,7 @@ export default function TestShadcnPage() {
               <Badge variant="secondary">Secondary</Badge>
               <Badge variant="outline">Outline</Badge>
               <Badge className="bg-primary/10 text-primary border-primary/20">
-                $150k+
+                $200k+
               </Badge>
             </div>
 

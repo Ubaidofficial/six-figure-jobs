@@ -6,51 +6,35 @@ const footerSections = [
   {
     title: '$100k+ Jobs by Role',
     links: [
-      { label: '$100k+ Software Engineer Jobs', href: '/jobs/software-engineer' },
-      { label: '$100k+ Product Manager Jobs', href: '/jobs/product-manager' },
-      { label: '$100k+ Data Scientist Jobs', href: '/jobs/data-scientist' },
-      { label: '$100k+ DevOps Engineer Jobs', href: '/jobs/devops-engineer' },
-      {
-        label: '$100k+ Machine Learning Engineer Jobs',
-        href: '/jobs/machine-learning-engineer',
-      },
+      { label: 'Software Engineer $100k+ Jobs', href: '/jobs/software-engineer' },
+      { label: 'Product Manager $100k+ Jobs', href: '/jobs/product-manager' },
+      { label: 'Data Scientist $100k+ Jobs', href: '/jobs/data-scientist' },
+      { label: 'DevOps Engineer $100k+ Jobs', href: '/jobs/devops-engineer' },
+      { label: 'Data Engineer $100k+ Jobs', href: '/jobs/data-engineer' },
       { label: 'View All Roles', href: '/jobs' },
     ],
   },
   {
-    title: '$100k+ Jobs by Location',
-    links: [
-      { label: '$100k+ Jobs in California', href: '/jobs/state/california' },
-      { label: '$100k+ Jobs in Texas', href: '/jobs/state/texas' },
-      { label: '$100k+ Jobs in New York', href: '/jobs/state/new-york' },
-      { label: '$100k+ Jobs in San Francisco', href: '/jobs/city/san-francisco' },
-      { label: '$100k+ Remote Jobs', href: '/remote' },
-      { label: 'View All Locations', href: '/jobs/state' },
-    ],
-  },
-  {
-    title: '$100k+ Jobs by Salary',
+    title: 'Six Figure Jobs by Salary',
     links: [
       { label: '$100k+ Jobs', href: '/jobs/100k-plus' },
-      { label: '$150k+ Jobs', href: '/jobs/150k-plus' },
       { label: '$200k+ Jobs', href: '/jobs/200k-plus' },
       { label: '$300k+ Jobs', href: '/jobs/300k-plus' },
       { label: '$400k+ Jobs', href: '/jobs/400k-plus' },
     ],
   },
   {
-    title: '$100k+ Jobs by Skill',
+    title: 'High Paying Jobs by Skill',
     links: [
       { label: 'Python $100k+ Jobs', href: '/jobs/skills/python' },
       { label: 'React $100k+ Jobs', href: '/jobs/skills/react' },
-      { label: 'TypeScript $100k+ Jobs', href: '/jobs/skills/typescript' },
       { label: 'AWS $100k+ Jobs', href: '/jobs/skills/aws' },
-      { label: 'Kubernetes $100k+ Jobs', href: '/jobs/skills/kubernetes' },
+      { label: 'TypeScript $100k+ Jobs', href: '/jobs/skills/typescript' },
       { label: 'View All Skills', href: '/jobs/skills' },
     ],
   },
   {
-    title: '$100k+ Jobs by Industry',
+    title: 'Six Figure Jobs by Industry',
     links: [
       { label: 'Fintech $100k+ Jobs', href: '/jobs/industry/fintech' },
       { label: 'AI/ML $100k+ Jobs', href: '/jobs/industry/ai-ml' },
@@ -73,61 +57,28 @@ const footerSections = [
   {
     title: 'Salary Guides',
     links: [
-      { label: 'Software Engineer Salary', href: '/salary/software-engineer' },
-      { label: 'Product Manager Salary', href: '/salary/product-manager' },
-      { label: 'Data Scientist Salary', href: '/salary/data-scientist' },
-      { label: 'DevOps Engineer Salary', href: '/salary/devops-engineer' },
+      { label: 'Software Engineer Salary Guide', href: '/salary/software-engineer' },
+      { label: 'Product Manager Salary Guide', href: '/salary/product-manager' },
+      { label: 'Data Scientist Salary Guide', href: '/salary/data-scientist' },
       { label: 'View All Salary Guides', href: '/salary' },
     ],
   },
   {
-    title: 'Remote $100k+ Jobs',
+    title: 'Remote Six Figure Jobs',
     links: [
       {
-        label: 'Remote Software Engineer Jobs',
-        href: '/jobs/software-engineer/remote',
+        label: 'Remote Six Figure Software Engineer Jobs',
+        href: '/remote/software-engineer',
       },
-      { label: 'Remote Product Manager Jobs', href: '/jobs/product-manager/remote' },
-      { label: 'Remote Data Scientist Jobs', href: '/jobs/data-scientist/remote' },
-      { label: 'Work From Anywhere Jobs', href: '/remote' },
-    ],
-  },
-  {
-    title: 'For Job Seekers',
-    links: [
-      { label: 'How It Works', href: '/how-it-works' },
-      { label: 'Job Search Tips', href: '/blog/job-search-tips' },
-      { label: 'Resume Tips', href: '/blog/resume-tips' },
-      { label: 'Interview Prep', href: '/blog/interview-prep' },
-      { label: 'Salary Negotiation', href: '/blog/salary-negotiation' },
-    ],
-  },
-  {
-    title: 'For Employers',
-    links: [
-      { label: 'Post a Job', href: '/post-a-job' },
-      { label: 'Pricing', href: '/pricing' },
-      { label: 'Why Six Figure Jobs', href: '/why-us' },
-      { label: 'Employer FAQ', href: '/faq#employers' },
+      { label: 'Remote Six Figure Product Manager Jobs', href: '/remote/product-manager' },
+      { label: 'Remote Six Figure Data Scientist Jobs', href: '/remote/data-scientist' },
+      { label: 'All Remote Jobs', href: '/remote' },
     ],
   },
   {
     title: 'Company',
     links: [
       { label: 'About Us', href: '/about' },
-      { label: 'Contact', href: '/contact' },
-      { label: 'Blog', href: '/blog' },
-      { label: 'Careers', href: '/careers' },
-      { label: 'Press Kit', href: '/press' },
-    ],
-  },
-  {
-    title: 'Support',
-    links: [
-      { label: 'Help Center', href: '/help' },
-      { label: 'FAQ', href: '/faq' },
-      { label: 'Report a Problem', href: '/report' },
-      { label: 'Feature Requests', href: '/feedback' },
     ],
   },
   {
@@ -136,7 +87,6 @@ const footerSections = [
       { label: 'Privacy Policy', href: '/privacy' },
       { label: 'Terms of Service', href: '/terms' },
       { label: 'Cookie Policy', href: '/cookies' },
-      { label: 'DMCA', href: '/dmca' },
     ],
   },
 ]

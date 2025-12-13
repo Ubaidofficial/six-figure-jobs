@@ -8,7 +8,7 @@ export type InternalLink = {
   description?: string
 }
 
-const SALARY_BANDS = [100_000, 150_000, 200_000]
+const SALARY_BANDS = [100_000, 200_000, 300_000, 400_000]
 
 function countryNameFromCode(code?: string): string {
   if (!code) return ''

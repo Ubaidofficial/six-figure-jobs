@@ -328,7 +328,7 @@ export default async function RemoteRoleCountryPage({
       : 1
 
   const jsonLd = buildJobListJsonLd(roleSlug, countryCode, jobs, page)
-  const salaryOptions = [100_000, 150_000, 200_000]
+  const salaryOptions = [100_000, 200_000, 300_000, 400_000]
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">

@@ -20,9 +20,8 @@ export const CATEGORY_LINKS = {
   ],
   salaryTiers: [
     { name: '$100k+', href: '/jobs/100k-plus', count: 0 },
-    { name: '$150k+', href: '/jobs/150k-plus', count: 0 },
     { name: '$200k+', href: '/jobs/200k-plus', count: 0 },
     { name: '$300k+', href: '/jobs/300k-plus', count: 0 },
+    { name: '$400k+', href: '/jobs/400k-plus', count: 0 },
   ],
 }
-
