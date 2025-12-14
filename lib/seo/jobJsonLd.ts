@@ -24,18 +24,22 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   // Remote detection MUST include remoteMode too (many ATS jobs set remoteMode)
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
-  // Required by Google Jobs
-  const datePosted = (job.postedAt ?? job.createdAt).toISOString()
+  // ✅ REQUIRED by Google Jobs: datePosted must always exist
+  const datePosted = (
+    job.postedAt ??
+    job.createdAt ??
+    job.updatedAt ??
+    new Date()
+  ).toISOString()
 
-  // Optional (recommended). Keep deterministic and reasonable.
+  // Optional (recommended)
   const validThrough = (() => {
-    const base = new Date(job.postedAt ?? job.createdAt)
+    const base = new Date(job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date())
     base.setDate(base.getDate() + 30)
     return base.toISOString()
   })()
 
-  // Required by Google Jobs
-  // Prefer descriptionHtml from DB. Fallback to salaryRaw/title to avoid empty.
+  // ✅ REQUIRED by Google Jobs: description must always exist + not too short
   const description = cleanDescription(
     stripTags(job.descriptionHtml || null) ||
       (job.salaryRaw ? String(job.salaryRaw) : '') ||
@@ -49,18 +53,17 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   // - Onsite/hybrid: provide valid Place -> PostalAddress
   const jobLocationType = isRemote ? 'TELECOMMUTE' : undefined
 
+  // ✅ Emit ONE Place object (less error-prone in Google Jobs than arrays)
   const jobLocation = !isRemote ? buildJobLocation(job) : undefined
 
-  // For remote jobs, applicantLocationRequirements is optional.
-  // Only emit if we have a real country code (avoid "Worldwide" as Country).
+  // Remote: applicantLocationRequirements optional.
+  // Only emit if we have a real country code.
   const applicantLocationRequirements =
     isRemote && job.countryCode
-      ? [
-          {
-            '@type': 'Country',
-            name: job.countryCode.toUpperCase(),
-          },
-        ]
+      ? {
+          '@type': 'Country',
+          name: String(job.countryCode).toUpperCase(),
+        }
       : undefined
 
   // Build JSON-LD and avoid emitting undefined fields where possible
@@ -82,7 +85,6 @@ export function buildJobJsonLd(job: JobWithCompany): any {
       ...(logo ? { logo } : {}),
     },
 
-    // Optional but good
     ...(job.type ? { employmentType: job.type } : {}),
 
     ...(jobLocationType ? { jobLocationType } : {}),
@@ -110,7 +112,6 @@ function buildBaseSalary(job: any): any | undefined {
 
   if (!min && !max) return undefined
 
-  // Prefer salaryCurrency if present (your model has salaryCurrency)
   const currency =
     (job.salaryCurrency as string | null | undefined) ||
     (job.currency as string | null | undefined) ||
@@ -128,25 +129,23 @@ function buildBaseSalary(job: any): any | undefined {
   }
 }
 
-function buildJobLocation(job: any): any[] | undefined {
+function buildJobLocation(job: any): any | undefined {
   const city = job.city ? String(job.city) : undefined
   const country = job.countryCode
     ? String(job.countryCode).toUpperCase()
     : undefined
 
-  // If we have neither, omit jobLocation entirely (don’t emit invalid stubs)
+  // If we have neither, omit jobLocation entirely
   if (!city && !country) return undefined
 
-  return [
-    {
-      '@type': 'Place',
-      address: {
-        '@type': 'PostalAddress',
-        ...(city ? { addressLocality: city } : {}),
-        ...(country ? { addressCountry: country } : {}),
-      },
+  return {
+    '@type': 'Place',
+    address: {
+      '@type': 'PostalAddress',
+      ...(city ? { addressLocality: city } : {}),
+      ...(country ? { addressCountry: country } : {}),
     },
-  ]
+  }
 }
 
 function stripTags(str?: string | null): string {
@@ -155,9 +154,9 @@ function stripTags(str?: string | null): string {
 }
 
 function cleanDescription(s: string): string {
-  // Google doesn’t like super-short/empty descriptions
   const trimmed = (s || '').replace(/\s+/g, ' ').trim()
   if (trimmed.length >= 30) return trimmed
+  // ensure non-empty (Google Jobs hates empty/too short)
   return `${trimmed} `.trim() || 'See job description on the page.'
 }
 
