@@ -1,13 +1,13 @@
-import puppeteer, { Browser, Page } from 'puppeteer'
+import { randomUUID } from 'node:crypto'
+import puppeteer, { Page } from 'puppeteer'
 import { prisma } from '../lib/prisma'
 import { makeBoardSource } from '../lib/ingest/sourcePriority'
+import { getShortStableIdForJobId } from '../lib/jobs/jobSlug'
 
 // =============================================================================
 // Configuration
 // =============================================================================
 
-const MAX_CONCURRENT_PAGES = 1 // Keep it safe to avoid detection
-const NAVIGATION_TIMEOUT = 30000
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 const ATS_PATTERNS = [
@@ -178,9 +178,11 @@ async function processCompany(company: any, page: Page) {
              })
              
              if (!exists) {
+               const id = randomUUID()
                await prisma.job.create({
                  data: {
-                   id: crypto.randomUUID(),
+                   id,
+                   shortId: getShortStableIdForJobId(id),
                    title: job.title,
                    company: company.name,
                    companyId: company.id,

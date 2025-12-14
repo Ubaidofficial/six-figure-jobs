@@ -9,6 +9,7 @@ datasource db {
 
 model Job {
   id                   String         @id
+  shortId              String?        @unique
   title                String
   company              String
   companyLogo          String?

@@ -2,13 +2,12 @@
 
 import type { Metadata } from 'next'
 import NextLink from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { prisma } from '../../../lib/prisma'
 import {
   parseJobSlugParam,
   buildJobSlugHref,
   buildJobSlug,
-  getShortStableIdForJobId,
 } from '../../../lib/jobs/jobSlug'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
@@ -30,6 +29,53 @@ export const revalidate = 3600
 
 const SITE_URL = getSiteUrl()
 
+// During rollout, code may deploy before the DB migration has run.
+// Cache `true` once detected; keep re-checking while false.
+let cachedHasJobShortIdColumn: true | null = null
+
+async function hasJobShortIdColumn(): Promise<boolean> {
+  if (cachedHasJobShortIdColumn) return true
+  try {
+    const rows = await prisma.$queryRaw<{ exists: boolean }[]>`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND lower(table_name) = 'job'
+          AND lower(column_name) = 'shortid'
+      ) as "exists"
+    `
+    const exists = rows?.[0]?.exists === true
+    if (exists) cachedHasJobShortIdColumn = true
+    return exists
+  } catch {
+    return false
+  }
+}
+
+function tryDecodeJidFromSlug(slug: string): string | null {
+  const decoded = decodeURIComponent(slug || '')
+  const lastSegment = decoded.split('/').pop() || decoded
+  const match = lastSegment.match(/-jid-([A-Za-z0-9_-]+)/)
+  if (!match?.[1]) return null
+
+  try {
+    const b64 = match[1].replace(/-/g, '+').replace(/_/g, '/')
+    const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : ''
+    const jobId = Buffer.from(b64 + pad, 'base64').toString('utf8')
+    return jobId || null
+  } catch {
+    return null
+  }
+}
+
+function extractExternalIdFromJobId(jobId: string): string | null {
+  if (!jobId) return null
+  if (!jobId.includes(':')) return null
+  const parts = jobId.split(':')
+  return parts[parts.length - 1] || null
+}
+
 /* -------------------------------------------------------------------------- */
 /* Metadata                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -41,6 +87,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
   const { jobId, externalId, shortId } = parseJobSlugParam(slug)
+  const canUseShortId = Boolean(shortId) && (await hasJobShortIdColumn())
 
   if (!jobId && !externalId && !shortId) {
     return { title: `Job not found | ${SITE_NAME}` }
@@ -50,7 +97,7 @@ export async function generateMetadata({
     const ors: any[] = []
     if (jobId) ors.push({ id: jobId })
     if (externalId) ors.push({ externalId })
-    if (shortId) ors.push({ shortId })
+    if (shortId && canUseShortId) ors.push({ shortId })
     if (ors.length === 0) return null
     if (ors.length === 1) return { ...ors[0], isExpired: false }
     return { OR: ors, isExpired: false }
@@ -81,23 +128,41 @@ export default async function JobPage({
 }) {
   const { slug } = await params
   const { jobId, externalId, shortId } = parseJobSlugParam(slug)
+  const canUseShortId = Boolean(shortId) && (await hasJobShortIdColumn())
 
   const where: any = (() => {
     const ors: any[] = []
     if (jobId) ors.push({ id: jobId })
     if (externalId) ors.push({ externalId })
-    if (shortId) ors.push({ shortId })
+    if (shortId && canUseShortId) ors.push({ shortId })
     if (ors.length === 0) return null
     if (ors.length === 1) return { ...ors[0], isExpired: false }
     return { OR: ors, isExpired: false }
   })()
 
-  if (!where) return notFound()
+  let job = where
+    ? await prisma.job.findFirst({
+        where,
+        include: { companyRef: true },
+      })
+    : null
 
-  const job = await prisma.job.findFirst({
-    where,
-    include: { companyRef: true },
-  })
+  if (!job && shortId) {
+    const jidJobId = tryDecodeJidFromSlug(slug)
+    if (jidJobId) {
+      const decodedExternalId = extractExternalIdFromJobId(jidJobId)
+      const ors: any[] = [{ id: jidJobId }]
+      if (decodedExternalId) ors.push({ externalId: decodedExternalId })
+
+      job = await prisma.job.findFirst({
+        where:
+          ors.length === 1
+            ? { ...ors[0], isExpired: false }
+            : { OR: ors, isExpired: false },
+        include: { companyRef: true },
+      })
+    }
+  }
 
   if (!job) return notFound()
 
@@ -119,7 +184,7 @@ export default async function JobPage({
     incoming.includes('-j-') && !isAlreadyCanonical
 
   if (!isAlreadyCanonical && (isLegacy || shouldNormalizeV28)) {
-    redirect(`/job/${canonicalSlug}`)
+    permanentRedirect(`/job/${canonicalSlug}`)
   }
 
   const company = typedJob.companyRef

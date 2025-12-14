@@ -23,6 +23,7 @@ import { parseGreenhouseSalary, isHighSalary as isHighSalaryGreenhouse } from '.
 
 // 🔥 NEW: Import the multi-currency threshold helper
 import { isHighSalary } from '../currency/thresholds'
+import { getShortStableIdForJobId } from '../jobs/jobSlug'
 
 import { getSourcePriority, isAtsSource, isBoardSource } from './sourcePriority'
 import { makeJobDedupeKey, normalizeLocation, normalizeUrl } from './dedupeHelpers'
@@ -198,6 +199,7 @@ async function createNewJob(
 
   const jobData = {
     id: jobId,
+    shortId: getShortStableIdForJobId(jobId),
     title: input.title,
     company: company.name,
     companyId: company.id,
@@ -259,6 +261,16 @@ async function createNewJob(
   } catch (error: any) {
     // Handle unique constraint violation (race condition)
     if (error?.code === 'P2002') {
+      const target = error?.meta?.target
+      const targets = Array.isArray(target)
+        ? target
+        : typeof target === 'string'
+          ? [target]
+          : []
+      if (targets.some((t) => String(t).toLowerCase().includes('shortid'))) {
+        console.error(`[ingest] shortId collision on create: ${jobId}`)
+        throw error
+      }
       console.log(`[ingest] Job already exists (race condition): ${jobId}`)
       return { status: 'skipped', reason: 'already-exists', jobId, dedupeKey }
     }
@@ -296,6 +308,7 @@ async function upgradeJob(
 
     // Update title if provided
     title: input.title,
+    shortId: getShortStableIdForJobId(existing.id),
     company: company.name,
     companyId: company.id,
     companyLogo: input.companyLogoUrl ?? existing.companyLogo,
@@ -360,6 +373,7 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
     lastSeenAt: new Date(),
     updatedAt: new Date(),
     isExpired: false,
+    shortId: getShortStableIdForJobId(existing.id),
   }
 
   // Fill in missing description
