@@ -2,21 +2,35 @@ name: Daily Job Scraper (Automated)
 
 on:
   schedule:
-    - cron: '0 6,18 * * *'
+    - cron: "0 6,18 * * *"
   workflow_dispatch:
+
+concurrency:
+  group: daily-scrape
+  cancel-in-progress: false
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    timeout-minutes: 15
+
+    # NOTE:
+    # Scheduled workflows always run from the repo DEFAULT branch.
+    # This allows the job to run even if GitHub shows the run under "main".
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/develop'
 
     steps:
       - name: Trigger Railway Scraper API
+        shell: bash
         run: |
+          set -euo pipefail
+
           echo "🚀 Triggering job scraper on Railway..."
+          echo "Event: $GITHUB_EVENT_NAME"
+          echo "Ref:   $GITHUB_REF"
 
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            https://www.6figjobs.com/api/cron/scrape \
+            "https://www.6figjobs.com/api/cron/scrape" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             --max-time 600 \
@@ -41,4 +55,4 @@ jobs:
         if: failure()
         run: |
           echo "⚠️ Scraper failed!"
-          echo "🔍 Check Railway logs: https://railway.app/project/your-project/deployments"
+          echo "🔍 Check Railway logs in your Railway project Deployments tab."
