@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
+import { buildJobSlug } from '@/lib/jobs/jobSlug'
 
 interface JobCardV2Props {
   job: {
@@ -32,7 +33,8 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
     return maxK ? `$${minK}k - $${maxK}k` : `$${minK}k+`
   }
 
-  const isNew = Date.now() - new Date(job.postedAt).getTime() < 3 * 24 * 60 * 60 * 1000
+  const isNew =
+    Date.now() - new Date(job.postedAt).getTime() < 3 * 24 * 60 * 60 * 1000
 
   const formatRelativeTime = (date: Date): string => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
@@ -43,8 +45,10 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
     return `${Math.floor(seconds / 604800)}w ago`
   }
 
+  const href = `/job/${buildJobSlug({ id: job.id, title: job.title })}`
+
   return (
-    <Link href={`/job/${job.id}`} className="focus-ring group block rounded-2xl">
+    <Link href={href} className="focus-ring group block rounded-2xl">
       <Card
         className={`h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_55px_rgba(16,185,129,0.14)] focus-within:ring-2 focus-within:ring-emerald-400/70 focus-within:ring-offset-2 focus-within:ring-offset-background ${
           featured
@@ -113,7 +117,9 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
             )}
             {job.isRemote && (
               <>
-                {job.location && <span className="text-muted-foreground/60">•</span>}
+                {job.location && (
+                  <span className="text-muted-foreground/60">•</span>
+                )}
                 <span className="flex items-center gap-1 text-emerald-300">
                   <Globe className="h-3.5 w-3.5" aria-hidden="true" />
                   Remote

@@ -8,6 +8,7 @@ import {
   parseJobSlugParam,
   buildJobSlugHref,
   buildJobSlug,
+  getShortStableIdForJobId,
 } from '../../../lib/jobs/jobSlug'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
@@ -39,9 +40,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const { jobId, externalId } = parseJobSlugParam(slug)
+  const { jobId, externalId, shortId } = parseJobSlugParam(slug)
 
-  if (!jobId && !externalId) {
+  if (!jobId && !externalId && !shortId) {
     return { title: `Job not found | ${SITE_NAME}` }
   }
 
@@ -49,7 +50,7 @@ export async function generateMetadata({
     const ors: any[] = []
     if (jobId) ors.push({ id: jobId })
     if (externalId) ors.push({ externalId })
-
+    if (shortId) ors.push({ shortId })
     if (ors.length === 0) return null
     if (ors.length === 1) return { ...ors[0], isExpired: false }
     return { OR: ors, isExpired: false }
@@ -79,13 +80,13 @@ export default async function JobPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const { jobId, externalId } = parseJobSlugParam(slug)
+  const { jobId, externalId, shortId } = parseJobSlugParam(slug)
 
   const where: any = (() => {
     const ors: any[] = []
     if (jobId) ors.push({ id: jobId })
     if (externalId) ors.push({ externalId })
-
+    if (shortId) ors.push({ shortId })
     if (ors.length === 0) return null
     if (ors.length === 1) return { ...ors[0], isExpired: false }
     return { OR: ors, isExpired: false }
@@ -102,12 +103,24 @@ export default async function JobPage({
 
   const typedJob = job as JobWithCompany
   const canonicalSlug = buildJobSlug(typedJob)
-  // NOTE:
-  // We don't hard-redirect here anymore because some historic slugs
-  // were generated with slightly different rules (encoding, title
-  // differences, etc.), which caused redirect loops.
-  // Canonicalization is now handled in app/job/[slug]/head.tsx via
-  // <link rel="canonical">, which is enough for SEO.
+
+  // 301 redirect old slugs -> canonical v2.8 (no loops)
+  // Redirect conditions:
+  // - legacy formats (-jid-, -job-)
+  // - raw job id in URL (contains ":")
+  // - v2.8 slug present but title differs (normalize)
+  const incoming = decodeURIComponent(slug || '').split('/').pop() || slug
+  const isLegacy =
+    incoming.includes('-jid-') ||
+    incoming.includes('-job-') ||
+    incoming.includes(':')
+  const isAlreadyCanonical = incoming === canonicalSlug
+  const shouldNormalizeV28 =
+    incoming.includes('-j-') && !isAlreadyCanonical
+
+  if (!isAlreadyCanonical && (isLegacy || shouldNormalizeV28)) {
+    redirect(`/job/${canonicalSlug}`)
+  }
 
   const company = typedJob.companyRef
 
@@ -160,7 +173,7 @@ export default async function JobPage({
     null
 
   const safeDescriptionHtml = rawDescriptionHtml
-    ? sanitizeDescriptionHtml(rawDescriptionHtml)
+    ? sanitizeDescriptionHtml(String(rawDescriptionHtml))
     : null
 
   const hasDescription =
@@ -226,9 +239,9 @@ export default async function JobPage({
           </ol>
         </nav>
 
-        <div className="grid gap-8 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="grid gap-8 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] md:items-start">
           {/* ----------------------------- Sidebar ----------------------------- */}
-          <aside className="order-2 space-y-4 md:order-none md:col-start-2">
+          <aside className="order-2 space-y-4 md:order-none md:col-start-2 md:self-start">
             <div className="space-y-4 md:sticky md:top-24">
               <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5">
                 <div className="flex flex-col items-center text-center">
@@ -449,9 +462,7 @@ export default async function JobPage({
               )}
 
               <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
-                {showRemoteBadge && remoteModeLabel ? (
-                  <span>{remoteModeLabel}</span>
-                ) : null}
+                {showRemoteBadge && remoteModeLabel ? <span>{remoteModeLabel}</span> : null}
                 {typedJob.type ? (
                   <>
                     {showRemoteBadge && remoteModeLabel ? (
@@ -462,9 +473,7 @@ export default async function JobPage({
                 ) : null}
                 {category ? (
                   <>
-                    {showRemoteBadge && remoteModeLabel ? (
-                      <span className="text-slate-600">•</span>
-                    ) : typedJob.type ? (
+                    {(showRemoteBadge && remoteModeLabel) || typedJob.type ? (
                       <span className="text-slate-600">•</span>
                     ) : null}
                     <span>{category}</span>
@@ -497,7 +506,6 @@ export default async function JobPage({
               </div>
             </section>
 
-            {/* AI-ish summary card (uses existing heuristic) */}
             {aiSummary && (
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-sm leading-relaxed text-slate-200">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">
@@ -514,29 +522,18 @@ export default async function JobPage({
             {/* Description */}
             {hasDescription ? (
               <section className="space-y-3">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  About the role
-                </h2>
-
+                <h2 className="text-sm font-semibold text-slate-50">About the role</h2>
                 <div
                   className="prose prose-invert max-w-none text-sm leading-relaxed prose-p:text-slate-200 prose-li:text-slate-200 prose-strong:text-slate-100 prose-ul:list-disc prose-ul:pl-5 prose-li:my-1"
-                  dangerouslySetInnerHTML={{
-                    __html: safeDescriptionHtml!,
-                  }}
+                  dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
                 />
               </section>
             ) : (
               <section className="space-y-3">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  About the role
-                </h2>
-
+                <h2 className="text-sm font-semibold text-slate-50">About the role</h2>
                 <p className="text-sm leading-relaxed text-slate-200">
-                  This role is sourced directly from the employer&apos;s
-                  careers site. The full job description is available on their
-                  ATS.
+                  This role is sourced directly from the employer&apos;s careers site. The full job description is available on their ATS.
                 </p>
-
                 {showApply && (
                   <div className="space-y-2">
                     <a
@@ -558,10 +555,7 @@ export default async function JobPage({
             {/* Requirements */}
             {requirements.length > 0 && (
               <section className="space-y-2">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  Requirements
-                </h2>
-
+                <h2 className="text-sm font-semibold text-slate-50">Requirements</h2>
                 <ul className="list-disc pl-5 text-sm text-slate-200">
                   {requirements.map((r, i) => (
                     <li key={i}>{r}</li>
@@ -573,10 +567,7 @@ export default async function JobPage({
             {/* Benefits */}
             {benefitItems.length > 0 && (
               <section className="space-y-2">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  Benefits
-                </h2>
-
+                <h2 className="text-sm font-semibold text-slate-50">Benefits</h2>
                 <ul className="list-disc pl-5 text-sm text-slate-200">
                   {benefitItems.map((b, i) => (
                     <li key={i}>{b}</li>
@@ -591,14 +582,10 @@ export default async function JobPage({
                 <h2 className="text-sm font-semibold text-slate-50">
                   Explore related $100k+ pages
                 </h2>
-
                 <ul className="list-disc pl-5 text-sm text-blue-400">
                   {internalLinks.map((link) => (
                     <li key={link.href}>
-                      <NextLink
-                        href={link.href}
-                        className="focus-ring rounded-md hover:underline"
-                      >
+                      <NextLink href={link.href} className="focus-ring rounded-md hover:underline">
                         {link.label}
                       </NextLink>
                     </li>
@@ -610,12 +597,8 @@ export default async function JobPage({
             {/* Similar Jobs */}
             {similarJobs.length > 0 && (
               <section className="space-y-3">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  Similar $100k+ jobs
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Based on role, country and salary band
-                </p>
+                <h2 className="text-sm font-semibold text-slate-50">Similar $100k+ jobs</h2>
+                <p className="text-xs text-slate-400">Based on role, country and salary band</p>
 
                 <ul className="space-y-3 text-sm">
                   {similarJobs.map((sj) => {
@@ -744,11 +727,8 @@ function cleanCompanyName(name: string): string {
   if (!name) return 'Company'
 
   const patterns = [
-    // CamelCase followed by description
     /^([A-Z][a-z]+(?:[A-Z][a-z]+)*)[A-Z][a-z]/,
-    // Text before first period
     /^([^.]+?)\s*[.]/,
-    // Text before common description starters
     /^(.+?)\s+(?:is|are|was|provides|offers|builds|creates|develops)/i,
   ]
 
@@ -949,18 +929,8 @@ function buildHeuristicSummary(
 
 function buildJobBreadcrumbJsonLd(job: JobWithCompany, slug: string): any {
   const items: any[] = [
-    {
-      '@type': 'ListItem',
-      position: 1,
-      name: 'Home',
-      item: `${SITE_URL}/`,
-    },
-    {
-      '@type': 'ListItem',
-      position: 2,
-      name: '$100k+ jobs',
-      item: `${SITE_URL}/jobs/100k-plus`,
-    },
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${SITE_URL}/jobs/100k-plus` },
   ]
 
   if (job.roleSlug && job.countryCode) {
@@ -991,16 +961,18 @@ function buildJobBreadcrumbJsonLd(job: JobWithCompany, slug: string): any {
 }
 
 function decodeHtmlEntities(str: string): string {
-  return str
+  return (str || '')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
 }
 
 function stripTags(str: string): string {
-  return str.replace(/<\/?[^>]+(>|$)/g, '')
+  return (str || '').replace(/<\/?[^>]+(>|$)/g, '')
 }
 
 function truncateText(str: string, maxChars: number): string {
@@ -1032,8 +1004,7 @@ function inferSeniorityFromTitle(title: string): string | null {
   const t = title.toLowerCase()
 
   if (t.includes('intern')) return 'Internship'
-  if (t.includes('principal') || t.includes('staff'))
-    return 'Staff / Principal'
+  if (t.includes('principal') || t.includes('staff')) return 'Staff / Principal'
   if (t.includes('lead') || t.includes('head')) return 'Lead'
   if (t.includes('senior') || t.includes('sr')) return 'Senior'
   if (t.includes('junior') || t.includes('jr')) return 'Junior'
@@ -1050,8 +1021,7 @@ function inferCategoryFromRoleSlug(roleSlug?: string | null): string | null {
   if (s.includes('engineer') || s.includes('developer')) return 'Engineering'
   if (s.includes('product')) return 'Product'
   if (s.includes('design')) return 'Design'
-  if (s.includes('ops') || s.includes('operations'))
-    return 'Operations'
+  if (s.includes('ops') || s.includes('operations')) return 'Operations'
   if (s.includes('sales')) return 'Sales'
   if (s.includes('marketing')) return 'Marketing'
   if (s.includes('legal') || s.includes('counsel')) return 'Legal'
@@ -1072,35 +1042,34 @@ function parseTags(raw?: string | null): string[] {
 }
 
 function sanitizeDescriptionHtml(html: string): string {
-  const withoutScripts = html.replace(
-    /<script[^>]*>[\s\S]*?<\/script>/gi,
-    '',
-  )
-  const withoutStyles = withoutScripts.replace(
-    /<style[^>]*>[\s\S]*?<\/style>/gi,
-    '',
-  )
+  // IMPORTANT: decode first so escaped HTML becomes real tags before filtering
+  const decoded = decodeHtmlEntities(html || '')
+
+  const withoutScripts = decoded.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+  const withoutStyles = withoutScripts.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
   const withoutComments = withoutStyles.replace(/<!--[\s\S]*?-->/g, '')
+
   const allowedTags = ['p', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'br']
   const filtered = withoutComments.replace(
     /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi,
     (match, tag) => {
-      const lower = tag.toLowerCase()
+      const lower = String(tag).toLowerCase()
       if (allowedTags.includes(lower)) {
         return `<${match.startsWith('</') ? '/' : ''}${lower}>`
       }
       return ''
     },
   )
+
   const withBreaks = filtered
     .replace(/\r\n|\r/g, '\n')
     .replace(/\n/g, '<br />')
     .replace(/(<br\s*\/?>\s*){2,}/gi, '</p><p>')
+
   const trimmed = withBreaks.trim()
   if (!trimmed) return ''
   const hasParagraph = /<p[\s>]/i.test(trimmed)
-  const normalized = hasParagraph ? trimmed : `<p>${trimmed}</p>`
-  return decodeHtmlEntities(normalized)
+  return hasParagraph ? trimmed : `<p>${trimmed}</p>`
 }
 
 function detectCountryFromText(raw?: string | null): string | null {
@@ -1137,13 +1106,13 @@ function buildSafeSnippet(job: JobWithCompany): string {
     (job as any).description ??
     (job as any).body ??
     ''
-  const trimmed = stripTags(rawDescription)
+  const trimmed = stripTags(decodeHtmlEntities(String(rawDescription)))
     .replace(/\s+/g, ' ')
     .trim()
   return trimmed ? truncateText(trimmed, 120) : ''
 }
 
 function formatBenefitPill(benefit: string): string {
-  const text = stripTags(benefit).trim()
+  const text = stripTags(decodeHtmlEntities(benefit)).trim()
   return truncateText(text, 90)
 }
