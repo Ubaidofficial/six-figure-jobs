@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { buildJobSlug } from '@/lib/jobs/jobSlug'
+import { e } from '@/lib/ui/emoji'
 
 interface JobCardV2Props {
   job: {
@@ -82,12 +83,12 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
             <div className="flex flex-col items-end gap-2">
               {featured && (
                 <Badge className="border-amber-500/20 bg-amber-500/10 text-[11px] font-semibold text-amber-300">
-                  FEATURED
+                  {e('featured')} FEATURED
                 </Badge>
               )}
               {isNew && (
                 <Badge className="border-emerald-500/20 bg-emerald-500/10 text-[11px] font-semibold text-emerald-300">
-                  NEW
+                  {e('new')} NEW
                 </Badge>
               )}
             </div>
@@ -99,18 +100,20 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
         <CardContent className="space-y-4 pt-4">
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="border-emerald-500/20 bg-emerald-500/10 text-[11px] font-semibold text-emerald-300">
+              {e('verified')}{' '}
               <BadgeCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
               VERIFIED SALARY
             </Badge>
           </div>
 
           <div className="inline-flex items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 font-mono text-lg font-semibold text-emerald-200">
-            {formatSalary(job.salaryMin, job.salaryMax)}
+            {e('salary')} {formatSalary(job.salaryMin, job.salaryMax)}
           </div>
 
           <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
             {job.location && (
               <span className="flex items-center gap-1">
+                {e('location')}{' '}
                 <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
                 {job.location}
               </span>
@@ -121,6 +124,7 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
                   <span className="text-muted-foreground/60">•</span>
                 )}
                 <span className="flex items-center gap-1 text-emerald-300">
+                  {e('remote')}{' '}
                   <Globe className="h-3.5 w-3.5" aria-hidden="true" />
                   Remote
                 </span>
@@ -151,9 +155,11 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
 
         <CardFooter className="flex flex-wrap items-center justify-between gap-3 pt-3">
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            {e('apply')}{' '}
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
             Apply on company site
             <span className="text-muted-foreground/60">•</span>
+            {e('posted')}{' '}
             <Clock className="h-3.5 w-3.5" aria-hidden="true" />
             Posted {formatRelativeTime(job.postedAt)}
           </span>
