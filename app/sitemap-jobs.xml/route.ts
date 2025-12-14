@@ -9,7 +9,7 @@ const PAGE_SIZE = 20000
 const BUILD_LASTMOD = new Date().toISOString()
 
 export const dynamic = 'force-static'
-export const revalidate = 60 * 60 * 24 // 24h
+export const revalidate = 86400 // 24h (number literal)
 
 function buildHundredKWhereBase() {
   const threshold = BigInt(100_000)
@@ -33,7 +33,6 @@ export async function GET() {
 
   const sitemapEntries = Array.from({ length: pages }).map((_, i) => {
     const page = i + 1
-    // IMPORTANT: this must match your route: app/sitemap-jobs/[page]/route.ts
     return `  <sitemap>
     <loc>${SITE_URL}/sitemap-jobs/${page}</loc>
     <lastmod>${BUILD_LASTMOD}</lastmod>
@@ -46,8 +45,6 @@ ${sitemapEntries.join('\n')}
 </sitemapindex>`
 
   return new Response(xml, {
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-    },
+    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
   })
 }

@@ -1,13 +1,12 @@
 // app/sitemap.xml/route.ts
+
 import { getSiteUrl } from '../../lib/seo/site'
 
 const SITE_URL = getSiteUrl()
-// Since this route is force-static, this timestamp effectively becomes the build-time lastmod.
 const BUILD_LASTMOD = new Date().toISOString()
 
 export const dynamic = 'force-static'
-// Optional: keep sitemaps reasonably fresh without being regenerated constantly
-export const revalidate = 60 * 60 * 24 // 24h
+export const revalidate = 86400 // 24h (MUST be a number literal, not an expression)
 
 export async function GET() {
   const sitemaps = [
@@ -29,14 +28,12 @@ ${sitemaps
     (s) => `  <sitemap>
     <loc>${SITE_URL}/${s}</loc>
     <lastmod>${BUILD_LASTMOD}</lastmod>
-  </sitemap>`
+  </sitemap>`,
   )
   .join('\n')}
 </sitemapindex>`
 
   return new Response(xml, {
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-    },
+    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
   })
 }
