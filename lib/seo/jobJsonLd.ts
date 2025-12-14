@@ -19,9 +19,10 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     (job.companyLogo && normalizeUrl(job.companyLogo)) ||
     undefined
 
-  const url = `${SITE_URL}/job/${buildJobSlug(job)}`
+  // ✅ Canonical job URL (v2.8)
+  const url = `${SITE_URL}/job/${buildJobSlug(job as any)}`
 
-  // Remote detection MUST include remoteMode too (many ATS jobs set remoteMode)
+  // Remote detection MUST include remoteMode too
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
   // ✅ REQUIRED by Google Jobs: datePosted must always exist
@@ -32,32 +33,27 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     new Date()
   ).toISOString()
 
-  // Optional (recommended)
+  // Optional (recommended): validThrough
   const validThrough = (() => {
-    const base = new Date(job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date())
+    const base = new Date(
+      job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date(),
+    )
     base.setDate(base.getDate() + 30)
     return base.toISOString()
   })()
 
-  // ✅ REQUIRED by Google Jobs: description must always exist + not too short
-  const description = cleanDescription(
-    stripTags(job.descriptionHtml || null) ||
-      (job.salaryRaw ? String(job.salaryRaw) : '') ||
-      `${job.title} at ${companyName}`,
-  )
+  // ✅ REQUIRED: description must exist and be plain text (NOT HTML, NOT escaped HTML)
+  const description = buildPlainTextDescription(job, companyName)
 
   const baseSalary = buildBaseSalary(job)
 
   // Google Jobs:
   // - Remote: set jobLocationType=TELECOMMUTE and OMIT jobLocation
-  // - Onsite/hybrid: provide valid Place -> PostalAddress
+  // - Onsite/hybrid: provide valid Place -> PostalAddress (ideally includes country)
   const jobLocationType = isRemote ? 'TELECOMMUTE' : undefined
-
-  // ✅ Emit ONE Place object (less error-prone in Google Jobs than arrays)
   const jobLocation = !isRemote ? buildJobLocation(job) : undefined
 
-  // Remote: applicantLocationRequirements optional.
-  // Only emit if we have a real country code.
+  // Remote: applicantLocationRequirements optional (only if countryCode exists)
   const applicantLocationRequirements =
     isRemote && job.countryCode
       ? {
@@ -66,7 +62,6 @@ export function buildJobJsonLd(job: JobWithCompany): any {
         }
       : undefined
 
-  // Build JSON-LD and avoid emitting undefined fields where possible
   const jsonLd: any = {
     '@context': 'https://schema.org',
     '@type': 'JobPosting',
@@ -104,18 +99,49 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   return jsonLd
 }
 
-/* helpers */
+/* ---------------- helpers ---------------- */
+
+function buildPlainTextDescription(job: any, companyName: string): string {
+  // Some sources store HTML, some store HTML-escaped HTML. Normalize both.
+  const raw = String(job.descriptionHtml || '').trim()
+
+  const decoded = raw ? decodeHtmlEntities(raw) : ''
+  const noTags = decoded ? stripTags(decoded) : ''
+
+  // If we somehow ended up with escaped tags after stripping (rare), strip again
+  const noTags2 = noTags.includes('<') ? stripTags(noTags) : noTags
+
+  // Fallbacks
+  const fallback =
+    (job.salaryRaw ? String(job.salaryRaw) : '') ||
+    `${job.title} at ${companyName}`
+
+  return cleanDescription(noTags2 || fallback)
+}
 
 function buildBaseSalary(job: any): any | undefined {
-  const min = job.minAnnual != null ? Number(job.minAnnual) : null
-  const max = job.maxAnnual != null ? Number(job.maxAnnual) : null
+  const rawMin = toNumberSafe(job.minAnnual)
+  const rawMax = toNumberSafe(job.maxAnnual)
 
-  if (!min && !max) return undefined
+  if (!rawMin && !rawMax) return undefined
 
+  const min = rawMin ? normalizeAnnualAmount(rawMin) : null
+  const max = rawMax ? normalizeAnnualAmount(rawMax) : null
+
+  // Prefer explicit salaryCurrency if present; else currency; else USD.
   const currency =
     (job.salaryCurrency as string | null | undefined) ||
     (job.currency as string | null | undefined) ||
     'USD'
+
+  // Guardrails: if we ended up with nonsense, omit salary entirely.
+  // (Google Jobs is better with no salary than a wildly wrong one.)
+  if (
+    (min && (min < 5_000 || min > 5_000_000)) ||
+    (max && (max < 5_000 || max > 5_000_000))
+  ) {
+    return undefined
+  }
 
   return {
     '@type': 'MonetaryAmount',
@@ -131,21 +157,48 @@ function buildBaseSalary(job: any): any | undefined {
 
 function buildJobLocation(job: any): any | undefined {
   const city = job.city ? String(job.city) : undefined
+  const region =
+    job.region || job.state ? String(job.region || job.state) : undefined
   const country = job.countryCode
     ? String(job.countryCode).toUpperCase()
     : undefined
 
   // If we have neither, omit jobLocation entirely
-  if (!city && !country) return undefined
+  if (!city && !region && !country) return undefined
 
   return {
     '@type': 'Place',
     address: {
       '@type': 'PostalAddress',
       ...(city ? { addressLocality: city } : {}),
+      ...(region ? { addressRegion: region } : {}),
       ...(country ? { addressCountry: country } : {}),
     },
   }
+}
+
+function toNumberSafe(v: any): number | null {
+  if (v == null) return null
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
+  if (typeof v === 'bigint') return Number(v)
+  if (typeof v === 'string') {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  try {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
+function normalizeAnnualAmount(n: number): number {
+  // Heuristic: if it looks like cents (e.g. 14560000000), convert to dollars.
+  // Most real annual salaries in dollars are < 10,000,000.
+  if (n >= 1_000_000 && n % 100 === 0) return Math.round(n / 100)
+  if (n >= 10_000_000) return Math.round(n / 100) // fallback for non-100-multiple
+  return Math.round(n)
 }
 
 function stripTags(str?: string | null): string {
@@ -156,8 +209,18 @@ function stripTags(str?: string | null): string {
 function cleanDescription(s: string): string {
   const trimmed = (s || '').replace(/\s+/g, ' ').trim()
   if (trimmed.length >= 30) return trimmed
-  // ensure non-empty (Google Jobs hates empty/too short)
   return `${trimmed} `.trim() || 'See job description on the page.'
+}
+
+function decodeHtmlEntities(input: string): string {
+  // Minimal + safe decode (covers what we saw in your JSON-LD)
+  return (input || '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
 }
 
 function normalizeUrl(u: string): string {
