@@ -1,5 +1,7 @@
 // lib/normalizers/role.ts
 
+import { isCanonicalSlug } from '../roles/canonicalSlugs'
+
 export type Seniority =
   | 'intern'
   | 'junior'
@@ -81,13 +83,25 @@ export function normalizeRole(rawTitle: string | null | undefined): NormalizedRo
   const isManager = inferIsManager(lower)
 
   const baseTitle = stripSeniorityTokens(cleaned)
-  const baseRoleSlug = slugify(baseTitle)
-  const roleSlug = buildRoleSlug(baseRoleSlug, seniority)
+  const generatedBaseRoleSlug = slugify(baseTitle)
+  const generatedRoleSlug = buildRoleSlug(generatedBaseRoleSlug, seniority)
+
+  // v2.7: enforce canonical-only role slugs (prevents garbage URLs)
+  const canonicalRoleSlug = isCanonicalSlug(generatedRoleSlug) ? generatedRoleSlug : ''
+
+  // Derive canonical base role slug (remove seniority prefix when present)
+  // Note: seniority "mid" and "unknown" do not prefix roleSlug.
+  const canonicalBaseRoleSlug = canonicalRoleSlug
+    ? canonicalRoleSlug.replace(
+        /^(intern|junior|senior|staff|principal|lead|manager|director|vp|cxo|head)-/,
+        '',
+      )
+    : ''
 
   return {
     normalizedTitle: capitalizeTitle(baseTitle),
-    roleSlug,
-    baseRoleSlug,
+    roleSlug: canonicalRoleSlug,
+    baseRoleSlug: canonicalBaseRoleSlug,
     seniority,
     discipline,
     isManager,

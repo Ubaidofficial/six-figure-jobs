@@ -235,7 +235,9 @@ async function createNewJob(
     applyUrl: input.applyUrl ?? input.url ?? null,
     url: input.url ?? null,
     descriptionHtml: input.descriptionHtml ?? null,
-    roleSlug: roleData.roleSlug ?? null,
+
+    // v2.7: avoid writing empty-string role slugs (canonical-only enforcement happens in normalizeRole)
+    roleSlug: roleData.roleSlug ? roleData.roleSlug : null,
 
     // Tracking
     externalId: input.externalId,
@@ -324,8 +326,8 @@ async function upgradeJob(
     url: input.url ?? existing.url,
     descriptionHtml: input.descriptionHtml ?? existing.descriptionHtml,
 
-    // Role
-    roleSlug: roleData.roleSlug ?? existing.roleSlug,
+    // Role (v2.7: avoid writing empty-string role slugs)
+    roleSlug: roleData.roleSlug ? roleData.roleSlug : null,
 
     // Tracking
     isExpired: false,
