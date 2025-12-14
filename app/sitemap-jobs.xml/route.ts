@@ -2,13 +2,14 @@
 // Sitemap index for job shards (100k+ focus)
 
 import { prisma } from '../../lib/prisma'
+import { getSiteUrl } from '../../lib/seo/site'
 
-const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-  : 'https://www.6figjobs.com'
+const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
+const BUILD_LASTMOD = new Date().toISOString()
 
-export const dynamic = "force-static"
+export const dynamic = 'force-static'
+export const revalidate = 60 * 60 * 24 // 24h
 
 function buildHundredKWhereBase() {
   const threshold = BigInt(100_000)
@@ -29,11 +30,13 @@ export async function GET() {
   })
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
   const sitemapEntries = Array.from({ length: pages }).map((_, i) => {
     const page = i + 1
+    // IMPORTANT: this must match your route: app/sitemap-jobs/[page]/route.ts
     return `  <sitemap>
     <loc>${SITE_URL}/sitemap-jobs/${page}</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
+    <lastmod>${BUILD_LASTMOD}</lastmod>
   </sitemap>`
   })
 
@@ -43,6 +46,8 @@ ${sitemapEntries.join('\n')}
 </sitemapindex>`
 
   return new Response(xml, {
-    headers: { 'Content-Type': 'application/xml' },
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+    },
   })
 }
