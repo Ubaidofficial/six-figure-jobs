@@ -38,7 +38,7 @@ export type UpsertAtsResult = {
  * DO NOT fall back to slugify(title) - that creates garbage URLs!
  */
 function inferRoleSlugFromTitle(
-  title: string | null | undefined
+  title: string | null | undefined,
 ): CanonicalRoleSlug | null {
   if (!title) return null
 
@@ -323,34 +323,16 @@ function inferRoleSlugFromTitle(
     return 'ui-designer'
   }
 
-  if (
-    t.includes('ux researcher') ||
-    t.includes('user researcher') ||
-    t.includes('design researcher')
-  ) {
+  if (t.includes('ux researcher') || t.includes('user researcher') || t.includes('design researcher')) {
     if (t.includes('senior') || t.includes('sr ')) return 'senior-ux-researcher'
     return 'ux-researcher'
   }
 
-  if (t.includes('visual designer')) {
-    return 'visual-designer'
-  }
-
-  if (t.includes('brand designer')) {
-    return 'brand-designer'
-  }
-
-  if (t.includes('creative director')) {
-    return 'creative-director'
-  }
-
-  if (t.includes('head of design') || t.includes('design director')) {
-    return 'head-of-design'
-  }
-
-  if (t.includes('design manager')) {
-    return 'design-manager'
-  }
+  if (t.includes('visual designer')) return 'visual-designer'
+  if (t.includes('brand designer')) return 'brand-designer'
+  if (t.includes('creative director')) return 'creative-director'
+  if (t.includes('head of design') || t.includes('design director')) return 'head-of-design'
+  if (t.includes('design manager')) return 'design-manager'
 
   // Generic designer - default to product-designer
   if (t.includes('designer') && !t.includes('manager')) {
@@ -362,9 +344,7 @@ function inferRoleSlugFromTitle(
   // ENGINEERING MANAGEMENT
   // ═══════════════════════════════════════════════════════════════════════════
 
-  if (t.includes('cto') || t.includes('chief technology officer')) {
-    return 'cto'
-  }
+  if (t.includes('cto') || t.includes('chief technology officer')) return 'cto'
 
   if (
     t.includes('vp of engineering') ||
@@ -380,26 +360,17 @@ function inferRoleSlugFromTitle(
     return 'director-of-engineering'
   }
 
-  if (t.includes('head of engineering')) {
-    return 'head-of-engineering'
-  }
+  if (t.includes('head of engineering')) return 'head-of-engineering'
 
   if (t.includes('engineering manager') || (t.includes('manager') && t.includes('engineer'))) {
     if (t.includes('senior') || t.includes('sr ')) return 'senior-engineering-manager'
     return 'engineering-manager'
   }
 
-  if (t.includes('technical lead') || t.includes('tech lead')) {
-    return 'technical-lead'
-  }
-
-  if (t.includes('team lead')) {
-    return 'team-lead'
-  }
-
-  if (t.includes('technical program manager') || t.includes('tpm ') || t.includes(' tpm')) {
+  if (t.includes('technical lead') || t.includes('tech lead')) return 'technical-lead'
+  if (t.includes('team lead')) return 'team-lead'
+  if (t.includes('technical program manager') || t.includes('tpm ') || t.includes(' tpm'))
     return 'technical-program-manager'
-  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // BUSINESS & SALES ROLES
@@ -422,114 +393,45 @@ function inferRoleSlugFromTitle(
     return 'customer-success-manager'
   }
 
-  if (t.includes('sales manager')) {
-    return 'sales-manager'
-  }
-
-  if (t.includes('sales director')) {
-    return 'sales-director'
-  }
-
-  if (t.includes('vp sales') || t.includes('vp of sales') || t.includes('vice president of sales')) {
+  if (t.includes('sales manager')) return 'sales-manager'
+  if (t.includes('sales director')) return 'sales-director'
+  if (t.includes('vp sales') || t.includes('vp of sales') || t.includes('vice president of sales'))
     return 'vp-sales'
-  }
-
-  if (t.includes('head of sales')) {
-    return 'head-of-sales'
-  }
-
-  if (t.includes('chief revenue officer') || t.includes('cro ') || t.includes(' cro')) {
+  if (t.includes('head of sales')) return 'head-of-sales'
+  if (t.includes('chief revenue officer') || t.includes('cro ') || t.includes(' cro'))
     return 'chief-revenue-officer'
-  }
-
-  if (t.includes('business development manager') || t.includes('bdm ')) {
+  if (t.includes('business development manager') || t.includes('bdm '))
     return 'business-development-manager'
-  }
-
-  if (
-    t.includes('business development representative') ||
-    t.includes('bdr ') ||
-    t.includes(' bdr')
-  ) {
+  if (t.includes('business development representative') || t.includes('bdr ') || t.includes(' bdr'))
     return 'business-development-representative'
-  }
-
-  if (t.includes('partnerships manager') || t.includes('partner manager')) {
-    return 'partnerships-manager'
-  }
-
-  if (t.includes('channel manager')) {
-    return 'channel-manager'
-  }
-
-  if (t.includes('revenue operations') || t.includes('revops')) {
-    return 'revenue-operations-manager'
-  }
-
-  if (t.includes('sales operations')) {
-    return 'sales-operations-manager'
-  }
-
-  if (t.includes('sales enablement')) {
-    return 'sales-enablement-manager'
-  }
-
-  if (t.includes('solution consultant')) {
-    return 'solution-consultant'
-  }
+  if (t.includes('partnerships manager') || t.includes('partner manager')) return 'partnerships-manager'
+  if (t.includes('channel manager')) return 'channel-manager'
+  if (t.includes('revenue operations') || t.includes('revops')) return 'revenue-operations-manager'
+  if (t.includes('sales operations')) return 'sales-operations-manager'
+  if (t.includes('sales enablement')) return 'sales-enablement-manager'
+  if (t.includes('solution consultant')) return 'solution-consultant'
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MARKETING ROLES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  if (t.includes('cmo') || t.includes('chief marketing officer')) {
-    return 'cmo'
-  }
-
-  if (
-    t.includes('vp marketing') ||
-    t.includes('vp of marketing') ||
-    t.includes('vice president of marketing')
-  ) {
+  if (t.includes('cmo') || t.includes('chief marketing officer')) return 'cmo'
+  if (t.includes('vp marketing') || t.includes('vp of marketing') || t.includes('vice president of marketing'))
     return 'vp-marketing'
-  }
-
-  if (t.includes('marketing director') || t.includes('director of marketing')) {
-    return 'marketing-director'
-  }
-
-  if (t.includes('head of marketing')) {
-    return 'head-of-marketing'
-  }
+  if (t.includes('marketing director') || t.includes('director of marketing')) return 'marketing-director'
+  if (t.includes('head of marketing')) return 'head-of-marketing'
 
   if (t.includes('product marketing manager') || t.includes('pmm ') || t.includes(' pmm')) {
     if (t.includes('senior') || t.includes('sr ')) return 'senior-product-marketing-manager'
     return 'product-marketing-manager'
   }
 
-  if (t.includes('growth marketing') || t.includes('growth manager')) {
-    return 'growth-marketing-manager'
-  }
-
-  if (t.includes('demand generation') || t.includes('demand gen')) {
-    return 'demand-generation-manager'
-  }
-
-  if (t.includes('performance marketing')) {
-    return 'performance-marketing-manager'
-  }
-
-  if (t.includes('content marketing')) {
-    return 'content-marketing-manager'
-  }
-
-  if (t.includes('content manager')) {
-    return 'content-manager'
-  }
-
-  if (t.includes('seo manager') || t.includes('seo specialist')) {
-    return 'seo-manager'
-  }
+  if (t.includes('growth marketing') || t.includes('growth manager')) return 'growth-marketing-manager'
+  if (t.includes('demand generation') || t.includes('demand gen')) return 'demand-generation-manager'
+  if (t.includes('performance marketing')) return 'performance-marketing-manager'
+  if (t.includes('content marketing')) return 'content-marketing-manager'
+  if (t.includes('content manager')) return 'content-manager'
+  if (t.includes('seo manager') || t.includes('seo specialist')) return 'seo-manager'
 
   if (t.includes('marketing manager')) {
     if (t.includes('senior') || t.includes('sr ')) return 'senior-marketing-manager'
@@ -540,17 +442,9 @@ function inferRoleSlugFromTitle(
   // FINANCE & OPERATIONS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  if (t.includes('cfo') || t.includes('chief financial officer')) {
-    return 'cfo'
-  }
-
-  if (t.includes('controller')) {
-    return 'controller'
-  }
-
-  if (t.includes('finance manager')) {
-    return 'finance-manager'
-  }
+  if (t.includes('cfo') || t.includes('chief financial officer')) return 'cfo'
+  if (t.includes('controller')) return 'controller'
+  if (t.includes('finance manager')) return 'finance-manager'
 
   if (t.includes('financial analyst')) {
     if (t.includes('senior') || t.includes('sr ')) return 'senior-financial-analyst'
@@ -562,98 +456,42 @@ function inferRoleSlugFromTitle(
     return 'accountant'
   }
 
-  if (t.includes('tax manager')) {
-    return 'tax-manager'
-  }
-
-  if (t.includes('coo') || t.includes('chief operating officer')) {
-    return 'chief-operating-officer'
-  }
-
-  if (t.includes('operations director') || t.includes('director of operations')) {
-    return 'operations-director'
-  }
-
-  if (t.includes('operations manager')) {
-    return 'operations-manager'
-  }
-
-  if (t.includes('business analyst') && !t.includes('intelligence')) {
-    return 'business-analyst'
-  }
+  if (t.includes('tax manager')) return 'tax-manager'
+  if (t.includes('coo') || t.includes('chief operating officer')) return 'chief-operating-officer'
+  if (t.includes('operations director') || t.includes('director of operations')) return 'operations-director'
+  if (t.includes('operations manager')) return 'operations-manager'
+  if (t.includes('business analyst') && !t.includes('intelligence')) return 'business-analyst'
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HR & RECRUITING
   // ═══════════════════════════════════════════════════════════════════════════
 
-  if (t.includes('chief people officer') || t.includes('chief human resources')) {
-    return 'chief-people-officer'
-  }
-
-  if (t.includes('head of people') || t.includes('head of hr')) {
-    return 'head-of-people'
-  }
-
-  if (t.includes('talent acquisition manager')) {
-    return 'talent-acquisition-manager'
-  }
-
-  if (t.includes('recruiting manager') || t.includes('recruitment manager')) {
-    return 'recruiting-manager'
-  }
-
-  if (t.includes('technical recruiter')) {
-    return 'technical-recruiter'
-  }
+  if (t.includes('chief people officer') || t.includes('chief human resources')) return 'chief-people-officer'
+  if (t.includes('head of people') || t.includes('head of hr')) return 'head-of-people'
+  if (t.includes('talent acquisition manager')) return 'talent-acquisition-manager'
+  if (t.includes('recruiting manager') || t.includes('recruitment manager')) return 'recruiting-manager'
+  if (t.includes('technical recruiter')) return 'technical-recruiter'
 
   if (t.includes('recruiter')) {
     if (t.includes('senior') || t.includes('sr ')) return 'senior-recruiter'
     return 'recruiter'
   }
 
-  if (t.includes('hr manager') || t.includes('human resources manager')) {
-    return 'hr-manager'
-  }
-
-  if (t.includes('hr business partner') || t.includes('hrbp')) {
-    return 'hr-business-partner'
-  }
-
-  if (t.includes('people operations') || t.includes('people ops')) {
-    return 'people-operations-manager'
-  }
+  if (t.includes('hr manager') || t.includes('human resources manager')) return 'hr-manager'
+  if (t.includes('hr business partner') || t.includes('hrbp')) return 'hr-business-partner'
+  if (t.includes('people operations') || t.includes('people ops')) return 'people-operations-manager'
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXECUTIVE ROLES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  if (t.includes('ceo') || t.includes('chief executive officer')) {
-    return 'ceo'
-  }
-
-  if (t.includes('president') && !t.includes('vice')) {
-    return 'president'
-  }
-
-  if (t.includes('managing director')) {
-    return 'managing-director'
-  }
-
-  if (t.includes('general manager')) {
-    return 'general-manager'
-  }
-
-  if (t.includes('chief of staff')) {
-    return 'chief-of-staff'
-  }
-
-  if (t.includes('ciso') || t.includes('chief information security')) {
-    return 'ciso'
-  }
-
-  if (t.includes('vp operations') || t.includes('vp of operations')) {
-    return 'vp-operations'
-  }
+  if (t.includes('ceo') || t.includes('chief executive officer')) return 'ceo'
+  if (t.includes('president') && !t.includes('vice')) return 'president'
+  if (t.includes('managing director')) return 'managing-director'
+  if (t.includes('general manager')) return 'general-manager'
+  if (t.includes('chief of staff')) return 'chief-of-staff'
+  if (t.includes('ciso') || t.includes('chief information security')) return 'ciso'
+  if (t.includes('vp operations') || t.includes('vp of operations')) return 'vp-operations'
 
   // ═══════════════════════════════════════════════════════════════════════════
   // OTHER ROLES
@@ -674,61 +512,26 @@ function inferRoleSlugFromTitle(
     return 'project-manager'
   }
 
-  if (t.includes('scrum master')) {
-    return 'scrum-master'
-  }
+  if (t.includes('scrum master')) return 'scrum-master'
+  if (t.includes('agile coach')) return 'agile-coach'
+  if (t.includes('strategy consultant')) return 'strategy-consultant'
+  if (t.includes('management consultant')) return 'management-consultant'
+  if (t.includes('consultant')) return 'consultant'
+  if (t.includes('compliance manager') || t.includes('compliance officer')) return 'compliance-manager'
+  if (t.includes('legal counsel') || t.includes('attorney') || t.includes('lawyer')) return 'legal-counsel'
+  if (t.includes('general counsel') || t.includes('gc ') || t.includes(' gc')) return 'general-counsel'
 
-  if (t.includes('agile coach')) {
-    return 'agile-coach'
-  }
-
-  if (t.includes('strategy consultant')) {
-    return 'strategy-consultant'
-  }
-
-  if (t.includes('management consultant')) {
-    return 'management-consultant'
-  }
-
-  if (t.includes('consultant')) {
-    return 'consultant'
-  }
-
-  if (t.includes('compliance manager') || t.includes('compliance officer')) {
-    return 'compliance-manager'
-  }
-
-  if (t.includes('legal counsel') || t.includes('attorney') || t.includes('lawyer')) {
-    return 'legal-counsel'
-  }
-
-  if (t.includes('general counsel') || t.includes('gc ') || t.includes(' gc')) {
-    return 'general-counsel'
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATCH-ALL PATTERNS (Last resort - be careful!)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // If title contains "engineer" but didn't match any specific pattern
+  // Catch-all
   if (t.includes('engineer') && !t.includes('manager') && !t.includes('director')) {
     if (t.includes('senior') || t.includes('sr ')) return 'senior-software-engineer'
     return 'software-engineer'
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // NO MATCH - RETURN NULL (Critical: Do NOT slugify the title!)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // If we can't determine a canonical role, return null
-  // This prevents garbage URLs from being created
-  // Jobs without a roleSlug will still be queryable by other filters
   return null
-
 }
 
 // =============================================================================
-// Salary Parsing (preserved from original)
+// Salary Parsing (FIXED)
 // =============================================================================
 
 type SalaryInfo = {
@@ -747,7 +550,6 @@ function extractSalaryFromHtml(html?: string | null): SalaryInfo {
   if (!html) return {}
 
   let decoded = html
-  // If it looks like HTML has been entity-escaped, decode a few basics
   if (!/<\w+/i.test(html) && /&lt;\/?\w+/i.test(html)) {
     decoded = decodeEntities(html)
   }
@@ -759,34 +561,40 @@ function extractSalaryFromHtml(html?: string | null): SalaryInfo {
 
   // $120,000 style
   const commaMatches = text.match(/\$ ?([0-9]{2,3}(?:,[0-9]{3})*)/g)
-  if (commaMatches && commaMatches.length > 0) {
+  if (commaMatches?.length) {
     numbers = commaMatches
       .map((m) => m.replace(/[^0-9]/g, ''))
       .map((n) => Number(n))
       .filter((n) => Number.isFinite(n))
   }
 
-  // 120k style
+  // 120k style (handles "$120k" and prevents "$120,000k" inflation)
   if (!numbers.length) {
-    const kMatches = text.match(/\$ ?([0-9]{2,3})\s*k/gi)
-    if (kMatches && kMatches.length > 0) {
+    const kMatches = text.match(/\$ ?([0-9]{2,3}(?:,[0-9]{3})*)\s*k/gi)
+    if (kMatches?.length) {
       numbers = kMatches
-        .map((m) => m.replace(/[^0-9]/g, ''))
-        .map((n) => Number(n) * 1000)
+        .map((m) => {
+          const rawNum = Number(m.replace(/[^0-9]/g, ''))
+          if (!Number.isFinite(rawNum)) return NaN
+          // Only multiply when it looks like "120k" (not "120,000k")
+          return rawNum >= 1000 ? rawNum : rawNum * 1000
+        })
         .filter((n) => Number.isFinite(n))
     }
   }
 
-  if (!numbers.length) {
-    return { salaryRaw }
-  }
+  if (!numbers.length) return { salaryRaw }
 
   let min = numbers[0]
   let max = numbers[0]
-
   if (numbers.length >= 2) {
     min = Math.min(numbers[0], numbers[1])
     max = Math.max(numbers[0], numbers[1])
+  }
+
+  // Sanity guard: ignore obviously corrupt values
+  if (min > 2_000_000 || max > 2_000_000) {
+    return { salaryRaw }
   }
 
   const minAnnual = BigInt(min)
@@ -823,14 +631,6 @@ function stripTags(str: string): string {
 // Main Function
 // =============================================================================
 
-/**
- * Ingest jobs for a single company from ATS.
- *
- * IMPORTANT:
- * - We assume the Company row already exists (created by board scrapers).
- * - We do NOT create or rename companies here.
- * - Only inserts/updates Job rows via the central ingest.
- */
 export async function upsertJobsForCompanyFromAts(
   company: any,
   rawJobs: any[],
@@ -859,7 +659,6 @@ export async function upsertJobsForCompanyFromAts(
 
   for (const raw of rawJobs) {
     try {
-      // Extract external ID
       const externalId: string | null =
         (raw.externalId as string) ?? (raw.id != null ? String(raw.id) : null)
 
@@ -870,86 +669,66 @@ export async function upsertJobsForCompanyFromAts(
 
       const title: string = raw.title || 'Unknown role'
 
-      // Build location text
       const locationText: string | null =
         raw.locationText ?? raw.location?.name ?? raw.location ?? null
 
-      // Check if remote
       const isRemote: boolean =
-        raw.remote === true ||
-        (locationText?.toLowerCase().includes('remote') ?? false)
+        raw.remote === true || (locationText?.toLowerCase().includes('remote') ?? false)
 
-      // Get URLs
       const jobUrl: string | null = raw.url ?? raw.absolute_url ?? null
       const applyUrl: string | null = raw.applyUrl ?? raw.absolute_url ?? jobUrl
 
-      // Get description (Greenhouse uses 'content', others use 'description')
       const descriptionHtml: string | null =
         raw.descriptionHtml ?? raw.description ?? raw.content ?? null
 
-      // Parse salary from HTML using our preserved function
       const salarySourceHtml: string | null =
         raw.salaryHtml ?? raw.salaryRaw ?? raw.salary ?? descriptionHtml ?? null
       const salary = extractSalaryFromHtml(salarySourceHtml)
 
-      // Get timestamps
       const postedAt: Date | null = raw.postedAt
         ? new Date(raw.postedAt)
         : raw.updated_at
         ? new Date(raw.updated_at)
         : null
 
-      // Infer role slug from title
       const inferredRoleSlug = raw.roleSlug ?? inferRoleSlugFromTitle(title)
 
-      // Build ScrapedJobInput
       const scrapedJob: ScrapedJobInput = {
-        // Required fields
         externalId,
         title,
         source: makeAtsSource(atsProvider),
 
-        // Company info (already resolved)
         rawCompanyName: companyName,
         companyLogoUrl: companyLogo,
 
-        // URLs
         url: jobUrl,
         applyUrl: applyUrl ?? jobUrl,
 
-        // Location
         locationText,
         isRemote,
 
-        // Salary - use our extracted values
         salaryRaw: salary.salaryRaw ?? null,
         salaryMin: salary.salaryMin ? Number(salary.salaryMin) : null,
         salaryMax: salary.salaryMax ? Number(salary.salaryMax) : null,
         salaryCurrency: salary.salaryCurrency ?? null,
         salaryInterval: salary.salaryPeriod ?? 'year',
 
-        // Job details
         employmentType: raw.type ?? raw.employmentType ?? null,
         department: raw.department ?? null,
         descriptionHtml,
         descriptionText: null,
 
-        // Timestamps
         postedAt,
         updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : null,
 
-        // Raw data for debugging
         raw: {
           ...raw,
-          // Include inferred role slug in raw for potential use
           _inferredRoleSlug: inferredRoleSlug,
         },
       }
 
-      // Delegate to central ingest
       const result = await ingestJob(scrapedJob)
 
-      // Track stats
       switch (result.status) {
         case 'created':
           created++
@@ -958,8 +737,6 @@ export async function upsertJobsForCompanyFromAts(
         case 'upgraded':
           updated++
           break
-        case 'skipped':
-        case 'error':
         default:
           skipped++
           break

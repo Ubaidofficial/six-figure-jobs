@@ -26,33 +26,27 @@ function bandSlugFromMinAnnual(minAnnual?: number): string {
 }
 
 /**
-  * Build the canonical path for a JobSlice based on its filters.
-  *
-  * Pattern:
-  *   /jobs/{band}/{remote?}/{role?}/{country?}/{city?}
-  *
-  * Notes:
-  *  - Salary band is always first to consolidate legacy/SEO variants.
-  *  - Remote-only slices get a "remote" segment after the band.
-  *  - Country/city segments are always lowercase to avoid duplicates.
-  */
+ * Build the canonical path for a JobSlice based on its filters.
+ *
+ * Canonical pattern:
+ *   /jobs/{band}/{remote?}/{role?}/{country?}/{city?}
+ *
+ * Notes:
+ *  - Salary band is always first to consolidate variants.
+ *  - Remote-only slices get a "remote" segment after the band.
+ *  - Country/city segments are lowercase to avoid duplicates.
+ */
 export function buildSliceCanonicalPath(filters: SliceFilters): string {
   const band = bandSlugFromMinAnnual(filters.minAnnual)
   const role = filters.roleSlugs?.[0]
   const country = filters.countryCode
   const city = filters.citySlug
 
-  // Remote-first canonical to stay compatible with loader candidates
-  if (filters.remoteOnly) {
-    const parts = ['jobs', 'remote']
-    if (role) parts.push(role)
-    parts.push(band)
-    return '/' + parts.join('/')
-  }
-
   const parts: string[] = ['jobs', band]
 
+  if (filters.remoteOnly) parts.push('remote')
   if (role) parts.push(role)
+
   if (country) {
     const countrySlug = countryCodeToSlug(country)
     if (countrySlug) parts.push(countrySlug)
@@ -62,24 +56,15 @@ export function buildSliceCanonicalPath(filters: SliceFilters): string {
   return '/' + parts.join('/')
 }
 
-function normalizeSlugPath(slug?: string | null): string | null {
-  if (!slug) return null
-  const clean = slug.replace(/^\/+/, '')
-  return '/' + clean
-}
-
 /**
- * Resolve the safest canonical path:
- *  - Prefer the normalized builder path.
- *  - If it differs from the stored slug, fall back to the stored slug to avoid 404s.
+ * Resolve canonical path.
+ * For SEO, always prefer the built canonical. Handle legacy slugs via redirects.
  */
 export function resolveSliceCanonicalPath(
   filters: SliceFilters,
-  slug?: string | null
+  _slug?: string | null
 ): string {
-  const built = buildSliceCanonicalPath(filters)
-  const fallback = normalizeSlugPath(slug) ?? built
-  return built === fallback ? built : fallback
+  return buildSliceCanonicalPath(filters)
 }
 
 export function buildSliceCanonicalUrl(
