@@ -11803,3 +11803,7 @@ Blast radius: (unscoped)
 - Improved job card readability and spacing
 - Added emoji-based visual cues (salary, location, remote, featured)
 - No changes to URLs, slugs, canonicals, or sitemaps
+
+- Homepage now renders JobCardV2 via app/components/JobList.tsx (no routing or SEO changes)
+- Added shared emoji helper (lib/ui/emoji.ts) for consistent UI cues
+- Updated job detail UI (app/job/[slug]/page.tsx) to align with new job card styling and emojis
