@@ -4,7 +4,7 @@
 import type { ReactElement } from 'react'
 import { loadSliceFromParams } from '../../../lib/slices/loadSlice'
 import { buildSliceCanonicalUrl } from '../../../lib/seo/canonical'
-import type { PageSearchParams } from './page'
+import type { PageSearchParams } from '../_components/page'
 
 const PAGE_SIZE = 20
 

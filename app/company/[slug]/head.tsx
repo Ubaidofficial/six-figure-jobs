@@ -15,19 +15,27 @@ export default async function Head({
 
   const company = await prisma.company.findUnique({
     where: { slug },
-    select: { slug: true, jobCount: true, updatedAt: true },
+    select: { slug: true },
   })
 
   if (!company) return null
+
+  // Count live jobs using the relation (companyRef) instead of companySlug
+  const liveJobCount = await prisma.job.count({
+    where: {
+      isExpired: false,
+      companyRef: {
+        slug: company.slug,
+      },
+    },
+  })
 
   const canonical = `${SITE_URL}/company/${company.slug}`
 
   return (
     <>
       <link rel="canonical" href={canonical} />
-      {(!company.jobCount || company.jobCount <= 0) && (
-        <meta name="robots" content="noindex,follow" />
-      )}
+      {liveJobCount <= 0 && <meta name="robots" content="noindex,follow" />}
     </>
   )
 }

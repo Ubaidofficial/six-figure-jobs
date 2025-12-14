@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { loadSliceFromParams } from '../../../lib/slices/loadSlice'
 import { queryJobs } from '../../../lib/jobs/queryJobs'
-import { SlicePage } from '../_components/SlicePage'
+import { SlicePage } from './SlicePage'
 import { buildSliceMetadata } from '../../../lib/seo/meta'
 import {
   buildJobListJsonLd,

@@ -167,7 +167,7 @@ export default async function JobPage({
     !!safeDescriptionHtml && safeDescriptionHtml.trim().length > 0
 
   const jsonLd = buildJobJsonLd(typedJob)
-  const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, slug)
+  const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
   const internalLinks = buildInternalLinks(typedJob)
   const aiSummary = buildHeuristicSummary(
     typedJob,

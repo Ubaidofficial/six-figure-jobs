@@ -60,24 +60,22 @@ export async function generateMetadata({
   }
 
   const jobCount = company.jobs.length
-  const highSalaryCount = company.jobs.filter(
-    (j: JobWithFlags) => j.isHighSalary
-  ).length
+  const highSalaryCount = company.jobs.filter((j: JobWithFlags) => j.isHighSalary)
+    .length
+
+  // Keep your existing rule, but use live job count (this page already queries live jobs)
   const allowIndex = jobCount >= 3
 
   const title = `${company.name} Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
+
+  const companyDesc = company.description
+    ? truncateText(toPlainText(company.description), 120)
+    : `Find your next role at ${company.name}.`
+
   const description =
     highSalaryCount > 0
-      ? `Browse ${jobCount} jobs at ${company.name}, including ${highSalaryCount} high-salary positions paying $100k+. ${
-          company.description
-            ? truncateText(stripTags(company.description), 120)
-            : `Find your next role at ${company.name}.`
-        }`
-      : `Browse ${jobCount} open positions at ${company.name}. ${
-          company.description
-            ? truncateText(stripTags(company.description), 120)
-            : `Find your next role at ${company.name}.`
-        }`
+      ? `Browse ${jobCount} jobs at ${company.name}, including ${highSalaryCount} high-salary positions paying $100k+. ${companyDesc}`
+      : `Browse ${jobCount} open positions at ${company.name}. ${companyDesc}`
 
   const canonicalUrl = `${SITE_URL}/company/${slug}`
 
@@ -85,7 +83,9 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: canonicalUrl },
-    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+    robots: allowIndex
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
     openGraph: {
       title,
       description,
@@ -126,25 +126,17 @@ export default async function CompanyPage({
   if (!company) return notFound()
 
   const jobs = company.jobs
-  const highSalaryJobs: JobWithFlags[] = jobs.filter(
-    (j: JobWithFlags) => j.isHighSalary
-  )
-  const otherJobs: JobWithFlags[] = jobs.filter(
-    (j: JobWithFlags) => !j.isHighSalary
-  )
+  const highSalaryJobs: JobWithFlags[] = jobs.filter((j) => j.isHighSalary)
+  const otherJobs: JobWithFlags[] = jobs.filter((j) => !j.isHighSalary)
+
   const countrySlug =
     company.countryCode ? countryCodeToSlug(company.countryCode) : null
 
-  // Build JSON-LD
   const organizationJsonLd = buildOrganizationJsonLd(company)
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(company)
 
-  // Parse tags
   const tags = parseTags(company.tagsJson)
-  const heroLogo = buildLogoUrl(
-    company.logoUrl ?? null,
-    company.website ?? null,
-  )
+  const heroLogo = buildLogoUrl(company.logoUrl ?? null, company.website ?? null)
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
@@ -154,6 +146,7 @@ export default async function CompanyPage({
           {/* Logo */}
           <div className="flex-shrink-0">
             {heroLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={heroLogo}
                 alt={company.name}
@@ -168,9 +161,7 @@ export default async function CompanyPage({
 
           {/* Company Info */}
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-slate-50">
-              {company.name}
-            </h1>
+            <h1 className="text-2xl font-bold text-slate-50">{company.name}</h1>
 
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
               {company.industry && (
@@ -195,19 +186,18 @@ export default async function CompanyPage({
               )}
             </div>
 
-            {company.description && (
+            {company.description ? (
               <p className="mt-4 text-sm leading-relaxed text-slate-300">
-                {truncateText(
-                  stripTags(decodeHtmlEntities(company.description)),
-                  400
-                )}
+                {truncateText(toPlainText(company.description), 400)}
               </p>
-            )}
-            {!company.description && (
+            ) : (
               <p className="mt-4 text-sm leading-relaxed text-slate-300">
                 {company.name} is hiring $100k+ talent across{' '}
                 {company.industry ?? 'multiple teams'}. Explore roles in{' '}
-                {highSalaryJobs.length > 0 ? 'high-compensation' : 'their latest'} postings and discover remote and on-site opportunities.
+                {highSalaryJobs.length > 0
+                  ? 'high-compensation'
+                  : 'their latest'}{' '}
+                postings and discover remote and on-site opportunities.
               </p>
             )}
 
@@ -228,7 +218,7 @@ export default async function CompanyPage({
             <div className="mt-4 flex flex-wrap gap-3">
               {company.website && (
                 <a
-                  href={company.website}
+                  href={cleanUrl(company.website)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-100 hover:border-slate-500"
@@ -238,7 +228,7 @@ export default async function CompanyPage({
               )}
               {company.atsUrl && (
                 <a
-                  href={company.atsUrl}
+                  href={cleanUrl(company.atsUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-100 hover:border-slate-500"
@@ -252,9 +242,7 @@ export default async function CompanyPage({
           {/* Stats */}
           <div className="flex gap-4 sm:flex-col sm:items-end sm:gap-2">
             <div className="text-center sm:text-right">
-              <div className="text-2xl font-bold text-slate-50">
-                {jobs.length}
-              </div>
+              <div className="text-2xl font-bold text-slate-50">{jobs.length}</div>
               <div className="text-xs text-slate-400">Open Jobs</div>
             </div>
             {highSalaryJobs.length > 0 && (
@@ -276,11 +264,13 @@ export default async function CompanyPage({
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
           {company.name} is actively hiring experienced talent for $100k+ roles across{' '}
-          {tags.length ? tags.slice(0, 3).join(', ') : 'multiple teams'}. These positions include high-impact
-          remote, hybrid, and on-site opportunities, with compensation shown up front where available.
-          Explore engineering, product, data, sales, and operations openings, or browse all open jobs to
-          find a six-figure role that matches your skills and location. We refresh this page frequently as
-          new jobs are added from the company’s ATS and careers feeds.
+          {tags.length ? tags.slice(0, 3).join(', ') : 'multiple teams'}. These
+          positions include high-impact remote, hybrid, and on-site opportunities,
+          with compensation shown up front where available. Explore engineering,
+          product, data, sales, and operations openings, or browse all open jobs to
+          find a six-figure role that matches your skills and location. We refresh
+          this page frequently as new jobs are added from the company’s ATS and
+          careers feeds.
         </p>
       </section>
 
@@ -291,10 +281,7 @@ export default async function CompanyPage({
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
           {countrySlug && (
             <li>
-              <Link
-                href={`/jobs/${countrySlug}/100k-plus`}
-                className="hover:underline"
-              >
+              <Link href={`/jobs/${countrySlug}/100k-plus`} className="hover:underline">
                 $100k+ jobs in {company.countryCode}
               </Link>
             </li>
@@ -329,10 +316,7 @@ export default async function CompanyPage({
             <p className="mt-2 text-sm text-slate-500">
               Check back later or visit their{' '}
               {company.atsUrl ? (
-                <a
-                  href={company.atsUrl}
-                  className="text-blue-400 hover:underline"
-                >
+                <a href={cleanUrl(company.atsUrl)} className="text-blue-400 hover:underline">
                   careers page
                 </a>
               ) : (
@@ -350,7 +334,7 @@ export default async function CompanyPage({
                   <span>💰</span> High-Salary Positions ($100k+)
                 </h3>
                 <div className="space-y-3">
-                  {highSalaryJobs.map((job: JobWithFlags) => (
+                  {highSalaryJobs.map((job) => (
                     <JobListItem key={job.id} job={job} />
                   ))}
                 </div>
@@ -366,7 +350,7 @@ export default async function CompanyPage({
                   </h3>
                 )}
                 <div className="space-y-3">
-                  {otherJobs.map((job: JobWithFlags) => (
+                  {otherJobs.map((job) => (
                     <JobListItem key={job.id} job={job} />
                   ))}
                 </div>
@@ -412,15 +396,11 @@ export default async function CompanyPage({
       {/* JSON-LD */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(organizationJsonLd),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbJsonLd),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
     </main>
   )
@@ -434,6 +414,16 @@ function JobListItem({ job }: { job: JobWithFlags }) {
   const salaryText = buildSalaryText(job)
   const locationText = buildLocationText(job)
   const isHighSalary = job.isHighSalary
+
+  // IMPORTANT: Some feeds store escaped HTML as text (e.g. "&lt;div class=...&gt;")
+  // so we normalize to plain text before rendering.
+  const rawSnippet =
+    (job as any).descriptionHtml ??
+    (job as any).description ??
+    (job as any).body ??
+    null
+
+  const snippet = rawSnippet ? truncateText(toPlainText(String(rawSnippet)), 140) : null
 
   return (
     <div className="group rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-colors hover:border-slate-700">
@@ -450,12 +440,15 @@ function JobListItem({ job }: { job: JobWithFlags }) {
             {locationText && <span>📍 {locationText}</span>}
             {job.type && <span>· {job.type}</span>}
             {job.postedAt && (
-              <span>
-                · Posted{' '}
-                {formatRelativeTime(job.postedAt) ?? ''}
-              </span>
+              <span>· Posted {formatRelativeTime(job.postedAt) ?? ''}</span>
             )}
           </div>
+
+          {snippet && snippet.length > 20 && (
+            <p className="mt-2 text-sm text-slate-300">
+              {snippet}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -473,7 +466,7 @@ function JobListItem({ job }: { job: JobWithFlags }) {
 
           {job.applyUrl && (
             <a
-              href={job.applyUrl}
+              href={cleanUrl(job.applyUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
@@ -530,14 +523,30 @@ function stripTags(str: string): string {
   return str.replace(/<\/?[^>]+(>|$)/g, '')
 }
 
+/**
+ * The key fix:
+ * 1) decode HTML entities (so "&lt;div&gt;" becomes "<div>")
+ * 2) strip tags
+ * 3) normalize whitespace
+ */
+function toPlainText(input: string): string {
+  const decoded = decodeHtmlEntities(input || '')
+  const stripped = stripTags(decoded)
+  return stripped.replace(/\s+/g, ' ').trim()
+}
+
 function truncateText(str: string, maxChars: number): string {
   if (str.length <= maxChars) return str
   const truncated = str.slice(0, maxChars)
   const lastSpace = truncated.lastIndexOf(' ')
-  return (
-    truncated.slice(0, lastSpace > 0 ? lastSpace : maxChars) +
-    '…'
-  )
+  return truncated.slice(0, lastSpace > 0 ? lastSpace : maxChars) + '…'
+}
+
+function cleanUrl(url: string): string {
+  const s = (url || '').trim()
+  if (!s) return '#'
+  if (s.startsWith('http://') || s.startsWith('https://')) return s
+  return `https://${s}`
 }
 
 /* -------------------------------------------------------------------------- */
@@ -552,12 +561,10 @@ function buildOrganizationJsonLd(company: NonNullable<CompanyWithJobs>) {
     url: company.website || `${SITE_URL}/company/${company.slug}`,
   }
 
-  if (company.logoUrl) {
-    jsonLd.logo = company.logoUrl
-  }
+  if (company.logoUrl) jsonLd.logo = company.logoUrl
 
   if (company.description) {
-    jsonLd.description = truncateText(stripTags(company.description), 200)
+    jsonLd.description = truncateText(toPlainText(company.description), 200)
   }
 
   if (company.headquarters) {
@@ -582,12 +589,7 @@ function buildBreadcrumbJsonLd(company: NonNullable<CompanyWithJobs>) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: `${SITE_URL}/`,
-      },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
       {
         '@type': 'ListItem',
         position: 2,
