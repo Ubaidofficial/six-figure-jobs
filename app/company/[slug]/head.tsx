@@ -15,18 +15,15 @@ export default async function Head({
 
   const company = await prisma.company.findUnique({
     where: { slug },
-    select: { slug: true },
+    select: { id: true, slug: true },
   })
 
   if (!company) return null
 
-  // Count live jobs using the relation (companyRef) instead of companySlug
   const liveJobCount = await prisma.job.count({
     where: {
       isExpired: false,
-      companyRef: {
-        slug: company.slug,
-      },
+      companyId: company.id,
     },
   })
 

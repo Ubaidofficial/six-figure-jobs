@@ -55,15 +55,13 @@ export async function generateMetadata({
   const { slug } = await params
   const company = await getCompanyWithJobs(slug)
 
-  if (!company) {
-    return { title: `Company not found | ${SITE_NAME}` }
-  }
+  if (!company) return { title: `Company not found | ${SITE_NAME}` }
 
   const jobCount = company.jobs.length
   const highSalaryCount = company.jobs.filter((j: JobWithFlags) => j.isHighSalary)
     .length
 
-  // Keep your existing rule, but use live job count (this page already queries live jobs)
+  // Keep your rule: index only when enough content
   const allowIndex = jobCount >= 3
 
   const title = `${company.name} Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
@@ -83,9 +81,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: canonicalUrl },
-    robots: allowIndex
-      ? { index: true, follow: true }
-      : { index: false, follow: true },
+    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,
       description,
@@ -194,9 +190,7 @@ export default async function CompanyPage({
               <p className="mt-4 text-sm leading-relaxed text-slate-300">
                 {company.name} is hiring $100k+ talent across{' '}
                 {company.industry ?? 'multiple teams'}. Explore roles in{' '}
-                {highSalaryJobs.length > 0
-                  ? 'high-compensation'
-                  : 'their latest'}{' '}
+                {highSalaryJobs.length > 0 ? 'high-compensation' : 'their latest'}{' '}
                 postings and discover remote and on-site opportunities.
               </p>
             )}
@@ -316,7 +310,10 @@ export default async function CompanyPage({
             <p className="mt-2 text-sm text-slate-500">
               Check back later or visit their{' '}
               {company.atsUrl ? (
-                <a href={cleanUrl(company.atsUrl)} className="text-blue-400 hover:underline">
+                <a
+                  href={cleanUrl(company.atsUrl)}
+                  className="text-blue-400 hover:underline"
+                >
                   careers page
                 </a>
               ) : (
@@ -327,7 +324,6 @@ export default async function CompanyPage({
           </div>
         ) : (
           <div className="space-y-6">
-            {/* High Salary Jobs */}
             {highSalaryJobs.length > 0 && (
               <div>
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-emerald-400">
@@ -341,7 +337,6 @@ export default async function CompanyPage({
               </div>
             )}
 
-            {/* Other Jobs */}
             {otherJobs.length > 0 && (
               <div>
                 {highSalaryJobs.length > 0 && (
@@ -415,15 +410,12 @@ function JobListItem({ job }: { job: JobWithFlags }) {
   const locationText = buildLocationText(job)
   const isHighSalary = job.isHighSalary
 
-  // IMPORTANT: Some feeds store escaped HTML as text (e.g. "&lt;div class=...&gt;")
-  // so we normalize to plain text before rendering.
   const rawSnippet =
-    (job as any).descriptionHtml ??
-    (job as any).description ??
-    (job as any).body ??
-    null
+    (job as any).descriptionHtml ?? (job as any).description ?? (job as any).body ?? null
 
-  const snippet = rawSnippet ? truncateText(toPlainText(String(rawSnippet)), 140) : null
+  const snippet = rawSnippet
+    ? truncateText(toPlainText(String(rawSnippet)), 140)
+    : null
 
   return (
     <div className="group rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-colors hover:border-slate-700">
@@ -439,15 +431,11 @@ function JobListItem({ job }: { job: JobWithFlags }) {
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
             {locationText && <span>📍 {locationText}</span>}
             {job.type && <span>· {job.type}</span>}
-            {job.postedAt && (
-              <span>· Posted {formatRelativeTime(job.postedAt) ?? ''}</span>
-            )}
+            {job.postedAt && <span>· Posted {formatRelativeTime(job.postedAt) ?? ''}</span>}
           </div>
 
           {snippet && snippet.length > 20 && (
-            <p className="mt-2 text-sm text-slate-300">
-              {snippet}
-            </p>
+            <p className="mt-2 text-sm text-slate-300">{snippet}</p>
           )}
         </div>
 
@@ -486,15 +474,10 @@ function JobListItem({ job }: { job: JobWithFlags }) {
 
 function buildLocationText(job: JobWithFlags): string {
   const isRemote = job.remote === true || job.remoteMode === 'remote'
-
-  if (isRemote) {
-    return job.countryCode ? `Remote (${job.countryCode})` : 'Remote'
-  }
-
+  if (isRemote) return job.countryCode ? `Remote (${job.countryCode})` : 'Remote'
   if (job.city && job.countryCode) return `${job.city}, ${job.countryCode}`
   if (job.countryCode) return job.countryCode
   if (job.locationRaw) return job.locationRaw
-
   return ''
 }
 
@@ -511,24 +494,21 @@ function parseTags(raw?: string | null): string[] {
 }
 
 function decodeHtmlEntities(str: string): string {
-  return str
+  return (str || '')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    // numeric entities: &#60; or &#x3C;
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
 }
 
 function stripTags(str: string): string {
-  return str.replace(/<\/?[^>]+(>|$)/g, '')
+  return (str || '').replace(/<\/?[^>]+(>|$)/g, '')
 }
 
-/**
- * The key fix:
- * 1) decode HTML entities (so "&lt;div&gt;" becomes "<div>")
- * 2) strip tags
- * 3) normalize whitespace
- */
 function toPlainText(input: string): string {
   const decoded = decodeHtmlEntities(input || '')
   const stripped = stripTags(decoded)
@@ -536,8 +516,9 @@ function toPlainText(input: string): string {
 }
 
 function truncateText(str: string, maxChars: number): string {
-  if (str.length <= maxChars) return str
-  const truncated = str.slice(0, maxChars)
+  const s = str || ''
+  if (s.length <= maxChars) return s
+  const truncated = s.slice(0, maxChars)
   const lastSpace = truncated.lastIndexOf(' ')
   return truncated.slice(0, lastSpace > 0 ? lastSpace : maxChars) + '…'
 }
