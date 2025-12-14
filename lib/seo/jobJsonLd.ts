@@ -194,16 +194,16 @@ function toNumberSafe(v: any): number | null {
 }
 
 function normalizeAnnualAmount(n: number): number {
-  // Heuristic: if it looks like cents (e.g. 14560000000), convert to dollars.
-  // Most real annual salaries in dollars are < 10,000,000.
-  if (n >= 1_000_000 && n % 100 === 0) return Math.round(n / 100)
-  if (n >= 10_000_000) return Math.round(n / 100) // fallback for non-100-multiple
+  // Treat very large values as "cents" (common from ATS/payroll exports).
+  // Real annual salaries in dollars are almost always < 10,000,000.
+  if (n >= 50_000_000) return Math.round(n / 100)
   return Math.round(n)
 }
 
 function stripTags(str?: string | null): string {
   if (!str) return ''
-  return str.replace(/<\/?[^>]+(>|$)/g, '')
+  // Replace tags with a space to avoid smashing words together
+  return str.replace(/<\/?[^>]+(>|$)/g, ' ')
 }
 
 function cleanDescription(s: string): string {
