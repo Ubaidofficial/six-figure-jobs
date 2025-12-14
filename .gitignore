@@ -19,3 +19,4 @@ prisma/dev.db
 prisma/dev.backup.db
 
 scrape.log
+scripts/checkCounts.ts
