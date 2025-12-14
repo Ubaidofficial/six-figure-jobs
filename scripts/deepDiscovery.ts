@@ -5,9 +5,14 @@ import puppeteer, { Page } from 'puppeteer'
 import { prisma } from '../lib/prisma'
 import { makeBoardSource } from '../lib/ingest/sourcePriority'
 
-// =============================================================================
-// Configuration
-// =============================================================================
+/**
+ * Deep Company Discovery (Puppeteer + fallback generic scrape)
+ *
+ * v2.8 notes:
+ * - Do NOT write job.shortId here (unless you’ve added it to Prisma + migrated).
+ * - v2.8 canonical job slugs can be built from job.id at runtime.
+ * - We generate a deterministic job.id to reduce duplicates across re-runs.
+ */
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -41,10 +46,6 @@ const JOB_TITLE_KEYWORDS = [
   'success',
 ]
 
-// =============================================================================
-// Main Script
-// =============================================================================
-
 async function main() {
   console.log('🚀 Starting Deep Company Discovery (Puppeteer + Generic Fallback)...')
 
@@ -72,31 +73,26 @@ async function main() {
       try {
         await processCompany(company, page)
       } catch (err) {
-        console.error(`❌ Error processing ${company.name}:`, err)
+        console.error(`❌ Error processing ${company?.name || company?.id}:`, err)
       } finally {
         await page.close()
       }
 
-      await sleep(1000)
+      await sleep(900)
     }
   } finally {
     await browser.close()
   }
 }
 
-// =============================================================================
-// Processing Logic
-// =============================================================================
-
 async function processCompany(company: any, page: Page) {
   process.stdout.write(`\n🔍 ${company.name}: `)
 
-  const candidates: string[] = buildCandidateUrls(company)
-
-  let foundSomething = false
+  const candidates = buildCandidateUrls(company)
+  let found = false
 
   for (const candidateUrl of candidates) {
-    if (foundSomething) break
+    if (found) break
 
     try {
       const url = normalizeUrl(candidateUrl)
@@ -135,116 +131,110 @@ async function processCompany(company: any, page: Page) {
           update: {
             atsProvider: atsResult.provider,
             lastScrapedAt: new Date(),
+            isActive: true,
           },
         })
 
-        foundSomething = true
+        found = true
         continue
       }
 
-      // B) Generic scrape (fallback)
+      // B) Generic scrape fallback (careers-ish pages)
       const isLikelyCareersPage =
         url.includes('/careers') || url.includes('/jobs') || candidates.indexOf(candidateUrl) === 0
 
-      if (isLikelyCareersPage) {
-        const genericJobs = await scanGenericJobs(page)
+      if (!isLikelyCareersPage) continue
 
-        if (genericJobs.length > 0) {
-          console.log(`✅ GENERIC SCRAPE: Found ${genericJobs.length} potential jobs on ${url}`)
+      const genericJobs = await scanGenericJobs(page)
+      if (!genericJobs.length) continue
 
-          await prisma.company.update({
-            where: { id: company.id },
-            data: { website: getBaseUrl(url) },
-          })
+      console.log(`✅ GENERIC SCRAPE: Found ${genericJobs.length} potential jobs on ${url}`)
 
-          await prisma.companySource.upsert({
-            where: { companyId_url: { companyId: company.id, url } },
-            create: {
-              companyId: company.id,
-              url,
-              sourceType: 'generic_careers_page',
-              isActive: true,
-              scrapeStatus: 'active',
-            },
-            update: { lastScrapedAt: new Date() },
-          })
+      await prisma.company.update({
+        where: { id: company.id },
+        data: { website: getBaseUrl(url) },
+      })
 
-          // Save discovered jobs (bootstrap)
-          let newJobs = 0
-          for (const job of genericJobs) {
-            const jobUrl = normalizeUrl(job.url)
-            if (!jobUrl) continue
+      await prisma.companySource.upsert({
+        where: { companyId_url: { companyId: company.id, url } },
+        create: {
+          companyId: company.id,
+          url,
+          sourceType: 'generic_careers_page',
+          isActive: true,
+          scrapeStatus: 'active',
+        },
+        update: { lastScrapedAt: new Date(), isActive: true },
+      })
 
-            // Deterministic ID to reduce duplicates: hash(companyId + jobUrl)
-            const id = stableJobId(company.id, jobUrl)
+      // Save discovered jobs (bootstrap)
+      let upserted = 0
 
-            // IMPORTANT:
-            // - Do NOT write `shortId` unless you actually add it to Prisma schema + migrate.
-            // - v2.8 can compute short stable id from job.id at runtime.
-            await prisma.job.upsert({
-              where: { id },
-              create: {
-                id,
-                title: job.title?.trim() || 'Job',
-                company: company.name,
-                companyId: company.id,
-                url: jobUrl,
-                applyUrl: jobUrl,
-                source: makeBoardSource('generic_discovery'),
-                descriptionHtml: 'Discovered via generic scrape',
-                postedAt: new Date(),
-                isHighSalary: false,
-              },
-              update: {
-                // keep it light—don’t overwrite good data if later pipelines enriched it
-                title: job.title?.trim() || undefined,
-                url: jobUrl,
-                applyUrl: jobUrl,
-                updatedAt: new Date(),
-              },
-            })
+      for (const job of genericJobs) {
+        const jobUrl = normalizeUrl(job.url)
+        if (!jobUrl) continue
 
-            newJobs++
-          }
+        const title = String(job.title || '').trim() || 'Job'
 
-          console.log(`   -> Upserted ${newJobs} jobs to DB`)
-          foundSomething = true
-        }
+        // Deterministic ID to reduce duplicates: hash(companyId + jobUrl)
+        const id = stableJobId(company.id, jobUrl)
+
+        await prisma.job.upsert({
+          where: { id },
+          create: {
+            id,
+            title,
+            company: company.name,
+            companyId: company.id,
+            url: jobUrl,
+            applyUrl: jobUrl,
+            source: makeBoardSource('generic_discovery'),
+            descriptionHtml: 'Discovered via generic scrape',
+            postedAt: new Date(),
+            isHighSalary: false,
+          },
+          update: {
+            // keep it light—don’t overwrite enriched fields from other pipelines
+            title,
+            url: jobUrl,
+            applyUrl: jobUrl,
+          },
+        })
+
+        upserted++
       }
+
+      console.log(`   -> Upserted ${upserted} jobs to DB`)
+      found = true
     } catch {
       // ignore navigation errors for guesses
     }
   }
 
-  if (!foundSomething) {
+  if (!found) {
     process.stdout.write('❌ No ATS or Job Links found')
   }
 }
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
 
 async function detectATS(page: Page): Promise<{ provider: string; slug: string } | null> {
   const url = page.url()
   for (const p of ATS_PATTERNS) {
     const match = url.match(p.regex)
-    if (match && match[1]) return { provider: p.provider, slug: match[1] }
+    if (match?.[1]) return { provider: p.provider, slug: match[1] }
   }
 
   const content = await page.content()
   for (const p of ATS_PATTERNS) {
     const match = content.match(p.regex)
-    if (match && match[1]) return { provider: p.provider, slug: match[1] }
+    if (match?.[1]) return { provider: p.provider, slug: match[1] }
   }
 
-  const frames = page.frames()
-  for (const frame of frames) {
+  for (const frame of page.frames()) {
     try {
       const frameUrl = frame.url()
       for (const p of ATS_PATTERNS) {
         const match = frameUrl.match(p.regex)
-        if (match && match[1]) return { provider: p.provider, slug: match[1] }
+        if (match?.[1]) return { provider: p.provider, slug: match[1] }
       }
     } catch {
       // ignore
@@ -276,16 +266,17 @@ async function scanGenericJobs(page: Page): Promise<Array<{ title: string; url: 
       )
     }
 
-    links.forEach((link) => {
-      const text = (link as HTMLAnchorElement).innerText?.trim() || ''
-      const href = (link as HTMLAnchorElement).href || ''
+    for (const el of links) {
+      const a = el as HTMLAnchorElement
+      const text = a.innerText?.trim() || ''
+      const href = a.href || ''
+      if (!text || !href) continue
+      if (!hasJobKeyword(text) || isBadLink(text)) continue
 
-      if (text && href && hasJobKeyword(text) && !isBadLink(text)) {
-        if (!results.find((r) => r.url === href)) {
-          results.push({ title: text, url: href })
-        }
+      if (!results.find((r) => r.url === href)) {
+        results.push({ title: text, url: href })
       }
-    })
+    }
 
     return results
   }, JOB_TITLE_KEYWORDS)
@@ -295,10 +286,11 @@ function buildCandidateUrls(company: any): string[] {
   const candidates: string[] = []
 
   if (company.website) {
-    const base = normalizeUrl(company.website) || company.website
-    candidates.push(base)
-    candidates.push(base.replace(/\/$/, '') + '/careers')
-    candidates.push(base.replace(/\/$/, '') + '/jobs')
+    const base = normalizeUrl(company.website) || String(company.website)
+    const trimmed = base.replace(/\/$/, '')
+    candidates.push(trimmed)
+    candidates.push(`${trimmed}/careers`)
+    candidates.push(`${trimmed}/jobs`)
   } else {
     const cleanName = String(company.name || '')
       .toLowerCase()
@@ -328,14 +320,11 @@ function normalizeUrl(u: string): string | null {
   const s = String(u || '').trim()
   if (!s) return null
   if (s.startsWith('http://') || s.startsWith('https://')) return s
-  // Avoid turning weird relative junk into https://
   if (s.startsWith('/')) return null
   return `https://${s}`
 }
 
 function stableJobId(companyId: string, jobUrl: string): string {
-  // deterministic “id” that is stable across re-runs
-  // Format: generic:<companyId>:<sha1(url)[:16]>
   const hash = createHash('sha1').update(jobUrl).digest('hex').slice(0, 16)
   return `generic:${companyId}:${hash}`
 }
