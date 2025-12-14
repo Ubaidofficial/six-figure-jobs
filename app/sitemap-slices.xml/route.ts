@@ -7,7 +7,7 @@ const SITE_URL = getSiteUrl()
 const BUILD_LASTMOD = new Date().toISOString()
 
 export const dynamic = 'force-static'
-export const revalidate = 60 * 60 * 24 // 24h
+export const revalidate = 86400 // 24h
 
 export async function GET() {
   const entries = ['sitemap-slices/priority', 'sitemap-slices/longtail']

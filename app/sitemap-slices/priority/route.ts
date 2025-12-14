@@ -8,7 +8,7 @@ import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
 import type { SliceFilters } from '../../../lib/slices/types'
 
 export const dynamic = 'force-static'
-export const revalidate = 60 * 60 * 24 // 24h
+export const revalidate = 86400 // 24h
 
 const SITE_URL = getSiteUrl()
 const RECENT_DAYS = 7

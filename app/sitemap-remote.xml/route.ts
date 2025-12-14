@@ -6,7 +6,7 @@ import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 const SITE_URL = getSiteUrl()
 
 export const dynamic = 'force-static'
-export const revalidate = 60 * 60 * 24 // 24h
+export const revalidate = 86400 // 24h
 
 function escapeXml(s: string) {
   return s
