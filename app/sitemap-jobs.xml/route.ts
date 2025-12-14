@@ -9,7 +9,16 @@ const PAGE_SIZE = 20000
 const BUILD_LASTMOD = new Date().toISOString()
 
 export const dynamic = 'force-static'
-export const revalidate = 86400 // 24h (number literal)
+export const revalidate = 86400 // 24h
+
+function escapeXml(s: string) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
 
 function buildHundredKWhereBase() {
   const threshold = BigInt(100_000)
@@ -33,8 +42,9 @@ export async function GET() {
 
   const sitemapEntries = Array.from({ length: pages }).map((_, i) => {
     const page = i + 1
+    const loc = escapeXml(`${SITE_URL}/sitemap-jobs/${page}`)
     return `  <sitemap>
-    <loc>${SITE_URL}/sitemap-jobs/${page}</loc>
+    <loc>${loc}</loc>
     <lastmod>${BUILD_LASTMOD}</lastmod>
   </sitemap>`
   })

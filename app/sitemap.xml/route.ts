@@ -6,7 +6,16 @@ const SITE_URL = getSiteUrl()
 const BUILD_LASTMOD = new Date().toISOString()
 
 export const dynamic = 'force-static'
-export const revalidate = 86400 // 24h (MUST be a number literal, not an expression)
+export const revalidate = 86400 // 24h
+
+function escapeXml(s: string) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
 
 export async function GET() {
   const sitemaps = [
@@ -24,12 +33,13 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${sitemaps
-  .map(
-    (s) => `  <sitemap>
-    <loc>${SITE_URL}/${s}</loc>
+  .map((s) => {
+    const loc = escapeXml(`${SITE_URL}/${s}`)
+    return `  <sitemap>
+    <loc>${loc}</loc>
     <lastmod>${BUILD_LASTMOD}</lastmod>
-  </sitemap>`,
-  )
+  </sitemap>`
+  })
   .join('\n')}
 </sitemapindex>`
 

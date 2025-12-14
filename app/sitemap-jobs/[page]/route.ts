@@ -1,15 +1,14 @@
 // app/sitemap-jobs/[page]/route.ts
 
 import { prisma } from '../../../lib/prisma'
-import type { JobWithCompany } from '../../../lib/jobs/queryJobs'
-import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
+import { buildJobSlug } from '../../../lib/jobs/jobSlug'
 import { getSiteUrl } from '../../../lib/seo/site'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
 
 export const dynamic = 'force-static'
-export const revalidate = 86400 // 24h (number literal)
+export const revalidate = 86400 // 24h
 
 function escapeXml(s: string) {
   return s
@@ -35,7 +34,7 @@ function buildHundredKWhereBase() {
 
 export async function GET(
   _req: Request,
-  ctx: { params: Promise<{ page: string }> }, // IMPORTANT: keep this as Promise for your Next build
+  ctx: { params: Promise<{ page: string }> },
 ) {
   const params = await ctx.params
   const pageNum = Math.max(1, Number(params.page) || 1)
@@ -45,7 +44,6 @@ export async function GET(
     select: {
       id: true,
       title: true,
-      company: true,
       updatedAt: true,
     },
     orderBy: { updatedAt: 'desc' },
@@ -55,8 +53,9 @@ export async function GET(
 
   const urlXml = jobs
     .map((job) => {
-      const href = buildJobSlugHref(job as unknown as JobWithCompany)
-      const loc = escapeXml(`${SITE_URL}${href}`)
+      // ✅ Always generate canonical v2.8 URL (no legacy/roleSlug risk)
+      const slug = buildJobSlug({ id: job.id, title: job.title })
+      const loc = escapeXml(`${SITE_URL}/job/${slug}`)
       const lastmod = (job.updatedAt ?? new Date()).toISOString()
 
       return `  <url>
