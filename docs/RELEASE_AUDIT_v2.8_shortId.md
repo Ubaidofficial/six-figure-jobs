@@ -11796,3 +11796,10 @@ Blast radius: (unscoped)
 ### DO-NOT-CHANGE (until blockers fixed)
 - Do not expand sitemap coverage or publish new longtail slices.
 - Do not introduce new indexable URL patterns.
+
+## Post-launch UI Fixes (Non-breaking)
+
+- Restored short job description/snippet on homepage job cards
+- Improved job card readability and spacing
+- Added emoji-based visual cues (salary, location, remote, featured)
+- No changes to URLs, slugs, canonicals, or sitemaps
