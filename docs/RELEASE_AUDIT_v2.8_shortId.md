@@ -11851,3 +11851,24 @@ Blast radius: (unscoped)
 - No blog content or forums
 - No user accounts or filters expansion
 
+
+---
+
+## v2.9 Forward Reference (Non-Breaking Release)
+
+v2.9 is a strictly non-breaking release focused on **AI job content enrichment and UX clarity**.
+
+It introduces:
+- AI-refined job summaries
+- Structured responsibilities, requirements, and benefits
+- Improved job card snippets
+
+Explicitly excluded from v2.9:
+- ❌ URL changes
+- ❌ Slug changes
+- ❌ Canonical changes
+- ❌ Sitemap changes
+- ❌ Routing or indexation changes
+
+👉 Full audit details live in:
+`docs/RELEASE_AUDIT_v2.9.md`
