@@ -49,7 +49,6 @@ ${input.description}
   try {
     parsed = JSON.parse(cleaned)
   } catch (e: any) {
-    // include a tiny snippet to debug without spamming logs
     const snippet = String(raw || '').slice(0, 220)
     throw new Error(`Failed to parse AI JSON: ${e?.message || e}. RawHead="${snippet}"`)
   }
@@ -57,7 +56,6 @@ ${input.description}
   const summary = cleanString(parsed.summary)
   const bullets = cleanStringArray(parsed.bullets).slice(0, 4)
 
-  // Filter tech to “real” terms; drop weak tokens like "ai"
   const techStackRaw = cleanLowerStringArray(parsed.techStack)
   const techStack = filterRealTech(techStackRaw).slice(0, 10)
 
@@ -69,14 +67,12 @@ ${input.description}
 function extractFirstJsonObject(text: string): string {
   const s = (text || '').trim()
 
-  // Remove ```json fences if present
   const unfenced = s
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
     .replace(/```$/i, '')
     .trim()
 
-  // Extract first { ... } (handles extra prose)
   const start = unfenced.indexOf('{')
   const end = unfenced.lastIndexOf('}')
   if (start === -1 || end === -1 || end <= start) return unfenced
@@ -112,6 +108,7 @@ function cleanLowerStringArray(v: any): string[] {
 }
 
 function filterRealTech(items: string[]): string[] {
+  // Keep this conservative; enrichers can add broader keywords in "keywords".
   const stop = new Set([
     'ai',
     'ml',
@@ -121,6 +118,9 @@ function filterRealTech(items: string[]): string[] {
     'systems',
     'automation',
     'devops',
+    'software',
+    'engineering',
+    'saas',
   ])
 
   const out: string[] = []
@@ -128,6 +128,10 @@ function filterRealTech(items: string[]): string[] {
     if (!t) continue
     if (stop.has(t)) continue
     if (t.length < 3) continue
+
+    // drop ultra-generic tokens
+    if (/^(tool|tools|framework|frameworks|api|apis|database|databases)$/.test(t)) continue
+
     out.push(t)
   }
   return out

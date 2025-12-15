@@ -2,6 +2,8 @@
 import 'dotenv/config'
 import { PrismaClient, type Prisma, type Job } from '@prisma/client'
 import { annotateJobWithAI } from '../lib/ai/jobAnnotator'
+import { getHighSalaryThresholdAnnual } from '../lib/currency/thresholds'
+import { HIGH_SALARY_MIN_CONFIDENCE } from '../lib/jobs/queryJobs'
 
 const prisma = new PrismaClient()
 
@@ -11,16 +13,42 @@ function stripHtml(html: string): string {
   return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+function safeToNumber(v: any): number | null {
+  if (v == null) return null
+  if (typeof v === 'bigint') {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
 /**
- * We only enrich jobs we actually show (salary-qualified)
- * => avoids wasting spend on low-quality / low-signal jobs.
+ * v2.9: Only enrich jobs we actually publish (numeric + validated only)
+ * - salaryValidated=true
+ * - salaryConfidence>=HIGH_SALARY_MIN_CONFIDENCE
+ * - per-currency threshold via getHighSalaryThresholdAnnual(currency)
+ * - descriptionHtml required
  */
 function qualifiesForDisplay(job: Job): boolean {
-  const min = job.minAnnual ?? job.salaryMin
-  if (!min) return false
-  const n = Number(min)
-  if (!Number.isFinite(n)) return false
-  return n >= 100_000 && Boolean(job.descriptionHtml)
+  if (job.isExpired) return false
+  if (!job.descriptionHtml) return false
+
+  // v2.9 hard gate
+  if (job.salaryValidated !== true) return false
+  if ((job.salaryConfidence ?? 0) < HIGH_SALARY_MIN_CONFIDENCE) return false
+
+  const threshold = getHighSalaryThresholdAnnual(job.currency)
+  if (!threshold) return false
+
+  const minAnnual = safeToNumber(job.minAnnual)
+  const maxAnnual = safeToNumber(job.maxAnnual)
+
+  // If either side qualifies, we consider it eligible
+  if (minAnnual != null && minAnnual >= threshold) return true
+  if (maxAnnual != null && maxAnnual >= threshold) return true
+
+  return false
 }
 
 function safeSnippet(s: string | null): string | null {
@@ -38,27 +66,33 @@ async function main() {
 
   console.log(`🤖 AI annotate (limit=${limit}, dryRun=${dryRun})`)
 
+  // Pull only jobs that are likely eligible; final gate enforced in qualifiesForDisplay()
   const jobs = await prisma.job.findMany({
     where: {
       isExpired: false,
       descriptionHtml: { not: null },
-      OR: [{ minAnnual: { gte: 100_000 } }, { salaryMin: { gte: 100_000 } }, { isHighSalary: true }],
+      salaryValidated: true,
+      salaryConfidence: { gte: HIGH_SALARY_MIN_CONFIDENCE },
     },
     orderBy: { createdAt: 'desc' },
     take: limit,
   })
 
   if (!jobs.length) {
-    console.log('No salary-qualified jobs found.')
+    console.log('No jobs found for enrichment query.')
     return
   }
 
   let updated = 0
   let skippedLowQuality = 0
+  let skippedNotEligible = 0
   let failed = 0
 
   for (const job of jobs) {
-    if (!qualifiesForDisplay(job)) continue
+    if (!qualifiesForDisplay(job)) {
+      skippedNotEligible++
+      continue
+    }
 
     const description = stripHtml(job.descriptionHtml!).slice(0, 7000)
 
@@ -74,8 +108,8 @@ async function main() {
       // - >=2 real tech terms (after filtering in annotator)
       const qualityScore =
         (ai.summary ? 1 : 0) +
-        (ai.bullets?.length >= 2 ? 1 : 0) +
-        (ai.techStack?.length >= 2 ? 1 : 0)
+        ((ai.bullets?.length ?? 0) >= 2 ? 1 : 0) +
+        ((ai.techStack?.length ?? 0) >= 2 ? 1 : 0)
 
       if (qualityScore < minQuality) {
         console.log(`⏭️ Skipped low quality (${qualityScore}/${minQuality}): ${job.title}`)
@@ -118,9 +152,14 @@ async function main() {
     }
   }
 
-  console.log(`\nDone. Updated ${updated} jobs. SkippedLowQuality=${skippedLowQuality}. Failed=${failed}.`)
+  console.log(
+    `\nDone. Updated ${updated} jobs. SkippedNotEligible=${skippedNotEligible}. SkippedLowQuality=${skippedLowQuality}. Failed=${failed}.`,
+  )
 }
 
 main()
-  .catch(console.error)
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })
   .finally(() => prisma.$disconnect())
