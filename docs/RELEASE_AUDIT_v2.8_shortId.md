@@ -11807,3 +11807,47 @@ Blast radius: (unscoped)
 - Homepage now renders JobCardV2 via app/components/JobList.tsx (no routing or SEO changes)
 - Added shared emoji helper (lib/ui/emoji.ts) for consistent UI cues
 - Updated job detail UI (app/job/[slug]/page.tsx) to align with new job card styling and emojis
+
+---
+
+## v2.9 – Authority, AI Refinement & Ranking Expansion (Planned)
+
+### Scope
+- Transform raw ATS job data into concise, authoritative, AI-refined content
+- Improve readability, scannability, and user trust without changing URLs or index rules
+
+### Job Detail Page Enhancements
+- AI-refined role overview (3–5 sentences)
+- Clean, deduplicated responsibilities list
+- Simplified hard requirements section
+- Minimized and structured benefits & perks
+- “Why this job pays $100k+” explanation derived from role, seniority, and market demand
+
+### Homepage & Job Cards
+- Restored and enhanced short job descriptions/snippets
+- Emoji-based visual cues for salary, location, remote status, and featured roles
+- Improved spacing, hierarchy, and readability
+- No impact to routing, slugs, or SEO canonicals
+
+### Skill & Data Intelligence
+- Surface top skills per role and per job
+- Highlight skills correlated with six-figure compensation
+- Enable future ranking for skill + salary combinations
+
+### Company & Trust Signals
+- Hiring momentum indicators (recent postings, active hiring)
+- Remote-friendliness and growth signals derived from data
+- No speculative claims or user-generated content
+
+### Editorial Authority (Tier-1 Roles Only)
+- Short role primers explaining:
+  - What the role does
+  - Why it commands six-figure pay
+  - Skills and experience that matter most
+- Applied only to Tier-1 roles to avoid index bloat
+
+### Explicit Non-Goals
+- No URL, slug, canonical, sitemap, or routing changes
+- No blog content or forums
+- No user accounts or filters expansion
+
