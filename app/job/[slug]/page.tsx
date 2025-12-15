@@ -23,6 +23,9 @@ export const revalidate = 3600
 
 const SITE_URL = getSiteUrl()
 
+// Feature flag (NO routing/SEO changes)
+const AI_UI_ENABLED = process.env.AI_UI_ENABLED === '1'
+
 // During rollout, code may deploy before the DB migration has run.
 // Cache `true` once detected; keep re-checking while false.
 let cachedHasJobShortIdColumn: true | null = null
@@ -227,7 +230,23 @@ export default async function JobPage({
   const jsonLd = buildJobJsonLd(typedJob)
   const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
   const internalLinks = buildInternalLinks(typedJob)
-  const aiSummary = buildHeuristicSummary(typedJob, salaryText, locationText, seniority)
+
+  // v2.9 AI UI (feature flagged) -> prefer DB AI summary, fallback to heuristic
+  const aiFromDb = AI_UI_ENABLED ? buildAiSummaryFromDb(typedJob as any) : null
+  const aiSummary =
+    aiFromDb?.highlights && aiFromDb.highlights.length > 0
+      ? aiFromDb.highlights
+      : buildHeuristicSummary(typedJob, salaryText, locationText, seniority)
+
+  const aiSnippet =
+    AI_UI_ENABLED && typeof (typedJob as any)?.aiSnippet === 'string'
+      ? ((typedJob as any).aiSnippet as string)
+      : null
+
+  const aiQualityScore =
+    AI_UI_ENABLED && typeof (typedJob as any)?.aiQualityScore === 'number'
+      ? ((typedJob as any).aiQualityScore as number)
+      : null
 
   /* --------------------------- Similar jobs -------------------------------- */
 
@@ -572,16 +591,32 @@ export default async function JobPage({
             </section>
 
             {/* Highlights */}
-            {aiSummary && (
+            {(aiSnippet || aiSummary) && (
               <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 text-sm leading-relaxed text-slate-200">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">
-                  {e('highlights')} Why this $100k+ role stands out
-                </p>
-                <ul className="list-disc space-y-1 pl-5">
-                  {aiSummary.map((line, idx) => (
-                    <li key={idx}>{line}</li>
-                  ))}
-                </ul>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">
+                    {e('highlights')} Role highlights
+                  </p>
+                  {AI_UI_ENABLED && aiQualityScore != null && (
+                    <span className="text-[11px] text-slate-400">AI score: {aiQualityScore}/3</span>
+                  )}
+                </div>
+
+                {aiSnippet && <p className="mt-2 text-sm text-slate-200">{aiSnippet}</p>}
+
+                {aiSummary && (
+                  <ul className="mt-3 list-disc space-y-1 pl-5">
+                    {aiSummary.map((line, idx) => (
+                      <li key={idx}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+
+                {AI_UI_ENABLED && (
+                  <p className="mt-3 text-[11px] text-slate-500">
+                    AI summary is generated from the employer&apos;s job description. No invented facts.
+                  </p>
+                )}
               </section>
             )}
 
@@ -923,6 +958,24 @@ function isValidUrl(url?: string | null): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Prefer DB AI summary if present (feature flagged).
+ * Stores a compact list used by the UI.
+ */
+function buildAiSummaryFromDb(job: any): { highlights: string[] } | null {
+  const js = job?.aiSummaryJson
+  if (!js || typeof js !== 'object') return null
+
+  const bullets = Array.isArray((js as any).bullets) ? (js as any).bullets.map(String).filter(Boolean) : []
+  const summary = typeof (js as any).summary === 'string' ? String((js as any).summary).trim() : ''
+
+  const highlights: string[] = []
+  if (summary) highlights.push(summary)
+  for (const b of bullets.slice(0, 3)) highlights.push(b)
+
+  return highlights.length ? { highlights } : null
 }
 
 function buildHeuristicSummary(
