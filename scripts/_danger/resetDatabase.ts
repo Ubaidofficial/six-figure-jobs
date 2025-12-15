@@ -1,14 +1,20 @@
-// scripts/resetDatabase.ts
+// scripts/_danger/resetDatabase.ts
 // One-shot database reset:
 //  - Deletes ALL Job records
 //  - Then runs scripts/seed.ts to (re)seed companies & ATS links
 //
 // Run with:
-//   npx tsx scripts/resetDatabase.ts
+//   npx tsx scripts/_danger/resetDatabase.ts
 
 import { PrismaClient } from '@prisma/client'
 import readline from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
+
+if (process.env.ALLOW_DANGER !== 'true') {
+  console.error('Refusing to run. Set ALLOW_DANGER=true to proceed.')
+  process.exit(1)
+}
+
 
 const prisma = new PrismaClient()
 

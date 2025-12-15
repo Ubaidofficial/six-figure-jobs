@@ -1,7 +1,13 @@
-// scripts/cleanup-bad-companies.ts
-// Run: npx tsx scripts/cleanup-bad-companies.ts
+// scripts/_danger/cleanup-bad-companies.ts
+// Run: npx tsx scripts/_danger/cleanup-bad-companies.ts
 
 import { PrismaClient } from '@prisma/client'
+
+if (process.env.ALLOW_DANGER !== 'true') {
+  console.error('Refusing to run. Set ALLOW_DANGER=true to proceed.')
+  process.exit(1)
+}
+
 
 const prisma = new PrismaClient()
 

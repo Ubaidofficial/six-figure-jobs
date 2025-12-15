@@ -399,7 +399,7 @@ async function checkFiles() {
 
   const required = [
     'scripts/dailyScrapeV2.ts',
-    'scripts/resetDatabase.ts',
+    'scripts/_danger/resetDatabase.ts',
     'scripts/seed.ts',
     'lib/ingest/index.ts',
     'prisma/schema.prisma',

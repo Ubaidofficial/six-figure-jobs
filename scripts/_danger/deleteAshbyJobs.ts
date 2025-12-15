@@ -1,5 +1,11 @@
 import { PrismaClient } from '@prisma/client'
 
+if (process.env.ALLOW_DANGER !== 'true') {
+  console.error('Refusing to run. Set ALLOW_DANGER=true to proceed.')
+  process.exit(1)
+}
+
+
 const prisma = new PrismaClient()
 
 async function deleteAshbyJobs() {
