@@ -1,6 +1,6 @@
 // lib/normalizers/salary.ts
-// Multi-currency salary normalizer with local thresholds
-// Phase 4: adds country→currency helpers + currency/location consistency checks
+// Multi-currency salary normalizer + deterministic eligibility gates.
+// SINGLE threshold source: lib/currency/thresholds.ts
 
 import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
 
@@ -8,16 +8,13 @@ export type SalaryInterval = 'year' | 'month' | 'week' | 'day' | 'hour' | null
 export type SupportedCurrency = string
 
 /**
- * Country → expected local currency mapping (for trust layer)
- *
- * NOTE: This is intentionally opinionated and *not* exhaustive.
- * You can expand with more country codes as needed.
+ * Country → expected local currency mapping (trust layer)
  */
 export const COUNTRY_TO_CURRENCY: Record<string, string> = {
   US: 'USD',
   CA: 'CAD',
   AU: 'AUD',
-  NZ: 'AUD', // NZD currently treated as AU band in canonical thresholds
+  NZ: 'NZD',
   SG: 'SGD',
   GB: 'GBP',
   UK: 'GBP',
@@ -47,8 +44,30 @@ export function inferCurrencyFromCountryCode(
   return COUNTRY_TO_CURRENCY[code] ?? null
 }
 
+/* ------------------------------------------------------------------ */
+/* Central banned-title helper (Six Figure Jobs board rules)           */
+/* ------------------------------------------------------------------ */
+
 /**
- * High-level helper result for currency/location consistency
+ * Titles we never want to validate as “six-figure” even if salary looks high.
+ * This prevents “intern/junior/entry” leakage into high-paying feeds.
+ */
+export function isBannedTitleForSixFigureBoard(
+  title: string | null | undefined
+): boolean {
+  const t = String(title ?? '').toLowerCase().trim()
+  if (!t) return false
+
+  return (
+    /\b(intern|internship|co[-\s]?op)\b/.test(t) ||
+    /\b(junior|jr\.?)\b/.test(t) ||
+    /\b(entry[-\s]?level|entry)\b/.test(t) ||
+    /\b(apprentice|apprenticeship)\b/.test(t)
+  )
+}
+
+/**
+ * Currency/location consistency check result
  */
 export interface CurrencyLocationCheck {
   countryCode: string | null
@@ -61,17 +80,22 @@ export interface CurrencyLocationCheck {
 
 /**
  * Currency detection patterns
+ * - Order matters (A$ / C$ / NZ$ must be detected before $).
+ * - IMPORTANT: "$" alone is ambiguous. We DO NOT treat "$" as USD here.
  */
 const CURRENCY_PATTERNS: Array<{ pattern: RegExp; currency: SupportedCurrency }> = [
-  // Multi-char symbols first (order matters!)
   { pattern: /A\$|AU\$|AUD/i, currency: 'AUD' },
   { pattern: /C\$|CA\$|CAD/i, currency: 'CAD' },
   { pattern: /NZ\$|NZD/i, currency: 'NZD' },
   { pattern: /S\$|SG\$|SGD/i, currency: 'SGD' },
   { pattern: /CHF|Fr\./i, currency: 'CHF' },
-  { pattern: /SEK|kr/i, currency: 'SEK' },
+
+  // NOTE: "kr" is ambiguous across SEK/NOK/DKK; only accept explicit codes.
+  { pattern: /\bSEK\b/i, currency: 'SEK' },
+  { pattern: /\bNOK\b/i, currency: 'NOK' },
+  { pattern: /\bDKK\b/i, currency: 'DKK' },
+
   { pattern: /₹|INR|lakh|lakhs/i, currency: 'INR' },
-  // Single-char symbols last
   { pattern: /€|EUR/i, currency: 'EUR' },
   { pattern: /£|GBP/i, currency: 'GBP' },
   { pattern: /US\$|USD/i, currency: 'USD' },
@@ -122,6 +146,10 @@ export function getSalaryConfidenceForSource(source: SalarySource): number {
 function toNumberSafe(v: bigint | number | null): number | null {
   if (v == null) return null
   if (typeof v === 'number') return Number.isFinite(v) ? v : null
+  if (typeof v === 'bigint') {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
   try {
     const n = Number(v)
     return Number.isFinite(n) ? n : null
@@ -130,15 +158,36 @@ function toNumberSafe(v: bigint | number | null): number | null {
   }
 }
 
+/**
+ * Deterministic eligibility gate for "high-paying" jobs.
+ * - Uses ONLY getHighSalaryThresholdAnnual() for thresholds
+ * - Applies currency-based annual caps
+ * - Rejects ambiguous currency
+ * - Requires confidence >= 80
+ */
 export function validateHighSalaryEligibility(input: {
   normalized: NormalizedSalary
   source: SalarySource
   currencyAmbiguous?: boolean
   now?: Date
+  title?: string | null
 }): SalaryValidationResult {
   const now = input.now ?? new Date()
   const salaryConfidence = getSalaryConfidenceForSource(input.source)
   const salaryNormalizedAt = now
+
+  // Central title ban (optional but recommended everywhere)
+  if (isBannedTitleForSixFigureBoard(input.title)) {
+    return {
+      salaryValidated: false,
+      salaryConfidence,
+      salarySource: input.source,
+      salaryParseReason: 'below_threshold',
+      salaryNormalizedAt,
+      salaryRejectedAt: now,
+      salaryRejectedReason: 'banned-title:intern-junior-entry',
+    }
+  }
 
   if (input.currencyAmbiguous) {
     return {
@@ -192,6 +241,7 @@ export function validateHighSalaryEligibility(input: {
     }
   }
 
+  // Reject absurdly wide ranges (e.g. 50k–500k)
   if (
     minAnnual != null &&
     maxAnnual != null &&
@@ -269,7 +319,6 @@ export interface ParsedSalaryFromText {
 
 /**
  * Normalize salary to annual in LOCAL currency (no FX conversion)
- * and determine if it meets the high-salary threshold for that currency
  */
 export function normalizeSalary(input: RawSalaryInput): NormalizedSalary {
   const interval = normalizeInterval(input.interval)
@@ -279,7 +328,6 @@ export function normalizeSalary(input: RawSalaryInput): NormalizedSalary {
   const minAnnual = input.min != null ? toBigInt(input.min) * factor : null
   const maxAnnual = input.max != null ? toBigInt(input.max) * factor : null
 
-  // Check if meets high-salary threshold
   const isHighSalary = checkHighSalary(minAnnual, maxAnnual, currency)
 
   return {
@@ -303,7 +351,6 @@ export function checkHighSalary(
   if (threshold == null) return false
   const thresholdBigInt = BigInt(threshold)
 
-  // Use maxAnnual if available (gives benefit of doubt), otherwise minAnnual
   const salaryToCheck = maxAnnual ?? minAnnual
   if (!salaryToCheck) return false
 
@@ -312,62 +359,40 @@ export function checkHighSalary(
 
 /**
  * Parse salary from raw text string
- * Handles formats like:
- *  - "$120,000 - $150,000"
- *  - "€80k - €100k"
- *  - "$150k/year"
- *  - "£60,000 - £80,000 per annum"
- *  - "$50/hour"
- *  - "A$120,000 - A$150,000"
- *  - "₹25 LPA" (Indian format)
  */
-export function parseSalaryFromText(text: string | null | undefined): ParsedSalaryFromText | null {
+export function parseSalaryFromText(
+  text: string | null | undefined
+): ParsedSalaryFromText | null {
   if (!text || typeof text !== 'string') return null
 
   const cleaned = text.trim()
   if (!cleaned) return null
 
-  // Detect currency
   const currency = detectCurrency(cleaned)
-
-  // Extract numbers
   const numbers = extractNumbers(cleaned, currency)
+
   if (numbers.length === 0) return null
 
-  // Detect interval
   const interval = detectInterval(cleaned)
 
-  // Parse min/max
   let min: number | null = null
   let max: number | null = null
 
   if (numbers.length === 1) {
     min = numbers[0]
     max = numbers[0]
-  } else if (numbers.length >= 2) {
-    // Sort to ensure min < max
+  } else {
     const sorted = [...numbers].sort((a, b) => a - b)
     min = sorted[0]
     max = sorted[sorted.length - 1]
   }
 
-  return {
-    min,
-    max,
-    currency,
-    interval,
-    raw: text,
-  }
+  return { min, max, currency, interval, raw: text }
 }
 
-/**
- * Detect currency from text
- */
 function detectCurrency(text: string): SupportedCurrency | null {
   for (const { pattern, currency } of CURRENCY_PATTERNS) {
-    if (pattern.test(text)) {
-      return currency
-    }
+    if (pattern.test(text)) return currency
   }
   return null
 }
@@ -378,21 +403,17 @@ function detectCurrency(text: string): SupportedCurrency | null {
 function extractNumbers(text: string, currency: SupportedCurrency | null): number[] {
   const numbers: number[] = []
 
-  // Handle Indian Lakh format: "25 LPA", "25L", "25 lakhs"
   if (currency === 'INR') {
     const lakhMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:l(?:akh?s?)?|lpa)/gi)
     if (lakhMatch) {
       for (const match of lakhMatch) {
         const num = parseFloat(match.replace(/[^\d.]/g, ''))
-        if (!isNaN(num)) {
-          numbers.push(num * 100_000) // 1 lakh = 100,000
-        }
+        if (!isNaN(num)) numbers.push(num * 100_000)
       }
       if (numbers.length > 0) return numbers
     }
   }
 
-  // Standard formats: $120,000 or $120k or $1.5M
   const regex = /(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\s*([kKmM])?/g
   let match: RegExpExecArray | null
 
@@ -405,19 +426,13 @@ function extractNumbers(text: string, currency: SupportedCurrency | null): numbe
 
     // Filter out obviously wrong numbers (like years: 2024, 2025)
     if (num >= 1000 && num <= 50_000_000) {
-      // Also filter out numbers that look like years
-      if (num < 1900 || num > 2100) {
-        numbers.push(num)
-      }
+      if (num < 1900 || num > 2100) numbers.push(num)
     }
   }
 
   return numbers
 }
 
-/**
- * Detect salary interval from text
- */
 function detectInterval(text: string): SalaryInterval {
   const lower = text.toLowerCase()
 
@@ -425,15 +440,12 @@ function detectInterval(text: string): SalaryInterval {
   if (/per\s*day|\/\s*day|daily/i.test(lower)) return 'day'
   if (/per\s*week|\/\s*week|weekly|\bpw\b/i.test(lower)) return 'week'
   if (/per\s*month|\/\s*month|monthly|\bpm\b|\/mo\b/i.test(lower)) return 'month'
-  if (/per\s*(year|annum)|\/\s*y(?:ea)?r|annual|yearly|\bpa\b|\blpa\b/i.test(lower)) return 'year'
+  if (/per\s*(year|annum)|\/\s*y(?:ea)?r|annual|yearly|\bpa\b|\blpa\b/i.test(lower))
+    return 'year'
 
-  // Default: if numbers are large enough, assume annual
   return 'year'
 }
 
-/**
- * Helper to convert a Job's existing salary fields
- */
 export function normalizeJobSalaryFields(job: {
   salaryMin?: bigint | number | null
   salaryMax?: bigint | number | null
@@ -449,10 +461,7 @@ export function normalizeJobSalaryFields(job: {
 }
 
 /**
- * Get the display threshold for a currency
- */
-/**
- * Get currency symbol for display
+ * Currency symbol for display
  */
 export function getCurrencySymbol(currency: string | null): string {
   switch (currency) {
@@ -473,6 +482,8 @@ export function getCurrencySymbol(currency: string | null): string {
     case 'INR':
       return '₹'
     case 'SEK':
+    case 'NOK':
+    case 'DKK':
       return 'kr '
     case 'USD':
     default:
@@ -481,13 +492,13 @@ export function getCurrencySymbol(currency: string | null): string {
 }
 
 /* ------------------------------------------------------------------ */
-/* Display helpers with safety clamps                                 */
+/* Display helpers with safety clamps                                  */
 /* ------------------------------------------------------------------ */
 
-const MAX_REASONABLE_ANNUAL_DEFAULT = 1_500_000 // 1.5M local currency
-const MAX_REASONABLE_ANNUAL_SEK = 20_000_000    // 20M SEK
-const MAX_REASONABLE_ANNUAL_NOK = 20_000_000    // 20M NOK
-const MAX_REASONABLE_ANNUAL_DKK = 20_000_000    // 20M DKK
+const MAX_REASONABLE_ANNUAL_DEFAULT = 1_500_000
+const MAX_REASONABLE_ANNUAL_SEK = 20_000_000
+const MAX_REASONABLE_ANNUAL_NOK = 20_000_000
+const MAX_REASONABLE_ANNUAL_DKK = 20_000_000
 
 export function getAnnualSalaryCapForCurrency(currency: string | null | undefined): number {
   const upper = currency?.toUpperCase() ?? ''
@@ -505,53 +516,27 @@ export function isAnnualSalaryWithinCap(
   return amount <= getAnnualSalaryCapForCurrency(currency)
 }
 
-function sanitizeAnnualForDisplay(
-  amount: number | null,
-  currency: string | null
-): number | null {
+function sanitizeAnnualForDisplay(amount: number | null, currency: string | null): number | null {
   if (amount == null || !Number.isFinite(amount) || amount <= 0) return null
-
   const limit = getAnnualSalaryCapForCurrency(currency)
-
-  // If the number is way above any plausible annual salary,
-  // treat it as untrustworthy for display.
-  if (amount > limit) {
-    return null
-  }
-
+  if (amount > limit) return null
   return amount
 }
 
-/**
- * Format salary for display
- */
-export function formatSalary(
-  amount: bigint | number | null,
-  currency: string | null
-): string {
+export function formatSalary(amount: bigint | number | null, currency: string | null): string {
   if (amount == null) return 'Not specified'
 
   const rawNum = typeof amount === 'bigint' ? Number(amount) : amount
   const num = sanitizeAnnualForDisplay(rawNum, currency)
   const symbol = getCurrencySymbol(currency)
 
-  if (num == null) {
-    // We know there's some salary info, but it's not trustworthy numerically.
-    return `${symbol}High salary role`
-  }
+  if (num == null) return `${symbol}High salary role`
 
-  if (num >= 1_000_000) {
-    return `${symbol}${(num / 1_000_000).toFixed(1)}M`
-  }
-  if (num >= 1000) {
-    return `${symbol}${Math.round(num / 1000)}K`
-  }
+  if (num >= 1_000_000) return `${symbol}${(num / 1_000_000).toFixed(1)}M`
+  if (num >= 1000) return `${symbol}${Math.round(num / 1000)}K`
   return `${symbol}${num.toLocaleString()}`
 }
 
-/**
- * Format salary range for display
- */
 export function formatSalaryRange(
   min: bigint | number | null,
   max: bigint | number | null,
@@ -560,10 +545,8 @@ export function formatSalaryRange(
   if (min == null && max == null) return 'Salary not specified'
 
   const symbol = getCurrencySymbol(currency)
-  const rawMin =
-    min != null ? (typeof min === 'bigint' ? Number(min) : min) : null
-  const rawMax =
-    max != null ? (typeof max === 'bigint' ? Number(max) : max) : null
+  const rawMin = min != null ? (typeof min === 'bigint' ? Number(min) : min) : null
+  const rawMax = max != null ? (typeof max === 'bigint' ? Number(max) : max) : null
 
   const minNum = sanitizeAnnualForDisplay(rawMin, currency)
   const maxNum = sanitizeAnnualForDisplay(rawMax, currency)
@@ -574,44 +557,28 @@ export function formatSalaryRange(
     return n.toLocaleString()
   }
 
-  // If both ends look insane, fall back to a neutral, trust-preserving label.
-  if (minNum == null && maxNum == null) {
-    return `${symbol}High salary role`
-  }
+  if (minNum == null && maxNum == null) return `${symbol}High salary role`
 
   if (minNum != null && maxNum != null && minNum !== maxNum) {
     return `${symbol}${fmt(minNum)} - ${symbol}${fmt(maxNum)}`
   }
-  if (minNum != null) {
-    return `${symbol}${fmt(minNum)}+`
-  }
-  if (maxNum != null) {
-    return `Up to ${symbol}${fmt(maxNum)}`
-  }
+  if (minNum != null) return `${symbol}${fmt(minNum)}+`
+  if (maxNum != null) return `Up to ${symbol}${fmt(maxNum)}`
   return 'Salary not specified'
 }
 
 /* ------------------------------------------------------------------ */
-/* Phase 4 helpers: country ↔ currency consistency                    */
+/* Country ↔ currency consistency                                      */
 /* ------------------------------------------------------------------ */
 
-/**
- * Given a country code, return the expected local currency (if we know it)
- */
 export function getExpectedCurrencyForCountry(
   countryCode: string | null | undefined
 ): SupportedCurrency | null {
   if (!countryCode) return null
-  const cc = countryCode.trim().toUpperCase()
+  const cc = String(countryCode).trim().toUpperCase()
   return COUNTRY_TO_CURRENCY[cc] ?? null
 }
 
-/**
- * Check whether a job's currency matches what we'd expect for its country.
- * This is used by:
- *  - repair scripts (auto-fix mismatches)
- *  - UI layer (fallback display when inconsistent)
- */
 export function checkCurrencyLocationMismatch(
   countryCode: string | null,
   currency: string | null
@@ -636,7 +603,7 @@ export function checkCurrencyLocationMismatch(
 }
 
 /* ------------------------------------------------------------------ */
-/* Internal helpers                                                   */
+/* Internal helpers                                                    */
 /* ------------------------------------------------------------------ */
 
 function toBigInt(value: bigint | number): bigint {
@@ -665,9 +632,9 @@ function normalizeCurrency(raw: string | null | undefined): SupportedCurrency | 
   if (!raw) return null
   const v = raw.trim().toUpperCase()
 
-  // Map common variations
-  // NOTE: "$" alone is ambiguous (USD vs CAD vs AUD, etc). Do not guess.
+  // "$" alone is ambiguous (USD vs CAD vs AUD etc). Do not guess here.
   if (v === '$') return null
+
   if (v === 'USD' || v === 'US$') return 'USD'
   if (v === '€' || v === 'EUR') return 'EUR'
   if (v === '£' || v === 'GBP') return 'GBP'
@@ -693,9 +660,9 @@ function getIntervalFactor(interval: SalaryInterval): bigint {
     case 'week':
       return BigInt(52)
     case 'day':
-      return BigInt(260) // ~working days per year
+      return BigInt(260)
     case 'hour':
-      return BigInt(2080) // 40h * 52 weeks
+      return BigInt(2080)
     default:
       return BigInt(1)
   }
