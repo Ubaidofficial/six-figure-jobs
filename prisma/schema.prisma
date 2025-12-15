@@ -62,6 +62,19 @@ model Job {
   locationRef          Location?      @relation(fields: [locationId], references: [id])
   roleInference        RoleInference?
 
+  // -----------------------------
+  // v2.9 AI enrichment fields (NON-BREAKING, OPTIONAL)
+  // -----------------------------
+  aiSummaryJson        Json?
+  aiSnippet            String?
+  aiBenefits           Json?
+  aiRequirements       Json?
+  aiWhyHighPay         String?
+  aiModel              String?
+  aiVersion            String?
+  aiQualityScore       Int?
+  lastAiEnrichedAt     DateTime?
+
   @@unique([externalId, source], name: "externalId_source")
   @@unique([companyId, dedupeKey], name: "company_dedupeKey")
   @@index([source])
@@ -80,6 +93,10 @@ model Job {
   @@index([industry])
   @@index([workArrangement])
   @@index([stateCode])
+
+  // v2.9 indexes
+  @@index([aiQualityScore])
+  @@index([lastAiEnrichedAt])
 }
 
 model Company {
