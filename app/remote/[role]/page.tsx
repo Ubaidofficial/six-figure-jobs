@@ -1,5 +1,6 @@
 // app/remote/[role]/page.tsx
-
+export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
@@ -13,7 +14,6 @@ import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import JobList from '../../components/JobList'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 
-export const revalidate = 300
 
 const SITE_URL = getSiteUrl()
 
