@@ -1,6 +1,6 @@
 // scripts/audit-v2.9.ts
 import { execSync } from 'node:child_process'
-import { PrismaClient, Prisma } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import { HIGH_SALARY_THRESHOLDS } from '../lib/currency/thresholds'
 import { HIGH_SALARY_MIN_CONFIDENCE } from '../lib/jobs/queryJobs'
 
@@ -13,12 +13,31 @@ function fail(msg: string): never {
   process.exit(1)
 }
 
+function formatRows(rows: Array<Record<string, any>>): string {
+  if (!rows?.length) return '(no sample rows)'
+  return rows
+    .map((r) => {
+      const id = r.id ?? ''
+      const title = r.title ?? ''
+      const company = r.company ?? ''
+      const url = r.url ?? ''
+      const extra =
+        r.type || r.employmentType
+          ? ` | type=${r.type ?? ''} employmentType=${r.employmentType ?? ''}`
+          : ''
+      return `- ${id} | ${company} | ${title} | ${url}${extra}`
+    })
+    .join('\n')
+}
+
 async function main() {
   // -----------------------------
   // Static repo checks (no DB)
   // -----------------------------
   try {
-    const jobPostingLeaks = sh(`grep -RIn "'@type': 'JobPosting'" app | grep -v "app/job" || true`).trim()
+    const jobPostingLeaks = sh(
+      `grep -RIn "'@type': 'JobPosting'" app | grep -v "app/job" || true`,
+    ).trim()
     if (jobPostingLeaks) {
       fail(`JobPosting JSON-LD leak outside app/job:\n${jobPostingLeaks}`)
     }
@@ -42,34 +61,19 @@ async function main() {
 
   const prisma = new PrismaClient()
 
-  // Title bans (best-effort; exact “word boundary” validation is also done in SQL in prod checks)
-  const bannedTitleOr: Prisma.JobWhereInput[] = [
-    { title: { contains: 'intern', mode: 'insensitive' } },
-    { title: { contains: 'internship', mode: 'insensitive' } },
-    { title: { contains: 'junior', mode: 'insensitive' } },
-    { title: { contains: ' jr', mode: 'insensitive' } }, // catches " X jr " / " jr,"
-    { title: { contains: 'jr.', mode: 'insensitive' } }, // catches "jr."
-    { title: { contains: 'entry', mode: 'insensitive' } },
-    { title: { contains: 'graduate', mode: 'insensitive' } },
-    { title: { contains: 'new grad', mode: 'insensitive' } },
-    { title: { contains: 'new graduate', mode: 'insensitive' } },
-  ]
+  // IMPORTANT:
+  // - Do NOT use Prisma "contains: intern" etc (false-positives: "International", "Internal").
+  // - Use Postgres word-boundary regex via \m (start of word) and \M (end of word).
+  //
+  // Title bans: junior/jr/entry-level/intern/internship/graduate/new grad
+  const BANNED_TITLE_RE =
+    String.raw`\m(junior|jr\.?|entry([ -]?level)?|intern(ship)?|graduate|new[ -]?grad(uate)?)\M`
 
-  // Type bans
-  const bannedTypeOr: Prisma.JobWhereInput[] = [
-    { type: { contains: 'part-time', mode: 'insensitive' } },
-    { type: { contains: 'part time', mode: 'insensitive' } },
-    { type: { contains: 'contract', mode: 'insensitive' } },
-    { type: { contains: 'temporary', mode: 'insensitive' } },
-    { employmentType: { contains: 'part-time', mode: 'insensitive' } },
-    { employmentType: { contains: 'part time', mode: 'insensitive' } },
-    { employmentType: { contains: 'contract', mode: 'insensitive' } },
-    { employmentType: { contains: 'temporary', mode: 'insensitive' } },
-  ]
+  // Type bans: part-time/contract/temporary (either in type OR employmentType)
+  const BANNED_TYPE_RE = String.raw`\m(part[ -]?time|contract|temporary)\M`
 
   try {
     // 1) SalaryValidated must be true for any published job
-    // NOTE: Prisma types salaryValidated as boolean (non-nullable), so do NOT check for null here.
     const invalidSalaryValidated = await prisma.job.count({
       where: { isExpired: false, salaryValidated: false },
     })
@@ -77,8 +81,7 @@ async function main() {
       fail(`Found ${invalidSalaryValidated} published jobs with salaryValidated=false`)
     }
 
-    // Optional hard guard: if you suspect historical NULLs, raw SQL can detect it.
-    // (Safe even if the column is NOT NULL; it will just return 0.)
+    // Extra hard guard (safe even if column is NOT NULL)
     const nullSalaryValidated = await prisma.$queryRaw<Array<{ n: bigint }>>`
       select count(*)::bigint as n
       from "Job"
@@ -99,23 +102,74 @@ async function main() {
       },
     })
     if (lowConfidence > 0) {
-      fail(`Found ${lowConfidence} published jobs with salaryConfidence<${HIGH_SALARY_MIN_CONFIDENCE}`)
+      fail(
+        `Found ${lowConfidence} published jobs with salaryConfidence<${HIGH_SALARY_MIN_CONFIDENCE}`,
+      )
     }
 
-    // 3) Banned titles
-    const bannedTitle = await prisma.job.count({
-      where: { isExpired: false, OR: bannedTitleOr },
-    })
-    if (bannedTitle > 0) {
-      fail(`Found ${bannedTitle} published jobs with banned title keywords`)
+    // 3) Banned titles (word-boundary regex, with sample)
+    const bannedTitleCount = await prisma.$queryRaw<Array<{ n: bigint }>>`
+      select count(*)::bigint as n
+      from "Job"
+      where "isExpired" = false
+        and coalesce("title",'') ~* ${BANNED_TITLE_RE}
+    `
+    const nBannedTitle = Number(bannedTitleCount?.[0]?.n ?? 0n)
+    if (nBannedTitle > 0) {
+      const sample = await prisma.$queryRaw<
+        Array<{ id: string; title: string; company: string; url: string }>
+      >`
+        select id, title, company, url
+        from "Job"
+        where "isExpired" = false
+          and coalesce("title",'') ~* ${BANNED_TITLE_RE}
+        order by "updatedAt" desc
+        limit 10
+      `
+      fail(
+        `Found ${nBannedTitle} published jobs with banned title keywords (word-boundary check).\nSample:\n${formatRows(
+          sample as any,
+        )}`,
+      )
     }
 
-    // 4) Banned employment types
-    const bannedType = await prisma.job.count({
-      where: { isExpired: false, OR: bannedTypeOr },
-    })
-    if (bannedType > 0) {
-      fail(`Found ${bannedType} published jobs with banned employment type keywords`)
+    // 4) Banned employment types (word-boundary regex, with sample)
+    const bannedTypeCount = await prisma.$queryRaw<Array<{ n: bigint }>>`
+      select count(*)::bigint as n
+      from "Job"
+      where "isExpired" = false
+        and (
+          coalesce("type",'') ~* ${BANNED_TYPE_RE}
+          or coalesce("employmentType",'') ~* ${BANNED_TYPE_RE}
+        )
+    `
+    const nBannedType = Number(bannedTypeCount?.[0]?.n ?? 0n)
+    if (nBannedType > 0) {
+      const sample = await prisma.$queryRaw<
+        Array<{
+          id: string
+          title: string
+          company: string
+          url: string
+          type: string | null
+          employmentType: string | null
+        }>
+      >`
+        select id, title, company, url, "type", "employmentType"
+        from "Job"
+        where "isExpired" = false
+          and (
+            coalesce("type",'') ~* ${BANNED_TYPE_RE}
+            or coalesce("employmentType",'') ~* ${BANNED_TYPE_RE}
+          )
+        order by "updatedAt" desc
+        limit 10
+      `
+      fail(
+        `Found ${nBannedType} published jobs with banned employment type keywords (word-boundary check).\nSample:\n${formatRows(
+          sample as any,
+        )}`,
+      )
     }
 
     // 5) Currency-aware threshold violations
@@ -127,7 +181,10 @@ async function main() {
           salaryConfidence: { gte: HIGH_SALARY_MIN_CONFIDENCE },
           currency,
           NOT: {
-            OR: [{ maxAnnual: { gte: BigInt(threshold) } }, { minAnnual: { gte: BigInt(threshold) } }],
+            OR: [
+              { maxAnnual: { gte: BigInt(threshold) } },
+              { minAnnual: { gte: BigInt(threshold) } },
+            ],
           },
         },
       })
@@ -151,8 +208,6 @@ async function main() {
     }
 
     // 7) Remote jobs must have remoteRegion (so remote sitemaps/pages can segment)
-    // Prisma typing likely makes remoteRegion non-nullable; so we check '' in Prisma,
-    // and also add a raw SQL null-check to be safe.
     const remoteMissingRemoteRegionEmpty = await prisma.job.count({
       where: {
         isExpired: false,

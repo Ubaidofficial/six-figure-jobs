@@ -115,6 +115,8 @@ We do NOT:
 - [ ] Missing data → null (not invented)
 - [ ] Raw ATS description still visible
 - [ ] Mobile layout unaffected
+- [ ] Hybrid jobs are never marked as fully remote
+- [ ] Remote jobs always have `remoteRegion`
 
 ---
 
@@ -164,9 +166,47 @@ Implemented checklist:
 - [x] Deterministic salary validator: `lib/normalizers/salary.ts` (`validateHighSalaryEligibility`) with currency-aware caps in one place.
 - [x] Ingest hardening: `lib/ingest/index.ts` stops forced USD, emits salary quality fields, and skips ineligible jobs.
 - [x] Query hard gates: `lib/jobs/queryJobs.ts` enforces `salaryValidated=true`, `salaryConfidence>=80`, and per-currency thresholds; extends global exclusions.
+- [x] Title and employment-type bans enforced at ingest and audited in CI using word-boundary matching (prevents false positives such as “International” or “Internal Audit”).
+- [x] Location normalization hardened: hybrid/onsite always override remote heuristics; remote jobs require `remoteRegion`.
 - [x] Bypass fixes: routes and sitemaps using Prisma now use canonical gate fragments (no salary flags).
 - [x] Structured data safety: list pages emit `ItemList` URLs only; `JobPosting` only on `/job/*` via `lib/seo/jobJsonLd.ts` with baseSalary eligibility.
 - [x] Job detail UI: Benefits section prefers `aiBenefits`, else `benefitsJson`, else omitted.
 - [x] Prisma additions: `Job` salary quality fields + `SalaryAggregate` model + additive migration `prisma/migrations/20251215184500_add_salary_quality_and_salary_aggregates`.
 - [x] Data-layer analytics helpers: `lib/salary/aggregates.ts` (no public pages shipped).
 - [x] Regression gate: `npm run audit:v2.9` + deterministic backfill script `npm run jobs:backfill:salary-quality:v2.9`.
+
+---
+
+## 14. CI & Regression Enforcement (v2.9)
+
+v2.9 introduces a mandatory CI audit gate that blocks deploys on data or SEO regressions.
+
+Enforced via:
+- `npm run audit:ci` (alias of `scripts/audit-v2.9.ts`)
+
+The audit blocks release if any of the following are detected:
+- Published jobs with `salaryValidated=false` or low confidence
+- Jobs below per-currency salary thresholds
+- Banned titles (junior, intern, entry-level, etc.) using word-boundary matching
+- Banned employment types (contract, part-time, temporary)
+- Hybrid roles misclassified as fully remote
+- Remote jobs missing `remoteRegion`
+- `JobPosting` JSON-LD leakage outside `/job/*`
+
+This audit is **required** before enabling AI rendering or shipping to production.
+
+---
+
+## 15. Operational Safety Improvements
+
+v2.9 includes operational hardening to reduce production risk.
+
+Changes:
+- Destructive maintenance scripts isolated under `scripts/_danger/`
+- Explicit environment guard required to execute: `ALLOW_DANGER=true`
+- Legacy and duplicate scripts identified and removed from normal execution paths
+- All scrapers and importers route exclusively through `lib/ingest/index.ts` (single ingestion authority)
+
+These changes do **not** affect runtime behavior or SEO, but significantly reduce the risk of accidental data loss or unsafe operations in production.
+
+---
