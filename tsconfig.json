@@ -2,17 +2,14 @@
   "compilerOptions": {
     /* -------------------------------- Core -------------------------------- */
     "target": "ESNext",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     },
+
     /* ------------------------------- Behavior ----------------------------- */
     "allowJs": true,
     "checkJs": false,
@@ -25,6 +22,7 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "incremental": true,
+
     /* ------------------------------- Next.js ------------------------------ */
     "plugins": [
       {
@@ -32,6 +30,7 @@
       }
     ]
   },
+
   /* --------------------------- Included Files ---------------------------- */
   "include": [
     "next-env.d.ts",
@@ -42,12 +41,21 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
+
   /* --------------------------- Excluded Files ---------------------------- */
   "exclude": [
     "node_modules",
+
+    /* tests */
     "lib/normalizers/location.test.ts",
     "**/*.test.ts",
     "**/*.test.tsx",
-    "tests/**/*"
+    "tests/**/*",
+
+    /* scripts should not block prod builds */
+    "scripts/**/*",
+
+    /* prisma generated / migration files not part of app build */
+    "prisma/**/*"
   ]
 }
