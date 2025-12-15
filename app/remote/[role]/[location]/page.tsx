@@ -4,10 +4,15 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
-import type { JobWithCompany } from '../../../../lib/jobs/queryJobs'
+import {
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+  type JobWithCompany,
+} from '../../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import JobList from '../../../components/JobList'
 import { SITE_NAME, getSiteUrl } from '../../../../lib/seo/site'
+import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 
 export const revalidate = 300
 
@@ -146,74 +151,17 @@ function buildWhere(
     roleSlug,
     citySlug,
     isExpired: false,
-    OR: [
-      { maxAnnual: { gte: threshold } },
-      { minAnnual: { gte: threshold } },
-      { isHundredKLocal: true },
+    AND: [
+      buildHighSalaryEligibilityWhere(),
+      buildGlobalExclusionsWhere(),
+      { OR: [{ remote: true }, { remoteMode: 'remote' }] },
+      {
+        OR: [
+          { maxAnnual: { gte: threshold } },
+          { minAnnual: { gte: threshold } },
+        ],
+      },
     ],
-  }
-}
-
-function buildJobListJsonLd(
-  roleSlug: string,
-  cityName: string,
-  countryCode: string | null,
-  jobs: JobWithCompany[],
-  page: number
-) {
-  const roleName = prettyRole(roleSlug)
-
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `Remote ${roleName} jobs in ${cityName} paying $100k+`,
-    itemListElement: jobs.map((job, index) => {
-      const href = buildJobSlugHref(job)
-
-      return {
-        '@type': 'ListItem',
-        position: (page - 1) * PAGE_SIZE + index + 1,
-        item: {
-          '@type': 'JobPosting',
-          title: job.title,
-          description: job.descriptionHtml || undefined,
-          datePosted: job.postedAt?.toISOString(),
-          employmentType: (job as any).type || undefined,
-          hiringOrganization: {
-            '@type': 'Organization',
-            name: job.companyRef?.name || job.company,
-            sameAs: job.companyRef?.website || undefined,
-          },
-          jobLocationType: job.remote ? 'TELECOMMUTE' : undefined,
-          jobLocation: {
-            '@type': 'Place',
-            address: {
-              '@type': 'PostalAddress',
-              addressLocality: job.city || cityName,
-              addressCountry: job.countryCode || countryCode || undefined,
-            },
-          },
-          baseSalary:
-            job.minAnnual || job.maxAnnual
-              ? {
-                  '@type': 'MonetaryAmount',
-                  currency: job.currency || 'USD',
-                  value: {
-                    '@type': 'QuantitativeValue',
-                    minValue: job.minAnnual
-                      ? Number(job.minAnnual)
-                      : undefined,
-                    maxValue: job.maxAnnual
-                      ? Number(job.maxAnnual)
-                      : undefined,
-                    unitText: 'YEAR',
-                  },
-                }
-              : undefined,
-          url: `${SITE_URL}${href}`,
-        },
-      }
-    }),
   }
 }
 
@@ -412,13 +360,12 @@ export default async function RemoteRoleCityPage({
   const cityName = prettyCity(sampleJob?.city || citySlug)
   const countryCode = sampleJob?.countryCode ?? null
 
-  const jsonLd = buildJobListJsonLd(
-    roleSlug,
-    cityName,
-    countryCode,
+  const jsonLd = buildItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
     jobs,
-    page
-  )
+    page,
+    pageSize: PAGE_SIZE,
+  })
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(
     roleSlug,
     cityParam,

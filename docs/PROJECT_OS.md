@@ -71,3 +71,21 @@ release discipline and rollback readiness are mandatory.
 - PROJECT_OS.md: v1.x
 - Sub-specs version independently
 - Deprecated or historical documents live in `/docs/archive` and are non-authoritative
+
+---
+
+## Salary Hard Gates (v2.9)
+
+Single source of truth:
+- Thresholds live in `lib/currency/thresholds.ts`.
+- All eligibility checks MUST call `getHighSalaryThresholdAnnual(currency)`.
+
+Global eligibility (system law):
+- A job is eligible ONLY IF `salaryValidated === true`, `salaryConfidence >= 80`, currency is supported (`getHighSalaryThresholdAnnual(...) !== null`), and `(maxAnnual >= threshold OR minAnnual >= threshold)`.
+
+Global exclusions (must never show anywhere):
+- Titles containing: junior / entry / intern / graduate / new grad.
+- Employment type/title indicating: part-time / contract / temporary.
+
+Prohibited qualifiers:
+- Flags like `isHighSalary`, `isHundredKLocal`, `isHighSalaryLocal` MUST NOT qualify jobs or override numeric gates.

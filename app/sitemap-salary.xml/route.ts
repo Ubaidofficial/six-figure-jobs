@@ -15,7 +15,6 @@ export async function GET() {
   const urls = tiers.map((tier) => {
     const path = buildSliceCanonicalPath({
       minAnnual: tier.min,
-      isHundredKLocal: true,
     } as any)
 
     return {

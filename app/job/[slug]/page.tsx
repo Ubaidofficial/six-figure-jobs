@@ -211,9 +211,12 @@ export default async function JobPage({
       : false)
 
   const requirements = parseArray(typedJob.requirementsJson)
-  const benefitItems = parseArray(typedJob.benefitsJson)
-    .map((b) => b.trim())
-    .filter((b): b is string => b.length > 0)
+  const benefitItems = ((): string[] => {
+    const fromAi = extractBenefitsFromAi((typedJob as any)?.aiBenefits)
+    const fromLegacy = parseArray(typedJob.benefitsJson)
+    const raw = fromAi.length > 0 ? fromAi : fromLegacy
+    return raw.map((b) => b.trim()).filter((b): b is string => b.length > 0)
+  })()
 
   const showApply = isValidUrl(typedJob.applyUrl)
 
@@ -861,6 +864,32 @@ function parseArray(raw?: string | null): string[] {
   } catch {
     return []
   }
+}
+
+function extractBenefitsFromAi(raw: any): string[] {
+  if (!raw) return []
+
+  // Prisma Json fields can be objects/arrays, but may also be stored as string in older rows.
+  if (Array.isArray(raw)) return raw.map(String)
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed.map(String)
+      if (parsed && typeof parsed === 'object') {
+        const items = (parsed as any).benefits ?? (parsed as any).items ?? (parsed as any).bullets
+        return Array.isArray(items) ? items.map(String) : []
+      }
+    } catch {
+      return []
+    }
+  }
+
+  if (raw && typeof raw === 'object') {
+    const items = raw.benefits ?? raw.items ?? raw.bullets
+    return Array.isArray(items) ? items.map(String) : []
+  }
+
+  return []
 }
 
 /**

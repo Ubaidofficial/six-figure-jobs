@@ -3,7 +3,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '../lib/prisma'
-import { queryJobs, type JobWithCompany } from '../lib/jobs/queryJobs'
+import {
+  queryJobs,
+  type JobWithCompany,
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+} from '../lib/jobs/queryJobs'
 import JobList from './components/JobList'
 import { buildJobsPath } from '../lib/jobs/searchSlug'
 import { SEARCH_ROLE_OPTIONS } from '../lib/roles/searchRoles'
@@ -183,12 +188,7 @@ export default async function HomePage() {
     prisma.job.count({
       where: {
         isExpired: false,
-        OR: [
-          { maxAnnual: { gte: BigInt(100_000) } },
-          { minAnnual: { gte: BigInt(100_000) } },
-          { isHighSalary: true },
-          { isHundredKLocal: true },
-        ],
+        AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
       },
     }),
     prisma.company.count({
@@ -196,47 +196,28 @@ export default async function HomePage() {
         jobs: {
           some: {
             isExpired: false,
-            OR: [
-              { maxAnnual: { gte: BigInt(100_000) } },
-              { minAnnual: { gte: BigInt(100_000) } },
-              { isHighSalary: true },
-              { isHundredKLocal: true },
-            ],
+            AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
           },
         },
       },
     }),
-    // UPDATED: make 100k+ band use isHighSalary / isHundredKLocal as well,
-    // so it matches QA + our currency-aware thresholds.
     Promise.all(
       SALARY_BANDS.map(async (band) => {
-        let count: number
-
-        if (band.min === 100_000) {
-          // $100k+ band: treat as "high-salary" in any local currency
-          count = await prisma.job.count({
-            where: {
-              isExpired: false,
-              OR: [
-                { isHighSalary: true },
-                { isHundredKLocal: true },
-                { maxAnnual: { gte: BigInt(100_000) } },
-                { minAnnual: { gte: BigInt(100_000) } },
-              ],
-            },
-          })
-        } else {
-          // Higher bands rely on normalized annual fields
-          count = await prisma.job.count({
-            where: {
-              isExpired: false,
-              OR: [
-                { maxAnnual: { gte: BigInt(band.min) } },
-                { minAnnual: { gte: BigInt(band.min) } },
-              ],
-            },
-          })
-        }
+        const count = await prisma.job.count({
+          where: {
+            isExpired: false,
+            AND: [
+              buildHighSalaryEligibilityWhere(),
+              buildGlobalExclusionsWhere(),
+              {
+                OR: [
+                  { maxAnnual: { gte: BigInt(band.min) } },
+                  { minAnnual: { gte: BigInt(band.min) } },
+                ],
+              },
+            ],
+          },
+        })
 
         return { ...band, count }
       })
@@ -247,20 +228,20 @@ export default async function HomePage() {
         count: await prisma.job.count({
           where: {
             isExpired: false,
-            isHighSalary: true,
+            AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
             roleSlug: { contains: role.slug },
           },
         }),
       }))
     ),
     prisma.job.count({
-      where: { isHighSalaryLocal: true, isExpired: false },
+      where: { isExpired: false, AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()] },
     }),
     prisma.company.count(),
     prisma.job.count({
       where: {
-        isHighSalaryLocal: true,
         isExpired: false,
+        AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
         postedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
       },
     }),

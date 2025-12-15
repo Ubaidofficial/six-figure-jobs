@@ -97,3 +97,26 @@ Before a job is eligible for “money pages”:
 - Writing raw location strings directly into indexable URLs
 - Failing the whole run on one job parse failure (must isolate errors)
 - Marking everything expired on a single source outage
+
+---
+
+## Reject, Don’t Store (v2.9)
+
+Salary hardening rules:
+- The ingest pipeline must NOT force a currency fallback (no `currency || 'USD'`).
+- Salary validation MUST be deterministic and centralized in `lib/normalizers/salary.ts` via `validateHighSalaryEligibility(...)`.
+- Threshold lookup MUST use the canonical helper `getHighSalaryThresholdAnnual(currency)` from `lib/currency/thresholds.ts` (no other threshold tables).
+
+When to reject/skip ingest:
+- Unknown/unsupported currency (`getHighSalaryThresholdAnnual(...) === null`).
+- Bad ranges (`min > max`, `max/min > 3`).
+- Annualized values above currency-safe caps (caps defined in one place).
+- Annualized values below the currency threshold.
+- Confidence < 80.
+- Title/type indicates junior/entry/intern/graduate/new grad, or part-time/contract/temporary.
+
+Persisted salary quality fields (Job):
+- `salaryValidated`, `salaryConfidence`, `salarySource`, `salaryParseReason`, `salaryNormalizedAt`, `salaryRejectedAt`, `salaryRejectedReason`.
+
+Backfill requirement:
+- After deploying the v2.9 migration, run `npm run jobs:backfill:salary-quality:v2.9` to mark existing eligible jobs as validated (deterministic; no AI).

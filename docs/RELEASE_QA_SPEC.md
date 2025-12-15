@@ -71,3 +71,18 @@ Include:
 - what URLs were affected
 - how canonicalization/indexation was validated
 - which checklists were run
+
+---
+
+## Regression Blockers (v2.9 Salary Hard Gates)
+
+Block release if any fail:
+- Run `npm run audit:v2.9` (fails on JobPosting JSON-LD leaks, salary-flag qualification leaks, and DB eligibility violations).
+- Apply DB migration `prisma/migrations/20251215184500_add_salary_quality_and_salary_aggregates` before deploy.
+- Run deterministic backfill after migration: `npm run jobs:backfill:salary-quality:v2.9`.
+
+Expected invariants (must hold in prod):
+- No list page emits `JobPosting` JSON-LD (only `/job/*`).
+- All listing queries enforce `salaryValidated === true` and `salaryConfidence >= 80` plus currency-aware threshold checks.
+- No junior/entry/intern/graduate/new grad jobs appear anywhere.
+- No part-time/contract/temporary jobs appear anywhere.

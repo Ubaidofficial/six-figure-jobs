@@ -5,6 +5,7 @@ import { SKILL_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -24,27 +25,6 @@ function buildBreadcrumbJsonLd(skillSlug: string, skillLabel: string) {
       { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${SITE_URL}/jobs/100k-plus` },
       { '@type': 'ListItem', position: 3, name: `${skillLabel} jobs`, item: `${SITE_URL}/jobs/skills/${skillSlug}` },
     ],
-  }
-}
-
-function buildItemListJsonLd(jobs: JobWithCompany[], skillLabel: string) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `$100k+ ${skillLabel} jobs`,
-    itemListElement: jobs.slice(0, PAGE_SIZE).map((job, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      item: {
-        '@type': 'JobPosting',
-        title: job.title,
-        hiringOrganization: {
-          '@type': 'Organization',
-          name: job.companyRef?.name || job.company,
-        },
-        url: `${SITE_URL}/job/${job.id}`,
-      },
-    })),
   }
 }
 
@@ -116,7 +96,12 @@ export default async function SkillPage({ params }: { params: Params }) {
       : Math.max(salaryMin, 200_000)
 
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(resolved.slug, resolved.label)
-  const itemListJsonLd = buildItemListJsonLd(jobs as JobWithCompany[], resolved.label)
+  const itemListJsonLd = buildSafeItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs: (jobs as JobWithCompany[]).slice(0, PAGE_SIZE),
+    page: 1,
+    pageSize: PAGE_SIZE,
+  })
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">

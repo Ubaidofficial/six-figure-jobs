@@ -154,3 +154,19 @@ v2.9 complies with:
 - PROJECT_OS
 - Zero index bloat mandate
 - Non-breaking change policy
+
+---
+
+## 13. Salary Hard Gates (v2.9 Addendum)
+
+Implemented checklist:
+- [x] Single threshold source: `lib/currency/thresholds.ts` with `getHighSalaryThresholdAnnual(currency)`.
+- [x] Deterministic salary validator: `lib/normalizers/salary.ts` (`validateHighSalaryEligibility`) with currency-aware caps in one place.
+- [x] Ingest hardening: `lib/ingest/index.ts` stops forced USD, emits salary quality fields, and skips ineligible jobs.
+- [x] Query hard gates: `lib/jobs/queryJobs.ts` enforces `salaryValidated=true`, `salaryConfidence>=80`, and per-currency thresholds; extends global exclusions.
+- [x] Bypass fixes: routes and sitemaps using Prisma now use canonical gate fragments (no salary flags).
+- [x] Structured data safety: list pages emit `ItemList` URLs only; `JobPosting` only on `/job/*` via `lib/seo/jobJsonLd.ts` with baseSalary eligibility.
+- [x] Job detail UI: Benefits section prefers `aiBenefits`, else `benefitsJson`, else omitted.
+- [x] Prisma additions: `Job` salary quality fields + `SalaryAggregate` model + additive migration `prisma/migrations/20251215184500_add_salary_quality_and_salary_aggregates`.
+- [x] Data-layer analytics helpers: `lib/salary/aggregates.ts` (no public pages shipped).
+- [x] Regression gate: `npm run audit:v2.9` + deterministic backfill script `npm run jobs:backfill:salary-quality:v2.9`.

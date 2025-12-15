@@ -3,6 +3,8 @@
 import type { Job, Company } from '@prisma/client'
 import { getSiteUrl } from './site'
 import { buildJobSlug } from '../jobs/jobSlug'
+import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
+import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
@@ -120,6 +122,8 @@ function buildPlainTextDescription(job: any, companyName: string): string {
 }
 
 function buildBaseSalary(job: any): any | undefined {
+  if (job?.salaryValidated !== true) return undefined
+
   const rawMin = toNumberSafe(job.minAnnual)
   const rawMax = toNumberSafe(job.maxAnnual)
 
@@ -128,20 +132,18 @@ function buildBaseSalary(job: any): any | undefined {
   const min = rawMin ? normalizeAnnualAmount(rawMin) : null
   const max = rawMax ? normalizeAnnualAmount(rawMax) : null
 
-  // Prefer explicit salaryCurrency if present; else currency; else USD.
   const currency =
     (job.salaryCurrency as string | null | undefined) ||
-    (job.currency as string | null | undefined) ||
-    'USD'
+    (job.currency as string | null | undefined)
+
+  const threshold = getHighSalaryThresholdAnnual(currency)
+  if (!currency || threshold == null) return undefined
 
   // Guardrails: if we ended up with nonsense, omit salary entirely.
   // (Google Jobs is better with no salary than a wildly wrong one.)
-  if (
-    (min && (min < 5_000 || min > 5_000_000)) ||
-    (max && (max < 5_000 || max > 5_000_000))
-  ) {
-    return undefined
-  }
+  if ((min && min <= 0) || (max && max <= 0)) return undefined
+  const cap = getAnnualSalaryCapForCurrency(currency)
+  if ((min && min > cap) || (max && max > cap)) return undefined
 
   return {
     '@type': 'MonetaryAmount',
@@ -157,8 +159,7 @@ function buildBaseSalary(job: any): any | undefined {
 
 function buildJobLocation(job: any): any | undefined {
   const city = job.city ? String(job.city) : undefined
-  const region =
-    job.region || job.state ? String(job.region || job.state) : undefined
+  const region = job.stateCode ? String(job.stateCode).toUpperCase() : undefined
   const country = job.countryCode
     ? String(job.countryCode).toUpperCase()
     : undefined

@@ -14,15 +14,17 @@
 
 import { prisma } from '../prisma'
 import { upsertCompanyFromBoard } from '../companies/upsertFromBoard'
-import { normalizeSalary, parseSalaryFromText } from '../normalizers/salary'
+import {
+  normalizeSalary,
+  parseSalaryFromText,
+  validateHighSalaryEligibility,
+  type SalarySource,
+} from '../normalizers/salary'
 import { normalizeLocation as normalizeLocationData } from '../normalizers/location'
 import { normalizeRole } from '../normalizers/role'
 import slugify from 'slugify'
 import { isJobTooOld, MAX_INGEST_AGE_DAYS } from './jobAgeFilter'
-import { parseGreenhouseSalary, isHighSalary as isHighSalaryGreenhouse } from './greenhouseSalaryParser'
-
-// 🔥 NEW: Import the multi-currency threshold helper
-import { isHighSalary } from '../currency/thresholds'
+import { parseGreenhouseSalary } from './greenhouseSalaryParser'
 import { getShortStableIdForJobId } from '../jobs/jobSlug'
 
 import { getSourcePriority, isAtsSource, isBoardSource } from './sourcePriority'
@@ -188,6 +190,15 @@ async function createNewJob(
   // Process salary
   const salaryData = processSalary(input)
 
+  if (salaryData.salaryValidated !== true) {
+    return { status: 'skipped', reason: 'salary-not-eligible', dedupeKey }
+  }
+
+  const strictExclusionReason = getStrictExclusionReason(input.title, input.employmentType)
+  if (strictExclusionReason) {
+    return { status: 'skipped', reason: strictExclusionReason, dedupeKey }
+  }
+
   // Process location
   const locationData = processLocation(input)
 
@@ -230,10 +241,22 @@ async function createNewJob(
     maxAnnual: salaryData.maxAnnual,
     currency: salaryData.currency,
     isHighSalary: salaryData.isHighSalary,
-    isHundredKLocal: salaryData.isHighSalary,
+    // v2.9 hard gate: flags cannot qualify jobs (numeric + validated only)
+    isHundredKLocal: false,
+
+    // Salary quality (v2.9)
+    salaryValidated: salaryData.salaryValidated,
+    salaryConfidence: salaryData.salaryConfidence,
+    salarySource: salaryData.salarySource,
+    salaryParseReason: salaryData.salaryParseReason,
+    salaryNormalizedAt: salaryData.salaryNormalizedAt,
+    salaryRejectedAt: salaryData.salaryRejectedAt,
+    salaryRejectedReason: salaryData.salaryRejectedReason,
 
     // Job details
     type: input.employmentType ?? 'Full-time',
+    employmentType: input.employmentType ?? null,
+    experienceLevel: inferExperienceLevelFromTitle(input.title),
     applyUrl: input.applyUrl ?? input.url ?? null,
     url: input.url ?? null,
     descriptionHtml: input.descriptionHtml ?? null,
@@ -292,6 +315,15 @@ async function upgradeJob(
   // Process salary
   const salaryData = processSalary(input)
 
+  if (salaryData.salaryValidated !== true) {
+    return { status: 'skipped', reason: 'salary-not-eligible', jobId: existing.id, dedupeKey }
+  }
+
+  const strictExclusionReason = getStrictExclusionReason(input.title, input.employmentType)
+  if (strictExclusionReason) {
+    return { status: 'skipped', reason: strictExclusionReason, jobId: existing.id, dedupeKey }
+  }
+
   // Process location
   const locationData = processLocation(input)
 
@@ -332,7 +364,17 @@ async function upgradeJob(
     maxAnnual: salaryData.maxAnnual ?? existing.maxAnnual,
     currency: salaryData.currency ?? existing.currency,
     isHighSalary: salaryData.isHighSalary ?? existing.isHighSalary,
-    isHundredKLocal: salaryData.isHighSalary ?? existing.isHundredKLocal,
+    // v2.9 hard gate: flags cannot qualify jobs (numeric + validated only)
+    isHundredKLocal: false,
+
+    // Salary quality (v2.9)
+    salaryValidated: salaryData.salaryValidated,
+    salaryConfidence: salaryData.salaryConfidence,
+    salarySource: salaryData.salarySource,
+    salaryParseReason: salaryData.salaryParseReason,
+    salaryNormalizedAt: salaryData.salaryNormalizedAt,
+    salaryRejectedAt: salaryData.salaryRejectedAt,
+    salaryRejectedReason: salaryData.salaryRejectedReason,
 
     // URLs - prefer new data
     applyUrl: input.applyUrl ?? input.url ?? existing.applyUrl,
@@ -347,6 +389,9 @@ async function upgradeJob(
     lastSeenAt: new Date(),
     postedAt: input.postedAt ?? existing.postedAt,
     updatedAt: new Date(),
+
+    // v2.9: deterministic experience level from title
+    experienceLevel: inferExperienceLevelFromTitle(input.title),
   }
 
   await prisma.job.update({
@@ -384,14 +429,24 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
   // Fill in missing salary
   if (!existing.salaryMin && !existing.salaryMax && (input.salaryMin || input.salaryMax)) {
     const salaryData = processSalary(input)
-    updateData.salaryMin = salaryData.salaryMin
-    updateData.salaryMax = salaryData.salaryMax
-    updateData.salaryCurrency = salaryData.salaryCurrency
-    updateData.salaryPeriod = salaryData.salaryInterval
-    updateData.minAnnual = salaryData.minAnnual
-    updateData.maxAnnual = salaryData.maxAnnual
-    updateData.isHighSalary = salaryData.isHighSalary
-    updateData.isHundredKLocal = salaryData.isHighSalary
+    if (salaryData.salaryValidated === true) {
+      updateData.salaryMin = salaryData.salaryMin
+      updateData.salaryMax = salaryData.salaryMax
+      updateData.salaryCurrency = salaryData.salaryCurrency
+      updateData.salaryPeriod = salaryData.salaryInterval
+      updateData.minAnnual = salaryData.minAnnual
+      updateData.maxAnnual = salaryData.maxAnnual
+      updateData.isHighSalary = salaryData.isHighSalary
+      updateData.isHundredKLocal = false
+
+      updateData.salaryValidated = salaryData.salaryValidated
+      updateData.salaryConfidence = salaryData.salaryConfidence
+      updateData.salarySource = salaryData.salarySource
+      updateData.salaryParseReason = salaryData.salaryParseReason
+      updateData.salaryNormalizedAt = salaryData.salaryNormalizedAt
+      updateData.salaryRejectedAt = salaryData.salaryRejectedAt
+      updateData.salaryRejectedReason = salaryData.salaryRejectedReason
+    }
   }
 
   // Fill in missing logo
@@ -429,6 +484,9 @@ function processSalary(input: ScrapedJobInput) {
   let salaryMax = input.salaryMax ?? null
   let salaryCurrency = input.salaryCurrency ?? null
   let salaryInterval = input.salaryInterval ?? 'year'
+  let salarySource: SalarySource = 'none'
+  let currencyAmbiguous = false
+  const now = new Date()
 
   // Try Greenhouse-specific parsing first (more accurate)
   if (salaryMin === null && salaryMax === null && input.source === 'ats:greenhouse') {
@@ -439,12 +497,27 @@ function processSalary(input: ScrapedJobInput) {
       salaryMax = greenhouseSalary.max
       salaryCurrency = greenhouseSalary.currency
       salaryInterval = 'year'
+      salarySource = 'descriptionText'
+      if (!greenhouseSalary.currency) currencyAmbiguous = true
     }
+  }
+
+  // ATS structured salary
+  if (
+    salarySource === 'none' &&
+    (input.salaryMin != null || input.salaryMax != null) &&
+    input.salaryCurrency != null
+  ) {
+    salarySource = 'ats'
+    if (String(input.salaryCurrency).trim() === '$') currencyAmbiguous = true
   }
 
   // Fallback: Try parsing from text if no explicit values
   if (salaryMin === null && salaryMax === null) {
-    const textToParse: string = input.salaryRaw ?? input.descriptionText ?? input.descriptionHtml ?? ''
+    const salaryRawText: string = input.salaryRaw ?? ''
+    const descText: string = input.descriptionText ?? input.descriptionHtml ?? ''
+    const textToParse: string = salaryRawText || descText
+
     if (textToParse.length > 0) {
       const parsed = parseSalaryFromText(textToParse)
       if (parsed) {
@@ -452,6 +525,7 @@ function processSalary(input: ScrapedJobInput) {
         salaryMax = parsed.max
         salaryCurrency = parsed.currency
         salaryInterval = parsed.interval ?? 'year'
+        salarySource = salaryRawText ? 'salaryRaw' : 'descriptionText'
       }
     }
   }
@@ -464,11 +538,12 @@ function processSalary(input: ScrapedJobInput) {
     interval: salaryInterval,
   })
 
-  // 🔥 NEW: Check multi-currency thresholds
-  // We check against the normalized annual max to be optimistic
-  const effectiveMax = Number(normalized.maxAnnual || normalized.minAnnual || 0)
-  // FIX: Force currency to 'USD' if null so the strict check passes
-  const isHigh = isHighSalary(effectiveMax, normalized.currency || 'USD')
+  const validation = validateHighSalaryEligibility({
+    normalized,
+    source: salarySource,
+    currencyAmbiguous,
+    now,
+  })
 
   return {
     salaryMin: salaryMin !== null ? BigInt(Math.round(salaryMin)) : null,
@@ -478,8 +553,40 @@ function processSalary(input: ScrapedJobInput) {
     minAnnual: normalized.minAnnual,
     maxAnnual: normalized.maxAnnual,
     currency: normalized.currency,
-    isHighSalary: isHigh,
+    isHighSalary: validation.salaryValidated === true,
+    ...validation,
   }
+}
+
+const BANNED_TITLE_RE =
+  /\b(junior|jr\.?|entry[- ]level|intern|internship|graduate|new\s*grad|new\s*graduate)\b/i
+const BANNED_TYPE_RE = /\b(part[- ]time|contract|temporary)\b/i
+
+function getStrictExclusionReason(
+  title: string | null | undefined,
+  employmentType: string | null | undefined
+): string | null {
+  const t = String(title ?? '')
+  if (BANNED_TITLE_RE.test(t)) return 'banned-title'
+
+  const type = String(employmentType ?? '')
+  if (BANNED_TYPE_RE.test(type) || BANNED_TYPE_RE.test(t)) return 'banned-employment-type'
+
+  return null
+}
+
+function inferExperienceLevelFromTitle(title: string | null | undefined): string {
+  const t = ` ${String(title ?? '').toLowerCase()} `
+
+  if (/\b(principal)\b/.test(t)) return 'principal'
+  if (/\b(staff)\b/.test(t)) return 'staff'
+  if (/\b(senior|sr\.?)\b/.test(t)) return 'senior'
+  if (/\b(lead)\b/.test(t)) return 'lead'
+  if (/\b(director)\b/.test(t)) return 'director'
+  if (/\b(vp|vice president)\b/.test(t)) return 'vp'
+  if (/\b(chief|cto|ceo|cpo|coo|ciso|cio)\b/.test(t)) return 'c-level'
+
+  return 'mid'
 }
 
 function processLocation(input: ScrapedJobInput) {

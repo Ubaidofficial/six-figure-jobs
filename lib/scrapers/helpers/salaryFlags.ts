@@ -23,6 +23,13 @@ export function calculateSalaryFlags(
 
   const salaryNum = typeof minAnnual === 'bigint' ? Number(minAnnual) : minAnnual
   const threshold = getMinSalaryForCountry(countryCode)
+  if (threshold == null) {
+    return {
+      isHundredKLocal: false,
+      isHighSalaryLocal: false,
+    }
+  }
+
   const isHundredKLocal = salaryNum >= threshold
   const isHighSalaryLocal = isVeryHighSalary(salaryNum, countryCode)
 

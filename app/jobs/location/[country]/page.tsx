@@ -12,6 +12,7 @@ import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countr
 import { redirect } from 'next/navigation'
 import { SALARY_BANDS } from '@/lib/constants/homepage'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 
 const PAGE_SIZE = 40
 
@@ -161,30 +162,12 @@ export default async function LocationPage({
     ],
   }
 
-  const itemListJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `${loc.label} $100k+ jobs`,
-    itemListElement: (jobs as JobWithCompany[]).slice(0, 40).map((job, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      item: {
-        '@type': 'JobPosting',
-        title: job.title,
-        hiringOrganization: {
-          '@type': 'Organization',
-          name: job.companyRef?.name || job.company,
-        },
-        jobLocation: job.countryCode
-          ? {
-              '@type': 'Country',
-              addressCountry: job.countryCode,
-            }
-          : undefined,
-        url: `${getSiteUrl()}/job/${job.id}`,
-      },
-    })),
-  }
+  const itemListJsonLd = buildItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs: (jobs as JobWithCompany[]).slice(0, 40),
+    page,
+    pageSize: PAGE_SIZE,
+  })
 
   const companyCounts = new Map<string, { name: string; count: number; slug?: string | null }>()
   jobs.forEach((job: any) => {

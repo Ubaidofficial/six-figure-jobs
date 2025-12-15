@@ -4,7 +4,7 @@
 export interface ParsedSalary {
   min: number
   max: number
-  currency: string
+  currency: string | null
 }
 
 /**
@@ -62,7 +62,7 @@ export function parseGreenhouseSalary(html: string | null | undefined): ParsedSa
   const max = parseNumber(maxStr)
 
   // Determine currency from symbol or explicit code
-  let currency = 'USD'
+  let currency: string | null = null
   if (currencyCode) {
     currency = currencyCode
   } else if (symbol === '£') {
@@ -71,25 +71,8 @@ export function parseGreenhouseSalary(html: string | null | undefined): ParsedSa
     currency = 'EUR'
   }
 
-  // Validate reasonable salary range
-  if (min < 30000 || max > 2000000 || min > max) {
-    return null
-  }
+  // Basic sanity only. Eligibility validation is centralized in the salary validator.
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0 || min > max) return null
 
   return { min, max, currency }
-}
-
-/**
- * Check if salary is high-paying based on currency thresholds
- */
-export function isHighSalary(salary: ParsedSalary): boolean {
-  const thresholds: Record<string, number> = {
-    USD: 90000,
-    EUR: 90000,
-    GBP: 75000,
-    AUD: 100000,
-    CAD: 100000,
-    CHF: 100000,
-  }
-  return salary.min >= (thresholds[salary.currency] || 90000)
 }

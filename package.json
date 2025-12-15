@@ -16,6 +16,8 @@
     "jobs:repair:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=repair",
     "jobs:annotate:ai": "tsx scripts/aiAnnotateJobs.ts",
     "jobs:backfill:salary": "tsx scripts/backfill-high-salary-local.ts",
+    "jobs:backfill:salary-quality:v2.9": "tsx scripts/backfill-salary-quality-v2.9.ts",
+    "audit:v2.9": "tsx scripts/audit-v2.9.ts",
     "scraper:smoke": "tsx scripts/smokeScrapers.ts",
     "scraper:ats:report": "tsx scripts/reportAtsCoverage.ts",
     "publish:pseo-batch": "tsx scripts/publish-pseo-batch.ts",

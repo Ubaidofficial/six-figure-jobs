@@ -6171,3 +6171,22 @@ for (const combo of roleCityCombos) {
 ═══════════════════════════════════════════════════════════════════════════════
                          END OF RULES v2.7
 ═══════════════════════════════════════════════════════════════════════════════
+
+---
+
+## Schema Eligibility Rules (v2.9)
+
+Single source of truth:
+- Thresholds: `lib/currency/thresholds.ts`
+- Helper: `getHighSalaryThresholdAnnual(currency)` returns `number | null` (null for unknown/unsupported).
+
+Listings (GSC-safe):
+- List pages MUST NOT emit `JobPosting` JSON-LD.
+- List pages may emit `ItemList` with URLs only (no embedded `JobPosting` items). Shared helper: `lib/seo/itemListJsonLd.ts`.
+
+Job detail pages only:
+- `JobPosting` JSON-LD is emitted only on `/job/*` using the canonical builder `lib/seo/jobJsonLd.ts`.
+- `baseSalary` is emitted ONLY if `salaryValidated === true` and values are within caps (caps defined in `lib/normalizers/salary.ts`).
+
+Eligibility is deterministic:
+- No AI output may affect eligibility, indexing, or structured data eligibility. AI fields render only in `ai*` fields and UI.

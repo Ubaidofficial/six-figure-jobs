@@ -4,7 +4,11 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { prisma } from '../../lib/prisma'
-import type { JobWithCompany } from '../../lib/jobs/queryJobs'
+import {
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+  type JobWithCompany,
+} from '../../lib/jobs/queryJobs'
 import JobList from '../components/JobList'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
@@ -181,7 +185,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const remoteMode = getParam(sp, 'remoteMode')?.trim() || ''
   const remoteRegion = getParam(sp, 'remoteRegion')?.trim() || ''
   const seniority = getParam(sp, 'seniority')?.trim() || ''
-  const minSalaryRaw = Number(getParam(sp, 'minSalary') || '100000')
+  const minSalaryParam = getParam(sp, 'minSalary')
+  const minSalaryRaw = Number(minSalaryParam || '100000')
   const page = Math.max(1, Number(getParam(sp, 'page') || '1') || 1)
 
   const aiFilters = parseSearchQuery(q)
@@ -204,14 +209,20 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   const andConditions: any[] = []
 
-  // High-salary enforcement
-  andConditions.push({
-    OR: [
-      { maxAnnual: { gte: BigInt(minAnnual) } },
-      { minAnnual: { gte: BigInt(minAnnual) } },
-      { isHighSalary: true },
-    ],
-  })
+  // v2.9 hard gates: eligibility + global exclusions
+  andConditions.push(buildHighSalaryEligibilityWhere())
+  andConditions.push(buildGlobalExclusionsWhere())
+
+  // Optional user min-salary filter (additional constraint on top of eligibility)
+  const hasUserMinSalary = Boolean(minSalaryParam) || aiFilters.minAnnual != null
+  if (hasUserMinSalary) {
+    andConditions.push({
+      OR: [
+        { maxAnnual: { gte: BigInt(minAnnual) } },
+        { minAnnual: { gte: BigInt(minAnnual) } },
+      ],
+    })
+  }
 
   if (q) {
     andConditions.push({
@@ -282,7 +293,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
     prisma.job.findMany({
       where,
       orderBy: [
-        { isHighSalary: 'desc' },
         { maxAnnual: 'desc' },
         { createdAt: 'desc' },
       ],

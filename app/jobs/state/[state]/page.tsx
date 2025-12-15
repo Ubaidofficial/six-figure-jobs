@@ -5,6 +5,7 @@ import { STATE_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -24,38 +25,6 @@ function buildBreadcrumbJsonLd(stateSlug: string, stateName: string) {
       { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${SITE_URL}/jobs/100k-plus` },
       { '@type': 'ListItem', position: 3, name: `${stateName} jobs`, item: `${SITE_URL}/jobs/state/${stateSlug}` },
     ],
-  }
-}
-
-function buildItemListJsonLd(jobs: JobWithCompany[], stateName: string) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `$100k+ jobs in ${stateName}`,
-    itemListElement: jobs.slice(0, PAGE_SIZE).map((job, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      item: {
-        '@type': 'JobPosting',
-        title: job.title,
-        hiringOrganization: {
-          '@type': 'Organization',
-          name: job.companyRef?.name || job.company,
-        },
-        jobLocation: job.city
-          ? {
-              '@type': 'Place',
-              address: {
-                '@type': 'PostalAddress',
-                addressLocality: job.city,
-                addressRegion: job.stateCode || undefined,
-                addressCountry: job.countryCode || undefined,
-              },
-            }
-          : undefined,
-        url: `${SITE_URL}/job/${job.id}`,
-      },
-    })),
   }
 }
 
@@ -127,7 +96,12 @@ export default async function StatePage({ params }: { params: Params }) {
       : Math.max(salaryMin, 200_000)
 
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(resolved.slug, resolved.name)
-  const itemListJsonLd = buildItemListJsonLd(jobs as JobWithCompany[], resolved.name)
+  const itemListJsonLd = buildSafeItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs: (jobs as JobWithCompany[]).slice(0, PAGE_SIZE),
+    page: 1,
+    pageSize: PAGE_SIZE,
+  })
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',

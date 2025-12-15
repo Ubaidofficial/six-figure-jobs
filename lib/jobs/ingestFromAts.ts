@@ -531,103 +531,6 @@ function inferRoleSlugFromTitle(
 }
 
 // =============================================================================
-// Salary Parsing (FIXED)
-// =============================================================================
-
-type SalaryInfo = {
-  minAnnual?: bigint | null
-  maxAnnual?: bigint | null
-  currency?: string | null
-  isHundredKLocal?: boolean
-  salaryRaw?: string | null
-  salaryMin?: bigint | null
-  salaryMax?: bigint | null
-  salaryCurrency?: string | null
-  salaryPeriod?: string | null
-}
-
-function extractSalaryFromHtml(html?: string | null): SalaryInfo {
-  if (!html) return {}
-
-  let decoded = html
-  if (!/<\w+/i.test(html) && /&lt;\/?\w+/i.test(html)) {
-    decoded = decodeEntities(html)
-  }
-
-  const salaryRaw = html
-  const text = stripTags(decoded)
-
-  let numbers: number[] = []
-
-  // $120,000 style
-  const commaMatches = text.match(/\$ ?([0-9]{2,3}(?:,[0-9]{3})*)/g)
-  if (commaMatches?.length) {
-    numbers = commaMatches
-      .map((m) => m.replace(/[^0-9]/g, ''))
-      .map((n) => Number(n))
-      .filter((n) => Number.isFinite(n))
-  }
-
-  // 120k style (handles "$120k" and prevents "$120,000k" inflation)
-  if (!numbers.length) {
-    const kMatches = text.match(/\$ ?([0-9]{2,3}(?:,[0-9]{3})*)\s*k/gi)
-    if (kMatches?.length) {
-      numbers = kMatches
-        .map((m) => {
-          const rawNum = Number(m.replace(/[^0-9]/g, ''))
-          if (!Number.isFinite(rawNum)) return NaN
-          // Only multiply when it looks like "120k" (not "120,000k")
-          return rawNum >= 1000 ? rawNum : rawNum * 1000
-        })
-        .filter((n) => Number.isFinite(n))
-    }
-  }
-
-  if (!numbers.length) return { salaryRaw }
-
-  let min = numbers[0]
-  let max = numbers[0]
-  if (numbers.length >= 2) {
-    min = Math.min(numbers[0], numbers[1])
-    max = Math.max(numbers[0], numbers[1])
-  }
-
-  // Sanity guard: ignore obviously corrupt values
-  if (min > 2_000_000 || max > 2_000_000) {
-    return { salaryRaw }
-  }
-
-  const minAnnual = BigInt(min)
-  const maxAnnual = BigInt(max)
-  const isHundredKLocal = max >= 100_000 || min >= 100_000
-
-  return {
-    minAnnual,
-    maxAnnual,
-    currency: 'USD',
-    salaryRaw,
-    isHundredKLocal,
-    salaryMin: minAnnual,
-    salaryMax: maxAnnual,
-    salaryCurrency: 'USD',
-    salaryPeriod: 'year',
-  }
-}
-
-function decodeEntities(str: string): string {
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-}
-
-function stripTags(str: string): string {
-  return str.replace(/<\/?[^>]+(>|$)/g, '')
-}
-
-// =============================================================================
 // Main Function
 // =============================================================================
 
@@ -681,9 +584,8 @@ export async function upsertJobsForCompanyFromAts(
       const descriptionHtml: string | null =
         raw.descriptionHtml ?? raw.description ?? raw.content ?? null
 
-      const salarySourceHtml: string | null =
-        raw.salaryHtml ?? raw.salaryRaw ?? raw.salary ?? descriptionHtml ?? null
-      const salary = extractSalaryFromHtml(salarySourceHtml)
+      const salaryRaw: string | null =
+        raw.salaryHtml ?? raw.salaryRaw ?? raw.salary ?? null
 
       const postedAt: Date | null = raw.postedAt
         ? new Date(raw.postedAt)
@@ -707,11 +609,13 @@ export async function upsertJobsForCompanyFromAts(
         locationText,
         isRemote,
 
-        salaryRaw: salary.salaryRaw ?? null,
-        salaryMin: salary.salaryMin ? Number(salary.salaryMin) : null,
-        salaryMax: salary.salaryMax ? Number(salary.salaryMax) : null,
-        salaryCurrency: salary.salaryCurrency ?? null,
-        salaryInterval: salary.salaryPeriod ?? 'year',
+        // v2.9: do not force currency/thresholds in this wrapper.
+        // The central ingest pipeline owns parsing + validation.
+        salaryRaw,
+        salaryMin: null,
+        salaryMax: null,
+        salaryCurrency: null,
+        salaryInterval: 'year',
 
         employmentType: raw.type ?? raw.employmentType ?? null,
         department: raw.department ?? null,

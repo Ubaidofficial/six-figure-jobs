@@ -32,6 +32,18 @@ model Job {
   isHighSalary         Boolean        @default(false)
   isHundredKLocal      Boolean        @default(false)
   isHighSalaryLocal    Boolean        @default(false)  // NEW: PPP-adjusted high salary (1.5x+ local threshold)
+
+  // -----------------------------
+  // v2.9 Salary quality fields (deterministic gates)
+  // -----------------------------
+  salaryConfidence      Int?      @default(0)
+  salaryValidated       Boolean   @default(false)
+  salarySource          String?
+  salaryParseReason     String?
+  salaryNormalizedAt    DateTime?
+  salaryRejectedAt      DateTime?
+  salaryRejectedReason  String?
+
   type                 String?
   source               String
   applyUrl             String?
@@ -94,9 +106,38 @@ model Job {
   @@index([workArrangement])
   @@index([stateCode])
 
+  // v2.9 salary quality indexes
+  @@index([salaryValidated])
+  @@index([salaryConfidence])
+  @@index([salarySource])
+  @@index([salaryNormalizedAt])
+
   // v2.9 indexes
   @@index([aiQualityScore])
   @@index([lastAiEnrichedAt])
+}
+
+model SalaryAggregate {
+  id            String   @id @default(cuid())
+  sliceType     String
+  sliceSlug     String
+  currency      String
+  minConfidence Int      @default(80)
+
+  jobCount      Int      @default(0)
+  minAnnual     BigInt?
+  maxAnnual     BigInt?
+  avgAnnual     BigInt?
+  medianAnnual  BigInt?
+  p75Annual     BigInt?
+
+  computedAt    DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([sliceType, sliceSlug, currency], name: "slice_currency_unique")
+  @@index([sliceType])
+  @@index([sliceSlug])
+  @@index([jobCount])
 }
 
 model Company {

@@ -3,6 +3,10 @@
 
 import { prisma } from '../../lib/prisma'
 import { getSiteUrl } from '../../lib/seo/site'
+import {
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+} from '../../lib/jobs/queryJobs'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
@@ -21,15 +25,9 @@ function escapeXml(s: string) {
 }
 
 function buildHundredKWhereBase() {
-  const threshold = BigInt(100_000)
   return {
     isExpired: false,
-    OR: [
-      { maxAnnual: { gte: threshold } },
-      { minAnnual: { gte: threshold } },
-      { isHighSalary: true },
-      { isHundredKLocal: true },
-    ],
+    AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
   }
 }
 

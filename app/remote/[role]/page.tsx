@@ -1,6 +1,4 @@
 // app/remote/[role]/page.tsx
-export const dynamic = 'force-dynamic'
-export const revalidate = 3600
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
@@ -13,6 +11,10 @@ import {
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import JobList from '../../components/JobList'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 
 const SITE_URL = getSiteUrl()
@@ -149,69 +151,6 @@ function faqItems(roleName: string) {
   ]
 }
 
-function buildJobListJsonLd(
-  roleSlug: string,
-  jobs: JobWithCompany[],
-  page: number
-) {
-  const roleName = prettyRole(roleSlug)
-
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `Remote ${roleName} jobs paying $100k+`,
-    itemListElement: jobs.map((job, index) => {
-      const href = buildJobSlugHref(job)
-
-      return {
-        '@type': 'ListItem',
-        position: (page - 1) * PAGE_SIZE + index + 1,
-        item: {
-          '@type': 'JobPosting',
-          title: job.title,
-          description: job.descriptionHtml || undefined,
-          datePosted: job.postedAt?.toISOString(),
-          employmentType: (job as any).type || undefined,
-          hiringOrganization: {
-            '@type': 'Organization',
-            name: job.companyRef?.name || job.company,
-            sameAs: job.companyRef?.website || undefined,
-          },
-          jobLocationType: job.remote ? 'TELECOMMUTE' : undefined,
-          jobLocation: job.city
-            ? {
-                '@type': 'Place',
-                address: {
-                  '@type': 'PostalAddress',
-                  addressLocality: job.city,
-                  addressCountry: job.countryCode || undefined,
-                },
-              }
-            : undefined,
-          baseSalary:
-            job.minAnnual || job.maxAnnual
-              ? {
-                  '@type': 'MonetaryAmount',
-                  currency: job.currency || 'USD',
-                  value: {
-                    '@type': 'QuantitativeValue',
-                    minValue: job.minAnnual
-                      ? Number(job.minAnnual)
-                      : undefined,
-                    maxValue: job.maxAnnual
-                      ? Number(job.maxAnnual)
-                      : undefined,
-                    unitText: 'YEAR',
-                  },
-                }
-              : undefined,
-          url: `${SITE_URL}${href}`,
-        },
-      }
-    }),
-  }
-}
-
 /* -------------------------------------------------------------------------- */
 /* Metadata                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -346,7 +285,12 @@ export default async function RemoteRolePage({
       ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
       : 1
 
-  const jsonLd = buildJobListJsonLd(roleSlug, jobs, page)
+  const jsonLd = buildItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs,
+    page,
+    pageSize: PAGE_SIZE,
+  })
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',

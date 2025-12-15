@@ -71,6 +71,7 @@ async function main() {
 
   for (const country of TARGET_COUNTRIES) {
     const threshold = highSalaryThresholdForCountry(country.code)
+    if (threshold == null) continue
 
     for (const role of ALL_SALARY_ROLES) {
       for (const band of salaryBands) {

@@ -2,6 +2,10 @@
 import { prisma } from '../../lib/prisma'
 import { getSiteUrl } from '../../lib/seo/site'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
+import {
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+} from '../../lib/jobs/queryJobs'
 
 const SITE_URL = getSiteUrl()
 
@@ -18,19 +22,11 @@ function escapeXml(s: string) {
 }
 
 function buildRemoteHundredKWhere(extra: any = {}) {
-  const threshold = BigInt(100_000)
-
   return {
     isExpired: false,
     AND: [
-      {
-        OR: [
-          { maxAnnual: { gte: threshold } },
-          { minAnnual: { gte: threshold } },
-          { isHighSalary: true },
-          { isHundredKLocal: true },
-        ],
-      },
+      buildHighSalaryEligibilityWhere(),
+      buildGlobalExclusionsWhere(),
       { OR: [{ remote: true }, { remoteMode: 'remote' }] },
       extra,
     ],

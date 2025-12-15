@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import { getSiteUrl, SITE_NAME } from '../../../lib/seo/site'
+import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 
 export const revalidate = 300
 
@@ -227,30 +228,12 @@ export default async function RolePage({
     ],
   }
 
-  const itemListJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `${roleTitle} jobs paying $100k+`,
-    itemListElement: (jobs as JobWithCompany[]).slice(0, 40).map((job, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      item: {
-        '@type': 'JobPosting',
-        title: job.title,
-        hiringOrganization: {
-          '@type': 'Organization',
-          name: job.companyRef?.name || job.company,
-        },
-        jobLocation: job.countryCode
-          ? {
-              '@type': 'Country',
-              addressCountry: job.countryCode,
-            }
-          : undefined,
-        url: `${SITE_URL}/job/${job.id}`,
-      },
-    })),
-  }
+  const itemListJsonLd = buildItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs: (jobs as JobWithCompany[]).slice(0, 40),
+    page: 1,
+    pageSize: 40,
+  })
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">

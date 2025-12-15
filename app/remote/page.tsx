@@ -1,6 +1,10 @@
 import Link from 'next/link'
 import { prisma } from '../../lib/prisma'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
+import {
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+} from '../../lib/jobs/queryJobs'
 
 const SITE_URL = getSiteUrl()
 
@@ -9,14 +13,8 @@ export async function generateMetadata() {
     where: {
       isExpired: false,
       AND: [
-        {
-          OR: [
-            { minAnnual: { gte: BigInt(100_000) } },
-            { maxAnnual: { gte: BigInt(100_000) } },
-            { isHundredKLocal: true },
-            { isHighSalaryLocal: true },
-          ],
-        },
+        buildHighSalaryEligibilityWhere(),
+        buildGlobalExclusionsWhere(),
         { OR: [{ remote: true }, { remoteMode: 'remote' }] },
       ],
     },
@@ -54,14 +52,8 @@ export default async function RemoteJobsPage() {
       isExpired: false,
       AND: [
         { OR: [{ remote: true }, { remoteMode: 'remote' }] },
-        {
-          OR: [
-            { minAnnual: { gte: BigInt(100_000) } },
-            { maxAnnual: { gte: BigInt(100_000) } },
-            { isHundredKLocal: true },
-            { isHighSalaryLocal: true },
-          ],
-        },
+        buildHighSalaryEligibilityWhere(),
+        buildGlobalExclusionsWhere(),
       ],
     },
     _count: true,

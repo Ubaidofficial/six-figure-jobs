@@ -54,7 +54,7 @@ async function backfillHighSalaryLocal() {
           
           // Get threshold for this country
           const threshold = getMinSalaryForCountry(countryCode)
-          if (!threshold) {
+          if (threshold == null) {
             noThreshold++
             return null
           }

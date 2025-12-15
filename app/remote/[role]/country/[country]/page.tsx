@@ -11,6 +11,7 @@ import {
 import { buildJobSlugHref } from '../../../../../lib/jobs/jobSlug'
 import JobList from '../../../../components/JobList'
 import { SITE_NAME, getSiteUrl } from '../../../../../lib/seo/site'
+import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 
 export const revalidate = 300
 
@@ -126,69 +127,6 @@ function buildFilterHref(
 
   const query = params.toString()
   return query ? `${basePath}?${query}` : basePath
-}
-
-function buildJobListJsonLd(
-  roleSlug: string,
-  countryCode: string,
-  jobs: JobWithCompany[],
-  page: number
-) {
-  const roleName = prettyRole(roleSlug)
-  const cc = prettyCountryCode(countryCode)
-
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `Remote ${roleName} jobs in ${cc} paying $100k+`,
-    itemListElement: jobs.map((job, index) => {
-      const href = buildJobSlugHref(job)
-
-      return {
-        '@type': 'ListItem',
-        position: (page - 1) * PAGE_SIZE + index + 1,
-        item: {
-          '@type': 'JobPosting',
-          title: job.title,
-          description: job.descriptionHtml || undefined,
-          datePosted: job.postedAt?.toISOString(),
-          employmentType: (job as any).type || undefined,
-          hiringOrganization: {
-            '@type': 'Organization',
-            name: job.companyRef?.name || job.company,
-            sameAs: job.companyRef?.website || undefined,
-          },
-          jobLocationType: job.remote ? 'TELECOMMUTE' : undefined,
-          jobLocation: {
-            '@type': 'Place',
-            address: {
-              '@type': 'PostalAddress',
-              addressCountry: job.countryCode || countryCode,
-              addressLocality: job.city || undefined,
-            },
-          },
-          baseSalary:
-            job.minAnnual || job.maxAnnual
-              ? {
-                  '@type': 'MonetaryAmount',
-                  currency: job.currency || 'USD',
-                  value: {
-                    '@type': 'QuantitativeValue',
-                    minValue: job.minAnnual
-                      ? Number(job.minAnnual)
-                      : undefined,
-                    maxValue: job.maxAnnual
-                      ? Number(job.maxAnnual)
-                      : undefined,
-                    unitText: 'YEAR',
-                  },
-                }
-              : undefined,
-          url: `${SITE_URL}${href}`,
-        },
-      }
-    }),
-  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -327,7 +265,12 @@ export default async function RemoteRoleCountryPage({
       ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
       : 1
 
-  const jsonLd = buildJobListJsonLd(roleSlug, countryCode, jobs, page)
+  const jsonLd = buildItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs,
+    page,
+    pageSize: PAGE_SIZE,
+  })
   const salaryOptions = [100_000, 200_000, 300_000, 400_000]
 
   return (
