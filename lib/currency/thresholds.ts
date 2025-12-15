@@ -1,18 +1,19 @@
 // lib/currency/thresholds.ts
 // Defines what counts as a "High Salary" in different currencies.
-// Values are roughly normalized to equivalent purchasing power of $100k USD in tech hubs.
+// Keep this as the SINGLE source of truth for per-currency thresholds.
 
 export const HIGH_SALARY_THRESHOLDS = {
-  USD: 100000, // United States
-  EUR: 80000,  // Europe (approx ~85k USD, adjusted for lower cost of living/taxes)
-  GBP: 70000,  // UK (approx ~88k USD)
-  CAD: 120000, // Canada (approx ~88k USD)
-  AUD: 140000, // Australia (approx ~92k USD)
-  SGD: 120000, // Singapore
-  CHF: 110000, // Switzerland (High cost of living)
-  NOK: 1_000_000, // Norway (~$100k USD equivalent)
-  SEK: 1_000_000, // Sweden (~$100k USD equivalent)
-  DKK: 700_000,   // Denmark (~$100k USD equivalent)
+  USD: 100_000,   // United States
+  EUR: 80_000,    // Europe (approx high-paying)
+  GBP: 70_000,    // United Kingdom
+  CAD: 120_000,   // Canada
+  AUD: 140_000,   // Australia
+  NZD: 150_000,   // New Zealand (roughly aligned with AU/NZ market)
+  SGD: 120_000,   // Singapore
+  CHF: 110_000,   // Switzerland
+  NOK: 1_000_000, // Norway
+  SEK: 1_000_000, // Sweden
+  DKK: 700_000,   // Denmark
 } as const satisfies Record<string, number>
 
 export type HighSalaryCurrency = keyof typeof HIGH_SALARY_THRESHOLDS
@@ -30,7 +31,7 @@ export function getHighSalaryThresholdAnnual(
 }
 
 /**
- * Checks if a salary is considered "High" based on its currency.
+ * Checks if a salary is considered "High" based on its currency threshold.
  */
 export function isHighSalary(amount: number, currency: string): boolean {
   const threshold = getHighSalaryThresholdAnnual(currency)
