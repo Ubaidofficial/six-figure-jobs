@@ -143,8 +143,6 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
 // =============================================================================
 
 async function resolveCompany(input: ScrapedJobInput): Promise<ResolvedCompany | null> {
-  // Use the existing upsertCompanyFromBoard helper
-  // This handles name cleaning, ATS detection, and deduplication
   const company = await upsertCompanyFromBoard({
     rawName: input.rawCompanyName,
     source: input.source,
@@ -196,7 +194,7 @@ async function createNewJob(
     return { status: 'skipped', reason: 'salary-not-eligible', dedupeKey }
   }
 
-  // Process location
+  // Process location (FIXED: hybrid/onsite must win over isRemote)
   const locationData = processLocation(input)
 
   // Infer role
@@ -274,7 +272,6 @@ async function createNewJob(
     await prisma.job.create({ data: jobData })
     return { status: 'created', jobId, dedupeKey }
   } catch (error: any) {
-    // Handle unique constraint violation (race condition)
     if (error?.code === 'P2002') {
       const target = error?.meta?.target
       const targets = Array.isArray(target)
@@ -324,7 +321,7 @@ async function upgradeJob(
     return { status: 'skipped', reason: 'salary-not-eligible', jobId: existing.id, dedupeKey }
   }
 
-  // Process location
+  // Process location (FIXED: hybrid/onsite must win over isRemote)
   const locationData = processLocation(input)
 
   // Infer role
@@ -338,7 +335,7 @@ async function upgradeJob(
     externalId: input.externalId,
     isUnverifiedBoardJob: false, // Upgraded jobs are verified
 
-    // Update title if provided
+    // Update title
     title: input.title,
     shortId: getShortStableIdForJobId(existing.id),
     company: company.name,
@@ -364,7 +361,6 @@ async function upgradeJob(
     maxAnnual: salaryData.maxAnnual ?? existing.maxAnnual,
     currency: salaryData.currency ?? existing.currency,
     isHighSalary: salaryData.isHighSalary ?? existing.isHighSalary,
-    // v2.9 hard gate
     isHundredKLocal: false,
 
     // Salary quality (v2.9)
@@ -380,7 +376,7 @@ async function upgradeJob(
     type: input.employmentType ?? existing.type,
     employmentType: input.employmentType ?? existing.employmentType,
 
-    // URLs - prefer new data
+    // URLs
     applyUrl: input.applyUrl ?? input.url ?? existing.applyUrl,
     url: input.url ?? existing.url,
     descriptionHtml: input.descriptionHtml ?? existing.descriptionHtml,
@@ -405,11 +401,7 @@ async function upgradeJob(
 
   console.log(`[ingest] Upgraded job ${existing.id} from ${existing.source} to ${input.source}`)
 
-  return {
-    status: 'upgraded',
-    jobId: existing.id,
-    dedupeKey,
-  }
+  return { status: 'upgraded', jobId: existing.id, dedupeKey }
 }
 
 // =============================================================================
@@ -417,7 +409,6 @@ async function upgradeJob(
 // =============================================================================
 
 async function refreshJob(existing: any, input: ScrapedJobInput): Promise<IngestResult> {
-  // Only update tracking fields and fill in missing data
   const updateData: any = {
     lastSeenAt: new Date(),
     updatedAt: new Date(),
@@ -463,11 +454,7 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
     data: updateData,
   })
 
-  return {
-    status: 'updated',
-    jobId: existing.id,
-    dedupeKey: existing.dedupeKey,
-  }
+  return { status: 'updated', jobId: existing.id, dedupeKey: existing.dedupeKey }
 }
 
 // =============================================================================
@@ -475,7 +462,6 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
 // =============================================================================
 
 function buildJobId(source: string, externalId: string): string {
-  // Sanitize externalId to be safe for use in ID
   const safeExternalId = externalId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 200)
   return `${source}:${safeExternalId}`
 }
@@ -531,7 +517,6 @@ function processSalary(input: ScrapedJobInput) {
     }
   }
 
-  // Normalize salary
   const normalized = normalizeSalary({
     min: salaryMin,
     max: salaryMax,
@@ -578,7 +563,6 @@ function getStrictExclusionReason(
 
 function inferExperienceLevelFromTitle(title: string | null | undefined): string {
   const t = ` ${String(title ?? '').toLowerCase()} `
-
   if (/\b(principal)\b/.test(t)) return 'principal'
   if (/\b(staff)\b/.test(t)) return 'staff'
   if (/\b(senior|sr\.?)\b/.test(t)) return 'senior'
@@ -586,35 +570,50 @@ function inferExperienceLevelFromTitle(title: string | null | undefined): string
   if (/\b(director)\b/.test(t)) return 'director'
   if (/\b(vp|vice president)\b/.test(t)) return 'vp'
   if (/\b(chief|cto|ceo|cpo|coo|ciso|cio)\b/.test(t)) return 'c-level'
-
   return 'mid'
 }
 
+/**
+ * Location normalization (v2.9):
+ * - If normalizer says "hybrid" → remote=false, remoteMode='hybrid' (wins)
+ * - If normalizer says "onsite" → remote=false, remoteMode='onsite' (wins)
+ * - Only then consider true remote via input.isRemote or location.isRemote
+ */
 function processLocation(input: ScrapedJobInput) {
   const locationText = input.locationText || ''
   const location = normalizeLocationData(locationText)
+  const countryCode = countryToCode(location.country)
 
-  let remoteMode: string | null = null
-  const effectiveRemote = input.isRemote || location.isRemote || false
-
-  if (effectiveRemote) {
-    remoteMode = 'remote'
-  } else if (location.kind === 'hybrid') {
-    remoteMode = 'hybrid'
-  } else if (location.kind === 'onsite') {
-    remoteMode = 'onsite'
-  } else if (location.city || location.country) {
-    remoteMode = 'onsite'
+  // ✅ Hybrid / Onsite must win over any “isRemote” heuristic
+  if (location.kind === 'hybrid') {
+    return {
+      city: location.city ?? null,
+      citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
+      countryCode,
+      isRemote: false,
+      remoteMode: 'hybrid',
+    }
   }
 
-  const countryCode = countryToCode(location.country)
+  if (location.kind === 'onsite') {
+    return {
+      city: location.city ?? null,
+      citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
+      countryCode,
+      isRemote: false,
+      remoteMode: 'onsite',
+    }
+  }
+
+  // True remote only
+  const effectiveRemote = input.isRemote === true || location.isRemote === true
 
   return {
     city: location.city ?? null,
     citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
     countryCode,
     isRemote: effectiveRemote,
-    remoteMode,
+    remoteMode: effectiveRemote ? 'remote' : location.city || location.country ? 'onsite' : null,
   }
 }
 
@@ -658,20 +657,14 @@ async function checkUnverifiedBoardJob(
   input: ScrapedJobInput,
   dedupeKey: string,
 ): Promise<boolean> {
-  // Only applies to board sources
   if (!isBoardSource(input.source)) return false
-
-  // Company must have an ATS configured
   if (!company.atsProvider) return false
-
-  // ATS must have been scraped recently
   if (!company.lastScrapedAt) return false
 
   const daysSinceAtsScrape =
     (Date.now() - company.lastScrapedAt.getTime()) / (1000 * 60 * 60 * 24)
   if (daysSinceAtsScrape > ATS_RECENT_DAYS) return false
 
-  // Check if any ATS job exists with the same dedupe key
   const atsJobExists = await prisma.job.findFirst({
     where: {
       companyId: company.id,
@@ -681,7 +674,6 @@ async function checkUnverifiedBoardJob(
     },
   })
 
-  // If no ATS job with same key, this board job is "unverified"
   return !atsJobExists
 }
 
