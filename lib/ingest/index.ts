@@ -23,19 +23,12 @@ import {
 import { normalizeLocation as normalizeLocationData } from '../normalizers/location'
 import { normalizeRole } from '../normalizers/role'
 import slugify from 'slugify'
-import { isJobTooOld, MAX_INGEST_AGE_DAYS } from './jobAgeFilter'
 import { parseGreenhouseSalary } from './greenhouseSalaryParser'
 import { getShortStableIdForJobId } from '../jobs/jobSlug'
 
 import { getSourcePriority, isAtsSource, isBoardSource } from './sourcePriority'
-import { makeJobDedupeKey, normalizeLocation, normalizeUrl } from './dedupeHelpers'
-import type {
-  ScrapedJobInput,
-  IngestResult,
-  IngestStats,
-  ResolvedCompany,
-  createEmptyStats,
-} from './types'
+import { makeJobDedupeKey, normalizeUrl } from './dedupeHelpers'
+import type { ScrapedJobInput, IngestResult, IngestStats, ResolvedCompany } from './types'
 import { isValidScrapedJob, getValidationErrors } from './types'
 
 // =============================================================================
@@ -51,7 +44,7 @@ const ATS_RECENT_DAYS = 7
 
 /**
  * Ingest a scraped job into the database.
- * * This function handles:
+ * This function handles:
  * - Company resolution (find existing or create new)
  * - Dedupe key generation
  * - Finding existing jobs with same dedupe key or URL
@@ -62,7 +55,10 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
   // 1. Validate input
   if (!isValidScrapedJob(input)) {
     const errors = getValidationErrors(input)
-    console.warn(`[ingest] Invalid job input: ${errors.join(', ')}`, (input as any).title ?? 'unknown')
+    console.warn(
+      `[ingest] Invalid job input: ${errors.join(', ')}`,
+      (input as any).title ?? 'unknown',
+    )
     return { status: 'skipped', reason: `validation-failed: ${errors.join(', ')}` }
   }
 
@@ -122,21 +118,20 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
     // But first, check if this should be marked as unverified board job
     if (isBoardSource(input.source) && isAtsSource(existing.source)) {
       // Board job exists in ATS - this is expected, just skip
-      return { 
-        status: 'skipped', 
+      return {
+        status: 'skipped',
         reason: 'lower-priority-ats-exists',
         jobId: existing.id,
         dedupeKey,
       }
     }
 
-    return { 
-      status: 'skipped', 
+    return {
+      status: 'skipped',
       reason: 'lower-priority',
       jobId: existing.id,
       dedupeKey,
     }
-
   } catch (error: any) {
     console.error(`[ingest] Error ingesting job "${input.title}":`, error?.message || error)
     return { status: 'error', reason: error?.message || 'unknown-error' }
@@ -160,9 +155,7 @@ async function resolveCompany(input: ScrapedJobInput): Promise<ResolvedCompany |
     explicitAtsUrl: input.explicitAtsUrl ?? null,
   })
 
-  if (!company) {
-    return null
-  }
+  if (!company) return null
 
   return {
     id: company.id,
@@ -182,21 +175,25 @@ async function createNewJob(
   company: ResolvedCompany,
   input: ScrapedJobInput,
   dedupeKey: string,
-  priority: number
+  priority: number,
 ): Promise<IngestResult> {
+  // ✅ Remote defaults: prevent empty location objects + enforce remote tagging
+  // MUST be at the very top of the job-mutation path (before parsing/gating)
+  if (input.isRemote === true && !input.locationText) input.locationText = 'Remote'
+  if (input.isRemote === true && !input.remoteRegion) input.remoteRegion = 'Global'
+
   // Build job ID
   const jobId = buildJobId(input.source, input.externalId)
-
-  // Process salary
-  const salaryData = processSalary(input)
-
-  if (salaryData.salaryValidated !== true) {
-    return { status: 'skipped', reason: 'salary-not-eligible', dedupeKey }
-  }
 
   const strictExclusionReason = getStrictExclusionReason(input.title, input.employmentType)
   if (strictExclusionReason) {
     return { status: 'skipped', reason: strictExclusionReason, dedupeKey }
+  }
+
+  // Process salary
+  const salaryData = processSalary(input)
+  if (salaryData.salaryValidated !== true) {
+    return { status: 'skipped', reason: 'salary-not-eligible', dedupeKey }
   }
 
   // Process location
@@ -261,7 +258,7 @@ async function createNewJob(
     url: input.url ?? null,
     descriptionHtml: input.descriptionHtml ?? null,
 
-    // v2.7: avoid writing empty-string role slugs (canonical-only enforcement happens in normalizeRole)
+    // v2.7: avoid writing empty-string role slugs
     roleSlug: roleData.roleSlug ? roleData.roleSlug : null,
 
     // Tracking
@@ -275,12 +272,7 @@ async function createNewJob(
 
   try {
     await prisma.job.create({ data: jobData })
-    
-    return {
-      status: 'created',
-      jobId,
-      dedupeKey,
-    }
+    return { status: 'created', jobId, dedupeKey }
   } catch (error: any) {
     // Handle unique constraint violation (race condition)
     if (error?.code === 'P2002') {
@@ -310,18 +302,26 @@ async function upgradeJob(
   company: ResolvedCompany,
   input: ScrapedJobInput,
   dedupeKey: string,
-  priority: number
+  priority: number,
 ): Promise<IngestResult> {
-  // Process salary
-  const salaryData = processSalary(input)
+  // ✅ Remote defaults: prevent empty location objects + enforce remote tagging
+  // MUST be at the very top of the job-mutation path (before parsing/gating)
+  if (input.isRemote === true && !input.locationText) input.locationText = 'Remote'
+  if (input.isRemote === true && !input.remoteRegion) input.remoteRegion = 'Global'
 
-  if (salaryData.salaryValidated !== true) {
-    return { status: 'skipped', reason: 'salary-not-eligible', jobId: existing.id, dedupeKey }
-  }
+  // ✅ IMPORTANT: prevent “contract/part-time” leakage when incoming payload omits employmentType
+  const effectiveEmploymentType =
+    input.employmentType ?? existing.employmentType ?? existing.type
 
-  const strictExclusionReason = getStrictExclusionReason(input.title, input.employmentType)
+  const strictExclusionReason = getStrictExclusionReason(input.title, effectiveEmploymentType)
   if (strictExclusionReason) {
     return { status: 'skipped', reason: strictExclusionReason, jobId: existing.id, dedupeKey }
+  }
+
+  // Process salary
+  const salaryData = processSalary(input)
+  if (salaryData.salaryValidated !== true) {
+    return { status: 'skipped', reason: 'salary-not-eligible', jobId: existing.id, dedupeKey }
   }
 
   // Process location
@@ -364,7 +364,7 @@ async function upgradeJob(
     maxAnnual: salaryData.maxAnnual ?? existing.maxAnnual,
     currency: salaryData.currency ?? existing.currency,
     isHighSalary: salaryData.isHighSalary ?? existing.isHighSalary,
-    // v2.9 hard gate: flags cannot qualify jobs (numeric + validated only)
+    // v2.9 hard gate
     isHundredKLocal: false,
 
     // Salary quality (v2.9)
@@ -376,12 +376,16 @@ async function upgradeJob(
     salaryRejectedAt: salaryData.salaryRejectedAt,
     salaryRejectedReason: salaryData.salaryRejectedReason,
 
+    // ✅ Force type fields to update (prevents old “Contract” from lingering)
+    type: input.employmentType ?? existing.type,
+    employmentType: input.employmentType ?? existing.employmentType,
+
     // URLs - prefer new data
     applyUrl: input.applyUrl ?? input.url ?? existing.applyUrl,
     url: input.url ?? existing.url,
     descriptionHtml: input.descriptionHtml ?? existing.descriptionHtml,
 
-    // Role (v2.7: avoid writing empty-string role slugs)
+    // Role
     roleSlug: roleData.roleSlug ? roleData.roleSlug : null,
 
     // Tracking
@@ -472,10 +476,7 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
 
 function buildJobId(source: string, externalId: string): string {
   // Sanitize externalId to be safe for use in ID
-  const safeExternalId = externalId
-    .replace(/[^a-zA-Z0-9_-]/g, '_')
-    .slice(0, 200)
-
+  const safeExternalId = externalId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 200)
   return `${source}:${safeExternalId}`
 }
 
@@ -564,7 +565,7 @@ const BANNED_TYPE_RE = /\b(part[- ]time|contract|temporary)\b/i
 
 function getStrictExclusionReason(
   title: string | null | undefined,
-  employmentType: string | null | undefined
+  employmentType: string | null | undefined,
 ): string | null {
   const t = String(title ?? '')
   if (BANNED_TITLE_RE.test(t)) return 'banned-title'
@@ -623,26 +624,26 @@ function countryToCode(country: string | null | undefined): string | null {
   const map: Record<string, string> = {
     'united states': 'US',
     'united kingdom': 'GB',
-    'canada': 'CA',
-    'germany': 'DE',
-    'france': 'FR',
-    'netherlands': 'NL',
-    'spain': 'ES',
-    'italy': 'IT',
-    'australia': 'AU',
+    canada: 'CA',
+    germany: 'DE',
+    france: 'FR',
+    netherlands: 'NL',
+    spain: 'ES',
+    italy: 'IT',
+    australia: 'AU',
     'new zealand': 'NZ',
-    'sweden': 'SE',
-    'norway': 'NO',
-    'denmark': 'DK',
-    'finland': 'FI',
-    'switzerland': 'CH',
-    'ireland': 'IE',
-    'poland': 'PL',
-    'portugal': 'PT',
-    'brazil': 'BR',
-    'mexico': 'MX',
-    'india': 'IN',
-    'singapore': 'SG',
+    sweden: 'SE',
+    norway: 'NO',
+    denmark: 'DK',
+    finland: 'FI',
+    switzerland: 'CH',
+    ireland: 'IE',
+    poland: 'PL',
+    portugal: 'PT',
+    brazil: 'BR',
+    mexico: 'MX',
+    india: 'IN',
+    singapore: 'SG',
   }
 
   return map[country.toLowerCase()] ?? null
@@ -655,27 +656,20 @@ function countryToCode(country: string | null | undefined): string | null {
 async function checkUnverifiedBoardJob(
   company: ResolvedCompany,
   input: ScrapedJobInput,
-  dedupeKey: string
+  dedupeKey: string,
 ): Promise<boolean> {
   // Only applies to board sources
-  if (!isBoardSource(input.source)) {
-    return false
-  }
+  if (!isBoardSource(input.source)) return false
 
   // Company must have an ATS configured
-  if (!company.atsProvider) {
-    return false
-  }
+  if (!company.atsProvider) return false
 
   // ATS must have been scraped recently
-  if (!company.lastScrapedAt) {
-    return false
-  }
+  if (!company.lastScrapedAt) return false
 
-  const daysSinceAtsScrape = (Date.now() - company.lastScrapedAt.getTime()) / (1000 * 60 * 60 * 24)
-  if (daysSinceAtsScrape > ATS_RECENT_DAYS) {
-    return false
-  }
+  const daysSinceAtsScrape =
+    (Date.now() - company.lastScrapedAt.getTime()) / (1000 * 60 * 60 * 24)
+  if (daysSinceAtsScrape > ATS_RECENT_DAYS) return false
 
   // Check if any ATS job exists with the same dedupe key
   const atsJobExists = await prisma.job.findFirst({
@@ -709,7 +703,6 @@ export async function ingestJobs(jobs: ScrapedJobInput[]): Promise<IngestStats> 
 
   for (const job of jobs) {
     const result = await ingestJob(job)
-
     switch (result.status) {
       case 'created':
         stats.created++
@@ -733,7 +726,7 @@ export async function ingestJobs(jobs: ScrapedJobInput[]): Promise<IngestStats> 
 }
 
 // =============================================================================
-// Exports
+// Exports (match your current exports)
 // =============================================================================
 
 export { createEmptyStats, mergeStats } from './types'

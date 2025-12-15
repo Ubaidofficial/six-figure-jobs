@@ -7,16 +7,12 @@ import Link from 'next/link'
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 import { findBestMatchingRole, slugToLabel } from '@/lib/roles/slugMatcher'
-import {
-  queryJobs,
-  type JobWithCompany,
-} from '../../../lib/jobs/queryJobs'
+import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import JobList from '../../components/JobList'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 
 const SITE_URL = getSiteUrl()
-
 const PAGE_SIZE = 20
 
 type SearchParams = Record<string, string | string[] | undefined>
@@ -56,9 +52,7 @@ function buildRequestedPath(roleSlug: string, sp: SearchParams) {
   return query ? `${base}?${query}` : base
 }
 
-function normalizeStringParam(
-  value?: string | string[]
-): string | undefined {
+function normalizeStringParam(value?: string | string[]): string | undefined {
   if (!value) return undefined
   return Array.isArray(value) ? value[0] : value
 }
@@ -94,7 +88,11 @@ function buildPageHref(
 function buildFilterHref(
   basePath: string,
   searchParams: SearchParams,
-  updates: Partial<{ country: string | null; min: number; remoteRegion: string | null }>
+  updates: Partial<{
+    country: string | null
+    min: number
+    remoteRegion: string | null
+  }>
 ): string {
   const params = new URLSearchParams()
 
@@ -112,19 +110,18 @@ function buildFilterHref(
   params.set('page', '1')
 
   if (updates.country !== undefined) {
-    if (!updates.country) {
-      params.delete('country')
-    } else {
-      params.set('country', updates.country)
-    }
+    if (!updates.country) params.delete('country')
+    else params.set('country', updates.country)
+  }
+
+  if (updates.remoteRegion !== undefined) {
+    if (!updates.remoteRegion) params.delete('remoteRegion')
+    else params.set('remoteRegion', updates.remoteRegion)
   }
 
   if (updates.min !== undefined) {
-    if (!updates.min || updates.min <= 0) {
-      params.delete('min')
-    } else {
-      params.set('min', String(updates.min))
-    }
+    if (!updates.min || updates.min <= 0) params.delete('min')
+    else params.set('min', String(updates.min))
   }
 
   const query = params.toString()
@@ -149,11 +146,7 @@ function faqItems(roleName: string) {
   ]
 }
 
-function buildJobListJsonLd(
-  roleSlug: string,
-  jobs: JobWithCompany[],
-  page: number
-) {
+function buildJobListJsonLd(roleSlug: string, jobs: JobWithCompany[], page: number) {
   const roleName = prettyRole(roleSlug)
 
   return {
@@ -162,51 +155,13 @@ function buildJobListJsonLd(
     name: `Remote ${roleName} jobs paying $100k+`,
     itemListElement: jobs.map((job, index) => {
       const href = buildJobSlugHref(job)
+      const url = `${SITE_URL}${href}`
 
       return {
         '@type': 'ListItem',
         position: (page - 1) * PAGE_SIZE + index + 1,
-        item: {
-          '@type': 'JobPosting',
-          title: job.title,
-          description: job.descriptionHtml || undefined,
-          datePosted: job.postedAt?.toISOString(),
-          employmentType: (job as any).type || undefined,
-          hiringOrganization: {
-            '@type': 'Organization',
-            name: job.companyRef?.name || job.company,
-            sameAs: job.companyRef?.website || undefined,
-          },
-          jobLocationType: job.remote ? 'TELECOMMUTE' : undefined,
-          jobLocation: job.city
-            ? {
-                '@type': 'Place',
-                address: {
-                  '@type': 'PostalAddress',
-                  addressLocality: job.city,
-                  addressCountry: job.countryCode || undefined,
-                },
-              }
-            : undefined,
-          baseSalary:
-            job.minAnnual || job.maxAnnual
-              ? {
-                  '@type': 'MonetaryAmount',
-                  currency: job.currency || 'USD',
-                  value: {
-                    '@type': 'QuantitativeValue',
-                    minValue: job.minAnnual
-                      ? Number(job.minAnnual)
-                      : undefined,
-                    maxValue: job.maxAnnual
-                      ? Number(job.maxAnnual)
-                      : undefined,
-                    unitText: 'YEAR',
-                  },
-                }
-              : undefined,
-          url: `${SITE_URL}${href}`,
-        },
+        // listing pages MUST NOT emit JobPosting
+        item: { '@type': 'Thing', url, name: job.title },
       }
     }),
   }
@@ -216,10 +171,7 @@ function buildJobListJsonLd(
 /* Metadata                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export async function generateMetadata({
-  params,
-  searchParams,
-}: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const p = await params
   const sp = await resolveSearchParams(searchParams)
 
@@ -245,9 +197,7 @@ export async function generateMetadata({
   const selectedRegion = normalizeStringParam(sp.remoteRegion)
   const minParam = normalizeStringParam(sp.min)
   const minAnnual =
-    minParam && !Number.isNaN(Number(minParam))
-      ? Math.max(100_000, Number(minParam))
-      : 100_000
+    minParam && !Number.isNaN(Number(minParam)) ? Math.max(100_000, Number(minParam)) : 100_000
 
   const result = await queryJobs({
     roleSlugs: [roleSlug],
@@ -292,10 +242,7 @@ export async function generateMetadata({
 /* Page                                                                       */
 /* -------------------------------------------------------------------------- */
 
-export default async function RemoteRolePage({
-  params,
-  searchParams,
-}: Props) {
+export default async function RemoteRolePage({ params, searchParams }: Props) {
   const p = await params
   const sp = await resolveSearchParams(searchParams)
 
@@ -327,9 +274,7 @@ export default async function RemoteRolePage({
   const selectedRegion = normalizeStringParam(sp.remoteRegion)
   const minParam = normalizeStringParam(sp.min)
   const minAnnual =
-    minParam && !Number.isNaN(Number(minParam))
-      ? Math.max(100_000, Number(minParam))
-      : 100_000
+    minParam && !Number.isNaN(Number(minParam)) ? Math.max(100_000, Number(minParam)) : 100_000
 
   const data = await queryJobs({
     roleSlugs: [roleSlug],
@@ -341,10 +286,7 @@ export default async function RemoteRolePage({
   })
 
   const jobs = data.jobs as JobWithCompany[]
-  const totalPages =
-    data.total > 0
-      ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
-      : 1
+  const totalPages = data.total > 0 ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1
 
   const jsonLd = buildJobListJsonLd(roleSlug, jobs, page)
   const faqJsonLd = {
@@ -364,11 +306,7 @@ export default async function RemoteRolePage({
   }
 
   const availableCountries = Array.from(
-    new Set(
-      jobs
-        .map((j) => j.countryCode)
-        .filter((c): c is string => Boolean(c))
-    )
+    new Set(jobs.map((j) => j.countryCode).filter((c): c is string => Boolean(c)))
   )
 
   const salaryOptions = [100_000, 200_000, 300_000, 400_000]
@@ -394,25 +332,16 @@ export default async function RemoteRolePage({
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       {/* -------------------------------- Breadcrumbs -------------------------------- */}
-      <nav
-        aria-label="Breadcrumb"
-        className="mb-4 text-xs text-slate-400"
-      >
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
         <ol className="flex flex-wrap items-center gap-1">
           <li>
-            <Link
-              href="/"
-              className="hover:text-slate-200 hover:underline"
-            >
+            <Link href="/" className="hover:text-slate-200 hover:underline">
               Home
             </Link>
           </li>
           <li className="px-1 text-slate-600">/</li>
           <li>
-            <Link
-              href="/jobs/100k-plus"
-              className="hover:text-slate-200 hover:underline"
-            >
+            <Link href="/jobs/100k-plus" className="hover:text-slate-200 hover:underline">
               $100k+ jobs
             </Link>
           </li>
@@ -428,13 +357,9 @@ export default async function RemoteRolePage({
         <h1 className="text-2xl font-semibold text-slate-50">
           Remote {roleName} jobs paying $100k+ ({data.total.toLocaleString()})
         </h1>
-        <p
-          className="text-sm text-slate-300"
-          data-speakable="summary"
-        >
-          Find remote and flexible {roleName} roles paying at least
-          $100k in local currency. Filter by country, remote region,
-          and salary band.
+        <p className="text-sm text-slate-300" data-speakable="summary">
+          Find remote and flexible {roleName} roles paying at least $100k in local currency. Filter by
+          country, remote region, and salary band.
         </p>
         <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
           <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
@@ -456,13 +381,9 @@ export default async function RemoteRolePage({
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-slate-400">Country:</span>
             <Link
-              href={buildFilterHref(basePath, sp, {
-                country: null,
-              })}
+              href={buildFilterHref(basePath, sp, { country: null })}
               className={`rounded-full px-2 py-1 ${
-                !selectedCountry
-                  ? 'bg-slate-200 text-slate-900'
-                  : 'bg-slate-900 text-slate-200'
+                !selectedCountry ? 'bg-slate-200 text-slate-900' : 'bg-slate-900 text-slate-200'
               }`}
             >
               Any
@@ -470,9 +391,7 @@ export default async function RemoteRolePage({
             {availableCountries.map((cc) => (
               <Link
                 key={cc}
-                href={buildFilterHref(basePath, sp, {
-                  country: cc,
-                })}
+                href={buildFilterHref(basePath, sp, { country: cc })}
                 className={`rounded-full px-2 py-1 ${
                   selectedCountry === cc
                     ? 'bg-slate-200 text-slate-900'
@@ -492,22 +411,20 @@ export default async function RemoteRolePage({
                 slug === ''
                   ? 'Any'
                   : slug === 'global'
-                  ? 'Global'
-                  : slug === 'us-only'
-                  ? 'US only'
-                  : slug === 'canada'
-                  ? 'Canada'
-                  : slug === 'emea'
-                  ? 'EMEA'
-                  : slug === 'apac'
-                  ? 'APAC'
-                  : 'UK & Ireland'
+                    ? 'Global'
+                    : slug === 'us-only'
+                      ? 'US only'
+                      : slug === 'canada'
+                        ? 'Canada'
+                        : slug === 'emea'
+                          ? 'EMEA'
+                          : slug === 'apac'
+                            ? 'APAC'
+                            : 'UK & Ireland'
               return (
                 <Link
                   key={slug || 'any'}
-                  href={buildFilterHref(basePath, sp, {
-                    remoteRegion: slug || null,
-                  })}
+                  href={buildFilterHref(basePath, sp, { remoteRegion: slug || null })}
                   className={`rounded-full px-2 py-1 ${
                     (selectedRegion || '') === slug
                       ? 'bg-slate-200 text-slate-900'
@@ -526,13 +443,9 @@ export default async function RemoteRolePage({
             {salaryOptions.map((s) => (
               <Link
                 key={s}
-                href={buildFilterHref(basePath, sp, {
-                  min: s,
-                })}
+                href={buildFilterHref(basePath, sp, { min: s })}
                 className={`rounded-full px-2 py-1 ${
-                  minAnnual === s
-                    ? 'bg-slate-200 text-slate-900'
-                    : 'bg-slate-900 text-slate-200'
+                  minAnnual === s ? 'bg-slate-200 text-slate-900' : 'bg-slate-900 text-slate-200'
                 }`}
               >
                 ${Math.round(s / 1000)}k+
@@ -543,9 +456,7 @@ export default async function RemoteRolePage({
       </section>
 
       <section className="mb-6 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h2 className="text-sm font-semibold text-slate-50">
-          Explore related high-paying pages
-        </h2>
+        <h2 className="text-sm font-semibold text-slate-50">Explore related high-paying pages</h2>
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
           <li>
             <Link href={`/jobs/100k-plus/${roleSlug}`} className="hover:underline">
@@ -572,16 +483,17 @@ export default async function RemoteRolePage({
 
       <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
         <p>
-          Browse verified $100k+ remote {roleName.toLowerCase()} roles from ATS feeds and trusted boards.
-          We refresh daily and rank by salary first, so you see the strongest offers across regions.
+          Browse verified $100k+ remote {roleName.toLowerCase()} roles from ATS feeds and trusted
+          boards. We refresh daily and rank by salary first, so you see the strongest offers across
+          regions.
         </p>
       </section>
 
       {/* -------------------------------- Job list -------------------------------- */}
       {jobs.length === 0 ? (
         <p className="text-sm text-slate-400">
-          No remote {roleName} jobs match your filters yet. Try
-          relaxing the filters or check back soon.
+          No remote {roleName} jobs match your filters yet. Try relaxing the filters or check back
+          soon.
         </p>
       ) : (
         <>
@@ -589,29 +501,16 @@ export default async function RemoteRolePage({
 
           {/* ------------------------------- Pagination ------------------------------- */}
           {totalPages > 1 && (
-            <nav
-              aria-label="Pagination"
-              className="mt-6 flex items-center justify-between gap-3 text-xs"
-            >
+            <nav aria-label="Pagination" className="mt-6 flex items-center justify-between gap-3 text-xs">
               <div className="text-slate-400">
-                Page{' '}
-                <span className="font-semibold text-slate-100">
-                  {page}
-                </span>{' '}
-                of{' '}
-                <span className="font-semibold text-slate-100">
-                  {totalPages}
-                </span>
+                Page <span className="font-semibold text-slate-100">{page}</span> of{' '}
+                <span className="font-semibold text-slate-100">{totalPages}</span>
               </div>
 
               <div className="flex items-center gap-2">
                 {page > 1 && (
                   <Link
-                    href={buildPageHref(
-                      basePath,
-                      sp,
-                      page - 1
-                    )}
+                    href={buildPageHref(basePath, sp, page - 1)}
                     className="rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-1.5 text-slate-200 hover:border-slate-700 hover:bg-slate-900"
                   >
                     Previous
@@ -620,11 +519,7 @@ export default async function RemoteRolePage({
 
                 {page < totalPages && (
                   <Link
-                    href={buildPageHref(
-                      basePath,
-                      sp,
-                      page + 1
-                    )}
+                    href={buildPageHref(basePath, sp, page + 1)}
                     className="rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-1.5 text-slate-200 hover:border-slate-700 hover:bg-slate-900"
                   >
                     Next
@@ -675,21 +570,15 @@ export default async function RemoteRolePage({
       {/* -------------------------------- JSON-LD -------------------------------- */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(faqJsonLd),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(speakableJsonLd),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(speakableJsonLd) }}
       />
     </main>
   )
@@ -699,7 +588,5 @@ export async function generateStaticParams() {
   // Only generate pages for Tier-1 roles (indexed pages)
   const { TIER_1_ROLES } = await import('@/lib/roles/canonicalSlugs')
 
-  return TIER_1_ROLES.map((role) => ({
-    role,
-  }))
+  return TIER_1_ROLES.map((role) => ({ role }))
 }

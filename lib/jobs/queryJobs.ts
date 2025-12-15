@@ -157,6 +157,9 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
     where.citySlug = filters.citySlug
   }
 
+  // IMPORTANT:
+  // - By default we show ALL eligible jobs (remote + hybrid + onsite).
+  // - Only restrict to remote when caller explicitly asks.
   if (filters.remoteOnly) {
     // Align with sitemap logic: remote flag OR remoteMode='remote'
     addAnd({ OR: [{ remote: true }, { remoteMode: 'remote' }] })
@@ -167,6 +170,7 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   }
 
   if (filters.remoteMode) {
+    // Explicit mode filter: remote/hybrid/onsite
     where.remoteMode = filters.remoteMode
   }
 
@@ -228,7 +232,7 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   if (filters.employmentTypes?.length) {
     where.type = { in: filters.employmentTypes }
   } else if (filters.excludeInternships) {
-    // Intern is already excluded globally above; keep for backward-compat.
+    // Intern is excluded globally below; keep for backward-compat.
   }
 
   // Skills
@@ -277,18 +281,37 @@ export function buildHighSalaryEligibilityWhere(): Prisma.JobWhereInput {
 }
 
 export function buildGlobalExclusionsWhere(): Prisma.JobWhereInput {
+  // Title exclusions:
+  // - Your audits showed leaks like "(New Grad) Software Engineering",
+  //   "Software Engineer - New Grad", and "New PhD Graduate".
+  // Prisma `contains` is substring-based; include variants that appear in real titles.
   return {
     NOT: [
+      // internships / junior / entry
       { title: { contains: 'intern', mode: 'insensitive' } },
+      { title: { contains: 'internship', mode: 'insensitive' } },
       { title: { contains: 'junior', mode: 'insensitive' } },
+      { title: { contains: ' jr', mode: 'insensitive' } },
+      { title: { contains: 'jr.', mode: 'insensitive' } },
       { title: { contains: 'entry', mode: 'insensitive' } },
+      { title: { contains: 'entry level', mode: 'insensitive' } },
+
+      // new-grad / graduate
       { title: { contains: 'graduate', mode: 'insensitive' } },
       { title: { contains: 'new grad', mode: 'insensitive' } },
+      { title: { contains: 'new-gr', mode: 'insensitive' } }, // catches "new-grad" / "new grad" formatting quirks
+      { title: { contains: '(new grad', mode: 'insensitive' } },
       { title: { contains: 'new graduate', mode: 'insensitive' } },
+      { title: { contains: 'phd graduate', mode: 'insensitive' } },
+
+      // employment type exclusions (both fields)
       { type: { contains: 'part-time', mode: 'insensitive' } },
+      { type: { contains: 'part time', mode: 'insensitive' } },
       { type: { contains: 'contract', mode: 'insensitive' } },
       { type: { contains: 'temporary', mode: 'insensitive' } },
+
       { employmentType: { contains: 'part-time', mode: 'insensitive' } },
+      { employmentType: { contains: 'part time', mode: 'insensitive' } },
       { employmentType: { contains: 'contract', mode: 'insensitive' } },
       { employmentType: { contains: 'temporary', mode: 'insensitive' } },
     ],
