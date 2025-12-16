@@ -1,5 +1,3 @@
-// app/components/JobList.tsx
-
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { JobCardV2 } from '@/components/jobs/JobCardV2'
@@ -24,7 +22,7 @@ export default function JobList({ jobs }: JobListProps) {
 
       {jobs.map((job) => {
         const companyName =
-          job.companyRef?.name?.trim() || job.company?.trim() || 'Company'
+          job.companyRef?.name?.trim() || (job as any)?.company?.trim() || 'Company'
 
         const logo = buildLogoUrl(
           job.companyRef?.logoUrl ?? (job as any)?.companyLogo ?? null,
@@ -35,21 +33,23 @@ export default function JobList({ jobs }: JobListProps) {
         const salaryMax = bigIntToNumberSafe((job as any)?.maxAnnual)
 
         const isRemote =
-          job.remote === true ||
+          (job as any)?.remote === true ||
           (job as any)?.remoteMode === 'remote' ||
           (job as any)?.remoteMode === 'hybrid'
 
-        const location = buildLocationLabel(job)
+        const location = buildLocationLabel(job as any)
         const snippet = getJobCardSnippet(job as any)
 
         const skills = parseStringArray((job as any)?.skillsJson)
           .filter(Boolean)
           .slice(0, 8)
 
+        // ✅ Job-board-friendly: prefer postedAt, otherwise show “freshness”
+        // This stops “16h ago” when scraper revalidated thousands of jobs recently.
         const postedAt =
-          (job.postedAt as any) ||
-          (job.createdAt as any) ||
-          (job.updatedAt as any) ||
+          ((job as any)?.postedAt as any) ||
+          ((job as any)?.updatedAt as any) ||
+          ((job as any)?.createdAt as any) ||
           new Date()
 
         const featured =
@@ -151,20 +151,20 @@ function parseStringArray(raw?: string | null): string[] {
 
 function buildLocationLabel(job: any): string | null {
   const isRemote =
-    job.remote === true ||
-    job.remoteMode === 'remote' ||
-    job.remoteMode === 'hybrid'
+    job?.remote === true ||
+    job?.remoteMode === 'remote' ||
+    job?.remoteMode === 'hybrid'
 
   if (isRemote) {
-    const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
+    const cc = job?.countryCode ? String(job.countryCode).toUpperCase() : null
     return cc ? `🌍 Remote (${cc})` : '🌍 Remote'
   }
 
-  const city = job.city ? String(job.city).trim() : ''
-  const cc = job.countryCode ? String(job.countryCode).toUpperCase() : ''
+  const city = job?.city ? String(job.city).trim() : ''
+  const cc = job?.countryCode ? String(job.countryCode).toUpperCase() : ''
 
   if (city && cc) return `📍 ${city}, ${cc}`
-  if (job.locationRaw) return `📍 ${String(job.locationRaw).trim()}`
+  if (job?.locationRaw) return `📍 ${String(job.locationRaw).trim()}`
   if (cc) return `📍 ${cc}`
 
   return null

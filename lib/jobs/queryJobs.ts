@@ -68,14 +68,15 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   let orderBy: Prisma.JobOrderByWithRelationInput[]
 
   if (sortBy === 'date') {
-  orderBy = [
-    { postedAt: 'desc' },
-    { updatedAt: 'desc' }, // ✅ add this
-    { createdAt: 'desc' },
-    { maxAnnual: 'desc' },
-    { minAnnual: 'desc' },
-  ]
-} else {
+    // ✅ Date-first ranking (postedAt if available, otherwise updatedAt/createdAt)
+    orderBy = [
+      { postedAt: 'desc' },
+      { updatedAt: 'desc' }, // ✅ critical for ATS feeds where postedAt is null
+      { createdAt: 'desc' },
+      { maxAnnual: 'desc' },
+      { minAnnual: 'desc' },
+    ]
+  } else {
     // Salary-first ranking
     orderBy = [
       { maxAnnual: 'desc' },
@@ -125,8 +126,6 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   }
 
   // v2.9 hard gates (canonical, deterministic)
-  // - Jobs must be salary-validated and meet the per-currency high-salary threshold.
-  // - Flags like isHighSalary/isHundredKLocal/isHighSalaryLocal never qualify jobs.
   addAnd(buildHighSalaryEligibilityWhere())
 
   // Global exclusions (never show anywhere)
@@ -134,7 +133,6 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 
   // Role / basic filters
   if (filters.roleSlugs?.length) {
-    // Prefer exact match; keep contains as fallback for any legacy storage formats.
     addAnd({
       OR: filters.roleSlugs.map((slug) => ({
         OR: [{ roleSlug: slug }, { roleSlug: { contains: slug } }],
@@ -158,11 +156,7 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
     where.citySlug = filters.citySlug
   }
 
-  // IMPORTANT:
-  // - By default we show ALL eligible jobs (remote + hybrid + onsite).
-  // - Only restrict to remote when caller explicitly asks.
   if (filters.remoteOnly) {
-    // Align with sitemap logic: remote flag OR remoteMode='remote'
     addAnd({ OR: [{ remote: true }, { remoteMode: 'remote' }] })
   }
 
@@ -171,7 +165,6 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   }
 
   if (filters.remoteMode) {
-    // Explicit mode filter: remote/hybrid/onsite
     where.remoteMode = filters.remoteMode
   }
 
@@ -198,14 +191,25 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 
   // Salary range filters (only safe when caller pins currency)
   const hasCurrencyFilter = Boolean(filters.currency)
-  if (hasCurrencyFilter && typeof filters.minAnnual === 'number' && filters.minAnnual > 0) {
+  if (
+    hasCurrencyFilter &&
+    typeof filters.minAnnual === 'number' &&
+    filters.minAnnual > 0
+  ) {
     const min = filters.minAnnual
     addAnd({
-      OR: [{ minAnnual: { gte: BigInt(min) } }, { maxAnnual: { gte: BigInt(min) } }],
+      OR: [
+        { minAnnual: { gte: BigInt(min) } },
+        { maxAnnual: { gte: BigInt(min) } },
+      ],
     })
   }
 
-  if (hasCurrencyFilter && typeof filters.maxAnnual === 'number' && filters.maxAnnual > 0) {
+  if (
+    hasCurrencyFilter &&
+    typeof filters.maxAnnual === 'number' &&
+    filters.maxAnnual > 0
+  ) {
     where.maxAnnual = { lte: BigInt(filters.maxAnnual) }
   }
 
@@ -264,15 +268,15 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 export const HIGH_SALARY_MIN_CONFIDENCE = 80
 
 export function buildHighSalaryEligibilityWhere(): Prisma.JobWhereInput {
-  const currencyClauses: Prisma.JobWhereInput[] = Object.entries(HIGH_SALARY_THRESHOLDS).map(
-    ([currency, threshold]) => ({
-      currency,
-      OR: [
-        { maxAnnual: { gte: BigInt(threshold) } },
-        { minAnnual: { gte: BigInt(threshold) } },
-      ],
-    })
-  )
+  const currencyClauses: Prisma.JobWhereInput[] = Object.entries(
+    HIGH_SALARY_THRESHOLDS,
+  ).map(([currency, threshold]) => ({
+    currency,
+    OR: [
+      { maxAnnual: { gte: BigInt(threshold) } },
+      { minAnnual: { gte: BigInt(threshold) } },
+    ],
+  }))
 
   return {
     salaryValidated: true,
@@ -282,13 +286,8 @@ export function buildHighSalaryEligibilityWhere(): Prisma.JobWhereInput {
 }
 
 export function buildGlobalExclusionsWhere(): Prisma.JobWhereInput {
-  // Title exclusions:
-  // - Your audits showed leaks like "(New Grad) Software Engineering",
-  //   "Software Engineer - New Grad", and "New PhD Graduate".
-  // Prisma `contains` is substring-based; include variants that appear in real titles.
   return {
     NOT: [
-      // internships / junior / entry
       { title: { contains: 'intern', mode: 'insensitive' } },
       { title: { contains: 'internship', mode: 'insensitive' } },
       { title: { contains: 'junior', mode: 'insensitive' } },
@@ -297,15 +296,13 @@ export function buildGlobalExclusionsWhere(): Prisma.JobWhereInput {
       { title: { contains: 'entry', mode: 'insensitive' } },
       { title: { contains: 'entry level', mode: 'insensitive' } },
 
-      // new-grad / graduate
       { title: { contains: 'graduate', mode: 'insensitive' } },
       { title: { contains: 'new grad', mode: 'insensitive' } },
-      { title: { contains: 'new-gr', mode: 'insensitive' } }, // catches "new-grad" / "new grad" formatting quirks
+      { title: { contains: 'new-gr', mode: 'insensitive' } },
       { title: { contains: '(new grad', mode: 'insensitive' } },
       { title: { contains: 'new graduate', mode: 'insensitive' } },
       { title: { contains: 'phd graduate', mode: 'insensitive' } },
 
-      // employment type exclusions (both fields)
       { type: { contains: 'part-time', mode: 'insensitive' } },
       { type: { contains: 'part time', mode: 'insensitive' } },
       { type: { contains: 'contract', mode: 'insensitive' } },
