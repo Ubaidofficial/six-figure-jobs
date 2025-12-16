@@ -3,6 +3,7 @@
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { JobCardV2 } from '@/components/jobs/JobCardV2'
+import { getJobCardSnippet } from '@/lib/jobs/snippet'
 
 export type JobListProps = {
   jobs: JobWithCompany[]
@@ -20,6 +21,7 @@ export default function JobList({ jobs }: JobListProps) {
   return (
     <div className="flex flex-col gap-4">
       <FeaturedPromoCard />
+
       {jobs.map((job) => {
         const companyName =
           job.companyRef?.name?.trim() || job.company?.trim() || 'Company'
@@ -38,7 +40,7 @@ export default function JobList({ jobs }: JobListProps) {
           (job as any)?.remoteMode === 'hybrid'
 
         const location = buildLocationLabel(job)
-        const snippet = buildSnippet(job)
+        const snippet = getJobCardSnippet(job as any)
 
         const skills = parseStringArray((job as any)?.skillsJson)
           .filter(Boolean)
@@ -166,52 +168,4 @@ function buildLocationLabel(job: any): string | null {
   if (cc) return `📍 ${cc}`
 
   return null
-}
-
-function buildSnippet(job: any): string | null {
-  // prefer explicit snippet if present
-  const raw =
-    job.snippet ??
-    job.descriptionHtml ??
-    job.description ??
-    job.body ??
-    null
-
-  if (!raw) return null
-  const text = stripTags(decodeHtmlEntities(String(raw)))
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  return text ? truncateText(text, 160) : null
-}
-
-function decodeHtmlEntities(str: string): string {
-  return (str || '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) =>
-      String.fromCharCode(parseInt(n, 16)),
-    )
-}
-
-function stripTags(str: string): string {
-  return (str || '').replace(/<\/?[^>]+(>|$)/g, '')
-}
-
-function truncateText(str: string, maxChars: number): string {
-  if (str.length <= maxChars) return str
-  const truncated = str.slice(0, maxChars)
-  const lastDot = truncated.lastIndexOf('.')
-  const lastSpace = truncated.lastIndexOf(' ')
-  const cutoff =
-    lastDot > maxChars * 0.6
-      ? lastDot + 1
-      : lastSpace > 0
-        ? lastSpace
-        : maxChars
-  return truncated.slice(0, cutoff) + ' …'
 }

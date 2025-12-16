@@ -3,14 +3,7 @@
 'use client'
 
 import Link from 'next/link'
-import {
-  ArrowUpRight,
-  BadgeCheck,
-  Clock,
-  Globe,
-  MapPin,
-  Sparkles,
-} from 'lucide-react'
+import { ArrowUpRight, BadgeCheck, Clock, Globe, MapPin, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -36,24 +29,33 @@ interface JobCardV2Props {
   featured?: boolean
 }
 
+function formatSalary(min: number, max: number | null) {
+  const safeMin = Number.isFinite(min) ? min : 0
+  const safeMax = max !== null && Number.isFinite(max) ? max : null
+
+  const minK = Math.round(safeMin / 1000)
+  const maxK = safeMax ? Math.round(safeMax / 1000) : null
+  return maxK ? `$${minK}k – $${maxK}k` : `$${minK}k+`
+}
+
+function formatRelativeTime(date: Date): string {
+  const ts = new Date(date).getTime()
+  if (!Number.isFinite(ts)) return 'recently'
+
+  const seconds = Math.floor((Date.now() - ts) / 1000)
+  if (seconds < 0) return 'just now'
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
+  return `${Math.floor(seconds / 604800)}w ago`
+}
+
 export function JobCardV2({ job, featured = false }: JobCardV2Props) {
-  const formatSalary = (min: number, max: number | null) => {
-    const minK = Math.round(min / 1000)
-    const maxK = max ? Math.round(max / 1000) : null
-    return maxK ? `$${minK}k – $${maxK}k` : `$${minK}k+`
-  }
-
+  const postedTs = new Date(job.postedAt).getTime()
   const isNew =
-    Date.now() - new Date(job.postedAt).getTime() < 3 * 24 * 60 * 60 * 1000
-
-  const formatRelativeTime = (date: Date): string => {
-    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-    if (seconds < 60) return 'just now'
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
-    return `${Math.floor(seconds / 604800)}w ago`
-  }
+    Number.isFinite(postedTs) &&
+    Date.now() - postedTs < 3 * 24 * 60 * 60 * 1000
 
   const href = `/job/${buildJobSlug({ id: job.id, title: job.title })}`
 
@@ -139,14 +141,14 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
             )}
           </div>
 
-          {/* ✅ snippet back */}
-          {job.snippet && (
+          {/* ✅ snippet */}
+          {typeof job.snippet === 'string' && job.snippet.trim() && (
             <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-              {job.snippet}
+              {job.snippet.trim()}
             </p>
           )}
 
-          {job.skills && job.skills.length > 0 && (
+          {Array.isArray(job.skills) && job.skills.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {job.skills.slice(0, 4).map((skill) => (
                 <Badge key={skill} variant="secondary" className="text-xs">
