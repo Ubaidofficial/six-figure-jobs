@@ -9,7 +9,7 @@ const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
 
 export const dynamic = 'force-dynamic'
 
-export const revalidate = 60 * 60 * 24
+export const revalidate = 86400
 export async function GET() {
   // Only include companies that actually have jobs (SEO best practice)
   const companies = await prisma.company.findMany({

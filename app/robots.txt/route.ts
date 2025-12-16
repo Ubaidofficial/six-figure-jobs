@@ -6,7 +6,7 @@ const SITE_URL = getSiteUrl()
 
 export const dynamic = 'force-dynamic'
 
-export const revalidate = 60 * 60 * 24
+export const revalidate = 86400
 export async function GET() {
   // Block staging from indexing entirely
   if (process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')) {
