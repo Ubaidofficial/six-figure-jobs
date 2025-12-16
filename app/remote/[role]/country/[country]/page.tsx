@@ -241,7 +241,7 @@ export default async function RemoteRoleCountryPage({
   // Sanity check: does this combination exist at all?
   const hasAnyJobs = await prisma.job.count({
     where: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       ...( { roleSlug } as any ),
       countryCode,
     },

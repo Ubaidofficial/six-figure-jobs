@@ -214,7 +214,7 @@ async function main() {
 
     console.log(`→ Checking ${company.name} (${company.website})`)
 
-    let html = await fetchHtml(company.website)
+    const html = await fetchHtml(company.website)
     let result = html
       ? await findAtsLinkInHtml(html, company.website)
       : null

@@ -204,7 +204,7 @@ async function fetchJobsByCategory(category: string): Promise<ProcessedJob[]> {
 function processJob(job: any): ProcessedJob | null {
   try {
     const title = (job.title || '').trim()
-    let company = (job.company_name || '').trim()
+    const company = (job.company_name || '').trim()
 
     if (!title || title.length < 5) return null
 

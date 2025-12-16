@@ -207,7 +207,7 @@ function normalizeCountry(raw: string): string | null {
   const mapToken = (token: string): string | null => {
     if (!token) return null
 
-    let withoutRemote = token.replace(/\bremote\b/gi, '').trim()
+    const withoutRemote = token.replace(/\bremote\b/gi, '').trim()
     if (!withoutRemote) return null
 
     const noDots = withoutRemote.replace(/\./g, '').trim()

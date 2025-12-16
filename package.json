@@ -8,7 +8,7 @@
     "dev:prod": "dotenv -e .env.production.local -- next dev -p 3000",
     "build": "npx prisma generate && next build --webpack",
     "start": "next start -p 3000",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint": "eslint .",
     "db:push:staging": "dotenv -e .env.staging.local -- npx prisma db push",
     "db:migrate:staging": "dotenv -e .env.staging.local -- npx prisma migrate dev",
     "db:studio:staging": "dotenv -e .env.staging.local -- npx prisma studio",
@@ -52,6 +52,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.10.1",
     "@types/puppeteer": "^5.4.7",
@@ -69,6 +70,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.50.0",
     "vitest": "^4.0.14"
   }
 }

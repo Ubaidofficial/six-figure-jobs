@@ -187,7 +187,7 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
     
     if (!company || !isValidCompanyName(company)) continue
     
-    let locationParts: string[] = []
+    const locationParts: string[] = []
     let category = ''
     for (let j = remoteIdx + 1; j < salaryLineIdx; j++) {
       const l = lines[j]
@@ -199,7 +199,7 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
       }
     }
     
-    let location = cleanLocation(locationParts.join(', '))
+    const location = cleanLocation(locationParts.join(', '))
     const salaryText = lines[salaryLineIdx]
     const salary = parseSalaryText(salaryText)
     
@@ -225,7 +225,7 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
       }
     }
     
-    let url = findMatchingUrl(company, title, urlMap)
+    const url = findMatchingUrl(company, title, urlMap)
     
     jobs.push({
       title,

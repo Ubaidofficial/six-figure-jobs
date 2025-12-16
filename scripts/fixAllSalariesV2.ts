@@ -26,8 +26,8 @@ function parseSalaryFromHtml(html: string): { min: number; max: number; currency
   if (!match) return null
   
   const symbol = match[1]
-  let minStr = match[2]
-  let maxStr = match[4]
+  const minStr = match[2]
+  const maxStr = match[4]
   const currencyCode = match[5]
   
   // Handle European format (dots as thousands): €155.000 -> 155000

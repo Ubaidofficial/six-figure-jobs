@@ -43,7 +43,7 @@ export function parseSalaryStringsToAnnual(
 
   const combined = salaryStrings.join(' • ').toLowerCase();
 
-  let currency = detectCurrency(combined, currencyHint || null);
+  const currency = detectCurrency(combined, currencyHint || null);
   const numbers = extractNumbers(combined);
   if (!numbers.length) {
     return { minAnnual: null, maxAnnual: null, currency };

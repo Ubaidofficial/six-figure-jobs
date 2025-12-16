@@ -133,9 +133,9 @@ export default async function scrapeRemoteRocketship() {
           .trim() || null
 
       let salaryMin: number | null = null
-      let salaryMax: number | null = null
+      const salaryMax: number | null = null
       let salaryCurrency: string | null = null
-      let salaryInterval: string | null = 'year'
+      const salaryInterval: string | null = 'year'
 
       if (!salaryText) {
         salaryMin = 100000
