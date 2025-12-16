@@ -184,7 +184,7 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
     s.includes(',') &&
     /usa|united states|u\.s\.|us\b/i.test(s)
   ) {
-    return { '@type': 'State', name: s }
+    return { '@type': 'AdministrativeArea', name: s }
   }
 
   // Otherwise treat as a readable country/region label (best-effort)
