@@ -12,7 +12,7 @@ const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
 const BUILD_LASTMOD = new Date().toISOString()
 
-export const dynamic = 'force-static'
+export const dynamic = 'force-dynamic'
 export const revalidate = 86400 // 24h
 
 function escapeXml(s: string) {

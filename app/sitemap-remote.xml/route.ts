@@ -9,7 +9,7 @@ import {
 
 const SITE_URL = getSiteUrl()
 
-export const dynamic = 'force-static'
+export const dynamic = 'force-dynamic'
 export const revalidate = 86400 // 24h
 
 function escapeXml(s: string) {
