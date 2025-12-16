@@ -68,13 +68,14 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   let orderBy: Prisma.JobOrderByWithRelationInput[]
 
   if (sortBy === 'date') {
-    orderBy = [
-      { postedAt: 'desc' },
-      { createdAt: 'desc' },
-      { maxAnnual: 'desc' },
-      { minAnnual: 'desc' },
-    ]
-  } else {
+  orderBy = [
+    { postedAt: 'desc' },
+    { updatedAt: 'desc' }, // ✅ add this
+    { createdAt: 'desc' },
+    { maxAnnual: 'desc' },
+    { minAnnual: 'desc' },
+  ]
+} else {
     // Salary-first ranking
     orderBy = [
       { maxAnnual: 'desc' },
