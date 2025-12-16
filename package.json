@@ -9,26 +9,21 @@
     "build": "npx prisma generate && next build --webpack",
     "start": "next start -p 3000",
     "lint": "next lint",
-
     "db:push:staging": "dotenv -e .env.staging.local -- npx prisma db push",
     "db:migrate:staging": "dotenv -e .env.staging.local -- npx prisma migrate dev",
     "db:studio:staging": "dotenv -e .env.staging.local -- npx prisma studio",
-
     "jobs:audit:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=audit --dry-run",
     "jobs:repair:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=repair",
-
     "jobs:annotate:ai": "tsx scripts/aiAnnotateJobs.ts",
     "jobs:backfill:salary": "tsx scripts/backfill-high-salary-local.ts",
     "jobs:backfill:salary-quality:v2.9": "tsx scripts/backfill-salary-quality-v2.9.ts",
-
     "audit:ci": "tsx scripts/audit-v2.9.ts",
-
     "scraper:smoke": "tsx scripts/smokeScrapers.ts",
     "scraper:ats:report": "tsx scripts/reportAtsCoverage.ts",
-
     "publish:pseo-batch": "tsx scripts/publish-pseo-batch.ts",
     "dashboard:pseo": "tsx scripts/monitoring-dashboard.ts",
-    "generate:sitemap": "tsx scripts/generate-sitemap.ts"
+    "generate:sitemap": "tsx scripts/generate-sitemap.ts",
+    "test": "jest"
   },
   "dependencies": {
     "@prisma/client": "^5.16.1",
@@ -57,15 +52,18 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.10.1",
     "@types/puppeteer": "^5.4.7",
     "@types/react": "19.2.6",
     "autoprefixer": "^10.4.22",
     "baseline-browser-mapping": "^2.9.7",
     "dotenv-cli": "^11.0.0",
+    "jest": "^30.2.0",
     "postcss": "^8.5.6",
     "prisma": "^5.16.1",
     "tailwindcss": "^3.4.18",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
