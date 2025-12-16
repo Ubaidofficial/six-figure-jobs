@@ -1,5 +1,3 @@
-// components/jobs/JobCardV2.tsx
-
 'use client'
 
 import Link from 'next/link'
@@ -8,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import { buildJobSlug } from '@/lib/jobs/jobSlug'
+import { buildJobSlug, buildJobSlugHref } from '@/lib/jobs/jobSlug'
 
 interface JobCardV2Props {
   job: {
@@ -39,7 +37,7 @@ function formatSalary(min: number, max: number | null) {
 }
 
 function formatRelativeTime(date: Date): string {
-  const ts = new Date(date).getTime()
+  const ts = new Date(date as any).getTime()
   if (!Number.isFinite(ts)) return 'recently'
 
   const seconds = Math.floor((Date.now() - ts) / 1000)
@@ -52,12 +50,16 @@ function formatRelativeTime(date: Date): string {
 }
 
 export function JobCardV2({ job, featured = false }: JobCardV2Props) {
-  const postedTs = new Date(job.postedAt).getTime()
+  const postedTs = new Date(job.postedAt as any).getTime()
   const isNew =
     Number.isFinite(postedTs) &&
     Date.now() - postedTs < 3 * 24 * 60 * 60 * 1000
 
-  const href = `/job/${buildJobSlug({ id: job.id, title: job.title })}`
+  // Prefer canonical helper if present (keeps routing consistent)
+  const href =
+    typeof buildJobSlugHref === 'function'
+      ? buildJobSlugHref({ id: job.id, title: job.title } as any)
+      : `/job/${buildJobSlug({ id: job.id, title: job.title })}`
 
   return (
     <Link href={href} className="focus-ring group block rounded-2xl">
@@ -156,10 +158,7 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
                 </Badge>
               ))}
               {job.skills.length > 4 && (
-                <Badge
-                  variant="secondary"
-                  className="text-xs text-muted-foreground"
-                >
+                <Badge variant="secondary" className="text-xs text-muted-foreground">
                   +{job.skills.length - 4}
                 </Badge>
               )}
