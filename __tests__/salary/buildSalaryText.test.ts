@@ -1,4 +1,4 @@
-import { buildSalaryText } from '@/lib/jobs/salary'
+import { buildSalaryText } from "../../lib/jobs/salary"
 
 describe('buildSalaryText – annual salary enforcement', () => {
   it('blocks low monthly or local salaries', () => {

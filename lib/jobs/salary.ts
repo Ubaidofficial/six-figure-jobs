@@ -1,4 +1,4 @@
-import { formatSalaryRange } from "@/lib/normalizers/salary"
+import { formatSalaryRange } from "../normalizers/salary"
 // lib/jobs/salary.ts
 // Unified salary helpers for JobCard, JobPage, CompanyPage, Slices, SEO, etc.
 
@@ -147,7 +147,6 @@ function looksSalaryLikeText(s: string): boolean {
    Build salary text
 ------------------------------------------------------------- */
 export function buildSalaryText(job: SalaryJob): string | null {
-  // Prefer normalized annual fields
   let min = toNum(job.minAnnual)
   let max = toNum(job.maxAnnual)
   let cur = job.currency
@@ -159,15 +158,29 @@ export function buildSalaryText(job: SalaryJob): string | null {
     cur = job.salaryCurrency || cur
   }
 
-  // Drop invalid or non-annual values (prevents kr 30k, kr 90k, etc)
-  if (min != null && (!Number.isFinite(min) || min < 50000)) min = null
-  if (max != null && (!Number.isFinite(max) || max < 50000)) max = null
+  // Reject invalid values
+  if (min != null && (!Number.isFinite(min) || min <= 0)) min = null
+  if (max != null && (!Number.isFinite(max) || max <= 0)) max = null
 
-  // Hard upper bound safety
-  if (min != null && min > 5000000) min = null
-  if (max != null && max > 5000000) max = null
+  // Currency-aware six-figure minimums
+  const MIN_BY_CURRENCY: Record<string, number> = {
+    USD: 100000,
+    EUR: 90000,
+    GBP: 85000,
+    SEK: 1000000,
+    NOK: 1000000,
+    DKK: 900000,
+    INR: 3000000,
+  }
 
-  // Country to currency correction for non-remote roles
+  const minThreshold = cur && MIN_BY_CURRENCY[cur.toUpperCase()]
+
+  if (minThreshold) {
+    if (min != null && min < minThreshold) min = null
+    if (max != null && max < minThreshold) max = null
+  }
+
+  // Country → currency correction (non-remote)
   const expectedCurrency = currencyForCountry(job.countryCode)
   const isRemote = job.remote === true || job.remoteMode === "remote"
 
@@ -175,13 +188,15 @@ export function buildSalaryText(job: SalaryJob): string | null {
     cur = expectedCurrency
   }
 
-  // Canonical formatting (caps + High salary role fallback)
+  // Canonical formatter handles caps + High salary role
   if (min != null || max != null) {
     return formatSalaryRange(min, max, cur ?? null)
   }
 
   return null
 }
+
+
 
 
 
