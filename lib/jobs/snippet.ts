@@ -66,7 +66,15 @@ function firstSentences(text: string, maxChars = 180): string | null {
 
 
 export function getJobCardSnippet(job: any): string | null {
-  const ai = typeof job?.aiSnippet === 'string' ? job.aiSnippet.trim() : ''
+  const one = typeof job?.aiOneLiner === "string" ? job.aiOneLiner.trim() : ""
+  if (one) {
+    const cleanedOne = cleanText(one)
+    if (cleanedOne.length >= 30 && !looksLikeCompanyBio(cleanedOne)) {
+      return cleanedOne.slice(0, 140).trim()
+    }
+  }
+
+  const ai = typeof job?.aiSnippet === "string" ? job.aiSnippet.trim() : ""
   if (ai) {
     const cleanedAi = cleanText(ai)
     if (cleanedAi.length >= 60 && !looksLikeCompanyBio(cleanedAi)) {
@@ -74,7 +82,7 @@ export function getJobCardSnippet(job: any): string | null {
     }
   }
 
-  const html = typeof job?.descriptionHtml === 'string' ? job.descriptionHtml : ''
+  const html = typeof job?.descriptionHtml === "string" ? job.descriptionHtml : ""
   if (!html) return null
 
   return firstSentences(cleanText(html))
