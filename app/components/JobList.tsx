@@ -83,6 +83,7 @@ export default function JobList({ jobs }: JobListProps) {
               isRemote,
               salaryMin: salaryMin || 100_000,
               salaryMax: salaryMax || null,
+              currency: (job as any).currency ?? (job as any).salaryCurrency ?? null,
               skills,
               postedAt,
               snippet,
