@@ -142,6 +142,13 @@ export function parseJobSlugParam(param: string): ParsedJobSlug {
     return { roleSlug: lastSegment || null, jobId: null, externalId: null, shortId: v28[1] }
   }
 
+
+  // v2.9: allow /job/<shortId> direct routing
+  // If the slug is just a token (no dashes/colons) treat it as shortId.
+  if (!lastSegment.includes('-') && !lastSegment.includes(':') && /^[a-z0-9]{4,12}$/i.test(lastSegment)) {
+    return { roleSlug: null, jobId: null, externalId: null, shortId: lastSegment }
+  }
+
   // otherwise treat as opaque slug
   return { roleSlug: lastSegment || null, jobId: null, externalId: null, shortId: null }
 }
