@@ -128,6 +128,14 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   // v2.9 hard gates (canonical, deterministic)
   addAnd(buildHighSalaryEligibilityWhere())
 
+  // 🔒 Annual salary sanity guard (blocks monthly / low local salaries)
+  addAnd({
+    OR: [
+      { minAnnual: { gte: BigInt(50000) } },
+      { maxAnnual: { gte: BigInt(50000) } },
+    ],
+  });
+
   // Global exclusions (never show anywhere)
   addAnd(buildGlobalExclusionsWhere())
 
