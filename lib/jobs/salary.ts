@@ -1,3 +1,4 @@
+import { formatSalaryRange } from "@/lib/normalizers/salary"
 // lib/jobs/salary.ts
 // Unified salary helpers for JobCard, JobPage, CompanyPage, Slices, SEO, etc.
 
@@ -151,78 +152,36 @@ export function buildSalaryText(job: SalaryJob): string | null {
   let max = toNum(job.maxAnnual)
   let cur = job.currency
 
-  // If missing → fallback to raw salaryMin/max
-  if (!min && !max) {
+  // Fallback to legacy fields
+  if (min == null && max == null) {
     min = toNum(job.salaryMin)
     max = toNum(job.salaryMax)
     cur = job.salaryCurrency || cur
   }
 
-  // Clean invalid values
-  if (min !== null && (!Number.isFinite(min) || min <= 0)) min = null
-  if (max !== null && (!Number.isFinite(max) || max <= 0)) max = null
-  if (min && min > 2_000_000) min = null
-  if (max && max > 2_000_000) max = null
+  // Drop invalid or non-annual values (prevents kr 30k, kr 90k, etc)
+  if (min != null && (!Number.isFinite(min) || min < 50000)) min = null
+  if (max != null && (!Number.isFinite(max) || max < 50000)) max = null
 
-  // If this looks like an on-site job and currency mismatches country, prefer country currency for display
+  // Hard upper bound safety
+  if (min != null && min > 5000000) min = null
+  if (max != null && max > 5000000) max = null
+
+  // Country to currency correction for non-remote roles
   const expectedCurrency = currencyForCountry(job.countryCode)
-  const isRemote =
-    job.remote === true ||
-    (job.remoteMode && job.remoteMode.toLowerCase() === 'remote')
+  const isRemote = job.remote === true || job.remoteMode === "remote"
 
-  if (!isRemote && expectedCurrency && cur && cur.toUpperCase() !== expectedCurrency) {
-    cur = expectedCurrency
-  } else if (!cur && expectedCurrency) {
+  if (!isRemote && expectedCurrency) {
     cur = expectedCurrency
   }
 
-  const symbol = getCurrencySymbol(cur)
-  const f = fmtCompact
-
-  if (min !== null && max !== null) {
-    return min === max
-      ? `${symbol}${f(min)}/yr`
-      : `${symbol}${f(min)}–${symbol}${f(max)}/yr`
-  }
-
-  if (min !== null) return `${symbol}${f(min)}+/yr`
-  if (max !== null) return `up to ${symbol}${f(max)}/yr`
-
-  // Last fallback to salaryRaw → ONLY if it looks like salary text (not HTML)
-  if (job.salaryRaw) {
-    const cleaned = cleanSalaryRaw(job.salaryRaw)
-    if (!cleaned) return null
-    if (!looksSalaryLikeText(cleaned)) return null
-    return cleaned
+  // Canonical formatting (caps + High salary role fallback)
+  if (min != null || max != null) {
+    return formatSalaryRange(min, max, cur ?? null)
   }
 
   return null
 }
 
-/* -------------------------------------------------------------
-   Clean salaryRaw fallback text
-------------------------------------------------------------- */
-function cleanSalaryRaw(raw: string): string {
-  const decoded = decode(raw || '').trim()
-  if (!decoded) return ''
 
-  // If it’s HTML/escaped HTML, bail out early (don’t show it at all)
-  if (looksLikeHtmlOrEscapedHtml(decoded)) return ''
 
-  // Strip any tags that slipped through
-  const noHtml = decoded.replace(/<\/?[^>]+>/g, '').trim()
-  if (!noHtml) return ''
-
-  let s = noHtml.replace(/\s+/g, ' ').trim()
-  if (s.length > 80) s = s.slice(0, 77) + '…'
-  return s
-}
-
-function decode(str: string): string {
-  return (str || '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-}

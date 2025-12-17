@@ -31,6 +31,7 @@ export default function TestShadcnPage() {
     isRemote: true,
     salaryMin: 180000,
     salaryMax: 250000,
+  currency: "USD",
     skills: ['React', 'TypeScript', 'Node.js', 'AWS'],
     postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
   }
