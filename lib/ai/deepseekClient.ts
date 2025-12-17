@@ -7,6 +7,29 @@ type DeepSeekChatOpts = {
   temperature?: number
 }
 
+// ---- Cost + budget guardrails (env-driven) ----
+// Set these yourself (don’t hardcode vendor pricing here)
+const PRICE_PROMPT_PER_1M = Number(process.env.AI_PRICE_PROMPT_PER_1M ?? 0)
+const PRICE_COMPLETION_PER_1M = Number(process.env.AI_PRICE_COMPLETION_PER_1M ?? 0)
+const MAX_USD = Number(process.env.AI_MAX_USD ?? 0) // 0 = no cap
+const MAX_OUTPUT_TOKENS = clampInt(Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 0), 0, 20000) // 0 = omit
+const LOG_COST = String(process.env.AI_LOG_COST ?? "").toLowerCase() === "1"
+
+let __spentUsd = 0
+let __promptTokens = 0
+let __completionTokens = 0
+
+function estimateTokens(text: string): number {
+  // crude but stable: ~4 chars/token for English-ish text
+  return Math.max(1, Math.ceil((text || "").length / 4))
+}
+
+function estCostUsd(promptT: number, completionT: number): number {
+  const p = (PRICE_PROMPT_PER_1M > 0) ? (promptT * PRICE_PROMPT_PER_1M / 1_000_000) : 0
+  const c = (PRICE_COMPLETION_PER_1M > 0) ? (completionT * PRICE_COMPLETION_PER_1M / 1_000_000) : 0
+  return p + c
+}
+
 /**
  * DeepSeek chat client with:
  * - model guard

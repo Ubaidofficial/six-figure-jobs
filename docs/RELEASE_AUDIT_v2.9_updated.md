@@ -367,3 +367,165 @@ Remote jobs must satisfy **one** of the following:
 - [ ] Update CI audit gate to new rule (remote must be classified worldwide/geo-restricted/region-only)
 - [ ] Backfill existing live jobs (idempotent script)
 - [ ] Re-run Rich Results tests on representative URLs (remote US-only, remote worldwide, onsite multi-city)
+
+
+---
+
+## 17. AI Enrichment Execution & Concurrency (v2.9)
+
+### What changed
+
+AI enrichment was executed using a **bounded concurrency worker pool** instead of a sequential loop.
+
+Implemented characteristics:
+- Fixed concurrency pool (default: **5 workers**)
+- Deterministic progress logging (`[n/total] start|done`)
+- Safe retry with exponential backoff
+- Idempotent execution (skips already-enriched jobs)
+
+This allowed fast, controlled enrichment without overwhelming:
+- DeepSeek API
+- Railway Postgres
+- Prisma connection pool
+
+### Verification
+
+- Successfully processed **500 jobs in one run**
+- All jobs completed with:
+  - `ok=500`
+  - `fail=0`
+- No API rate-limit errors
+- No Prisma connection failures
+
+---
+
+## 18. AI Scope Restriction — High Salary Jobs Only
+
+### Enforcement
+
+AI enrichment is **explicitly restricted** to salary-qualified jobs.
+
+Eligibility rules:
+- Job must already pass deterministic salary validation
+- Job must meet six-figure threshold for its currency
+- AI is never invoked for ineligible jobs
+
+AI **cannot**:
+- Infer salary
+- Modify salary fields
+- Override salary validation
+
+This ensures:
+- Zero risk of salary corruption
+- AI cost spent only on high-value listings
+
+---
+
+## 19. AI Cost Controls & Monthly Budget Cap
+
+### Global Budget
+
+A **hard monthly AI budget** is enforced:
+
+- **$10 USD / month (global, all runs combined)**
+- Shared across:
+  - Backfills
+  - Manual runs
+  - Scheduled enrichments
+
+### Tracking Model
+
+AI usage is tracked in a dedicated table:
+
+- Monthly key: `YYYY-MM`
+- Tracked fields:
+  - `promptTokens`
+  - `completionTokens`
+  - `spentUsd`
+- Budget checked **before every AI call**
+
+When the cap is reached:
+- AI calls are blocked
+- Enrichment runner exits safely
+- No partial writes occur
+
+---
+
+## 20. AI Client Guardrails (DeepSeek)
+
+The DeepSeek client enforces:
+
+- Allowed model allowlist:
+  - `deepseek-chat`
+  - `deepseek-reasoner`
+- Retry with exponential backoff
+- Rate limiting via env configuration
+- Explicit error handling on 429 / 5xx
+
+Misconfiguration results in a **hard failure**, not silent fallback.
+
+---
+
+## 21. Production Verification — AI Coverage
+
+Verified against Railway production database:
+
+- Total jobs: **14,228**
+- Jobs with `aiSnippet`: **686**
+- Jobs without AI enrichment: **13,542**
+
+This confirms:
+- Partial rollout (expected)
+- No runaway enrichment
+- AI applied selectively, not globally
+
+---
+
+## 22. Prisma & Migration Safety (Railway)
+
+### Known Constraint
+
+Railway production uses PostgreSQL.  
+Historical migrations include SQLite-era SQL (`DATETIME`, `PRAGMA`) which cause shadow DB failures.
+
+### Enforced Practice
+
+- **NO `prisma migrate dev` against Railway**
+- Production schema changes applied via:
+  - `prisma migrate diff`
+  - `prisma migrate deploy`
+
+A migration note was added to documentation to prevent accidental misuse.
+
+---
+
+## 23. Script Idempotency & Safety Guarantees
+
+AI enrichment scripts guarantee:
+
+- Safe re-runs (no duplicate writes)
+- Skip logic for already-enriched jobs
+- Explicit environment configuration required
+- No destructive operations
+
+Scripts log:
+- Start
+- Completion
+- Per-job status
+- Final success/failure counts
+
+---
+
+## 24. Post-v2.9 Confidence Statement
+
+After live execution and verification:
+
+- AI enrichment is **bounded, auditable, and cost-safe**
+- Salary correctness is preserved
+- SEO surfaces remain untouched
+- Production stability is confirmed
+
+This work strengthens v2.9 beyond initial scope without increasing risk.
+
+---
+

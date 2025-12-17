@@ -268,3 +268,4 @@ model AiRunLedger {
   lastRunAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
 }
+
