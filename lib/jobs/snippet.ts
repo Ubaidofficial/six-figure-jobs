@@ -1,111 +1,56 @@
 // lib/jobs/snippet.ts
 
 /**
- * Decode common HTML entities safely.
- * Minimal + deterministic.
+ * Job card snippet rules:
+ * - Must describe the ROLE (not the company).
+ * - Never fallback to company mission/about/founded boilerplate.
+ * - Prefer AI snippet; else extract 1-2 sentences from descriptionHtml.
  */
-export function decodeEntities(s: string): string {
-  return (s || '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) =>
-      String.fromCharCode(parseInt(n, 16)),
-    )
-}
 
-/**
- * Strip HTML tags (used only for fallback paths).
- */
-export function stripHtml(s: string): string {
-  return (s || '').replace(/<[^>]*>/g, ' ')
-}
-
-/**
- * Normalize text:
- * - decode entities
- * - strip tags
- * - collapse whitespace
- */
-export function cleanText(s: string): string {
-  return stripHtml(decodeEntities(s))
+function stripHtml(html: string): string {
+  return (html || '')
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
 
-function truncateText(str: string, maxChars: number): string {
-  const s = (str || '').trim()
-  if (!s) return ''
-  if (s.length <= maxChars) return s
-
-  const truncated = s.slice(0, maxChars)
-  const lastDot = truncated.lastIndexOf('.')
-  const lastSpace = truncated.lastIndexOf(' ')
-  const cutoff =
-    lastDot > maxChars * 0.6 ? lastDot + 1 : lastSpace > 0 ? lastSpace : maxChars
-
-  return truncated.slice(0, cutoff).trimEnd() + ' …'
+function looksLikeCompanyBio(text: string): boolean {
+  const t = (text || '').toLowerCase()
+  return (
+    t.includes('was founded') ||
+    t.includes('our mission') ||
+    t.includes('we believe') ||
+    t.includes('about us') ||
+    (t.includes('at ') && t.includes(' we ')) ||
+    t.includes('join our team') ||
+    t.includes('who we are')
+  )
 }
 
-function coerceJsonObject(raw: unknown): any | null {
-  if (!raw) return null
-  if (typeof raw === 'object') return raw
-  if (typeof raw === 'string') {
-    const s = raw.trim()
-    if (!s) return null
-    try {
-      const parsed = JSON.parse(s)
-      return parsed && typeof parsed === 'object' ? parsed : null
-    } catch {
-      return null
-    }
-  }
-  return null
+function firstSentences(text: string, maxChars = 180): string | null {
+  const cleaned = (text || '').replace(/\s+/g, ' ').trim()
+  if (!cleaned) return null
+
+  const parts = cleaned.split(/(?<=[.!?])\s+/).filter(Boolean)
+  const combined = (parts[0] || '') + (parts[1] ? ' ' + parts[1] : '')
+  const out = combined.slice(0, maxChars).trim()
+
+  if (out.length < 60) return null
+  if (looksLikeCompanyBio(out)) return null
+  return out
 }
 
-/**
- * Canonical job-card snippet selector.
- *
- * Priority (STRICT):
- * 1) aiSnippet              (best, curated)
- * 2) aiSummaryJson.*        (summary / shortSummary / oneLiner / snippet)
- * 3) descriptionHtml        (cleaned)
- * 4) description/body/snippet (cleaned)
- *
- * Deterministic, read-only, UI-safe.
- */
 export function getJobCardSnippet(job: any): string | null {
-  // 1) AI curated snippet
-  if (typeof job?.aiSnippet === 'string' && job.aiSnippet.trim()) {
-    return truncateText(job.aiSnippet.trim(), 240)
+  const ai = typeof job?.aiSnippet === 'string' ? job.aiSnippet.trim() : ''
+  if (ai && ai.length >= 60 && !looksLikeCompanyBio(ai)) {
+    return ai.slice(0, 200).trim()
   }
 
-  // 2) AI summary JSON (object OR string)
-  const obj = coerceJsonObject(job?.aiSummaryJson)
-  const summary =
-    obj?.summary || obj?.shortSummary || obj?.oneLiner || obj?.snippet
+  const html = typeof job?.descriptionHtml === 'string' ? job.descriptionHtml : ''
+  if (!html) return null
 
-  if (typeof summary === 'string' && summary.trim()) {
-    return truncateText(summary.trim(), 240)
-  }
-
-  // 3) Legacy HTML description (cleaned)
-  if (typeof job?.descriptionHtml === 'string' && job.descriptionHtml.trim()) {
-    const cleaned = cleanText(job.descriptionHtml)
-    return cleaned ? truncateText(cleaned, 240) : null
-  }
-
-  // 4) Legacy plaintext fallbacks (cleaned)
-  const raw =
-    (typeof job?.description === 'string' && job.description) ||
-    (typeof job?.body === 'string' && job.body) ||
-    (typeof job?.snippet === 'string' && job.snippet) ||
-    ''
-
-  const cleaned = cleanText(String(raw))
-  return cleaned ? truncateText(cleaned, 240) : null
+  const raw = stripHtml(html)
+  return firstSentences(raw)
 }
