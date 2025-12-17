@@ -273,9 +273,15 @@ export function buildHighSalaryEligibilityWhere(): Prisma.JobWhereInput {
   ).map(([currency, threshold]) => ({
     currency,
     OR: [
-      { maxAnnual: { gte: BigInt(threshold) } },
-      { minAnnual: { gte: BigInt(threshold) } },
-    ],
+      { minAnnual: { gte: threshold } },
+      {
+        AND: [
+          { minAnnual: { not: null } },
+          { minAnnual: { gte: BigInt(90_000) } }, // buffer
+          { maxAnnual: { gte: threshold } },
+        ],
+      },
+    ]
   }))
 
   return {

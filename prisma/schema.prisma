@@ -8,84 +8,80 @@ datasource db {
 }
 
 model Job {
-  id                   String         @id
-  shortId              String?        @unique
-  title                String
-  company              String
-  companyLogo          String?
-  locationRaw          String?
-  city                 String?
-  citySlug             String?
-  countryCode          String?
-  remote               Boolean?
-  remoteRegion         String?
-  remoteMode           String?
-  salaryRaw            String?
-  descriptionHtml      String?
-  salaryMin            BigInt?
-  salaryMax            BigInt?
-  salaryCurrency       String?
-  salaryPeriod         String?
-  minAnnual            BigInt?
-  maxAnnual            BigInt?
-  currency             String?
-  isHighSalary         Boolean        @default(false)
-  isHundredKLocal      Boolean        @default(false)
-  isHighSalaryLocal    Boolean        @default(false)  // NEW: PPP-adjusted high salary (1.5x+ local threshold)
-
-  // -----------------------------
-  // v2.9 Salary quality fields (deterministic gates)
-  // -----------------------------
-  salaryConfidence      Int?      @default(0)
-  salaryValidated       Boolean   @default(false)
-  salarySource          String?
-  salaryParseReason     String?
-  salaryNormalizedAt    DateTime?
-  salaryRejectedAt      DateTime?
-  salaryRejectedReason  String?
-
-  type                 String?
-  source               String
-  applyUrl             String?
-  url                  String?
-  roleSlug             String?
-  skillsJson           String?
-  requirementsJson     String?
-  benefitsJson         String?
-  externalId           String?
-  isExpired            Boolean        @default(false)
-  lastSeenAt           DateTime?
-  postedAt             DateTime?
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  companyId            String?
-  locationId           String?
-  dedupeKey            String?
-  sourcePriority       Int            @default(20)
-  isUnverifiedBoardJob Boolean        @default(false)
-  experienceLevel      String?        @default("mid")
-  employmentType       String?        @default("full-time")
-  workArrangement      String?
-  visaSponsorship      Boolean        @default(false)
-  techStack            String?
-  industry             String?
-  stateCode            String?
-  companyRef           Company?       @relation(fields: [companyId], references: [id])
-  locationRef          Location?      @relation(fields: [locationId], references: [id])
-  roleInference        RoleInference?
-
-  // -----------------------------
-  // v2.9 AI enrichment fields (NON-BREAKING, OPTIONAL)
-  // -----------------------------
-  aiSummaryJson        Json?
-  aiSnippet            String?
-  aiBenefits           Json?
-  aiRequirements       Json?
-  aiWhyHighPay         String?
-  aiModel              String?
-  aiVersion            String?
-  aiQualityScore       Int?
-  lastAiEnrichedAt     DateTime?
+  id                        String         @id
+  title                     String
+  company                   String
+  companyLogo               String?
+  locationRaw               String?
+  city                      String?
+  citySlug                  String?
+  countryCode               String?
+  remote                    Boolean?
+  remoteRegion              String?
+  remoteMode                String?
+  salaryRaw                 String?
+  descriptionHtml           String?
+  salaryMin                 BigInt?
+  salaryMax                 BigInt?
+  salaryCurrency            String?
+  salaryPeriod              String?
+  minAnnual                 BigInt?
+  maxAnnual                 BigInt?
+  currency                  String?
+  isHighSalary              Boolean        @default(false)
+  isHundredKLocal           Boolean        @default(false)
+  isHighSalaryLocal         Boolean        @default(false)
+  type                      String?
+  source                    String
+  applyUrl                  String?
+  url                       String?
+  roleSlug                  String?
+  skillsJson                String?
+  requirementsJson          String?
+  benefitsJson              String?
+  externalId                String?
+  isExpired                 Boolean        @default(false)
+  lastSeenAt                DateTime?
+  postedAt                  DateTime?
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+  companyId                 String?
+  locationId                String?
+  dedupeKey                 String?
+  sourcePriority            Int            @default(20)
+  isUnverifiedBoardJob      Boolean        @default(false)
+  experienceLevel           String?        @default("mid")
+  employmentType            String?        @default("full-time")
+  workArrangement           String?
+  visaSponsorship           Boolean        @default(false)
+  techStack                 String?
+  industry                  String?
+  stateCode                 String?
+  shortId                   String?        @unique
+  aiSummaryJson             Json?
+  aiSnippet                 String?
+  aiOneLiner                String?        @db.VarChar(180)
+  aiEnrichedAt              DateTime?
+  locationsJson             Json?
+  primaryLocation           Json?
+  aiBenefits                Json?
+  aiRequirements            Json?
+  aiWhyHighPay              String?
+  aiModel                   String?
+  aiVersion                 String?
+  aiQualityScore            Int?
+  lastAiEnrichedAt          DateTime?      @db.Timestamptz(6)
+  salaryConfidence          Int?           @default(0)
+  salaryValidated           Boolean        @default(false)
+  salarySource              String?
+  salaryParseReason         String?
+  salaryNormalizedAt        DateTime?      @db.Timestamptz(6)
+  salaryRejectedAt          DateTime?      @db.Timestamptz(6)
+  salaryRejectedReason      String?
+  workArrangementNormalized String?
+  companyRef                Company?       @relation(fields: [companyId], references: [id])
+  locationRef               Location?      @relation(fields: [locationId], references: [id])
+  roleInference             RoleInference?
 
   @@unique([externalId, source], name: "externalId_source")
   @@unique([companyId, dedupeKey], name: "company_dedupeKey")
@@ -94,7 +90,7 @@ model Job {
   @@index([countryCode])
   @@index([isHighSalary])
   @@index([isHundredKLocal])
-  @@index([isHighSalaryLocal])  // NEW: Index for filtering
+  @@index([isHighSalaryLocal])
   @@index([companyId])
   @@index([externalId])
   @@index([remoteMode])
@@ -105,14 +101,10 @@ model Job {
   @@index([industry])
   @@index([workArrangement])
   @@index([stateCode])
-
-  // v2.9 salary quality indexes
   @@index([salaryValidated])
   @@index([salaryConfidence])
   @@index([salarySource])
   @@index([salaryNormalizedAt])
-
-  // v2.9 indexes
   @@index([aiQualityScore])
   @@index([lastAiEnrichedAt])
 }
@@ -123,18 +115,16 @@ model SalaryAggregate {
   sliceSlug     String
   currency      String
   minConfidence Int      @default(80)
-
   jobCount      Int      @default(0)
   minAnnual     BigInt?
   maxAnnual     BigInt?
   avgAnnual     BigInt?
   medianAnnual  BigInt?
   p75Annual     BigInt?
+  computedAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  computedAt    DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([sliceType, sliceSlug, currency], name: "slice_currency_unique")
+  @@unique([sliceType, sliceSlug, currency], name: "slice_currency_unique", map: "slice_currency_unique")
   @@index([sliceType])
   @@index([sliceSlug])
   @@index([jobCount])
@@ -267,4 +257,14 @@ model ScrapeRun {
 
   @@index([status])
   @@index([startedAt])
+}
+
+model AiRunLedger {
+  id            String   @id @default(cuid())
+  day           DateTime @unique
+  jobsProcessed Int      @default(0)
+  tokensIn      Int      @default(0)
+  tokensOut     Int      @default(0)
+  lastRunAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
 }

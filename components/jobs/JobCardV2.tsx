@@ -130,17 +130,12 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
                 {job.location}
               </span>
             )}
-            {job.isRemote && (
-              <>
-                {job.location && (
-                  <span className="text-muted-foreground/60">•</span>
-                )}
-                <span className="flex items-center gap-1 text-emerald-300">
-                  <Globe className="h-3.5 w-3.5" aria-hidden="true" />
-                  Remote
-                </span>
-              </>
-            )}
+{job.isRemote && !job.location?.includes('Remote') && (
+  <span className="flex items-center gap-1 text-emerald-300">
+    <Globe className="h-3.5 w-3.5" />
+    Remote
+  </span>
+)}
           </div>
 
           {/* ✅ snippet */}

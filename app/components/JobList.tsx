@@ -16,11 +16,24 @@ export default function JobList({ jobs }: JobListProps) {
     )
   }
 
+  // ✅ UI dedupe: collapse identical ATS duplicates (same company + title + comp)
+  const seen = new Set<string>()
+  const dedupedJobs = jobs.filter((job: any) => {
+    const companyId = job.companyId || job.companyRef?.id || ''
+    const title = (job.title || '').trim().toLowerCase()
+    const min = String(job.minAnnual ?? '')
+    const max = String(job.maxAnnual ?? '')
+    const key = `${companyId}:${title}:${min}:${max}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
   return (
     <div className="flex flex-col gap-4">
       <FeaturedPromoCard />
 
-      {jobs.map((job) => {
+      {dedupedJobs.map((job) => {
         const companyName =
           job.companyRef?.name?.trim() || (job as any)?.company?.trim() || 'Company'
 
@@ -29,8 +42,8 @@ export default function JobList({ jobs }: JobListProps) {
           job.companyRef?.website ?? null,
         )
 
-        const salaryMin = bigIntToNumberSafe((job as any)?.minAnnual)
-        const salaryMax = bigIntToNumberSafe((job as any)?.maxAnnual)
+        const salaryMin = normalizeAnnualSalary(bigIntToNumberSafe((job as any)?.minAnnual))
+        const salaryMax = normalizeAnnualSalary(bigIntToNumberSafe((job as any)?.maxAnnual))
 
         const isRemote =
           (job as any)?.remote === true ||
@@ -139,6 +152,20 @@ function bigIntToNumberSafe(v: unknown): number | null {
   }
 }
 
+function normalizeAnnualSalary(v: number | null): number | null {
+  if (!v || !Number.isFinite(v)) return null
+
+  // cents -> dollars heuristic
+  if (v >= 1_000_000 && v % 100 === 0) {
+    const dollars = v / 100
+    if (dollars >= 20_000 && dollars <= 2_000_000) return Math.round(dollars)
+  }
+
+  if (v < 20_000) return null
+  if (v > 2_000_000) return null
+  return Math.round(v)
+}
+
 function parseStringArray(raw?: string | null): string[] {
   if (!raw) return []
   try {
@@ -155,17 +182,33 @@ function buildLocationLabel(job: any): string | null {
     job?.remoteMode === 'remote' ||
     job?.remoteMode === 'hybrid'
 
+  function countryFlag(cc: string | null): string {
+    const code = (cc || '').trim().toUpperCase()
+    if (code.length !== 2 || !/^[A-Z]{2}$/.test(code)) return ''
+    return String.fromCodePoint(
+      0x1F1E6 + (code.charCodeAt(0) - 65),
+      0x1F1E6 + (code.charCodeAt(1) - 65)
+    )
+  }
+
+  const cc = job?.countryCode ? String(job.countryCode).toUpperCase() : ''
+  const flag = cc ? countryFlag(cc) : ''
+
   if (isRemote) {
-    const cc = job?.countryCode ? String(job.countryCode).toUpperCase() : null
-    return cc ? `🌍 Remote (${cc})` : '🌍 Remote'
+    if (cc && flag) return `🌍 Remote (${flag} ${cc})`
+    if (cc) return `🌍 Remote (${cc})`
+    return '🌍 Remote'
   }
 
   const city = job?.city ? String(job.city).trim() : ''
-  const cc = job?.countryCode ? String(job.countryCode).toUpperCase() : ''
 
+    if (city && cc && flag) return `${flag} ${city}, ${cc}`
   if (city && cc) return `📍 ${city}, ${cc}`
   if (job?.locationRaw) return `📍 ${String(job.locationRaw).trim()}`
+  if (cc && flag) return `${flag} ${cc}`
   if (cc) return `📍 ${cc}`
 
   return null
 }
+
+
