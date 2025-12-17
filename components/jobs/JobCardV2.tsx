@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { buildJobSlug, buildJobSlugHref } from '@/lib/jobs/jobSlug'
+import { formatSalaryRange } from "@/lib/normalizers/salary"
 
 interface JobCardV2Props {
   job: {
@@ -20,20 +21,12 @@ interface JobCardV2Props {
     isRemote: boolean
     salaryMin: number
     salaryMax: number | null
+    currency: string | null | undefined
     skills: string[]
     postedAt: Date
     snippet?: string | null
   }
   featured?: boolean
-}
-
-function formatSalary(min: number, max: number | null) {
-  const safeMin = Number.isFinite(min) ? min : 0
-  const safeMax = max !== null && Number.isFinite(max) ? max : null
-
-  const minK = Math.round(safeMin / 1000)
-  const maxK = safeMax ? Math.round(safeMax / 1000) : null
-  return maxK ? `$${minK}k – $${maxK}k` : `$${minK}k+`
 }
 
 function formatRelativeTime(date: Date): string {
@@ -120,7 +113,7 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
           </div>
 
           <div className="inline-flex items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 font-mono text-lg font-semibold text-emerald-200">
-            💰 {formatSalary(job.salaryMin, job.salaryMax)}
+            💰 {formatSalaryRange(job.salaryMin, job.salaryMax, job.currency ?? null)}
           </div>
 
           <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
