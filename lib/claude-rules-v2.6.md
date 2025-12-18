@@ -2011,10 +2011,10 @@ function extractAshbySalary(job: AshbyJob): SalaryRange | null {
 // lib/salary-parser.ts - Universal salary extraction from text
 
 const SALARY_PATTERNS = [
-  // "$150,000 - $200,000" or "$150k - $200k"
+  // "$200,000 - $300,000" or "$200k - $300k"
   /\$\s*([\d,]+)k?\s*[-–to]+\s*\$?\s*([\d,]+)k?(?:\s*\/?\s*(?:year|yr|annually|per\s*year))?/gi,
   
-  // "$150,000+" or "$150k+"
+  // "$200,000+" or "$200k+"
   /\$\s*([\d,]+)k?\s*\+(?:\s*\/?\s*(?:year|yr|annually))?/gi,
   
   // "150,000 USD" or "150k USD"
@@ -3708,7 +3708,6 @@ export function Footer() {
           <h3 className="font-semibold text-white mb-4">High-Paying Jobs</h3>
           <ul className="space-y-2 text-sm text-zinc-400">
             <li><Link href="/jobs/100k-plus">$100k+ Jobs</Link></li>
-            <li><Link href="/jobs/150k-plus">$150k+ Jobs</Link></li>
             <li><Link href="/jobs/200k-plus">$200k+ Jobs</Link></li>
             <li><Link href="/jobs/300k-plus">$300k+ Jobs</Link></li>
             <li><Link href="/jobs/400k-plus">$400k+ Jobs</Link></li>
@@ -4716,7 +4715,6 @@ const SALARY_BANDS = [
   { min: 400_000, label: '$400k+', slug: '400k-plus', description: 'Executive compensation' },
 ]
 // NOTE: $150k tier REMOVED in v2.7 - dilutes premium positioning
-// /jobs/150k-plus MUST 301 redirect to /jobs/100k-plus
 ```
 
 **CRITICAL RULES:**
@@ -5356,7 +5354,6 @@ Disallow: /api/
 **CRITICAL:** Sitemaps must ONLY include:
 - Canonical role slugs (Tier-1 indexed pages)
 - Pages meeting quality gates (min job count)
-- NO `/jobs/150k-plus`
 - NO non-canonical role slugs
 - NO thin pages below thresholds
 
@@ -5725,7 +5722,6 @@ export PSEO_ENABLED=false
 ```
 /remote/staff-ux-designer-ai → 301 to /remote/ux-designer
 /remote/garbage-slug         → 404
-/jobs/150k-plus              → 301 to /jobs/100k-plus
 /jobs/[role]/remote          → 301 to /remote/[role]
 ```
 
@@ -5975,7 +5971,6 @@ const getStats = unstable_cache(
 | /remote/staff-ux-designer-ai | 301 redirect | /remote/ux-designer |
 | /remote/senior-swe-platform | 301 redirect | /remote/software-engineer |
 | /remote/random-garbage | 404 | - |
-| /jobs/150k-plus | 301 redirect | /jobs/100k-plus |
 | /jobs/software-engineer/remote | 301 redirect | /remote/software-engineer |
 
 ## 30.3 Redirect Rules
@@ -6142,7 +6137,6 @@ for (const combo of roleCityCombos) {
 - [ ] `app/jobs/[role]/page.tsx` — Add tiered indexing
 - [ ] `app/jobs/[role]/[city]/page.tsx` — Add tiered indexing
 - [ ] `app/jobs/[role]/remote/page.tsx` — 301 redirect to /remote/[role]
-- [ ] `app/jobs/150k-plus/page.tsx` — 301 redirect to /jobs/100k-plus
 - [ ] `app/page.tsx` — Homepage SEO + stats caching
 - [ ] `components/layout/Footer.tsx` — 9 sections, fix anchors
 - [ ] `lib/constants/homepage.ts` — Remove $150k tier
@@ -6159,14 +6153,13 @@ for (const combo of roleCityCombos) {
     35. FINAL v2.7 NON-NEGOTIABLES
 ═══════════════════════════════════════════════════════════════════════════════
 
-1. NO `/jobs/150k-plus` pages, links, or sitemap entries — ever
-2. NO listing page for non-canonical role slugs
-3. NO indexing of Tier-2 role pages or non-Tier-1 combos
-4. `/remote/*` is canonical; `/jobs/[role]/remote` must 301 redirect
-5. Footer links to canonical hubs only (no "Senior" prefix)
-6. Keyword density: 3-5 per 500 words (not 5-7)
-7. Homepage stats must be cached (no fluctuation)
-8. Sections 24 & 26 (publishing safety) are PRESERVED — do not modify
+1. NO listing page for non-canonical role slugs
+2. NO indexing of Tier-2 role pages or non-Tier-1 combos
+3. `/remote/*` is canonical; `/jobs/[role]/remote` must 301 redirect
+4. Footer links to canonical hubs only (no "Senior" prefix)
+5. Keyword density: 3-5 per 500 words (not 5-7)
+6. Homepage stats must be cached (no fluctuation)
+7. Sections 24 & 26 (publishing safety) are PRESERVED — do not modify
 
 ═══════════════════════════════════════════════════════════════════════════════
                          END OF RULES v2.7

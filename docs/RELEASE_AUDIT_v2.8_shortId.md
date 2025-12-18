@@ -21,7 +21,7 @@ Repo HEAD: `06b72de0a560789232890d6640a5a04e8c0522ea` (2025-12-14T18:26:57+01:00
 5. Backfill script exists with collision stop behavior (`scripts/backfill-shortId.ts`).
 6. Remote role pages enforce canonical role slugs and tier gating (`app/remote/[role]/page.tsx`).
 7. Dedicated sitemaps exist (jobs shards, remote, companies, browse, slices).
-8. Middleware enforces apex→www and hard-disallows `/jobs/150k-plus` via 301 (`middleware.ts`).
+8. Middleware enforces apex→www redirects (`middleware.ts`).
 9. JobPosting JSON-LD on job detail uses stable canonical URL (`lib/seo/jobJsonLd.ts`).
 10. Search page is explicitly `noindex,follow` and canonicalizes query params (`app/search/page.tsx`).
 11. Query boundary is mostly respected via `lib/jobs/queryJobs.ts`.
@@ -154,11 +154,9 @@ Repo HEAD: `06b72de0a560789232890d6640a5a04e8c0522ea` (2025-12-14T18:26:57+01:00
 - app/components/JobList.tsx
 - app/components/RoleTypeahead.tsx
 - app/globals.css
-- app/job/[slug]/head.tsx
 - app/job/[slug]/page.tsx
 - app/jobs/100k-plus-jobs/page.tsx
 - app/jobs/100k-plus/page.tsx
-- app/jobs/150k-plus/page.tsx
 - app/jobs/200k-plus-jobs/page.tsx
 - app/jobs/200k-plus/page.tsx
 - app/jobs/300k-plus-jobs/page.tsx
@@ -558,11 +556,9 @@ Repo HEAD: `06b72de0a560789232890d6640a5a04e8c0522ea` (2025-12-14T18:26:57+01:00
 - app/company/[slug]/head.tsx → `/company/[slug]`
 - app/company/[slug]/page.tsx → `/company/[slug]`
 - app/company/page.tsx → `/company`
-- app/job/[slug]/head.tsx → `/job/[slug]`
 - app/job/[slug]/page.tsx → `/job/[slug]`
 - app/jobs/100k-plus-jobs/page.tsx → `/jobs/100k-plus-jobs`
 - app/jobs/100k-plus/page.tsx → `/jobs/100k-plus`
-- app/jobs/150k-plus/page.tsx → `/jobs/150k-plus`
 - app/jobs/200k-plus-jobs/page.tsx → `/jobs/200k-plus-jobs`
 - app/jobs/200k-plus/page.tsx → `/jobs/200k-plus`
 - app/jobs/300k-plus-jobs/page.tsx → `/jobs/300k-plus-jobs`
@@ -728,7 +724,6 @@ Repo HEAD: `06b72de0a560789232890d6640a5a04e8c0522ea` (2025-12-14T18:26:57+01:00
 | SEO-041 | Non-negotiable | SEO | // Lazy load filters and non-critical UI | docs/SEO_SPEC.md:4018 (Index optimization - run weekly) |
 | SEO-042 | Non-negotiable | SEO | hasH1WithKeyword: boolean; // Must include "$100k" or "high paying" | docs/SEO_SPEC.md:4373 (Node environment) |
 | SEO-043 | Important | SEO | node scripts/emergency-noindex.ts --threshold=10 | docs/SEO_SPEC.md:4480 (Days 2-7: Damage Control) |
-| SEO-044 | Non-negotiable | SEO | // /jobs/150k-plus MUST 301 redirect to /jobs/100k-plus | docs/SEO_SPEC.md:4719 (Share: Pages published, coverage %, issues found) |
 | SEO-045 | Important | SEO | 4. If !isTier1Role(role) → Add noindex meta tag | docs/SEO_SPEC.md:5968 (Days 2-7: Add noindex to thin pages) |
 | ARCHIVE-001 | Important | SEO | - `metadataBase` configured; staging noindex/robots block | docs/archive/SEO_IMPLEMENTATION_v1.5_2025-12-11_DEPRECATED.md.md:23 (Six Figure Jobs — SEO Implementation v1.5 > Completed Work) |
 
@@ -1477,35 +1472,6 @@ Findings:
 GOOD:
 - Sets `alternates.canonical`
 - Uses job slug builder
-
-WRONG:
-- (none)
-
-RISK:
-- (none)
-Actions:
-
-Must fix:
-- (none)
-
-Should fix:
-- (none)
-
-Nice to have:
-- (none)
-Blast radius: (unscoped)
-
-Path:
-app/jobs/150k-plus/page.tsx
-Type: route
-Purpose: Next.js page for `/jobs/150k-plus`
-SEO relevance: direct
-Docs rules impacted: SEO-*, ARCH-*
-Status: ✅ Good
-Findings:
-
-GOOD:
-- Uses `permanentRedirect()`
 
 WRONG:
 - (none)

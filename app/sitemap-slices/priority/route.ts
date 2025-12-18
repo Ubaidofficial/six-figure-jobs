@@ -7,7 +7,6 @@ import { getSiteUrl } from '../../../lib/seo/site'
 import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
 import type { SliceFilters } from '../../../lib/slices/types'
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 86400 // 24h
 
 const SITE_URL = getSiteUrl()

@@ -5,7 +5,6 @@ import { getSiteUrl } from '../../lib/seo/site'
 const SITE_URL = getSiteUrl()
 const BUILD_LASTMOD = new Date().toISOString()
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 86400 // 24h
 
 function escapeXml(s: string) {

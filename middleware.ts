@@ -5,15 +5,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const host = request.headers.get('host')
 
-  // 1) Redirect ALL /jobs/150k-plus URLs (including deep paths) → /jobs/100k-plus
-  if (pathname.startsWith('/jobs/150k-plus')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/jobs/100k-plus'
-    url.search = ''
-    return NextResponse.redirect(url, 301)
-  }
-
-  // 2) Redirect apex → www (except localhost)
+  // 1) Redirect apex → www (except localhost)
   const hostname = host ? host.split(':')[0] : null
   if (host && hostname === '6figjobs.com' && !host.startsWith('localhost')) {
     const url = request.nextUrl.clone()
