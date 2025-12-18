@@ -4,7 +4,7 @@ export const revalidate = 3600
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound, permanentRedirect, redirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 import { findBestMatchingRole, slugToLabel } from '@/lib/roles/slugMatcher'
 import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
@@ -190,7 +190,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const requestedPath = buildRequestedPath(roleSlug, sp)
   const canonicalPath = buildCanonicalPath(roleSlug, page)
   if (requestedPath !== canonicalPath) {
-    redirect(canonicalPath)
+    permanentRedirect(canonicalPath)
   }
 
   const selectedCountry = normalizeStringParam(sp.country)

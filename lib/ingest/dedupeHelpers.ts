@@ -170,6 +170,8 @@ export function debugDedupeKey(
   title: string,
   location: string | null | undefined
 ): void {
+  if (process.env.DEBUG_DEDUPE !== '1') return
+
   console.log('--- Dedupe Key Debug ---')
   console.log('Input:')
   console.log('  companyId:', companyId)

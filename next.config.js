@@ -59,6 +59,17 @@ const nextConfig = {
   // Remove eslint key (not supported in config anymore)
   // Use .eslintrc.json instead.
 
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: '6figjobs.com' }],
+        destination: 'https://www.6figjobs.com/:path*',
+        permanent: true,
+      },
+    ]
+  },
+
   async headers() {
     return [
       {

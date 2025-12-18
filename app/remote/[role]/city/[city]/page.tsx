@@ -2,7 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { prisma } from '../../../../../lib/prisma'
 import {
   buildGlobalExclusionsWhere,
@@ -320,7 +320,7 @@ export default async function RemoteRoleCityPage({
     return qs ? `${basePath}?${qs}` : basePath
   })()
   if (requested !== canonicalPath) {
-    redirect(canonicalPath)
+    permanentRedirect(canonicalPath)
   }
 
   const minParam = normalizeStringParam(sp.min)

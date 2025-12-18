@@ -2,7 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { prisma } from '../../../../../lib/prisma'
 import {
   queryJobs,
@@ -164,7 +164,7 @@ export async function generateMetadata({
     return qs ? `/remote/${roleSlug}/country/${countryParam}?${qs}` : `/remote/${roleSlug}/country/${countryParam}`
   })()
   if (requested !== canonicalPathname) {
-    redirect(canonicalPathname)
+    permanentRedirect(canonicalPathname)
   }
 
   const minParam = normalizeStringParam(sp.min)

@@ -41,6 +41,11 @@ export const maxDuration = 60
 
 type Target = 'boards' | 'ats' | 'all'
 
+const shouldLogScrape = process.env.NODE_ENV !== 'production' || process.env.DEBUG_SCRAPE === '1'
+const log = (...args: Parameters<typeof console.log>) => {
+  if (shouldLogScrape) console.log(...args)
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const target = (searchParams.get('target') ?? 'boards') as Target
@@ -52,7 +57,7 @@ export async function GET(req: Request) {
   const atsResults: any[] = []
 
   if (runBoards) {
-    console.log('▶ Scraping BOARD sources…')
+    log('▶ Scraping BOARD sources…')
 
     boardResults.push(await scrapeRemoteOK())
     boardResults.push(await scrapeWeWorkRemotely())
@@ -74,7 +79,7 @@ export async function GET(req: Request) {
   }
 
   if (runATS) {
-    console.log('▶ Scraping ATS sources…')
+    log('▶ Scraping ATS sources…')
 
     const companies = await prisma.company.findMany({
       where: {

@@ -38,6 +38,11 @@ import { isValidScrapedJob, getValidationErrors } from './types'
 /** How many days back to consider a company's ATS scrape as "recent" */
 const ATS_RECENT_DAYS = 7
 
+const shouldLogIngest = process.env.NODE_ENV !== 'production' || process.env.DEBUG_INGEST === '1'
+const ingestLog = (...args: Parameters<typeof console.log>) => {
+  if (shouldLogIngest) console.log(...args)
+}
+
 // =============================================================================
 // Main Ingest Function
 // =============================================================================
@@ -283,7 +288,7 @@ async function createNewJob(
         console.error(`[ingest] shortId collision on create: ${jobId}`)
         throw error
       }
-      console.log(`[ingest] Job already exists (race condition): ${jobId}`)
+      ingestLog(`[ingest] Job already exists (race condition): ${jobId}`)
       return { status: 'skipped', reason: 'already-exists', jobId, dedupeKey }
     }
     throw error
@@ -399,7 +404,7 @@ async function upgradeJob(
     data: updateData,
   })
 
-  console.log(`[ingest] Upgraded job ${existing.id} from ${existing.source} to ${input.source}`)
+  ingestLog(`[ingest] Upgraded job ${existing.id} from ${existing.source} to ${input.source}`)
 
   return { status: 'upgraded', jobId: existing.id, dedupeKey }
 }
