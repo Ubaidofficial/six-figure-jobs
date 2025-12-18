@@ -1,0 +1,425 @@
+middleware.ts:13:    return NextResponse.redirect(url, 301)
+app/remote/page.tsx:32:      canonical: `${SITE_URL}/remote`,
+app/remote/[role]/country/[country]/page.tsx:5:import { notFound, redirect } from 'next/navigation'
+app/remote/[role]/country/[country]/page.tsx:151:  const canonicalPathname = buildCanonicalPath(roleSlug, countryParam, sp)
+app/remote/[role]/country/[country]/page.tsx:166:  if (requested !== canonicalPathname) {
+app/remote/[role]/country/[country]/page.tsx:167:    redirect(canonicalPathname)
+app/remote/[role]/country/[country]/page.tsx:190:  const canonicalUrl = `${SITE_URL}${canonicalPathname}`
+app/remote/[role]/country/[country]/page.tsx:196:      canonical: canonicalUrl,
+app/remote/[role]/country/[country]/page.tsx:201:      url: canonicalUrl,
+lib/claude-rules-v2.6.md:80:- [ ] Fix URL slug system (canonical slugs only)
+lib/claude-rules-v2.6.md:84:- [ ] Route canonicalization (/remote/* primary)
+lib/claude-rules-v2.6.md:105:✅ Enforcing canonical URL slug validation (v2.7)
+lib/claude-rules-v2.6.md:175:- **~150 canonical role slugs** are supported for URL validation & redirects
+lib/claude-rules-v2.6.md:177:- All other canonical slugs are valid for job normalization but remain 
+lib/claude-rules-v2.6.md:178:  non-indexed (noindex) unless explicitly promoted to Tier-1
+lib/claude-rules-v2.6.md:188:| Role Pages (Tier-2+) | ~120 | `/jobs/[role]` | noindex |
+lib/claude-rules-v2.6.md:194:| Role+City (others) | - | - | noindex |
+lib/claude-rules-v2.6.md:199:**v2.7 REDIRECT RULE:** All `/jobs/[role]/remote` URLs MUST 301 redirect to `/remote/[role]`.
+lib/claude-rules-v2.6.md:576:    alternates: { canonical: `https://www.6figjobs.com/...` },
+lib/claude-rules-v2.6.md:605:### robots.txt (app/robots.txt/route.ts)
+lib/claude-rules-v2.6.md:612:### Layout noindex (app/layout.tsx)
+lib/claude-rules-v2.6.md:617:  robots: isStaging ? { index: false, follow: false } : undefined,
+lib/claude-rules-v2.6.md:622:## 7.4 AI Crawler Rules (robots.txt) ✅
+lib/claude-rules-v2.6.md:666:- ❌ "Senior Software Engineer" anchors (senior is modifier, not canonical)
+lib/claude-rules-v2.6.md:678:**NOTE:** No "Senior" prefix in anchor text. Link to canonical role hubs only.
+lib/claude-rules-v2.6.md:736:- "Senior Software Engineer Jobs" (senior is a modifier, not canonical)
+lib/claude-rules-v2.6.md:747:| sitemap.xml | Index of all sitemaps | ✅ |
+lib/claude-rules-v2.6.md:748:| sitemap-jobs.xml | Job detail pages | ✅ |
+lib/claude-rules-v2.6.md:749:| sitemap-browse.xml | All pSEO pages | ✅ |
+lib/claude-rules-v2.6.md:750:| sitemap-companies.xml | Company pages | ✅ |
+lib/claude-rules-v2.6.md:752:## 9.2 sitemap-browse.xml Contents ✅
+lib/claude-rules-v2.6.md:936:- [x] Staging noindex/robots block
+lib/claude-rules-v2.6.md:2602:    canonical: 'https://www.6figjobs.com',
+lib/claude-rules-v2.6.md:2623:  robots: {
+lib/claude-rules-v2.6.md:2721:      canonical: `https://www.6figjobs.com/jobs/${role}`,
+lib/claude-rules-v2.6.md:2895:      canonical: `https://www.6figjobs.com/jobs/state/${state}`,
+lib/claude-rules-v2.6.md:2939:      canonical: `https://www.6figjobs.com/jobs/city/${city}`,
+lib/claude-rules-v2.6.md:2969:      canonical: `https://www.6figjobs.com/jobs/skills/${skill}`,
+lib/claude-rules-v2.6.md:2994:      canonical: `https://www.6figjobs.com/jobs/${role}/remote`,
+lib/claude-rules-v2.6.md:3032:      canonical: `https://www.6figjobs.com/job/${slug}`,
+lib/claude-rules-v2.6.md:3125:      canonical: `https://www.6figjobs.com/company/${slug}`,
+lib/claude-rules-v2.6.md:3180:      canonical: `https://www.6figjobs.com/salary/${role}`,
+lib/claude-rules-v2.6.md:3228:- [ ] All pages have canonical URLs
+lib/claude-rules-v2.6.md:3238:- [ ] sitemap.xml includes all pages
+lib/claude-rules-v2.6.md:3239:- [ ] robots.txt is correctly configured
+lib/claude-rules-v2.6.md:3240:- [ ] Staging has noindex meta tag
+lib/claude-rules-v2.6.md:3511:  // 6. Check sitemap is recent
+lib/claude-rules-v2.6.md:3849:└── generate-sitemap.ts   # Sitemap generation
+lib/claude-rules-v2.6.md:3984:**Days 2-7:** Add noindex to pages <5 jobs. Remove from sitemap pages <10 jobs. Submit reconsideration request.
+lib/claude-rules-v2.6.md:4229:// app/sitemap.xml/route.ts
+lib/claude-rules-v2.6.md:4235:  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+lib/claude-rules-v2.6.md:4236:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+lib/claude-rules-v2.6.md:4247:  return new Response(sitemap, {
+lib/claude-rules-v2.6.md:4336:# Site URL (for canonical/schemas)
+lib/claude-rules-v2.6.md:4373:  hasMetadata: boolean;      // Title (<60 chars), description (<160 chars), canonical
+lib/claude-rules-v2.6.md:4404:  if (!page.title || !page.description || !page.canonical) {
+lib/claude-rules-v2.6.md:4479:node scripts/emergency-noindex.ts --threshold=10
+lib/claude-rules-v2.6.md:4480:node scripts/rebuild-sitemap.ts --min-jobs=10
+lib/claude-rules-v2.6.md:4530:1. Verify pages are in sitemap
+lib/claude-rules-v2.6.md:4531:2. Check for noindex tags (staging mode)
+lib/claude-rules-v2.6.md:4536:**Solution:** Google is over-indexing. Add stricter noindex rules or remove thin pages.
+lib/claude-rules-v2.6.md:4653:- [ ] Fix URL slug system (canonical slugs only)
+lib/claude-rules-v2.6.md:4657:- [ ] Route canonicalization (/remote/* primary)
+lib/claude-rules-v2.6.md:4678:✅ Enforcing canonical URL slug validation
+lib/claude-rules-v2.6.md:4759:- **~150 canonical role slugs** are supported for URL validation & redirects
+lib/claude-rules-v2.6.md:4761:- All other canonical slugs are valid for job normalization but remain 
+lib/claude-rules-v2.6.md:4762:  non-indexed (noindex) unless explicitly promoted to Tier-1
+lib/claude-rules-v2.6.md:4772:| Role Pages (Tier-2+) | ~120 | `/jobs/[role]` | noindex |
+lib/claude-rules-v2.6.md:4778:| Role+City (others) | - | - | noindex |
+lib/claude-rules-v2.6.md:4899:All others - noindex by default until promoted
+lib/claude-rules-v2.6.md:4911:- All other combinations MUST render with `noindex` and be excluded from sitemaps
+lib/claude-rules-v2.6.md:4914:**Example (noindex):** `/jobs/tax-manager/phoenix`
+lib/claude-rules-v2.6.md:4942:All `/jobs/[role]/remote` URLs MUST 301 redirect to `/remote/[role]`.
+lib/claude-rules-v2.6.md:4947:import { redirect } from 'next/navigation'
+lib/claude-rules-v2.6.md:4951:  redirect(`/remote/${role}`, 301)
+lib/claude-rules-v2.6.md:5204:    alternates: { canonical: `https://www.6figjobs.com/...` },
+lib/claude-rules-v2.6.md:5232:### robots.txt (app/robots.txt/route.ts)
+lib/claude-rules-v2.6.md:5239:## 7.4 AI Crawler Rules (robots.txt) ✅
+lib/claude-rules-v2.6.md:5278:**NOTE:** No "Senior" prefix in anchor text. Link to canonical role hubs only.
+lib/claude-rules-v2.6.md:5335:- "Senior Software Engineer Jobs" (senior is a modifier, not canonical)
+lib/claude-rules-v2.6.md:5346:| sitemap.xml | Index of all sitemaps | ✅ |
+lib/claude-rules-v2.6.md:5347:| sitemap-jobs.xml | Job detail pages | ✅ |
+lib/claude-rules-v2.6.md:5348:| sitemap-browse.xml | All pSEO pages | ✅ |
+lib/claude-rules-v2.6.md:5349:| sitemap-companies.xml | Company pages | ✅ |
+lib/claude-rules-v2.6.md:5350:| sitemap-remote.xml | Remote role pages | ✅ |
+lib/claude-rules-v2.6.md:5357:- NO non-canonical role slugs
+lib/claude-rules-v2.6.md:5361:// In sitemap generation:
+lib/claude-rules-v2.6.md:5362:import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
+lib/claude-rules-v2.6.md:5364:// Filter: Only Tier-1 canonical slugs in sitemap
+lib/claude-rules-v2.6.md:5460:11. Create non-canonical role slug URLs
+lib/claude-rules-v2.6.md:5474:9. Validate role slugs against canonical list
+lib/claude-rules-v2.6.md:5476:11. 301 redirect `/jobs/[role]/remote` to `/remote/[role]`
+lib/claude-rules-v2.6.md:5477:12. Use noindex on non-Tier-1 Role+City pages
+lib/claude-rules-v2.6.md:5495:- [x] Staging noindex/robots block
+lib/claude-rules-v2.6.md:5510:- [ ] 301 redirect /jobs/[role]/remote → /remote/[role]
+lib/claude-rules-v2.6.md:5513:- [ ] Sitemap canonical filtering
+lib/claude-rules-v2.6.md:5691:# Days 2-7: Add noindex to thin pages
+lib/claude-rules-v2.6.md:5715:/remote/[canonical-role]              ✅ CANONICAL for remote
+lib/claude-rules-v2.6.md:5716:/jobs/[canonical-role]                ✅ Tier-1 roles only indexed
+lib/claude-rules-v2.6.md:5723:/remote/staff-ux-designer-ai → 301 to /remote/ux-designer
+lib/claude-rules-v2.6.md:5725:/jobs/[role]/remote          → 301 to /remote/[role]
+lib/claude-rules-v2.6.md:5775:These URLs are not keyword-focused, create duplicate intent, and bloat sitemaps.
+lib/claude-rules-v2.6.md:5779:**~150 canonical role slugs** are supported for URL validation & redirects.
+lib/claude-rules-v2.6.md:5782:All other canonical slugs are valid for job normalization but remain 
+lib/claude-rules-v2.6.md:5783:non-indexed (noindex) unless explicitly promoted to Tier-1.
+lib/claude-rules-v2.6.md:5830:## 28.4 Tier-2 Roles (Valid but noindex) — ~125
+lib/claude-rules-v2.6.md:5832:All other canonical slugs. Valid for:
+lib/claude-rules-v2.6.md:5834:- 301 redirects from garbage URLs
+lib/claude-rules-v2.6.md:5851:File: `lib/roles/canonicalSlugs.ts`
+lib/claude-rules-v2.6.md:5883:  // Pattern matching to canonical slugs...
+lib/claude-rules-v2.6.md:5960:2. Try findBestMatchingRole(role) → 301 redirect
+lib/claude-rules-v2.6.md:5964:4. If !isTier1Role(role) → Add noindex meta tag
+lib/claude-rules-v2.6.md:5971:| /remote/staff-ux-designer-ai | 301 redirect | /remote/ux-designer |
+lib/claude-rules-v2.6.md:5972:| /remote/senior-swe-platform | 301 redirect | /remote/software-engineer |
+lib/claude-rules-v2.6.md:5974:| /jobs/software-engineer/remote | 301 redirect | /remote/software-engineer |
+lib/claude-rules-v2.6.md:5978:- 301 only when the target intent is a clear match
+lib/claude-rules-v2.6.md:5979:- Do NOT 301 random garbage to the homepage (soft-404 risk)
+lib/claude-rules-v2.6.md:5981:- Log redirects for analysis
+lib/claude-rules-v2.6.md:5999:All `/jobs/[role]/remote` URLs MUST 301 redirect to `/remote/[role]`.
+lib/claude-rules-v2.6.md:6003:import { redirect } from 'next/navigation'
+lib/claude-rules-v2.6.md:6007:  redirect(`/remote/${role}`, 301)
+lib/claude-rules-v2.6.md:6037:- senior ≠ canonical role
+lib/claude-rules-v2.6.md:6042:- Links to canonical hub
+lib/claude-rules-v2.6.md:6045:Footer must only link to canonical Tier-1 role hubs.
+lib/claude-rules-v2.6.md:6075:| /jobs/[role] | Tier-2 role | noindex |
+lib/claude-rules-v2.6.md:6077:| /remote/[role] | Tier-2 role | noindex |
+lib/claude-rules-v2.6.md:6079:| /jobs/[role]/[city] | Either Tier-2 | noindex |
+lib/claude-rules-v2.6.md:6091:    robots: shouldIndex 
+lib/claude-rules-v2.6.md:6101:Only Tier-1 pages appear in sitemaps:
+lib/claude-rules-v2.6.md:6104:// sitemap generation
+lib/claude-rules-v2.6.md:6129:- [ ] `lib/roles/canonicalSlugs.ts` — Tier-1/Tier-2 role lists
+lib/claude-rules-v2.6.md:6130:- [ ] `lib/roles/slugMatcher.ts` — Fuzzy matching for redirects
+lib/claude-rules-v2.6.md:6139:- [ ] `app/jobs/[role]/remote/page.tsx` — 301 redirect to /remote/[role]
+lib/claude-rules-v2.6.md:6143:- [ ] `app/sitemap-*.xml/route.ts` — Filter to Tier-1 only
+lib/claude-rules-v2.6.md:6148:- [ ] Resubmit sitemap index in GSC
+lib/claude-rules-v2.6.md:6156:1. NO listing page for non-canonical role slugs
+lib/claude-rules-v2.6.md:6158:3. `/remote/*` is canonical; `/jobs/[role]/remote` must 301 redirect
+lib/claude-rules-v2.6.md:6159:4. Footer links to canonical hubs only (no "Senior" prefix)
+app/remote/[role]/page.tsx:7:import { notFound, permanentRedirect, redirect } from 'next/navigation'
+app/remote/[role]/page.tsx:8:import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
+app/remote/[role]/page.tsx:184:      robots: { index: false, follow: false },
+app/remote/[role]/page.tsx:191:  const canonicalPath = buildCanonicalPath(roleSlug, page)
+app/remote/[role]/page.tsx:192:  if (requestedPath !== canonicalPath) {
+app/remote/[role]/page.tsx:193:    redirect(canonicalPath)
+app/remote/[role]/page.tsx:221:      canonical: `${SITE_URL}/remote/${roleSlug}`,
+app/remote/[role]/page.tsx:223:    robots: shouldIndex
+app/remote/[role]/page.tsx:225:      : { index: false, follow: true }, // Tier-2: noindex but follow links
+app/remote/[role]/page.tsx:255:  // 1. Check if it's a canonical slug
+app/remote/[role]/page.tsx:257:    // 2. Try to find a matching canonical slug for redirect
+app/remote/[role]/page.tsx:261:      // Permanent redirect to canonical URL
+app/remote/[role]/page.tsx:589:  const { TIER_1_ROLES } = await import('@/lib/roles/canonicalSlugs')
+app/remote/[role]/city/[city]/page.tsx:5:import { notFound, redirect } from 'next/navigation'
+app/remote/[role]/city/[city]/page.tsx:256:  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, sp)
+app/remote/[role]/city/[city]/page.tsx:257:  const canonicalUrl = `${SITE_URL}${canonicalPath}`
+app/remote/[role]/city/[city]/page.tsx:269:      canonical: canonicalUrl,
+app/remote/[role]/city/[city]/page.tsx:276:      url: canonicalUrl,
+app/remote/[role]/city/[city]/page.tsx:310:  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, sp)
+app/remote/[role]/city/[city]/page.tsx:322:  if (requested !== canonicalPath) {
+app/remote/[role]/city/[city]/page.tsx:323:    redirect(canonicalPath)
+app/remote/[role]/[location]/page.tsx:5:import { notFound, redirect } from 'next/navigation'
+app/remote/[role]/[location]/page.tsx:253:  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, sp)
+app/remote/[role]/[location]/page.tsx:254:  const canonicalUrl = `${SITE_URL}${canonicalPath}`
+app/remote/[role]/[location]/page.tsx:266:      canonical: canonicalUrl,
+app/remote/[role]/[location]/page.tsx:268:    robots:
+app/remote/[role]/[location]/page.tsx:277:      url: canonicalUrl,
+app/remote/[role]/[location]/page.tsx:305:  const canonicalPath = buildCanonicalPath(roleSlug, cityParam, sp)
+app/remote/[role]/[location]/page.tsx:318:  if (requested !== canonicalPath) {
+app/remote/[role]/[location]/page.tsx:319:    redirect(canonicalPath)
+lib/normalizers/role.ts:3:import { isCanonicalSlug } from '../roles/canonicalSlugs'
+lib/normalizers/role.ts:89:  // v2.7: enforce canonical-only role slugs (prevents garbage URLs)
+lib/normalizers/role.ts:90:  const canonicalRoleSlug = isCanonicalSlug(generatedRoleSlug) ? generatedRoleSlug : ''
+lib/normalizers/role.ts:92:  // Derive canonical base role slug (remove seniority prefix when present)
+lib/normalizers/role.ts:94:  const canonicalBaseRoleSlug = canonicalRoleSlug
+lib/normalizers/role.ts:95:    ? canonicalRoleSlug.replace(
+lib/normalizers/role.ts:103:    roleSlug: canonicalRoleSlug,
+lib/normalizers/role.ts:104:    baseRoleSlug: canonicalBaseRoleSlug,
+lib/seo/company.ts:40:  const canonical = buildCanonical(company.slug, ctx.page)
+lib/seo/company.ts:46:      canonical,
+lib/seo/company.ts:51:      url: canonical,
+lib/ingest/sourcePriority.ts:44:  // ATS sources (highest priority - canonical, direct from company)
+lib/seo/structuredData.ts:13: * Build the most canonical / non-redirecting job URL we can.
+lib/seo/structuredData.ts:15: *  1) job.canonicalSlug / job.jobSlug / job.slug (if your DB/query exposes it)
+lib/seo/structuredData.ts:20:    (typeof job?.canonicalSlug === 'string' && job.canonicalSlug) ||
+lib/seo/structuredData.ts:41:  // v2.8 fallback (should be canonical if title used matches)
+lib/seo/site.ts:1:// Centralized site branding + canonical helpers
+app/company/[slug]/page.tsx:78:  const canonicalUrl = `${SITE_URL}/company/${slug}`
+app/company/[slug]/page.tsx:83:    alternates: { canonical: canonicalUrl },
+app/company/[slug]/page.tsx:84:    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+app/company/[slug]/page.tsx:88:      url: canonicalUrl,
+lib/seo/jobMeta.ts:61:    alternates: { canonical: url },
+lib/seo/jobMeta.ts:62:    robots: job.isExpired ? { index: false, follow: true } : undefined,
+lib/seo/meta.ts:5:import { buildSliceCanonicalUrl } from './canonical'
+lib/seo/meta.ts:124:  const canonical = buildCanonicalUrl(slice, ctx.page)
+lib/seo/meta.ts:150:      ? { [`en-${countryCode}`]: canonical, 'x-default': canonical }
+lib/seo/meta.ts:157:      canonical,
+lib/seo/meta.ts:164:    robots: allowIndex
+lib/seo/meta.ts:170:      url: canonical,
+lib/seo/canonical.ts:1:// lib/seo/canonical.ts
+lib/seo/canonical.ts:2:// Helpers for producing a single canonical URL shape for job slices.
+lib/seo/canonical.ts:29: * Build the canonical path for a JobSlice based on its filters.
+lib/seo/canonical.ts:60: * Resolve canonical path.
+lib/seo/canonical.ts:61: * For SEO, always prefer the built canonical. Handle legacy slugs via redirects.
+app/company/[slug]/head.tsx:2:// Canonical link for company pages and noindex when no live roles.
+app/company/[slug]/head.tsx:30:  const canonical = `${SITE_URL}/company/${company.slug}`
+app/company/[slug]/head.tsx:34:      <link rel="canonical" href={canonical} />
+app/company/[slug]/head.tsx:35:      {liveJobCount <= 0 && <meta name="robots" content="noindex,follow" />}
+app/company/page.tsx:2:import { redirect } from 'next/navigation'
+app/company/page.tsx:5:  redirect('/companies')
+lib/jobs/searchSlug.ts:40: * Build the canonical /jobs URL path (without origin).
+lib/seo/companyMeta.ts:27:  const canonical = buildCompanyCanonical(company.slug);
+lib/seo/companyMeta.ts:32:    alternates: { canonical },
+lib/seo/companyMeta.ts:36:      url: canonical,
+lib/jobs/salaryThresholds.ts:3:// v2.9: Compatibility helpers (country -> currency -> canonical threshold).
+lib/jobs/salaryThresholds.ts:38:// Derived flags only (NOT eligibility): "very high" == 1.5x canonical threshold
+app/sitemap-category.xml/route.ts:16:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+app/sitemap-slices.xml/route.ts:1:// app/sitemap-slices.xml/route.ts
+app/sitemap-slices.xml/route.ts:12:  const entries = ['sitemap-slices/priority', 'sitemap-slices/longtail']
+app/sitemap-slices.xml/route.ts:15:<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+app/sitemap-slices.xml/route.ts:18:    (loc) => `  <sitemap>
+app/sitemap-slices.xml/route.ts:21:  </sitemap>`,
+app/sitemap-slices.xml/route.ts:24:</sitemapindex>`
+app/sitemap-company.xml/route.ts:1:// app/sitemap-company.xml/route.ts
+app/sitemap-company.xml/route.ts:39:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+lib/roles/canonicalSlugs.ts:1:// lib/roles/canonicalSlugs.ts
+lib/roles/canonicalSlugs.ts:2:// Master list of canonical role slugs for pSEO pages
+lib/roles/canonicalSlugs.ts:49:// TIER-2 ROLES: Valid for redirects but noindex (~125 roles)
+lib/roles/canonicalSlugs.ts:261: * Check if a slug is in the canonical list (Tier-1 or Tier-2)
+lib/roles/canonicalSlugs.ts:275: * Check if a slug is Tier-2 (valid but noindex)
+lib/roles/canonicalSlugs.ts:289: * Get count of canonical slugs
+lib/jobs/queryJobs.ts:128:  // v2.9 hard gates (canonical, deterministic)
+app/sitemap-remote.xml/route.ts:1:// app/sitemap-remote.xml/route.ts
+app/sitemap-remote.xml/route.ts:4:import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
+app/sitemap-remote.xml/route.ts:66:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+lib/roles/salaryRoles.ts:729: * For sitemaps and static generation, prefer EXPANDED_SALARY_ROLES.
+app/sitemap-slices/priority/route.ts:1:// app/sitemap-slices/priority/route.ts
+app/sitemap-slices/priority/route.ts:7:import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
+app/sitemap-slices/priority/route.ts:72:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+lib/roles/slugMatcher.ts:2:// Fuzzy matching for redirecting bad slugs to canonical slugs
+lib/roles/slugMatcher.ts:8:} from './canonicalSlugs'
+lib/roles/slugMatcher.ts:57: * Find the best matching canonical role slug for a bad/non-canonical slug
+lib/roles/slugMatcher.ts:65:  // 1. Direct match - already canonical
+lib/roles/slugMatcher.ts:75:  // 3. Check if any canonical slug is a substring of the bad slug
+lib/roles/slugMatcher.ts:81:  for (const canonical of sortedSlugs) {
+lib/roles/slugMatcher.ts:82:    if (slug.includes(canonical)) {
+lib/roles/slugMatcher.ts:83:      return canonical
+app/sitemap-slices/longtail/route.ts:1:// app/sitemap-slices/longtail/route.ts
+app/sitemap-slices/longtail/route.ts:7:import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
+app/sitemap-slices/longtail/route.ts:67:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+app/search/page.tsx:5:import { redirect } from 'next/navigation'
+app/search/page.tsx:135:  const canonical = `${getSiteUrl()}${buildCanonicalPath(sp)}`
+app/search/page.tsx:144:      canonical,
+app/search/page.tsx:146:    robots: {
+app/search/page.tsx:154:      url: canonical,
+app/search/page.tsx:165:  const canonicalPath = buildCanonicalPath(sp)
+app/search/page.tsx:178:  if (requestedPath !== canonicalPath) {
+app/search/page.tsx:179:    redirect(canonicalPath)
+app/salary/[role]/page.tsx:170:  const canonical = `${SITE_URL}/salary/${roleSlug}${bandSlug ? `?band=${bandSlug}` : ''}`
+app/salary/[role]/page.tsx:175:    alternates: { canonical },
+app/salary/[role]/page.tsx:176:    robots: allowIndex
+app/salary/[role]/page.tsx:182:      url: canonical,
+app/salary/[role]/page.tsx:443:          Data freshness: updated from live $100k+ listings; thin pages stay noindex until more roles are available.
+lib/scrapers/types.ts:18:  atsUrl: string;      // canonical ATS board URL
+app/companies/page.tsx:12:  alternates: { canonical: 'https://www.6figjobs.com/companies' },
+lib/jobs/salaryBands.ts:12:// Base US bands – your canonical ranges
+app/salary/[role]/[...loc]/page.tsx:166:  const canonicalBase = `${SITE_URL}/salary/${roleSlug}${loc.length ? `/${loc.join('/')}` : ''}`
+app/salary/[role]/[...loc]/page.tsx:167:  const canonical = `${canonicalBase}${bandSlug ? `?band=${bandSlug}` : ''}`
+app/salary/[role]/[...loc]/page.tsx:172:    alternates: { canonical },
+app/salary/[role]/[...loc]/page.tsx:176:      url: canonical,
+app/sitemap-salary.xml/route.ts:1:import { buildSliceCanonicalPath } from '../../lib/seo/canonical'
+app/sitemap-salary.xml/route.ts:29:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+lib/jobs/ingestFromAts.ts:14:import type { CanonicalRoleSlug } from '../roles/canonicalSlugs'
+lib/jobs/ingestFromAts.ts:34: * Infer a canonical role slug from a job title
+lib/jobs/ingestFromAts.ts:35: * Returns null if no canonical match found (prevents garbage URLs)
+app/sitemap-level.xml/route.ts:16:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+app/post-a-job/page.tsx:13:    canonical: 'https://www.6figjobs.com/post-a-job',
+app/sitemap-jobs.xml/route.ts:1:// app/sitemap-jobs.xml/route.ts
+app/sitemap-jobs.xml/route.ts:45:  const sitemapEntries: string[] = []
+app/sitemap-jobs.xml/route.ts:73:    // Maintain previous behaviour: always emit at least 1 sitemap entry.
+app/sitemap-jobs.xml/route.ts:76:        const loc = escapeXml(`${SITE_URL}/sitemap-jobs/1`)
+app/sitemap-jobs.xml/route.ts:77:        sitemapEntries.push(`  <sitemap>
+app/sitemap-jobs.xml/route.ts:80:  </sitemap>`)
+app/sitemap-jobs.xml/route.ts:86:    const loc = escapeXml(`${SITE_URL}/sitemap-jobs/${token}`)
+app/sitemap-jobs.xml/route.ts:87:    sitemapEntries.push(`  <sitemap>
+app/sitemap-jobs.xml/route.ts:90:  </sitemap>`)
+app/sitemap-jobs.xml/route.ts:98:<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+app/sitemap-jobs.xml/route.ts:99:${sitemapEntries.join('\n')}
+app/sitemap-jobs.xml/route.ts:100:</sitemapindex>`
+app/sitemap-country.xml/route.ts:21:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+app/sitemap-browse.xml/route.ts:1:// app/sitemap-browse.xml/route.ts
+app/sitemap-browse.xml/route.ts:78:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+app/sitemap-jobs/[page]/route.ts:1:// app/sitemap-jobs/[page]/route.ts
+app/sitemap-jobs/[page]/route.ts:64:    return Response.redirect(`${SITE_URL}/sitemap-jobs.xml`, 301)
+app/sitemap-jobs/[page]/route.ts:105:      // ✅ Always generate canonical v2.8 URL (no legacy/roleSlug risk)
+app/sitemap-jobs/[page]/route.ts:118:<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+app/robots.txt/route.ts:1:// app/robots.txt/route.ts
+app/robots.txt/route.ts:32:    `Sitemap: ${SITE_URL}/sitemap.xml`,
+app/robots.txt/route.ts:33:    `Sitemap: ${SITE_URL}/sitemap-jobs.xml`,
+app/robots.txt/route.ts:34:    `Sitemap: ${SITE_URL}/sitemap-company.xml`,
+app/robots.txt/route.ts:35:    `Sitemap: ${SITE_URL}/sitemap-salary.xml`,
+app/robots.txt/route.ts:36:    `Sitemap: ${SITE_URL}/sitemap-remote.xml`,
+app/robots.txt/route.ts:37:    `Sitemap: ${SITE_URL}/sitemap-country.xml`,
+app/robots.txt/route.ts:38:    `Sitemap: ${SITE_URL}/sitemap-category.xml`,
+app/robots.txt/route.ts:39:    `Sitemap: ${SITE_URL}/sitemap-level.xml`,
+app/robots.txt/route.ts:40:    `Sitemap: ${SITE_URL}/sitemap-browse.xml`,
+app/robots.txt/route.ts:41:    `Sitemap: ${SITE_URL}/sitemap-slices.xml`,
+app/page.tsx:35:    canonical: 'https://www.6figjobs.com',
+app/page.tsx:61:  robots: {
+app/pricing/page.tsx:13:    canonical: 'https://www.6figjobs.com/pricing',
+app/jobs/100k-plus-jobs/page.tsx:1:import { redirect } from 'next/navigation'
+app/jobs/100k-plus-jobs/page.tsx:4:  redirect('/jobs/100k-plus')
+app/sitemap.xml/route.ts:1:// app/sitemap.xml/route.ts
+app/sitemap.xml/route.ts:20:  const sitemaps = [
+app/sitemap.xml/route.ts:21:    'sitemap-jobs.xml',
+app/sitemap.xml/route.ts:22:    'sitemap-company.xml',
+app/sitemap.xml/route.ts:23:    'sitemap-remote.xml',
+app/sitemap.xml/route.ts:24:    'sitemap-salary.xml',
+app/sitemap.xml/route.ts:25:    'sitemap-country.xml',
+app/sitemap.xml/route.ts:26:    'sitemap-category.xml',
+app/sitemap.xml/route.ts:27:    'sitemap-level.xml',
+app/sitemap.xml/route.ts:28:    'sitemap-browse.xml',
+app/sitemap.xml/route.ts:29:    'sitemap-slices.xml',
+app/sitemap.xml/route.ts:33:<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+app/sitemap.xml/route.ts:34:${sitemaps
+app/sitemap.xml/route.ts:37:    return `  <sitemap>
+app/sitemap.xml/route.ts:40:  </sitemap>`
+app/sitemap.xml/route.ts:43:</sitemapindex>`
+app/jobs/[...slug]/head.tsx:2:// Emit prev/next link tags for pagination to reinforce canonical signals.
+app/jobs/[...slug]/head.tsx:6:import { buildSliceCanonicalUrl } from '../../../lib/seo/canonical'
+app/job/[slug]/page.tsx:127:  const canonicalSlug = buildJobSlug(job)
+app/job/[slug]/page.tsx:128:  const canonicalUrl = `${SITE_URL}/job/${canonicalSlug}`
+app/job/[slug]/page.tsx:133:    alternates: { ...(base.alternates ?? {}), canonical: canonicalUrl },
+app/job/[slug]/page.tsx:149:  const canonicalSlug = buildJobSlug(typedJob)
+app/job/[slug]/page.tsx:151:  // 301 redirect old slugs -> canonical v2.8 (no loops)
+app/job/[slug]/page.tsx:155:  const isAlreadyCanonical = incoming === canonicalSlug
+app/job/[slug]/page.tsx:159:    permanentRedirect(`/job/${canonicalSlug}`)
+app/job/[slug]/page.tsx:217:  const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
+app/jobs/germany/page.tsx:1:import { redirect } from 'next/navigation'
+app/jobs/germany/page.tsx:6:  redirect(`/jobs/country/${slug}`)
+app/jobs/canada/page.tsx:1:import { redirect } from 'next/navigation'
+app/jobs/canada/page.tsx:6:  redirect(`/jobs/country/${slug}`)
+app/jobs/300k-plus-jobs/page.tsx:1:import { redirect } from 'next/navigation'
+app/jobs/300k-plus-jobs/page.tsx:4:  redirect('/jobs/300k-plus')
+app/jobs/400k-plus/page.tsx:29:    alternates: { canonical: `${SITE_URL}/jobs/400k-plus` },
+app/test-shadcn/page.tsx:16:  robots: {
+app/jobs/400k-plus-jobs/page.tsx:1:import { redirect } from 'next/navigation'
+app/jobs/400k-plus-jobs/page.tsx:4:  redirect('/jobs/400k-plus')
+app/jobs/[role]/remote/page.tsx:2:// v2.7: /remote/* is canonical for remote role pages
+app/jobs/location/remote/route.ts:2:// Redirect /jobs/location/remote → canonical remote listing
+app/jobs/location/remote/route.ts:4:import { redirect } from 'next/navigation'
+app/jobs/location/remote/route.ts:7:  redirect('/remote/software-engineer') // fallback default; main remote browsing lives in role pages
+app/jobs/[role]/page.tsx:112:      canonical: `https://www.6figjobs.com/jobs/${role}`,
+app/jobs/usa/page.tsx:1:import { redirect } from 'next/navigation'
+app/jobs/usa/page.tsx:6:  redirect(`/jobs/country/${slug}`)
+app/jobs/[role]/skills/[skill]/page.tsx:43:  const canonical = `${SITE_URL}/jobs/${role}/skills/${skillInfo.slug}`
+app/jobs/[role]/skills/[skill]/page.tsx:48:    alternates: { canonical },
+app/jobs/[role]/skills/[skill]/page.tsx:49:    openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
+app/jobs/[role]/skills/[skill]/page.tsx:51:    robots: total >= 3 ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/100k-plus/page.tsx:191:    alternates: { canonical: `${SITE_URL}/jobs/100k-plus` },
+app/layout.tsx:21:  robots: process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')
+app/jobs/200k-plus-jobs/page.tsx:1:import { redirect } from 'next/navigation'
+app/jobs/200k-plus-jobs/page.tsx:4:  redirect('/jobs/200k-plus')
+app/jobs/location/[country]/page.tsx:12:import { redirect } from 'next/navigation'
+app/jobs/location/[country]/page.tsx:77:    redirect(`/jobs/location/${(loc as any).slug}`)
+app/jobs/location/[country]/page.tsx:95:  const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
+app/jobs/location/[country]/page.tsx:101:    alternates: { canonical },
+app/jobs/location/[country]/page.tsx:102:    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/location/[country]/page.tsx:106:      url: canonical,
+app/jobs/location/[country]/page.tsx:130:    redirect(`/jobs/location/${(loc as any).slug}`)
+app/jobs/[role]/country/[country]/route.ts:2:// Redirect helper: /jobs/{role}/country/{country} → canonical slice
+app/jobs/[role]/country/[country]/route.ts:5:import { redirect } from 'next/navigation'
+app/jobs/[role]/country/[country]/route.ts:12:  redirect(`/jobs/${params.role}/${params.country}/100k-plus`)
+app/jobs/city/[city]/page.tsx:51:  const canonical = `${SITE_URL}/jobs/city/${resolved.slug}`
+app/jobs/city/[city]/page.tsx:56:    alternates: { canonical },
+app/jobs/city/[city]/page.tsx:57:    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/city/[city]/page.tsx:61:      url: canonical,
+app/jobs/[role]/[filter]/page.tsx:3:import { notFound, redirect } from 'next/navigation'
+app/jobs/[role]/[filter]/page.tsx:122:      alternates: { canonical: `${SITE_URL}/jobs/${role}/${filter}` },
+app/jobs/[role]/[filter]/page.tsx:151:      redirect(`/jobs/${role}/${slug}`)
+app/jobs/[role]/city/[city]/page.tsx:44:  const canonical = `${SITE_URL}/jobs/${role}/city/${cityInfo.slug}`
+app/jobs/[role]/city/[city]/page.tsx:49:    alternates: { canonical },
+app/jobs/[role]/city/[city]/page.tsx:50:    openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
+app/jobs/[role]/city/[city]/page.tsx:52:    robots: total >= 3 ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/200k-plus/page.tsx:29:    alternates: { canonical: `${SITE_URL}/jobs/200k-plus` },
+app/jobs/category/[category]/page.tsx:108:  const canonical = `${getSiteUrl()}/jobs/category/${category}`
+app/jobs/category/[category]/page.tsx:113:    alternates: { canonical },
+app/jobs/category/[category]/page.tsx:114:    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/category/[category]/page.tsx:118:      url: canonical,
+app/jobs/country/[code]/page.tsx:8:import { redirect } from 'next/navigation'
+app/jobs/country/[code]/page.tsx:30:  // Support legacy code-based slugs by redirecting
+app/jobs/country/[code]/page.tsx:35:      // canonical will use the full-name slug
+app/jobs/country/[code]/page.tsx:57:  const canonical = `${SITE_URL}/jobs/country/${code.toLowerCase()}`
+app/jobs/country/[code]/page.tsx:62:    alternates: { canonical },
+app/jobs/country/[code]/page.tsx:63:    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/country/[code]/page.tsx:67:      url: canonical,
+app/jobs/country/[code]/page.tsx:98:      redirect(`/jobs/country/${slugFromCode}`)
+app/jobs/skills/[skill]/remote/page.tsx:38:  const canonical = `${SITE_URL}/jobs/skills/${skillInfo.slug}/remote`
+app/jobs/skills/[skill]/remote/page.tsx:43:    alternates: { canonical },
+app/jobs/skills/[skill]/remote/page.tsx:44:    openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
+app/jobs/skills/[skill]/remote/page.tsx:46:    robots: total >= 3 ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/uk/page.tsx:1:import { redirect } from 'next/navigation'
+app/jobs/uk/page.tsx:6:  redirect(`/jobs/country/${slug}`)
+app/jobs/skills/[skill]/page.tsx:50:  const canonical = `${SITE_URL}/jobs/skills/${resolved.slug}`
+app/jobs/skills/[skill]/page.tsx:55:    alternates: { canonical },
+app/jobs/skills/[skill]/page.tsx:56:    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/skills/[skill]/page.tsx:60:      url: canonical,
+app/jobs/industry/[industry]/page.tsx:50:  const canonical = `${SITE_URL}/jobs/industry/${resolved.slug}`
+app/jobs/industry/[industry]/page.tsx:55:    alternates: { canonical },
+app/jobs/industry/[industry]/page.tsx:56:    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/industry/[industry]/page.tsx:60:      url: canonical,
+app/jobs/page.tsx:18:    canonical: `${SITE_URL}/jobs`,
+app/jobs/_components/page.tsx:4:import { redirect } from 'next/navigation'
+app/jobs/_components/page.tsx:17:import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
+app/jobs/_components/page.tsx:78:      redirect(`/jobs/${salaryPage}`)
+app/jobs/_components/page.tsx:131:  const canonicalPath = resolveSliceCanonicalPath(
+app/jobs/_components/page.tsx:136:  if (requestedPath.replace(/\/+$/, '') !== canonicalPath.replace(/\/+$/, '')) {
+app/jobs/_components/page.tsx:138:    redirect(`${canonicalPath}${search}`)
+app/jobs/level/[level]/page.tsx:38:  const canonical = `${SITE_URL}/jobs/level/${level}`
+app/jobs/level/[level]/page.tsx:53:    alternates: { canonical },
+app/jobs/level/[level]/page.tsx:54:    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/level/[level]/page.tsx:58:      url: canonical,
+app/jobs/300k-plus/page.tsx:29:    alternates: { canonical: `${SITE_URL}/jobs/300k-plus` },
+app/jobs/state/[state]/page.tsx:50:  const canonical = `${SITE_URL}/jobs/state/${resolved.slug}`
+app/jobs/state/[state]/page.tsx:55:    alternates: { canonical },
+app/jobs/state/[state]/page.tsx:56:    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+app/jobs/state/[state]/page.tsx:60:      url: canonical,
