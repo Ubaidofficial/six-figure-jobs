@@ -19,6 +19,7 @@ import { CATEGORY_LINKS } from '@/lib/constants/category-links'
 import { LOCATIONS, SALARY_BANDS } from '@/lib/constants/homepage'
 
 export const revalidate = 600
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Six Figure Jobs | 6 Figure Jobs & High Paying $100k+ Positions | 6FigJobs',

@@ -6,6 +6,7 @@ import { prisma } from '../../lib/prisma'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 
 export const revalidate = 600
+export const dynamic = 'force-dynamic'
 
 const SITE_URL = getSiteUrl()
 

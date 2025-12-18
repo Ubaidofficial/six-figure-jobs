@@ -7,6 +7,7 @@ const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
   ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
   : 'https://www.6figjobs.com'
 
+export const dynamic = 'force-dynamic'
 export const revalidate = 86400
 export async function GET() {
   // Only include companies that actually have jobs (SEO best practice)

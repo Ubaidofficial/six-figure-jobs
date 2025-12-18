@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 
 export const revalidate = 600 // 10m
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Companies hiring $100k+ roles | 6FigJobs',

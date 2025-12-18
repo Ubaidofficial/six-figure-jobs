@@ -8,6 +8,8 @@ import {
 
 const SITE_URL = getSiteUrl()
 
+export const dynamic = 'force-dynamic'
+
 export async function generateMetadata() {
   const total = await prisma.job.count({
     where: {

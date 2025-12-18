@@ -5,6 +5,7 @@ import JobCard from '../../components/JobCard'
 import { getSiteUrl } from '../../../lib/seo/site'
 
 export const revalidate = 300
+export const dynamic = 'force-dynamic'
 
 const MIN_SALARY = 300_000
 const SITE_URL = getSiteUrl()

@@ -22,10 +22,6 @@ const COUNTRIES: Record<string, { name: string; flag: string }> = {
   sweden: { name: 'Sweden', flag: '🇸🇪' },
 }
 
-export async function generateStaticParams() {
-  return Object.keys(COUNTRIES).map((code) => ({ code }))
-}
-
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   const { code } = await params
   const country = COUNTRIES[code.toLowerCase()]
