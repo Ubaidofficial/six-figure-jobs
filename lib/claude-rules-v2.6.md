@@ -4337,7 +4337,7 @@ PUBLISHING_START_DATE=2025-12-27
 NEXT_PUBLIC_SITE_URL=https://www.6figjobs.com
 
 # Cron secret for scheduled jobs
-CRON_SECRET=6fjbs_cron_2025_secure_key_abc123xyz789_prod
+CRON_SECRET=<set-in-Railway>
 
 # Node environment
 NODE_ENV=production
