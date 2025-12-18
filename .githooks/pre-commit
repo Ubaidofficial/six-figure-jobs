@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+# Only check when there are staged changes
+if git diff --cached --quiet; then
+  exit 0
+fi
+
+node scripts/checkChangelogUpdated.js
