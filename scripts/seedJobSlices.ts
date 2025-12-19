@@ -11,6 +11,7 @@
  */
 
 import { PrismaClient } from '@prisma/client'
+import { countryCodeToSlug } from '../lib/seo/countrySlug'
 
 const prisma = new PrismaClient()
 
@@ -144,10 +145,11 @@ async function seedRoleCountrySlicesForBand(band: Band) {
     `  Found ${entries.length} (role,country) combos with >= ${MIN_JOBS_FOR_SLICE} jobs for band ${band}`
   )
 
-  for (const [key, jobCount] of entries) {
-    const [roleSlug, countryCode] = key.split('|')
-    const bandSlug = `${band / 1000}k-plus`
-    const slug = `jobs/${bandSlug}/${roleSlug}/${countryCode.toLowerCase()}`
+	  for (const [key, jobCount] of entries) {
+	    const [roleSlug, countryCode] = key.split('|')
+	    const bandSlug = `${band / 1000}k-plus`
+	    const countrySlug = countryCodeToSlug(countryCode) ?? countryCode.toLowerCase()
+	    const slug = `jobs/${bandSlug}/${roleSlug}/${countrySlug}`
 
     const filters = {
       minAnnual: band,

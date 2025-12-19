@@ -49,7 +49,7 @@ export function buildSliceCanonicalPath(filters: SliceFilters): string {
 
   if (country) {
     const countrySlug = countryCodeToSlug(country)
-    if (countrySlug) parts.push(countrySlug)
+    parts.push(countrySlug ?? country.toLowerCase())
   }
   if (city) parts.push(city.toLowerCase())
 
