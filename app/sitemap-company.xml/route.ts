@@ -13,7 +13,7 @@ export async function GET() {
   // Only include companies that actually have jobs (SEO best practice)
   const companies = await prisma.company.findMany({
     where: {
-      jobCount: { gt: 0 }, // avoid dead pages
+      jobCount: { gte: 3 }, // match company page indexability gate
     },
     select: {
       slug: true,
