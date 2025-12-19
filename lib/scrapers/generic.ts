@@ -15,6 +15,38 @@ const JOB_TITLE_KEYWORDS = [
   'director', 'counsel', 'recruiter', 'support', 'success'
 ]
 
+function blockedUrlReason(rawUrl: string): string | null {
+  let parsed: URL
+  try {
+    parsed = new URL(rawUrl)
+  } catch {
+    return 'invalid-url'
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return `blocked-protocol:${parsed.protocol}`
+  }
+
+  const hostname = parsed.hostname.toLowerCase()
+  const blockedHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0', '169.254.169.254', '::1'])
+
+  if (blockedHosts.has(hostname) || hostname.endsWith('.localhost')) {
+    return `blocked-host:${hostname}`
+  }
+
+  if (
+    hostname.match(/^10\./) ||
+    hostname.match(/^127\./) ||
+    hostname.match(/^192\.168\./) ||
+    hostname.match(/^169\.254\./) ||
+    hostname.match(/^172\.(1[6-9]|2[0-9]|3[01])\./)
+  ) {
+    return `blocked-ip:${hostname}`
+  }
+
+  return null
+}
+
 export default async function scrapeGenericSources() {
   console.log('[Generic] Starting scrape of custom career pages...')
   
@@ -46,6 +78,20 @@ export default async function scrapeGenericSources() {
   try {
     for (const source of sources) {
       console.log(`[Generic] Scraping ${source.company.name} at ${source.url}`)
+
+      const blockedReason = blockedUrlReason(source.url)
+      if (blockedReason) {
+        console.error(
+          `[Generic] Blocked URL for ${source.company.name}: ${source.url} (${blockedReason})`,
+        )
+        stats.errors++
+        await prisma.companySource.update({
+          where: { id: source.id },
+          data: { scrapeStatus: 'error', scrapeError: blockedReason.slice(0, 100) },
+        })
+        continue
+      }
+
       const page = await browser.newPage()
       
       try {
