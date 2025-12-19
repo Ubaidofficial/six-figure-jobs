@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
+import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
+import { findBestMatchingRole } from '@/lib/roles/slugMatcher'
 import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import { getSiteUrl, SITE_NAME } from '../../../lib/seo/site'
@@ -87,7 +89,14 @@ export async function generateMetadata({
 }: { 
   params: Promise<{ role: string }> 
 }): Promise<Metadata> {
-  const { role } = await params
+  const { role: roleRaw } = await params
+  const role = roleRaw.toLowerCase()
+
+  if (!isCanonicalSlug(role)) {
+    const matched = findBestMatchingRole(role)
+    if (matched) permanentRedirect(`/jobs/${matched}`)
+    return { title: 'Not Found', robots: { index: false, follow: false } }
+  }
   
   const { jobs, total } = await queryJobs({
     roleSlugs: [role],
@@ -96,25 +105,28 @@ export async function generateMetadata({
   })
 
   if (total === 0) {
-    return { title: 'Not Found' }
+    return { title: 'Not Found', robots: { index: false, follow: false } }
   }
 
+  const shouldIndex = isTier1Role(role)
   const roleTitle = formatRoleTitle(role)
   const jobCount = total
   const title = `${roleTitle} Jobs Paying $100k+ | ${jobCount.toLocaleString()} Positions`
   const description = `Find ${jobCount.toLocaleString()} verified ${roleTitle} jobs paying $100k+ USD. Remote, hybrid, and on-site six-figure positions. Updated daily.`
   const imageUrl = 'https://www.6figjobs.com/og-image.png'
+  const canonical = `${SITE_URL}/jobs/${role}`
 
   return {
     title,
     description,
     alternates: {
-      canonical: `https://www.6figjobs.com/jobs/${role}`,
+      canonical,
     },
+    robots: shouldIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,
       description,
-      url: `https://www.6figjobs.com/jobs/${role}`,
+      url: canonical,
       siteName: SITE_NAME,
       type: 'website',
       images: [
@@ -140,7 +152,14 @@ export default async function RolePage({
 }: { 
   params: Promise<{ role: string }> 
 }) {
-  const { role } = await params
+  const { role: roleRaw } = await params
+  const role = roleRaw.toLowerCase()
+
+  if (!isCanonicalSlug(role)) {
+    const matched = findBestMatchingRole(role)
+    if (matched) permanentRedirect(`/jobs/${matched}`)
+    notFound()
+  }
   
   const { jobs, total } = await queryJobs({
     roleSlugs: [role],
