@@ -4,9 +4,14 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 
+function authorized(req: Request) {
+  const secret = process.env.CRON_SECRET
+  const auth = req.headers.get('authorization')
+  return !!secret && auth === `Bearer ${secret}`
+}
+
 export async function GET(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get('secret')
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (!authorized(req)) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
   }
 
