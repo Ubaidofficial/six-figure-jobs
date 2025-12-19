@@ -137,11 +137,6 @@ export default async function scrapeRemoteRocketship() {
       let salaryCurrency: string | null = null
       const salaryInterval: string | null = 'year'
 
-      if (!salaryText) {
-        salaryMin = 100000
-        salaryCurrency = 'USD'
-      }
-
       const resultPromise = ingestBoardJob(BOARD_NAME, {
         externalId: jobUrl,
         title,
