@@ -86,19 +86,13 @@ export default async function scrapeRemoteOK() {
       if (j.salary_min != null || j.salary_max != null) {
         salaryMin = j.salary_min != null ? Number(j.salary_min) : null
         salaryMax = j.salary_max != null ? Number(j.salary_max) : null
-        salaryCurrency = j.salary_currency || 'USD'
+        salaryCurrency = j.salary_currency || null
         salaryInterval = j.salary_interval || j.salary_type || 'year'
       } else if (j.salary) {
         // We rely on ingestBoardJob.parseSalaryFromText fallback
         // by passing descriptionText below.
         salaryCurrency = null
         salaryInterval = null
-      } else {
-        // As a last resort, RemoteOK is mostly >$100k in our target slice.
-        // Treat unknown salary as "$100k+ USD".
-        salaryMin = 100000
-        salaryCurrency = 'USD'
-        salaryInterval = 'year'
       }
 
       const descriptionHtml: string | null = j.description || null
