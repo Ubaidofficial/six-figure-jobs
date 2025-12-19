@@ -3,7 +3,7 @@ const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
   : 'https://www.6figjobs.com'
 
 export async function GET() {
-  const categories = ['engineering', 'product', 'design', 'data', 'marketing', 'sales', 'devops', 'ai-ml']
+  const categories = ['engineering', 'product', 'design', 'data', 'marketing', 'sales', 'devops', 'mlai']
 
   const urls = categories.map(cat => ({
     url: `${SITE_URL}/jobs/category/${cat}`,

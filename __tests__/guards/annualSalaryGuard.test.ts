@@ -1,6 +1,9 @@
 import { prisma } from "../../lib/prisma"
 
-describe("Annual salary invariant", () => {
+const describeIfDbEnabled =
+  process.env.RUN_DB_GUARD_TESTS === "1" ? describe : describe.skip
+
+describeIfDbEnabled("Annual salary invariant", () => {
   it("has no jobs with monthly / invalid annual salaries", async () => {
     const bad = await prisma.job.count({
       where: {

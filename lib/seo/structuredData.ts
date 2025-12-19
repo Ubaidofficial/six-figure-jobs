@@ -4,6 +4,7 @@ import type { JobSlice } from '../slices/types'
 import type { JobQueryResult } from '../jobs/queryJobs'
 import { buildCanonicalUrl, buildSliceDescription, buildSliceTitle } from './meta'
 import { getSiteUrl, SITE_NAME } from './site'
+import { resolveSliceCanonicalPath } from './canonical'
 import { buildJobSlugHref } from '../jobs/jobSlug'
 import type { SliceFilters } from '../slices/types'
 
@@ -66,7 +67,8 @@ export function buildJobListJsonLd(slice: JobSlice, data: JobQueryResult): any {
 }
 
 export function buildBreadcrumbJsonLd(slice: JobSlice): any {
-  const segments = slice.slug.split('/').filter(Boolean)
+  const canonicalPath = resolveSliceCanonicalPath(slice.filters, slice.slug)
+  const segments = canonicalPath.split('/').filter(Boolean)
   const items: any[] = []
 
   // Always add homepage

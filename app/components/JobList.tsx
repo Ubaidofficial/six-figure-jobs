@@ -71,24 +71,24 @@ export default function JobList({ jobs }: JobListProps) {
             ? new Date((job as any).featureExpiresAt).getTime() > Date.now()
             : false)
 
-        return (
-          <JobCardV2
-            key={job.id}
-            featured={featured}
-            job={{
+	        return (
+	          <JobCardV2
+	            key={job.id}
+	            featured={featured}
+	            job={{
               id: job.id,
               title: job.title,
-              company: { name: companyName, logo },
-              location,
-              isRemote,
-              salaryMin: salaryMin || 100_000,
-              salaryMax: salaryMax || null,
-              currency: (job as any).currency ?? (job as any).salaryCurrency ?? null,
-              skills,
-              postedAt,
-              snippet,
-            }}
-          />
+	              company: { name: companyName, logo },
+	              location,
+	              isRemote,
+	              salaryMin: salaryMin ?? null,
+	              salaryMax: salaryMax ?? null,
+	              currency: (job as any).currency ?? (job as any).salaryCurrency ?? null,
+	              skills,
+	              postedAt,
+	              snippet,
+	            }}
+	          />
         )
       })}
     </div>
@@ -211,5 +211,4 @@ function buildLocationLabel(job: any): string | null {
 
   return null
 }
-
 

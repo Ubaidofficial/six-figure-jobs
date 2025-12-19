@@ -61,7 +61,8 @@ export function buildSliceInternalLinks(slice: JobSlice): InternalLink[] {
   // If we have salary + country, suggest "all roles in country"
   if (countryCode && f.minAnnual) {
     const bandSlug = `${f.minAnnual / 1000}k-plus`
-    const href = `/jobs/${bandSlug}/all-roles/${countrySlug}`
+    const countrySegment = countrySlug ?? String(countryCode).toLowerCase()
+    const href = `/jobs/${bandSlug}/${countrySegment}`
     links.push({
       href,
       label: `${Math.round(f.minAnnual / 1000)}k+ jobs in ${country}`,

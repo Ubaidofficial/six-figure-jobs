@@ -19,7 +19,7 @@ interface JobCardV2Props {
     }
     location: string | null
     isRemote: boolean
-    salaryMin: number
+    salaryMin: number | null
     salaryMax: number | null
     currency: string | null | undefined
     skills: string[]
@@ -47,6 +47,7 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
   const isNew =
     Number.isFinite(postedTs) &&
     Date.now() - postedTs < 3 * 24 * 60 * 60 * 1000
+  const hasSalary = job.salaryMin != null || job.salaryMax != null
 
   // Prefer canonical helper if present (keeps routing consistent)
   const href =
@@ -106,10 +107,12 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
 
         <CardContent className="space-y-4 pt-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="border-emerald-500/20 bg-emerald-500/10 text-[11px] font-semibold text-emerald-300">
-              <BadgeCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-              VERIFIED SALARY
-            </Badge>
+            {hasSalary && (
+              <Badge className="border-emerald-500/20 bg-emerald-500/10 text-[11px] font-semibold text-emerald-300">
+                <BadgeCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                VERIFIED SALARY
+              </Badge>
+            )}
           </div>
 
           <div className="inline-flex items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 font-mono text-lg font-semibold text-emerald-200">

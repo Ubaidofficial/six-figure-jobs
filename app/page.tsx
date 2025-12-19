@@ -13,6 +13,7 @@ import JobList from './components/JobList'
 import { buildJobsPath } from '../lib/jobs/searchSlug'
 import { SEARCH_ROLE_OPTIONS } from '../lib/roles/searchRoles'
 import { TARGET_COUNTRIES } from '../lib/seo/regions'
+import { buildSliceCanonicalPath } from '../lib/seo/canonical'
 import { HomeFAQ } from './pageFAQ'
 import RoleTypeahead from './components/RoleTypeahead'
 import { CATEGORY_LINKS } from '@/lib/constants/category-links'
@@ -627,36 +628,60 @@ export default async function HomePage() {
           Popular Six Figure Job Searches
         </h2>
         <div className="grid gap-x-8 gap-y-2 text-xs text-slate-500 sm:grid-cols-2 md:grid-cols-4">
-          <div className="space-y-2">
-            <p className="font-medium text-slate-400">By Role</p>
-            <Link href="/jobs/software-engineer/100k-plus" className="block hover:text-slate-300">
-              Software Engineer Jobs ($100k+)
-            </Link>
-            <Link href="/jobs/senior-software-engineer/100k-plus" className="block hover:text-slate-300">
-              Senior Engineer Jobs ($100k+)
-            </Link>
-            <Link href="/jobs/product-manager/100k-plus" className="block hover:text-slate-300">
-              Product Manager Jobs ($100k+)
-            </Link>
-            <Link href="/jobs/data-engineer/100k-plus" className="block hover:text-slate-300">
-              Data Engineer Jobs ($100k+)
-            </Link>
-          </div>
-          <div className="space-y-2">
-            <p className="font-medium text-slate-400">By Location</p>
-            <Link href="/jobs/us/100k-plus" className="block hover:text-slate-300">
-              $100k+ Jobs in USA
-            </Link>
-            <Link href="/jobs/gb/100k-plus" className="block hover:text-slate-300">
-              £75k+/£100k+ Jobs in UK
-            </Link>
-            <Link href="/jobs/ca/100k-plus" className="block hover:text-slate-300">
-              $100k+/CA$ Jobs in Canada
-            </Link>
-            <Link href="/jobs/remote/100k-plus" className="block hover:text-slate-300">
-              Remote $100k+ Jobs
-            </Link>
-          </div>
+	          <div className="space-y-2">
+	            <p className="font-medium text-slate-400">By Role</p>
+	            <Link
+	              href={buildSliceCanonicalPath({ minAnnual: 100_000, roleSlugs: ['software-engineer'] })}
+	              className="block hover:text-slate-300"
+	            >
+	              Software Engineer Jobs ($100k+)
+	            </Link>
+	            <Link
+	              href={buildSliceCanonicalPath({ minAnnual: 100_000, roleSlugs: ['senior-software-engineer'] })}
+	              className="block hover:text-slate-300"
+	            >
+	              Senior Engineer Jobs ($100k+)
+	            </Link>
+	            <Link
+	              href={buildSliceCanonicalPath({ minAnnual: 100_000, roleSlugs: ['product-manager'] })}
+	              className="block hover:text-slate-300"
+	            >
+	              Product Manager Jobs ($100k+)
+	            </Link>
+	            <Link
+	              href={buildSliceCanonicalPath({ minAnnual: 100_000, roleSlugs: ['data-engineer'] })}
+	              className="block hover:text-slate-300"
+	            >
+	              Data Engineer Jobs ($100k+)
+	            </Link>
+	          </div>
+	          <div className="space-y-2">
+	            <p className="font-medium text-slate-400">By Location</p>
+	            <Link
+	              href={buildSliceCanonicalPath({ minAnnual: 100_000, countryCode: 'US' })}
+	              className="block hover:text-slate-300"
+	            >
+	              $100k+ Jobs in USA
+	            </Link>
+	            <Link
+	              href={buildSliceCanonicalPath({ minAnnual: 100_000, countryCode: 'GB' })}
+	              className="block hover:text-slate-300"
+	            >
+	              £75k+/£100k+ Jobs in UK
+	            </Link>
+	            <Link
+	              href={buildSliceCanonicalPath({ minAnnual: 100_000, countryCode: 'CA' })}
+	              className="block hover:text-slate-300"
+	            >
+	              $100k+/CA$ Jobs in Canada
+	            </Link>
+	            <Link
+	              href={buildSliceCanonicalPath({ minAnnual: 100_000, remoteOnly: true })}
+	              className="block hover:text-slate-300"
+	            >
+	              Remote $100k+ Jobs
+	            </Link>
+	          </div>
           <div className="space-y-2">
             <p className="font-medium text-slate-400">By Salary Band</p>
             <Link href="/jobs/100k-plus" className="block hover:text-slate-300">

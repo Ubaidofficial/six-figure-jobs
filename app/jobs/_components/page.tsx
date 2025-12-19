@@ -1,7 +1,7 @@
 // app/jobs/_components/[Slug]/page.tsx
 
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
+import { permanentRedirect, redirect } from 'next/navigation'
 import { loadSliceFromParams } from '../../../lib/slices/loadSlice'
 import { queryJobs } from '../../../lib/jobs/queryJobs'
 import { SlicePage } from './SlicePage'
@@ -135,7 +135,7 @@ export default async function JobsSlicePage({
   const requestedPath = `/jobs/${(resolvedParams.slug || []).join('/')}`
   if (requestedPath.replace(/\/+$/, '') !== canonicalPath.replace(/\/+$/, '')) {
     const search = page > 1 ? `?page=${page}` : ''
-    redirect(`${canonicalPath}${search}`)
+    permanentRedirect(`${canonicalPath}${search}`)
   }
 
   const data = await queryJobs({

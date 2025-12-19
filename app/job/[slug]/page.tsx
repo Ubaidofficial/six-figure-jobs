@@ -13,6 +13,7 @@ import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { buildSliceCanonicalPath } from '../../../lib/seo/canonical'
 import {
   countryCodeToSlug,
   countryCodeToName,
@@ -1025,7 +1026,11 @@ function buildJobBreadcrumbJsonLd(job: JobWithCompany, slug: string): any {
   if (job.roleSlug && job.countryCode) {
     const roleLabel = prettyRole(job.roleSlug)
     const cc = job.countryCode.toUpperCase()
-    const path = `/jobs/${job.roleSlug}/${job.countryCode.toLowerCase()}/100k-plus`
+    const path = buildSliceCanonicalPath({
+      minAnnual: 100_000,
+      roleSlugs: [job.roleSlug],
+      countryCode: job.countryCode,
+    })
 
     items.push({
       '@type': 'ListItem',
