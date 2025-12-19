@@ -48,6 +48,20 @@ async function main() {
     if (salaryFlagLeaks) {
       fail(`Salary flag qualification leak:\n${salaryFlagLeaks}`)
     }
+
+    const fabricatedSalary = sh(
+      `grep -RIn "salaryMin[[:space:]]*[:=][[:space:]]*100000\\|salaryMax[[:space:]]*[:=][[:space:]]*100000" lib/scrapers || true`,
+    ).trim()
+    if (fabricatedSalary) {
+      fail(`Fabricated salary constants found in scrapers:\n${fabricatedSalary}`)
+    }
+
+    const currencyFallback = sh(
+      `grep -RIn "currency[[:space:]]*||[[:space:]]*['\\\"]USD['\\\"]\\|salary_currency[[:space:]]*||[[:space:]]*['\\\"]USD['\\\"]" lib/scrapers lib/ingest || true`,
+    ).trim()
+    if (currencyFallback) {
+      fail(`Currency fallback to USD found in scrapers/ingest:\n${currencyFallback}`)
+    }
   } catch (e: any) {
     fail(`Static audit failed to run: ${e?.message || e}`)
   }

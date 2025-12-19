@@ -41,8 +41,6 @@ export async function scrapeWeWorkRemotely(): Promise<ScrapedJobInput[]> {
       locationText: location || 'Remote',
       url,
       isRemote: true,
-      salaryMin: 100000,
-      salaryCurrency: 'USD',
     })
   })
   
