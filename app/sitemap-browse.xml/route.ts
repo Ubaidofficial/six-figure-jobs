@@ -31,11 +31,13 @@ export async function GET() {
   })
 
   LOCATIONS.forEach((loc) => {
-    urls.push(
-      loc.code === 'remote'
-        ? `${SITE_URL}/jobs/location/remote`
-        : `${SITE_URL}/jobs/location/${loc.code}`,
-    )
+    if (loc.code === 'remote') {
+      // /jobs/location/remote redirects; include canonical remote landing instead
+      urls.push(`${SITE_URL}/remote`)
+      return
+    }
+
+    urls.push(`${SITE_URL}/jobs/location/${loc.code}`)
   })
 
   STATE_TARGETS.forEach((state) => {
@@ -60,7 +62,8 @@ export async function GET() {
 
   // Combo routes: role + remote
   TOP_ROLE_SLUGS.forEach((roleSlug) => {
-    urls.push(`${SITE_URL}/jobs/${roleSlug}/remote`)
+    // /jobs/[role]/remote redirects; include canonical remote role page instead
+    urls.push(`${SITE_URL}/remote/${roleSlug}`)
     TOP_CITIES.forEach((city) => {
       urls.push(`${SITE_URL}/jobs/${roleSlug}/city/${city.slug}`)
     })
