@@ -41,12 +41,22 @@ export const maxDuration = 60
 
 type Target = 'boards' | 'ats' | 'all'
 
+function authorized(req: Request) {
+  const secret = process.env.CRON_SECRET
+  const auth = req.headers.get('authorization')
+  return !!secret && auth === `Bearer ${secret}`
+}
+
 const shouldLogScrape = process.env.NODE_ENV !== 'production' || process.env.DEBUG_SCRAPE === '1'
 const log = (...args: Parameters<typeof console.log>) => {
   if (shouldLogScrape) console.log(...args)
 }
 
 export async function GET(req: Request) {
+  if (!authorized(req)) {
+    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const target = (searchParams.get('target') ?? 'boards') as Target
 
