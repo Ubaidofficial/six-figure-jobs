@@ -79,8 +79,8 @@ export async function scrapeJustJoin() {
       let salaryText: string | null = null
       const salary =
         offer.employment_types?.find((et) => et.salary)?.salary || null
-      if (salary?.from || salary?.to) {
-        const cur = salary.currency || 'USD'
+      if ((salary?.from || salary?.to) && salary.currency) {
+        const cur = salary.currency
         const from = salary.from ?? null
         const to = salary.to ?? null
         const period = salary.period || 'month'
