@@ -9,7 +9,7 @@ import JobList from '../../../components/JobList'
 import { formatRelativeTime } from '../../../../lib/utils/time'
 import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { SALARY_BANDS } from '@/lib/constants/homepage'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
@@ -71,7 +71,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { country } = await params
   const loc = resolveLocation(country)
-  if (!loc) return { title: 'Jobs | Six Figure Jobs' }
+  if (!loc) {
+    return {
+      title: 'Not Found',
+      robots: { index: false, follow: false },
+    }
+  }
 
   if ((loc as any).legacy) {
     redirect(`/jobs/location/${(loc as any).slug}`)
@@ -118,13 +123,7 @@ export default async function LocationPage({
   const { country } = await params
   const loc = resolveLocation(country)
 
-  if (!loc) {
-    return (
-      <main className="mx-auto max-w-4xl px-4 py-12">
-        <h1 className="text-xl font-semibold text-slate-50">Location not found</h1>
-      </main>
-    )
-  }
+  if (!loc) notFound()
 
   if ((loc as any).legacy) {
     redirect(`/jobs/location/${(loc as any).slug}`)
