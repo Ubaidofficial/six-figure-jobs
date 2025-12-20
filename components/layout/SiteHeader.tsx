@@ -79,7 +79,7 @@ export function SiteHeader() {
 
   const scheduleClose = React.useCallback(() => {
     if (closeTimer.current) window.clearTimeout(closeTimer.current)
-    closeTimer.current = window.setTimeout(() => setJobsOpen(false), 200)
+    closeTimer.current = window.setTimeout(() => setJobsOpen(false), 300)
   }, [])
 
   const cancelClose = React.useCallback(() => {
@@ -89,8 +89,19 @@ export function SiteHeader() {
 
   React.useEffect(() => {
     return () => {
-      if (closeTimer.current) window.clearTimeout(closeTimer.current)
+      if (closeTimer.current) {
+        window.clearTimeout(closeTimer.current)
+        closeTimer.current = null
+      }
     }
+  }, [])
+
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setJobsOpen(false)
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
   }, [])
 
   React.useEffect(() => {
@@ -134,6 +145,7 @@ export function SiteHeader() {
                   setJobsOpen(true)
                 }}
                 onMouseLeave={scheduleClose}
+                onBlur={() => setJobsOpen(false)}
               >
                 <DropdownMenuTrigger asChild>
                   <button

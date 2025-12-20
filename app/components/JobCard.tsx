@@ -155,7 +155,8 @@ export default function JobCard({
         <div className={styles.side}>
           {salaryDisplay ? (
             <div className={styles.salary} aria-label={`Minimum salary ${salaryDisplay}`}>
-              Minimum: {salaryDisplay}
+              <span className={styles.salaryPrefix}>Minimum: </span>
+              {salaryDisplay}
             </div>
           ) : (
             <div className={styles.salaryPlaceholder}>Salary listed in posting</div>

@@ -135,3 +135,16 @@ Minimum:
 - 12,000-word plan ready
 - Deploy weeks 3-4 after GSC >30%
 - Inspired by RemoteYeah + Remote Rocketship
+
+## Recent Improvements (Dec 2025)
+- Navigation: Fixed dropdown (200ms delay)
+- Salary: Added 'Minimum' labels
+- Search: Verified working
+
+### Phase 2 UI/UX Overhaul (DEPLOYED Dec 2025)
+- Enhanced hero section with prominent search
+- Improved job card layout (data-rich design)
+- Refined typography and spacing
+- Updated color scheme and branding
+- Mobile-optimized responsive layouts
+- Inspired by RemoteYeah + Remote Rocketship aesthetics

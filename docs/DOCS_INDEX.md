@@ -16,4 +16,3 @@ If docs conflict → follow order.
 ## Recent Updates
 - 2025-12-20: Added SCRAPER_SPEC.md
 - 2025-12-20: Updated .chatgpt-rules to v2.7
-- 2025-12-20: Added scraper optimization to CHANGELOG

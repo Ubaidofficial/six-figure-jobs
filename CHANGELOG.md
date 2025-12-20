@@ -165,3 +165,10 @@ If you want auto-generated history, see CHANGELOG.generated.md.
 ### PRD-7: Sitemap/Category Alignment ✅
 - Category sitemap slugs aligned with category resolver (no invalid category URLs)
 - Invalid category pages now return true 404 via `notFound()`
+
+### UI/UX Phase 2 Deployed ✅
+- **Homepage**: New hero section with enhanced search
+- **Job Cards**: Improved layout and data density
+- **Typography**: Refined font hierarchy
+- **Color Scheme**: Updated brand colors
+- **Mobile**: Enhanced responsive design

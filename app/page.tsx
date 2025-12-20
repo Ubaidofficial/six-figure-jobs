@@ -25,6 +25,7 @@ import {
   type FeaturedCompany,
 } from '@/components/home/FeaturedCompaniesCarousel'
 import { LatestOpportunities } from '@/components/home/LatestOpportunities'
+import { BrowseByRole } from '@/components/home/BrowseByRole'
 import { BrowseBySalaryTier, type SalaryTier } from '@/components/home/BrowseBySalaryTier'
 import {
   ExplorePremiumRoles,
@@ -38,14 +39,13 @@ export const revalidate = 600
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Six Figure Jobs - High Paying $100k+ Positions | 6 Figure Jobs & Six Fig Jobs',
+  title: '6 Figure Jobs & Six Figure Jobs | High Paying $100k+ Positions Without Degree',
   description:
-    'Find six figure jobs and high paying positions with verified $100k+ salaries. ' +
-    'Explore 21,037+ six fig jobs from 2,643 verified companies. Updated daily.',
+    'Find 6 figure jobs and six figure jobs paying $100k+ with verified salaries. ' +
+    'Discover easy 6 figure jobs, 6 figure remote jobs, and high paying jobs without degree. ' +
+    '5,347+ six-figure salary jobs from 303 verified companies. Updated daily.',
   keywords:
-    'six figure jobs, 6 figure jobs, high paying jobs, $100k jobs, 100k jobs, ' +
-    'six figure salary, high paying careers, lucrative jobs, well paying jobs, ' +
-    '$100k+ jobs, six figure positions, high salary jobs',
+    '6 figure jobs, six figure jobs, 6 figure salary jobs, six-figure jobs, high paying jobs, easy 6 figure jobs, 6 figure remote jobs, 6 figure jobs no degree, 6 figure jobs without college degree, six-figure salary jobs, best 6 figure jobs',
   alternates: {
     canonical: 'https://www.6figjobs.com',
   },
@@ -119,6 +119,29 @@ const ROLE_OPTIONS = (() => {
   }
   return result
 })()
+
+function getRoleEmoji(slug: string): string {
+  const emojiMap: Record<string, string> = {
+    'software-engineer': '💻',
+    'full-stack-engineer': '🔧',
+    'backend-engineer': '🖥️',
+    'frontend-engineer': '🎨',
+    'data-engineer': '📊',
+    'devops-engineer': '⚙️',
+    'ai-engineer': '🤖',
+    'data-scientist': '🔬',
+    'product-manager': '🧭',
+    'engineering-manager': '👥',
+  }
+  return emojiMap[slug] || '💼'
+}
+
+function roleSlugToName(slug: string): string {
+  return slug
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
 
 const REMOTE_REGIONS = [
   { value: '', label: 'Any remote region' },
@@ -205,6 +228,7 @@ export default async function HomePage() {
     schemaTotalJobs,
     schemaTotalCompanies,
     schemaNewThisWeek,
+    topRoles,
   ] = await Promise.all([
     queryJobs({
       minAnnual: 100_000,
@@ -366,6 +390,16 @@ export default async function HomePage() {
         postedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
       },
     }),
+    prisma.job.groupBy({
+      by: ['roleSlug'],
+      where: {
+        isExpired: false,
+        ...buildHighSalaryEligibilityWhere(),
+      },
+      _count: { _all: true },
+      orderBy: { _count: { roleSlug: 'desc' } },
+      take: 12,
+    }),
   ])
 
   const stats = {
@@ -373,6 +407,15 @@ export default async function HomePage() {
     totalCompanies: schemaTotalCompanies,
     newThisWeek: schemaNewThisWeek,
   }
+
+  const roleCards = topRoles
+    .filter((r) => r.roleSlug)
+    .map((r) => ({
+      slug: r.roleSlug!,
+      name: roleSlugToName(r.roleSlug!),
+      count: r._count._all,
+      emoji: getRoleEmoji(r.roleSlug!),
+    }))
 
   const featuredCompanyIds = featuredCompanyGroups
     .map((g) => g.companyId)
@@ -646,6 +689,8 @@ export default async function HomePage() {
       <WhySixFigureJobs />
 
       <LatestOpportunities jobs={jobs} totalJobs={totalJobs} />
+
+      <BrowseByRole roles={roleCards} />
 
       <HomeFAQ />
 
