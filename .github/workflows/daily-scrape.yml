@@ -2,7 +2,7 @@ name: Daily Job Scraper (Automated)
 
 on:
   schedule:
-    - cron: "0 6,18 * * *"
+    - cron: "0 6,18 * * *"  # 6am and 6pm UTC daily
   workflow_dispatch:
 
 concurrency:
@@ -12,11 +12,8 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 90  # Changed from 15 to 90 for full scrape
 
-    # NOTE:
-    # Scheduled workflows always run from the repo DEFAULT branch.
-    # This allows the job to run even if GitHub shows the run under "main".
     if: github.event_name == 'schedule' || github.ref == 'refs/heads/develop'
 
     steps:
@@ -30,10 +27,10 @@ jobs:
           echo "Ref:   $GITHUB_REF"
 
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://www.6figjobs.com/api/cron/scrape" \
+            "https://www.6figjobs.com/api/cron/scrape?mode=all" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            --max-time 600 \
+            --max-time 5400 \
             --retry 2 \
             --retry-delay 30)
 
