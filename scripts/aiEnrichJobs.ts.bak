@@ -68,7 +68,7 @@ async function main() {
         id: true,
         title: true,
         descriptionHtml: true,
-        
+        description: true,
         locationRaw: true,
         primaryLocation: true,
         locationsJson: true,

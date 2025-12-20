@@ -45,9 +45,5 @@ export function parseAiEnrichJson(text: string): AiEnrichOutput {
   }
   const jsonText = trimmed.slice(firstBrace, lastBrace + 1)
   const parsed = JSON.parse(jsonText)
-  // Truncate bullets if DeepSeek returns >4
-  if (Array.isArray(parsed.bullets) && parsed.bullets.length > 4) {
-    parsed.bullets = parsed.bullets.slice(0, 4)
-  }
   return AiEnrichSchema.parse(parsed)
 }

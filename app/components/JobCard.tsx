@@ -85,14 +85,28 @@ export default function JobCard({
     Date.now() - new Date((job.postedAt ?? job.createdAt) as any).getTime() < 1000 * 60 * 60 * 48
 
   return (
-    <article
-      className={`${styles.card} ${isFeatured ? styles.featured : ''} ${
-        variant === 'compact' ? styles.compact : styles.full
-      }`}
-    >
-      <div className={styles.header}>
-        {companySlug ? (
-          <Link href={`/company/${companySlug}`} className={styles.logoLink}>
+    <article className={`${styles.card} ${isFeatured ? styles.featured : ''}`}>
+      <div className={styles.cardInner}>
+        <div className={styles.logoContainer}>
+          {companySlug ? (
+            <Link href={`/company/${companySlug}`} className={styles.logoLink}>
+              <div className={styles.logoBox} aria-hidden="true">
+                {showLogo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logo ?? ''}
+                    alt=""
+                    className={styles.logoImg}
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setLogoFailed(true)}
+                  />
+                ) : (
+                  <span className={styles.logoFallback}>{companyInitials || '?'}</span>
+                )}
+              </div>
+            </Link>
+          ) : (
             <div className={styles.logoBox} aria-hidden="true">
               {showLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -108,74 +122,56 @@ export default function JobCard({
                 <span className={styles.logoFallback}>{companyInitials || '?'}</span>
               )}
             </div>
-          </Link>
-        ) : (
-          <div className={styles.logoBox} aria-hidden="true">
-            {showLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logo ?? ''}
-                alt=""
-                className={styles.logoImg}
-                loading="lazy"
-                decoding="async"
-                onError={() => setLogoFailed(true)}
-              />
-            ) : (
-              <span className={styles.logoFallback}>{companyInitials || '?'}</span>
-            )}
-          </div>
-        )}
-
-        <div className={styles.main}>
-          <h3 className={styles.title}>
-            <Link href={buildJobSlugHref(job)} className={styles.titleLink}>
-              {job.title}
-            </Link>
-          </h3>
-
-          <div className={styles.companyRow}>
-            {companySlug ? (
-              <Link href={`/company/${companySlug}`} className={styles.companyLink}>
-                {companyName}
-              </Link>
-            ) : (
-              <span className={styles.companyName}>{companyName}</span>
-            )}
-          </div>
-
-          <div className={styles.badges}>
-            {location ? <span className={styles.badge}>{location}</span> : null}
-            {workType ? (
-              <span className={`${styles.badge} ${styles.badgeAccent}`}>{workType}</span>
-            ) : null}
-          </div>
+          )}
         </div>
 
-        <div className={styles.side}>
+        <div className={styles.content}>
+          <div className={styles.titleRow}>
+            <h3 className={styles.title}>
+              <Link href={buildJobSlugHref(job)} className={styles.titleLink}>
+                {job.title}
+              </Link>
+            </h3>
+            <div className={styles.companyRow}>
+              {companySlug ? (
+                <Link href={`/company/${companySlug}`} className={styles.companyLink}>
+                  {companyName}
+                </Link>
+              ) : (
+                <span className={styles.companyName}>{companyName}</span>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.metadata}>
+            {location ? <span className={styles.badge}>{location}</span> : null}
+            {workType ? <span className={`${styles.badge} ${styles.badgeAccent}`}>{workType}</span> : null}
+            {postedLabel ? <span className={styles.badgeTime}>Posted {postedLabel}</span> : null}
+          </div>
+
+          {variant === 'full' && snippet ? <p className={styles.snippet}>{snippet}</p> : null}
+        </div>
+
+        <div className={styles.actions}>
           {salaryDisplay ? (
-            <div className={styles.salary} aria-label={`Minimum salary ${salaryDisplay}`}>
-              <span className={styles.salaryPrefix}>Minimum: </span>
-              {salaryDisplay}
+            <div className={styles.salaryBadge}>
+              <span className={styles.salaryLabel}>Minimum</span>
+              <span className={styles.salaryAmount}>{salaryDisplay}</span>
             </div>
           ) : (
-            <div className={styles.salaryPlaceholder}>Salary listed in posting</div>
+            <div className={styles.salaryPlaceholder}>Salary in posting</div>
           )}
 
           <div className={styles.pills}>
-            {salaryDisplay ? <StatusPill tone="success">Salary verified</StatusPill> : null}
+            {salaryDisplay ? <StatusPill tone="success">Verified</StatusPill> : null}
             {isNew ? <StatusPill tone="neutral">NEW</StatusPill> : null}
             {isFeatured ? <StatusPill tone="warning">FEATURED</StatusPill> : null}
           </div>
         </div>
       </div>
 
-      {variant === 'full' && snippet ? (
-        <p className={styles.snippet}>{snippet}</p>
-      ) : null}
-
       {variant === 'full' && techStack.length > 0 ? (
-        <div className={styles.techStack} aria-label="Tech stack">
+        <div className={styles.techStack}>
           {techStack.map((tech) => (
             <span key={tech} className={styles.techChip}>
               {tech}
@@ -183,30 +179,6 @@ export default function JobCard({
           ))}
         </div>
       ) : null}
-
-      <div className={styles.footer}>
-        <span className={styles.footerText}>{postedLabel ? `Posted ${postedLabel}` : 'Recently posted'}</span>
-
-        {variant === 'full' ? (
-          <div className={styles.footerActions}>
-            {isValidUrl(job.companyRef?.website) ? (
-              <a
-                href={cleanUrl(job.companyRef!.website!)}
-                target="_blank"
-                rel="noreferrer"
-                className={styles.actionLink}
-              >
-                Company site
-              </a>
-            ) : null}
-            {companySlug ? (
-              <Link href={`/company/${companySlug}`} className={styles.actionLink}>
-                Explore roles
-              </Link>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
     </article>
   )
 }

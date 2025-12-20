@@ -1,68 +1,40 @@
-/* ==========================================================================
-   Six Figure Jobs — Job Card (Latest Opportunities)
-   - Token-driven premium styling
-   - Dark card (#141414) with green hover glow
-   ========================================================================== */
-
 .card {
   background: var(--color-bg-1);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-xl); /* 16px */
-  padding: var(--space-24); /* 24px */
-  transition:
-    transform 200ms ease,
-    border-color 200ms ease,
-    box-shadow 200ms ease,
-    background-color 200ms ease;
+  border-radius: var(--radius-xl);
+  padding: var(--space-20);
+  box-shadow: var(--shadow-sm);
+  transition: all 200ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
 }
 
 .card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   border-color: rgba(132, 204, 22, 0.35);
-  box-shadow: var(--shadow-lg-glow);
-}
-
-.card:focus-within {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
 }
 
 .featured {
   border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.02);
 }
 
-.featured:hover {
-  border-color: rgba(245, 158, 11, 0.55);
-  box-shadow: var(--shadow-lg);
-}
-
-.full {
-}
-
-.compact {
-}
-
-.header {
-  display: grid;
-  grid-template-columns: 64px 1fr auto;
-  gap: var(--space-16);
+.cardInner {
+  display: flex;
   align-items: start;
+  gap: var(--space-16);
 }
 
-.logoLink {
-  display: inline-flex;
-  border-radius: var(--radius-xl);
-}
-
-.logoLink:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 3px;
+.logoContainer {
+  flex-shrink: 0;
 }
 
 .logoBox {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-xl);
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
   background: var(--color-bg-2);
   border: 1px solid rgba(255, 255, 255, 0.08);
   display: grid;
@@ -74,7 +46,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 10px;
+  padding: 8px;
 }
 
 .logoFallback {
@@ -84,8 +56,27 @@
   font-size: var(--text-sm);
 }
 
-.main {
+.logoLink {
+  display: block;
+  border-radius: var(--radius-lg);
+}
+
+.logoLink:hover {
+  opacity: 0.8;
+}
+
+.content {
+  flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+.titleRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .title {
@@ -101,19 +92,17 @@
 }
 
 .titleLink:hover {
-  color: var(--color-text-0);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: rgba(132, 204, 22, 0.45);
+  color: var(--color-primary-light);
 }
 
 .companyRow {
-  margin-top: var(--space-8);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
 }
 
 .companyLink,
 .companyName {
-  display: inline-flex;
   color: var(--color-text-1);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
@@ -122,22 +111,20 @@
 
 .companyLink:hover {
   color: var(--color-text-0);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
-.badges {
-  margin-top: var(--space-12);
+.metadata {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-8);
+  align-items: center;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
-  height: 28px;
-  padding: 0 10px;
+  height: 24px;
+  padding: 0 8px;
   border-radius: 999px;
   background: rgba(31, 31, 31, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -152,79 +139,12 @@
   color: var(--color-primary-light);
 }
 
-.side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-12);
-  min-width: 0;
-}
-
-.salary {
-  border-radius: var(--radius-xl);
-  background: rgba(132, 204, 22, 0.10);
-  border: 1px solid rgba(132, 204, 22, 0.22);
-  padding: 10px 12px;
-  font-family: var(--font-mono);
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--text-base);
-  color: var(--color-primary-light);
-  max-width: 260px;
-  text-align: right;
-}
-
-.salaryPrefix {
-  opacity: 0.8;
-  font-size: 0.9em;
-  margin-right: 0.25em;
-}
-
-.salaryPlaceholder {
-  font-size: var(--text-xs);
+.badgeTime {
   color: var(--color-text-2);
-  text-align: right;
-}
-
-.pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-8);
-  justify-content: flex-end;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px solid transparent;
-}
-
-.pillSuccess {
-  color: var(--color-primary-light);
-  background: rgba(132, 204, 22, 0.10);
-  border-color: rgba(132, 204, 22, 0.22);
-}
-
-.pillWarning {
-  color: #fff7ed;
-  background: rgba(245, 158, 11, 0.14);
-  border-color: rgba(245, 158, 11, 0.28);
-}
-
-.pillNeutral {
-  color: var(--color-text-0);
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.10);
+  font-size: var(--text-xs);
 }
 
 .snippet {
-  margin-top: var(--space-16);
   color: var(--color-text-1);
   font-size: var(--text-sm);
   line-height: var(--line-height-relaxed);
@@ -234,18 +154,99 @@
   overflow: hidden;
 }
 
+.actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-12);
+  min-width: 160px;
+}
+
+.salaryBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-12);
+  border-radius: var(--radius-lg);
+  background: rgba(132, 204, 22, 0.10);
+  border: 1px solid rgba(132, 204, 22, 0.22);
+  box-shadow: var(--shadow-xs);
+}
+
+.salaryLabel {
+  font-size: var(--text-xs);
+  color: rgba(132, 204, 22, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-weight-semibold);
+}
+
+.salaryAmount {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-light);
+}
+
+.salaryPlaceholder {
+  font-size: var(--text-xs);
+  color: var(--color-text-2);
+  text-align: right;
+  padding: var(--space-12);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  justify-content: flex-end;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pillSuccess {
+  color: var(--color-primary-light);
+  background: rgba(132, 204, 22, 0.10);
+  border: 1px solid rgba(132, 204, 22, 0.22);
+}
+
+.pillWarning {
+  color: #fff7ed;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.pillNeutral {
+  color: var(--color-text-0);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
 .techStack {
-  margin-top: var(--space-16);
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-8);
+  padding-top: var(--space-12);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .techChip {
   display: inline-flex;
   align-items: center;
-  height: 28px;
-  padding: 0 12px;
+  height: 26px;
+  padding: 0 10px;
   border-radius: 999px;
   background: rgba(31, 31, 31, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -254,61 +255,34 @@
   font-weight: var(--font-weight-medium);
 }
 
-.footer {
-  margin-top: var(--space-20);
-  padding-top: var(--space-16);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-12);
-  flex-wrap: wrap;
-}
-
-.footerText {
-  font-size: var(--text-xs);
-  color: var(--color-text-2);
-}
-
-.footerActions {
-  display: inline-flex;
-  gap: var(--space-12);
-  align-items: center;
-}
-
-.actionLink {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: var(--radius-full);
-  background: rgba(10, 10, 10, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  color: var(--color-text-0);
-  text-decoration: none;
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
-  transition: background-color 200ms ease, border-color 200ms ease, transform 200ms ease;
-}
-
-.actionLink:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(132, 204, 22, 0.25);
-}
-
 @media (max-width: 767px) {
-  .header {
-    grid-template-columns: 64px 1fr;
+  .cardInner {
+    flex-direction: column;
   }
 
-  .side {
-    grid-column: 1 / -1;
-    align-items: flex-start;
-  }
-
-  .salary {
-    text-align: left;
-    max-width: none;
+  .actions {
     width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .salaryBadge {
+    flex-direction: row;
+    gap: var(--space-8);
+    align-items: center;
+  }
+
+  .salaryLabel {
+    font-size: 10px;
+  }
+
+  .salaryAmount {
+    font-size: var(--text-base);
+  }
+
+  .snippet {
+    display: none;
   }
 }

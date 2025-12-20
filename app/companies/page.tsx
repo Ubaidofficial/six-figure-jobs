@@ -71,7 +71,7 @@ export default async function CompaniesPage() {
             <Link
               key={c.id}
               href={c.slug ? `/company/${c.slug}` : '/companies'}
-              className="group rounded-2xl border border-slate-800 bg-slate-950/40 p-4 transition hover:border-slate-600 hover:bg-slate-950/60"
+              className="group rounded-2xl border border-slate-800 bg-slate-950/40 p-4 shadow-sm transition hover:border-slate-600 hover:bg-slate-950/60 hover:shadow-md"
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-sm font-semibold text-slate-200">

@@ -120,22 +120,6 @@ const ROLE_OPTIONS = (() => {
   return result
 })()
 
-function getRoleEmoji(slug: string): string {
-  const emojiMap: Record<string, string> = {
-    'software-engineer': '💻',
-    'full-stack-engineer': '🔧',
-    'backend-engineer': '🖥️',
-    'frontend-engineer': '🎨',
-    'data-engineer': '📊',
-    'devops-engineer': '⚙️',
-    'ai-engineer': '🤖',
-    'data-scientist': '🔬',
-    'product-manager': '🧭',
-    'engineering-manager': '👥',
-  }
-  return emojiMap[slug] || '💼'
-}
-
 function roleSlugToName(slug: string): string {
   return slug
     .split('-')
@@ -414,7 +398,6 @@ export default async function HomePage() {
       slug: r.roleSlug!,
       name: roleSlugToName(r.roleSlug!),
       count: r._count._all,
-      emoji: getRoleEmoji(r.roleSlug!),
     }))
 
   const featuredCompanyIds = featuredCompanyGroups

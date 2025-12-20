@@ -31,6 +31,7 @@
   background: var(--card-bg, var(--color-bg-1));
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
   border-radius: 12px;
+  box-shadow: var(--shadow-sm);
   transition: all 0.2s;
   text-decoration: none;
 }
@@ -38,10 +39,7 @@
 .card:hover {
   border-color: var(--accent-color, rgba(132, 204, 22, 0.35));
   transform: translateY(-2px);
-}
-
-.emoji {
-  font-size: 2.5rem;
+  box-shadow: var(--shadow-md);
 }
 
 .content {
@@ -58,6 +56,28 @@
 .count {
   font-size: 0.9rem;
   color: var(--text-secondary, var(--color-text-1));
+}
+
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(132, 204, 22, 0.08);
+  border: 1px solid rgba(132, 204, 22, 0.15);
+  transition: all 200ms ease;
+}
+
+.icon {
+  color: rgba(132, 204, 22, 0.9);
+}
+
+.card:hover .iconBox {
+  background: rgba(132, 204, 22, 0.12);
+  border-color: rgba(132, 204, 22, 0.25);
+  transform: scale(1.05);
 }
 
 .arrow {

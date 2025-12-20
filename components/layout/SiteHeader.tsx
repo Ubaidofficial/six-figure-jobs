@@ -70,31 +70,11 @@ export function SiteHeader() {
   const router = useRouter()
 
   const [jobsOpen, setJobsOpen] = React.useState(false)
-  const closeTimer = React.useRef<number | null>(null)
 
   const [searchOpen, setSearchOpen] = React.useState(false)
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [query, setQuery] = React.useState('')
   const inputRef = React.useRef<HTMLInputElement | null>(null)
-
-  const scheduleClose = React.useCallback(() => {
-    if (closeTimer.current) window.clearTimeout(closeTimer.current)
-    closeTimer.current = window.setTimeout(() => setJobsOpen(false), 300)
-  }, [])
-
-  const cancelClose = React.useCallback(() => {
-    if (closeTimer.current) window.clearTimeout(closeTimer.current)
-    closeTimer.current = null
-  }, [])
-
-  React.useEffect(() => {
-    return () => {
-      if (closeTimer.current) {
-        window.clearTimeout(closeTimer.current)
-        closeTimer.current = null
-      }
-    }
-  }, [])
 
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -138,60 +118,50 @@ export function SiteHeader() {
 
           <nav className={styles.nav} aria-label="Primary">
             <DropdownMenu open={jobsOpen} onOpenChange={setJobsOpen}>
-              <div
-                className={styles.dropdownRegion}
-                onMouseEnter={() => {
-                  cancelClose()
-                  setJobsOpen(true)
-                }}
-                onMouseLeave={scheduleClose}
-                onBlur={() => setJobsOpen(false)}
-              >
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className={styles.navTrigger}
-                    aria-haspopup="menu"
-                    aria-expanded={jobsOpen}
-                    onFocus={() => setJobsOpen(true)}
-                  >
-                    Jobs <ChevronDown className={styles.chev} aria-hidden="true" />
-                  </button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent
-                  className={styles.dropdown}
-                  sideOffset={10}
-                  portalled={false}
-                  onMouseLeave={scheduleClose}
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={styles.navTrigger}
+                  aria-haspopup="menu"
+                  aria-expanded={jobsOpen}
+                  onMouseEnter={() => setJobsOpen(true)}
                 >
-                  <DropdownMenuLabel className={styles.dropdownLabel}>Explore</DropdownMenuLabel>
-                  <MenuItem
-                    href="/jobs"
-                    title="All jobs"
-                    description="Explore every $100k+ listing"
-                    onClick={() => setJobsOpen(false)}
-                  />
-                  <MenuItem
-                    href="/remote"
-                    title="Remote"
-                    description="Work from anywhere roles"
-                    onClick={() => setJobsOpen(false)}
-                  />
+                  Jobs <ChevronDown className={styles.chev} aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
 
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className={styles.dropdownLabel}>By Salary</DropdownMenuLabel>
-                  {SALARY_LINKS.map((l) => (
-                    <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
-                  ))}
+              <DropdownMenuContent
+                className={styles.dropdown}
+                sideOffset={10}
+                onMouseEnter={() => setJobsOpen(true)}
+                onMouseLeave={() => setJobsOpen(false)}
+              >
+                <DropdownMenuLabel className={styles.dropdownLabel}>Explore</DropdownMenuLabel>
+                <MenuItem
+                  href="/jobs"
+                  title="All jobs"
+                  description="Explore every $100k+ listing"
+                  onClick={() => setJobsOpen(false)}
+                />
+                <MenuItem
+                  href="/remote"
+                  title="Remote"
+                  description="Work from anywhere roles"
+                  onClick={() => setJobsOpen(false)}
+                />
 
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className={styles.dropdownLabel}>By Location</DropdownMenuLabel>
-                  {LOCATION_LINKS.map((l) => (
-                    <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
-                  ))}
-                </DropdownMenuContent>
-              </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className={styles.dropdownLabel}>By Salary</DropdownMenuLabel>
+                {SALARY_LINKS.map((l) => (
+                  <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
+                ))}
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className={styles.dropdownLabel}>By Location</DropdownMenuLabel>
+                {LOCATION_LINKS.map((l) => (
+                  <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
+                ))}
+              </DropdownMenuContent>
             </DropdownMenu>
 
             <Link href="/companies" className={styles.navLink}>

@@ -28,7 +28,7 @@ export default function JobList({ jobs }: JobListProps) {
   })
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <FeaturedPromoCard />
 
       {dedupedJobs.map((job) => (

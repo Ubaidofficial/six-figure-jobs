@@ -329,8 +329,8 @@
 }
 
 .grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-24);
 }
 
@@ -400,18 +400,10 @@
   .citiesGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (min-width: 1200px) {
   .citiesGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
