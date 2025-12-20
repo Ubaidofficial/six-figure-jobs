@@ -129,7 +129,7 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
       </p>
 
       {jobs.length === 0 ? (
-        <p className="text-slate-400">No jobs found.</p>
+        <p className="text-slate-400">No jobs found. Try exploring all $100k+ opportunities.</p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}

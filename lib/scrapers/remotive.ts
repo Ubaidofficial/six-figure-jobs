@@ -2,6 +2,7 @@
 
 import axios from 'axios'
 import { upsertBoardJob } from './_boardHelpers'
+import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 
 const BOARD = 'remotive'
 
@@ -29,9 +30,9 @@ type ProcessedJob = {
 }
 
 export default async function scrapeRemotive() {
-  try {
-    console.log('▶ Scraping Remotive API…')
+  console.log('[Remotive] Starting scrape...')
 
+  try {
     const jobs: ProcessedJob[] = []
 
     const searchTerms = [
@@ -85,10 +86,10 @@ export default async function scrapeRemotive() {
       `  Remotive: Found ${highPayingJobs.length} ML/AI jobs with estimated $100k+`
     )
 
-    let stored = 0
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
 
     for (const job of highPayingJobs) {
-      await upsertBoardJob({
+      const result = await upsertBoardJob({
         board: BOARD,
         externalId: job.id,
         title: job.title,
@@ -98,24 +99,14 @@ export default async function scrapeRemotive() {
         salaryText: job.salary,
         remote: job.remote,
       })
-      stored++
+      addBoardIngestResult(stats, result)
     }
 
-    console.log(`✅ Remotive: upserted ${stored} jobs`)
-
-    return {
-      board: BOARD,
-      found: highPayingJobs.length,
-      stored,
-    }
-  } catch (error: any) {
-    console.error('Remotive error:', error?.message ?? error)
-    return {
-      board: BOARD,
-      found: 0,
-      stored: 0,
-      error: String(error),
-    }
+    console.log(`[Remotive] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[Remotive] ❌ Scrape failed:', error)
+    return errorStats(error)
   }
 }
 

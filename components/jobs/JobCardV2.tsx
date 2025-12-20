@@ -162,7 +162,7 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
         <CardFooter className="flex flex-wrap items-center justify-between gap-3 pt-3">
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-            Apply on company site
+            Apply now on company site
             <span className="text-muted-foreground/60">•</span>
             <Clock className="h-3.5 w-3.5" aria-hidden="true" />
             Posted {formatRelativeTime(job.postedAt)}

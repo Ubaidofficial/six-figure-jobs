@@ -5,7 +5,7 @@ import NextLink from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { cache } from 'react'
 import { prisma } from '../../../lib/prisma'
-import { parseJobSlugParam, buildJobSlugHref, buildJobSlug } from '../../../lib/jobs/jobSlug'
+import { parseJobSlugParam, buildJobSlug } from '../../../lib/jobs/jobSlug'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
 import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
@@ -19,7 +19,21 @@ import {
   countryCodeToName,
   COUNTRY_CODE_TO_NAME,
 } from '../../../lib/seo/countrySlug'
-import { e } from '@/lib/ui/emoji'
+import { JobCard } from '@/components/jobs/JobCard'
+import {
+  BadgeCheck,
+  Briefcase,
+  Check,
+  Clock,
+  ExternalLink,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Users,
+} from 'lucide-react'
+
+import { JobActions } from './JobActions'
+import styles from './JobDetail.module.css'
 
 export const revalidate = 3600
 
@@ -171,28 +185,14 @@ export default async function JobPage({
     company?.website ?? null,
   )
 
-  // Safely read LinkedIn URL even if TS types are lagging behind schema
-  const companyLinkedIn =
-    (company as any)?.linkedinUrl && typeof (company as any).linkedinUrl === 'string'
-      ? ((company as any).linkedinUrl as string)
-      : null
-
   /* ------------------------------ Derived UI data ------------------------------ */
 
   const salaryText = buildSalaryText(typedJob)
   const locationText = buildLocationText(typedJob)
   const seniority = inferSeniorityFromTitle(typedJob.title)
-  const category = inferCategoryFromRoleSlug(typedJob.roleSlug)
-  const remoteModeLabel = getRemoteModeLabel(typedJob)
   const postedLabel = formatRelativeTime(
     typedJob.postedAt ?? typedJob.createdAt ?? typedJob.updatedAt ?? null,
   )
-
-  const isFeatured =
-    Boolean((typedJob as any)?.featured) ||
-    ((typedJob as any)?.featureExpiresAt
-      ? new Date((typedJob as any).featureExpiresAt).getTime() > Date.now()
-      : false)
 
   const requirements = parseArray(typedJob.requirementsJson)
   const benefitItems = ((): string[] => {
@@ -245,561 +245,431 @@ export default async function JobPage({
     pageSize: 6,
   })
 
-  const similarJobs = similarResult.jobs.filter((j) => j.id !== typedJob.id).slice(0, 4)
-
-  const companyTags = parseTags(company?.tagsJson).filter((tag) => tag && tag.trim().length > 0)
+  const similarJobs = similarResult.jobs.filter((j) => j.id !== typedJob.id).slice(0, 3)
 
   const companyCountry = company?.countryCode || typedJob.countryCode || 'Global'
+  const isSalaryVerified = Boolean((typedJob as any)?.salaryValidated)
+  const companyProfileVerified = Boolean(company?.slug)
+  const lastUpdatedDays = daysSince(typedJob.updatedAt ?? typedJob.lastSeenAt ?? null)
+
+  const isRemoteRole = typedJob.remote === true || (typedJob as any).remoteMode === 'remote'
+  const workTypeLabel = isRemoteRole
+    ? null
+    : (typedJob as any).remoteMode === 'hybrid'
+      ? 'Hybrid'
+      : (typedJob as any).remoteMode === 'onsite'
+        ? 'Onsite'
+        : null
+
+  const employmentType = typedJob.type || (typedJob as any).employmentType || null
+  const teamSize =
+    company?.sizeBucket ||
+    (typeof (company as any)?.employeeCount === 'number'
+      ? String((company as any).employeeCount)
+      : null)
+
+  const skills = parseSkillsFromJob(typedJob)
+  const requiredSkills = skills.slice(0, 10)
+  const niceSkills = skills.slice(10, 18)
+
+  const { responsibilities, requirements: resolvedRequirements } = extractRoleLists(
+    typedJob,
+    requirements,
+  )
 
   /* ------------------------------ Render ----------------------------------- */
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50">
-      {/* subtle background glow */}
-      <div className="pointer-events-none fixed inset-0 -z-10 opacity-60">
-        <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="absolute -right-40 top-24 h-[520px] w-[520px] rounded-full bg-violet-500/10 blur-3xl" />
-      </div>
+    <main className={styles.page}>
+      <div className={styles.bgGlow} />
 
-      <div className="mx-auto max-w-7xl px-4 pb-16 pt-10">
-        {/* Breadcrumbs */}
-        <nav className="mb-6 text-xs text-slate-400" aria-label="Breadcrumb">
-          <ol className="flex flex-wrap items-center gap-1">
-            <li>
-              <NextLink
-                href="/"
-                className="focus-ring rounded-md hover:text-slate-200 hover:underline"
-              >
-                Home
-              </NextLink>
-            </li>
-            <li className="px-1 text-slate-600">/</li>
-            <li>
-              <NextLink
-                href="/jobs/100k-plus"
-                className="focus-ring rounded-md hover:text-slate-200 hover:underline"
-              >
-                $100k+ jobs
-              </NextLink>
-            </li>
-            <li className="px-1 text-slate-600">/</li>
-            <li aria-current="page" className="text-slate-200">
-              {typedJob.title}
-            </li>
-          </ol>
-        </nav>
+      <div className={styles.container}>
+        <NextLink href="/jobs" className={styles.backLink}>
+          <span aria-hidden="true">←</span> Back to jobs
+        </NextLink>
 
-        {/* Layout: company left (sticky), job content right */}
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
-          {/* ----------------------------- Company Panel ----------------------------- */}
-          <aside className="order-2 lg:order-none">
-            <div className="space-y-4 lg:sticky lg:top-24">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6 shadow-lg shadow-slate-900/40">
-                <div className="flex flex-col items-center text-center">
-                  {logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={logoUrl}
-                      alt={`${companyName} logo`}
-                      className="h-16 w-16 rounded-2xl bg-slate-900/60 object-contain p-2 ring-1 ring-slate-800/70"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900/60 text-lg font-semibold text-slate-100 ring-1 ring-slate-800/70">
-                      {companyName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-
-                  <h2 className="mt-3 text-base font-semibold text-slate-50">
-                    {companyName}
-                  </h2>
-
-                  <p className="text-xs text-slate-400">{companyCountry}</p>
-
-                  {company?.sizeBucket && (
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      {company?.sizeBucket} employees
-                    </p>
-                  )}
-
-                  {companyTags.length > 0 && (
-                    <div className="mt-4 flex flex-wrap justify-center gap-1.5">
-                      {companyTags.slice(0, 8).map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-slate-900/60 px-2 py-0.5 text-[11px] text-slate-200 ring-1 ring-slate-800/70"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mt-5 flex flex-wrap justify-center gap-2 text-xs">
-                    {isValidUrl(company?.website) && (
-                      <a
-                        href={cleanUrl(company!.website!)}
-                        target="_blank"
-                        rel="nofollow noreferrer"
-                        className="focus-ring inline-flex items-center rounded-full border border-slate-700/80 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
-                      >
-                        Website
-                      </a>
-                    )}
-
-                    {isValidUrl(companyLinkedIn) && (
-                      <a
-                        href={cleanUrl(companyLinkedIn!)}
-                        target="_blank"
-                        rel="nofollow noreferrer"
-                        className="focus-ring inline-flex items-center rounded-full border border-slate-700/80 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
-                      >
-                        LinkedIn
-                      </a>
-                    )}
-
-                    {company?.slug && (
-                      <NextLink
-                        href={`/company/${company.slug}`}
-                        className="focus-ring inline-flex items-center rounded-full border border-slate-700/80 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
-                      >
-                        All jobs
-                      </NextLink>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Apply card */}
-              {showApply && (
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6 shadow-lg shadow-slate-900/40">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
-                    {e('apply')} Apply
-                  </p>
-                  <a
-                    href={cleanUrl(typedJob.applyUrl!)}
-                    target="_blank"
-                    rel="nofollow sponsored noopener noreferrer"
-                    className="focus-ring mt-3 inline-flex w-full items-center justify-center rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300"
-                  >
-                    Apply on company site
-                  </a>
-                  <p className="mt-2 text-xs text-slate-400">
-                    ↗️ Opens in a new tab. We don’t track your application.
-                  </p>
+        <header className={styles.header}>
+          <div className={styles.headerMain}>
+            <div className={styles.logoWrap}>
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt={`${companyName} logo`}
+                  className={styles.logoImg}
+                  loading="lazy"
+                />
+              ) : (
+                <div className={styles.logoFallback} aria-hidden="true">
+                  {companyName.charAt(0).toUpperCase()}
                 </div>
               )}
+            </div>
 
-              {/* Quality checks */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-6 shadow-lg shadow-slate-900/40">
-                <h3 className="text-sm font-semibold text-slate-50">
-                  {e('quality')} Quality checks
-                </h3>
-                <ul className="mt-2 space-y-1.5 text-xs text-slate-300">
-                  <li>✅ Verified salary data</li>
-                  <li>🔗 Source-linked listing</li>
-                  <li>🧹 Expired jobs removed</li>
-                </ul>
+            <div>
+              <h1 className={styles.title}>{typedJob.title}</h1>
+
+              <div className={styles.companyRow}>
+                {company?.slug ? (
+                  <NextLink href={`/company/${company.slug}`} className={styles.companyLink}>
+                    {companyName}
+                  </NextLink>
+                ) : (
+                  <span className={styles.companyLink}>{companyName}</span>
+                )}
+
+                <span className={styles.verifiedBadge}>
+                  <BadgeCheck className={styles.metaIcon} aria-hidden="true" />
+                  {isSalaryVerified ? 'Salary verified' : 'Verified listing'}
+                </span>
               </div>
 
-              {/* Company snapshot */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
-                <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-left text-xs leading-relaxed text-slate-200 shadow-inner shadow-slate-900/30">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-400">
-                      {e('company')} Company snapshot
-                    </p>
-                    {company?.website && (
-                      <a
-                        href={cleanUrl(company.website)}
-                        target="_blank"
-                        rel="nofollow noreferrer"
-                        className="focus-ring rounded-full border border-slate-700/80 bg-slate-950/40 px-3 py-1 text-[11px] font-semibold text-slate-100 transition hover:bg-white/5"
-                      >
-                        Company site
-                      </a>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap justify-center gap-2 text-[11px] text-slate-200">
-                    {company?.sizeBucket && (
-                      <span className="inline-flex items-center rounded-full bg-slate-900/60 px-3 py-1 ring-1 ring-slate-800/70">
-                        {company.sizeBucket} employees
-                      </span>
-                    )}
-                    {company?.foundedYear && (
-                      <span className="inline-flex items-center rounded-full bg-slate-900/60 px-3 py-1 ring-1 ring-slate-800/70">
-                        Founded {company.foundedYear}
-                      </span>
-                    )}
-                    {company?.industry && (
-                      <span className="inline-flex items-center rounded-full bg-slate-900/60 px-3 py-1 ring-1 ring-slate-800/70">
-                        {company.industry}
-                      </span>
-                    )}
-                    {company?.headquarters && (
-                      <span className="inline-flex items-center rounded-full bg-slate-900/60 px-3 py-1 ring-1 ring-slate-800/70">
-                        HQ: {company.headquarters}
-                      </span>
-                    )}
-                    {companyTags.slice(0, 4).map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center rounded-full bg-slate-900/60 px-3 py-1 ring-1 ring-slate-800/70"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="text-[12px] leading-relaxed text-slate-200">
-                    {company?.description
-                      ? truncateText(stripTags(decodeHtmlEntities(company.description)), 600)
-                      : `${companyName} is hiring $100k+ talent across multiple teams. Explore their open roles below.`}
-                  </div>
-                </div>
-
-                {benefitItems.length > 0 && (
-                  <div className="mt-4 space-y-2 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-xs text-slate-200 shadow-inner shadow-slate-900/30">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-400">
-                      {e('benefits')} Benefits the company offers
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {benefitItems.slice(0, 6).map((benefit, idx) => (
-                        <span
-                          key={`${benefit}-${idx}`}
-                          className="inline-flex max-w-[16rem] items-center rounded-full bg-slate-900/60 px-2 py-0.5 text-[11px] text-slate-200 ring-1 ring-slate-800/70"
-                        >
-                          {formatBenefitPill(benefit)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className={styles.metaBadges}>
+                {locationText ? (
+                  <span className={styles.metaBadge}>
+                    <MapPin className={styles.metaIcon} aria-hidden="true" />
+                    {locationText}
+                  </span>
+                ) : null}
+                {workTypeLabel ? (
+                  <span className={styles.metaBadge}>
+                    <Briefcase className={styles.metaIcon} aria-hidden="true" />
+                    {workTypeLabel}
+                  </span>
+                ) : null}
+                {postedLabel ? (
+                  <span className={styles.metaBadge}>
+                    <Clock className={styles.metaIcon} aria-hidden="true" />
+                    Posted {postedLabel}
+                  </span>
+                ) : null}
               </div>
             </div>
-          </aside>
+          </div>
+        </header>
 
-          {/* --------------------------- Job Content --------------------------- */}
-          <section className="order-1 space-y-8 lg:order-none">
-            {/* Hero */}
-            <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-7 shadow-lg shadow-slate-900/40">
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <h1 className="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
-                    {typedJob.title}
-                  </h1>
+        <div className={styles.actionBarOuter} aria-label="Action bar">
+          <div className={styles.actionBar}>
+            <div className={styles.salaryBox}>
+              <div className={styles.salaryLabel}>Salary Range</div>
+              <div className={styles.salaryValue}>{salaryText || 'Not disclosed'}</div>
+              <div className={styles.salaryPeriod}>per year</div>
+            </div>
 
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-300">
-                    <div className="font-medium">
-                      {company?.slug ? (
-                        <NextLink
-                          href={`/company/${company.slug}`}
-                          className="focus-ring rounded-md hover:underline"
-                        >
-                          {companyName}
-                        </NextLink>
-                      ) : (
-                        companyName
-                      )}
+            <div className={styles.actions}>
+              {showApply ? (
+                <a
+                  href={cleanUrl(typedJob.applyUrl!)}
+                  target="_blank"
+                  rel="nofollow sponsored noopener noreferrer"
+                  className={styles.applyButton}
+                >
+                  Apply Now <ExternalLink aria-hidden="true" />
+                </a>
+              ) : null}
+
+              <JobActions jobId={typedJob.id} shareUrl={`${SITE_URL}/job/${canonicalSlug}`} />
+            </div>
+          </div>
+        </div>
+
+        {/* Two-column layout */}
+        <div className={styles.layout}>
+          <aside className={styles.sidebar}>
+            <section className={styles.card}>
+              <div className={styles.cardTitle}>Job Highlights</div>
+              <div className={styles.highlightGrid}>
+                <div className={styles.highlightRow}>
+                  <div className={styles.highlightLeft}>
+                    <div className={styles.iconChip} aria-hidden="true">
+                      <Sparkles />
                     </div>
-
-                    {locationText ? (
-                      <>
-                        <span className="text-slate-600">•</span>
-                        <span className="text-slate-400">{locationText}</span>
-                      </>
-                    ) : null}
+                    <div>
+                      <div className={styles.hlLabel}>Seniority</div>
+                      <div className={styles.hlValue}>{seniority || '—'}</div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Salary + apply row */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {salaryText && (
-                      <div className="inline-flex items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 font-mono text-xl font-semibold text-emerald-200">
-                        {e('salary')} {salaryText}
-                      </div>
-                    )}
-
-                    {isFeatured && (
-                      <span className="inline-flex items-center rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-200">
-                        {e('featured')} Featured
-                      </span>
-                    )}
-
-                    {remoteModeLabel && (
-                      <span className="inline-flex items-center rounded-full border border-slate-700/70 bg-slate-900/50 px-3 py-1 text-xs font-semibold text-slate-200">
-                        {e('remote')} {remoteModeLabel}
-                      </span>
-                    )}
-
-                    {typedJob.type && (
-                      <span className="inline-flex items-center rounded-full border border-slate-700/70 bg-slate-900/50 px-3 py-1 text-xs font-semibold text-slate-200">
-                        {e('type')} {typedJob.type}
-                      </span>
-                    )}
-
-                    {category && (
-                      <span className="inline-flex items-center rounded-full border border-slate-700/70 bg-slate-900/50 px-3 py-1 text-xs font-semibold text-slate-200">
-                        {e('level')} {category}
-                      </span>
-                    )}
-
-                    {seniority && (
-                      <span className="inline-flex items-center rounded-full border border-slate-700/70 bg-slate-900/50 px-3 py-1 text-xs font-semibold text-slate-200">
-                        🎚️ {seniority}
-                      </span>
-                    )}
-
-                    {postedLabel && (
-                      <span className="inline-flex items-center rounded-full border border-slate-700/70 bg-slate-900/50 px-3 py-1 text-xs font-semibold text-slate-200">
-                        {e('posted')} Posted {postedLabel}
-                      </span>
-                    )}
-                  </div>
-
-                  {showApply && (
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                      <a
-                        href={cleanUrl(typedJob.applyUrl!)}
-                        target="_blank"
-                        rel="nofollow sponsored noopener noreferrer"
-                        className="focus-ring inline-flex items-center justify-center rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300"
-                      >
-                        {e('apply')} Apply now
-                      </a>
-                      <p className="text-xs text-slate-400 sm:max-w-[16rem]">
-                        ↗️ Opens in a new tab. We don’t track your application.
-                      </p>
+                <div className={styles.highlightRow}>
+                  <div className={styles.highlightLeft}>
+                    <div className={styles.iconChip} aria-hidden="true">
+                      <Users />
                     </div>
+                    <div>
+                      <div className={styles.hlLabel}>Team size</div>
+                      <div className={styles.hlValue}>{teamSize || '—'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.highlightRow}>
+                  <div className={styles.highlightLeft}>
+                    <div className={styles.iconChip} aria-hidden="true">
+                      <Briefcase />
+                    </div>
+                    <div>
+                      <div className={styles.hlLabel}>Employment type</div>
+                      <div className={styles.hlValue}>{employmentType || '—'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className={styles.card}>
+              <div className={styles.cardTitle}>Verification</div>
+              <div className={styles.checkList}>
+                <div className={styles.checkItem}>
+                  <span className={styles.checkCircle} aria-hidden="true">
+                    <Check />
+                  </span>
+                  <span>{isSalaryVerified ? 'Salary verified from ATS' : 'Salary listed in the job posting'}</span>
+                </div>
+                <div className={styles.checkItem}>
+                  <span className={styles.checkCircle} aria-hidden="true">
+                    <Check />
+                  </span>
+                  <span>{companyProfileVerified ? 'Company profile verified' : 'Company profile available'}</span>
+                </div>
+                <div className={styles.checkItem}>
+                  <span className={styles.checkCircle} aria-hidden="true">
+                    <Check />
+                  </span>
+                  <span>
+                    Last updated {lastUpdatedDays != null ? `${lastUpdatedDays} days ago` : 'recently'}
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section className={styles.card}>
+              <div className={styles.cardTitle}>About Company</div>
+              <p className={styles.cardSubtitle}>
+                {company?.description
+                  ? truncateText(stripTags(decodeHtmlEntities(company.description)), 200)
+                  : `${companyName} is hiring $100k+ talent across multiple teams.`}
+              </p>
+
+              <div className={styles.aboutCompanyMeta}>
+                <div className={styles.metaRow}>
+                  <span className={styles.metaKey}>Country</span>
+                  <span>{companyCountry}</span>
+                </div>
+                <div className={styles.metaRow}>
+                  <span className={styles.metaKey}>Employees</span>
+                  <span>{company?.sizeBucket || (company as any)?.employeeCount || '—'}</span>
+                </div>
+                <div className={styles.metaRow}>
+                  <span className={styles.metaKey}>Founded</span>
+                  <span>{company?.foundedYear || '—'}</span>
+                </div>
+                <div className={styles.metaRow}>
+                  <span className={styles.metaKey}>Website</span>
+                  {isValidUrl(company?.website) ? (
+                    <a href={cleanUrl(company!.website!)} target="_blank" rel="nofollow noreferrer">
+                      Visit <ExternalLink aria-hidden="true" style={{ width: 14, height: 14 }} />
+                    </a>
+                  ) : (
+                    <span>—</span>
                   )}
                 </div>
               </div>
             </section>
 
+            <section className={styles.card}>
+              <div className={styles.cardTitle}>Required Skills</div>
+              {requiredSkills.length > 0 ? (
+                <>
+                  <div className={styles.skillsWrap}>
+                    {requiredSkills.map((s) => (
+                      <span key={s} className={`${styles.skillPill} ${styles.skillRequired}`}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+
+                  {niceSkills.length > 0 ? (
+                    <>
+                      <div className={styles.dividerLabel}>Nice to have</div>
+                      <div className={styles.skillsWrap}>
+                        {niceSkills.map((s) => (
+                          <span key={s} className={`${styles.skillPill} ${styles.skillNice}`}>
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <p className={styles.cardSubtitle}>Skills not listed on the ATS page.</p>
+              )}
+            </section>
+          </aside>
+
+          {/* --------------------------- Job Content --------------------------- */}
+          <section className={styles.content}>
+
             {/* Highlights */}
             {(aiSnippet || aiSummary) && (
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 text-sm leading-relaxed text-slate-200">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">
-                    {e('highlights')} Role highlights
-                  </p>
-                  {AI_UI_ENABLED && aiQualityScore != null && (
-                    <span className="text-[11px] text-slate-400">AI score: {aiQualityScore}/3</span>
-                  )}
+              <section className={styles.card}>
+                <div className={styles.cardTitle}>
+                  Role Highlights
+                  {AI_UI_ENABLED && aiQualityScore != null ? (
+                    <span className={styles.verifiedBadge}>AI score: {aiQualityScore}/3</span>
+                  ) : null}
                 </div>
 
-                {aiSnippet && <p className="mt-2 text-sm text-slate-200">{aiSnippet}</p>}
+                {aiSnippet ? <p className={styles.cardSubtitle}>{aiSnippet}</p> : null}
 
-                {aiSummary && (
-                  <ul className="mt-3 list-disc space-y-1 pl-5">
+                {aiSummary ? (
+                  <div className={styles.checkList}>
                     {aiSummary.map((line, idx) => (
-                      <li key={idx}>{line}</li>
+                      <div key={idx} className={styles.checkItem}>
+                        <span className={styles.checkCircle} aria-hidden="true">
+                          <Check />
+                        </span>
+                        <span>{line}</span>
+                      </div>
                     ))}
-                  </ul>
-                )}
-
-                {AI_UI_ENABLED && (
-                  <p className="mt-3 text-[11px] text-slate-500">
-                    AI summary is generated from the employer&apos;s job description. No invented facts.
-                  </p>
-                )}
+                  </div>
+                ) : null}
               </section>
             )}
 
             {/* Description */}
             {hasDescription ? (
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/50 p-6">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  {e('company')} About the role
-                </h2>
+              <section className={styles.card}>
+                <div className={styles.cardTitle}>Job Description</div>
                 <div
-                  className="prose prose-invert mt-3 max-w-none text-sm leading-relaxed prose-p:text-slate-200 prose-li:text-slate-200 prose-strong:text-slate-100 prose-ul:list-disc prose-ul:pl-5 prose-li:my-1"
+                  className={`prose prose-invert max-w-none ${styles.richText}`}
                   dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
                 />
               </section>
             ) : (
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/50 p-6">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  {e('company')} About the role
-                </h2>
-                <p className="mt-3 text-sm leading-relaxed text-slate-200">
+              <section className={styles.card}>
+                <div className={styles.cardTitle}>Job Description</div>
+                <p className={styles.cardSubtitle}>
                   This role is sourced directly from the employer&apos;s careers site. The full job description is available on their ATS.
                 </p>
-                {showApply && (
-                  <div className="mt-4 space-y-2">
-                    <a
-                      href={cleanUrl(typedJob.applyUrl!)}
-                      target="_blank"
-                      rel="nofollow sponsored noopener noreferrer"
-                      className="focus-ring inline-flex items-center justify-center rounded-xl bg-emerald-400 px-4 py-2.5 text-xs font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300"
-                    >
-                      {e('apply')} Apply on company site
-                    </a>
-                    <p className="text-xs text-slate-400">
-                      ↗️ Opens in a new tab. We don’t track your application.
-                    </p>
-                  </div>
-                )}
               </section>
             )}
+
+            {responsibilities.length > 0 ? (
+              <section className={styles.card}>
+                <div className={styles.cardTitle}>Responsibilities</div>
+                <div className={styles.checkList}>
+                  {responsibilities.slice(0, 10).map((r, i) => (
+                    <div key={i} className={styles.checkItem}>
+                      <span className={styles.checkCircle} aria-hidden="true">
+                        <Check />
+                      </span>
+                      <span>{r}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             {/* Requirements */}
-            {requirements.length > 0 && (
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/50 p-6">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  {e('requirements')} Requirements
-                </h2>
-                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
-                  {requirements.map((r, i) => (
-                    <li key={i}>{r}</li>
+            {resolvedRequirements.length > 0 ? (
+              <section className={styles.card}>
+                <div className={styles.cardTitle}>Requirements</div>
+                <div className={styles.checkList}>
+                  {resolvedRequirements.slice(0, 12).map((r, i) => (
+                    <div key={i} className={styles.checkItem}>
+                      <span className={styles.checkCircle} aria-hidden="true">
+                        <Check />
+                      </span>
+                      <span>{r}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </section>
-            )}
+            ) : null}
 
             {/* Benefits */}
-            {benefitItems.length > 0 && (
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/50 p-6">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  {e('benefits')} Benefits
-                </h2>
-                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
-                  {benefitItems.map((b, i) => (
-                    <li key={i}>{b}</li>
+            {benefitItems.length > 0 ? (
+              <section className={styles.card}>
+                <div className={styles.cardTitle}>Benefits</div>
+                <div className={styles.benefitsGrid}>
+                  {benefitItems.slice(0, 12).map((b, i) => (
+                    <div key={i} className={styles.benefitCard}>
+                      <div className={styles.benefitIcon} aria-hidden="true">
+                        <ShieldCheck />
+                      </div>
+                      <div className={styles.benefitText}>{formatBenefitPill(b)}</div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </section>
-            )}
+            ) : null}
+
+            {showApply ? (
+              <section className={styles.card}>
+                <div className={styles.applyCta}>
+                  <div>
+                    <div className={styles.cardTitle}>Apply on the company site</div>
+                    <p className={styles.cardSubtitle}>
+                      Opens in a new tab. Six Figure Jobs doesn&apos;t track your application.
+                    </p>
+                  </div>
+                  <a
+                    href={cleanUrl(typedJob.applyUrl!)}
+                    target="_blank"
+                    rel="nofollow sponsored noopener noreferrer"
+                    className={styles.applyButton}
+                  >
+                    Apply Now <ExternalLink aria-hidden="true" />
+                  </a>
+                </div>
+              </section>
+            ) : null}
 
             {/* Internal Links */}
-            {internalLinks.length > 0 && (
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/50 p-6">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  🔗 Explore related $100k+ pages
-                </h2>
-                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-blue-400">
-                  {internalLinks.map((link) => (
-                    <li key={link.href}>
-                      <NextLink href={link.href} className="focus-ring rounded-md hover:underline">
+            {internalLinks.length > 0 ? (
+              <section className={styles.card}>
+                <div className={styles.cardTitle}>Explore related pages</div>
+                <div className={styles.checkList}>
+                  {internalLinks.slice(0, 8).map((link) => (
+                    <div key={link.href} className={styles.checkItem}>
+                      <span className={styles.checkCircle} aria-hidden="true">
+                        <Check />
+                      </span>
+                      <NextLink href={link.href} className={styles.companyLink}>
                         {link.label}
                       </NextLink>
-                    </li>
+                    </div>
                   ))}
-                </ul>
-              </section>
-            )}
-
-            {/* Similar Jobs */}
-            {similarJobs.length > 0 && (
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/50 p-6">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <h2 className="text-sm font-semibold text-slate-50">
-                      {e('similar')} Similar $100k+ jobs
-                    </h2>
-                    <p className="mt-1 text-xs text-slate-400">Based on role, country and salary band</p>
-                  </div>
                 </div>
-
-                <ul className="mt-4 space-y-3 text-sm">
-                  {similarJobs.map((sj) => {
-                    const sjSalary = buildSalaryText(sj)
-                    const sjLocation = buildLocationText(sj)
-                    const sjPosted = formatRelativeTime(sj.postedAt ?? sj.createdAt ?? sj.updatedAt ?? null)
-
-                    const roleSlug = sj.roleSlug
-                    const countryCode = sj.countryCode?.toUpperCase() ?? null
-                    const countryName = countryCode ? countryCodeToName(countryCode) : null
-                    const hasCountryInfo = Boolean(countryCode && countryName)
-                    const isCountryMismatch =
-                      countryName && countryCode ? countryName.toUpperCase() !== countryCode : false
-                    const hasValidCountry = hasCountryInfo && isCountryMismatch
-                    const countrySlug = hasValidCountry && countryCode ? countryCodeToSlug(countryCode) : null
-
-                    const sliceHref =
-                      roleSlug && hasValidCountry && countrySlug
-                        ? `/jobs/${roleSlug}/${countrySlug}/100k-plus`
-                        : roleSlug
-                          ? `/jobs/${roleSlug}/100k-plus`
-                          : '/jobs/100k-plus'
-
-                    const snippet = buildSafeSnippet(sj)
-
-                    return (
-                      <li
-                        key={sj.id}
-                        className="rounded-xl border border-slate-800 bg-slate-950/70 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <NextLink
-                              href={buildJobSlugHref(sj)}
-                              className="focus-ring rounded-md font-semibold text-slate-100 hover:underline"
-                            >
-                              {sj.title}
-                            </NextLink>
-
-                            <div className="mt-0.5 text-slate-300">
-                              {cleanCompanyName(sj.companyRef?.name || sj.company || '')}
-                            </div>
-
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
-                              {sjLocation && (
-                                <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
-                                  {e('location')} {sjLocation}
-                                </span>
-                              )}
-                              {sjSalary && (
-                                <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
-                                  {e('salary')} {sjSalary}
-                                </span>
-                              )}
-                              {sj.roleSlug && (
-                                <NextLink
-                                  href={sliceHref}
-                                  className="focus-ring rounded-full bg-slate-900 px-2 py-0.5 text-blue-300 ring-1 ring-slate-800 hover:text-blue-200"
-                                >
-                                  {prettyRole(sj.roleSlug)} roles →
-                                </NextLink>
-                              )}
-                              {sjPosted && (
-                                <span className="rounded-full bg-slate-900 px-2 py-0.5 ring-1 ring-slate-800">
-                                  {e('posted')} Posted {sjPosted}
-                                </span>
-                              )}
-                            </div>
-
-                            {snippet && (
-                              <p className="mt-3 text-[12px] text-slate-400">{snippet}</p>
-                            )}
-                          </div>
-
-                          <NextLink
-                            href={buildJobSlugHref(sj)}
-                            className="focus-ring inline-flex items-center justify-center rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold text-slate-100 hover:border-slate-500"
-                          >
-                            View details
-                          </NextLink>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
               </section>
-            )}
-
-            {/* JSON-LD */}
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-            />
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-            />
+            ) : null}
           </section>
         </div>
+
+        {similarJobs.length > 0 ? (
+          <section className={styles.similarGrid}>
+            <div className={styles.similarHeader}>
+              <div>
+                <div className={styles.similarTitle}>Similar $100k+ Opportunities</div>
+                <div className={styles.similarSub}>Based on role, country and salary band</div>
+              </div>
+            </div>
+            <div className={styles.similarCards}>
+              {similarJobs.map((sj) => (
+                <JobCard key={sj.id} job={sj as JobWithCompany} />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* JSON-LD (keep existing schema) */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        />
       </div>
     </main>
   )
@@ -850,6 +720,90 @@ function parseArray(raw?: string | null): string[] {
   }
 }
 
+function daysSince(date: Date | null | undefined): number | null {
+  if (!date) return null
+  const d = date instanceof Date ? date : new Date(date)
+  const ms = Date.now() - d.getTime()
+  if (!Number.isFinite(ms)) return null
+  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)))
+}
+
+function parseSkillsFromJob(job: any): string[] {
+  const out: string[] = []
+
+  const fromJson = parseArray(job?.skillsJson)
+  if (fromJson.length) out.push(...fromJson)
+
+  const rawTech = typeof job?.techStack === 'string' ? job.techStack : ''
+  if (rawTech) {
+    out.push(
+      ...rawTech
+        .split(/[,|/•·]/g)
+        .map((s: string) => s.trim())
+        .filter(Boolean),
+    )
+  }
+
+  const cleaned = out
+    .map((s) => stripTags(decodeHtmlEntities(String(s))).trim())
+    .filter((s) => s.length > 0 && s.length <= 40)
+
+  return Array.from(new Set(cleaned))
+}
+
+function extractRoleLists(
+  job: any,
+  fallbackRequirements: string[],
+): { responsibilities: string[]; requirements: string[] } {
+  const raw = job?.aiRequirements
+
+  const parsed = (() => {
+    if (!raw) return null
+    if (Array.isArray(raw)) return { requirements: raw.map(String) }
+    if (typeof raw === 'string') {
+      try {
+        const p = JSON.parse(raw)
+        return p
+      } catch {
+        return null
+      }
+    }
+    if (typeof raw === 'object') return raw
+    return null
+  })()
+
+  const responsibilities = (() => {
+    const arr =
+      (parsed && Array.isArray((parsed as any).responsibilities) && (parsed as any).responsibilities) ||
+      (parsed && Array.isArray((parsed as any).responsibility) && (parsed as any).responsibility) ||
+      []
+    return Array.isArray(arr) ? arr.map(String) : []
+  })()
+
+  const requirements = (() => {
+    const arr =
+      (parsed && Array.isArray((parsed as any).requirements) && (parsed as any).requirements) ||
+      (parsed && Array.isArray((parsed as any).bullets) && (parsed as any).bullets) ||
+      null
+    if (arr && Array.isArray(arr)) return arr.map(String)
+    return fallbackRequirements
+  })()
+
+  const normalize = (items: string[]) =>
+    Array.from(
+      new Set(
+        items
+          .map((s) => stripTags(decodeHtmlEntities(String(s))).trim())
+          .filter((s) => s.length > 0),
+      ),
+    )
+
+  return {
+    responsibilities: normalize(responsibilities),
+    requirements: normalize(requirements),
+  }
+}
+
 function extractBenefitsFromAi(raw: any): string[] {
   if (!raw) return []
 
@@ -883,8 +837,15 @@ function buildLocationText(job: any): string {
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
   if (isRemote) {
-    if (job.countryCode) return `Remote (${job.countryCode})`
-    return 'Remote (International)'
+    const cc = typeof job.countryCode === 'string' ? job.countryCode.trim().toUpperCase() : ''
+    if (cc) {
+      const flag =
+        cc.length === 2 && /^[A-Z]{2}$/.test(cc)
+          ? String.fromCodePoint(0x1f1e6 + (cc.charCodeAt(0) - 65), 0x1f1e6 + (cc.charCodeAt(1) - 65))
+          : ''
+      return `${flag ? `${flag} ` : ''}Remote (${cc})`
+    }
+    return '🌍 Remote'
   }
 
   const hasValidCityAndCountry =
@@ -895,13 +856,6 @@ function buildLocationText(job: any): string {
   if (job.locationRaw) return job.locationRaw
   if (job.countryCode) return job.countryCode
   return 'Location not specified'
-}
-
-function getRemoteModeLabel(job: any): 'Remote' | 'Hybrid' | null {
-  const mode = job.remoteMode as 'remote' | 'hybrid' | 'onsite' | null
-  if (mode === 'remote' || job.remote === true) return 'Remote'
-  if (mode === 'hybrid') return 'Hybrid'
-  return null
 }
 
 type InternalLink = { href: string; label: string }
@@ -1104,33 +1058,6 @@ function inferSeniorityFromTitle(title: string): string | null {
   return null
 }
 
-function inferCategoryFromRoleSlug(roleSlug?: string | null): string | null {
-  if (!roleSlug) return null
-  const s = roleSlug.toLowerCase()
-
-  if (s.includes('data')) return 'Data'
-  if (s.includes('ml') || s.includes('machine-learning')) return 'ML / AI'
-  if (s.includes('engineer') || s.includes('developer')) return 'Engineering'
-  if (s.includes('product')) return 'Product'
-  if (s.includes('design')) return 'Design'
-  if (s.includes('ops') || s.includes('operations')) return 'Operations'
-  if (s.includes('sales')) return 'Sales'
-  if (s.includes('marketing')) return 'Marketing'
-  if (s.includes('legal') || s.includes('counsel')) return 'Legal'
-
-  return null
-}
-
-function parseTags(raw?: string | null): string[] {
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : []
-  } catch {
-    return []
-  }
-}
-
 function sanitizeDescriptionHtml(html: string): string {
   // IMPORTANT: decode first so escaped HTML becomes real tags before filtering
   const decoded = decodeHtmlEntities(html || '')
@@ -1184,15 +1111,6 @@ function isLocationValid(
   const detected = detectCountryFromText(locationRaw)
   if (detected && detected !== countryCode.toUpperCase()) return false
   return true
-}
-
-function buildSafeSnippet(job: JobWithCompany): string {
-  const rawDescription =
-    (job as any).descriptionHtml ?? (job as any).description ?? (job as any).body ?? ''
-  const trimmed = stripTags(decodeHtmlEntities(String(rawDescription)))
-    .replace(/\s+/g, ' ')
-    .trim()
-  return trimmed ? truncateText(trimmed, 120) : ''
 }
 
 function formatBenefitPill(benefit: string): string {

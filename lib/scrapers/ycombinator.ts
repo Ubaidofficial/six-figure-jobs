@@ -2,6 +2,7 @@
 
 import axios from 'axios'
 import { upsertBoardJob } from './_boardHelpers'
+import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 
 const BOARD = 'ycombinator'
 const BASE_URL = 'https://www.ycombinator.com'
@@ -41,18 +42,18 @@ async function fetchCompanies(attempt = 1): Promise<any | null> {
 }
 
 export default async function scrapeYCombinator() {
-  try {
-    console.log('▶ Scraping Y Combinator Startup Jobs…')
+  console.log('[YCombinator] Starting scrape...')
 
+  try {
     const data = (await fetchCompanies()) as any
     if (!data) {
-      return { board: BOARD, found: 0, stored: 0, error: 'Failed to fetch YC data' }
+      return { created: 0, updated: 0, skipped: 0, error: 'Failed to fetch YC data' } satisfies ScraperStats
     }
 
     if (!data || !Array.isArray(data.companies)) {
       console.log('YC returned unexpected format for companies:')
       console.log(Object.keys(data || {}))
-      return { board: BOARD, found: 0, stored: 0 }
+      return { created: 0, updated: 0, skipped: 0, error: 'unexpected-format' } satisfies ScraperStats
     }
 
     const companies: any[] = data.companies
@@ -74,8 +75,7 @@ export default async function scrapeYCombinator() {
       'research engineer',
     ]
 
-    let found = 0
-    let stored = 0
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
 
     for (const company of companies) {
       const jobs: any[] = company.jobs || []
@@ -88,8 +88,6 @@ export default async function scrapeYCombinator() {
 
         const isMLJob = mlKeywords.some((kw) => combinedText.includes(kw))
         if (!isMLJob) continue
-
-        found++
 
         // --- Salary estimation (very rough) --------------------
         let minSalary = 100
@@ -123,7 +121,7 @@ export default async function scrapeYCombinator() {
             ? `${BASE_URL}${job.url}`
             : `${BASE_URL}/companies/${company.slug || ''}`
 
-        await upsertBoardJob({
+        const result = await upsertBoardJob({
           board: BOARD,
           externalId: `yc-${job.id}`,
           title,
@@ -133,20 +131,14 @@ export default async function scrapeYCombinator() {
           salaryText,
           remote: location === 'Remote',
         })
-
-        stored++
+        addBoardIngestResult(stats, result)
       }
     }
 
-    console.log(`✅ Y Combinator: Found ${found} AI/ML jobs, upserted ${stored}`)
-
-    return {
-      board: BOARD,
-      found,
-      stored,
-    }
-  } catch (err: any) {
-    console.error('YC scraper error:', err?.message ?? err)
-    return { board: BOARD, found: 0, stored: 0, error: String(err) }
+    console.log(`[YCombinator] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[YCombinator] ❌ Scrape failed:', error)
+    return errorStats(error)
   }
 }

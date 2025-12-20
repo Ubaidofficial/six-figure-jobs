@@ -10,6 +10,8 @@ import { buildSalaryText } from '../../lib/jobs/salary' // ← unified helper
 import { formatRelativeTime } from '../../lib/utils/time'
 import { buildLogoUrl } from '../../lib/companies/logo'
 
+import styles from './JobCard.module.css'
+
 /** Extend queryJobs result with UI-only optional fields */
 export type JobCardJob = JobWithCompany & {
   snippet?: string | null
@@ -24,7 +26,13 @@ export type JobCardJob = JobWithCompany & {
 /* Component                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export default function JobCard({ job }: { job: JobCardJob }) {
+export default function JobCard({
+  job,
+  variant = 'full',
+}: {
+  job: JobCardJob
+  variant?: 'full' | 'compact'
+}) {
   const [logoFailed, setLogoFailed] = useState(false)
   const companyName =
     job.companyRef?.name ?? job.company ?? 'Unknown company'
@@ -47,12 +55,13 @@ export default function JobCard({ job }: { job: JobCardJob }) {
     job.companyRef?.logoUrl ?? job.companyLogo ?? null,
     job.companyRef?.website ?? null,
   )
-  const showLogo = logo && !logoFailed
+  const showLogo = Boolean(logo) && !logoFailed
 
   const companySlug = job.companyRef?.slug ?? null
-  const companySize = job.companyRef?.sizeBucket || null
-  const companyTags = parseJsonArray(job.companyRef?.tagsJson)
+
   const companyDesc = getCompanyBlurb(job.companyRef?.description)
+  const snippet = buildSnippet(job, companyDesc)
+  const techStack = parseJsonArray(job.techStack).slice(0, variant === 'compact' ? 0 : 3)
 
   const location = buildLocation(job)
   const salaryText = buildSalaryText(job) // ← UNIFIED salary logic
@@ -63,210 +72,139 @@ export default function JobCard({ job }: { job: JobCardJob }) {
     isReasonableSalary(job)
       ? salaryText
       : null
-  const snippet = buildSnippet(job, companyDesc)
 
-  const seniority = inferSeniorityFromTitle(job.title)
-  const category = inferCategoryFromRoleSlug(job.roleSlug)
   const remoteMode = getRemoteMode(job)
+  const workType = remoteMode ?? (job.remote === true ? 'Remote' : 'On-site')
 
   const postedLabel = formatRelativeTime(
     job.postedAt ?? job.createdAt ?? job.updatedAt ?? null,
   )
+
   const isNew =
     !!(job.postedAt ?? job.createdAt) &&
-    Date.now() - new Date(job.postedAt ?? job.createdAt as any).getTime() < 1000 * 60 * 60 * 48
-
-  const techStack = parseJsonArray(job.techStack).slice(0, 3)
+    Date.now() - new Date((job.postedAt ?? job.createdAt) as any).getTime() < 1000 * 60 * 60 * 48
 
   return (
     <article
-      className={`group relative rounded-3xl border p-5 transition-all duration-200 focus-within:ring-2 focus-within:ring-emerald-400/70 focus-within:ring-offset-2 focus-within:ring-offset-background ${
-        isFeatured
-          ? 'border-amber-400/50 bg-slate-950/55 ring-1 ring-amber-300/20 hover:-translate-y-0.5 hover:border-amber-300/60 hover:shadow-[0_18px_60px_rgba(251,191,36,0.12)]'
-          : 'border-slate-800/70 bg-slate-950/55 hover:-translate-y-0.5 hover:border-emerald-400/30 hover:shadow-[0_18px_60px_rgba(16,185,129,0.12)]'
+      className={`${styles.card} ${isFeatured ? styles.featured : ''} ${
+        variant === 'compact' ? styles.compact : styles.full
       }`}
     >
-      <div className="flex gap-4">
+      <div className={styles.header}>
         {companySlug ? (
-          <Link
-            href={`/company/${companySlug}`}
-            className="focus-ring mt-0.5 inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900/60 ring-1 ring-slate-800/70"
-          >
-            {showLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logo ?? ''}
-                alt={`${companyName} logo`}
-                className="h-12 w-12 rounded-xl object-contain p-2"
-                onError={() => setLogoFailed(true)}
-              />
-            ) : (
-              <span className="text-xs font-semibold text-slate-200">
-                {companyInitials || '?'}
-              </span>
-            )}
+          <Link href={`/company/${companySlug}`} className={styles.logoLink}>
+            <div className={styles.logoBox} aria-hidden="true">
+              {showLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logo ?? ''}
+                  alt=""
+                  className={styles.logoImg}
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => setLogoFailed(true)}
+                />
+              ) : (
+                <span className={styles.logoFallback}>{companyInitials || '?'}</span>
+              )}
+            </div>
           </Link>
         ) : (
-          <div className="mt-0.5 inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900/60 ring-1 ring-slate-800/70">
+          <div className={styles.logoBox} aria-hidden="true">
             {showLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logo ?? ''}
-                alt={`${companyName} logo`}
-                className="h-12 w-12 rounded-xl object-contain p-2"
+                alt=""
+                className={styles.logoImg}
+                loading="lazy"
+                decoding="async"
                 onError={() => setLogoFailed(true)}
               />
             ) : (
-              <span className="text-xs font-semibold text-slate-200">
-                {companyInitials || '?'}
-              </span>
+              <span className={styles.logoFallback}>{companyInitials || '?'}</span>
             )}
           </div>
         )}
 
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <h3 className="line-clamp-2 text-base font-semibold text-slate-50">
-                <Link
-                  href={buildJobSlugHref(job)}
-                  className="focus-ring rounded-md text-slate-50 transition-colors hover:text-white"
-                >
-                  {job.title}
-                </Link>
-              </h3>
+        <div className={styles.main}>
+          <h3 className={styles.title}>
+            <Link href={buildJobSlugHref(job)} className={styles.titleLink}>
+              {job.title}
+            </Link>
+          </h3>
 
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-300">
-                {companySlug ? (
-                  <Link
-                    href={`/company/${companySlug}`}
-                    className="focus-ring rounded-md font-medium text-slate-200 hover:text-white hover:underline"
-                  >
-                    {companyName}
-                  </Link>
-                ) : (
-                  <span className="font-medium text-slate-200">{companyName}</span>
-                )}
-
-                {companySize && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-xs text-slate-400">
-                      {companySize} employees
-                    </span>
-                  </>
-                )}
-
-                {companyTags.length > 0 && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-xs text-slate-400">
-                      {companyTags.slice(0, 2).join(' • ')}
-                    </span>
-                  </>
-                )}
-              </div>
-
-              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
-                {remoteMode && <span>{remoteMode}</span>}
-                {location && (
-                  <>
-                    {remoteMode && <span className="text-slate-600">•</span>}
-                    <span>{location}</span>
-                  </>
-                )}
-                {job.type && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span>{job.type}</span>
-                  </>
-                )}
-                {category && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span>{category}</span>
-                  </>
-                )}
-                {seniority && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span>{seniority}</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-start gap-2 sm:items-end">
-              {salaryDisplay ? (
-                <div className="inline-flex rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 font-mono text-lg font-semibold text-emerald-200">
-                  {salaryDisplay}
-                </div>
-              ) : (
-                <div className="text-xs text-slate-500">Salary disclosed in posting</div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-2">
-                {salaryDisplay && (
-                  <StatusPill tone="success">VERIFIED SALARY</StatusPill>
-                )}
-                {isNew && <StatusPill tone="neutral">NEW</StatusPill>}
-                {isFeatured && <StatusPill tone="warning">FEATURED</StatusPill>}
-              </div>
-            </div>
+          <div className={styles.companyRow}>
+            {companySlug ? (
+              <Link href={`/company/${companySlug}`} className={styles.companyLink}>
+                {companyName}
+              </Link>
+            ) : (
+              <span className={styles.companyName}>{companyName}</span>
+            )}
           </div>
 
-          {snippet && (
-            <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-slate-300">
-              {snippet}
-            </p>
-          )}
-
-          {techStack.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              {techStack.map((tech) => (
-                <span
-                  key={tech}
-                  className="rounded-full bg-slate-900/60 px-3 py-1 text-slate-300 ring-1 ring-slate-800/70"
-                >
-                  {tech}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/60 pt-4">
-            <p className="text-xs text-slate-400">
-              Apply on company site
-              {postedLabel ? (
-                <>
-                  <span className="text-slate-600"> • </span>
-                  Posted {postedLabel}
-                </>
-              ) : null}
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {isValidUrl(job.companyRef?.website) && (
-                <a
-                  href={cleanUrl(job.companyRef!.website!)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="focus-ring inline-flex h-11 items-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
-                >
-                  Company site
-                </a>
-              )}
-              {companySlug && (
-                <Link
-                  href={`/company/${companySlug}`}
-                  className="focus-ring inline-flex h-11 items-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
-                >
-                  More roles
-                </Link>
-              )}
-            </div>
+          <div className={styles.badges}>
+            {location ? <span className={styles.badge}>{location}</span> : null}
+            {workType ? (
+              <span className={`${styles.badge} ${styles.badgeAccent}`}>{workType}</span>
+            ) : null}
           </div>
         </div>
+
+        <div className={styles.side}>
+          {salaryDisplay ? (
+            <div className={styles.salary} aria-label={`Minimum salary ${salaryDisplay}`}>
+              Minimum: {salaryDisplay}
+            </div>
+          ) : (
+            <div className={styles.salaryPlaceholder}>Salary listed in posting</div>
+          )}
+
+          <div className={styles.pills}>
+            {salaryDisplay ? <StatusPill tone="success">Salary verified</StatusPill> : null}
+            {isNew ? <StatusPill tone="neutral">NEW</StatusPill> : null}
+            {isFeatured ? <StatusPill tone="warning">FEATURED</StatusPill> : null}
+          </div>
+        </div>
+      </div>
+
+      {variant === 'full' && snippet ? (
+        <p className={styles.snippet}>{snippet}</p>
+      ) : null}
+
+      {variant === 'full' && techStack.length > 0 ? (
+        <div className={styles.techStack} aria-label="Tech stack">
+          {techStack.map((tech) => (
+            <span key={tech} className={styles.techChip}>
+              {tech}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <div className={styles.footer}>
+        <span className={styles.footerText}>{postedLabel ? `Posted ${postedLabel}` : 'Recently posted'}</span>
+
+        {variant === 'full' ? (
+          <div className={styles.footerActions}>
+            {isValidUrl(job.companyRef?.website) ? (
+              <a
+                href={cleanUrl(job.companyRef!.website!)}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.actionLink}
+              >
+                Company site
+              </a>
+            ) : null}
+            {companySlug ? (
+              <Link href={`/company/${companySlug}`} className={styles.actionLink}>
+                Explore roles
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   )
@@ -283,17 +221,19 @@ function StatusPill({
   children: ReactNode
   tone?: 'neutral' | 'success' | 'warning'
 }) {
-  const base =
-    'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ring-1'
-
-  const classes =
-    tone === 'success'
-      ? `${base} bg-emerald-500/10 text-emerald-300 ring-emerald-500/20`
-      : tone === 'warning'
-      ? `${base} bg-amber-500/10 text-amber-300 ring-amber-500/20`
-      : `${base} bg-slate-900/60 text-slate-200 ring-slate-800/70`
-
-  return <span className={classes}>{children}</span>
+  return (
+    <span
+      className={`${styles.pill} ${
+        tone === 'success'
+          ? styles.pillSuccess
+          : tone === 'warning'
+          ? styles.pillWarning
+          : styles.pillNeutral
+      }`}
+    >
+      {children}
+    </span>
+  )
 }
 
 /* -------------------------------------------------------------------------- */

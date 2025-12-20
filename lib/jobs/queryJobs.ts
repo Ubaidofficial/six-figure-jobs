@@ -218,7 +218,13 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
     typeof filters.maxAnnual === 'number' &&
     filters.maxAnnual > 0
   ) {
-    where.maxAnnual = { lte: BigInt(filters.maxAnnual) }
+    const max = BigInt(filters.maxAnnual)
+    addAnd({
+      OR: [
+        { maxAnnual: { lte: max } },
+        { maxAnnual: null, minAnnual: { lte: max } },
+      ],
+    })
   }
 
   // IMPORTANT: do NOT overwrite where.postedAt (it breaks the base OR)
@@ -282,13 +288,7 @@ export function buildHighSalaryEligibilityWhere(): Prisma.JobWhereInput {
     currency,
     OR: [
       { minAnnual: { gte: threshold } },
-      {
-        AND: [
-          { minAnnual: { not: null } },
-          { minAnnual: { gte: BigInt(90_000) } }, // buffer
-          { maxAnnual: { gte: threshold } },
-        ],
-      },
+      { maxAnnual: { gte: threshold } },
     ]
   }))
 

@@ -5,6 +5,7 @@ import puppeteer, { Browser, Page } from 'puppeteer'
 import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
 import type { ScrapedJobInput, IngestStats } from '../ingest/types'
+import type { ScraperStats } from './scraperStats'
 
 // =============================================================================
 // Constants
@@ -65,8 +66,8 @@ interface ParsedJob {
 // Scraper Functions
 // =============================================================================
 
-export default async function scrapeRemote100k(): Promise<IngestStats> {
-  console.log(`[${BOARD_NAME}] Starting scrape...`)
+export default async function scrapeRemote100k(): Promise<ScraperStats> {
+  console.log('[Remote100k] Starting scrape...')
   
   const stats: IngestStats = {
     created: 0,
@@ -150,8 +151,12 @@ export default async function scrapeRemote100k(): Promise<IngestStats> {
     }
   }
 
-  console.log(`[${BOARD_NAME}] Scrape complete:`, stats)
-  return stats
+  console.log(`[Remote100k] ✓ Scraped ${stats.created} jobs`)
+  return {
+    created: stats.created,
+    updated: stats.updated + stats.upgraded,
+    skipped: stats.skipped + stats.errors,
+  }
 }
 
 async function scrapeListingPage(

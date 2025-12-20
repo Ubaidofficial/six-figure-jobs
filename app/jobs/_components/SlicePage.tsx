@@ -210,7 +210,7 @@ export function SlicePage({ slice, data }: Props) {
                 Verified companies
               </span>
               <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
-                Updated daily
+                Refreshed daily
               </span>
             </div>
           </div>
@@ -219,13 +219,13 @@ export function SlicePage({ slice, data }: Props) {
               href="#jobs"
               className="inline-flex flex-1 items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500"
             >
-              Browse $100k+ jobs
+              Explore $100k+ opportunities
             </Link>
             <Link
               href="/jobs/100k-plus"
               className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-slate-500"
             >
-              View all $100k+ →
+              Explore all $100k+ →
             </Link>
           </div>
         </div>
@@ -294,7 +294,7 @@ export function SlicePage({ slice, data }: Props) {
         )}
         {jobs.length === 0 ? (
           <p className="py-4 text-sm text-slate-400">
-            No jobs found for this slice yet. Try another salary band or region below.
+            No jobs found. Try another salary band, region, or explore all $100k+ opportunities.
           </p>
         ) : (
           <JobList jobs={jobs} />

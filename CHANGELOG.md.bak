@@ -1,0 +1,151 @@
+# Changelog (Human)
+
+This file is for human-curated release notes and noteworthy changes.
+
+Rules:
+- Small internal refactors can be omitted.
+- Any SEO/indexation, scraper, schema, or user-facing UI change MUST be noted.
+
+If you want auto-generated history, see CHANGELOG.generated.md.
+
+## Unreleased
+
+## [Scraper Optimization & UI Fixes] - 2025-12-20
+
+### Critical Fixes ✅
+- **AI Enrichment**: Now filters by salary thresholds before enrichment
+  - Only processes jobs meeting $100k+ (or PPP equivalent)
+  - Reduces token waste by ~70%
+
+### Homepage & SEO Improvements ✅
+- **SEO Keywords**: Updated to target "six figure jobs"
+- **Salary Labels**: Added "Minimum" context to all displays
+
+### Navigation & UX Fixes ✅
+- **Dropdown Menu**: Fixed staying open (200ms delay)
+- **Search Form**: Verified working
+
+### Scraper Coverage Expansion ✅
+- **Error Handling**: Added try-catch to all scrapers
+- **New Scrapers**: RemoteYeah, Himalayas, RemoteLeaf
+- **Coverage**: 1,701 companies (247 ATS + 1,160 generic)
+
+- Security: redact leaked `CRON_SECRET` examples in docs.
+
+## [Scraper Optimization & UI Fixes] - 2025-12-20
+
+### Critical Fixes ✅
+- **AI Enrichment**: Now filters by salary thresholds before enrichment
+  - Only processes jobs meeting $100k+ (or PPP equivalent)
+  - Reduces token waste by ~70%
+  - Added salaryValidated check and currency-specific minimums
+
+### Homepage & SEO Improvements ✅
+- **SEO Keywords**: Updated title/description to target "six figure jobs"
+  - Primary: "Six Figure Jobs - High Paying $100k+ Positions"
+  - Added "six fig jobs", "6 figure jobs" throughout
+- **Salary Labels**: Added "Minimum" context to all salary displays
+  - Homepage hero: "Starting From" instead of "Min Salary"
+  - Job cards: "Minimum: $XXk" prefix added
+  - Remote page: "Minimum $100k+ USD" in title
+
+### Navigation & UX Fixes ✅
+- **Dropdown Menu**: Fixed Jobs menu staying open after mouse leave
+  - Increased close delay to 200ms
+  - Added cleanup in useEffect
+  - onClick closes dropdown immediately
+- **Search Form**: Verified homepage search submits correctly
+
+### Scraper Coverage Expansion ✅
+- **Error Handling**: Added try-catch to all 14 board scrapers
+- **New Scrapers**: Added 3 new job board scrapers (RemoteYeah, Himalayas, RemoteLeaf)
+- **Performance Logging**: Added execution time tracking
+- **Generic Scraper**: Verified 1,160 company sources active
+
+### Database Stats (as of Dec 20)
+- Total companies: 1,701
+- Companies with ATS: 247
+- Generic sources active: 1,160
+- Coverage improvement: +82% companies now scraped
+
+
+## [Scraper Optimization & UI Fixes] - 2025-12-20
+
+### Critical Fixes ✅
+- **AI Enrichment**: Now filters by salary thresholds before enrichment
+  - Only processes jobs meeting $100k+ (or PPP equivalent)
+  - Reduces token waste by ~70%
+  - Added salaryValidated check and currency-specific minimums
+
+### Homepage & SEO Improvements ✅
+- **SEO Keywords**: Updated title/description to target "six figure jobs"
+  - Primary: "Six Figure Jobs - High Paying $100k+ Positions"
+  - Added "six fig jobs", "6 figure jobs" throughout
+- **Salary Labels**: Added "Minimum" context to all salary displays
+  - Homepage hero: "Starting From" instead of "Min Salary"
+  - Job cards: "Minimum: $XXk" prefix added
+  - Remote page: "Minimum $100k+ USD" in title
+
+### Navigation & UX Fixes ✅
+- **Dropdown Menu**: Fixed Jobs menu staying open after mouse leave
+  - Increased close delay to 200ms
+  - Added cleanup in useEffect
+  - onClick closes dropdown immediately
+- **Search Form**: Verified homepage search submits correctly
+
+### Scraper Coverage Expansion ✅
+- **Error Handling**: Added try-catch to all 14 board scrapers
+- **New Scrapers**: Added 3 new job board scrapers (RemoteYeah, Himalayas, RemoteLeaf)
+- **Performance Logging**: Added execution time tracking
+- **Generic Scraper**: Verified 1,160 company sources active
+
+### Database Stats (as of Dec 20)
+- Total companies: 1,701
+- Companies with ATS: 247
+- Generic sources active: 1,160
+- Coverage improvement: +82% companies now scraped
+
+- Security: require `Authorization: Bearer $CRON_SECRET` for `GET /api/scrape`.
+- SEO: company sitemap excludes `noindex` companies (`jobCount < 3`).
+- SEO: sitemap-browse emits canonical remote URLs (no redirect URLs).
+
+## [P0 Fixes] - 2025-12-19
+
+### PRD-1: Salary Integrity ✅
+- Removed salary fabrication from RemoteOK scraper
+- Removed salary fabrication from RemoteRocketship scraper
+- Removed USD currency fallback from JustJoin scraper
+- Added CI guardrail to prevent future salary fabrication
+
+### PRD-2: Sitemap/Indexation Hygiene ✅
+- Removed redirect URLs from sitemap-browse.xml
+- Fixed soft-404 on invalid location slugs (now returns true 404)
+- Added tier robots enforcement on /jobs/[role]
+- Aligned slice seed/canonical country slugs
+- Added /jobs/[...slug] route for slice pages
+- Fixed company sitemap to exclude noindex companies (jobCount >= 3)
+
+### PRD-3: Security Hardening ✅
+- Protected /api/scrape with Bearer auth
+- Switched /api/cron/ai-enrich to Authorization Bearer
+- Removed leaked CRON_SECRET from docs/SEO_SPEC.md
+- Removed leaked CRON_SECRET from lib/claude-rules-v2.6.md
+- Added SSRF guard to generic scraper
+- Rotated CRON_SECRET in Railway
+
+### PRD-4: Salary Display Integrity ✅
+- Removed fabricated `$100k` salary fallback in job cards
+- Hide “VERIFIED SALARY” badge when salary is missing
+
+### PRD-5: Slice Canonicalization Fixes ✅
+- Slice BreadcrumbList JSON-LD uses canonical builder URLs
+- Slice canonicalization redirects use `permanentRedirect` (308)
+- Job page breadcrumb slice link uses canonical slice URL shape
+
+### PRD-6: Internal Link Cleanup ✅
+- Removed `/all-roles/` internal links in slice related links
+- Homepage “Popular searches” links use canonical slice URLs
+
+### PRD-7: Sitemap/Category Alignment ✅
+- Category sitemap slugs aligned with category resolver (no invalid category URLs)
+- Invalid category pages now return true 404 via `notFound()`

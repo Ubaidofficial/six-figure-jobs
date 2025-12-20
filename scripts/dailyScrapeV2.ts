@@ -28,6 +28,9 @@ import scrapeRemote100k from '../lib/scrapers/remote100k'
 import scrapeRemoteRocketship from '../lib/scrapers/remoterocketship'
 import scrapeGenericSources from '../lib/scrapers/generic'
 import scrapeRemoteAI from '../lib/scrapers/remoteai'
+import scrapeRemoteYeah from '../lib/scrapers/remoteyeah'
+import scrapeHimalayas from '../lib/scrapers/himalayas'
+import scrapeRemoteLeaf from '../lib/scrapers/remoteleaf'
 
 // New board scrapers (named exports)
 import { scrapeRealWorkFromAnywhere } from '../lib/scrapers/realworkfromanywhere'
@@ -133,49 +136,71 @@ async function runBoardScrapers(options: CliOptions) {
   await seedGenericSourcesForNonAts()
 
   // Ordered so we hit “core” boards first
-  const allScrapers: Array<[string, () => Promise<unknown>]> = [
-    ['RemoteOK', scrapeRemoteOK],
-    ['WeWorkRemotely', scrapeWeWorkRemotely],
-    ['NoDesk', scrapeNodesk],
-    ['BuiltIn', scrapeBuiltIn],
-    ['Remote100k', scrapeRemote100k],
-    ['RemoteRocketship', scrapeRemoteRocketship],
-    ['RealWorkFromAnywhere', scrapeRealWorkFromAnywhere],
-    ['JustJoin', scrapeJustJoin],
-    ['RemoteOtter', scrapeRemoteOtter],
-    ['Trawle', scrapeTrawle],
-    ['FourDayWeek', scrapeFourDayWeek],
-    ['Remotive', scrapeRemotive],
-    ['YCombinator', scrapeYCombinator],
-    ['RemoteAI (companies only)', scrapeRemoteAI],
-    ['GenericSources', scrapeGenericSources],
-  ]
+	  const allScrapers: Array<[string, () => Promise<unknown>]> = [
+	    ['RemoteOK', scrapeRemoteOK],
+	    ['WeWorkRemotely', scrapeWeWorkRemotely],
+	    ['NoDesk', scrapeNodesk],
+	    ['BuiltIn', scrapeBuiltIn],
+	    ['Remote100k', scrapeRemote100k],
+	    ['RemoteRocketship', scrapeRemoteRocketship],
+	    ['Himalayas', scrapeHimalayas],
+	    ['RemoteLeaf', scrapeRemoteLeaf],
+	    ['RealWorkFromAnywhere', scrapeRealWorkFromAnywhere],
+	    ['JustJoin', scrapeJustJoin],
+	    ['RemoteOtter', scrapeRemoteOtter],
+	    ['Trawle', scrapeTrawle],
+	    ['FourDayWeek', scrapeFourDayWeek],
+	    ['Remotive', scrapeRemotive],
+	    ['YCombinator', scrapeYCombinator],
+	    ['RemoteYeah', scrapeRemoteYeah],
+	    ['RemoteAI (companies only)', scrapeRemoteAI],
+	    ['GenericSources', scrapeGenericSources],
+	  ]
 
   // In fast mode, skip the slower / more experimental scrapers
-  const scrapers = fast
-    ? allScrapers.filter(([name]) =>
-        [
-          'RemoteOK',
-          'WeWorkRemotely',
-          'Remote100k',
-          'RemoteRocketship',
-          'RealWorkFromAnywhere',
-          'JustJoin',
-          'FourDayWeek',
-        ].includes(name),
-      )
-    : allScrapers
+	  const scrapers = fast
+	    ? allScrapers.filter(([name]) =>
+	        [
+	          'RemoteOK',
+	          'WeWorkRemotely',
+	          'Remote100k',
+	          'RemoteRocketship',
+	          'Himalayas',
+	          'RemoteLeaf',
+	          'RealWorkFromAnywhere',
+	          'JustJoin',
+	          'FourDayWeek',
+	          'RemoteYeah',
+	          'RemoteAI (companies only)',
+	          'GenericSources',
+	        ].includes(name),
+	      )
+	    : allScrapers
 
-  await runWithConcurrency(
-    scrapers,
-    options.concurrency,
-    async ([name, fn]) => {
-      console.log(`▶ ${name}…`)
-      await fn()
-      console.log(`   ✅ ${name} done.\n`)
-    },
-  )
-}
+	  await runWithConcurrency(scrapers, options.concurrency, async ([name, fn]) => {
+	    console.log(`\n▶ Running ${name}…`)
+	    const startTime = Date.now()
+
+	    try {
+	      const result = (await fn()) as any
+	      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+
+	      const created = Number(result?.created ?? 0)
+	      const skipped = Number(result?.skipped ?? 0)
+	      const error = result?.error
+
+	      if (error) {
+	        console.log(`   ❌ ${name} failed: ${error}`)
+	      } else {
+	        console.log(`   ✓ ${name}: ${created} created, ${skipped} skipped (${elapsed}s)`)
+	      }
+	    } catch (err) {
+	      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+	      console.error(`   ❌ ${name} crashed:`, err)
+	      console.log(`   Time: ${elapsed}s`)
+	    }
+	  })
+	}
 
 async function runAtsScrapers() {
   console.log('🏢 Running ATS scrapers…\n')

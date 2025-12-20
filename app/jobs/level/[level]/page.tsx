@@ -113,7 +113,7 @@ export default async function LevelPage({
       <p className="mb-6 text-sm text-slate-300">{info.description}</p>
 
       {jobs.length === 0 ? (
-        <p className="text-slate-400">No jobs found.</p>
+        <p className="text-slate-400">No jobs found. Try exploring all $100k+ opportunities.</p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}

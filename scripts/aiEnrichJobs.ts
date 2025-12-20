@@ -50,6 +50,16 @@ async function main() {
       where: {
         isExpired: false,
         aiOneLiner: null,
+        salaryValidated: true,
+        OR: [
+          { currency: 'USD', minAnnual: { gte: BigInt(100_000) } },
+          { currency: 'GBP', minAnnual: { gte: BigInt(75_000) } },
+          { currency: 'EUR', minAnnual: { gte: BigInt(80_000) } },
+          { currency: 'CAD', minAnnual: { gte: BigInt(120_000) } },
+          { currency: 'AUD', minAnnual: { gte: BigInt(140_000) } },
+          { currency: 'CHF', minAnnual: { gte: BigInt(90_000) } },
+          { currency: 'SGD', minAnnual: { gte: BigInt(130_000) } },
+        ],
       },
       orderBy: { createdAt: 'desc' },
       take: Math.min(pageSize, maxJobsPerRun - processed),

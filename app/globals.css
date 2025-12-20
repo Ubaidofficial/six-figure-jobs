@@ -3,6 +3,7 @@
 /* -------------------------------------------------------------------------- */
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import "../src/styles/globals.css";
 
 /* -------------------------------------------------------------------------- */
 /* TAILWIND LAYERS                                                            */
@@ -194,9 +195,11 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-primary);
     font-feature-settings: "rlig" 1, "calt" 1;
-    line-height: 1.65;
+    line-height: var(--leading-normal);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
   }

@@ -1,195 +1,33 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
-import JobCard from '../../components/JobCard'
-import { getSiteUrl } from '../../../lib/seo/site'
 
-export const revalidate = 300
+import { queryJobs } from '@/lib/jobs/queryJobs'
+import { SALARY_TIERS } from '@/lib/jobs/salaryTiers'
+
+import { SalaryTierTemplate, buildSalaryTierMetadata } from '../_components/SalaryTierTemplate'
+
 export const dynamic = 'force-dynamic'
+export const revalidate = 600
 
-const MIN_SALARY = 300_000
-const SITE_URL = getSiteUrl()
+type SearchParams = Record<string, string | string[] | undefined>
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { total } = await queryJobs({ minAnnual: MIN_SALARY, pageSize: 1 })
-
-  const title =
-    total > 0
-      ? `$300k+ Tech Jobs - ${total.toLocaleString()} Principal Positions | Six Figure Jobs`
-      : '$300k+ Tech Jobs | Six Figure Jobs'
-
-  const description =
-    total > 0
-      ? `Find ${total.toLocaleString()} principal engineer and lead roles paying $300k+. Top-tier compensation at elite tech companies. Updated daily.`
-      : 'Principal engineer and lead roles with $300k+ compensation packages.'
-
-  return {
-    title,
-    description,
-    alternates: { canonical: `${SITE_URL}/jobs/300k-plus` },
-    openGraph: {
-      title,
-      description,
-      url: `${SITE_URL}/jobs/300k-plus`,
-      siteName: 'Six Figure Jobs',
-      type: 'website',
-      images: [
-        {
-          url: `${SITE_URL}/og-300k.png`,
-          width: 1200,
-          height: 630,
-          alt: '$300k+ Tech Jobs',
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [`${SITE_URL}/og-300k.png`],
-    },
-  }
-}
-
-export default async function Jobs300kPage() {
-  const { jobs, total } = await queryJobs({
-    minAnnual: MIN_SALARY,
-    pageSize: 40,
+  const tier = SALARY_TIERS['300k-plus']
+  const { total } = await queryJobs({
+    page: 1,
+    pageSize: 1,
+    currency: 'USD',
+    minAnnual: tier.minAnnualUsd,
+    ...(tier.maxAnnualUsd ? { maxAnnual: tier.maxAnnualUsd } : {}),
   })
 
-  const typedJobs = jobs as JobWithCompany[]
-
-  return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
-        <ol className="flex items-center gap-1">
-          <li>
-            <Link href="/">Home</Link>
-          </li>
-          <li className="px-1">/</li>
-          <li>$300k+ jobs</li>
-        </ol>
-      </nav>
-
-      <h1 className="mb-1 text-2xl font-semibold text-slate-50">
-        $300k+ Tech Jobs ({total.toLocaleString()})
-      </h1>
-      <p className="mb-6 text-sm text-slate-300">
-        Principal and lead-level roles with $300k+ compensation. Remote, hybrid, and on-site openings from verified companies, refreshed daily. Six-figure executive-track jobs for staff/principal engineers, EMs, and product leads.
-      </p>
-
-      <section className="mb-8 grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-            Principal &amp; lead roles
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            <Link href="/jobs/staff-software-engineer/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              Staff/Principal Engineer $300k+
-            </Link>
-            <Link href="/jobs/engineering-manager/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              Eng Manager $300k+
-            </Link>
-            <Link href="/jobs/product-manager/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              Product Lead $300k+
-            </Link>
-            <Link href="/jobs/ml-engineer/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              ML/AI $300k+
-            </Link>
-          </div>
-        </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-            Salary guides
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            <Link href="/salary/software-engineer?band=300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              Software Engineer $300k+ guide
-            </Link>
-            <Link href="/salary/staff-software-engineer?band=300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              Staff Engineer $300k+ guide
-            </Link>
-            <Link href="/salary/engineering-manager?band=300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              Eng Manager $300k+ guide
-            </Link>
-          </div>
-        </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-            Top regions for $300k+
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            <Link href="/jobs/software-engineer/us/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              US $300k+ roles
-            </Link>
-            <Link href="/jobs/software-engineer/remote/us-only/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              Remote (US-only) $300k+
-            </Link>
-            <Link href="/jobs/software-engineer/remote/global/300k-plus" className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600">
-              Global remote $300k+
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {typedJobs.length === 0 ? (
-        <p className="text-slate-400">No jobs found.</p>
-      ) : (
-        <>
-          <p className="mb-3 text-[11px] text-slate-400">
-            Showing {typedJobs.length} most recent roles.
-          </p>
-          <div className="space-y-3">
-            {typedJobs.map((job) => (
-              <JobCard key={job.id} job={job as any} />
-            ))}
-          </div>
-        </>
-      )}
-
-      <section className="mt-12 rounded-xl border border-slate-800 bg-slate-950/50 p-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">
-          Related Searches
-        </h2>
-        <div className="grid gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
-          <Link
-            href="/jobs/level/lead"
-            className="text-blue-400 hover:underline"
-          >
-            Lead &amp; Principal Jobs
-          </Link>
-          <Link
-            href="/jobs/category/engineering"
-            className="text-blue-400 hover:underline"
-          >
-            Engineering Jobs $300k+
-          </Link>
-          <Link
-            href="/jobs/country/united-states"
-            className="text-blue-400 hover:underline"
-          >
-            $300k+ Jobs in USA
-          </Link>
-          <Link
-            href="/jobs/400k-plus"
-            className="text-blue-400 hover:underline"
-          >
-            $400k+ Tech Jobs
-          </Link>
-          <Link
-            href="/jobs/200k-plus"
-            className="text-blue-400 hover:underline"
-          >
-            $200k+ Tech Jobs
-          </Link>
-          <Link
-            href="/jobs/100k-plus"
-            className="text-blue-400 hover:underline"
-          >
-            All $100k+ Jobs
-          </Link>
-        </div>
-      </section>
-    </main>
-  )
+  return buildSalaryTierMetadata('300k-plus', total)
 }
+
+export default function Jobs300kPlusPage({
+  searchParams,
+}: {
+  searchParams?: Promise<SearchParams>
+}) {
+  return <SalaryTierTemplate tierId="300k-plus" searchParams={searchParams} />
+}
+

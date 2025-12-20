@@ -1,5 +1,6 @@
 // lib/scrapers/justjoin.ts
 import { upsertBoardJob } from './_boardHelpers'
+import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 
 const BOARD = 'justjoin'
 const OFFERS_API = 'https://justjoin.it/api/offers' // primary API
@@ -55,63 +56,65 @@ async function fetchOffers(): Promise<JustJoinOffer[]> {
 }
 
 export async function scrapeJustJoin() {
-  console.log(`▶ Scraping ${BOARD}…`)
+  console.log('[JustJoin] Starting scrape...')
 
-  const offers = await fetchOffers()
-  console.log(`  Got ${offers.length} offers from API`)
+  try {
+    const offers = await fetchOffers()
+    console.log(`  Got ${offers.length} offers from API`)
 
-  let created = 0
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
 
-  for (const offer of offers) {
-    try {
-      const id = String(offer.id)
-      const company = offer.company_name || 'Unknown company'
-      const title = offer.title || 'Untitled role'
+    for (const offer of offers) {
+      try {
+        const id = String(offer.id)
+        const company = offer.company_name || 'Unknown company'
+        const title = offer.title || 'Untitled role'
 
-      const city = offer.city || ''
-      const country = offer.country_code || ''
-      const location =
-        city && country
-          ? `${city}, ${country}`
-          : city || country || null
+        const city = offer.city || ''
+        const country = offer.country_code || ''
+        const location = city && country ? `${city}, ${country}` : city || country || null
 
-      // Salary: take first employment_type with salary
-      let salaryText: string | null = null
-      const salary =
-        offer.employment_types?.find((et) => et.salary)?.salary || null
-      if ((salary?.from || salary?.to) && salary.currency) {
-        const cur = salary.currency
-        const from = salary.from ?? null
-        const to = salary.to ?? null
-        const period = salary.period || 'month'
-        if (from && to) {
-          salaryText = `${cur} ${from.toLocaleString()}–${to.toLocaleString()} / ${period}`
-        } else if (from) {
-          salaryText = `${cur} ${from.toLocaleString()}+ / ${period}`
-        } else if (to) {
-          salaryText = `up to ${cur} ${to.toLocaleString()} / ${period}`
+        // Salary: take first employment_type with salary
+        let salaryText: string | null = null
+        const salary = offer.employment_types?.find((et) => et.salary)?.salary || null
+        if ((salary?.from || salary?.to) && salary.currency) {
+          const cur = salary.currency
+          const from = salary.from ?? null
+          const to = salary.to ?? null
+          const period = salary.period || 'month'
+          if (from && to) {
+            salaryText = `${cur} ${from.toLocaleString()}–${to.toLocaleString()} / ${period}`
+          } else if (from) {
+            salaryText = `${cur} ${from.toLocaleString()}+ / ${period}`
+          } else if (to) {
+            salaryText = `up to ${cur} ${to.toLocaleString()} / ${period}`
+          }
         }
+
+        const offerSlug = offer.slug || id
+        const applyUrl = `https://justjoin.it/offers/${offerSlug}`
+
+        const result = await upsertBoardJob({
+          board: BOARD,
+          externalId: id,
+          title,
+          company,
+          applyUrl,
+          location,
+          salaryText,
+          remote: offer.workplace_type === 'remote' || offer.remote === true,
+        })
+        addBoardIngestResult(stats, result)
+      } catch (err) {
+        console.error('    ❌ Error on JustJoin offer', offer, err)
+        stats.skipped++
       }
-
-      const offerSlug = offer.slug || id
-      const applyUrl = `https://justjoin.it/offers/${offerSlug}`
-
-      await upsertBoardJob({
-        board: BOARD,
-        externalId: id,
-        title,
-        company,
-        applyUrl,
-        location,
-        salaryText,
-        remote:
-          offer.workplace_type === 'remote' || offer.remote === true,
-      })
-      created++
-    } catch (err) {
-      console.error('    ❌ Error on JustJoin offer', offer, err)
     }
-  }
 
-  console.log(`✅ ${BOARD}: upserted ${created} jobs`)
+    console.log(`[JustJoin] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[JustJoin] ❌ Scrape failed:', error)
+    return errorStats(error)
+  }
 }

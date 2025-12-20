@@ -1,0 +1,173 @@
+.page {
+  background: var(--color-bg-0);
+  color: var(--color-text-0);
+}
+
+.section {
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: 0 var(--space-16) var(--space-64);
+}
+
+.sectionHeader {
+  margin-top: var(--space-40);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-16);
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-2xl);
+  color: var(--color-text-0);
+}
+
+.sectionSub {
+  margin-top: 6px;
+  font-size: var(--text-sm);
+  color: var(--color-text-1);
+  line-height: var(--line-height-relaxed);
+}
+
+.roleGrid {
+  margin-top: var(--space-24);
+  display: grid;
+  gap: var(--space-16);
+  grid-template-columns: 1fr;
+}
+
+.roleCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: var(--space-20);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 20, 0.9);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: var(--color-text-0);
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    background 200ms ease;
+}
+
+.roleCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(132, 204, 22, 0.35);
+  box-shadow: var(--shadow-md-glow);
+  background: rgba(31, 31, 31, 0.95);
+}
+
+.roleLeft {
+  min-width: 0;
+}
+
+.roleName {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--color-text-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roleMeta {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--color-text-2);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(10, 10, 10, 0.22);
+  color: var(--color-text-1);
+  font-family: var(--font-mono);
+}
+
+.arrow {
+  flex: 0 0 auto;
+  color: rgba(132, 204, 22, 0.9);
+  font-weight: var(--font-weight-semibold);
+}
+
+.why {
+  margin-top: var(--space-48);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 20, 0.85);
+  padding: var(--space-24);
+  box-shadow: var(--shadow-sm);
+}
+
+.whyTitle {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-0);
+}
+
+.whyList {
+  margin-top: var(--space-16);
+  display: grid;
+  gap: var(--space-12);
+  color: var(--color-text-1);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.checkDot {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(132, 204, 22, 0.14);
+  border: 1px solid rgba(132, 204, 22, 0.28);
+  color: rgba(132, 204, 22, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.empty {
+  margin-top: var(--space-24);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 20, 0.85);
+  padding: var(--space-24);
+  color: var(--color-text-1);
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 640px) {
+  .roleGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .roleGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+

@@ -1,6 +1,7 @@
 // lib/scrapers/trawle.ts
 import * as cheerio from 'cheerio'
 import { upsertBoardJob } from './_boardHelpers'
+import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 
 const BOARD = 'trawle'
 const BASE_URL = 'https://trawle.com'
@@ -29,28 +30,29 @@ function absolute(url: string): string {
   return `${BASE_URL}${url}`
 }
 
-export async function scrapeTrawle(): Promise<void> {
-  console.log(`▶ Scraping ${BOARD}…`)
+export async function scrapeTrawle(): Promise<ScraperStats> {
+  console.log('[Trawle] Starting scrape...')
 
-  let html: string | null = null
-  for (const url of [JOBS_URL, ...FALLBACK_URLS]) {
-    try {
-      html = await fetchHtml(url)
-      break
-    } catch (err) {
-      console.warn(`[${BOARD}] Failed ${url}: ${(err as any)?.message ?? err}`)
+  try {
+    let html: string | null = null
+    for (const url of [JOBS_URL, ...FALLBACK_URLS]) {
+      try {
+        html = await fetchHtml(url)
+        break
+      } catch (err) {
+        console.warn(`[${BOARD}] Failed ${url}: ${(err as any)?.message ?? err}`)
+      }
     }
-  }
 
-  if (!html) {
-    console.warn(`[${BOARD}] No HTML fetched, skipping`)
-    return
-  }
+    if (!html) {
+      console.warn(`[${BOARD}] No HTML fetched, skipping`)
+      return { created: 0, updated: 0, skipped: 0, error: 'no-html' }
+    }
 
-  const $ = cheerio.load(html)
+    const $ = cheerio.load(html)
 
-  // Initial guess at job cards
-  let cards = $('.job-card, .job, article').toArray()
+    // Initial guess at job cards
+    let cards = $('.job-card, .job, article').toArray()
 
   if (cards.length === 0) {
     // Fallback: links under /jobs/
@@ -90,13 +92,13 @@ export async function scrapeTrawle(): Promise<void> {
     })
   }
 
-  console.log(`  Found ${cards.length} potential job cards`)
+    console.log(`  Found ${cards.length} potential job cards`)
 
-  let created = 0
-  const seen = new Set<string>()
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
+    const seen = new Set<string>()
 
-  for (const el of cards) {
-    const card = $(el)
+    for (const el of cards) {
+      const card = $(el)
 
     const linkEl =
       card.is('a') && card.attr('href')
@@ -137,24 +139,30 @@ export async function scrapeTrawle(): Promise<void> {
 
     const applyUrl = absolute(normalizedHref)
 
-    await upsertBoardJob({
-      board: BOARD,
-      externalId: normalizedHref.replace(/^\//, ''),
-      title,
-      company,
-      applyUrl,
-      location,
-      salaryText,
-      remote: /remote/i.test(location || ''),
-    })
+      const result = await upsertBoardJob({
+        board: BOARD,
+        externalId: normalizedHref.replace(/^\//, ''),
+        title,
+        company,
+        applyUrl,
+        location,
+        salaryText,
+        remote: /remote/i.test(location || ''),
+      })
 
-    created++
-  }
+      addBoardIngestResult(stats, result)
+    }
 
-  if (created === 0) {
-    console.warn(`⚠️  ${BOARD}: no jobs ingested (site may have changed or is empty)`)
-  } else {
-    console.log(`✅ ${BOARD}: upserted ${created} jobs`)
+    if (stats.created === 0 && stats.updated === 0) {
+      console.warn(`⚠️  ${BOARD}: no jobs ingested (site may have changed or is empty)`)
+    } else {
+      console.log(`[Trawle] ✓ Scraped ${stats.created} jobs`)
+    }
+
+    return stats
+  } catch (error) {
+    console.error('[Trawle] ❌ Scrape failed:', error)
+    return errorStats(error)
   }
 }
 

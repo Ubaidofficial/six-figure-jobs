@@ -1,13 +1,14 @@
 // lib/scrapers/weworkremotely.ts
 import * as cheerio from 'cheerio'
 import type { ScrapedJobInput } from '../ingest/types'
+import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
+import { addIngestStatus, errorStats, type ScraperStats } from './scraperStats'
 
 const BOARD_NAME = 'weworkremotely'
 const BASE_URL = 'https://weworkremotely.com'
 
-export async function scrapeWeWorkRemotely(): Promise<ScrapedJobInput[]> {
-  console.log('Scraping WeWorkRemotely...')
+export async function fetchWeWorkRemotelyJobs(): Promise<ScrapedJobInput[]> {
   const jobs: ScrapedJobInput[] = []
   
   const res = await fetch(BASE_URL + '/remote-100k-or-more-salary-jobs', {
@@ -48,4 +49,27 @@ export async function scrapeWeWorkRemotely(): Promise<ScrapedJobInput[]> {
   return jobs
 }
 
-export default scrapeWeWorkRemotely
+export default async function scrapeWeWorkRemotely(): Promise<ScraperStats> {
+  console.log('[WeWorkRemotely] Starting scrape...')
+
+  try {
+    const jobs = await fetchWeWorkRemotelyJobs()
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
+
+    for (const job of jobs) {
+      try {
+        const result = await ingestJob(job)
+        addIngestStatus(stats, result.status)
+      } catch (err) {
+        console.error('[WeWorkRemotely] Job ingest failed:', err)
+        stats.skipped++
+      }
+    }
+
+    console.log(`[WeWorkRemotely] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[WeWorkRemotely] ❌ Scrape failed:', error)
+    return errorStats(error)
+  }
+}

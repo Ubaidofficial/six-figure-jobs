@@ -1,0 +1,240 @@
+/* ==========================================================================
+   Six Figure Jobs — Featured Companies Carousel
+   - Token-driven, dark premium card
+   - GPU-friendly marquee animation with pause-on-hover
+   - Grayscale logos → color on hover
+   ========================================================================== */
+
+.section {
+  margin: var(--space-40) auto 0;
+  max-width: 72rem;
+  padding: 0 var(--space-16);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--space-16);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.02em;
+  color: var(--color-text-0);
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  line-height: var(--line-height-tight);
+}
+
+.subtitle {
+  margin-top: var(--space-8);
+  color: var(--color-text-1);
+  font-size: var(--text-base);
+  line-height: var(--line-height-normal);
+}
+
+.card {
+  position: relative;
+  border-radius: var(--radius-2xl);
+  background: rgba(20, 20, 20, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-16);
+  overflow: hidden;
+}
+
+.rows {
+  position: relative;
+}
+
+/* Edge fade */
+.card::before,
+.card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 72px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.card::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(20, 20, 20, 0.95), rgba(20, 20, 20, 0));
+}
+
+.card::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(20, 20, 20, 0.95), rgba(20, 20, 20, 0));
+}
+
+.desktopRow {
+  display: block;
+}
+
+.mobileRows {
+  display: none;
+  gap: var(--space-12);
+}
+
+.marquee {
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+.track {
+  --marquee-duration: 32s;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: max-content;
+  padding: var(--space-8) 0;
+  list-style: none;
+
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  animation: marquee var(--marquee-duration) linear infinite;
+}
+
+.marquee[data-reverse="true"] .track {
+  animation-direction: reverse;
+}
+
+.marquee:hover .track {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.item {
+  position: relative;
+}
+
+.logoLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-xl);
+  background: rgba(31, 31, 31, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    background-color 200ms ease,
+    filter 200ms ease;
+}
+
+.logoLink:hover {
+  transform: translateY(-2px);
+  border-color: rgba(132, 204, 22, 0.35);
+  box-shadow: var(--shadow-sm-glow);
+  background: rgba(31, 31, 31, 0.75);
+}
+
+.logoBox {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+}
+
+.logoImg {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: grayscale(100%) contrast(1.05) brightness(0.9);
+  transition: filter 200ms ease;
+}
+
+.logoLink:hover .logoImg {
+  filter: grayscale(0%) contrast(1.05) brightness(1);
+}
+
+.fallback {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-0);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-bold);
+}
+
+.tooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  transform: translateX(-50%) translateY(-2px);
+  padding: 8px 10px;
+  border-radius: var(--radius-lg);
+  background: rgba(10, 10, 10, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: var(--color-text-0);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 150ms ease;
+  z-index: 3;
+}
+
+.logoLink:hover .tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    animation: none;
+  }
+
+  .marquee {
+    overflow-x: auto;
+    scroll-behavior: smooth;
+  }
+
+  .marquee:hover .track {
+    animation-play-state: running;
+  }
+}
+
+@media (max-width: 767px) {
+  .card {
+    padding: var(--space-12);
+  }
+
+  .desktopRow {
+    display: none;
+  }
+
+  .mobileRows {
+    display: grid;
+  }
+
+  .track {
+    --marquee-duration: 26s;
+    gap: var(--space-12);
+  }
+
+  .card::before,
+  .card::after {
+    width: 48px;
+  }
+}

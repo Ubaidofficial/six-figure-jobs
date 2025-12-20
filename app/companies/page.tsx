@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: 'Companies hiring $100k+ roles | 6FigJobs',
   description:
-    'Browse companies hiring for verified $100k+ roles. Apply directly on company sites.',
+    'Explore companies hiring for verified $100k+ roles. Apply directly on company sites.',
   alternates: { canonical: 'https://www.6figjobs.com/companies' },
 }
 
@@ -63,7 +63,7 @@ export default async function CompaniesPage() {
 
       {companies.length === 0 ? (
         <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-8 text-center">
-          <p className="text-slate-400">No companies found yet. Scrapers may still be running.</p>
+          <p className="text-slate-400">No companies found yet. Try again soon — listings update frequently.</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

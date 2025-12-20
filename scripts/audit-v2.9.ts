@@ -196,8 +196,8 @@ async function main() {
           currency,
           NOT: {
             OR: [
-              { maxAnnual: { gte: BigInt(threshold) } },
-              { minAnnual: { gte: BigInt(threshold) } },
+              { maxAnnual: { gte: threshold } },
+              { minAnnual: { gte: threshold } },
             ],
           },
         },

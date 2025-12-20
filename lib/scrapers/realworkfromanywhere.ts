@@ -1,6 +1,7 @@
 // lib/scrapers/realworkfromanywhere.ts
 import * as cheerio from 'cheerio'
 import { upsertBoardJob } from './_boardHelpers'
+import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 
 const BOARD = 'realworkfromanywhere'
 const BASE_URL = 'https://www.realworkfromanywhere.com'
@@ -22,88 +23,90 @@ function absolute(url: string) {
   return `${BASE_URL}${url}`
 }
 
-export async function scrapeRealWorkFromAnywhere() {
-  console.log(`▶ Scraping ${BOARD}…`)
+export async function scrapeRealWorkFromAnywhere(): Promise<ScraperStats> {
+  console.log('[RealWorkFromAnywhere] Starting scrape...')
 
-  const html = await fetchHtml(BASE_URL + '/')
-  const $ = cheerio.load(html)
+  try {
+    const html = await fetchHtml(BASE_URL + '/')
+    const $ = cheerio.load(html)
 
-  const jobHrefs = new Set<string>()
+    const jobHrefs = new Set<string>()
 
-  $('a[href^="/jobs/"]').each((_i, el) => {
-    const href = $(el).attr('href')
-    if (!href) return
-    // Avoid nav / footer duplicates later by Set
-    jobHrefs.add(href.split('#')[0])
-  })
+    $('a[href^="/jobs/"]').each((_i, el) => {
+      const href = $(el).attr('href')
+      if (!href) return
+      // Avoid nav / footer duplicates later by Set
+      jobHrefs.add(href.split('#')[0])
+    })
 
-  console.log(`  Found ${jobHrefs.size} job links on homepage`)
+    console.log(`  Found ${jobHrefs.size} job links on homepage`)
 
-  let created = 0
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
 
-  for (const href of jobHrefs) {
-    try {
-      const url = absolute(href)
-      const jobHtml = await fetchHtml(url)
-      const $$ = cheerio.load(jobHtml)
+    for (const href of jobHrefs) {
+      try {
+        const url = absolute(href)
+        const jobHtml = await fetchHtml(url)
+        const $$ = cheerio.load(jobHtml)
 
-      // H1 usually looks like: "White Bridge LTD: Junior Crypto Analyst & Trader …"
-      const h1Text = $$('h1')
-        .first()
-        .text()
-        .trim()
+        // H1 usually looks like: "White Bridge LTD: Junior Crypto Analyst & Trader …"
+        const h1Text = $$('h1').first().text().trim()
 
-      if (!h1Text) {
-        console.log(`    ⚠️ No H1 for ${url}, skipping`)
-        continue
-      }
+        if (!h1Text) {
+          console.log(`    ⚠️ No H1 for ${url}, skipping`)
+          stats.skipped++
+          continue
+        }
 
-      let company = 'Unknown company'
-      let title = h1Text
+        let company = 'Unknown company'
+        let title = h1Text
 
-      if (h1Text.includes(':')) {
-        const [before, after] = h1Text.split(':', 2)
-        company = before.trim() || company
-        title = after.trim() || title
-      }
+        if (h1Text.includes(':')) {
+          const [before, after] = h1Text.split(':', 2)
+          company = before.trim() || company
+          title = after.trim() || title
+        }
 
-      // Location is often somewhere near the top – grab the first "Worldwide"/"Remote"/etc line heuristically
-      let location: string | null = null
-      $$('.job-header, .job-meta, main')
-        .first()
-        .find('p, li, span')
-        .each((_j, node) => {
-          const t = $$(node).text().trim()
-          if (!t) return
-          if (
-            /worldwide|anywhere|remote|europe|usa|uk|canada/i.test(t) &&
-            !location
-          ) {
-            location = t
-          }
-        })
-
-      // Usually apply button links out to external careers site; fall back to detail URL
-      const applyHref =
-        $$('a[href^="https://"]')
-          .filter((_i, el) => /apply|apply now|view job/i.test($$(el).text()))
+        // Location is often somewhere near the top – grab the first "Worldwide"/"Remote"/etc line heuristically
+        let location: string | null = null
+        $$('.job-header, .job-meta, main')
           .first()
-          .attr('href') || url
+          .find('p, li, span')
+          .each((_j, node) => {
+            const t = $$(node).text().trim()
+            if (!t) return
+            if (/worldwide|anywhere|remote|europe|usa|uk|canada/i.test(t) && !location) {
+              location = t
+            }
+          })
 
-      const externalId = href.replace(/^\/jobs\//, '')
-      await upsertBoardJob({
-        board: BOARD,
-        externalId,
-        title,
-        company,
-        applyUrl: applyHref,
-        location,
-      })
-      created++
-    } catch (err) {
-      console.error(`    ❌ Error scraping job ${href}`, err)
+        // Usually apply button links out to external careers site; fall back to detail URL
+        const applyHref =
+          $$('a[href^="https://"]')
+            .filter((_i, el) => /apply|apply now|view job/i.test($$(el).text()))
+            .first()
+            .attr('href') || url
+
+        const externalId = href.replace(/^\/jobs\//, '')
+        const result = await upsertBoardJob({
+          board: BOARD,
+          externalId,
+          title,
+          company,
+          applyUrl: applyHref,
+          location,
+        })
+        addBoardIngestResult(stats, result)
+      } catch (err) {
+        console.error(`    ❌ Error scraping job ${href}`, err)
+        stats.skipped++
+      }
     }
-  }
 
-  console.log(`✅ ${BOARD}: upserted ${created} jobs`)
+    console.log(`[RealWorkFromAnywhere] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[RealWorkFromAnywhere] ❌ Scrape failed:', error)
+    return errorStats(error)
+  }
 }

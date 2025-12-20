@@ -3,7 +3,9 @@
 
 import puppeteer from 'puppeteer'
 import type { ScrapedJobInput } from '../ingest/types'
+import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
+import { addIngestStatus, errorStats, type ScraperStats } from './scraperStats'
 
 const BOARD_NAME = 'nodesk'
 const BASE_URL = 'https://nodesk.co'
@@ -46,60 +48,63 @@ function extractCompanyFromSlug(slug: string, title: string): string {
   return company || 'Unknown'
 }
 
-export async function scrapeNodesk(): Promise<ScrapedJobInput[]> {
-  console.log('Scraping Nodesk with Puppeteer...')
+export async function fetchNodeskJobs(): Promise<ScrapedJobInput[]> {
   const jobs: ScrapedJobInput[] = []
-  
+
   let browser
   try {
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     })
-    
+
     const page = await browser.newPage()
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
-    
+
     await page.goto(BASE_URL + '/remote-jobs/', {
       waitUntil: 'networkidle2',
-      timeout: 30000
+      timeout: 30000,
     })
-    
-    await new Promise(r => setTimeout(r, 3000))
-    
-    const jobData = await page.evaluate((baseUrl, categorySet) => {
-      const results: any[] = []
-      const seen = new Set()
-      const categories = new Set(categorySet)
-      
-      document.querySelectorAll('a[href*="/remote-jobs/"]').forEach((link) => {
-        const href = link.getAttribute('href')
-        if (!href || seen.has(href)) return
-        
-        const slug = href.replace(/\/$/, '').split('/').pop() || ''
-        
-        if (!slug || slug === 'remote-jobs' || slug.length < 10) return
-        if (categories.has(slug)) return
-        if (href.includes('#')) return
-        
-        const hyphenCount = (slug.match(/-/g) || []).length
-        if (hyphenCount < 2) return
-        
-        const title = link.textContent?.trim() || ''
-        if (!title || title.length < 5 || title.length > 150) return
-        
-        const titleLower = title.toLowerCase()
-        if (titleLower.includes('testimonial') || titleLower.includes('post a job')) return
-        
-        const url = href.startsWith('http') ? href : baseUrl + href
-        
-        seen.add(href)
-        results.push({ externalId: slug, title, url })
-      })
-      
-      return results
-    }, BASE_URL, Array.from(CATEGORY_SLUGS))
-    
+
+    await new Promise((r) => setTimeout(r, 3000))
+
+    const jobData = await page.evaluate(
+      (baseUrl, categorySet) => {
+        const results: any[] = []
+        const seen = new Set()
+        const categories = new Set(categorySet)
+
+        document.querySelectorAll('a[href*="/remote-jobs/"]').forEach((link) => {
+          const href = link.getAttribute('href')
+          if (!href || seen.has(href)) return
+
+          const slug = href.replace(/\/$/, '').split('/').pop() || ''
+
+          if (!slug || slug === 'remote-jobs' || slug.length < 10) return
+          if (categories.has(slug)) return
+          if (href.includes('#')) return
+
+          const hyphenCount = (slug.match(/-/g) || []).length
+          if (hyphenCount < 2) return
+
+          const title = link.textContent?.trim() || ''
+          if (!title || title.length < 5 || title.length > 150) return
+
+          const titleLower = title.toLowerCase()
+          if (titleLower.includes('testimonial') || titleLower.includes('post a job')) return
+
+          const url = href.startsWith('http') ? href : baseUrl + href
+
+          seen.add(href)
+          results.push({ externalId: slug, title, url })
+        })
+
+        return results
+      },
+      BASE_URL,
+      Array.from(CATEGORY_SLUGS),
+    )
+
     for (const job of jobData) {
       const company = extractCompanyFromSlug(job.externalId, job.title)
       jobs.push({
@@ -112,16 +117,38 @@ export async function scrapeNodesk(): Promise<ScrapedJobInput[]> {
         isRemote: true,
       })
     }
-    
+
     console.log('  Found ' + jobs.length + ' jobs from Nodesk')
-    
-  } catch (e) {
-    console.error('Nodesk scrape error:', e)
   } finally {
     if (browser) await browser.close()
   }
-  
+
   return jobs
 }
 
-export default scrapeNodesk
+export default async function scrapeNodesk(): Promise<ScraperStats> {
+  console.log('[Nodesk] Starting scrape...')
+
+  try {
+    const jobs = await fetchNodeskJobs()
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
+
+    for (const job of jobs) {
+      try {
+        const result = await ingestJob(job)
+        addIngestStatus(stats, result.status)
+      } catch (err) {
+        console.error('[Nodesk] Job ingest failed:', err)
+        stats.skipped++
+      }
+    }
+
+    console.log(`[Nodesk] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[Nodesk] ❌ Scrape failed:', error)
+    return errorStats(error)
+  }
+}
+
+export { scrapeNodesk }

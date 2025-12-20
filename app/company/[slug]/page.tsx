@@ -459,7 +459,7 @@ function JobListItem({ job }: { job: JobWithFlags }) {
               rel="noopener noreferrer"
               className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
             >
-              Apply
+              Apply now
             </a>
           )}
         </div>

@@ -89,3 +89,49 @@ Minimum:
 - Infinite scroll with no pagination fallback
 - UI that creates uncontrolled URL variations
 - Long, cluttered footer that repeats internal links excessively
+
+---
+
+## Recent UX Improvements (December 2025)
+
+### Navigation Enhancement
+- Fixed Jobs dropdown staying open (200ms delay)
+- Immediate close on link click
+- Proper cleanup prevents memory leaks
+
+### Salary Display Clarity
+- Job cards: "Minimum: $XXk"
+- Homepage: "Starting From"
+- Remote page: "Minimum $100k+ USD"
+
+### Search Functionality
+- Homepage search verified working
+- Submits to /search?q=[query]
+
+### Phase 2 UI/UX Overhaul
+- 12,000-word plan ready
+- Deploy weeks 3-4 after GSC >30%
+- Inspired by RemoteYeah + Remote Rocketship
+
+---
+
+## Recent UX Improvements (December 2025)
+
+### Navigation Enhancement
+- Fixed Jobs dropdown staying open (200ms delay)
+- Immediate close on link click
+- Proper cleanup prevents memory leaks
+
+### Salary Display Clarity
+- Job cards: "Minimum: $XXk"
+- Homepage: "Starting From"
+- Remote page: "Minimum $100k+ USD"
+
+### Search Functionality
+- Homepage search verified working
+- Submits to /search?q=[query]
+
+### Phase 2 UI/UX Overhaul
+- 12,000-word plan ready
+- Deploy weeks 3-4 after GSC >30%
+- Inspired by RemoteYeah + Remote Rocketship

@@ -10,7 +10,7 @@ interface SearchInputProps {
 }
 
 export function SearchInput({
-  placeholder = 'Search jobs, companies, skills...',
+  placeholder = 'Find roles, companies, skills…',
   defaultValue = '',
   onSearch,
 }: SearchInputProps) {
@@ -27,4 +27,3 @@ export function SearchInput({
     </div>
   )
 }
-

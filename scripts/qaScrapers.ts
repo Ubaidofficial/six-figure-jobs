@@ -40,9 +40,8 @@ function summarizeResult(result: any): { count: number; sample?: any } {
   if (result && Array.isArray(result.jobs)) {
     return { count: result.jobs.length, sample: result.jobs[0] }
   }
-  // remoteok returns stats object; we can't derive a count reliably
-  if (result && typeof result.jobsNew === 'number' && typeof result.jobsUpdated === 'number') {
-    return { count: result.jobsNew + result.jobsUpdated, sample: undefined }
+  if (result && typeof result.created === 'number' && typeof result.updated === 'number') {
+    return { count: result.created + result.updated, sample: undefined }
   }
   return { count: 0, sample: undefined }
 }

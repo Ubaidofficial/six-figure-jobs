@@ -16,10 +16,11 @@ export function MobileNav() {
       <SheetTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
+          size="md"
+          icon={<Menu className="h-5 w-5" aria-hidden="true" />}
+          aria-label="Open menu"
           className="focus-ring h-11 w-11 rounded-full border border-slate-800/70 bg-slate-950/40 text-slate-200 hover:bg-slate-900/60"
         >
-          <Menu className="h-5 w-5" aria-hidden="true" />
           <span className="sr-only">Open menu</span>
         </Button>
       </SheetTrigger>
@@ -52,11 +53,10 @@ export function MobileNav() {
             Hire $100k+ Talent
           </Link>
           <p className="mt-2 text-xs text-slate-500">
-            Source-linked listings. Apply direct on the company site.
+            Source-linked listings. Apply directly on the company site.
           </p>
         </div>
       </SheetContent>
     </Sheet>
   )
 }
-

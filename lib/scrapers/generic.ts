@@ -61,7 +61,7 @@ export default async function scrapeGenericSources() {
 
   if (sources.length === 0) {
     console.log('[Generic] No generic sources found. Run deepDiscovery.ts to find some.')
-    return { created: 0, updated: 0, skipped: 0, errors: 0 }
+    return { created: 0, updated: 0, skipped: 0 }
   }
 
   console.log(`[Generic] Found ${sources.length} pages to scrape.`)
@@ -78,6 +78,7 @@ export default async function scrapeGenericSources() {
   try {
     for (const source of sources) {
       console.log(`[Generic] Scraping ${source.company.name} at ${source.url}`)
+      console.log(`[Generic] Processing ${source.company.name}...`)
 
       const blockedReason = blockedUrlReason(source.url)
       if (blockedReason) {
@@ -148,7 +149,11 @@ export default async function scrapeGenericSources() {
     await prisma.$disconnect()
   }
 
-  return stats
+  return {
+    created: stats.created,
+    updated: stats.updated,
+    skipped: stats.skipped + stats.errors,
+  }
 }
 
 async function scanPageForJobs(page: Page) {

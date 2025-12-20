@@ -1,7 +1,5 @@
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
-import { buildLogoUrl } from '@/lib/companies/logo'
-import { JobCardV2 } from '@/components/jobs/JobCardV2'
-import { getJobCardSnippet } from '@/lib/jobs/snippet'
+import { JobCard } from '@/components/jobs/JobCard'
 
 export type JobListProps = {
   jobs: JobWithCompany[]
@@ -11,7 +9,7 @@ export default function JobList({ jobs }: JobListProps) {
   if (!jobs || jobs.length === 0) {
     return (
       <p className="py-6 text-sm text-slate-400">
-        No jobs found yet. Try again soon — we&apos;re still ingesting feeds.
+        No jobs found. Try adjusting your filters or explore all $100k+ opportunities.
       </p>
     )
   }
@@ -33,64 +31,9 @@ export default function JobList({ jobs }: JobListProps) {
     <div className="flex flex-col gap-4">
       <FeaturedPromoCard />
 
-      {dedupedJobs.map((job) => {
-        const companyName =
-          job.companyRef?.name?.trim() || (job as any)?.company?.trim() || 'Company'
-
-        const logo = buildLogoUrl(
-          job.companyRef?.logoUrl ?? (job as any)?.companyLogo ?? null,
-          job.companyRef?.website ?? null,
-        )
-
-        const salaryMin = normalizeAnnualSalary(bigIntToNumberSafe((job as any)?.minAnnual))
-        const salaryMax = normalizeAnnualSalary(bigIntToNumberSafe((job as any)?.maxAnnual))
-
-        const isRemote =
-          (job as any)?.remote === true ||
-          (job as any)?.remoteMode === 'remote' ||
-          (job as any)?.remoteMode === 'hybrid'
-
-        const location = buildLocationLabel(job as any)
-        const snippet = getJobCardSnippet(job as any)
-
-        const skills = parseStringArray((job as any)?.skillsJson)
-          .filter(Boolean)
-          .slice(0, 8)
-
-        // ✅ Job-board-friendly: prefer postedAt, otherwise show “freshness”
-        // This stops “16h ago” when scraper revalidated thousands of jobs recently.
-        const postedAt =
-          ((job as any)?.postedAt as any) ||
-          ((job as any)?.updatedAt as any) ||
-          ((job as any)?.createdAt as any) ||
-          new Date()
-
-        const featured =
-          Boolean((job as any)?.featured) ||
-          ((job as any)?.featureExpiresAt
-            ? new Date((job as any).featureExpiresAt).getTime() > Date.now()
-            : false)
-
-	        return (
-	          <JobCardV2
-	            key={job.id}
-	            featured={featured}
-	            job={{
-              id: job.id,
-              title: job.title,
-	              company: { name: companyName, logo },
-	              location,
-	              isRemote,
-	              salaryMin: salaryMin ?? null,
-	              salaryMax: salaryMax ?? null,
-	              currency: (job as any).currency ?? (job as any).salaryCurrency ?? null,
-	              skills,
-	              postedAt,
-	              snippet,
-	            }}
-	          />
-        )
-      })}
+      {dedupedJobs.map((job) => (
+        <JobCard key={job.id} job={job as JobWithCompany} />
+      ))}
     </div>
   )
 }
@@ -133,82 +76,3 @@ function FeaturedPromoCard() {
     </article>
   )
 }
-
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
-
-function bigIntToNumberSafe(v: unknown): number | null {
-  if (v === null || v === undefined) return null
-  try {
-    if (typeof v === 'bigint') return Number(v)
-    if (typeof v === 'number') return Number.isFinite(v) ? v : null
-    if (typeof v === 'string' && v.trim()) {
-      const n = Number(v)
-      return Number.isFinite(n) ? n : null
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-function normalizeAnnualSalary(v: number | null): number | null {
-  if (!v || !Number.isFinite(v)) return null
-
-  // cents -> dollars heuristic
-  if (v >= 1_000_000 && v % 100 === 0) {
-    const dollars = v / 100
-    if (dollars >= 20_000 && dollars <= 2_000_000) return Math.round(dollars)
-  }
-
-  if (v < 20_000) return null
-  if (v > 2_000_000) return null
-  return Math.round(v)
-}
-
-function parseStringArray(raw?: string | null): string[] {
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.map(String) : []
-  } catch {
-    return []
-  }
-}
-
-function buildLocationLabel(job: any): string | null {
-  const isRemote =
-    job?.remote === true ||
-    job?.remoteMode === 'remote' ||
-    job?.remoteMode === 'hybrid'
-
-  function countryFlag(cc: string | null): string {
-    const code = (cc || '').trim().toUpperCase()
-    if (code.length !== 2 || !/^[A-Z]{2}$/.test(code)) return ''
-    return String.fromCodePoint(
-      0x1F1E6 + (code.charCodeAt(0) - 65),
-      0x1F1E6 + (code.charCodeAt(1) - 65)
-    )
-  }
-
-  const cc = job?.countryCode ? String(job.countryCode).toUpperCase() : ''
-  const flag = cc ? countryFlag(cc) : ''
-
-  if (isRemote) {
-    if (cc && flag) return `🌍 Remote (${flag} ${cc})`
-    if (cc) return `🌍 Remote (${cc})`
-    return '🌍 Remote'
-  }
-
-  const city = job?.city ? String(job.city).trim() : ''
-
-    if (city && cc && flag) return `${flag} ${city}, ${cc}`
-  if (city && cc) return `📍 ${city}, ${cc}`
-  if (job?.locationRaw) return `📍 ${String(job.locationRaw).trim()}`
-  if (cc && flag) return `${flag} ${cc}`
-  if (cc) return `📍 ${cc}`
-
-  return null
-}
-

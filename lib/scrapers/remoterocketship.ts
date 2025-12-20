@@ -7,6 +7,7 @@
 
 import * as cheerio from 'cheerio'
 import { ingestBoardJob } from '../jobs/ingestBoardJob'
+import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 
 const BOARD_NAME = 'remoterocketship'
 const BASE_URL = 'https://www.remoterocketship.com'
@@ -65,130 +66,114 @@ async function fetchWithBackoff(url: string, attempt = 1): Promise<Response | nu
 }
 
 export default async function scrapeRemoteRocketship() {
-  console.log('Scraping RemoteRocketship (100k+ jobs)…')
+  console.log('[RemoteRocketship] Starting scrape...')
 
-  let jobsNew = 0
-  let jobsUpdated = 0
-  let jobsSkipped = 0
-  const companies = new Set<string>()
-  const seenJobs = new Set<string>()
+  try {
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
+    const seenJobs = new Set<string>()
 
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const url = `${BASE_LISTING_URL}&page=${page}`
-
-    const res = await fetchWithBackoff(url)
-    if (!res) {
-      if (page === 1) {
-        console.warn(`[${BOARD_NAME}] Failed to fetch page 1 (rate limited), skipping this run.`)
-      } else {
-        console.warn(
-          `[${BOARD_NAME}] Stopping pagination at page=${page} due to repeated failures.`,
-        )
-      }
-      break
+    type Parsed = {
+      jobUrl: string
+      title: string
+      company: string | null
+      locationText: string | null
+      salaryText: string | null
     }
 
-    const html = await res.text()
-    const $ = cheerio.load(html)
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const url = `${BASE_LISTING_URL}&page=${page}`
 
-    $('a[href*="/jobs/"]').each((_, el) => {
-      const $link = $(el)
-      const href = $link.attr('href')
-      if (!href) return
+      const res = await fetchWithBackoff(url)
+      if (!res) {
+        if (page === 1) {
+          console.warn(`[${BOARD_NAME}] Failed to fetch page 1 (rate limited), skipping this run.`)
+        } else {
+          console.warn(`[${BOARD_NAME}] Stopping pagination at page=${page} due to repeated failures.`)
+        }
+        break
+      }
 
-      const jobUrl = href.startsWith('http') ? href : `${BASE_URL}${href}`
-      if (seenJobs.has(jobUrl)) return
-      seenJobs.add(jobUrl)
+      const html = await res.text()
+      const $ = cheerio.load(html)
 
-      const $card = $link.closest('article,li,div')
+      const parsedJobs: Parsed[] = []
 
-      const title =
-        $card.find('h2,h3,[data-testid*="title"]').first().text().trim() ||
-        $link.text().trim()
-      if (!title) return
+      $('a[href*="/jobs/"]').each((_, el) => {
+        const $link = $(el)
+        const href = $link.attr('href')
+        if (!href) return
 
-      const company =
-        $card
-          .find('.company-name, .company, [data-testid*="company"]')
-          .first()
-          .text()
-          .trim() || null
+        const jobUrl = href.startsWith('http') ? href : `${BASE_URL}${href}`
+        if (seenJobs.has(jobUrl)) return
+        seenJobs.add(jobUrl)
 
-      const locationText =
-        $card
-          .find(
-            '.location, [data-testid*="location"], [class*="Location"], [class*="location"]',
-          )
-          .first()
-          .text()
-          .trim() || null
+        const $card = $link.closest('article,li,div')
 
-      const salaryText =
-        $card
-          .find(
-            '.salary, [data-testid*="salary"], [class*="Salary"], [class*="salary"]',
-          )
-          .first()
-          .text()
-          .trim() || null
+        const title =
+          $card.find('h2,h3,[data-testid*="title"]').first().text().trim() || $link.text().trim()
+        if (!title) return
 
-      let salaryMin: number | null = null
-      const salaryMax: number | null = null
-      let salaryCurrency: string | null = null
-      const salaryInterval: string | null = 'year'
+        const company =
+          $card.find('.company-name, .company, [data-testid*="company"]').first().text().trim() ||
+          null
 
-      const resultPromise = ingestBoardJob(BOARD_NAME, {
-        externalId: jobUrl,
-        title,
-        url: jobUrl,
-        rawCompanyName: company,
-        locationText,
-        salaryMin,
-        salaryMax,
-        salaryCurrency,
-        salaryInterval,
-        isRemote: true,
-        employmentType: null,
-        postedAt: null,
-        updatedAt: null,
-        descriptionHtml: null,
-        descriptionText: salaryText || null,
-        companyWebsiteUrl: null,
-        applyUrl: jobUrl,
-        explicitAtsProvider: null,
-        explicitAtsUrl: null,
-        raw: { url: jobUrl, title, company, locationText, salaryText },
+        const locationText =
+          $card
+            .find('.location, [data-testid*="location"], [class*="Location"], [class*="location"]')
+            .first()
+            .text()
+            .trim() || null
+
+        const salaryText =
+          $card
+            .find('.salary, [data-testid*="salary"], [class*="Salary"], [class*="salary"]')
+            .first()
+            .text()
+            .trim() || null
+
+        parsedJobs.push({ jobUrl, title, company, locationText, salaryText })
       })
 
-      resultPromise
-        .then((result) => {
-          if (company) companies.add(company)
-          if (result === 'new') jobsNew++
-          else if (result === 'updated') jobsUpdated++
-          else jobsSkipped++
-        })
-        .catch((err) => {
-          console.error(
-            `[${BOARD_NAME}] Error ingesting job ${jobUrl}:`,
-            err?.message || err,
-          )
-          jobsSkipped++
-        })
-    })
+      for (const j of parsedJobs) {
+        try {
+          const result = await ingestBoardJob(BOARD_NAME, {
+            externalId: j.jobUrl,
+            title: j.title,
+            url: j.jobUrl,
+            rawCompanyName: j.company,
+            locationText: j.locationText,
+            salaryMin: null,
+            salaryMax: null,
+            salaryCurrency: null,
+            salaryInterval: 'year',
+            isRemote: true,
+            employmentType: null,
+            postedAt: null,
+            updatedAt: null,
+            descriptionHtml: null,
+            descriptionText: j.salaryText || null,
+            companyWebsiteUrl: null,
+            applyUrl: j.jobUrl,
+            explicitAtsProvider: null,
+            explicitAtsUrl: null,
+            raw: j,
+          })
+          addBoardIngestResult(stats, result)
+        } catch (err: any) {
+          console.error(`[${BOARD_NAME}] Error ingesting job ${j.jobUrl}:`, err?.message || err)
+          stats.skipped++
+        }
+      }
 
-    if (page < MAX_PAGES) {
-      await new Promise((r) => setTimeout(r, PAGE_DELAY_MS))
+      if (page < MAX_PAGES) {
+        await new Promise((r) => setTimeout(r, PAGE_DELAY_MS))
+      }
     }
-  }
 
-  console.log(
-    `[${BOARD_NAME}] Done: jobsNew=${jobsNew}, jobsUpdated=${jobsUpdated}, jobsSkipped=${jobsSkipped}, uniqueCompanies=${companies.size}`,
-  )
-
-  return {
-    jobsNew,
-    jobsUpdated,
-    jobsSkipped,
-    companiesSeen: companies.size,
+    console.log(`[RemoteRocketship] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[RemoteRocketship] ❌ Scrape failed:', error)
+    return errorStats(error)
   }
 }

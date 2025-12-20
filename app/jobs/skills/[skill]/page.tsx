@@ -119,7 +119,7 @@ export default async function SkillPage({ params }: { params: Params }) {
         {resolved.label} $100k+ jobs ({total.toLocaleString()})
       </h1>
       <p className="mb-4 text-sm text-slate-300">
-        Browse <strong className="text-white">{total.toLocaleString()}</strong>{' '}
+        Explore <strong className="text-white">{total.toLocaleString()}</strong>{' '}
         {resolved.label} <strong className="text-green-500">$100k</strong> jobs
         with verified{' '}
         <strong className="text-green-500">six figure salaries</strong>. Find{' '}
@@ -133,7 +133,9 @@ export default async function SkillPage({ params }: { params: Params }) {
       </p>
 
       {jobs.length === 0 ? (
-        <p className="text-sm text-slate-400">No $100k+ {resolved.label} roles yet. New jobs are added daily.</p>
+        <p className="text-sm text-slate-400">
+          No jobs found. Try exploring all $100k+ opportunities.
+        </p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}
