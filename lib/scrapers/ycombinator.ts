@@ -117,14 +117,6 @@ export default async function scrapeYCombinator() {
           location,
           salaryText,
           remote: location === 'Remote',
-          raw: {
-            ...job,
-            company: {
-              name: companyName,
-              slug: company.slug,
-              batch: company.batch,
-            }
-          }
         })
         addBoardIngestResult(stats, result)
       }
