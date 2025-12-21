@@ -68,11 +68,11 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   let orderBy: Prisma.JobOrderByWithRelationInput[]
 
   if (sortBy === 'date') {
-    // ✅ Date-first ranking (postedAt if available, otherwise updatedAt/createdAt)
+    // ✅ Date-first ranking - prioritize when WE scraped it (createdAt)
     orderBy = [
-      { postedAt: 'desc' },
-      { updatedAt: 'desc' }, // ✅ critical for ATS feeds where postedAt is null
-      { createdAt: 'desc' },
+      { createdAt: 'desc' }, // FIRST: When we scraped it (most accurate)
+      { updatedAt: 'desc' }, // SECOND: When job was updated
+      { postedAt: 'desc' }, // THIRD: Company's post date (fallback)
       { maxAnnual: 'desc' },
       { minAnnual: 'desc' },
     ]
