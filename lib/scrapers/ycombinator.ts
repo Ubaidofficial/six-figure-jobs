@@ -117,8 +117,6 @@ export default async function scrapeYCombinator() {
           location,
           salaryText,
           remote: location === 'Remote',
-          descriptionHtml: description || null,
-          descriptionText: description || null,
           raw: {
             ...job,
             company: {
