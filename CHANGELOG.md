@@ -10,6 +10,28 @@ If you want auto-generated history, see CHANGELOG.generated.md.
 
 ## Unreleased
 
+## [P0 Fixes & Scraper Expansion] - 2025-12-21
+
+### UI & UX
+- Fixed Jobs dropdown freeze and added emoji-enhanced nav labels (salary tiers + country flags).
+- Removed “coming soon” footer items.
+- Improved Companies page cards/grid and added emoji cues to job cards (📍 🌍 💰 🎁).
+
+### SEO & Data Accuracy
+- Homepage: switched to PPP-adjusted eligibility (`isHundredKLocal`) for latest jobs, corrected displayed counts (5,945 jobs / 333 companies), and reduced revalidate to 5 minutes.
+- Country pages: show the correct local “six-figure” threshold label (e.g., Germany €80k+) in title/metadata and on-page copy.
+
+### Scrapers
+- Lever ATS: added retries + pagination + richer payload capture (full descriptions + raw) for AI enrichment.
+- Ashby ATS: API-first via `posting-api` with strong debugging + fallbacks and full descriptions for enrichment.
+- Remotive: expanded search terms/categories, removed ML-only filtering, preserved full descriptions, improved salary extraction, and passes descriptions into ingest.
+- Added new board scrapers and wiring:
+  - Dice (API-only, paginated) + runner `npm run scrape:dice`
+  - Wellfound (GraphQL-only, paginated) + runner `npm run scrape:wellfound`
+  - Otta (API → JSON → HTML fallback) + runner `npm run scrape:otta`
+  - BuiltIn (Cheerio-only for 5 cities, paginated + rate-limited) + runner `npm run scrape:builtin`
+- Daily scrape runner (`scripts/dailyScrapeV2.ts`) now includes Dice, Wellfound, and Otta; BuiltIn now uses the new TS scraper.
+
 ## [Scraper Optimization & UI Fixes] - 2025-12-20
 
 ### Critical Fixes ✅
@@ -198,4 +220,3 @@ If you want auto-generated history, see CHANGELOG.generated.md.
 - **Core Web Vitals**: LCP/CLS/font fixes implemented
 - **Job Schema**: Fixed `applicantLocationRequirements` for GSC
 - **Redirects**: Salary pages now 301 (permanent)
-

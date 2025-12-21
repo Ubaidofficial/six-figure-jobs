@@ -14,12 +14,11 @@ async function fetchCompanies(attempt = 1): Promise<any | null> {
     const url = `${BASE_URL}/companies?include=jobs`
     const response = await axios.get(url, {
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         Accept: 'application/json',
       },
       timeout: 20000,
-      validateStatus: (s) => s >= 200 && s < 500, // allow 429/500 handling below
+      validateStatus: (s) => s >= 200 && s < 500,
     })
 
     if (response.status >= 500) {
@@ -57,24 +56,6 @@ export default async function scrapeYCombinator() {
     }
 
     const companies: any[] = data.companies
-
-    const mlKeywords = [
-      'machine learning',
-      ' ml ',
-      'artificial intelligence',
-      ' ai ',
-      'deep learning',
-      'data scientist',
-      'computer vision',
-      'nlp',
-      'llm',
-      'generative ai',
-      'gen ai',
-      'ai engineer',
-      'ml engineer',
-      'research engineer',
-    ]
-
     const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
 
     for (const company of companies) {
@@ -84,30 +65,37 @@ export default async function scrapeYCombinator() {
       for (const job of jobs) {
         const title: string = job.title || ''
         const description: string = job.description || ''
-        const combinedText = (title + ' ' + description).toLowerCase()
 
-        const isMLJob = mlKeywords.some((kw) => combinedText.includes(kw))
-        if (!isMLJob) continue
-
-        // --- Salary estimation (very rough) --------------------
+        // REMOVED ML FILTER - get all tech jobs from YC companies
+        
         let minSalary = 100
         let maxSalary = 180
         let salaryText = '$100k+ (estimated)'
 
-        if (job.compensation && job.compensation.salary) {
-          const sal = String(job.compensation.salary).toLowerCase()
-          const match = sal.match(/(\d{2,3})k/)
-          if (match) {
-            minSalary = parseInt(match[1], 10)
-            maxSalary = minSalary + 40
+        // Better salary extraction from compensation object
+        if (job.compensation) {
+          if (job.compensation.min_salary) {
+            minSalary = Math.round(job.compensation.min_salary / 1000)
+          }
+          if (job.compensation.max_salary) {
+            maxSalary = Math.round(job.compensation.max_salary / 1000)
+          }
+          if (job.compensation.salary) {
+            const sal = String(job.compensation.salary).toLowerCase()
+            const match = sal.match(/(\d{2,3})k/)
+            if (match) {
+              minSalary = parseInt(match[1], 10)
+              maxSalary = minSalary + 40
+            }
+          }
+          
+          if (minSalary && maxSalary) {
             salaryText = `$${minSalary}k - $${maxSalary}k`
           }
         }
 
-        // Skip clearly sub-100k roles
         if (minSalary < 100) continue
 
-        // --- Location handling ---------------------------------
         let location: string = job.location || 'Remote'
         if (location.toLowerCase().includes('remote')) {
           location = 'Remote'
@@ -115,11 +103,10 @@ export default async function scrapeYCombinator() {
 
         const companyName: string = company.name || 'YC company'
 
-        // YC job URLs are relative; prefix with BASE_URL
-        const applyUrl =
-          job.url && job.url.startsWith('/')
-            ? `${BASE_URL}${job.url}`
-            : `${BASE_URL}/companies/${company.slug || ''}`
+        // Better URL construction
+        const applyUrl = job.apply_url 
+          || (job.url?.startsWith('http') ? job.url : job.url?.startsWith('/') ? `${BASE_URL}${job.url}` : null)
+          || `${BASE_URL}/companies/${company.slug || company.id}/jobs/${job.id}`
 
         const result = await upsertBoardJob({
           board: BOARD,
@@ -130,6 +117,16 @@ export default async function scrapeYCombinator() {
           location,
           salaryText,
           remote: location === 'Remote',
+          descriptionHtml: description || null,
+          descriptionText: description || null,
+          raw: {
+            ...job,
+            company: {
+              name: companyName,
+              slug: company.slug,
+              batch: company.batch,
+            }
+          }
         })
         addBoardIngestResult(stats, result)
       }

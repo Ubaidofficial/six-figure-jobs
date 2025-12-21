@@ -42,6 +42,9 @@ import { scrapeFourDayWeek } from '../lib/scrapers/fourdayweek'
 // “API style” board scrapers / extra sources
 import scrapeRemotive from '../lib/scrapers/remotive'
 import scrapeYCombinator from '../lib/scrapers/ycombinator'
+import scrapeDice from '../lib/scrapers/dice'
+import scrapeWellfound from '../lib/scrapers/wellfound'
+import scrapeOtta from '../lib/scrapers/otta'
 
 // ATS scrapers
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
@@ -151,6 +154,9 @@ async function runBoardScrapers(options: CliOptions) {
 	    ['Trawle', scrapeTrawle],
 	    ['FourDayWeek', scrapeFourDayWeek],
 	    ['Remotive', scrapeRemotive],
+	    ['Dice', scrapeDice],
+	    ['Wellfound', scrapeWellfound],
+	    ['Otta', scrapeOtta],
 	    ['YCombinator', scrapeYCombinator],
 	    ['RemoteYeah', scrapeRemoteYeah],
 	    ['RemoteAI (companies only)', scrapeRemoteAI],
