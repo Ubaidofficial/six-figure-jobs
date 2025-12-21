@@ -99,6 +99,7 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
 
   const salaryText = buildSalaryText(job)
   const salary = salaryText ? toKCase(salaryText) : null
+  const hasSalary = Boolean(salary)
 
   const workType = getWorkType(job)
   const seniority = inferSeniority(job)
@@ -155,51 +156,48 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
             {hasBenefits ? (
               <span className={styles.benefits} title="Benefits available">
                 <Gift className={styles.benefitsIcon} aria-hidden="true" />
-                🎁
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
+      <div className={styles.body}>
+        <div className={styles.hero}>
+          <h3 className={styles.title}>{job.title}</h3>
+
+          <div className={styles.salaryStack}>
+            <div className={styles.salaryPill} aria-label={hasSalary ? `Salary ${salary}` : 'High salary role'}>
+              <span className={styles.salaryIcon} aria-hidden="true">
+                💰
+              </span>
+              <span className={styles.salaryValue}>{salary ?? 'High salary role'}</span>
+            </div>
+
+            {hasSalary ? (
+              <span className={styles.verified} aria-label="Salary verified">
+                <BadgeCheck className={styles.verifiedIcon} aria-hidden="true" />
+                Verified salary
               </span>
             ) : null}
           </div>
         </div>
 
-        <div className={styles.badges}>
-          <span className={styles.verified} aria-label="Salary verified">
-            <BadgeCheck className={styles.verifiedIcon} aria-hidden="true" />
-            ✓ Salary Verified
-          </span>
-        </div>
-      </header>
-
-      <div className={styles.body}>
-        <h3 className={styles.title}>{job.title}</h3>
-
-        <div className={styles.metaGrid} aria-label="Job metadata">
-          <div className={styles.metaItem}>
+        <div className={styles.metaRow} aria-label="Job metadata">
+          <span className={styles.metaPill}>
             <MapPin className={styles.metaIcon} aria-hidden="true" />
-            <span className={styles.metaLabel}>📍 Location</span>
-            <span className={styles.metaValue}>{locationLabel ?? '—'}</span>
-          </div>
+            {locationLabel ?? '—'}
+          </span>
 
-          <div className={styles.metaItem}>
+          <span className={styles.metaPill}>
             {workType ? <workType.Icon className={styles.metaIcon} aria-hidden="true" /> : null}
-            <span className={styles.metaLabel}>🌍 Work type</span>
-            <span className={styles.metaValue}>{workType?.label ?? '—'}</span>
-          </div>
+            {workType?.label ?? '—'}
+          </span>
 
-          <div className={styles.metaItem}>
+          <span className={styles.metaPill}>
             <TrendingUp className={styles.metaIcon} aria-hidden="true" />
-            <span className={styles.metaLabel}>Seniority</span>
-            <span className={styles.metaValue}>{seniority ?? '—'}</span>
-          </div>
-
-          <div className={cn(styles.metaItem, styles.salaryBox)}>
-            <span className={styles.salaryTop}>
-              <span className={styles.salaryIcon} aria-hidden="true">
-                💰
-              </span>
-              <span className={styles.metaLabel}>Salary</span>
-            </span>
-            <span className={styles.salaryValue}>{salary ?? 'High salary role'}</span>
-          </div>
+            {seniority ?? '—'}
+          </span>
         </div>
 
         <p className={styles.snippet}>
