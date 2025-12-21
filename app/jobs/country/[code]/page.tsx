@@ -22,6 +22,21 @@ const COUNTRIES: Record<string, { name: string; flag: string }> = {
   sweden: { name: 'Sweden', flag: '🇸🇪' },
 }
 
+function getSalaryLabel(code: string): string {
+  const upper = code.toUpperCase()
+  const map: Record<string, string> = {
+    US: '$100k+',
+    GB: '£75k+',
+    CA: '$120k+ CAD',
+    DE: '€80k+',
+    AU: '$140k+ AUD',
+    NL: '€80k+',
+    FR: '€80k+',
+    SE: '1M+ SEK',
+  }
+  return map[upper] || '$100k+'
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   const { code } = await params
   const country = COUNTRIES[code.toLowerCase()]
@@ -41,17 +56,17 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 
   const { total } = await queryJobs({
     countryCode: resolvedCode.toUpperCase(),
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     pageSize: 1,
   })
 
   const title = total > 0
-    ? `$100k+ Jobs in ${country.name} - ${total.toLocaleString()} Positions | Six Figure Jobs`
-    : `$100k+ Jobs in ${country.name} | Six Figure Jobs`
+    ? `${getSalaryLabel(resolvedCode)} Jobs in ${country.name} - ${total.toLocaleString()} Positions | Six Figure Jobs`
+    : `${getSalaryLabel(resolvedCode)} Jobs in ${country.name} | Six Figure Jobs`
 
   const description = total > 0
-    ? `Find ${total.toLocaleString()} high-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions paying $100k+. Engineering, product, data roles. Updated daily.`
-    : `High-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions paying $100k+ at top companies.`
+    ? `Find ${total.toLocaleString()} high-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions starting at ${getSalaryLabel(resolvedCode)}. Engineering, product, data roles. Updated daily.`
+    : `High-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions starting at ${getSalaryLabel(resolvedCode)} at top companies.`
 
   const allowIndex = total >= 3
   const canonical = `${SITE_URL}/jobs/country/${code.toLowerCase()}`
@@ -72,7 +87,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
           url: `${SITE_URL}/og-country-${code.toLowerCase()}.png`,
           width: 1200,
           height: 630,
-          alt: `$100k+ Jobs in ${country.name}`,
+          alt: `${getSalaryLabel(resolvedCode)} Jobs in ${country.name}`,
         },
       ],
     },
@@ -105,7 +120,7 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
 
   const { jobs, total } = await queryJobs({
     countryCode: countryCode.toUpperCase(),
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     pageSize: 40,
   })
 
@@ -122,10 +137,10 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
       </nav>
 
       <h1 className="mb-4 text-2xl font-semibold text-slate-50">
-        {country.flag} $100k+ Jobs in {country.name} ({total.toLocaleString()})
+        {country.flag} {getSalaryLabel(countryCode)} Jobs in {country.name} ({total.toLocaleString()})
       </h1>
       <p className="mb-6 text-sm text-slate-300">
-        High-salary tech positions in {country.name} from top companies.
+        High-salary tech positions (starting {getSalaryLabel(countryCode)}) in {country.name} from top companies.
       </p>
 
       {jobs.length === 0 ? (

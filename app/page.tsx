@@ -35,15 +35,13 @@ import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
 import { WhySixFigureJobs } from '@/components/home/WhySixFigureJobs'
 
-export const revalidate = 600
+export const revalidate = 300 // 5min instead of 10min
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: '6 Figure Jobs & Six Figure Jobs | High Paying $100k+ Positions Without Degree',
   description:
-    'Find 6 figure jobs and six figure jobs paying $100k+ with verified salaries. ' +
-    'Discover easy 6 figure jobs, 6 figure remote jobs, and high paying jobs without degree. ' +
-    '5,347+ six-figure salary jobs from 303 verified companies. Updated daily.',
+    'Find 5,945+ verified jobs paying $100k+ USD (or local equivalent). Premium roles from 333 verified companies. Updated daily.',
   keywords:
     '6 figure jobs, six figure jobs, 6 figure salary jobs, six-figure jobs, high paying jobs, easy 6 figure jobs, 6 figure remote jobs, 6 figure jobs no degree, 6 figure jobs without college degree, six-figure salary jobs, best 6 figure jobs',
   alternates: {
@@ -53,7 +51,7 @@ export const metadata: Metadata = {
     title: 'Six Figure Jobs & High Paying $100k+ Positions',
     description:
       'Find six-figure jobs and high-paying positions with verified $100k+ salaries. ' +
-      'Explore 21,037+ premium opportunities from 2,643 verified companies.',
+      'Explore 5,945+ premium opportunities from 333 verified companies.',
     url: 'https://www.6figjobs.com',
     siteName: '6FigJobs - Six Figure Jobs',
     type: 'website',
@@ -70,7 +68,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Six Figure Jobs | High Paying $100k+ Positions',
     description:
-      'Find six-figure jobs with verified salaries. Explore 21,037+ high-paying opportunities.',
+      'Find six-figure jobs with verified salaries. Explore 5,945+ high-paying opportunities.',
     images: ['https://www.6figjobs.com/og-image.png'],
   },
   robots: {
@@ -215,16 +213,20 @@ export default async function HomePage() {
     topRoles,
   ] = await Promise.all([
     queryJobs({
-      minAnnual: 100_000,
+      isHundredKLocal: true, // Use PPP-adjusted threshold
       page: 1,
       pageSize: PAGE_SIZE,
-      sortBy: 'date', // newest first
-      excludeInternships: true, // explicit
+      sortBy: 'date',
+      excludeInternships: true,
     }),
     prisma.job.count({
       where: {
         isExpired: false,
-        AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
+        OR: [
+          { minAnnual: { gte: BigInt(100_000) } },
+          { maxAnnual: { gte: BigInt(100_000) } },
+          { isHundredKLocal: true },
+        ],
       },
     }),
     prisma.company.count({
@@ -232,7 +234,7 @@ export default async function HomePage() {
         jobs: {
           some: {
             isExpired: false,
-            AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
+            OR: [{ minAnnual: { gte: BigInt(100_000) } }, { isHundredKLocal: true }],
           },
         },
       },
@@ -685,25 +687,25 @@ export default async function HomePage() {
 	          <div className="space-y-2">
 	            <p className="font-medium text-slate-400">By Role</p>
 	            <Link
-	              href={buildSliceCanonicalPath({ minAnnual: 100_000, roleSlugs: ['software-engineer'] })}
+	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['software-engineer'] })}
 	              className="block hover:text-slate-300"
 	            >
 	              Software Engineer Jobs ($100k+)
 	            </Link>
 	            <Link
-	              href={buildSliceCanonicalPath({ minAnnual: 100_000, roleSlugs: ['senior-software-engineer'] })}
+	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['senior-software-engineer'] })}
 	              className="block hover:text-slate-300"
 	            >
 	              Senior Engineer Jobs ($100k+)
 	            </Link>
 	            <Link
-	              href={buildSliceCanonicalPath({ minAnnual: 100_000, roleSlugs: ['product-manager'] })}
+	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['product-manager'] })}
 	              className="block hover:text-slate-300"
 	            >
 	              Product Manager Jobs ($100k+)
 	            </Link>
 	            <Link
-	              href={buildSliceCanonicalPath({ minAnnual: 100_000, roleSlugs: ['data-engineer'] })}
+	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['data-engineer'] })}
 	              className="block hover:text-slate-300"
 	            >
 	              Data Engineer Jobs ($100k+)
@@ -712,25 +714,25 @@ export default async function HomePage() {
 	          <div className="space-y-2">
 	            <p className="font-medium text-slate-400">By Location</p>
 	            <Link
-	              href={buildSliceCanonicalPath({ minAnnual: 100_000, countryCode: 'US' })}
+	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'US' })}
 	              className="block hover:text-slate-300"
 	            >
 	              $100k+ Jobs in USA
 	            </Link>
 	            <Link
-	              href={buildSliceCanonicalPath({ minAnnual: 100_000, countryCode: 'GB' })}
+	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'GB' })}
 	              className="block hover:text-slate-300"
 	            >
 	              £75k+/£100k+ Jobs in UK
 	            </Link>
 	            <Link
-	              href={buildSliceCanonicalPath({ minAnnual: 100_000, countryCode: 'CA' })}
+	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'CA' })}
 	              className="block hover:text-slate-300"
 	            >
 	              $100k+/CA$ Jobs in Canada
 	            </Link>
 	            <Link
-	              href={buildSliceCanonicalPath({ minAnnual: 100_000, remoteOnly: true })}
+	              href={buildSliceCanonicalPath({ isHundredKLocal: true, remoteOnly: true })}
 	              className="block hover:text-slate-300"
 	            >
 	              Remote $100k+ Jobs

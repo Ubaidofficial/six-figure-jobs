@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { total } = await queryJobs({
     skillSlugs: [skillInfo.slug],
     remoteOnly: true,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: 1,
   })
@@ -55,7 +55,7 @@ export default async function SkillRemotePage({ params }: { params: Params }) {
   const { jobs, total, totalPages, page } = await queryJobs({
     skillSlugs: [skillInfo.slug],
     remoteOnly: true,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: PAGE_SIZE,
   })

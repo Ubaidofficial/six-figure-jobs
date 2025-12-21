@@ -155,6 +155,7 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
             {hasBenefits ? (
               <span className={styles.benefits} title="Benefits available">
                 <Gift className={styles.benefitsIcon} aria-hidden="true" />
+                🎁
               </span>
             ) : null}
           </div>
@@ -174,13 +175,13 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
         <div className={styles.metaGrid} aria-label="Job metadata">
           <div className={styles.metaItem}>
             <MapPin className={styles.metaIcon} aria-hidden="true" />
-            <span className={styles.metaLabel}>Location</span>
+            <span className={styles.metaLabel}>📍 Location</span>
             <span className={styles.metaValue}>{locationLabel ?? '—'}</span>
           </div>
 
           <div className={styles.metaItem}>
             {workType ? <workType.Icon className={styles.metaIcon} aria-hidden="true" /> : null}
-            <span className={styles.metaLabel}>Work type</span>
+            <span className={styles.metaLabel}>🌍 Work type</span>
             <span className={styles.metaValue}>{workType?.label ?? '—'}</span>
           </div>
 
@@ -193,7 +194,7 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
           <div className={cn(styles.metaItem, styles.salaryBox)}>
             <span className={styles.salaryTop}>
               <span className={styles.salaryIcon} aria-hidden="true">
-                $
+                💰
               </span>
               <span className={styles.metaLabel}>Salary</span>
             </span>

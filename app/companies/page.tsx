@@ -66,35 +66,33 @@ export default async function CompaniesPage() {
           <p className="text-slate-400">No companies found yet. Try again soon — listings update frequently.</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {companies.map((c) => (
             <Link
               key={c.id}
               href={c.slug ? `/company/${c.slug}` : '/companies'}
-              className="group rounded-2xl border border-slate-800 bg-slate-950/40 p-4 shadow-sm transition hover:border-slate-600 hover:bg-slate-950/60 hover:shadow-md"
+              className="group flex flex-col items-center rounded-2xl border border-slate-800 bg-slate-950/40 p-6 shadow-sm transition hover:border-slate-600 hover:bg-slate-950/60 hover:shadow-lg"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-sm font-semibold text-slate-200">
-                  {c.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={c.logoUrl}
-                      alt={`${c.name} logo`}
-                      className="h-full w-full object-contain"
-                      loading="lazy"
-                    />
-                  ) : (
-                    (c.name?.[0] || 'C').toUpperCase()
-                  )}
-                </div>
+              <div className="mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-lg font-bold text-slate-200">
+                {c.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.logoUrl}
+                    alt=""
+                    className="h-full w-full object-contain"
+                    loading="lazy"
+                  />
+                ) : (
+                  (c.name?.[0] || 'C').toUpperCase()
+                )}
+              </div>
 
-                <div className="min-w-0">
-                  <div className="line-clamp-1 text-base font-semibold text-slate-100 group-hover:text-white">
-                    {c.name}
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    {c._count.jobs.toLocaleString()} live $100k+ roles
-                  </div>
+              <div className="w-full text-center">
+                <div className="mb-1 line-clamp-2 text-sm font-semibold text-slate-100 group-hover:text-white">
+                  {c.name}
+                </div>
+                <div className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-1 text-xs font-medium text-green-400">
+                  💼 {c._count.jobs.toLocaleString()} jobs
                 </div>
               </div>
             </Link>

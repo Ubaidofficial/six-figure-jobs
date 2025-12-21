@@ -105,7 +105,7 @@ export async function generateMetadata({
 
   const { total } = await queryJobs({
     roleSlugs: cfg.roleSlugs,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: 1,
   })
@@ -144,7 +144,7 @@ export default async function CategoryPage({
 
   const { jobs, total } = await queryJobs({
     roleSlugs: cfg.roleSlugs,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page,
     pageSize: PAGE_SIZE,
     sortBy: 'date',

@@ -21,20 +21,20 @@ import styles from './SiteHeader.module.css'
 type NavLink = { href: string; title: string; description?: string; onClick?: () => void }
 
 const SALARY_LINKS: NavLink[] = [
-  { href: '/jobs/100k-plus', title: '$100k+ jobs', description: 'Core six-figure roles' },
-  { href: '/jobs/200k-plus', title: '$200k+ jobs', description: 'Senior + staff band' },
-  { href: '/jobs/300k-plus', title: '$300k+ jobs', description: 'Principal + leadership band' },
-  { href: '/jobs/400k-plus', title: '$400k+ jobs', description: 'Executive + elite band' },
-  { href: '/salary', title: 'Salary guides', description: 'Role-based compensation insights' },
+  { href: '/jobs/100k-plus', title: '💵 $100k+ jobs', description: 'Core six-figure roles' },
+  { href: '/jobs/200k-plus', title: '💰 $200k+ jobs', description: 'Senior + staff band' },
+  { href: '/jobs/300k-plus', title: '💎 $300k+ jobs', description: 'Principal + leadership band' },
+  { href: '/jobs/400k-plus', title: '🏆 $400k+ jobs', description: 'Executive + elite band' },
+  { href: '/salary', title: '📊 Salary guides', description: 'Role-based compensation insights' },
 ]
 
 const LOCATION_LINKS: NavLink[] = [
-  { href: '/jobs/location/united-states', title: 'United States', description: '$100k+ (USD)' },
-  { href: '/jobs/location/united-kingdom', title: 'United Kingdom', description: '£70k+ (GBP)' },
-  { href: '/jobs/location/canada', title: 'Canada', description: '$120k+ (CAD)' },
-  { href: '/jobs/location/germany', title: 'Germany', description: '€80k+ (EUR)' },
-  { href: '/jobs/location/australia', title: 'Australia', description: '$140k+ (AUD)' },
-  { href: '/jobs/location/netherlands', title: 'Netherlands', description: '€80k+ (EUR)' },
+  { href: '/jobs/location/united-states', title: '🇺🇸 United States', description: '$100k+ (USD)' },
+  { href: '/jobs/location/united-kingdom', title: '🇬🇧 United Kingdom', description: '£75k+ (GBP)' },
+  { href: '/jobs/location/canada', title: '🇨🇦 Canada', description: '$120k+ (CAD)' },
+  { href: '/jobs/location/germany', title: '🇩🇪 Germany', description: '€80k+ (EUR)' },
+  { href: '/jobs/location/australia', title: '🇦🇺 Australia', description: '$140k+ (AUD)' },
+  { href: '/jobs/location/netherlands', title: '🇳🇱 Netherlands', description: '€80k+ (EUR)' },
 ]
 
 function useScrolled(thresholdPx: number = 10): boolean {

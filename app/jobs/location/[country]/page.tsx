@@ -63,7 +63,7 @@ export async function generateMetadata({
   }
 
   const { total } = await queryJobs({
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     countryCode: loc.countryCode ?? undefined,
     remoteMode: loc.remoteOnly ? 'remote' : undefined,
     pageSize: 1,

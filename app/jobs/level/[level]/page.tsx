@@ -30,7 +30,7 @@ export async function generateMetadata({
   // Runs at request-time (cached via revalidate), not during build.
   const { total } = await queryJobs({
     experienceLevel: level,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     pageSize: 1,
   })
 
@@ -87,7 +87,7 @@ export default async function LevelPage({
 
   const { jobs, total } = await queryJobs({
     experienceLevel: level,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     pageSize: 40,
   })
 

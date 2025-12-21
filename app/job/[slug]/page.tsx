@@ -240,7 +240,7 @@ export default async function JobPage({
   const similarResult = await queryJobs({
     roleSlugs: typedJob.roleSlug ? [typedJob.roleSlug] : undefined,
     countryCode: typedJob.countryCode || undefined,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: 6,
   })
@@ -981,7 +981,7 @@ function buildJobBreadcrumbJsonLd(job: JobWithCompany, slug: string): any {
     const roleLabel = prettyRole(job.roleSlug)
     const cc = job.countryCode.toUpperCase()
     const path = buildSliceCanonicalPath({
-      minAnnual: 100_000,
+      isHundredKLocal: true,
       roleSlugs: [job.roleSlug],
       countryCode: job.countryCode,
     })

@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { total } = await queryJobs({
     roleSlugs: [role],
     skillSlugs: [skillInfo.slug],
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: 1,
   })
@@ -61,7 +61,7 @@ export default async function RoleSkillPage({ params }: { params: Params }) {
   const { jobs, total, totalPages, page } = await queryJobs({
     roleSlugs: [role],
     skillSlugs: [skillInfo.slug],
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: PAGE_SIZE,
   })

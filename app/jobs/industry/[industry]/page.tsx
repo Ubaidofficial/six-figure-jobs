@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
   const { total } = await queryJobs({
     industry: resolved.label,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: 1,
   })
@@ -76,7 +76,7 @@ export default async function IndustryPage({ params }: { params: Params }) {
 
   const { jobs, total, totalPages, page } = await queryJobs({
     industry: resolved.label,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: PAGE_SIZE,
   })

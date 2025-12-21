@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: '%s | Six Figure Jobs',
   },
   description:
-    'Find 21,037+ verified jobs paying $100k+ USD (or local equivalent). Premium roles from 2,643 verified companies. Updated daily.',
+    'Find 5,945+ verified jobs paying $100k+ USD (or local equivalent). Premium roles from 333 verified companies. Updated daily.',
   robots: process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')
     ? { index: false, follow: false }
     : undefined,
