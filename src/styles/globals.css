@@ -22,8 +22,8 @@
   --leading-normal: var(--line-height-normal);
 
   /* Accents */
-  --accent: var(--color-primary);
-  --focus-ring: var(--color-focus-ring);
+  --brand-accent: hsl(var(--accent));
+  --brand-focus-ring: hsl(var(--ring) / 0.45);
 }
 
 /* --------------------------------------------------------------------------
@@ -63,7 +63,7 @@ body {
    -------------------------------------------------------------------------- */
 
 a {
-  color: var(--accent);
+  color: var(--brand-accent);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
   text-decoration-color: rgba(132, 204, 22, 0.45);
@@ -83,12 +83,12 @@ a:active {
    -------------------------------------------------------------------------- */
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--brand-accent);
   outline-offset: 2px;
 }
 
 :where(a, button, input, select, textarea, [role="button"]):focus-visible {
-  box-shadow: 0 0 0 4px var(--focus-ring);
+  box-shadow: 0 0 0 4px var(--brand-focus-ring);
 }
 
 /* --------------------------------------------------------------------------

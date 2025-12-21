@@ -37,7 +37,7 @@ export function LatestOpportunities({
     <section className={styles.section} aria-label="Latest opportunities">
       <header className={styles.header}>
         <div>
-          <h2 className={styles.title}>Latest $100k+ Opportunities (Minimum Salary)</h2>
+          <h2 className={styles.title}>Latest $100k+ Opportunities</h2>
         </div>
         <Link href="/jobs" className={styles.headerLink}>
           Explore all opportunities <span aria-hidden="true">→</span>

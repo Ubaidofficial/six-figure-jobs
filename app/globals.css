@@ -305,3 +305,31 @@
     animation: none !important;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* TOKEN OVERRIDES (APPEND-ONLY)                                              */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  :root,
+  .dark {
+    /* Align shadcn/tailwind tokens with src/styles/design-tokens.css palette */
+    --background: 0 0% 4%; /* #0a0a0a */
+    --foreground: 0 0% 100%; /* #ffffff */
+    --card: 0 0% 8%; /* #141414 */
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 100%;
+    --secondary: 0 0% 12%; /* #1f1f1f */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 64%; /* #a3a3a3 */
+    --border: 0 0% 16%; /* #2a2a2a */
+    --input: 0 0% 16%;
+
+    /* Brand primary (RemoteYeah green #84cc16 -> hsl(83.7 80.5% 44.3%)) */
+    --primary: 83.7 80.5% 44.3%;
+    --accent: 83.7 80.5% 44.3%;
+    --ring: 83.7 80.5% 44.3%;
+  }
+}

@@ -155,11 +155,11 @@ export default function JobCard({
         <div className={styles.actions}>
           {salaryDisplay ? (
             <div className={styles.salaryBadge}>
-              <span className={styles.salaryLabel}>Minimum</span>
+              <span className={styles.salaryLabel}>Salary</span>
               <span className={styles.salaryAmount}>{salaryDisplay}</span>
             </div>
           ) : (
-            <div className={styles.salaryPlaceholder}>Salary in posting</div>
+            <div className={styles.salaryPlaceholder}>Salary not disclosed</div>
           )}
 
           <div className={styles.pills}>
