@@ -172,3 +172,30 @@ If you want auto-generated history, see CHANGELOG.generated.md.
 - **Typography**: Refined font hierarchy
 - **Color Scheme**: Updated brand colors
 - **Mobile**: Enhanced responsive design
+
+## [v2.10.0] - 2024-12-21
+
+### Fixed
+- **Global Query Logic**: Replaced 36 instances of USD-only queries with PPP-adjusted across all pages
+- **Homepage Data**: Updated to accurate counts (5,945 jobs, 333 companies)
+- **Germany Currency Display**: Shows €80k+, UK shows £75k+, etc. (was $100k everywhere)
+- **Homepage Revalidation**: Reduced from 10min to 5min for faster updates
+- **Metadata Accuracy**: All SEO metadata now reflects real counts
+
+### Added
+- **Emoji Icons**: 📍 🌍 💰 💼 🎁 throughout UI
+- **Flag Emojis**: 🇺🇸 🇬🇧 🇩🇪 🇨🇦 🇦🇺 🇳🇱 in navigation
+- **City Sitemap**: `/sitemap-city.xml` for 19 major cities
+
+### Improved
+- **Companies Page**: 4-column responsive grid with centered cards
+- **Navigation**: Jobs dropdown with emojis + accurate thresholds
+
+### Removed
+- **Footer**: "Coming soon" placeholder links
+
+### Technical
+- **Core Web Vitals**: LCP/CLS/font fixes implemented
+- **Job Schema**: Fixed `applicantLocationRequirements` for GSC
+- **Redirects**: Salary pages now 301 (permanent)
+
