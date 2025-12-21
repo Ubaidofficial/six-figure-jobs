@@ -14,8 +14,7 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   const company = job.companyRef
 
   const companyName = company?.name || job.company || 'Company'
-  const companyUrl =
-    (company?.website && normalizeUrl(company.website)) || undefined
+  const companyUrl = (company?.website && normalizeUrl(company.website)) || undefined
   const logo =
     (company?.logoUrl && normalizeUrl(company.logoUrl)) ||
     (job.companyLogo && normalizeUrl(job.companyLogo)) ||
@@ -25,17 +24,10 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
-  const datePosted = (
-    job.postedAt ??
-    job.createdAt ??
-    job.updatedAt ??
-    new Date()
-  ).toISOString()
+  const datePosted = (job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date()).toISOString()
 
   const validThrough = (() => {
-    const base = new Date(
-      job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date(),
-    )
+    const base = new Date(job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date())
     base.setDate(base.getDate() + 30)
     return base.toISOString()
   })()
@@ -43,16 +35,11 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   const description = buildPlainTextDescription(job, companyName)
   const baseSalary = buildBaseSalary(job)
 
-  // Remote: declare TELECOMMUTE and avoid inventing a physical location
   const jobLocationType = isRemote ? 'TELECOMMUTE' : undefined
   const jobLocation = isRemote ? undefined : buildJobLocation(job)
 
-  // Only emit applicantLocationRequirements if it's a real geo restriction
-  const applicantLocationRequirements = isRemote
-    ? buildApplicantLocationRequirements(job)
-    : undefined
+  const applicantLocationRequirements = isRemote ? buildApplicantLocationRequirements(job) : undefined
 
-  // Recommended; always provide a fallback string
   const employmentType = job.type || job.employmentType || 'Full-time'
 
   const jsonLd: any = {
@@ -78,9 +65,7 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     ...(jobLocationType ? { jobLocationType } : {}),
     ...(jobLocation ? { jobLocation } : {}),
     ...(baseSalary ? { baseSalary } : {}),
-    ...(applicantLocationRequirements
-      ? { applicantLocationRequirements }
-      : {}),
+    ...(applicantLocationRequirements ? { applicantLocationRequirements } : {}),
 
     identifier: {
       '@type': 'PropertyValue',
@@ -95,7 +80,6 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 /* ---------------- helpers ---------------- */
 
 function buildPlainTextDescription(job: any, companyName: string): string {
-  // Prefer plain text if available (many scrapers store this)
   const text = String(job.descriptionText || '').trim()
   if (text) return cleanDescription(text)
 
@@ -105,9 +89,7 @@ function buildPlainTextDescription(job: any, companyName: string): string {
   const noTags = decoded ? stripTags(decoded) : ''
   const noTags2 = noTags.includes('<') ? stripTags(noTags) : noTags
 
-  const fallback =
-    (job.salaryRaw ? String(job.salaryRaw) : '') ||
-    `${job.title} at ${companyName}`
+  const fallback = (job.salaryRaw ? String(job.salaryRaw) : '') || `${job.title} at ${companyName}`
 
   return cleanDescription(noTags2 || fallback)
 }
@@ -123,9 +105,7 @@ function buildBaseSalary(job: any): any | undefined {
   const min = rawMin ? normalizeAnnualAmount(rawMin) : null
   const max = rawMax ? normalizeAnnualAmount(rawMax) : null
 
-  const currency =
-    (job.salaryCurrency as string | null | undefined) ||
-    (job.currency as string | null | undefined)
+  const currency = (job.salaryCurrency as string | null | undefined) || (job.currency as string | null | undefined)
 
   const threshold = getHighSalaryThresholdAnnual(currency)
   if (!currency || threshold == null) return undefined
@@ -146,53 +126,40 @@ function buildBaseSalary(job: any): any | undefined {
   }
 }
 
-/**
- * For remote jobs, Google expects applicantLocationRequirements to be a valid geo
- * restriction (typically Country, or State). Never emit placeholders like
- * "Global", "Worldwide", "Anywhere" because they frequently trigger errors.
- */
 function buildApplicantLocationRequirements(job: any): any | undefined {
-  const raw =
-    (job.countryCode ? String(job.countryCode) : '') ||
-    (job.remoteRegion ? String(job.remoteRegion) : '')
+  const raw = (job.countryCode ? String(job.countryCode) : '') || (job.remoteRegion ? String(job.remoteRegion) : '')
 
   const s = raw.trim()
-  if (!s) return undefined
+
+  // Default to US if no country specified for remote jobs
+  if (!s) {
+    return { '@type': 'Country', name: 'United States' }
+  }
 
   const upper = s.toUpperCase()
 
   // Block non-geo placeholders
-  if (
-    upper === 'GLOBAL' ||
-    upper === 'WORLDWIDE' ||
-    upper === 'ANYWHERE' ||
-    upper === 'REMOTE' ||
-    upper === 'INTERNATIONAL'
-  ) {
-    return undefined
+  if (upper === 'GLOBAL' || upper === 'WORLDWIDE' || upper === 'ANYWHERE' || upper === 'REMOTE' || upper === 'INTERNATIONAL') {
+    return { '@type': 'Country', name: 'United States' }
   }
 
-  // ISO-3166-1 alpha-2 country code (US, CA, GB, etc)
+  // ISO-3166-1 alpha-2 country code
   if (/^[A-Z]{2}$/.test(upper)) {
     const name = countryNameFromCode(upper) || upper
     return { '@type': 'Country', name }
   }
 
-  // If remoteRegion is a known pattern like "California, USA" or "CA, United States"
-  // treat as State to avoid invalid object-type issues.
-  if (
-    s.includes(',') &&
-    /usa|united states|u\.s\.|us\b/i.test(s)
-  ) {
+  // State/region format
+  if (s.includes(',') && /usa|united states|u\.s\.|us\b/i.test(s)) {
     return { '@type': 'AdministrativeArea', name: s }
   }
 
-  // Otherwise treat as a readable country/region label (best-effort)
+  // Fallback
   if (s.length >= 3 && s.length <= 60) {
     return { '@type': 'Country', name: s }
   }
 
-  return undefined
+  return { '@type': 'Country', name: 'United States' }
 }
 
 function countryNameFromCode(code: string): string | null {
@@ -207,12 +174,9 @@ function countryNameFromCode(code: string): string | null {
 function buildJobLocation(job: any): any {
   const city = job.city ? String(job.city) : undefined
   const region = job.stateCode ? String(job.stateCode).toUpperCase() : undefined
-  const country = job.countryCode
-    ? String(job.countryCode).toUpperCase()
-    : undefined
+  const country = job.countryCode ? String(job.countryCode).toUpperCase() : undefined
   const locationRaw = job.locationRaw ? String(job.locationRaw).trim() : ''
 
-  // Onsite/hybrid: include what exists, but never emit an empty address
   if (!city && !region && !country && !locationRaw) {
     return undefined
   }
@@ -246,7 +210,6 @@ function toNumberSafe(v: any): number | null {
 }
 
 function normalizeAnnualAmount(n: number): number {
-  // Some sources store annual as cents
   if (n >= 50_000_000) return Math.round(n / 100)
   return Math.round(n)
 }

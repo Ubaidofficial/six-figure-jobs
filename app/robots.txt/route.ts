@@ -32,6 +32,7 @@ export async function GET() {
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     `Sitemap: ${SITE_URL}/sitemap-jobs.xml`,
     `Sitemap: ${SITE_URL}/sitemap-company.xml`,
+    `Sitemap: ${SITE_URL}/sitemap-city.xml`,
     `Sitemap: ${SITE_URL}/sitemap-salary.xml`,
     `Sitemap: ${SITE_URL}/sitemap-remote.xml`,
     `Sitemap: ${SITE_URL}/sitemap-country.xml`,

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 
 import { cn } from '@/lib/utils'
@@ -132,8 +133,15 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
       <header className={styles.header}>
         <div className={styles.logoWrap} aria-hidden="true">
           {companyLogo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={companyLogo} alt="" className={styles.logoImg} loading="lazy" />
+            <Image
+              src={companyLogo}
+              alt=""
+              width={48}
+              height={48}
+              className={styles.logoImg}
+              loading="lazy"
+              unoptimized={companyLogo.includes('clearbit.com')}
+            />
           ) : (
             <span className={styles.logoFallback}>{initials || 'C'}</span>
           )}
@@ -194,8 +202,7 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
         </div>
 
         <p className={styles.snippet}>
-          {snippet ||
-            'Verified compensation and direct application links from company ATS systems.'}
+          {snippet || 'Verified compensation and direct application links from company ATS systems.'}
         </p>
 
         <div className={styles.skills} aria-label="Skills">

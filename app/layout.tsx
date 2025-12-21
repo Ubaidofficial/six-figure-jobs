@@ -1,9 +1,17 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import type { Viewport } from 'next'
+import { Space_Grotesk } from 'next/font/google'
+
 import { ThemeProvider } from '@/components/theme-provider'
 import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+})
 
 function getSiteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL || 'https://www.6figjobs.com'
@@ -33,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className="h-full">
+    <html lang="en" suppressHydrationWarning className={`h-full ${spaceGrotesk.className}`}>
       <body className="min-h-full bg-background text-foreground">
         <ThemeProvider
           attribute="class"

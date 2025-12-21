@@ -20,6 +20,7 @@ export async function GET() {
   const sitemaps = [
     'sitemap-jobs.xml',
     'sitemap-company.xml',
+    'sitemap-city.xml',
     'sitemap-remote.xml',
     'sitemap-salary.xml',
     'sitemap-country.xml',

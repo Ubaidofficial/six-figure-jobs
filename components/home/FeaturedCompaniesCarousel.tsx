@@ -26,7 +26,9 @@ function CompanyLogo({ company }: { company: FeaturedCompany }) {
       alt={`${company.name} logo`}
       width={64}
       height={64}
-      loading="lazy"
+      loading="eager"
+      placeholder="blur"
+      blurDataURL="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%23334155'/%3E%3C/svg%3E"
       unoptimized
       className={styles.logoImg}
     />
@@ -99,4 +101,3 @@ export function FeaturedCompaniesCarousel({ companies }: { companies: FeaturedCo
     </section>
   )
 }
-
