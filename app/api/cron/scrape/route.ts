@@ -10,12 +10,27 @@ function authorized(req: Request) {
   return !!secret && auth === `Bearer ${secret}`
 }
 
-function runScrape() {
-  spawn(
+function runScrapeAndEnrich() {
+  // Run scraping first
+  const scrapeProcess = spawn(
     'npx',
     ['tsx', 'scripts/dailyScrapeV2.ts', '--mode=all', '--concurrency=5'],
     { env: process.env, stdio: 'inherit' }
   )
+
+  // When scraping completes, run enrichment
+  scrapeProcess.on('close', (code) => {
+    if (code === 0) {
+      console.log('✅ Scraping complete, starting apply URL enrichment...')
+      spawn(
+        'npx',
+        ['tsx', 'scripts/enrich-apply-urls.ts'],
+        { env: process.env, stdio: 'inherit' }
+      )
+    } else {
+      console.error(`❌ Scraping failed with code ${code}, skipping enrichment`)
+    }
+  })
 }
 
 export async function POST(req: Request) {
@@ -23,8 +38,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  runScrape()
-  return NextResponse.json({ success: true, message: 'Started dailyScrapeV2' })
+  runScrapeAndEnrich()
+
+  return NextResponse.json({ 
+    success: true, 
+    message: 'Started dailyScrapeV2 + apply URL enrichment' 
+  })
 }
 
 export async function GET(req: Request) {
