@@ -6,13 +6,12 @@ import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
-import { buildSalaryText } from '../../lib/jobs/salary' // ← unified helper
+import { buildSalaryText } from '../../lib/jobs/salary'
 import { formatRelativeTime } from '../../lib/utils/time'
 import { buildLogoUrl } from '../../lib/companies/logo'
 
 import styles from './JobCard.module.css'
 
-/** Extend queryJobs result with UI-only optional fields */
 export type JobCardJob = JobWithCompany & {
   snippet?: string | null
   description?: string | null
@@ -22,10 +21,6 @@ export type JobCardJob = JobWithCompany & {
   techStack?: string | null
 }
 
-/* -------------------------------------------------------------------------- */
-/* Component                                                                   */
-/* -------------------------------------------------------------------------- */
-
 export default function JobCard({
   job,
   variant = 'full',
@@ -34,8 +29,7 @@ export default function JobCard({
   variant?: 'full' | 'compact'
 }) {
   const [logoFailed, setLogoFailed] = useState(false)
-  const companyName =
-    job.companyRef?.name ?? job.company ?? 'Unknown company'
+  const companyName = job.companyRef?.name ?? job.company ?? 'Unknown company'
   const companyInitials = companyName
     .split(/\s+/)
     .map((w) => w[0])
@@ -49,8 +43,6 @@ export default function JobCard({
       ? new Date((job as any).featureExpiresAt).getTime() > Date.now()
       : false
 
-  // Prefer DB logo first, fallback to Clearbit from website
-  // Stronger logo fallback: prefer stored logo → Clearbit/logo.dev → initials
   const logo = buildLogoUrl(
     job.companyRef?.logoUrl ?? job.companyLogo ?? null,
     job.companyRef?.website ?? null,
@@ -58,13 +50,13 @@ export default function JobCard({
   const showLogo = Boolean(logo) && !logoFailed
 
   const companySlug = job.companyRef?.slug ?? null
-
   const companyDesc = getCompanyBlurb(job.companyRef?.description)
   const snippet = buildSnippet(job, companyDesc)
   const techStack = parseJsonArray(job.techStack).slice(0, variant === 'compact' ? 0 : 3)
 
+  // FIX 1: Better location handling - show city + country or just country
   const location = buildLocation(job)
-  const salaryText = buildSalaryText(job) // ← UNIFIED salary logic
+  const salaryText = buildSalaryText(job)
   const salaryDisplay =
     salaryText &&
     /\d/.test(salaryText) &&
@@ -73,9 +65,11 @@ export default function JobCard({
       ? salaryText
       : null
 
+  // FIX 2: Extract seniority from title
+  const seniority = inferSeniorityFromTitle(job.title)
+  
   const remoteMode = getRemoteMode(job)
-  const workType = remoteMode ?? (job.remote === true ? 'Remote' : 'On-site')
-
+  
   const postedLabel = formatRelativeTime(
     job.postedAt ?? job.createdAt ?? job.updatedAt ?? null,
   )
@@ -143,15 +137,19 @@ export default function JobCard({
             </div>
           </div>
 
+          {/* FIX 3: Show location + seniority + remote, avoid duplication */}
           <div className={styles.metadata}>
-            {location ? <span className={styles.badge}>{location}</span> : null}
-            {workType ? <span className={`${styles.badge} ${styles.badgeAccent}`}>{workType}</span> : null}
-            {postedLabel ? <span className={styles.badgeTime}>Posted {postedLabel}</span> : null}
+            {location && <span className={styles.badge}>{location}</span>}
+            {remoteMode && <span className={`${styles.badge} ${styles.badgeAccent}`}>{remoteMode}</span>}
+            {seniority && <span className={styles.badge}>{seniority}</span>}
+            {postedLabel && <span className={styles.badgeTime}>Posted {postedLabel}</span>}
           </div>
 
+          {/* FIX 4: Better snippet - use AI summary or description, not generic text */}
           {variant === 'full' && snippet ? <p className={styles.snippet}>{snippet}</p> : null}
         </div>
 
+        {/* FIX 5: Improved salary badge alignment */}
         <div className={styles.actions}>
           {salaryDisplay ? (
             <div className={styles.salaryBadge}>
@@ -163,9 +161,9 @@ export default function JobCard({
           )}
 
           <div className={styles.pills}>
-            {salaryDisplay ? <StatusPill tone="success">Verified</StatusPill> : null}
-            {isNew ? <StatusPill tone="neutral">NEW</StatusPill> : null}
-            {isFeatured ? <StatusPill tone="warning">FEATURED</StatusPill> : null}
+            {salaryDisplay && <StatusPill tone="success">Verified</StatusPill>}
+            {isNew && <StatusPill tone="neutral">NEW</StatusPill>}
+            {isFeatured && <StatusPill tone="warning">FEATURED</StatusPill>}
           </div>
         </div>
       </div>
@@ -182,10 +180,6 @@ export default function JobCard({
     </article>
   )
 }
-
-/* -------------------------------------------------------------------------- */
-/* Status Pill                                                                 */
-/* -------------------------------------------------------------------------- */
 
 function StatusPill({
   children,
@@ -219,11 +213,10 @@ function buildLocation(job: JobCardJob): string | null {
   const city = job.city ?? null
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
-  if (isRemote) {
-    if (code) return code
-    return 'Worldwide'
-  }
-
+  // Don't show location if fully remote - remoteMode badge will handle it
+  if (isRemote) return null
+  
+  // Show city + country or just country
   if (city && code) return `${city}, ${code}`
   if (code) return code
   if (job.locationRaw) return String(job.locationRaw)
@@ -232,14 +225,25 @@ function buildLocation(job: JobCardJob): string | null {
 }
 
 function buildSnippet(job: JobCardJob, companyDesc?: string | null): string | null {
+  // Priority 1: AI-generated summary
   const aiSummary = extractSummary(job.requirementsJson)
   if (aiSummary) return aiSummary
 
+  // Priority 2: Job description
   const rawPrimary = job.snippet ?? job.descriptionHtml ?? null
   const rawSecondary = job.description ?? null
-  const raw = rawPrimary || rawSecondary || companyDesc || null
-  if (!raw) return null
-  return truncateText(stripTags(decodeHtmlEntities(raw)), 160)
+  const raw = rawPrimary || rawSecondary
+  
+  if (raw) {
+    return truncateText(stripTags(decodeHtmlEntities(raw)), 160)
+  }
+
+  // Priority 3: Company description as last resort
+  if (companyDesc) {
+    return `${companyDesc.slice(0, 140)} ...`
+  }
+
+  return null
 }
 
 function isReasonableSalary(job: JobCardJob) {
@@ -281,26 +285,12 @@ function truncateText(str: string, maxChars: number) {
 function inferSeniorityFromTitle(title: string): string | null {
   const t = title.toLowerCase()
   if (t.includes('intern')) return 'Internship'
-  if (t.includes('principal') || t.includes('staff')) return 'Staff / Principal'
+  if (t.includes('principal') || t.includes('staff')) return 'Staff'
   if (t.includes('lead') || t.includes('head')) return 'Lead'
-  if (t.includes('senior') || t.includes('sr')) return 'Senior'
-  if (t.includes('junior') || t.includes('jr')) return 'Junior'
-  return null
-}
-
-function inferCategoryFromRoleSlug(roleSlug?: string | null) {
-  if (!roleSlug) return null
-  const s = roleSlug.toLowerCase()
-  if (s.includes('data')) return 'Data'
-  if (s.includes('ml') || s.includes('machine-learning')) return 'ML / AI'
-  if (s.includes('engineer') || s.includes('developer')) return 'Engineering'
-  if (s.includes('product')) return 'Product'
-  if (s.includes('design')) return 'Design'
-  if (s.includes('ops') || s.includes('operations')) return 'Operations'
-  if (s.includes('sales')) return 'Sales'
-  if (s.includes('marketing')) return 'Marketing'
-  if (s.includes('legal') || s.includes('counsel')) return 'Legal'
-  return null
+  if (t.includes('senior') || t.includes('sr.') || t.includes('sr ')) return 'Senior'
+  if (t.includes('junior') || t.includes('jr.') || t.includes('jr ')) return 'Junior'
+  if (t.includes('mid-level') || t.includes('mid level')) return 'Mid-level'
+  return 'Mid-level' // Default to mid-level for jobs without explicit seniority
 }
 
 function getRemoteMode(job: JobCardJob): string | null {
@@ -342,27 +332,9 @@ function getCompanyBlurb(description?: string | null): string | null {
   if (!description) return null
   const clean = stripTags(decodeHtmlEntities(description)).trim()
   if (!clean) return null
-  // take first sentence-ish
   const cutoff = clean.indexOf('.')
   if (cutoff > 50 && cutoff < 220) {
     return clean.slice(0, cutoff + 1)
   }
   return clean.slice(0, 220)
-}
-
-function isValidUrl(url?: string | null) {
-  if (!url) return false
-  try {
-    // new URL will throw if invalid; we also reject localhost/file protocols
-    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
-    return ['http:', 'https:'].includes(parsed.protocol)
-  } catch {
-    return false
-  }
-}
-
-function cleanUrl(url: string) {
-  if (!url) return '#'
-  if (url.startsWith('http://') || url.startsWith('https://')) return url
-  return `https://${url}`
 }

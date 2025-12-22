@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { JobCard } from '@/components/jobs/JobCard'
+import JobCard from '@/components/JobCard'
+import { InfiniteJobsList } from './_components/InfiniteJobsList'
 
 import {
   buildWhere,
@@ -360,36 +361,16 @@ export default async function JobsIndexPage({
               </div>
             </div>
           ) : (
-            <div className={view === 'list' ? styles.list : styles.grid}>
-              {dedupedJobs.map((job) => (
-                <JobCard key={job.id} job={job as JobWithCompany} />
-              ))}
-            </div>
-          )}
-
-          {totalPages > 1 && (
-            <nav className={styles.pagination} aria-label="Pagination">
-              <div className={styles.pageMeta}>
-                Page <strong>{page}</strong> of <strong>{totalPages}</strong>
-              </div>
-              <div className={styles.pageLinks}>
-                {page > 1 && (
-                  <Link className={styles.pageLink} href={buildPageHref(basePath, sp, page - 1)} scroll={false}>
-                    Previous
-                  </Link>
-                )}
-                {page < totalPages && (
-                  <Link className={styles.pageLink} href={buildPageHref(basePath, sp, page + 1)} scroll={false}>
-                    Next
-                  </Link>
-                )}
-              </div>
-            </nav>
+            <InfiniteJobsList
+              initialJobs={dedupedJobs}
+              initialPage={page}
+              totalPages={totalPages}
+              view={view}
+            />
           )}
         </section>
       </div>
-
-      <section className={styles.below} aria-label="Browse salary bands">
+        <section className={styles.below} aria-label="Browse salary bands">
         <div className={styles.belowHeader}>
           <h2 className={styles.belowTitle}>Browse by salary band</h2>
           <p className={styles.belowBlurb}>

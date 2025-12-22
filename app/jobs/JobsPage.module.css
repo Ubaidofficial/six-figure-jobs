@@ -247,3 +247,22 @@
     padding: var(--space-12) var(--space-12);
   }
 }
+
+/* Infinite scroll additions */
+.loadMoreTrigger {
+  height: 1px;
+  width: 100%;
+  margin: 2rem 0;
+}
+
+.endMessage {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary);
+}
+
+.endMessage p:first-child {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
