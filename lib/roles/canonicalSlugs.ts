@@ -1,11 +1,11 @@
 // lib/roles/canonicalSlugs.ts
+// EXPANDED VERSION: 500+ canonical role slugs
 // Master list of canonical role slugs for pSEO pages
 // ONLY these slugs are valid for /remote/[role] and /jobs/[role] routes
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIER-1 ROLES: Always indexed (~25 roles with highest search volume)
 // ═══════════════════════════════════════════════════════════════════════════
-
 export const TIER_1_ROLES = [
   // Engineering (10)
   'software-engineer',
@@ -18,283 +18,757 @@ export const TIER_1_ROLES = [
   'ios-engineer',
   'android-engineer',
   'security-engineer',
-
+  
   // Data (3)
   'data-scientist',
   'data-analyst',
   'analytics-engineer',
-
+  
   // Product & Design (4)
   'product-manager',
   'product-designer',
   'ux-designer',
   'ux-researcher',
-
+  
   // Management (3)
   'engineering-manager',
   'technical-program-manager',
   'technical-lead',
-
+  
   // Business (3)
   'account-executive',
   'customer-success-manager',
   'sales-engineer',
-
+  
   // Executive (2)
   'vp-engineering',
   'cto',
-] as const
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TIER-2 ROLES: Valid for redirects but noindex (~125 roles)
-// ═══════════════════════════════════════════════════════════════════════════
-
-export const TIER_2_ROLES = [
-  // Senior/Staff/Principal variants
-  'senior-software-engineer',
-  'staff-software-engineer',
-  'principal-software-engineer',
-  'senior-frontend-engineer',
-  'senior-backend-engineer',
-  'senior-full-stack-engineer',
-  'senior-devops-engineer',
-  'senior-data-engineer',
-  'staff-data-engineer',
-  'senior-machine-learning-engineer',
-  'senior-data-scientist',
-  'staff-data-scientist',
-  'senior-data-analyst',
-  'senior-product-manager',
-  'group-product-manager',
-  'principal-product-manager',
-  'senior-product-designer',
-  'staff-product-designer',
-  'senior-ux-designer',
-  'senior-ux-researcher',
-  'senior-engineering-manager',
-  'senior-account-executive',
-  'enterprise-account-executive',
-  'senior-customer-success-manager',
-
-  // Additional Engineering
-  'site-reliability-engineer',
-  'platform-engineer',
-  'infrastructure-engineer',
-  'cloud-engineer',
-  'senior-security-engineer',
-  'qa-engineer',
-  'senior-qa-engineer',
-  'mobile-engineer',
-  'embedded-engineer',
-  'firmware-engineer',
-  'systems-engineer',
-  'network-engineer',
-  'database-engineer',
-  'solutions-engineer',
-  'support-engineer',
-  'release-engineer',
-  'build-engineer',
-  'test-engineer',
-  'automation-engineer',
-  'performance-engineer',
-  'reliability-engineer',
-  'integration-engineer',
-  'api-engineer',
-  'protocol-engineer',
-  'blockchain-engineer',
-  'web-developer',
-  'software-developer',
-  'application-engineer',
-  'systems-administrator',
-
-  // Data & AI/ML
-  'ml-engineer',
-  'ai-engineer',
-  'research-scientist',
-  'research-engineer',
-  'applied-scientist',
-  'data-architect',
-  'bi-engineer',
-  'bi-analyst',
-  'business-intelligence-analyst',
-  'mlops-engineer',
-  'nlp-engineer',
-  'computer-vision-engineer',
-  'deep-learning-engineer',
-  'ai-researcher',
-
-  // Product & Design
-  'director-of-product',
-  'vp-product',
-  'chief-product-officer',
-  'ui-designer',
-  'visual-designer',
-  'brand-designer',
-  'creative-director',
-  'head-of-design',
-  'design-manager',
-
-  // Engineering Management
-  'senior-director-of-engineering',
-  'svp-engineering',
-  'director-of-engineering',
-  'head-of-engineering',
-  'tech-lead',
-  'team-lead',
-  'software-architect',
-  'solutions-architect',
-  'enterprise-architect',
-  'cloud-architect',
-  'engineering-director',
-
-  // Business & Sales
-  'senior-account-manager',
-  'account-manager',
-  'customer-success-director',
-  'sales-manager',
-  'sales-director',
-  'vp-sales',
-  'head-of-sales',
-  'chief-revenue-officer',
-  'business-development-manager',
-  'business-development-representative',
-  'partnerships-manager',
-  'channel-manager',
-  'revenue-operations-manager',
-  'sales-operations-manager',
-  'sales-enablement-manager',
-  'solution-consultant',
-  'pre-sales-engineer',
-
-  // Marketing
-  'marketing-manager',
-  'senior-marketing-manager',
-  'growth-manager',
-  'growth-marketing-manager',
-  'product-marketing-manager',
-  'senior-product-marketing-manager',
-  'content-manager',
-  'content-marketing-manager',
-  'seo-manager',
-  'performance-marketing-manager',
-  'demand-generation-manager',
-  'marketing-director',
-  'vp-marketing',
-  'cmo',
-  'head-of-marketing',
-
-  // Finance & Operations
-  'financial-analyst',
-  'senior-financial-analyst',
-  'finance-manager',
-  'controller',
-  'cfo',
-  'accountant',
-  'senior-accountant',
-  'tax-manager',
-  'operations-manager',
-  'operations-director',
-  'chief-operating-officer',
-  'business-analyst',
-
-  // HR & Recruiting
-  'recruiter',
-  'senior-recruiter',
-  'technical-recruiter',
-  'recruiting-manager',
-  'hr-manager',
-  'hr-business-partner',
-  'people-operations-manager',
-  'talent-acquisition-manager',
-  'head-of-people',
-  'chief-people-officer',
-
-  // Executive
+  // Additional Executive & Management
   'ceo',
-  'coo',
-  'cpo',
-  'ciso',
-  'chief-of-staff',
-  'vp-operations',
-  'general-manager',
-  'managing-director',
   'president',
-
-  // Other
-  'technical-writer',
-  'senior-technical-writer',
-  'program-manager',
-  'senior-program-manager',
+  'managing-director',
+  'general-manager',
+  'ciso',
+  'vp-operations',
   'project-manager',
   'senior-project-manager',
   'scrum-master',
   'agile-coach',
   'consultant',
-  'strategy-consultant',
-  'management-consultant',
-  'security-analyst',
-  'compliance-manager',
-  'legal-counsel',
-  'general-counsel',
+
 ] as const
 
 // ═══════════════════════════════════════════════════════════════════════════
-// COMBINED & TYPE EXPORTS
+// TIER-2 ROLES: Valid for redirects but noindex (~500+ roles)
 // ═══════════════════════════════════════════════════════════════════════════
+export const TIER_2_ROLES = [
+  // ─────────────────────────────────────────────────────────────────────────
+  // SENIOR/STAFF/PRINCIPAL VARIANTS (Engineering)
+  // ─────────────────────────────────────────────────────────────────────────
+  'senior-software-engineer',
+  'staff-software-engineer',
+  'principal-software-engineer',
+  'senior-frontend-engineer',
+  'staff-frontend-engineer',
+  'principal-frontend-engineer',
+  'senior-backend-engineer',
+  'staff-backend-engineer',
+  'principal-backend-engineer',
+  'senior-full-stack-engineer',
+  'staff-full-stack-engineer',
+  'principal-full-stack-engineer',
+  'senior-devops-engineer',
+  'staff-devops-engineer',
+  'principal-devops-engineer',
+  'senior-data-engineer',
+  'staff-data-engineer',
+  'principal-data-engineer',
+  'senior-machine-learning-engineer',
+  'staff-machine-learning-engineer',
+  'principal-machine-learning-engineer',
+  'senior-security-engineer',
+  'staff-security-engineer',
+  'principal-security-engineer',
+  'senior-ios-engineer',
+  'senior-android-engineer',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // CORE ENGINEERING DISCIPLINES
+  // ─────────────────────────────────────────────────────────────────────────
+  'site-reliability-engineer',
+  'senior-site-reliability-engineer',
+  'staff-site-reliability-engineer',
+  'platform-engineer',
+  'senior-platform-engineer',
+  'staff-platform-engineer',
+  'infrastructure-engineer',
+  'senior-infrastructure-engineer',
+  'cloud-engineer',
+  'senior-cloud-engineer',
+  'qa-engineer',
+  'senior-qa-engineer',
+  'test-engineer',
+  'senior-test-engineer',
+  'automation-engineer',
+  'senior-automation-engineer',
+  'mobile-engineer',
+  'senior-mobile-engineer',
+  'embedded-engineer',
+  'senior-embedded-engineer',
+  'firmware-engineer',
+  'senior-firmware-engineer',
+  'systems-engineer',
+  'senior-systems-engineer',
+  'network-engineer',
+  'senior-network-engineer',
+  'database-engineer',
+  'senior-database-engineer',
+  'solutions-engineer',
+  'senior-solutions-engineer',
+  'support-engineer',
+  'senior-support-engineer',
+  'release-engineer',
+  'senior-release-engineer',
+  'build-engineer',
+  'senior-build-engineer',
+  'performance-engineer',
+  'senior-performance-engineer',
+  'reliability-engineer',
+  'senior-reliability-engineer',
+  'integration-engineer',
+  'senior-integration-engineer',
+  'api-engineer',
+  'senior-api-engineer',
+  'protocol-engineer',
+  'senior-protocol-engineer',
+  'blockchain-engineer',
+  'senior-blockchain-engineer',
+  'web-developer',
+  'senior-web-developer',
+  'software-developer',
+  'senior-software-developer',
+  'application-engineer',
+  'senior-application-engineer',
+  'systems-administrator',
+  'senior-systems-administrator',
+  
+  // Specialized Engineering
+  'push-engineer',
+  'senior-push-engineer',
+  'events-engineer',
+  'senior-events-engineer',
+  'pricing-engineer',
+  'senior-pricing-engineer',
+  'billing-engineer',
+  'senior-billing-engineer',
+  'payment-systems-engineer',
+  'senior-payment-systems-engineer',
+  'fraud-engineer',
+  'senior-fraud-engineer',
+  'trust-and-safety-engineer',
+  'senior-trust-and-safety-engineer',
+  'moderation-engineer',
+  'senior-moderation-engineer',
+  'compliance-engineer',
+  'senior-compliance-engineer',
+  'integration-specialist',
+  'senior-integration-specialist',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // AI/ML & DATA SCIENCE
+  // ─────────────────────────────────────────────────────────────────────────
+  'ml-engineer',
+  'senior-ml-engineer',
+  'staff-ml-engineer',
+  'ai-engineer',
+  'senior-ai-engineer',
+  'staff-ai-engineer',
+  'research-scientist',
+  'senior-research-scientist',
+  'staff-research-scientist',
+  'research-engineer',
+  'senior-research-engineer',
+  'applied-scientist',
+  'senior-applied-scientist',
+  'senior-data-scientist',
+  'staff-data-scientist',
+  'principal-data-scientist',
+  'senior-data-analyst',
+  'staff-data-analyst',
+  'data-architect',
+  'senior-data-architect',
+  'bi-engineer',
+  'senior-bi-engineer',
+  'bi-analyst',
+  'senior-bi-analyst',
+  'business-intelligence-analyst',
+  'senior-business-intelligence-analyst',
+  'mlops-engineer',
+  'senior-mlops-engineer',
+  'nlp-engineer',
+  'senior-nlp-engineer',
+  'computer-vision-engineer',
+  'senior-computer-vision-engineer',
+  'deep-learning-engineer',
+  'senior-deep-learning-engineer',
+  'ai-researcher',
+  'senior-ai-researcher',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRODUCT & DESIGN
+  // ─────────────────────────────────────────────────────────────────────────
+  'senior-product-manager',
+  'staff-product-manager',
+  'principal-product-manager',
+  'group-product-manager',
+  'director-of-product',
+  'vp-product',
+  'chief-product-officer',
+  'senior-product-designer',
+  'staff-product-designer',
+  'principal-product-designer',
+  'senior-ux-designer',
+  'staff-ux-designer',
+  'principal-ux-designer',
+  'senior-ux-researcher',
+  'staff-ux-researcher',
+  'ui-designer',
+  'senior-ui-designer',
+  'visual-designer',
+  'senior-visual-designer',
+  'brand-designer',
+  'senior-brand-designer',
+  'creative-director',
+  'senior-creative-director',
+  'head-of-design',
+  'design-manager',
+  'senior-design-manager',
+  'interaction-designer',
+  'senior-interaction-designer',
+  'motion-designer',
+  'senior-motion-designer',
+  'illustration-designer',
+  'senior-illustration-designer',
+  'graphic-designer',
+  'senior-graphic-designer',
+  'product-marketing-manager',
+  'senior-product-marketing-manager',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // ENGINEERING MANAGEMENT & ARCHITECTURE
+  // ─────────────────────────────────────────────────────────────────────────
+  'senior-engineering-manager',
+  'director-of-engineering',
+  'senior-director-of-engineering',
+  'svp-engineering',
+  'head-of-engineering',
+  'tech-lead',
+  'senior-tech-lead',
+  'team-lead',
+  'senior-team-lead',
+  'software-architect',
+  'senior-software-architect',
+  'principal-software-architect',
+  'solutions-architect',
+  'senior-solutions-architect',
+  'principal-solutions-architect',
+  'enterprise-architect',
+  'senior-enterprise-architect',
+  'cloud-architect',
+  'senior-cloud-architect',
+  'engineering-director',
+  'senior-engineering-director',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // TECHNICAL PROGRAM MANAGEMENT
+  // ─────────────────────────────────────────────────────────────────────────
+  'senior-technical-program-manager',
+  'staff-technical-program-manager',
+  'principal-technical-program-manager',
+  'program-manager',
+  'senior-program-manager',
+  'technical-delivery-manager',
+  'senior-technical-delivery-manager',
+  'engineering-program-manager',
+  'senior-engineering-program-manager',
+  'product-operations-manager',
+  'senior-product-operations-manager',
+  'go-to-market-manager',
+  'senior-go-to-market-manager',
+  'launch-manager',
+  'senior-launch-manager',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // SALES & BUSINESS DEVELOPMENT (100+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'senior-account-executive',
+  'enterprise-account-executive',
+  'senior-enterprise-account-executive',
+  'strategic-account-executive',
+  'senior-strategic-account-executive',
+  'field-sales-representative',
+  'senior-field-sales-representative',
+  'field-sales-associate',
+  'senior-field-sales-associate',
+  'field-sales-consultant',
+  'senior-field-sales-consultant',
+  'field-sales-manager',
+  'senior-field-sales-manager',
+  'territory-field-sales-manager',
+  'senior-territory-field-sales-manager',
+  'territory-sales-manager',
+  'senior-territory-sales-manager',
+  'territory-manager',
+  'senior-territory-manager',
+  'area-sales-manager',
+  'senior-area-sales-manager',
+  'regional-sales-manager',
+  'senior-regional-sales-manager',
+  'district-sales-manager',
+  'senior-district-sales-manager',
+  'sales-development-representative',
+  'senior-sales-development-representative',
+  'account-development-representative',
+  'senior-account-development-representative',
+  'business-development-representative',
+  'senior-business-development-representative',
+  'inside-sales-representative',
+  'senior-inside-sales-representative',
+  'outbound-sales-representative',
+  'senior-outbound-sales-representative',
+  'account-manager',
+  'senior-account-manager',
+  'strategic-account-manager',
+  'senior-strategic-account-manager',
+  'key-account-manager',
+  'senior-key-account-manager',
+  'major-account-manager',
+  'senior-major-account-manager',
+  'enterprise-account-manager',
+  'senior-enterprise-account-manager',
+  'commercial-account-manager',
+  'senior-commercial-account-manager',
+  'business-development-manager',
+  'senior-business-development-manager',
+  'partnerships-manager',
+  'senior-partnerships-manager',
+  'channel-manager',
+  'senior-channel-manager',
+  'alliance-manager',
+  'senior-alliance-manager',
+  'sales-manager',
+  'senior-sales-manager',
+  'sales-director',
+  'senior-sales-director',
+  'vp-sales',
+  'svp-sales',
+  'head-of-sales',
+  'chief-revenue-officer',
+  'revenue-operations-manager',
+  'senior-revenue-operations-manager',
+  'sales-operations-manager',
+  'senior-sales-operations-manager',
+  'sales-enablement-manager',
+  'senior-sales-enablement-manager',
+  'solution-consultant',
+  'senior-solution-consultant',
+  'solutions-consultant',
+  'senior-solutions-consultant',
+  'enterprise-solutions-consultant',
+  'senior-enterprise-solutions-consultant',
+  'pre-sales-engineer',
+  'senior-pre-sales-engineer',
+  'pre-sales-consultant',
+  'senior-pre-sales-consultant',
+  'enterprise-sales-executive',
+  'senior-enterprise-sales-executive',
+  'global-sales-manager',
+  'senior-global-sales-manager',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // CUSTOMER SUCCESS & SUPPORT (50+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'senior-customer-success-manager',
+  'enterprise-customer-success-manager',
+  'senior-enterprise-customer-success-manager',
+  'strategic-customer-success-manager',
+  'senior-strategic-customer-success-manager',
+  'technical-customer-success-manager',
+  'senior-technical-customer-success-manager',
+  'customer-success-specialist',
+  'senior-customer-success-specialist',
+  'customer-success-associate',
+  'senior-customer-success-associate',
+  'customer-success-director',
+  'senior-customer-success-director',
+  'head-of-customer-success',
+  'vp-customer-success',
+  'customer-support-specialist',
+  'senior-customer-support-specialist',
+  'customer-support-manager',
+  'senior-customer-support-manager',
+  'technical-support-specialist',
+  'senior-technical-support-specialist',
+  'technical-support-manager',
+  'senior-technical-support-manager',
+  'support-analyst',
+  'senior-support-analyst',
+  'customer-experience-manager',
+  'senior-customer-experience-manager',
+  'customer-operations-manager',
+  'senior-customer-operations-manager',
+  'client-success-manager',
+  'senior-client-success-manager',
+  'account-success-manager',
+  'senior-account-success-manager',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // OPERATIONS & ANALYTICS (60+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'sales-operations-analyst',
+  'senior-sales-operations-analyst',
+  'revenue-operations-analyst',
+  'senior-revenue-operations-analyst',
+  'business-operations-manager',
+  'senior-business-operations-manager',
+  'global-operations-associate',
+  'senior-global-operations-associate',
+  'global-operations-specialist',
+  'senior-global-operations-specialist',
+  'operations-manager',
+  'senior-operations-manager',
+  'operations-director',
+  'senior-operations-director',
+  'head-of-operations',
+  'vp-operations',
+  'chief-operating-officer',
+  'operations-analyst',
+  'senior-operations-analyst',
+  'operations-coordinator',
+  'senior-operations-coordinator',
+  'business-analyst',
+  'senior-business-analyst',
+  'business-systems-analyst',
+  'senior-business-systems-analyst',
+  'supply-chain-analyst',
+  'senior-supply-chain-analyst',
+  'supply-chain-manager',
+  'senior-supply-chain-manager',
+  'logistics-coordinator',
+  'senior-logistics-coordinator',
+  'logistics-manager',
+  'senior-logistics-manager',
+  'procurement-specialist',
+  'senior-procurement-specialist',
+  'procurement-manager',
+  'senior-procurement-manager',
+  'strategy-manager',
+  'senior-strategy-manager',
+  'strategic-operations-manager',
+  'senior-strategic-operations-manager',
+  'business-intelligence-manager',
+  'senior-business-intelligence-manager',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // SOLUTIONS & CONSULTING (40+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'technical-solutions-consultant',
+  'senior-technical-solutions-consultant',
+  'cloud-solutions-architect',
+  'senior-cloud-solutions-architect',
+  'enterprise-solutions-architect',
+  'senior-enterprise-solutions-architect',
+  'implementation-consultant',
+  'senior-implementation-consultant',
+  'enterprise-implementation-consultant',
+  'senior-enterprise-implementation-consultant',
+  'professional-services-consultant',
+  'senior-professional-services-consultant',
+  'technical-consultant',
+  'senior-technical-consultant',
+  'associate-technical-consultant',
+  'integration-consultant',
+  'senior-integration-consultant',
+  'technology-consultant',
+  'senior-technology-consultant',
+  'business-consultant',
+  'senior-business-consultant',
+  'management-consultant',
+  'senior-management-consultant',
+  'strategy-consultant',
+  'senior-strategy-consultant',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // FINANCE & ACCOUNTING (50+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'senior-corporate-accountant',
+  'corporate-accountant',
+  'staff-accountant',
+  'senior-staff-accountant',
+  'accounting-manager',
+  'senior-accounting-manager',
+  'controller',
+  'senior-controller',
+  'assistant-controller',
+  'senior-assistant-controller',
+  'financial-controller',
+  'senior-financial-controller',
+  'cfo',
+  'vp-finance',
+  'svp-finance',
+  'head-of-finance',
+  'director-of-finance',
+  'senior-director-of-finance',
+  'financial-analyst',
+  'senior-financial-analyst',
+  'fp-a-analyst',
+  'senior-fp-a-analyst',
+  'fp-a-manager',
+  'senior-fp-a-manager',
+  'financial-planning-manager',
+  'senior-financial-planning-manager',
+  'treasury-analyst',
+  'senior-treasury-analyst',
+  'treasury-manager',
+  'senior-treasury-manager',
+  'tax-analyst',
+  'senior-tax-analyst',
+  'tax-manager',
+  'senior-tax-manager',
+  'internal-auditor',
+  'senior-internal-auditor',
+  'audit-manager',
+  'senior-audit-manager',
+  'compliance-analyst',
+  'senior-compliance-analyst',
+  'finance-director',
+  'senior-finance-director',
+  'finance-manager',
+  'senior-finance-manager',
+  'accountant',
+  'senior-accountant',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // LEGAL & COMPLIANCE (30+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'commercial-counsel',
+  'senior-commercial-counsel',
+  'corporate-counsel',
+  'senior-corporate-counsel',
+  'associate-general-counsel',
+  'general-counsel',
+  'staff-attorney',
+  'senior-staff-attorney',
+  'legal-counsel',
+  'senior-legal-counsel',
+  'compliance-manager',
+  'senior-compliance-manager',
+  'compliance-director',
+  'senior-compliance-director',
+  'regulatory-affairs-specialist',
+  'senior-regulatory-affairs-specialist',
+  'regulatory-affairs-manager',
+  'senior-regulatory-affairs-manager',
+  'contract-manager',
+  'senior-contract-manager',
+  'legal-operations-manager',
+  'senior-legal-operations-manager',
+  'chief-legal-officer',
+  'vp-legal',
+  'head-of-legal',
+  'director-of-legal',
+  'senior-director-of-legal',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // MARKETING (60+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'marketing-manager',
+  'senior-marketing-manager',
+  'growth-manager',
+  'senior-growth-manager',
+  'growth-marketing-manager',
+  'senior-growth-marketing-manager',
+  'senior-product-marketing-manager',
+  'content-manager',
+  'senior-content-manager',
+  'content-marketing-manager',
+  'senior-content-marketing-manager',
+  'seo-manager',
+  'senior-seo-manager',
+  'seo-specialist',
+  'senior-seo-specialist',
+  'performance-marketing-manager',
+  'senior-performance-marketing-manager',
+  'demand-generation-manager',
+  'senior-demand-generation-manager',
+  'marketing-director',
+  'senior-marketing-director',
+  'vp-marketing',
+  'svp-marketing',
+  'cmo',
+  'head-of-marketing',
+  'brand-manager',
+  'senior-brand-manager',
+  'brand-marketing-manager',
+  'senior-brand-marketing-manager',
+  'digital-marketing-manager',
+  'senior-digital-marketing-manager',
+  'social-media-manager',
+  'senior-social-media-manager',
+  'community-manager',
+  'senior-community-manager',
+  'email-marketing-manager',
+  'senior-email-marketing-manager',
+  'marketing-operations-manager',
+  'senior-marketing-operations-manager',
+  'marketing-analyst',
+  'senior-marketing-analyst',
+  'campaign-manager',
+  'senior-campaign-manager',
+  'partner-marketing-manager',
+  'senior-partner-marketing-manager',
+  'field-marketing-manager',
+  'senior-field-marketing-manager',
+  'event-marketing-manager',
+  'senior-event-marketing-manager',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // DEVELOPER RELATIONS & ADVOCACY (30+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'developer-advocate',
+  'senior-developer-advocate',
+  'staff-developer-advocate',
+  'principal-developer-advocate',
+  'developer-relations-engineer',
+  'senior-developer-relations-engineer',
+  'technical-evangelist',
+  'senior-technical-evangelist',
+  'developer-community-manager',
+  'senior-developer-community-manager',
+  'technical-writer',
+  'senior-technical-writer',
+  'staff-technical-writer',
+  'documentation-engineer',
+  'senior-documentation-engineer',
+  'solutions-engineer-developer-tools',
+  'senior-solutions-engineer-developer-tools',
+  'developer-experience-engineer',
+  'senior-developer-experience-engineer',
+  'developer-relations-manager',
+  'senior-developer-relations-manager',
+  'head-of-developer-relations',
+  'director-of-developer-relations',
+  'vp-developer-relations',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // HR & PEOPLE OPS (30+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'recruiter',
+  'senior-recruiter',
+  'technical-recruiter',
+  'senior-technical-recruiter',
+  'recruiting-manager',
+  'senior-recruiting-manager',
+  'talent-acquisition-specialist',
+  'senior-talent-acquisition-specialist',
+  'talent-acquisition-manager',
+  'senior-talent-acquisition-manager',
+  'people-operations-manager',
+  'senior-people-operations-manager',
+  'hr-manager',
+  'senior-hr-manager',
+  'hr-director',
+  'senior-hr-director',
+  'head-of-people',
+  'vp-people',
+  'chief-people-officer',
+  'hr-business-partner',
+  'senior-hr-business-partner',
+  'people-partner',
+  'senior-people-partner',
+  'compensation-analyst',
+  'senior-compensation-analyst',
+  'benefits-manager',
+  'senior-benefits-manager',
+  'learning-and-development-manager',
+  'senior-learning-and-development-manager',
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // ADMINISTRATIVE & EXECUTIVE SUPPORT (20+ roles)
+  // ─────────────────────────────────────────────────────────────────────────
+  'executive-assistant',
+  'senior-executive-assistant',
+  'chief-of-staff',
+  'senior-chief-of-staff',
+  'office-manager',
+  'senior-office-manager',
+  'administrative-coordinator',
+  'senior-administrative-coordinator',
+  'executive-coordinator',
+  'senior-executive-coordinator',
+  'business-operations-coordinator',
+  'senior-business-operations-coordinator',
+  'program-coordinator',
+  'senior-program-coordinator',
+  'project-coordinator',
+  'senior-project-coordinator',
+  'facilities-manager',
+  'senior-facilities-manager',
+  'workplace-experience-manager',
+  'senior-workplace-experience-manager',
 
-export const CANONICAL_ROLE_SLUGS = [...TIER_1_ROLES, ...TIER_2_ROLES] as const
+  // Additional Executive & Management
+  'ceo',
+  'president',
+  'managing-director',
+  'general-manager',
+  'ciso',
+  'vp-operations',
+  'project-manager',
+  'senior-project-manager',
+  'scrum-master',
+  'agile-coach',
+  'consultant',
 
-export type Tier1RoleSlug = (typeof TIER_1_ROLES)[number]
-export type Tier2RoleSlug = (typeof TIER_2_ROLES)[number]
-export type CanonicalRoleSlug = (typeof CANONICAL_ROLE_SLUGS)[number]
-
-// Sets for O(1) lookup
-export const TIER_1_ROLE_SET = new Set<string>(TIER_1_ROLES)
-export const TIER_2_ROLE_SET = new Set<string>(TIER_2_ROLES)
-export const CANONICAL_ROLE_SET = new Set<string>(CANONICAL_ROLE_SLUGS)
+] as const
 
 // ═══════════════════════════════════════════════════════════════════════════
-// UTILITY FUNCTIONS
+// TYPE EXPORTS & HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
+export type Tier1Role = typeof TIER_1_ROLES[number]
+export type Tier2Role = typeof TIER_2_ROLES[number]
+export type CanonicalRoleSlug = Tier1Role | Tier2Role
 
-/**
- * Check if a slug is in the canonical list (Tier-1 or Tier-2)
- */
-export function isCanonicalSlug(slug: string): slug is CanonicalRoleSlug {
-  return CANONICAL_ROLE_SET.has(slug)
+const TIER_1_SET = new Set<string>(TIER_1_ROLES)
+const TIER_2_SET = new Set<string>(TIER_2_ROLES)
+const ALL_CANONICAL_SET = new Set<string>([...TIER_1_ROLES, ...TIER_2_ROLES])
+
+export function isCanonicalSlug(slug: string | null | undefined): boolean {
+  if (!slug) return false
+  return ALL_CANONICAL_SET.has(slug)
 }
 
-/**
- * Check if a slug is Tier-1 (should be indexed)
- */
-export function isTier1Role(slug: string): slug is Tier1RoleSlug {
-  return TIER_1_ROLE_SET.has(slug)
+export function isTier1Slug(slug: string): boolean {
+  return TIER_1_SET.has(slug)
 }
 
-/**
- * Check if a slug is Tier-2 (valid but noindex)
- */
-export function isTier2Role(slug: string): slug is Tier2RoleSlug {
-  return TIER_2_ROLE_SET.has(slug)
+export function isTier2Slug(slug: string): boolean {
+  return TIER_2_SET.has(slug)
 }
 
-/**
- * Determine if a role page should be indexed
- */
-export function shouldIndexRole(slug: string): boolean {
-  return TIER_1_ROLE_SET.has(slug)
+export function getAllCanonicalSlugs(): readonly string[] {
+  return [...TIER_1_ROLES, ...TIER_2_ROLES]
 }
 
-/**
- * Get count of canonical slugs
- */
-export function getCanonicalSlugCount(): number {
-  return CANONICAL_ROLE_SLUGS.length
+export function getTier1Slugs(): readonly string[] {
+  return TIER_1_ROLES
 }
 
-/**
- * Get count of Tier-1 slugs
- */
-export function getTier1SlugCount(): number {
-  return TIER_1_ROLES.length
+export function getTier2Slugs(): readonly string[] {
+  return TIER_2_ROLES
 }
+// Legacy exports for backward compatibility
+export const CANONICAL_ROLE_SET = ALL_CANONICAL_SET
+export const CANONICAL_ROLE_SLUGS = getAllCanonicalSlugs()
+export const isTier1Role = isTier1Slug

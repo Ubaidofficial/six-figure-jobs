@@ -138,15 +138,11 @@ export default function JobCard({
           </div>
 
           {/* FIX 3: Show location + seniority + remote, avoid duplication */}
-          {/* Enhanced metadata: flag + country + remote in one badge */}
           <div className={styles.metadata}>
-            {(location || remoteMode) && (
-              <span className={styles.badge}>
-                {getCountryFlag(job.countryCode)} {location || 'Worldwide'}{remoteMode ? ` · ${remoteMode}` : ''}
-              </span>
-            )}
+            {location && <span className={styles.badge}>{location}</span>}
+            {remoteMode && <span className={`${styles.badge} ${styles.badgeAccent}`}>{remoteMode}</span>}
             {seniority && <span className={styles.badge}>{seniority}</span>}
-            {postedLabel && <span className={styles.badgeTime}>📅 {postedLabel}</span>}
+            {postedLabel && <span className={styles.badgeTime}>Posted {postedLabel}</span>}
           </div>
 
           {/* FIX 4: Better snippet - use AI summary or description, not generic text */}
@@ -207,36 +203,26 @@ function StatusPill({
   )
 }
 
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
 function buildLocation(job: JobCardJob): string | null {
-  let code = job.countryCode ? job.countryCode.toString().toUpperCase() : null
-  
-  // TEMP FIX: Extract country from city field if it has flags
-  if (!code && job.city) {
-    const cityStr = String(job.city)
-    if (cityStr.includes('USA') || cityStr.includes('🇺🇸')) code = 'US'
-    else if (cityStr.includes('Canada') || cityStr.includes('🇨🇦')) code = 'CA'
-    else if (cityStr.includes('UK') || cityStr.includes('🇬🇧')) code = 'GB'
-    else if (cityStr.includes('Germany') || cityStr.includes('🇩🇪')) code = 'DE'
-    else if (cityStr.includes('Australia') || cityStr.includes('🇦🇺')) code = 'AU'
-    else if (cityStr.includes('APAC') || cityStr.includes('🌏')) code = 'APAC'
-    else if (cityStr.includes('EMEA') || cityStr.includes('🌍')) code = 'EMEA'
-  }
-  
+  const rawCode = job.countryCode
+  const code = rawCode ? rawCode.toString().toUpperCase() : null
   const city = job.city ?? null
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
-  if (isRemote) {
-    if (code) return code
-    return 'Worldwide'
-  }
+  // Don't show location if fully remote - remoteMode badge will handle it
+  if (isRemote) return null
   
+  // Show city + country or just country
   if (city && code) return `${city}, ${code}`
   if (code) return code
   if (job.locationRaw) return String(job.locationRaw)
 
   return null
 }
-
 
 function buildSnippet(job: JobCardJob, companyDesc?: string | null): string | null {
   // Priority 1: AI-generated summary
@@ -351,45 +337,4 @@ function getCompanyBlurb(description?: string | null): string | null {
     return clean.slice(0, cutoff + 1)
   }
   return clean.slice(0, 220)
-}
-
-function getCountryFlag(countryCode?: string | null): string {
-  if (!countryCode) return '🌍'
-  
-  const flags: Record<string, string> = {
-    US: '🇺🇸', GB: '🇬🇧', UK: '🇬🇧', CA: '🇨🇦', DE: '🇩🇪',
-    FR: '🇫🇷', NL: '🇳🇱', AU: '🇦🇺', IE: '🇮🇪', ES: '🇪🇸',
-    IT: '🇮🇹', SE: '🇸🇪', CH: '🇨🇭', IN: '🇮🇳', SG: '🇸🇬',
-    BR: '🇧🇷', MX: '🇲🇽', PL: '🇵🇱', NO: '🇳🇴', DK: '🇩🇰',
-  }
-  
-  return flags[countryCode.toUpperCase()] || '🌍'
-}
-
-function formatCompanySize(count: number): string {
-  if (count < 10) return '1-10'
-  if (count < 50) return '10-50'
-  if (count < 200) return '50-200'
-  if (count < 1000) return '200-1K'
-  if (count < 5000) return '1K-5K'
-  return '5K+'
-
-function getCountryFlag(countryCode?: string | null): string {
-  if (!countryCode) return '🌍'
-  const flags: Record<string, string> = {
-    US: '🇺🇸', GB: '🇬🇧', UK: '🇬🇧', CA: '🇨🇦', DE: '🇩🇪', FR: '🇫🇷', 
-    NL: '🇳🇱', AU: '🇦🇺', IE: '🇮🇪', ES: '🇪🇸', IT: '🇮🇹', SE: '🇸🇪',
-    CH: '🇨🇭', IN: '🇮🇳', SG: '🇸🇬', BR: '🇧🇷', MX: '🇲🇽', PL: '🇵🇱',
-  }
-  return flags[countryCode.toUpperCase()] || '🌍'
-}
-
-function formatCompanySize(count: number): string {
-  if (count < 10) return '1-10'
-  if (count < 50) return '10-50'
-  if (count < 200) return '50-200'
-  if (count < 1000) return '200-1K'
-  if (count < 5000) return '1K-5K'
-  return '5K+'
-}
 }

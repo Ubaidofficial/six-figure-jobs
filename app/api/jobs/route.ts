@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server'
 import { queryJobs, type JobQueryInput } from '@/lib/jobs/queryJobs'
-
 const PAGE_SIZE = 24
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-
   const page = Number(searchParams.get('page') || '1')
   const country = searchParams.get('country') || undefined
-  const remoteMode = searchParams.get('remoteMode') as '' | 'remote' | 'hybrid' | 'onsite' | undefined
+  const remoteMode = (searchParams.get('remoteMode') || undefined) as 'remote' | 'hybrid' | 'onsite' | undefined
   const sort = (searchParams.get('sort') || 'recent') as 'recent' | 'salary'
   const roles = searchParams.getAll('role')
   const seniority = searchParams.getAll('seniority')

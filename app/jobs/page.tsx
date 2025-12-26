@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import JobCard from '@/components/JobCard'
+import { JobCard } from '@/components/jobs/JobCard'
 import { InfiniteJobsList } from './_components/InfiniteJobsList'
 
 import {
