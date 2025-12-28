@@ -19,6 +19,10 @@ export type JobCardJob = JobWithCompany & {
   postedAt?: string | Date | null
   requirementsJson?: string | null
   techStack?: string | null
+  primaryLocation?: any
+  locationsJson?: any
+  aiSnippet?: string | null
+  experienceLevel?: string | null
 }
 
 export default function JobCard({
@@ -50,12 +54,12 @@ export default function JobCard({
   const showLogo = Boolean(logo) && !logoFailed
 
   const companySlug = job.companyRef?.slug ?? null
-  const companyDesc = getCompanyBlurb(job.companyRef?.description)
-  const snippet = buildSnippet(job, companyDesc)
-  const techStack = parseJsonArray(job.techStack).slice(0, variant === 'compact' ? 0 : 3)
+  const snippet = buildSnippet(job)
+  const techStack = parseJsonArray(job.techStack).slice(0, variant === 'compact' ? 0 : 5)
 
-  // FIX 1: Better location handling - show city + country or just country
-  const location = buildLocation(job)
+  // Enhanced location handling with primaryLocation
+  const locationData = buildLocationData(job)
+  
   const salaryText = buildSalaryText(job)
   const salaryDisplay =
     salaryText &&
@@ -65,11 +69,9 @@ export default function JobCard({
       ? salaryText
       : null
 
-  // FIX 2: Extract seniority from title
-  const seniority = inferSeniorityFromTitle(job.title)
-  
+  const seniority = job.experienceLevel || inferSeniorityFromTitle(job.title)
   const remoteMode = getRemoteMode(job)
-  
+
   const postedLabel = formatRelativeTime(
     job.postedAt ?? job.createdAt ?? job.updatedAt ?? null,
   )
@@ -137,23 +139,45 @@ export default function JobCard({
             </div>
           </div>
 
-          {/* FIX 3: Show location + seniority + remote, avoid duplication */}
-          {/* Enhanced metadata: flag + country + remote in one badge */}
+          {/* Enhanced metadata row */}
           <div className={styles.metadata}>
-            {(location || remoteMode) && (
+            {/* Location badge */}
+            {locationData && (
               <span className={styles.badge}>
-                {getCountryFlag(job.countryCode)} {location || 'Worldwide'}{remoteMode ? ` · ${remoteMode}` : ''}
+                {locationData.flag} {locationData.primary}
+                {locationData.hasMultiple && ` +${locationData.count - 1}`}
               </span>
             )}
-            {seniority && <span className={styles.badge}>{seniority}</span>}
-            {postedLabel && <span className={styles.badgeTime}>📅 {postedLabel}</span>}
+            
+            {/* Remote mode */}
+            {remoteMode && (
+              <span className={styles.badge}>
+                {remoteMode === 'Remote' ? '🌍' : remoteMode === 'Hybrid' ? '🏢' : '📍'} {remoteMode}
+              </span>
+            )}
+
+            {/* Seniority level */}
+            {seniority && (
+              <span className={styles.badge}>
+                {getSeniorityIcon(seniority)} {seniority}
+              </span>
+            )}
+
+            {/* Posted time */}
+            {postedLabel && (
+              <span className={styles.badgeTime}>
+                📅 {postedLabel}
+              </span>
+            )}
           </div>
 
-          {/* FIX 4: Better snippet - use AI summary or description, not generic text */}
-          {variant === 'full' && snippet ? <p className={styles.snippet}>{snippet}</p> : null}
+          {/* Snippet - prioritize AI-generated content */}
+          {variant === 'full' && snippet ? (
+            <p className={styles.snippet}>{snippet}</p>
+          ) : null}
         </div>
 
-        {/* FIX 5: Improved salary badge alignment */}
+        {/* Salary section */}
         <div className={styles.actions}>
           {salaryDisplay ? (
             <div className={styles.salaryBadge}>
@@ -165,13 +189,14 @@ export default function JobCard({
           )}
 
           <div className={styles.pills}>
-            {salaryDisplay && <StatusPill tone="success">Verified</StatusPill>}
+            {salaryDisplay && job.salaryValidated && <StatusPill tone="success">Verified</StatusPill>}
             {isNew && <StatusPill tone="neutral">NEW</StatusPill>}
             {isFeatured && <StatusPill tone="warning">FEATURED</StatusPill>}
           </div>
         </div>
       </div>
 
+      {/* Tech stack section */}
       {variant === 'full' && techStack.length > 0 ? (
         <div className={styles.techStack}>
           {techStack.map((tech) => (
@@ -207,54 +232,87 @@ function StatusPill({
   )
 }
 
-function buildLocation(job: JobCardJob): string | null {
-  let code = job.countryCode ? job.countryCode.toString().toUpperCase() : null
-  
-  // TEMP FIX: Extract country from city field if it has flags
-  if (!code && job.city) {
-    const cityStr = String(job.city)
-    if (cityStr.includes('USA') || cityStr.includes('🇺🇸')) code = 'US'
-    else if (cityStr.includes('Canada') || cityStr.includes('🇨🇦')) code = 'CA'
-    else if (cityStr.includes('UK') || cityStr.includes('🇬🇧')) code = 'GB'
-    else if (cityStr.includes('Germany') || cityStr.includes('🇩🇪')) code = 'DE'
-    else if (cityStr.includes('Australia') || cityStr.includes('🇦🇺')) code = 'AU'
-    else if (cityStr.includes('APAC') || cityStr.includes('🌏')) code = 'APAC'
-    else if (cityStr.includes('EMEA') || cityStr.includes('🌍')) code = 'EMEA'
+// Enhanced location builder using primaryLocation and locationsJson
+function buildLocationData(job: JobCardJob): {
+  primary: string
+  flag: string
+  hasMultiple: boolean
+  count: number
+} | null {
+  // Try primaryLocation first (new field)
+  if (job.primaryLocation) {
+    const primary = String(job.primaryLocation)
+    const locations = parseJsonArray(job.locationsJson)
+    const countryCode = job.countryCode || detectCountryCode(primary)
+    
+    return {
+      primary: primary,
+      flag: getCountryFlag(countryCode),
+      hasMultiple: locations.length > 1,
+      count: locations.length
+    }
   }
-  
-  const city = job.city ?? null
+
+  // Fallback to existing logic
   const isRemote = job.remote === true || job.remoteMode === 'remote'
+  const code = job.countryCode ? job.countryCode.toString().toUpperCase() : null
 
   if (isRemote) {
-    if (code) return code
-    return 'Worldwide'
+    return {
+      primary: code || 'Worldwide',
+      flag: getCountryFlag(code),
+      hasMultiple: false,
+      count: 1
+    }
   }
-  
-  if (city && code) return `${city}, ${code}`
-  if (code) return code
-  if (job.locationRaw) return String(job.locationRaw)
+
+  if (job.city && code) {
+    return {
+      primary: `${job.city}, ${code}`,
+      flag: getCountryFlag(code),
+      hasMultiple: false,
+      count: 1
+    }
+  }
+
+  if (code) {
+    return {
+      primary: code,
+      flag: getCountryFlag(code),
+      hasMultiple: false,
+      count: 1
+    }
+  }
+
+  if (job.locationRaw) {
+    const raw = String(job.locationRaw)
+    const detectedCode = detectCountryCode(raw)
+    return {
+      primary: raw.split(/[;,]/)[0].trim(),
+      flag: getCountryFlag(detectedCode),
+      hasMultiple: raw.includes(';') || raw.includes(','),
+      count: raw.split(/[;,]/).length
+    }
+  }
 
   return null
 }
 
+function buildSnippet(job: JobCardJob): string | null {
+  // Priority 1: AI-generated snippet (shortest, most concise)
+  if (job.aiSnippet) return job.aiSnippet
 
-function buildSnippet(job: JobCardJob, companyDesc?: string | null): string | null {
-  // Priority 1: AI-generated summary
+  // Priority 2: AI summary from requirementsJson
   const aiSummary = extractSummary(job.requirementsJson)
   if (aiSummary) return aiSummary
 
-  // Priority 2: Job description
+  // Priority 3: Job description
   const rawPrimary = job.snippet ?? job.descriptionHtml ?? null
   const rawSecondary = job.description ?? null
   const raw = rawPrimary || rawSecondary
-  
-  if (raw) {
-    return truncateText(stripTags(decodeHtmlEntities(raw)), 160)
-  }
 
-  // Priority 3: Company description as last resort
-  if (companyDesc) {
-    return `${companyDesc.slice(0, 140)} ...`
+  if (raw) {
+    return truncateText(stripTags(decodeHtmlEntities(raw)), 140)
   }
 
   return null
@@ -299,12 +357,22 @@ function truncateText(str: string, maxChars: number) {
 function inferSeniorityFromTitle(title: string): string | null {
   const t = title.toLowerCase()
   if (t.includes('intern')) return 'Internship'
-  if (t.includes('principal') || t.includes('staff')) return 'Staff'
-  if (t.includes('lead') || t.includes('head')) return 'Lead'
+  if (t.includes('principal') || t.includes('staff') || t.includes('distinguished')) return 'Staff+'
+  if (t.includes('lead') || t.includes('head') || t.includes('director')) return 'Lead'
   if (t.includes('senior') || t.includes('sr.') || t.includes('sr ')) return 'Senior'
-  if (t.includes('junior') || t.includes('jr.') || t.includes('jr ')) return 'Junior'
-  if (t.includes('mid-level') || t.includes('mid level')) return 'Mid-level'
-  return 'Mid-level' // Default to mid-level for jobs without explicit seniority
+  if (t.includes('junior') || t.includes('jr.') || t.includes('jr ') || t.includes('associate')) return 'Junior'
+  if (t.includes('mid-level') || t.includes('mid level') || t.includes('intermediate')) return 'Mid-level'
+  return 'Mid-level'
+}
+
+function getSeniorityIcon(seniority: string): string {
+  const s = seniority.toLowerCase()
+  if (s.includes('intern')) return '🎓'
+  if (s.includes('junior')) return '🌱'
+  if (s.includes('mid')) return '⚡'
+  if (s.includes('senior')) return '⭐'
+  if (s.includes('staff') || s.includes('lead') || s.includes('principal')) return '🚀'
+  return '💼'
 }
 
 function getRemoteMode(job: JobCardJob): string | null {
@@ -316,8 +384,10 @@ function getRemoteMode(job: JobCardJob): string | null {
   return null
 }
 
-function parseJsonArray(raw?: string | null): string[] {
+function parseJsonArray(raw?: any): string[] {
   if (!raw) return []
+  if (Array.isArray(raw)) return raw.filter((x) => typeof x === 'string')
+  if (typeof raw !== 'string') return []
   try {
     const parsed = JSON.parse(raw)
     if (Array.isArray(parsed)) {
@@ -342,54 +412,28 @@ function extractSummary(requirementsJson?: string | null): string | null {
   return null
 }
 
-function getCompanyBlurb(description?: string | null): string | null {
-  if (!description) return null
-  const clean = stripTags(decodeHtmlEntities(description)).trim()
-  if (!clean) return null
-  const cutoff = clean.indexOf('.')
-  if (cutoff > 50 && cutoff < 220) {
-    return clean.slice(0, cutoff + 1)
-  }
-  return clean.slice(0, 220)
+function detectCountryCode(text: string): string | null {
+  const t = text.toLowerCase()
+  if (t.includes('usa') || t.includes('united states') || t.includes('🇺🇸')) return 'US'
+  if (t.includes('canada') || t.includes('🇨🇦')) return 'CA'
+  if (t.includes('uk') || t.includes('united kingdom') || t.includes('🇬🇧')) return 'GB'
+  if (t.includes('germany') || t.includes('🇩🇪')) return 'DE'
+  if (t.includes('australia') || t.includes('🇦🇺')) return 'AU'
+  if (t.includes('france') || t.includes('🇫🇷')) return 'FR'
+  if (t.includes('netherlands') || t.includes('🇳🇱')) return 'NL'
+  return null
 }
 
 function getCountryFlag(countryCode?: string | null): string {
   if (!countryCode) return '🌍'
-  
+
   const flags: Record<string, string> = {
     US: '🇺🇸', GB: '🇬🇧', UK: '🇬🇧', CA: '🇨🇦', DE: '🇩🇪',
     FR: '🇫🇷', NL: '🇳🇱', AU: '🇦🇺', IE: '🇮🇪', ES: '🇪🇸',
     IT: '🇮🇹', SE: '🇸🇪', CH: '🇨🇭', IN: '🇮🇳', SG: '🇸🇬',
     BR: '🇧🇷', MX: '🇲🇽', PL: '🇵🇱', NO: '🇳🇴', DK: '🇩🇰',
+    AT: '🇦🇹', BE: '🇧🇪', FI: '🇫🇮', PT: '🇵🇹', NZ: '🇳🇿',
   }
-  
+
   return flags[countryCode.toUpperCase()] || '🌍'
-}
-
-function formatCompanySize(count: number): string {
-  if (count < 10) return '1-10'
-  if (count < 50) return '10-50'
-  if (count < 200) return '50-200'
-  if (count < 1000) return '200-1K'
-  if (count < 5000) return '1K-5K'
-  return '5K+'
-
-function getCountryFlag(countryCode?: string | null): string {
-  if (!countryCode) return '🌍'
-  const flags: Record<string, string> = {
-    US: '🇺🇸', GB: '🇬🇧', UK: '🇬🇧', CA: '🇨🇦', DE: '🇩🇪', FR: '🇫🇷', 
-    NL: '🇳🇱', AU: '🇦🇺', IE: '🇮🇪', ES: '🇪🇸', IT: '🇮🇹', SE: '🇸🇪',
-    CH: '🇨🇭', IN: '🇮🇳', SG: '🇸🇬', BR: '🇧🇷', MX: '🇲🇽', PL: '🇵🇱',
-  }
-  return flags[countryCode.toUpperCase()] || '🌍'
-}
-
-function formatCompanySize(count: number): string {
-  if (count < 10) return '1-10'
-  if (count < 50) return '10-50'
-  if (count < 200) return '50-200'
-  if (count < 1000) return '200-1K'
-  if (count < 5000) return '1K-5K'
-  return '5K+'
-}
 }
