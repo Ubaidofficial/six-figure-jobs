@@ -1,128 +1,126 @@
 // lib/scrapers/generic.ts
-// Scrapes individual company career pages that don't use a known ATS.
-// Relies on "heuristic" scraping (looking for keywords like "Engineer", "Apply", etc.)
-
-import puppeteer, { Page } from 'puppeteer'
+// Scrapes generic career pages for companies without ATS
+import puppeteer from 'puppeteer'
+import type { Page } from 'puppeteer'
 import { PrismaClient } from '@prisma/client'
 import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
 
 const prisma = new PrismaClient()
 
-const JOB_TITLE_KEYWORDS = [
-  'engineer', 'developer', 'manager', 'designer', 'product', 
-  'sales', 'marketing', 'analyst', 'lead', 'head of', 'vp', 
-  'director', 'counsel', 'recruiter', 'support', 'success'
+const CAREER_PAGE_KEYWORDS = [
+  'careers',
+  'jobs',
+  'join',
+  'work-with-us',
+  'opportunities',
+  'hiring',
+  'positions',
+  'openings',
 ]
 
-function blockedUrlReason(rawUrl: string): string | null {
-  let parsed: URL
-  try {
-    parsed = new URL(rawUrl)
-  } catch {
-    return 'invalid-url'
-  }
-
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    return `blocked-protocol:${parsed.protocol}`
-  }
-
-  const hostname = parsed.hostname.toLowerCase()
-  const blockedHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0', '169.254.169.254', '::1'])
-
-  if (blockedHosts.has(hostname) || hostname.endsWith('.localhost')) {
-    return `blocked-host:${hostname}`
-  }
-
-  if (
-    hostname.match(/^10\./) ||
-    hostname.match(/^127\./) ||
-    hostname.match(/^192\.168\./) ||
-    hostname.match(/^169\.254\./) ||
-    hostname.match(/^172\.(1[6-9]|2[0-9]|3[01])\./)
-  ) {
-    return `blocked-ip:${hostname}`
-  }
-
-  return null
-}
-
 export default async function scrapeGenericSources() {
-  console.log('[Generic] Starting scrape of custom career pages...')
-  
-  // 1. Find sources marked as generic pages
-  const sources = await prisma.companySource.findMany({
-    where: { 
-      sourceType: 'generic_careers_page',
-      isActive: true
-    },
-    include: { company: true }
-  })
+  console.log('[GenericSources] Starting scrape...')
 
-  if (sources.length === 0) {
-    console.log('[Generic] No generic sources found. Run deepDiscovery.ts to find some.')
-    return { created: 0, updated: 0, skipped: 0 }
+  const stats = {
+    created: 0,
+    updated: 0,
+    skipped: 0,
+    errors: 0,
   }
 
-  console.log(`[Generic] Found ${sources.length} pages to scrape.`)
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    // @ts-expect-error: ignoreHTTPSErrors is available at runtime but missing in our bundled types
-    ignoreHTTPSErrors: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-  })
-
-  const stats = { created: 0, updated: 0, skipped: 0, errors: 0 }
-
   try {
+    const sources = await prisma.companySource.findMany({
+      where: {
+        sourceType: 'generic_careers_page',
+        isActive: true,
+      },
+      include: {
+        company: {
+          select: {
+            name: true,
+            website: true,
+          },
+        },
+      },
+      take: 50,
+    })
+
+    if (!sources.length) {
+      console.log('[GenericSources] No generic sources found')
+      return stats
+    }
+
+    console.log(`[GenericSources] Found ${sources.length} sources to scrape`)
+
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    })
+
     for (const source of sources) {
-      console.log(`[Generic] Scraping ${source.company.name} at ${source.url}`)
-      console.log(`[Generic] Processing ${source.company.name}...`)
-
-      const blockedReason = blockedUrlReason(source.url)
-      if (blockedReason) {
-        console.error(
-          `[Generic] Blocked URL for ${source.company.name}: ${source.url} (${blockedReason})`,
-        )
-        stats.errors++
-        await prisma.companySource.update({
-          where: { id: source.id },
-          data: { scrapeStatus: 'error', scrapeError: blockedReason.slice(0, 100) },
-        })
-        continue
-      }
-
       const page = await browser.newPage()
-      
-      try {
-        await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-        page.setDefaultNavigationTimeout(45000)
 
-        await page.goto(source.url, { waitUntil: 'domcontentloaded', timeout: 45000 })
-        
-        // Scan page for links that look like jobs
+      try {
+        console.log(`   -> Scraping ${source.url}`)
+
+        await page.goto(source.url, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000,
+        })
+
+        const jobs = await scanPageForJobs(page)
+
+        if (jobs.length > 0) {
+          console.log(`   -> Found ${jobs.length} potential jobs`)
+
+          for (const job of jobs) {
+            const description = await scrapeJobDescription(browser, job.url)
+
+            const result = await ingestJob({
+              externalId: Buffer.from(job.url).toString('base64').slice(0, 32),
+              title: job.title,
+              rawCompanyName: source.company.name,
+              companyWebsiteUrl: source.company.website,
+              url: job.url,
+              applyUrl: job.url,
+              source: makeBoardSource('generic_career_page'),
+              descriptionHtml: description || undefined,
+              postedAt: new Date(),
+              isRemote: true,
+            })
+
+            if (result.status === 'created') stats.created++
+            else if (result.status === 'updated') stats.updated++
+            else stats.skipped++
+          }
         }
 
-        // Update last scraped time
         await prisma.companySource.update({
           where: { id: source.id },
-          data: { lastScrapedAt: new Date(), scrapeStatus: 'success' }
+          data: { lastScrapedAt: new Date(), scrapeStatus: 'success' },
         })
-
       } catch (err) {
         console.error(`   -> Error scraping ${source.url}:`, err)
         stats.errors++
+
         await prisma.companySource.update({
           where: { id: source.id },
-          data: { scrapeStatus: 'error', scrapeError: String(err).slice(0, 100) }
+          data: { 
+            scrapeStatus: 'error', 
+            scrapeError: String(err).slice(0, 100) 
+          },
         })
       } finally {
         await page.close()
       }
     }
-  } finally {
+
     await browser.close()
+  } catch (err) {
+    console.error('[GenericSources] Fatal error:', err)
+    stats.errors++
+  } finally {
     await prisma.$disconnect()
   }
 
@@ -135,33 +133,63 @@ export default async function scrapeGenericSources() {
 
 async function scanPageForJobs(page: Page) {
   return await page.evaluate((keywords) => {
-    // Some sites throw ReferenceError for __name helper; ensure it exists
-    ;(globalThis as any).__name = (v: any) => v
+    const jobs: Array<{ title: string; url: string }> = []
+    const links = Array.from(document.querySelectorAll('a[href]'))
 
-    const links = Array.from(document.querySelectorAll('a'))
-    const results: { title: string, url: string }[] = []
-    
-    const hasJobKeyword = (text: string) => {
-      const t = text.toLowerCase()
-      return keywords.some(k => t.includes(k))
-    }
+    for (const link of links) {
+      const href = (link as HTMLAnchorElement).href
+      const text = link.textContent?.toLowerCase() || ''
 
-    const isBadLink = (text: string) => {
-      const t = text.toLowerCase()
-      return t.includes('login') || t.includes('sign up') || t.includes('policy') || t.length > 100
-    }
+      const isJobLink = keywords.some((kw) => 
+        href.toLowerCase().includes(kw) || text.includes(kw)
+      )
 
-    links.forEach(link => {
-      const text = link.innerText.trim()
-      const href = link.href
-
-      if (text && href && hasJobKeyword(text) && !isBadLink(text)) {
-        if (!results.find(r => r.url === href)) {
-          results.push({ title: text, url: href })
-        }
+      if (isJobLink && !jobs.find((j) => j.url === href)) {
+        jobs.push({
+          title: link.textContent?.trim() || 'Untitled Position',
+          url: href,
+        })
       }
+    }
+
+    return jobs.slice(0, 50)
+  }, CAREER_PAGE_KEYWORDS)
+}
+
+async function scrapeJobDescription(browser: any, url: string): Promise<string | null> {
+  const page = await browser.newPage()
+  
+  try {
+    await page.goto(url, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
     })
 
-    return results
-  }, JOB_TITLE_KEYWORDS)
+    const description = await page.evaluate(() => {
+      const selectors = [
+        '.job-description',
+        '#job-description',
+        '[class*="description"]',
+        '[class*="content"]',
+        'main',
+        'article',
+      ]
+
+      for (const selector of selectors) {
+        const elem = document.querySelector(selector)
+        if (elem && elem.textContent && elem.textContent.length > 200) {
+          return elem.innerHTML
+        }
+      }
+
+      return document.body.innerHTML
+    })
+
+    return description
+  } catch (err) {
+    console.error(`   -> Error fetching description from ${url}:`, err)
+    return null
+  } finally {
+    await page.close()
+  }
 }
