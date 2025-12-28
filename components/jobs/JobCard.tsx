@@ -25,7 +25,11 @@ import {
 import styles from './JobCard.module.css'
 
 export type JobCardProps = {
-  job: JobWithCompany
+  job: JobWithCompany & {
+    primaryLocation?: any
+    locationsJson?: any
+    aiSnippet?: string | null
+  }
   onClick?: () => void
   className?: string
 }
@@ -69,14 +73,89 @@ function inferSeniority(job: JobWithCompany): string | null {
   return null
 }
 
-function parseStringArray(raw?: string | null): string[] {
+function parseJsonArray(raw?: any): string[] {
   if (!raw) return []
+  if (Array.isArray(raw)) return raw.filter((x) => typeof x === 'string')
+  if (typeof raw !== 'string') return []
   try {
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : []
   } catch {
     return []
   }
+}
+
+function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; locationsJson?: any }): {
+  label: string
+  hasMultiple: boolean
+  count: number
+} | null {
+  // Use primaryLocation if available
+  if (job.primaryLocation) {
+    const locations = parseJsonArray(job.locationsJson)
+    const isRemote = job.remote === true || job.remoteMode === 'remote'
+    
+    if (isRemote) {
+      const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
+      const flag = countryFlag(cc)
+      return {
+        label: cc ? `${flag} ${cc}` : 'Remote',
+        hasMultiple: locations.length > 1,
+        count: locations.length
+      }
+    }
+
+    const primary = String(job.primaryLocation)
+    const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
+    const flag = countryFlag(cc)
+    
+    return {
+      label: flag ? `${flag} ${primary}` : primary,
+      hasMultiple: locations.length > 1,
+      count: locations.length
+    }
+  }
+
+  // Fallback to old logic
+  const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
+  const flag = countryFlag(cc)
+  const city = job.city ? String(job.city).trim() : ''
+  const isRemote = job.remote === true || job.remoteMode === 'remote'
+
+  if (isRemote) {
+    return {
+      label: cc ? `${flag} ${cc}` : 'Remote',
+      hasMultiple: false,
+      count: 1
+    }
+  }
+
+  if (city && cc) {
+    return {
+      label: `${flag} ${city}, ${cc}`,
+      hasMultiple: false,
+      count: 1
+    }
+  }
+
+  if (cc) {
+    return {
+      label: `${flag} ${cc}`,
+      hasMultiple: false,
+      count: 1
+    }
+  }
+
+  if (job.locationRaw) {
+    const raw = String(job.locationRaw)
+    return {
+      label: raw.split(/[;,]/)[0].trim(),
+      hasMultiple: raw.includes(';') || raw.includes(','),
+      count: raw.split(/[;,]/).length
+    }
+  }
+
+  return null
 }
 
 export function JobCard({ job, onClick, className }: JobCardProps) {
@@ -104,22 +183,12 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
   const workType = getWorkType(job)
   const seniority = inferSeniority(job)
 
-  const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
-  const flag = countryFlag(cc)
-  const city = job.city ? String(job.city).trim() : ''
-  const locationLabel =
-    job.remote === true || job.remoteMode === 'remote'
-      ? 'Remote'
-      : city && cc
-        ? `${flag ? `${flag} ` : ''}${city}, ${cc}`
-        : cc
-          ? `${flag ? `${flag} ` : ''}${cc}`
-          : job.locationRaw
-            ? String(job.locationRaw)
-            : null
+  const locationData = buildLocationDisplay(job)
 
-  const snippet = getJobCardSnippet(job as any)
-  const skills = parseStringArray((job as any)?.skillsJson).filter(Boolean)
+  // Prioritize aiSnippet over default snippet
+  const snippet = (job as any).aiSnippet || getJobCardSnippet(job as any)
+  
+  const skills = parseJsonArray((job as any)?.techStack || (job as any)?.skillsJson).filter(Boolean)
   const shownSkills = skills.slice(0, 5)
   const extraSkills = Math.max(0, skills.length - shownSkills.length)
 
@@ -186,7 +255,8 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
         <div className={styles.metaRow} aria-label="Job metadata">
           <span className={styles.metaPill}>
             <MapPin className={styles.metaIcon} aria-hidden="true" />
-            {locationLabel ?? '—'}
+            {locationData?.label ?? '—'}
+            {locationData?.hasMultiple ? ` +${locationData.count - 1}` : ''}
           </span>
 
           <span className={styles.metaPill}>
@@ -200,20 +270,22 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
           </span>
         </div>
 
-        <p className={styles.snippet}>
-          {snippet || 'Verified compensation and direct application links from company ATS systems.'}
-        </p>
+        {snippet ? (
+          <p className={styles.snippet}>{snippet}</p>
+        ) : null}
 
-        <div className={styles.skills} aria-label="Skills">
-          {shownSkills.map((s) => (
-            <span key={s} className={styles.skill}>
-              {s}
-            </span>
-          ))}
-          {extraSkills > 0 ? (
-            <span className={cn(styles.skill, styles.moreSkill)}>+{extraSkills} more</span>
-          ) : null}
-        </div>
+        {shownSkills.length > 0 ? (
+          <div className={styles.skills} aria-label="Skills">
+            {shownSkills.map((s) => (
+              <span key={s} className={styles.skill}>
+                {s}
+              </span>
+            ))}
+            {extraSkills > 0 ? (
+              <span className={cn(styles.skill, styles.moreSkill)}>+{extraSkills} more</span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <footer className={styles.footer}>
