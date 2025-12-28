@@ -1,0 +1,49 @@
+name: AI Enrichment (Daily)
+on:
+  schedule:
+    - cron: "30 7,19 * * *"  # 7:30am and 7:30pm UTC (1.5 hours after scraping)
+  workflow_dispatch:
+
+concurrency:
+  group: ai-enrich
+  cancel-in-progress: false
+
+jobs:
+  ai-enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/develop'
+    
+    steps:
+      - name: Trigger AI Enrichment API
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🤖 Triggering AI enrichment on Railway..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET \
+            "https://www.6figjobs.com/api/cron/ai-enrich" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 1800 \
+            --retry 2 \
+            --retry-delay 30)
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          echo "📊 Response Code: $HTTP_CODE"
+          echo "📄 Response Body: $BODY"
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ AI enrichment triggered successfully"
+            exit 0
+          else
+            echo "❌ AI enrichment failed with code $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "⚠️ AI enrichment failed!"
