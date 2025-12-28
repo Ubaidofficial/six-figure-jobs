@@ -102,29 +102,6 @@ export default async function scrapeGenericSources() {
         await page.goto(source.url, { waitUntil: 'domcontentloaded', timeout: 45000 })
         
         // Scan page for links that look like jobs
-        const jobs = await scanPageForJobs(page)
-        
-        if (jobs.length > 0) {
-          console.log(`   -> Found ${jobs.length} potential jobs`)
-          
-          for (const job of jobs) {
-            const result = await ingestJob({
-              externalId: Buffer.from(job.url).toString('base64').slice(0, 32),
-              title: job.title,
-              rawCompanyName: source.company.name,
-              companyWebsiteUrl: source.company.website,
-              url: job.url,
-              applyUrl: job.url,
-              source: makeBoardSource('generic_career_page'),
-              descriptionText: 'Discovered via generic scrape',
-              postedAt: new Date(),
-              isRemote: true // Assumption for now, or use keyword detection
-            })
-            
-            if (result.status === 'created') stats.created++
-            else if (result.status === 'updated') stats.updated++
-            else stats.skipped++
-          }
         }
 
         // Update last scraped time

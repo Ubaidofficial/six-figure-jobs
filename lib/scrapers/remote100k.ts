@@ -15,7 +15,7 @@ const BOARD_NAME = 'remote100k'
 const BASE_URL = 'https://remote100k.com'
 
 // Rate limiting
-const MAX_PAGES_PER_RUN = 20
+const MAX_PAGES_PER_RUN = 2
 const DELAY_BETWEEN_PAGES_MS = 1000 // Increased delay slightly
 const PAGE_LOAD_TIMEOUT_MS = 45000 // Increased timeout
 const WAIT_FOR_CONTENT_MS = 3000
@@ -111,7 +111,7 @@ export default async function scrapeRemote100k(): Promise<ScraperStats> {
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         )
 
-        const jobs = await scrapeListingPage(page, url, seenJobUrls)
+        const jobs = await scrapeListingPage(browser, page, url, seenJobUrls)
         console.log(`[${BOARD_NAME}] Found ${jobs.length} new jobs on ${categoryPath}`)
         
         for (const job of jobs) {
@@ -160,6 +160,7 @@ export default async function scrapeRemote100k(): Promise<ScraperStats> {
 }
 
 async function scrapeListingPage(
+  browser: Browser,
   page: Page, 
   url: string,
   seenJobUrls: Set<string>
@@ -193,6 +194,10 @@ async function scrapeListingPage(
       if (seenJobUrls.has(parsed.url)) {
         continue
       }
+
+      // Fetch description from detail page
+      const description = await scrapeJobDetailPage(browser, parsed.url)
+
       seenJobUrls.add(parsed.url)
 
       const salary = parseSalaryText(parsed.salaryText)
@@ -206,6 +211,7 @@ async function scrapeListingPage(
         applyUrl: parsed.url,
         locationText: parsed.location,
         isRemote: true,
+        descriptionHtml: description || undefined,
         salaryMin: salary.min,
         salaryMax: salary.max,
         salaryCurrency: salary.currency,
@@ -226,6 +232,60 @@ async function scrapeListingPage(
   }
 
   return jobs
+}
+
+
+/**
+ * Scrape job description from detail page
+ */
+async function scrapeJobDetailPage(
+  browser: Browser,
+  jobUrl: string
+): Promise<string | null> {
+  let page: Page | null = null
+  try {
+    page = await browser.newPage()
+    await page.goto(jobUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: PAGE_LOAD_TIMEOUT_MS,
+    })
+    await delay(WAIT_FOR_CONTENT_MS)
+
+    const description = await page.evaluate(() => {
+      const selectors = [
+        '.job-description',
+        '[class*="description"]',
+        '[class*="job-details"]',
+        'article',
+        'main',
+        '.content',
+      ]
+
+      for (const selector of selectors) {
+        const element = document.querySelector(selector)
+        if (element && element.innerHTML && element.innerHTML.length > 200) {
+          return element.innerHTML
+        }
+      }
+
+      const paragraphs = Array.from(document.querySelectorAll('p'))
+        .map(p => p.outerHTML)
+        .join('\n')
+      
+      if (paragraphs.length > 200) {
+        return paragraphs
+      }
+
+      return null
+    })
+
+    return description
+  } catch (err) {
+    console.error(`[${BOARD_NAME}] Error scraping detail page ${jobUrl}:`, err)
+    return null
+  } finally {
+    if (page) await page.close().catch(() => {})
+  }
 }
 
 function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
