@@ -103,3 +103,24 @@
 - Sitemap reduced from 5,746 → 840 URLs (all valid)
 - Next: Resurrect 2,000-2,500 expired jobs that now map to expanded canonical roles
 
+
+## [Unreleased] - 2024-12-29
+
+### Fixed
+- **Double flag display in job location labels** - Fixed issue where remote jobs showed duplicate country flags (e.g., "🇺🇸 🇺🇸 USA" now correctly displays as "🇺🇸 USA")
+  - Added country code to name mapping (US → USA, GB → UK, etc.)
+  - Fixed both main and legacy JobCard components
+  - Handle descriptive location text properly (e.g., "Remote, USA")
+  - Commit: 9c55e4b
+
+- **Remote100k apply URLs** - Fixed apply buttons to point directly to employer ATS instead of aggregator
+  - Modified scraper to extract real employer URLs from job detail pages
+  - Detects Greenhouse, Lever, Ashby, and other ATS platforms
+  - Falls back to aggregator URL if extraction fails
+  - Commit: 9f8a6c5
+
+### Technical Improvements
+- Enhanced `buildLocationDisplay()` function with better location handling
+- Modified `scrapeJobDetailPage()` to return both description and apply URL
+- Added comprehensive URL extraction logic for multiple ATS providers
+
