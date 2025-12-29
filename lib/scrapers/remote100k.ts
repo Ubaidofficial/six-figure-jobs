@@ -196,7 +196,7 @@ async function scrapeListingPage(
       }
 
       // Fetch description from detail page
-      const description = await scrapeJobDetailPage(browser, parsed.url)
+      const detailData = await scrapeJobDetailPage(browser, parsed.url)
 
       seenJobUrls.add(parsed.url)
 
@@ -208,10 +208,10 @@ async function scrapeListingPage(
         source: makeBoardSource(BOARD_NAME),
         rawCompanyName: parsed.company,
         url: parsed.url,
-        applyUrl: parsed.url,
+        applyUrl: detailData.applyUrl || parsed.url,
         locationText: parsed.location,
         isRemote: true,
-        descriptionHtml: description || undefined,
+        descriptionHtml: detailData.description || undefined,
         salaryMin: salary.min,
         salaryMax: salary.max,
         salaryCurrency: salary.currency,
@@ -241,7 +241,7 @@ async function scrapeListingPage(
 async function scrapeJobDetailPage(
   browser: Browser,
   jobUrl: string
-): Promise<string | null> {
+): Promise<{ description: string | null; applyUrl: string | null }> {
   let page: Page | null = null
   try {
     page = await browser.newPage()
@@ -279,10 +279,25 @@ async function scrapeJobDetailPage(
       return null
     })
 
-    return description
+    // Extract actual apply URL
+    const applyUrl = await page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll('a[href]'))
+      for (const link of links) {
+        const href = (link as HTMLAnchorElement).href
+        const text = link.textContent?.toLowerCase() || ''
+        if (href.includes('remote100k.com')) continue
+        if (text.includes('apply') || href.includes('greenhouse.io') || href.includes('lever.co') || 
+            href.includes('ashbyhq.com') || href.includes('/jobs/') || href.includes('/careers/')) {
+          return href
+        }
+      }
+      return null
+    })
+
+    return { description, applyUrl }
   } catch (err) {
     console.error(`[${BOARD_NAME}] Error scraping detail page ${jobUrl}:`, err)
-    return null
+    return { description: null, applyUrl: null }
   } finally {
     if (page) await page.close().catch(() => {})
   }
