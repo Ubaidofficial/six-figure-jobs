@@ -90,16 +90,67 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
   hasMultiple: boolean
   count: number
 } | null {
+  // Country code to name mapping
+  const countryNames: Record<string, string> = {
+    'US': 'USA',
+    'GB': 'UK',
+    'CA': 'Canada',
+    'AU': 'Australia',
+    'DE': 'Germany',
+    'FR': 'France',
+    'NL': 'Netherlands',
+    'ES': 'Spain',
+    'IT': 'Italy',
+    'SE': 'Sweden',
+    'NO': 'Norway',
+    'DK': 'Denmark',
+    'FI': 'Finland',
+    'IE': 'Ireland',
+    'CH': 'Switzerland',
+    'AT': 'Austria',
+    'BE': 'Belgium',
+    'PT': 'Portugal',
+    'PL': 'Poland',
+    'CZ': 'Czech Republic',
+    'SG': 'Singapore',
+    'JP': 'Japan',
+    'KR': 'South Korea',
+    'IN': 'India',
+    'BR': 'Brazil',
+    'MX': 'Mexico',
+    'AR': 'Argentina',
+    'CL': 'Chile',
+    'NZ': 'New Zealand',
+  }
+
   // Use primaryLocation if available
   if (job.primaryLocation) {
     const locations = parseJsonArray(job.locationsJson)
     const isRemote = job.remote === true || job.remoteMode === 'remote'
-    
+
     if (isRemote) {
       const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
       const flag = countryFlag(cc)
+      
+      // Get location value
+      const locationValue = String(job.primaryLocation).trim()
+      
+      // Only map 2-letter country codes to full names
+      // If it's already descriptive text (like "Remote, USA"), use as-is without flag
+      let displayName = locationValue
+      if (locationValue.length === 2 && locationValue === locationValue.toUpperCase()) {
+        // It's a bare country code like "US" - map to "USA" and add flag
+        displayName = countryNames[locationValue] || locationValue
+        return {
+          label: flag ? `${flag} ${displayName}` : displayName || 'Remote',
+          hasMultiple: locations.length > 1,
+          count: locations.length
+        }
+      }
+      
+      // It's descriptive text - return as-is WITHOUT flag (flag is redundant)
       return {
-        label: cc ? `${flag} ${cc}` : 'Remote',
+        label: displayName,
         hasMultiple: locations.length > 1,
         count: locations.length
       }
@@ -108,7 +159,7 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
     const primary = String(job.primaryLocation)
     const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
     const flag = countryFlag(cc)
-    
+
     return {
       label: flag ? `${flag} ${primary}` : primary,
       hasMultiple: locations.length > 1,
@@ -123,8 +174,9 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
   if (isRemote) {
+    const displayName = cc ? (countryNames[cc] || cc) : null
     return {
-      label: cc ? `${flag} ${cc}` : 'Remote',
+      label: displayName ? `${flag} ${displayName}` : 'Remote',
       hasMultiple: false,
       count: 1
     }

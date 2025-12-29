@@ -239,33 +239,52 @@ function buildLocationData(job: JobCardJob): {
   hasMultiple: boolean
   count: number
 } | null {
+  // Country code to name mapping
+  const countryNames: Record<string, string> = {
+    'US': 'USA', 'GB': 'UK', 'CA': 'Canada', 'AU': 'Australia',
+    'DE': 'Germany', 'FR': 'France', 'NL': 'Netherlands', 'ES': 'Spain',
+    'IT': 'Italy', 'SE': 'Sweden', 'NO': 'Norway', 'DK': 'Denmark',
+    'FI': 'Finland', 'IE': 'Ireland', 'CH': 'Switzerland', 'AT': 'Austria',
+    'BE': 'Belgium', 'PT': 'Portugal', 'PL': 'Poland', 'CZ': 'Czech Republic',
+    'SG': 'Singapore', 'JP': 'Japan', 'KR': 'South Korea', 'IN': 'India',
+    'BR': 'Brazil', 'MX': 'Mexico', 'AR': 'Argentina', 'CL': 'Chile', 'NZ': 'New Zealand',
+  }
   // Try primaryLocation first (new field)
   if (job.primaryLocation) {
     const primary = String(job.primaryLocation)
     const locations = parseJsonArray(job.locationsJson)
     const countryCode = job.countryCode || detectCountryCode(primary)
     
+    // For primaryLocation that's already descriptive (like "Remote, USA" or "New Jersey, USA"),
+    // just return it as-is without adding country name mapping
+    // Only map if it's a bare 2-letter code (US, GB, CA, etc.)
+    let displayName = primary
+    if (primary.length === 2 && primary === primary.toUpperCase()) {
+      // It's a 2-letter country code, map it to full name
+      displayName = countryNames[primary] || primary
+    }
+    
     return {
-      primary: primary,
+      primary: displayName,
       flag: getCountryFlag(countryCode),
       hasMultiple: locations.length > 1,
       count: locations.length
     }
   }
-
   // Fallback to existing logic
   const isRemote = job.remote === true || job.remoteMode === 'remote'
   const code = job.countryCode ? job.countryCode.toString().toUpperCase() : null
-
   if (isRemote) {
+    // Only add flag for 2-letter country codes
+    // If primaryLocation exists and is descriptive, it was already handled above
+    const displayName = code ? (countryNames[code] || code) : 'Worldwide'
     return {
-      primary: code || 'Worldwide',
+      primary: displayName,
       flag: getCountryFlag(code),
       hasMultiple: false,
       count: 1
     }
   }
-
   if (job.city && code) {
     return {
       primary: `${job.city}, ${code}`,
@@ -274,16 +293,15 @@ function buildLocationData(job: JobCardJob): {
       count: 1
     }
   }
-
   if (code) {
+    const displayName = countryNames[code] || code
     return {
-      primary: code,
+      primary: displayName,
       flag: getCountryFlag(code),
       hasMultiple: false,
       count: 1
     }
   }
-
   if (job.locationRaw) {
     const raw = String(job.locationRaw)
     const detectedCode = detectCountryCode(raw)
@@ -294,7 +312,6 @@ function buildLocationData(job: JobCardJob): {
       count: raw.split(/[;,]/).length
     }
   }
-
   return null
 }
 
