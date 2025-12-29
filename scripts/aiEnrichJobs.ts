@@ -89,7 +89,6 @@ async function main() {
       const roleSnippet = buildSnippetFromJob({
         title: job.title || '',
         descriptionHtml: job.descriptionHtml ?? undefined,
-        descriptionText: job.description ?? undefined,
       })
 
       const locationHint =
