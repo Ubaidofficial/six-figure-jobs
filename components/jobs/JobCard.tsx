@@ -75,14 +75,55 @@ function inferSeniority(job: JobWithCompany): string | null {
 
 function parseJsonArray(raw?: any): string[] {
   if (!raw) return []
-  if (Array.isArray(raw)) return raw.filter((x) => typeof x === 'string')
+  if (Array.isArray(raw)) {
+    return raw
+      .map((x) => {
+        if (typeof x === 'string') return x
+        if (x && typeof x === 'object') {
+          const name = (x as any).name ?? (x as any).label ?? (x as any).title
+          return typeof name === 'string' ? name : String(x)
+        }
+        return null
+      })
+      .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+  }
   if (typeof raw !== 'string') return []
   try {
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : []
+    return Array.isArray(parsed) ? parseJsonArray(parsed) : []
   } catch {
-    return []
+    const text = raw.trim()
+    if (!text) return []
+
+    // Postgres array style: {"React","Node.js"}
+    if (text.startsWith('{') && text.endsWith('}')) {
+      const inner = text.slice(1, -1)
+      return inner
+        .split(',')
+        .map((v) => v.trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1'))
+        .filter((v) => v.length > 0)
+    }
+
+    // Fallback: comma/pipe/semicolon/newline-separated string
+    return text
+      .split(/[,\n\r;|]+/g)
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0)
   }
+}
+
+function uniqStrings(values: string[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const raw of values) {
+    const v = raw.trim()
+    const key = v.toLowerCase()
+    if (!v) continue
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(v)
+  }
+  return result
 }
 
 function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; locationsJson?: any }): {
@@ -239,21 +280,33 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
 
   // Prioritize aiSnippet over default snippet
   const snippet = (job as any).aiSnippet || getJobCardSnippet(job as any)
+  const truncatedSnippet =
+    typeof snippet === 'string' && snippet.length > 120
+      ? `${snippet.slice(0, 120).trim()}...`
+      : snippet
 
-  // DEBUG: Log first job to see what fields we have
-  if (typeof window !== 'undefined' && !(window as any).__debugLogged) {
-    console.log('JobCard data:', { 
-      aiSnippet: (job as any).aiSnippet, 
-      aiOneLiner: (job as any).aiOneLiner,
-      id: job.id, 
-      title: job.title 
-    })
-    ;(window as any).__debugLogged = true
-  }
-  
-  const skills = parseJsonArray((job as any)?.techStack || (job as any)?.skillsJson).filter(Boolean)
-  const shownSkills = skills.slice(0, 5)
+  const skills = uniqStrings([
+    ...parseJsonArray((job as any)?.techStack),
+    ...parseJsonArray((job as any)?.skillsJson),
+  ])
+
+  const shownSkills = skills.slice(0, 10)
   const extraSkills = Math.max(0, skills.length - shownSkills.length)
+
+  if (
+    typeof window !== 'undefined' &&
+    process.env.NEXT_PUBLIC_DEBUG_JOB_SKILLS === '1' &&
+    !(window as any).__debugSkills
+  ) {
+    console.log('Job tech stack debug:', {
+      jobId: job.id,
+      techStack: (job as any)?.techStack,
+      skillsJson: (job as any)?.skillsJson,
+      parsed: skills,
+      shown: shownSkills,
+    })
+    ;(window as any).__debugSkills = true
+  }
 
   const postedLabel = formatRelativeTime(job.postedAt ?? job.updatedAt ?? job.createdAt ?? null)
 
@@ -333,8 +386,8 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
           </span>
         </div>
 
-        {snippet ? (
-          <p className={styles.snippet}>{snippet}</p>
+        {truncatedSnippet ? (
+          <p className={styles.snippet}>{truncatedSnippet}</p>
         ) : null}
 
         {shownSkills.length > 0 ? (
