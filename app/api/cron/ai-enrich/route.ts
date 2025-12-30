@@ -13,15 +13,19 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    console.log('[ai-enrich-api] Starting AI enrichment process...')
+    
     // Fire and forget - don't wait for completion
     const child = spawn('npx', ['tsx', 'scripts/aiEnrichJobs.ts'], {
       detached: true,
-      stdio: 'ignore',
+      stdio: ['ignore', 'inherit', 'inherit'], // Log stdout/stderr to Railway
       env: process.env,
       cwd: process.cwd()
     })
     
     child.unref() // Allow parent to exit independently
+    
+    console.log(`[ai-enrich-api] Background process started with PID: ${child.pid}`)
     
     return NextResponse.json({ 
       ok: true, 
@@ -29,7 +33,7 @@ export async function GET(req: NextRequest) {
       pid: child.pid 
     })
   } catch (e: any) {
-    console.error('AI enrichment error:', e)
+    console.error('[ai-enrich-api] Failed to start process:', e)
     return NextResponse.json({ 
       ok: false, 
       error: e?.message || 'failed'
