@@ -239,6 +239,17 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
 
   // Prioritize aiSnippet over default snippet
   const snippet = (job as any).aiSnippet || getJobCardSnippet(job as any)
+
+  // DEBUG: Log first job to see what fields we have
+  if (typeof window !== 'undefined' && !(window as any).__debugLogged) {
+    console.log('JobCard data:', { 
+      aiSnippet: (job as any).aiSnippet, 
+      aiOneLiner: (job as any).aiOneLiner,
+      id: job.id, 
+      title: job.title 
+    })
+    ;(window as any).__debugLogged = true
+  }
   
   const skills = parseJsonArray((job as any)?.techStack || (job as any)?.skillsJson).filter(Boolean)
   const shownSkills = skills.slice(0, 5)
