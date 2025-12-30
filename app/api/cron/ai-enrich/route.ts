@@ -17,12 +17,22 @@ export async function GET(req: NextRequest) {
 
   try {
     const { stdout, stderr } = await execFileAsync(
-      'node',
-      ['-r', 'ts-node/register', 'scripts/aiEnrichJobs.ts'],
-      { env: process.env }
+      'npx',
+      ['tsx', 'scripts/aiEnrichJobs.ts'],
+      { 
+        env: process.env,
+        cwd: process.cwd(),
+        timeout: 1800000 // 30 minutes
+      }
     )
     return NextResponse.json({ ok: true, stdout, stderr })
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || 'failed' }, { status: 500 })
+    console.error('AI enrichment error:', e)
+    return NextResponse.json({ 
+      ok: false, 
+      error: e?.message || 'failed',
+      stderr: e?.stderr,
+      stdout: e?.stdout
+    }, { status: 500 })
   }
 }
