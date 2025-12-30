@@ -10,7 +10,7 @@ export function Footer() {
       <div className={styles.inner}>
         <section className={styles.newsletter} aria-label="Newsletter signup">
           <div>
-            <div className={styles.newsletterTitle}>Get weekly $100k+ jobs in your inbox</div>
+            <div className={styles.newsletterTitle}>Get weekly six-figure jobs in your inbox</div>
             <div className={styles.newsletterSub}>Premium roles, verified salaries, no noise.</div>
           </div>
           <FooterNewsletter />

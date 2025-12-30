@@ -37,7 +37,7 @@ export function LatestOpportunities({
     <section className={styles.section} aria-label="Latest opportunities">
       <header className={styles.header}>
         <div>
-          <h2 className={styles.title}>Latest $100k+ Opportunities</h2>
+          <h2 className={styles.title}>Latest Six Figure Opportunities</h2>
         </div>
         <Link href="/jobs" className={styles.headerLink}>
           Explore all opportunities <span aria-hidden="true">→</span>
@@ -46,7 +46,7 @@ export function LatestOpportunities({
 
       {latest.length === 0 ? (
         <div className={styles.empty}>
-          <p>No jobs found. Try adjusting your filters or explore all $100k+ opportunities.</p>
+          <p>No jobs found. Try adjusting your filters or explore all six-figure opportunities.</p>
         </div>
       ) : (
         <div className={styles.grid}>

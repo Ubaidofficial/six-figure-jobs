@@ -358,7 +358,7 @@ export default async function CompanyPage({
       {/* Related Links */}
       <section className="mt-10">
         <h2 className="mb-3 text-sm font-semibold text-slate-50">
-          Explore More $100k+ Jobs
+          Explore More Six Figure Jobs
         </h2>
         <div className="flex flex-wrap gap-2">
           <Link

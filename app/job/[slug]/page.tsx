@@ -235,6 +235,17 @@ export default async function JobPage({
       ? ((typedJob as any).aiQualityScore as number)
       : null
 
+  const aiOneLiner = (typedJob.aiOneLiner ?? '').toString().trim() || null
+  const aiSummaryBullets = (() => {
+    const js = typedJob.aiSummaryJson
+    if (!js || typeof js !== 'object') return []
+    const bullets = (js as any).bullets
+    if (!Array.isArray(bullets)) return []
+    return bullets
+      .map((b) => (typeof b === 'string' ? b : String(b)).trim())
+      .filter((b): b is string => b.length > 0)
+  })()
+
   /* --------------------------- Similar jobs -------------------------------- */
 
   const similarResult = await queryJobs({
@@ -308,6 +319,8 @@ export default async function JobPage({
 
             <div>
               <h1 className={styles.title}>{typedJob.title}</h1>
+
+              {aiOneLiner ? <p className={styles.oneLiner}>{aiOneLiner}</p> : null}
 
               <div className={styles.companyRow}>
                 {company?.slug ? (
@@ -448,7 +461,7 @@ export default async function JobPage({
               <p className={styles.cardSubtitle}>
                 {company?.description
                   ? truncateText(stripTags(decodeHtmlEntities(company.description)), 200)
-                  : `${companyName} is hiring $100k+ talent across multiple teams.`}
+                  : `${companyName} is hiring six-figure talent across multiple teams.`}
               </p>
 
               <div className={styles.aboutCompanyMeta}>
@@ -538,23 +551,32 @@ export default async function JobPage({
               </section>
             )}
 
-            {/* Description */}
-            {hasDescription ? (
-              <section className={styles.card}>
-                <div className={styles.cardTitle}>Job Description</div>
+            {/* About the Role (prefer AI bullets, fallback to raw HTML) */}
+            <section className={styles.card}>
+              <div className={styles.cardTitle}>About the Role</div>
+
+              {aiSummaryBullets.length > 0 ? (
+                <div className={styles.checkList}>
+                  {aiSummaryBullets.map((bullet, i) => (
+                    <div key={i} className={styles.checkItem}>
+                      <span className={styles.checkCircle} aria-hidden="true">
+                        <Check />
+                      </span>
+                      <span>{bullet}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : hasDescription ? (
                 <div
                   className={`prose prose-invert max-w-none ${styles.richText}`}
                   dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
                 />
-              </section>
-            ) : (
-              <section className={styles.card}>
-                <div className={styles.cardTitle}>Job Description</div>
+              ) : (
                 <p className={styles.cardSubtitle}>
                   This role is sourced directly from the employer&apos;s careers site. The full job description is available on their ATS.
                 </p>
-              </section>
-            )}
+              )}
+            </section>
 
             {responsibilities.length > 0 ? (
               <section className={styles.card}>
@@ -652,7 +674,7 @@ export default async function JobPage({
           <section className={styles.similarGrid}>
             <div className={styles.similarHeader}>
               <div>
-                <div className={styles.similarTitle}>Similar $100k+ Opportunities</div>
+                <div className={styles.similarTitle}>Similar Six Figure Opportunities</div>
                 <div className={styles.similarSub}>Based on role, country and salary band</div>
               </div>
             </div>
@@ -898,7 +920,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
     })
   }
 
-  links.push({ href: '/jobs/100k-plus', label: 'All $100k+ jobs' })
+  links.push({ href: '/jobs/100k-plus', label: 'All Six Figure Jobs' })
 
   if (roleSlug) {
     links.push({ href: `/salary/${roleSlug}`, label: `${roleLabel} salary guide` })

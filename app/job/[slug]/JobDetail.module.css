@@ -93,6 +93,14 @@
   font-size: 42px;
 }
 
+.oneLiner {
+  margin-top: var(--space-12);
+  font-size: 18px;
+  color: var(--color-text-1);
+  line-height: var(--line-height-relaxed);
+  max-width: 70ch;
+}
+
 .companyRow {
   margin-top: var(--space-8);
   display: flex;

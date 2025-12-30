@@ -140,7 +140,7 @@ export function SiteHeader() {
                 <MenuItem
                   href="/jobs"
                   title="All jobs"
-                  description="Explore every $100k+ listing"
+                  description="Explore every six-figure listing"
                   onClick={() => setJobsOpen(false)}
                 />
                 <MenuItem

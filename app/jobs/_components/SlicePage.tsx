@@ -219,13 +219,13 @@ export function SlicePage({ slice, data }: Props) {
               href="#jobs"
               className="inline-flex flex-1 items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500"
             >
-              Explore $100k+ opportunities
+              Explore six-figure opportunities
             </Link>
             <Link
               href="/jobs/100k-plus"
               className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-slate-500"
             >
-              Explore all $100k+ →
+              Explore all six-figure →
             </Link>
           </div>
         </div>

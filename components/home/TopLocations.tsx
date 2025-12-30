@@ -18,7 +18,7 @@ export function TopLocations({ locations }: { locations: TopLocationCard[] }) {
   return (
     <section className={styles.section} aria-label="Top locations for high-paying jobs">
       <header className={styles.header}>
-        <h2 className={styles.title}>Top Locations for $100k+ Jobs</h2>
+        <h2 className={styles.title}>Top Locations for Six Figure Jobs</h2>
         <p className={styles.subtitle}>Global opportunities with PPP-adjusted thresholds</p>
       </header>
 
@@ -48,4 +48,3 @@ export function TopLocations({ locations }: { locations: TopLocationCard[] }) {
     </section>
   )
 }
-

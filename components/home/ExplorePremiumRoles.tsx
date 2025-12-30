@@ -25,7 +25,7 @@ export function ExplorePremiumRoles({ roles }: { roles: PremiumRoleCard[] }) {
     <section className={styles.section} aria-label="Explore premium roles">
       <header className={styles.header}>
         <h2 className={styles.title}>Explore Premium Roles</h2>
-        <p className={styles.subtitle}>Explore $100k+ opportunities by position</p>
+        <p className={styles.subtitle}>Explore six-figure opportunities by position</p>
       </header>
 
       <div className={styles.grid}>

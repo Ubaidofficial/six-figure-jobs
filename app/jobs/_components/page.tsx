@@ -220,7 +220,7 @@ export default async function JobsSlicePage({
       {internalLinks.length > 0 && (
         <section className="mx-auto mt-10 max-w-5xl px-4 pb-12">
           <h2 className="mb-3 text-sm font-semibold text-slate-50">
-            Explore related $100k+ pages
+            Explore related six-figure pages
           </h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-blue-400">
             {internalLinks.map((link) => (

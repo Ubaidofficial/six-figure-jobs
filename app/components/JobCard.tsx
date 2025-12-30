@@ -172,9 +172,7 @@ export default function JobCard({
           </div>
 
           {/* Snippet - prioritize AI-generated content */}
-          {variant === 'full' && snippet ? (
-            <p className={styles.snippet}>{snippet}</p>
-          ) : null}
+          {snippet ? <p className={styles.snippet}>{snippet}</p> : null}
         </div>
 
         {/* Salary section */}

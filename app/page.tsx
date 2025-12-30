@@ -620,7 +620,7 @@ export default async function HomePage() {
             href="/jobs/100k-plus"
             className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-6 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/5 sm:w-auto"
           >
-            Explore $100k+ opportunities
+            Explore six-figure opportunities
           </Link>
         </div>
 
