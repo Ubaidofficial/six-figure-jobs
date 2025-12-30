@@ -1,8 +1,8 @@
 import OpenAI from 'openai'
 import { buildAiEnrichPrompt, parseAiEnrichJson, type AiEnrichOutput } from './aiEnrichPrompt'
 
-const client = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
+const client = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: 'https://api.deepseek.com'
 })
 
