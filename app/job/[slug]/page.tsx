@@ -218,13 +218,7 @@ export default async function JobPage({
   const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
   const internalLinks = buildInternalLinks(typedJob)
 
-  // v2.9 AI UI (feature flagged) -> prefer DB AI summary, fallback to heuristic
-  const aiFromDb = AI_UI_ENABLED ? buildAiSummaryFromDb(typedJob as any) : null
-  const aiSummary =
-    aiFromDb?.highlights && aiFromDb.highlights.length > 0
-      ? aiFromDb.highlights
-      : buildHeuristicSummary(typedJob, salaryText, locationText, seniority)
-
+  // AI snippet / score (feature flagged)
   const aiSnippet =
     AI_UI_ENABLED && typeof (typedJob as any)?.aiSnippet === 'string'
       ? ((typedJob as any).aiSnippet as string)
@@ -525,10 +519,10 @@ export default async function JobPage({
           <section className={styles.content}>
 
             {/* Highlights */}
-            {(aiSnippet || aiSummary) && (
+            {(aiSnippet || aiSummaryBullets.length > 0) && (
               <section className={styles.card}>
                 <div className={styles.cardTitle}>
-                  Role Highlights
+                  <span>✨ Role Highlights</span>
                   {AI_UI_ENABLED && aiQualityScore != null ? (
                     <span className={styles.verifiedBadge}>AI score: {aiQualityScore}/3</span>
                   ) : null}
@@ -536,9 +530,9 @@ export default async function JobPage({
 
                 {aiSnippet ? <p className={styles.cardSubtitle}>{aiSnippet}</p> : null}
 
-                {aiSummary ? (
+                {aiSummaryBullets.length > 0 ? (
                   <div className={styles.checkList}>
-                    {aiSummary.map((line, idx) => (
+                    {aiSummaryBullets.map((line, idx) => (
                       <div key={idx} className={styles.checkItem}>
                         <span className={styles.checkCircle} aria-hidden="true">
                           <Check />
@@ -551,22 +545,13 @@ export default async function JobPage({
               </section>
             )}
 
-            {/* About the Role (prefer AI bullets, fallback to raw HTML) */}
+            {/* Full job description (always show when available) */}
             <section className={styles.card}>
-              <div className={styles.cardTitle}>About the Role</div>
+              <div className={styles.cardTitle}>
+                <span>📋 Full Job Description</span>
+              </div>
 
-              {aiSummaryBullets.length > 0 ? (
-                <div className={styles.checkList}>
-                  {aiSummaryBullets.map((bullet, i) => (
-                    <div key={i} className={styles.checkItem}>
-                      <span className={styles.checkCircle} aria-hidden="true">
-                        <Check />
-                      </span>
-                      <span>{bullet}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : hasDescription ? (
+              {hasDescription ? (
                 <div
                   className={`prose prose-invert max-w-none ${styles.richText}`}
                   dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
@@ -949,50 +934,6 @@ function isValidUrl(url?: string | null): boolean {
   }
 }
 
-/**
- * Prefer DB AI summary if present (feature flagged).
- * Stores a compact list used by the UI.
- */
-function buildAiSummaryFromDb(job: any): { highlights: string[] } | null {
-  const js = job?.aiSummaryJson
-  if (!js || typeof js !== 'object') return null
-
-  const bullets = Array.isArray((js as any).bullets) ? (js as any).bullets.map(String).filter(Boolean) : []
-  const summary = typeof (js as any).summary === 'string' ? String((js as any).summary).trim() : ''
-
-  const highlights: string[] = []
-  if (summary) highlights.push(summary)
-  for (const b of bullets.slice(0, 3)) highlights.push(b)
-
-  return highlights.length ? { highlights } : null
-}
-
-function buildHeuristicSummary(
-  job: JobWithCompany,
-  salaryText: string | null,
-  locationText: string | null,
-  seniority: string | null,
-) {
-  const summary: string[] = []
-  const companyDesc = (job.companyRef as any)?.description ?? (job as any)?.companyDescription ?? null
-  const descSentence = companyDesc ? firstSentence(stripTags(decodeHtmlEntities(companyDesc))) : null
-
-  if (descSentence) summary.push(descSentence)
-  if (salaryText) summary.push(`Salary: ${salaryText} (shown to candidates).`)
-
-  if (locationText) {
-    const mode = job.remote ? 'Remote' : job.remoteMode === 'hybrid' ? 'Hybrid' : 'On-site'
-    summary.push(`Location: ${locationText} · ${mode}.`)
-  }
-
-  if (seniority) summary.push(`Level: ${seniority.replace('⭐ ', '')}.`)
-
-  const reqs = parseArray(job.requirementsJson).filter(Boolean).slice(0, 1)
-  if (reqs.length) summary.push(`Top requirement: ${reqs[0]}.`)
-
-  return summary.length ? summary.slice(0, 3) : null
-}
-
 function buildJobBreadcrumbJsonLd(job: JobWithCompany, slug: string): any {
   const items: any[] = [
     { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
@@ -1060,14 +1001,6 @@ function truncateText(str: string, maxChars: number): string {
         : maxChars
 
   return truncated.slice(0, cutoff) + ' …'
-}
-
-function firstSentence(text: string): string {
-  const trimmed = text.trim()
-  if (!trimmed) return ''
-  const match = trimmed.match(/(.+?[.!?])\s/)
-  if (match && match[1]) return match[1].trim()
-  return trimmed.slice(0, 200)
 }
 
 function inferSeniorityFromTitle(title: string): string | null {
