@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
@@ -252,6 +253,7 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
 }
 
 export function JobCard({ job, onClick, className }: JobCardProps) {
+  const router = useRouter()
   const companyName = String(job.companyRef?.name ?? (job as any)?.company ?? 'Company')
   const companyLogo = buildLogoUrl(
     job.companyRef?.logoUrl ?? (job as any)?.companyLogo ?? null,
@@ -309,12 +311,30 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
   }
 
   const postedLabel = formatRelativeTime(job.postedAt ?? job.updatedAt ?? job.createdAt ?? null)
+  const jobHref = buildJobSlugHref(job as any)
+
+  const navigateToJob = () => {
+    onClick?.()
+    router.push(jobHref)
+  }
 
   return (
-    <Link
-      href={buildJobSlugHref(job as any)}
-      onClick={onClick}
+    <article
       className={cn(styles.card, className)}
+      onClick={(e) => {
+        const el = e.target as HTMLElement | null
+        if (el?.closest('a')) return
+        navigateToJob()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          navigateToJob()
+        }
+      }}
+      role="link"
+      tabIndex={0}
+      aria-label={`View job: ${job.title} at ${companyName}`}
     >
       <header className={styles.header}>
         <div className={styles.logoWrap} aria-hidden="true">
@@ -349,7 +369,15 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
 
       <div className={styles.body}>
         <div className={styles.hero}>
-          <h3 className={styles.title}>{job.title}</h3>
+          <h3 className={styles.title}>
+            <Link
+              href={jobHref}
+              className={styles.titleLink}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {job.title}
+            </Link>
+          </h3>
 
           <div className={styles.salaryStack}>
             <div className={styles.salaryPill} aria-label={hasSalary ? `Salary ${salary}` : 'High salary role'}>
@@ -393,9 +421,17 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
         {shownSkills.length > 0 ? (
           <div className={styles.skills} aria-label="Skills">
             {shownSkills.map((s) => (
-              <span key={s} className={styles.skill}>
+              <Link
+                key={s}
+                href={`/jobs?tech=${encodeURIComponent(s.toLowerCase())}`}
+                className={styles.skill}
+                onClick={(e) => {
+                  e.stopPropagation()
+                }}
+                title={`Filter jobs by ${s}`}
+              >
                 {s}
-              </span>
+              </Link>
             ))}
             {extraSkills > 0 ? (
               <span className={cn(styles.skill, styles.moreSkill)}>+{extraSkills} more</span>
@@ -414,6 +450,6 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
           View Details <ArrowRight className={styles.ctaIcon} />
         </div>
       </footer>
-    </Link>
+    </article>
   )
 }

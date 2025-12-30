@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   const country = searchParams.get('country') || undefined
   const remoteMode = (searchParams.get('remoteMode') || undefined) as 'remote' | 'hybrid' | 'onsite' | undefined
   const sort = (searchParams.get('sort') || 'recent') as 'recent' | 'salary'
+  const tech = searchParams.get('tech') || undefined
   const roles = searchParams.getAll('role')
   const seniority = searchParams.getAll('seniority')
   const companySizes = searchParams.getAll('companySize')
@@ -21,6 +22,7 @@ export async function GET(request: Request) {
     remoteMode,
     seniorityLevels: seniority.length ? seniority : undefined,
     companySizeBuckets: companySizes.length ? companySizes : undefined,
+    tech,
     ...(minSalary ? { minAnnual: minSalary } : {}),
   }
 

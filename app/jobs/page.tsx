@@ -167,6 +167,7 @@ export default async function JobsIndexPage({
 }) {
   const sp = (await searchParams) || {}
   const page = parsePage(sp)
+  const techFilter = (firstParam(sp, 'tech') || '').trim() || undefined
 
   const rawCountry = (firstParam(sp, 'country') || '').trim().toUpperCase()
   const country = rawCountry.length === 2 ? rawCountry : undefined
@@ -203,6 +204,7 @@ export default async function JobsIndexPage({
     remoteMode: remoteMode || undefined,
     seniorityLevels: seniority.length ? seniority : undefined,
     companySizeBuckets: companySizes.length ? companySizes : undefined,
+    tech: techFilter,
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
   }
 
@@ -340,6 +342,25 @@ export default async function JobsIndexPage({
         </aside>
 
         <section className={styles.results} aria-label="Job results">
+          {techFilter ? (
+            <div className="mb-6 flex flex-wrap items-center gap-3">
+              <span className="text-sm text-slate-400">Filtering by technology:</span>
+              <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2">
+                <span className="font-semibold text-emerald-400">{techFilter}</span>
+                <Link
+                  href="/jobs"
+                  className="ml-1 text-slate-400 transition-colors hover:text-white"
+                  aria-label="Clear tech filter"
+                >
+                  <span className="text-lg">✕</span>
+                </Link>
+              </div>
+              <span className="text-sm text-slate-500">
+                ({data.total} {data.total === 1 ? 'job' : 'jobs'} found)
+              </span>
+            </div>
+          ) : null}
+
           <div className={styles.resultsHeader}>
             <div className={styles.resultsCount}>
               Showing page {data.page} of {totalPages} • {data.total.toLocaleString()} total

@@ -16,6 +16,7 @@ export type JobQueryInput = {
 
   roleSlugs?: string[]
   skillSlugs?: string[]
+  tech?: string
   stateCode?: string
   minAnnual?: number
   maxAnnual?: number
@@ -261,6 +262,18 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
         skillsJson: { contains: slug },
       })),
     })
+  }
+
+  if (filters.tech) {
+    const tech = String(filters.tech).trim()
+    if (tech) {
+      addAnd({
+        OR: [
+          { techStack: { contains: tech, mode: 'insensitive' } },
+          { skillsJson: { contains: tech, mode: 'insensitive' } },
+        ],
+      })
+    }
   }
 
   // Extra SEO-ish filters

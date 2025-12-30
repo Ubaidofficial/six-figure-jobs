@@ -110,7 +110,12 @@ async function main() {
             data: {
               aiOneLiner: out.oneLiner.trim(),
               aiSnippet: out.snippet.trim(),
-              aiSummaryJson: { bullets: out.bullets },
+              aiSummaryJson: {
+                bullets: out.bullets || [],
+                description: out.description || [],
+                requirements: out.requirements || [],
+                benefits: out.benefits || [],
+              },
               aiEnrichedAt: new Date(),
             },
           }),

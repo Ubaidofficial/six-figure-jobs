@@ -230,15 +230,32 @@ export default async function JobPage({
       : null
 
   const aiOneLiner = (typedJob.aiOneLiner ?? '').toString().trim() || null
-  const aiSummaryBullets = (() => {
+  const aiStructured = (() => {
     const js = typedJob.aiSummaryJson
-    if (!js || typeof js !== 'object') return []
-    const bullets = (js as any).bullets
-    if (!Array.isArray(bullets)) return []
-    return bullets
-      .map((b) => (typeof b === 'string' ? b : String(b)).trim())
-      .filter((b): b is string => b.length > 0)
+    const empty = { bullets: [] as string[], description: [] as string[], requirements: [] as string[], benefits: [] as string[] }
+    if (!js || typeof js !== 'object') return empty
+
+    const pickArray = (key: string, max: number): string[] => {
+      const raw = (js as any)[key]
+      if (!Array.isArray(raw)) return []
+      return raw
+        .map((v) => (typeof v === 'string' ? v : String(v)).trim())
+        .filter((v): v is string => v.length > 0)
+        .slice(0, max)
+    }
+
+    return {
+      bullets: pickArray('bullets', 6),
+      description: pickArray('description', 12),
+      requirements: pickArray('requirements', 12),
+      benefits: pickArray('benefits', 10),
+    }
   })()
+
+  const hasStructuredSections =
+    aiStructured.description.length > 0 ||
+    aiStructured.requirements.length > 0 ||
+    aiStructured.benefits.length > 0
 
   /* --------------------------- Similar jobs -------------------------------- */
 
@@ -518,37 +535,98 @@ export default async function JobPage({
           {/* --------------------------- Job Content --------------------------- */}
           <section className={styles.content}>
 
-            {/* Highlights */}
-            {(aiSnippet || aiSummaryBullets.length > 0) && (
-              <section className={styles.card}>
-                <div className={styles.cardTitle}>
-                  <span>✨ Role Highlights</span>
-                  {AI_UI_ENABLED && aiQualityScore != null ? (
-                    <span className={styles.verifiedBadge}>AI score: {aiQualityScore}/3</span>
-                  ) : null}
-                </div>
+            {/* AI-Structured Content */}
+            {(aiStructured.bullets.length > 0 ||
+              aiStructured.description.length > 0 ||
+              aiStructured.requirements.length > 0 ||
+              aiStructured.benefits.length > 0 ||
+              aiSnippet) && (
+              <>
+                {/* Old-style bullets fallback (backwards compatibility) */}
+                {aiStructured.bullets.length > 0 && !hasStructuredSections ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>
+                      <span>✨ Role Highlights</span>
+                      {AI_UI_ENABLED && aiQualityScore != null ? (
+                        <span className={styles.verifiedBadge}>AI score: {aiQualityScore}/3</span>
+                      ) : null}
+                    </div>
 
-                {aiSnippet ? <p className={styles.cardSubtitle}>{aiSnippet}</p> : null}
+                    {aiSnippet ? <p className={styles.cardSubtitle}>{aiSnippet}</p> : null}
 
-                {aiSummaryBullets.length > 0 ? (
-                  <div className={styles.checkList}>
-                    {aiSummaryBullets.map((line, idx) => (
-                      <div key={idx} className={styles.checkItem}>
-                        <span className={styles.checkCircle} aria-hidden="true">
-                          <Check />
-                        </span>
-                        <span>{line}</span>
-                      </div>
-                    ))}
-                  </div>
+                    <div className={styles.checkList}>
+                      {aiStructured.bullets.map((line, idx) => (
+                        <div key={idx} className={styles.checkItem}>
+                          <span className={styles.checkCircle} aria-hidden="true">
+                            <Check />
+                          </span>
+                          <span>{line}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 ) : null}
-              </section>
+
+                {aiStructured.description.length > 0 ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>
+                      <span>📋 About the Role</span>
+                    </div>
+                    <div className={styles.checkList}>
+                      {aiStructured.description.map((line, idx) => (
+                        <div key={idx} className={styles.checkItem}>
+                          <span className={styles.checkCircle} aria-hidden="true">
+                            <Check />
+                          </span>
+                          <span>{line}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                {aiStructured.requirements.length > 0 ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>
+                      <span>🎯 Requirements</span>
+                    </div>
+                    <div className={styles.checkList}>
+                      {aiStructured.requirements.map((line, idx) => (
+                        <div key={idx} className={styles.checkItem}>
+                          <span className={styles.checkCircle} aria-hidden="true">
+                            <Check />
+                          </span>
+                          <span>{line}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                {aiStructured.benefits.length > 0 ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>
+                      <span>💎 Benefits &amp; Perks</span>
+                    </div>
+                    <div className={styles.checkList}>
+                      {aiStructured.benefits.map((line, idx) => (
+                        <div key={idx} className={styles.checkItem}>
+                          <span className={styles.checkCircle} aria-hidden="true">
+                            <Check />
+                          </span>
+                          <span>{line}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+              </>
             )}
 
-            {/* Full job description (always show when available) */}
+            {/* Original Job Posting (keep showing as fallback / reference) */}
             <section className={styles.card}>
               <div className={styles.cardTitle}>
-                <span>📋 Full Job Description</span>
+                <span>📄 Original Job Posting</span>
               </div>
 
               {hasDescription ? (
