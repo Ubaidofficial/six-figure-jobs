@@ -13,14 +13,13 @@ const SITE_ORIGIN = getSiteUrl()
 /**
  * Build the most canonical / non-redirecting job URL we can.
  * Order of preference:
- *  1) job.canonicalSlug / job.jobSlug / job.slug (if your DB/query exposes it)
+ *  1) job.canonicalSlug / job.jobSlug (if your DB/query exposes it)
  *  2) v2.8 generated href from title + shortStableId
  */
 function getCanonicalJobUrl(job: any): string {
   const rawSlug =
     (typeof job?.canonicalSlug === 'string' && job.canonicalSlug) ||
     (typeof job?.jobSlug === 'string' && job.jobSlug) ||
-    (typeof job?.slug === 'string' && job.slug) ||
     null
 
   if (rawSlug) {

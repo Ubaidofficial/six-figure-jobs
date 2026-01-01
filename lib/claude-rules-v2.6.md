@@ -2771,7 +2771,8 @@ function RolePageSchemas({ role, jobs, count }: { role: string; jobs: any[]; cou
           '@type': 'Place',
           address: job.location
         },
-        url: `https://www.6figjobs.com/job/${job.slug}`
+	        // Use canonical v2.8 slug builder (Job has no `slug` column)
+	        url: `https://www.6figjobs.com${buildJobSlugHref(job)}`
       }
     }))
   }
@@ -3088,7 +3089,8 @@ function JobDetailSchema({ job }: { job: any }) {
       }
     },
     directApply: true,
-    url: `https://www.6figjobs.com/job/${job.slug}`,
+	    // Use canonical v2.8 slug builder (Job has no `slug` column)
+	    url: `https://www.6figjobs.com${buildJobSlugHref(job)}`,
     applicationContact: {
       '@type': 'ContactPoint',
       url: job.applyUrl
