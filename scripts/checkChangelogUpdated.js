@@ -9,7 +9,8 @@ try {
   let base = 'origin/develop';
   try { sh(`git rev-parse --verify ${base}`); } catch { base = 'HEAD~1'; }
 
-  const changed = sh(`git diff --name-only ${base}...HEAD`);
+  // Prefer staged changes (commit-time gate). If nothing is staged, fall back to branch diff (CI/PR gate).
+  const changed = sh(`git diff --cached --name-only`) || sh(`git diff --name-only ${base}...HEAD`);
   if (!changed) process.exit(0);
 
   const files = changed.split('\n').filter(Boolean);

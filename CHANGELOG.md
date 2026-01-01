@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+
+- chore: make changelog gate use staged diff
+
 - fix: harden job routing + remote100k scraper cleanup
 
 
