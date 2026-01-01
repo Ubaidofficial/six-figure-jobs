@@ -208,9 +208,12 @@ export default async function JobPage({
   const rawDescriptionHtml =
     (typedJob as any).descriptionHtml ?? (typedJob as any).description ?? (typedJob as any).body ?? null
 
-  const safeDescriptionHtml = rawDescriptionHtml
-    ? sanitizeDescriptionHtml(String(rawDescriptionHtml))
-    : null
+  const rawDescriptionString = rawDescriptionHtml ? String(rawDescriptionHtml) : ''
+  const isOversizedDescription = rawDescriptionString.length > 100_000
+  const safeDescriptionHtml =
+    rawDescriptionString && !isOversizedDescription
+      ? sanitizeDescriptionHtml(rawDescriptionString)
+      : null
 
   const hasDescription = !!safeDescriptionHtml && safeDescriptionHtml.trim().length > 0
 
@@ -629,7 +632,11 @@ export default async function JobPage({
                 <span>📄 Original Job Posting</span>
               </div>
 
-              {hasDescription ? (
+              {isOversizedDescription ? (
+                <p className={styles.cardSubtitle}>
+                  Job description is too large to display safely. Please use the “Apply Now” link to view the posting on the company site.
+                </p>
+              ) : hasDescription ? (
                 <div
                   className={`prose prose-invert max-w-none ${styles.richText}`}
                   dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
