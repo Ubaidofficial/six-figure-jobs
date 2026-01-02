@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function testATS(type: string, slug: string): Promise<boolean> {
@@ -31,7 +36,7 @@ async function main() {
     take: 200
   })
   
-  console.log(`\n🔍 Testing ${companies.length} companies...\n`)
+  __slog(`\n🔍 Testing ${companies.length} companies...\n`)
   let found = 0
   
   for (const c of companies) {
@@ -46,7 +51,7 @@ async function main() {
             : ats === 'lever' ? `https://jobs.lever.co/${slug}` 
             : `https://jobs.ashbyhq.com/${slug}`
           await prisma.company.update({ where: { id: c.id }, data: { atsUrl: url } })
-          console.log(`✓ ${ats}`)
+          __slog(`✓ ${ats}`)
           found++
           ok = true
           break
@@ -54,12 +59,12 @@ async function main() {
       }
       if (ok) break
     }
-    if (!ok) console.log('✗')
+    if (!ok) __slog('✗')
   }
   
-  console.log(`\n✅ Found ${found} new ATS URLs`)
+  __slog(`\n✅ Found ${found} new ATS URLs`)
   const total = await prisma.company.count({ where: { atsUrl: { not: null } } })
-  console.log(`Total with ATS: ${total}\n`)
+  __slog(`Total with ATS: ${total}\n`)
   await prisma.$disconnect()
 }
 main()

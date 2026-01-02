@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 function decodeHtml(html: string): string {
@@ -25,13 +30,13 @@ async function main() {
   const payRangeIdx = decoded.indexOf('pay-range')
   if (payRangeIdx > -1) {
     const snippet = decoded.slice(payRangeIdx, payRangeIdx + 500)
-    console.log('Pay range snippet (decoded):')
-    console.log(snippet)
+    __slog('Pay range snippet (decoded):')
+    __slog(snippet)
   }
 
   // Try regex on decoded
   const match1 = decoded.match(/\$\s*([\d,]+)\s*[-–—]\s*\$?\s*([\d,]+)/)
-  console.log('\nUSD match:', match1 ? `$${match1[1]} - $${match1[2]}` : 'none')
+  __slog('\nUSD match:', match1 ? `$${match1[1]} - $${match1[2]}` : 'none')
 
   await prisma.$disconnect()
 }

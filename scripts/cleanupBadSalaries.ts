@@ -1,7 +1,13 @@
+import { format as __format } from 'node:util'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
+
 const { prisma } = require("../lib/prisma")
 
 async function run() {
-  console.log("Starting salary cleanup...")
+  __slog("Starting salary cleanup...")
 
   const result = await prisma.job.updateMany({
     where: {
@@ -28,12 +34,12 @@ async function run() {
     },
   })
 
-  console.log(`Cleaned ${result.count} jobs`)
+  __slog(`Cleaned ${result.count} jobs`)
 }
 
 run()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

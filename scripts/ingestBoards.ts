@@ -1,20 +1,25 @@
+import { format as __format } from 'node:util'
 import scrapeWeWorkRemotely, { fetchWeWorkRemotelyJobs } from '../lib/scrapers/weworkremotely'
 import { ingestJobs } from '../lib/ingest'
 
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
+
 async function main() {
-  console.log('Ingesting jobs from job boards...\n')
+  __slog('Ingesting jobs from job boards...\n')
   
-  console.log('=== WeWorkRemotely ===')
+  __slog('=== WeWorkRemotely ===')
   const wwrJobs = await fetchWeWorkRemotelyJobs()
   
   if (wwrJobs.length > 0) {
     const result = await ingestJobs(wwrJobs)
-    console.log('Ingested:', result.created, 'new,', result.updated, 'updated')
+    __slog('Ingested:', result.created, 'new,', result.updated, 'updated')
   }
   const stats = await scrapeWeWorkRemotely()
-  console.log('Scraper stats:', stats)
+  __slog('Scraper stats:', stats)
   
-  console.log('\nDone!')
+  __slog('\nDone!')
 }
 
 main()

@@ -3,6 +3,9 @@
 import axios from 'axios'
 import { ingestBoardJob } from '../jobs/ingestBoardJob'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
+import { extractApplyDestinationFromHtml } from './utils/extractApplyLink'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD = 'remotive'
 
@@ -135,6 +138,24 @@ export default async function scrapeRemotive() {
     const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
 
     for (const job of highPayingJobs) {
+      let applyUrl = job.applyUrl
+      let discoveredApplyUrl: string | null = null
+
+      if (applyUrl && !isExternalToHost(applyUrl, 'remotive.com')) {
+        discoveredApplyUrl = await discoverRemotiveApplyUrl(job.url)
+        if (discoveredApplyUrl) applyUrl = discoveredApplyUrl
+      }
+
+      const atsType = detectATS(applyUrl)
+      const explicitAtsProvider = toAtsProvider(atsType)
+      const explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(applyUrl, atsType) : null
+
+      // Only store CompanyATS mappings when we have a recognizable ATS provider.
+      // Remotive frequently returns mailto links or generic company URLs, which aren't useful for ATS discovery.
+      if (job.company && explicitAtsProvider && isExternalToHost(applyUrl, 'remotive.com')) {
+        await saveCompanyATS(job.company, applyUrl, 'remotive')
+      }
+
       const descriptionHtml =
         job.raw?.fullDescription && typeof job.raw.fullDescription === 'string'
           ? job.raw.fullDescription
@@ -148,8 +169,8 @@ export default async function scrapeRemotive() {
       const result = await ingestBoardJob(BOARD, {
         externalId: job.id,
         title: job.title,
-        url: job.applyUrl,
-        applyUrl: job.applyUrl,
+        url: job.url,
+        applyUrl,
         rawCompanyName: job.company || 'Unknown company',
         locationText: job.location,
         isRemote: job.remote,
@@ -160,6 +181,8 @@ export default async function scrapeRemotive() {
         salaryInterval: 'year',
         descriptionHtml: descriptionHtml || null,
         descriptionText: descriptionText || null,
+        explicitAtsProvider,
+        explicitAtsUrl,
         raw: job.raw ?? null,
       })
       addBoardIngestResult(stats, result)
@@ -470,6 +493,61 @@ function stripHtml(html: string): string {
     .replace(/&gt;/g, '>')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+async function discoverRemotiveApplyUrl(jobUrl: string): Promise<string | null> {
+  try {
+    const parsed = new URL(jobUrl)
+    const path = parsed.pathname.replace(/\/+$/, '')
+    const last = path.split('/').pop() || ''
+    const m = last.match(/-(\d+)$/)
+    const jobId = m?.[1] || null
+
+    if (jobId) {
+      const res = await axios.post(
+        `https://remotive.com/job/application/${encodeURIComponent(jobId)}`,
+        {
+          jsonrpc: '2.0',
+          method: 'call',
+          params: { source: 'job_detail_page' },
+          id: 128144762,
+        },
+        {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            Referer: jobUrl,
+          },
+          timeout: 15000,
+        },
+      )
+
+      const urlRaw = (res?.data as any)?.result?.url
+      const url = typeof urlRaw === 'string' ? urlRaw.trim() : ''
+      if (!url) return null
+
+      if (/^https?:\/\//i.test(url)) return url
+      if (url.includes('@') && !url.includes('://')) return `mailto:${url}`
+    }
+
+    const res = await axios.get(jobUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      timeout: 15000,
+    })
+
+    const html = typeof res.data === 'string' ? res.data : ''
+    if (!html) return null
+
+    return extractApplyDestinationFromHtml(html, jobUrl)
+  } catch {
+    return null
+  }
 }
 
 function extractSkills(title: string, description: string): string[] {

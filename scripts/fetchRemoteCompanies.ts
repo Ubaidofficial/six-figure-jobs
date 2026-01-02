@@ -1,5 +1,11 @@
 // Fetch company lists from remote job sites
 
+import { format as __format } from 'node:util'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
+
 async function fetchRemote100kCompanies(): Promise<string[]> {
   try {
     const res = await fetch('https://remote100k.com/remote-companies')
@@ -10,7 +16,7 @@ async function fetchRemote100kCompanies(): Promise<string[]> {
     const slugs = matches.map(m => m.replace('/company/', ''))
     return [...new Set(slugs)]
   } catch (e) {
-    console.error('Error fetching Remote100k:', e)
+    __serr('Error fetching Remote100k:', e)
     return []
   }
 }
@@ -28,25 +34,25 @@ async function fetchWeWorkRemotely(): Promise<string[]> {
     }).filter(Boolean)
     return [...new Set(names)]
   } catch (e) {
-    console.error('Error fetching WeWorkRemotely:', e)
+    __serr('Error fetching WeWorkRemotely:', e)
     return []
   }
 }
 
 async function main() {
-  console.log('Fetching company lists...\n')
+  __slog('Fetching company lists...\n')
   
   const remote100k = await fetchRemote100kCompanies()
-  console.log(`Remote100k companies (${remote100k.length}):`)
-  remote100k.slice(0, 20).forEach(c => console.log(`  ${c}`))
-  if (remote100k.length > 20) console.log(`  ... and ${remote100k.length - 20} more`)
+  __slog(`Remote100k companies (${remote100k.length}):`)
+  remote100k.slice(0, 20).forEach(c => __slog(`  ${c}`))
+  if (remote100k.length > 20) __slog(`  ... and ${remote100k.length - 20} more`)
   
-  console.log('')
+  __slog('')
   
   const wwr = await fetchWeWorkRemotely()
-  console.log(`WeWorkRemotely $100k+ companies (${wwr.length}):`)
-  wwr.slice(0, 20).forEach(c => console.log(`  ${c}`))
-  if (wwr.length > 20) console.log(`  ... and ${wwr.length - 20} more`)
+  __slog(`WeWorkRemotely $100k+ companies (${wwr.length}):`)
+  wwr.slice(0, 20).forEach(c => __slog(`  ${c}`))
+  if (wwr.length > 20) __slog(`  ... and ${wwr.length - 20} more`)
 }
 
 main()

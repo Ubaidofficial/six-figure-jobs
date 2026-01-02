@@ -2,7 +2,12 @@
 // Aggressive salary cleanup - fixes Greenhouse cents issue + clears bad data
 // Run: npx ts-node scripts/salarySanityCleanupV2.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -38,7 +43,7 @@ function formatMoney(value: bigint | number | null, currency: string = 'USD'): s
 }
 
 async function main() {
-  console.log('🔍 Salary Sanity Cleanup V2\n')
+  __slog('🔍 Salary Sanity Cleanup V2\n')
   
   const totalJobs = await prisma.job.count()
   const jobsWithSalary = await prisma.job.count({
@@ -52,15 +57,15 @@ async function main() {
     where: { OR: [{ minAnnual: { gt: 10_000_000n } }, { maxAnnual: { gt: 10_000_000n } }] }
   })
   
-  console.log(`📊 BEFORE: ${totalJobs} jobs, ${jobsWithSalary} with salary, ${highSalaryJobs} high-salary`)
-  console.log(`⚠️  Over $1M: ${over1M}, Over $10M: ${over10M}\n`)
+  __slog(`📊 BEFORE: ${totalJobs} jobs, ${jobsWithSalary} with salary, ${highSalaryJobs} high-salary`)
+  __slog(`⚠️  Over $1M: ${over1M}, Over $10M: ${over10M}\n`)
 
   // STEP 1: Clear extreme outliers (> $10M)
   const extremeOutliers = await prisma.job.updateMany({
     where: { OR: [{ minAnnual: { gt: 10_000_000n } }, { maxAnnual: { gt: 10_000_000n } }] },
     data: { minAnnual: null, maxAnnual: null, isHighSalary: false }
   })
-  console.log(`✅ Step 1: Cleared ${extremeOutliers.count} jobs > $10M`)
+  __slog(`✅ Step 1: Cleared ${extremeOutliers.count} jobs > $10M`)
 
   // STEP 2: Fix "stored in cents" ($1M-$10M range)
   const possibleCents = await prisma.job.findMany({
@@ -99,7 +104,7 @@ async function main() {
       centsCleared++
     }
   }
-  console.log(`✅ Step 2: Fixed ${centsFixed} (÷100), cleared ${centsCleared}`)
+  __slog(`✅ Step 2: Fixed ${centsFixed} (÷100), cleared ${centsCleared}`)
 
   // STEP 3: Clear remaining per-currency outliers
   let currencyCleared = 0
@@ -114,7 +119,7 @@ async function main() {
     where: { currency: null, OR: [{ minAnnual: { gt: BigInt(CONFIG.DEFAULT_MAX) } }, { maxAnnual: { gt: BigInt(CONFIG.DEFAULT_MAX) } }] },
     data: { minAnnual: null, maxAnnual: null, isHighSalary: false }
   })
-  console.log(`✅ Step 3: Cleared ${currencyCleared + unknownCleared.count} currency outliers`)
+  __slog(`✅ Step 3: Cleared ${currencyCleared + unknownCleared.count} currency outliers`)
 
   // STEP 4: Recalculate isHighSalary
   await prisma.job.updateMany({
@@ -129,17 +134,17 @@ async function main() {
     where: { minAnnual: null, maxAnnual: null, isHighSalary: true },
     data: { isHighSalary: false }
   })
-  console.log(`✅ Step 4: Recalculated isHighSalary flags`)
+  __slog(`✅ Step 4: Recalculated isHighSalary flags`)
 
   // Final stats
   const finalWithSalary = await prisma.job.count({ where: { OR: [{ minAnnual: { not: null } }, { maxAnnual: { not: null } }] }})
   const finalHighSalary = await prisma.job.count({ where: { isHighSalary: true } })
   const finalOver1M = await prisma.job.count({ where: { OR: [{ minAnnual: { gt: 1_000_000n } }, { maxAnnual: { gt: 1_000_000n } }] }})
   
-  console.log(`\n📊 AFTER: ${finalWithSalary} with salary, ${finalHighSalary} high-salary, ${finalOver1M} over $1M`)
+  __slog(`\n📊 AFTER: ${finalWithSalary} with salary, ${finalHighSalary} high-salary, ${finalOver1M} over $1M`)
 
   // Top 10 sanity check
-  console.log(`\n🔝 TOP 10 HIGHEST SALARIES:`)
+  __slog(`\n🔝 TOP 10 HIGHEST SALARIES:`)
   const topJobs = await prisma.job.findMany({
     where: { maxAnnual: { not: null } },
     orderBy: { maxAnnual: 'desc' },
@@ -148,10 +153,10 @@ async function main() {
   })
   for (const job of topJobs) {
     const c = job.currency || 'USD'
-    console.log(`  ${formatMoney(job.maxAnnual, c)} - ${job.title} @ ${job.company}`)
+    __slog(`  ${formatMoney(job.maxAnnual, c)} - ${job.title} @ ${job.company}`)
   }
 
   await prisma.$disconnect()
 }
 
-main().catch(e => { console.error(e); prisma.$disconnect(); process.exit(1) })
+main().catch(e => { __serr(e); prisma.$disconnect(); process.exit(1) })

@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 // Use pooled URL with longer timeout to avoid connection pool timeouts
 const baseUrl =
@@ -83,7 +88,7 @@ async function main() {
 
     if (companies.length === 0) break
 
-    console.log(`\n🔍 Scanning ${companies.length} companies (skip=${skip})...\n`)
+    __slog(`\n🔍 Scanning ${companies.length} companies (skip=${skip})...\n`)
 
     for (const c of companies) {
       processedTotal++
@@ -92,10 +97,10 @@ async function main() {
 
       if (result) {
         await prisma.company.update({ where: { id: c.id }, data: { atsUrl: result.url, atsProvider: result.ats } })
-        console.log(`✓ ${result.ats}`)
+        __slog(`✓ ${result.ats}`)
         foundTotal++
       } else {
-        console.log('✗')
+        __slog('✗')
       }
     }
 
@@ -103,9 +108,9 @@ async function main() {
     if (companies.length < batch) break
   }
 
-  console.log(`\n✅ Found ${foundTotal} new ATS URLs (processed ${processedTotal})`)
+  __slog(`\n✅ Found ${foundTotal} new ATS URLs (processed ${processedTotal})`)
   const total = await prisma.company.count({ where: { atsUrl: { not: null } } })
-  console.log(`Total with ATS: ${total}\n`)
+  __slog(`Total with ATS: ${total}\n`)
 
   await prisma.$disconnect()
 }

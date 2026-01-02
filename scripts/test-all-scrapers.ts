@@ -1,6 +1,11 @@
 // scripts/test-all-scrapers.ts
 // Comprehensive scraper health check
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -43,8 +48,8 @@ async function testScraper(
 }
 
 async function main() {
-  console.log('🧪 SixFigureJobs Scraper Health Check')
-  console.log('=====================================\n')
+  __slog('🧪 SixFigureJobs Scraper Health Check')
+  __slog('=====================================\n')
 
   const scrapers = [
     { name: 'RemoteOK', module: 'remoteok' },
@@ -71,7 +76,7 @@ async function main() {
   const results: ScraperResult[] = []
 
   for (const scraper of scrapers) {
-    console.log(`\n▶ Testing ${scraper.name}...`)
+    __slog(`\n▶ Testing ${scraper.name}...`)
     
     try {
       const mod = await import(`../lib/scrapers/${scraper.module}`)
@@ -84,7 +89,7 @@ async function main() {
           error: 'No export found',
           duration: 0
         })
-        console.log(`   ❌ No export found`)
+        __slog(`   ❌ No export found`)
         continue
       }
 
@@ -92,9 +97,9 @@ async function main() {
       results.push(result)
 
       if (result.success) {
-        console.log(`   ✅ SUCCESS: ${result.created} created, ${result.skipped} skipped (${result.duration.toFixed(1)}s)`)
+        __slog(`   ✅ SUCCESS: ${result.created} created, ${result.skipped} skipped (${result.duration.toFixed(1)}s)`)
       } else {
-        console.log(`   ❌ FAILED: ${result.error}`)
+        __slog(`   ❌ FAILED: ${result.error}`)
       }
     } catch (err: any) {
       results.push({
@@ -103,38 +108,38 @@ async function main() {
         error: `Import failed: ${err.message}`,
         duration: 0
       })
-      console.log(`   ❌ Import failed: ${err.message}`)
+      __slog(`   ❌ Import failed: ${err.message}`)
     }
   }
 
   // Summary
-  console.log('\n\n📊 SUMMARY')
-  console.log('==========\n')
+  __slog('\n\n📊 SUMMARY')
+  __slog('==========\n')
 
   const successful = results.filter(r => r.success)
   const failed = results.filter(r => !r.success)
 
-  console.log(`✅ Working: ${successful.length}/${results.length}`)
-  console.log(`❌ Broken: ${failed.length}/${results.length}\n`)
+  __slog(`✅ Working: ${successful.length}/${results.length}`)
+  __slog(`❌ Broken: ${failed.length}/${results.length}\n`)
 
   if (successful.length > 0) {
-    console.log('✅ Working Scrapers:')
+    __slog('✅ Working Scrapers:')
     successful.forEach(r => {
-      console.log(`   • ${r.name}: ${r.created} created, ${r.skipped} skipped`)
+      __slog(`   • ${r.name}: ${r.created} created, ${r.skipped} skipped`)
     })
   }
 
   if (failed.length > 0) {
-    console.log('\n❌ Broken Scrapers:')
+    __slog('\n❌ Broken Scrapers:')
     failed.forEach(r => {
-      console.log(`   • ${r.name}: ${r.error}`)
+      __slog(`   • ${r.name}: ${r.error}`)
     })
   }
 
   const totalCreated = successful.reduce((sum, r) => sum + (r.created || 0), 0)
   const totalSkipped = successful.reduce((sum, r) => sum + (r.skipped || 0), 0)
 
-  console.log(`\n📈 Total: ${totalCreated} created, ${totalSkipped} skipped`)
+  __slog(`\n📈 Total: ${totalCreated} created, ${totalSkipped} skipped`)
 
   await prisma.$disconnect()
 }

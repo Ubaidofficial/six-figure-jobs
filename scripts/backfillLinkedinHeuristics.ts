@@ -2,7 +2,12 @@
 // Infer LinkedIn URLs for companies missing linkedinUrl using simple heuristics.
 // Usage: npx tsx scripts/backfillLinkedinHeuristics.ts
 
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 function cleanHost(url?: string | null): string | null {
   if (!url) return null
@@ -34,7 +39,7 @@ async function main() {
     })
 
     if (companies.length === 0) break
-    console.log(`Batch starting at ${skip}: ${companies.length} companies`)
+    __slog(`Batch starting at ${skip}: ${companies.length} companies`)
 
     for (const c of companies) {
       const host = cleanHost(c.website)
@@ -51,12 +56,12 @@ async function main() {
     skip += batchSize
   }
 
-  console.log(`Updated ${totalUpdated} companies with guessed LinkedIn URLs.`)
+  __slog(`Updated ${totalUpdated} companies with guessed LinkedIn URLs.`)
 }
 
 main()
   .catch((err) => {
-    console.error(err)
+    __serr(err)
     process.exitCode = 1
   })
   .finally(async () => {

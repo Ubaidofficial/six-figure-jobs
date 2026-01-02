@@ -4,9 +4,14 @@
  * - generates {oneLiner, snippet, bullets} (cached in DB)
  * - enforces hard cost guardrails with AiRunLedger day bucket
  */
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
 import { enrichJobWithAI } from '../lib/ai/openaiEnricher'
 import { buildSnippetFromJob } from '../lib/jobs/snippet'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 function envInt(name: string, def: number) {
   const v = process.env[name]
@@ -38,7 +43,7 @@ async function main() {
 
   const alreadyTotal = (ledger.tokensIn || 0) + (ledger.tokensOut || 0)
   if (alreadyTotal >= maxDailyTokensTotal) {
-    console.log('[ai-enrich] Daily token cap reached; exiting.')
+    __slog('[ai-enrich] Daily token cap reached; exiting.')
     return
   }
 
@@ -82,7 +87,7 @@ async function main() {
       const fresh = await prisma.aiRunLedger.findUnique({ where: { day } })
       const total = (fresh?.tokensIn || 0) + (fresh?.tokensOut || 0)
       if (total >= maxDailyTokensTotal) {
-        console.log('[ai-enrich] Daily token cap hit mid-run; stopping.')
+        __slog('[ai-enrich] Daily token cap hit mid-run; stopping.')
         return
       }
 
@@ -130,23 +135,23 @@ async function main() {
         ])
 
         processed++
-        console.log(`[ai-enrich] ok job=${job.id} processed=${processed}`)
+        __slog(`[ai-enrich] ok job=${job.id} processed=${processed}`)
       } catch (e) {
         // safe: do not fail the whole run; keep moving
-        console.error(`[ai-enrich] failed job=${job.id}`, e)
+        __serr(`[ai-enrich] failed job=${job.id}`, e)
       }
     }
 
     cursor = jobs[jobs.length - 1]!.id
   }
 
-  console.log(`[ai-enrich] done processed=${processed}`)
+  __slog(`[ai-enrich] done processed=${processed}`)
 }
 
 main()
   .then(() => prisma.$disconnect())
   .catch(async (e) => {
-    console.error(e)
+    __serr(e)
     await prisma.$disconnect()
     process.exit(1)
   })

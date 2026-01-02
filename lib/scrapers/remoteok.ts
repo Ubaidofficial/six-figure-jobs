@@ -8,6 +8,10 @@
 
 import { ingestBoardJob } from '../jobs/ingestBoardJob'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { extractApplyDestinationFromHtml } from './utils/extractApplyLink'
+import { resolveFinalUrl } from './utils/resolveFinalUrl'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD_NAME = 'remoteok'
 const API_URL = 'https://remoteok.com/api'
@@ -51,10 +55,41 @@ export default async function scrapeRemoteOK() {
 
         const rawCompanyName: string | null = j.company || j.company_name || null
 
-        const urlRaw: string | null = j.url || j.apply_url || null
-        if (!urlRaw) continue
+        const boardUrlRaw: string | null = j.url || null
+        const applyUrlRaw: string | null = j.apply_url || null
+        const fallbackUrlRaw: string | null = boardUrlRaw || applyUrlRaw || null
+        if (!fallbackUrlRaw) continue
 
-        const url = urlRaw.startsWith('http') ? urlRaw : `https://remoteok.com${urlRaw}`
+        const boardUrl =
+          (boardUrlRaw || fallbackUrlRaw).startsWith('http')
+            ? (boardUrlRaw || fallbackUrlRaw)
+            : `https://remoteok.com${boardUrlRaw || fallbackUrlRaw}`
+
+        const applyUrlCandidate =
+          applyUrlRaw && applyUrlRaw.startsWith('http')
+            ? applyUrlRaw
+            : applyUrlRaw
+            ? `https://remoteok.com${applyUrlRaw}`
+            : null
+
+	        let applyUrl =
+	          applyUrlCandidate && isExternalToHost(applyUrlCandidate, 'remoteok.com')
+	            ? applyUrlCandidate
+	            : boardUrl
+
+	        let discoveredApplyUrl: string | null = null
+	        if (applyUrl && applyUrl.toLowerCase().includes('remoteok.com')) {
+	          discoveredApplyUrl = await discoverRemoteOKApplyUrl(boardUrl, String(id))
+	          if (discoveredApplyUrl) applyUrl = discoveredApplyUrl
+	        }
+
+	        const atsType = detectATS(applyUrl)
+	        const explicitAtsProvider = toAtsProvider(atsType)
+	        const explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(applyUrl, atsType) : null
+
+        if (rawCompanyName && isExternalToHost(applyUrl, 'remoteok.com')) {
+          await saveCompanyATS(rawCompanyName, applyUrl, 'remoteok')
+        }
 
         const locationText: string | null =
           j.location ||
@@ -82,7 +117,7 @@ export default async function scrapeRemoteOK() {
         const result = await ingestBoardJob(BOARD_NAME, {
           externalId: String(id),
           title,
-          url,
+          url: boardUrl,
           rawCompanyName,
           locationText,
           salaryMin,
@@ -96,9 +131,9 @@ export default async function scrapeRemoteOK() {
           descriptionHtml,
           descriptionText,
           companyWebsiteUrl: null,
-          applyUrl: url,
-          explicitAtsProvider: null,
-          explicitAtsUrl: null,
+          applyUrl,
+          explicitAtsProvider,
+          explicitAtsUrl,
           raw: j,
         })
 
@@ -120,3 +155,54 @@ export default async function scrapeRemoteOK() {
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
+
+async function discoverRemoteOKApplyUrl(jobUrl: string, remoteOkId?: string): Promise<string | null> {
+  try {
+    // RemoteOK uses an internal /l/<id> redirect with JS-obfuscated destination.
+    // When we have the numeric id from the API, decode it directly (no need to parse the job page).
+    if (remoteOkId) {
+      const redirectUrl = `https://remoteok.com/l/${encodeURIComponent(remoteOkId)}`
+      const resolved = await resolveFinalUrl(redirectUrl, { referer: jobUrl })
+      if (resolved) return resolved
+    }
+
+    const res = await fetch(jobUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      cache: 'no-store',
+	    })
+
+	    if (!res.ok) {
+	      return null
+	    }
+
+	    const html = await res.text()
+	    if (!html) {
+	      return null
+	    }
+
+	    const result = extractApplyDestinationFromHtml(html, jobUrl)
+	    if (!result) return null
+
+    try {
+      const parsed = new URL(result)
+      if (parsed.hostname.toLowerCase().includes('remoteok.com') && parsed.pathname.startsWith('/l/')) {
+        const resolved = await resolveFinalUrl(result, { referer: jobUrl })
+        if (resolved) {
+          // RemoteOK may decode to another internal /l/?rh=... step; use it as a better applyUrl even if still internal.
+          if (!resolved.toLowerCase().includes('remoteok.com')) return resolved
+          return resolved
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+	    return result
+	  } catch (err: any) {
+	    return null
+	  }
+	}

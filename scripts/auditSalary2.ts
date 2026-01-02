@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -9,8 +14,8 @@ async function main() {
     take: 5,
     select: { title: true, company: true, minAnnual: true, maxAnnual: true, currency: true }
   })
-  console.log('Jobs WITH $100k+ salary:')
-  withSalary.forEach(j => console.log(`  ${j.title} @ ${j.company} | ${Number(j.minAnnual)}-${Number(j.maxAnnual)} ${j.currency}`))
+  __slog('Jobs WITH $100k+ salary:')
+  withSalary.forEach(j => __slog(`  ${j.title} @ ${j.company} | ${Number(j.minAnnual)}-${Number(j.maxAnnual)} ${j.currency}`))
 
   // Check what homepage query returns
   const homepageQuery = await prisma.job.findMany({
@@ -26,8 +31,8 @@ async function main() {
     take: 5,
     select: { title: true, company: true, minAnnual: true, maxAnnual: true, isHundredKLocal: true }
   })
-  console.log('\nHomepage query results:')
-  homepageQuery.forEach(j => console.log(`  ${j.title} | ${j.minAnnual}-${j.maxAnnual} | isHundredKLocal: ${j.isHundredKLocal}`))
+  __slog('\nHomepage query results:')
+  homepageQuery.forEach(j => __slog(`  ${j.title} | ${j.minAnnual}-${j.maxAnnual} | isHundredKLocal: ${j.isHundredKLocal}`))
 
   await prisma.$disconnect()
 }

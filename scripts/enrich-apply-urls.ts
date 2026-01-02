@@ -1,8 +1,13 @@
 // scripts/enrich-apply-urls.ts
 // Extracts direct apply URLs from job board aggregator pages
 
+import { format as __format } from 'node:util'
 import puppeteer from 'puppeteer'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -98,14 +103,14 @@ async function extractApplyUrl(page: any, url: string, source: string): Promise<
     return applyUrl
 
   } catch (err) {
-    console.error(`❌ Error extracting apply URL from ${url}:`, err)
+    __serr(`❌ Error extracting apply URL from ${url}:`, err)
     return null
   }
 }
 
 async function enrichApplyUrls(sources: string[], dryRun = false) {
-  console.log(`\n🚀 Starting apply URL enrichment for sources: ${sources.join(', ')}`)
-  console.log(`Dry run: ${dryRun ? 'YES' : 'NO'}\n`)
+  __slog(`\n🚀 Starting apply URL enrichment for sources: ${sources.join(', ')}`)
+  __slog(`Dry run: ${dryRun ? 'YES' : 'NO'}\n`)
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -114,7 +119,7 @@ async function enrichApplyUrls(sources: string[], dryRun = false) {
 
   try {
     for (const source of sources) {
-      console.log(`\n📋 Processing source: ${source}`)
+      __slog(`\n📋 Processing source: ${source}`)
 
       // Get jobs that need enrichment
       const jobs = await prisma.job.findMany({
@@ -132,7 +137,7 @@ async function enrichApplyUrls(sources: string[], dryRun = false) {
         take: BATCH_SIZE,
       })
 
-      console.log(`Found ${jobs.length} jobs to enrich`)
+      __slog(`Found ${jobs.length} jobs to enrich`)
 
       if (jobs.length === 0) continue
 
@@ -145,12 +150,12 @@ async function enrichApplyUrls(sources: string[], dryRun = false) {
       let failed = 0
 
       for (const job of jobs) {
-        console.log(`Processing: ${job.url}`)
+        __slog(`Processing: ${job.url}`)
 
         const directUrl = await extractApplyUrl(page, job.url, job.source)
 
         if (directUrl) {
-          console.log(`  ✅ Found: ${directUrl}`)
+          __slog(`  ✅ Found: ${directUrl}`)
 
           if (!dryRun) {
             await prisma.job.update({
@@ -161,7 +166,7 @@ async function enrichApplyUrls(sources: string[], dryRun = false) {
 
           enriched++
         } else {
-          console.log(`  ❌ No direct URL found`)
+          __slog(`  ❌ No direct URL found`)
           failed++
         }
 
@@ -170,7 +175,7 @@ async function enrichApplyUrls(sources: string[], dryRun = false) {
 
       await page.close()
 
-      console.log(`\n✅ ${source}: Enriched ${enriched}, Failed ${failed}`)
+      __slog(`\n✅ ${source}: Enriched ${enriched}, Failed ${failed}`)
     }
 
   } finally {
@@ -191,10 +196,10 @@ const dryRun = process.argv.includes('--dry-run')
 
 enrichApplyUrls(sources, dryRun)
   .then(() => {
-    console.log('\n✅ Enrichment complete!')
+    __slog('\n✅ Enrichment complete!')
     process.exit(0)
   })
   .catch((err) => {
-    console.error('❌ Fatal error:', err)
+    __serr('❌ Fatal error:', err)
     process.exit(1)
   })

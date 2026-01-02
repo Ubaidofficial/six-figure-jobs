@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -10,14 +15,14 @@ async function main() {
     orderBy: { _count: { source: 'desc' } }
   })
 
-  console.log('Jobs by source:')
-  console.log('=' .repeat(50))
+  __slog('Jobs by source:')
+  __slog('=' .repeat(50))
   sources.forEach(s => {
-    console.log(`  ${s.source || 'unknown'}: ${s._count}`)
+    __slog(`  ${s.source || 'unknown'}: ${s._count}`)
   })
 
   const total = sources.reduce((sum, s) => sum + s._count, 0)
-  console.log(`\nTotal active jobs: ${total}`)
+  __slog(`\nTotal active jobs: ${total}`)
 
   await prisma.$disconnect()
 }

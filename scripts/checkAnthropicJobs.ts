@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -7,10 +12,10 @@ async function main() {
   const active = await prisma.job.count({ where: { company: 'Anthropic', isExpired: false } })
   const expired = await prisma.job.count({ where: { company: 'Anthropic', isExpired: true } })
 
-  console.log(`Anthropic jobs:`)
-  console.log(`  Total: ${total}`)
-  console.log(`  Active: ${active}`)
-  console.log(`  Expired: ${expired}`)
+  __slog(`Anthropic jobs:`)
+  __slog(`  Total: ${total}`)
+  __slog(`  Active: ${active}`)
+  __slog(`  Expired: ${expired}`)
 
   // Check when last scraped
   const latest = await prisma.job.findFirst({
@@ -18,7 +23,7 @@ async function main() {
     orderBy: { createdAt: 'desc' },
     select: { createdAt: true, title: true }
   })
-  console.log(`\nLatest job: ${latest?.title} (${latest?.createdAt})`)
+  __slog(`\nLatest job: ${latest?.title} (${latest?.createdAt})`)
 
   await prisma.$disconnect()
 }

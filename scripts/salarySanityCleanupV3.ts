@@ -2,7 +2,12 @@
 // Final pass - tighter thresholds and role-based validation
 // Run: npx ts-node scripts/salarySanityCleanupV3.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -62,7 +67,7 @@ function getMaxForCurrency(currency: string | null): number {
 }
 
 async function main() {
-  console.log('🔍 Salary Sanity Cleanup V3 (Final Pass)\n')
+  __slog('🔍 Salary Sanity Cleanup V3 (Final Pass)\n')
   
   // Before stats
   const before = {
@@ -71,7 +76,7 @@ async function main() {
     over500k: await prisma.job.count({ where: { OR: [{ minAnnual: { gt: 500_000n } }, { maxAnnual: { gt: 500_000n } }] }}),
   }
   
-  console.log(`📊 BEFORE: ${before.withSalary} with salary, ${before.highSalary} high-salary, ${before.over500k} over $500K\n`)
+  __slog(`📊 BEFORE: ${before.withSalary} with salary, ${before.highSalary} high-salary, ${before.over500k} over $500K\n`)
 
   // STEP 1: Clear jobs over $500K (99% of tech jobs are under this)
   let cleared = 0
@@ -84,7 +89,7 @@ async function main() {
       data: { minAnnual: null, maxAnnual: null, isHighSalary: false }
     })
     if (result.count > 0) {
-      console.log(`  ${currency}: Cleared ${result.count} jobs over ${formatMoney(maxSalary, currency)}`)
+      __slog(`  ${currency}: Cleared ${result.count} jobs over ${formatMoney(maxSalary, currency)}`)
       cleared += result.count
     }
   }
@@ -99,7 +104,7 @@ async function main() {
   })
   cleared += unknownResult.count
   
-  console.log(`\n✅ Step 1: Cleared ${cleared} jobs over max thresholds`)
+  __slog(`\n✅ Step 1: Cleared ${cleared} jobs over max thresholds`)
 
   // STEP 2: Clear entry-level roles with unrealistic salaries (> $150K)
   const entryLevelJobs = await prisma.job.findMany({
@@ -121,12 +126,12 @@ async function main() {
       })
       entryCleared++
       if (entryCleared <= 5) {
-        console.log(`  Cleared: "${job.title}" - ${formatMoney(job.maxAnnual, job.currency || 'USD')}`)
+        __slog(`  Cleared: "${job.title}" - ${formatMoney(job.maxAnnual, job.currency || 'USD')}`)
       }
     }
   }
   
-  console.log(`\n✅ Step 2: Cleared ${entryCleared} entry-level roles with inflated salaries`)
+  __slog(`\n✅ Step 2: Cleared ${entryCleared} entry-level roles with inflated salaries`)
 
   // STEP 3: Recalculate isHighSalary
   await prisma.job.updateMany({
@@ -144,7 +149,7 @@ async function main() {
     data: { isHighSalary: false }
   })
   
-  console.log(`\n✅ Step 3: Recalculated isHighSalary flags`)
+  __slog(`\n✅ Step 3: Recalculated isHighSalary flags`)
 
   // Final stats
   const after = {
@@ -153,14 +158,14 @@ async function main() {
     over500k: await prisma.job.count({ where: { OR: [{ minAnnual: { gt: 500_000n } }, { maxAnnual: { gt: 500_000n } }] }}),
   }
   
-  console.log(`\n${'='.repeat(60)}`)
-  console.log(`📊 FINAL STATS:`)
-  console.log(`   Jobs with salary: ${after.withSalary} (was ${before.withSalary})`)
-  console.log(`   High salary ($100K+): ${after.highSalary} (was ${before.highSalary})`)
-  console.log(`   Over $500K: ${after.over500k} (was ${before.over500k})`)
+  __slog(`\n${'='.repeat(60)}`)
+  __slog(`📊 FINAL STATS:`)
+  __slog(`   Jobs with salary: ${after.withSalary} (was ${before.withSalary})`)
+  __slog(`   High salary ($100K+): ${after.highSalary} (was ${before.highSalary})`)
+  __slog(`   Over $500K: ${after.over500k} (was ${before.over500k})`)
 
   // Top 15 sanity check
-  console.log(`\n🔝 TOP 15 HIGHEST SALARIES:`)
+  __slog(`\n🔝 TOP 15 HIGHEST SALARIES:`)
   const topJobs = await prisma.job.findMany({
     where: { maxAnnual: { not: null } },
     orderBy: { maxAnnual: 'desc' },
@@ -170,11 +175,11 @@ async function main() {
   
   for (const job of topJobs) {
     const c = job.currency || 'USD'
-    console.log(`  ${formatMoney(job.maxAnnual, c).padEnd(12)} ${job.title.slice(0, 50)} @ ${job.company}`)
+    __slog(`  ${formatMoney(job.maxAnnual, c).padEnd(12)} ${job.title.slice(0, 50)} @ ${job.company}`)
   }
 
   // Salary distribution
-  console.log(`\n📈 SALARY DISTRIBUTION:`)
+  __slog(`\n📈 SALARY DISTRIBUTION:`)
   const ranges = [
     { label: '$100K-$150K', min: 100_000n, max: 150_000n },
     { label: '$150K-$200K', min: 150_000n, max: 200_000n },
@@ -192,11 +197,11 @@ async function main() {
         ]
       }
     })
-    console.log(`   ${range.label}: ${count} jobs`)
+    __slog(`   ${range.label}: ${count} jobs`)
   }
 
   await prisma.$disconnect()
-  console.log(`\n✅ Cleanup complete!`)
+  __slog(`\n✅ Cleanup complete!`)
 }
 
-main().catch(e => { console.error(e); prisma.$disconnect(); process.exit(1) })
+main().catch(e => { __serr(e); prisma.$disconnect(); process.exit(1) })

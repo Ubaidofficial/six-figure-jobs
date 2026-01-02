@@ -13,7 +13,12 @@
 // 3. Marks lower-priority duplicates as expired
 // 4. Preserves the best data from each source
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -49,13 +54,13 @@ interface DuplicateGroup {
 // =============================================================================
 
 async function mergeDuplicates() {
-  console.log('═══════════════════════════════════════════════')
-  console.log('  Merge Duplicate Jobs')
+  __slog('═══════════════════════════════════════════════')
+  __slog('  Merge Duplicate Jobs')
   if (DRY_RUN) {
-    console.log('  🔍 DRY RUN MODE - No changes will be made')
+    __slog('  🔍 DRY RUN MODE - No changes will be made')
   }
-  console.log('═══════════════════════════════════════════════')
-  console.log('')
+  __slog('═══════════════════════════════════════════════')
+  __slog('')
 
   // Find all dedupe keys that have multiple active jobs
   const duplicateKeys = await prisma.$queryRaw<{ dedupeKey: string; companyId: string; count: bigint }[]>`
@@ -68,11 +73,11 @@ async function mergeDuplicates() {
     ORDER BY COUNT(*) DESC
   `
 
-  console.log(`Found ${duplicateKeys.length} duplicate groups`)
-  console.log('')
+  __slog(`Found ${duplicateKeys.length} duplicate groups`)
+  __slog('')
 
   if (duplicateKeys.length === 0) {
-    console.log('✅ No duplicates to merge!')
+    __slog('✅ No duplicates to merge!')
     return
   }
 
@@ -115,19 +120,19 @@ async function mergeDuplicates() {
     const losers = jobs.slice(1)
 
     if (VERBOSE) {
-      console.log('─'.repeat(60))
-      console.log(`Dedupe Key: ${dupKey.dedupeKey.slice(0, 50)}...`)
-      console.log(`Jobs: ${jobs.length}`)
-      console.log('')
-      console.log(`  KEEP: ${winner.id}`)
-      console.log(`        Source: ${winner.source} (priority: ${winner.sourcePriority})`)
-      console.log(`        Title: ${winner.title.slice(0, 50)}`)
-      console.log('')
+      __slog('─'.repeat(60))
+      __slog(`Dedupe Key: ${dupKey.dedupeKey.slice(0, 50)}...`)
+      __slog(`Jobs: ${jobs.length}`)
+      __slog('')
+      __slog(`  KEEP: ${winner.id}`)
+      __slog(`        Source: ${winner.source} (priority: ${winner.sourcePriority})`)
+      __slog(`        Title: ${winner.title.slice(0, 50)}`)
+      __slog('')
       for (const loser of losers) {
-        console.log(`  EXPIRE: ${loser.id}`)
-        console.log(`          Source: ${loser.source} (priority: ${loser.sourcePriority})`)
+        __slog(`  EXPIRE: ${loser.id}`)
+        __slog(`          Source: ${loser.source} (priority: ${loser.sourcePriority})`)
       }
-      console.log('')
+      __slog('')
     }
 
     if (!DRY_RUN) {
@@ -173,7 +178,7 @@ async function mergeDuplicates() {
             data: updateData,
           })
           if (VERBOSE) {
-            console.log(`  Enhanced winner with data from duplicates`)
+            __slog(`  Enhanced winner with data from duplicates`)
           }
         }
 
@@ -193,7 +198,7 @@ async function mergeDuplicates() {
         totalMerged += losers.length
 
       } catch (err: any) {
-        console.error(`Error merging group ${dupKey.dedupeKey}: ${err.message}`)
+        __serr(`Error merging group ${dupKey.dedupeKey}: ${err.message}`)
         totalErrors++
       }
     } else {
@@ -203,22 +208,22 @@ async function mergeDuplicates() {
     }
   }
 
-  console.log('')
-  console.log('═══════════════════════════════════════════════')
-  console.log('  Results')
-  console.log('═══════════════════════════════════════════════')
-  console.log(`  Duplicate groups: ${duplicateKeys.length}`)
-  console.log(`  Jobs kept: ${totalKept}`)
-  console.log(`  Jobs ${DRY_RUN ? 'would be ' : ''}merged/expired: ${totalMerged}`)
+  __slog('')
+  __slog('═══════════════════════════════════════════════')
+  __slog('  Results')
+  __slog('═══════════════════════════════════════════════')
+  __slog(`  Duplicate groups: ${duplicateKeys.length}`)
+  __slog(`  Jobs kept: ${totalKept}`)
+  __slog(`  Jobs ${DRY_RUN ? 'would be ' : ''}merged/expired: ${totalMerged}`)
   if (totalErrors > 0) {
-    console.log(`  Errors: ${totalErrors}`)
+    __slog(`  Errors: ${totalErrors}`)
   }
-  console.log('')
+  __slog('')
 
   if (DRY_RUN) {
-    console.log('This was a dry run. Run without --dry-run to apply changes.')
+    __slog('This was a dry run. Run without --dry-run to apply changes.')
   } else {
-    console.log('✅ Merge complete!')
+    __slog('✅ Merge complete!')
   }
 }
 
@@ -227,11 +232,11 @@ async function mergeDuplicates() {
 // =============================================================================
 
 async function analyzeSourceDistribution() {
-  console.log('')
-  console.log('═══════════════════════════════════════════════')
-  console.log('  Source Distribution Analysis')
-  console.log('═══════════════════════════════════════════════')
-  console.log('')
+  __slog('')
+  __slog('═══════════════════════════════════════════════')
+  __slog('  Source Distribution Analysis')
+  __slog('═══════════════════════════════════════════════')
+  __slog('')
 
   const distribution = await prisma.$queryRaw<{ source: string; count: bigint; expired: bigint }[]>`
     SELECT 
@@ -243,18 +248,18 @@ async function analyzeSourceDistribution() {
     ORDER BY count DESC
   `
 
-  console.log('  Source                          | Active | Expired | Total')
-  console.log('  ' + '-'.repeat(65))
+  __slog('  Source                          | Active | Expired | Total')
+  __slog('  ' + '-'.repeat(65))
 
   for (const row of distribution) {
     const total = Number(row.count)
     const expired = Number(row.expired)
     const active = total - expired
     const source = (row.source || 'unknown').padEnd(30)
-    console.log(`  ${source} | ${String(active).padStart(6)} | ${String(expired).padStart(7)} | ${String(total).padStart(5)}`)
+    __slog(`  ${source} | ${String(active).padStart(6)} | ${String(expired).padStart(7)} | ${String(total).padStart(5)}`)
   }
 
-  console.log('')
+  __slog('')
 }
 
 // Run
@@ -265,7 +270,7 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error('Script failed:', err)
+    __serr('Script failed:', err)
     process.exit(1)
   })
   .finally(async () => {

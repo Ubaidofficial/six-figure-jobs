@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 function decodeHtml(html: string): string {
@@ -70,7 +75,7 @@ async function main() {
     select: { id: true, title: true, descriptionHtml: true, company: true }
   })
 
-  console.log(`Processing ${jobs.length} Greenhouse jobs...`)
+  __slog(`Processing ${jobs.length} Greenhouse jobs...`)
   
   let updated = 0
   let usd = 0, eur = 0, gbp = 0
@@ -105,15 +110,15 @@ async function main() {
     else if (salary.currency === 'GBP') gbp++
 
     if (updated <= 5) {
-      console.log(`  ${job.company} - ${job.title}: ${salary.currency} ${salary.min.toLocaleString()}-${salary.max.toLocaleString()}`)
+      __slog(`  ${job.company} - ${job.title}: ${salary.currency} ${salary.min.toLocaleString()}-${salary.max.toLocaleString()}`)
     }
   }
 
-  console.log(`\nUpdated ${updated} jobs (USD: ${usd}, EUR: ${eur}, GBP: ${gbp})`)
+  __slog(`\nUpdated ${updated} jobs (USD: ${usd}, EUR: ${eur}, GBP: ${gbp})`)
 
   // Summary
   const highSalary = await prisma.job.count({ where: { isExpired: false, isHighSalary: true } })
-  console.log(`Total high-salary jobs: ${highSalary}`)
+  __slog(`Total high-salary jobs: ${highSalary}`)
 
   await prisma.$disconnect()
 }

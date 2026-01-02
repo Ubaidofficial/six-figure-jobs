@@ -1,7 +1,12 @@
 // scripts/testRemote100k.ts
 // Test script for the Remote100k scraper
 
+import { format as __format } from 'node:util'
 import puppeteer from 'puppeteer'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const BOARD_NAME = 'remote100k'
 const BASE_URL = 'https://remote100k.com'
@@ -27,9 +32,9 @@ interface ParsedJob {
 }
 
 async function testScraper() {
-  console.log(`[TEST] Starting Remote100k scraper test...`)
-  console.log(`[TEST] URL: ${TEST_URL}`)
-  console.log('')
+  __slog(`[TEST] Starting Remote100k scraper test...`)
+  __slog(`[TEST] URL: ${TEST_URL}`)
+  __slog('')
 
   let browser
 
@@ -42,12 +47,12 @@ async function testScraper() {
     const page = await browser.newPage()
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
 
-    console.log(`[TEST] Loading page...`)
+    __slog(`[TEST] Loading page...`)
     await page.goto(TEST_URL, { waitUntil: 'networkidle2', timeout: 30000 })
     await new Promise(resolve => setTimeout(resolve, 3000))
 
-    console.log(`[TEST] Page loaded. Extracting content...`)
-    console.log('')
+    __slog(`[TEST] Page loaded. Extracting content...`)
+    __slog('')
 
     const pageText = await page.evaluate(() => document.body.innerText)
     
@@ -64,43 +69,43 @@ async function testScraper() {
       return urls
     })
 
-    console.log(`[TEST] Found ${jobUrls.length} job URLs`)
+    __slog(`[TEST] Found ${jobUrls.length} job URLs`)
     if (jobUrls.length > 0) {
-      console.log(`[TEST] Sample URL: ${jobUrls[0]}`)
+      __slog(`[TEST] Sample URL: ${jobUrls[0]}`)
     }
-    console.log('')
+    __slog('')
 
     const jobs = parseJobsFromText(pageText, jobUrls)
 
-    console.log(`[TEST] Parsed ${jobs.length} jobs:`)
-    console.log('='.repeat(100))
-    console.log('')
+    __slog(`[TEST] Parsed ${jobs.length} jobs:`)
+    __slog('='.repeat(100))
+    __slog('')
 
     jobs.slice(0, 25).forEach((job, i) => {
-      console.log(`Job ${i + 1}:`)
-      console.log(`  Title:     ${job.title}`)
-      console.log(`  Company:   ${job.company}`)
-      console.log(`  Location:  ${job.location}`)
-      console.log(`  Category:  ${job.category}`)
-      console.log(`  Salary:    ${job.salaryText} → $${job.salaryMin?.toLocaleString() || '?'} - $${job.salaryMax?.toLocaleString() || '?'} ${job.currency}`)
-      console.log(`  Type:      ${job.employmentType}`)
-      console.log(`  Age:       ${job.ageText || 'N/A'}`)
-      console.log(`  URL:       ${job.url}`)
-      console.log('')
+      __slog(`Job ${i + 1}:`)
+      __slog(`  Title:     ${job.title}`)
+      __slog(`  Company:   ${job.company}`)
+      __slog(`  Location:  ${job.location}`)
+      __slog(`  Category:  ${job.category}`)
+      __slog(`  Salary:    ${job.salaryText} → $${job.salaryMin?.toLocaleString() || '?'} - $${job.salaryMax?.toLocaleString() || '?'} ${job.currency}`)
+      __slog(`  Type:      ${job.employmentType}`)
+      __slog(`  Age:       ${job.ageText || 'N/A'}`)
+      __slog(`  URL:       ${job.url}`)
+      __slog('')
     })
 
     if (jobs.length > 25) {
-      console.log(`... and ${jobs.length - 25} more jobs`)
+      __slog(`... and ${jobs.length - 25} more jobs`)
     }
 
-    console.log('')
-    console.log('='.repeat(100))
-    console.log('[TEST] Summary:')
-    console.log(`  Total jobs parsed: ${jobs.length}`)
-    console.log(`  Jobs with company: ${jobs.filter(j => j.company && j.company !== 'Unknown').length}`)
-    console.log(`  Jobs with salary: ${jobs.filter(j => j.salaryMin).length}`)
-    console.log(`  Jobs with clean location: ${jobs.filter(j => j.location && !j.location.includes('Engineering') && !j.location.includes(',,')).length}`)
-    console.log(`  Jobs with valid URL: ${jobs.filter(j => j.url.startsWith('https://remote100k.com/remote-job/') && !j.url.includes('..')).length}`)
+    __slog('')
+    __slog('='.repeat(100))
+    __slog('[TEST] Summary:')
+    __slog(`  Total jobs parsed: ${jobs.length}`)
+    __slog(`  Jobs with company: ${jobs.filter(j => j.company && j.company !== 'Unknown').length}`)
+    __slog(`  Jobs with salary: ${jobs.filter(j => j.salaryMin).length}`)
+    __slog(`  Jobs with clean location: ${jobs.filter(j => j.location && !j.location.includes('Engineering') && !j.location.includes(',,')).length}`)
+    __slog(`  Jobs with valid URL: ${jobs.filter(j => j.url.startsWith('https://remote100k.com/remote-job/') && !j.url.includes('..')).length}`)
     
     const issues = jobs.filter(j => 
       !j.company || 
@@ -111,24 +116,24 @@ async function testScraper() {
       j.url.includes('..')
     )
     if (issues.length > 0) {
-      console.log(`  ⚠️  Jobs with parsing issues: ${issues.length}`)
+      __slog(`  ⚠️  Jobs with parsing issues: ${issues.length}`)
       issues.slice(0, 3).forEach((j, i) => {
-        console.log(`    Issue ${i+1}: title="${j.title.slice(0,30)}..." url="${j.url.slice(0,50)}..."`)
+        __slog(`    Issue ${i+1}: title="${j.title.slice(0,30)}..." url="${j.url.slice(0,50)}..."`)
       })
     } else {
-      console.log(`  ✅ No parsing issues detected!`)
+      __slog(`  ✅ No parsing issues detected!`)
     }
 
   } catch (err) {
-    console.error(`[TEST] Error:`, err)
+    __serr(`[TEST] Error:`, err)
   } finally {
     if (browser) {
       await browser.close()
     }
   }
 
-  console.log('')
-  console.log(`[TEST] Done!`)
+  __slog('')
+  __slog(`[TEST] Done!`)
 }
 
 function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {

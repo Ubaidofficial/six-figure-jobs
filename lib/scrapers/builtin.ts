@@ -4,6 +4,9 @@ import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
 import type { ScrapedJobInput } from '../ingest/types'
 import { addIngestStatus, errorStats, type ScraperStats } from './scraperStats'
+import { discoverApplyUrlFromPage } from './utils/discoverApplyUrl'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD_NAME = 'builtin'
 const BASE_URL = 'https://builtin.com'
@@ -24,7 +27,9 @@ async function fetchCityJobs(city: string): Promise<any[]> {
   const seenUrls = new Set<string>()
 
   for (let page = 1; page <= MAX_PAGES_PER_CITY; page++) {
-    const url = `${BASE_URL}/${city}/jobs?salary_floor=100000&page=${page}`
+    // BuiltIn city listings are under `/jobs/<city>` (not `/<city>/jobs`).
+    // Example: https://builtin.com/jobs/san-francisco?salary_floor=100000&page=1
+    const url = `${BASE_URL}/jobs/${city}?salary_floor=100000&page=${page}`
 
     console.log(`[BuiltIn] Fetching ${city} page ${page}`)
 
@@ -46,10 +51,9 @@ async function fetchCityJobs(city: string): Promise<any[]> {
     const $ = cheerio.load(html)
 
     const selectors = [
-      '[data-id*="job-"]',
-      '.job-item',
-      'article[class*="job"]',
-      '[class*="JobCard"]',
+      '[data-id="job-card"]',
+      '[id^="job-card-"]',
+      '[data-id*="job-card"]',
     ]
 
     let foundOnPage = 0
@@ -63,9 +67,10 @@ async function fetchCityJobs(city: string): Promise<any[]> {
       matches.each((_i, el) => {
         const $el = $(el)
 
-        const titleEl = $el
-          .find('h2, h3, [class*="title"], a[href*="/jobs/"]')
-          .first()
+        let titleEl = $el.find('a[data-id="job-card-title"][href]').first()
+        if (!titleEl.length) {
+          titleEl = $el.find('a[href^="/job/"][href]').first()
+        }
 
         const title = titleEl.text().trim()
         const href = titleEl.attr('href')
@@ -76,18 +81,33 @@ async function fetchCityJobs(city: string): Promise<any[]> {
         if (seenUrls.has(jobUrl)) return
         seenUrls.add(jobUrl)
 
+        const domId = $el.attr('id') || ''
+        const idMatch = domId.match(/job-card-(\d+)/)
+        const jobId = idMatch?.[1] || jobUrl.split('/').pop() || jobUrl
+
+        const company =
+          $el.find('a[data-id="company-title"] span').first().text().trim() ||
+          $el.find('a[data-id="company-title"]').first().text().trim() ||
+          $el.find('[class*="company"]').first().text().trim()
+
+        const location =
+          $el.find('[data-id*="location"]').first().text().trim() ||
+          $el.find('[class*="location"]').first().text().trim() ||
+          city
+
+        const salary =
+          $el.find('[data-id*="salary"]').first().text().trim() ||
+          $el.find('[class*="salary"], [class*="compensation"]').first().text().trim() ||
+          null
+
         jobs.push({
-          id: jobUrl.split('/').pop() || jobUrl,
+          id: jobId,
           title,
-          company: $el.find('[class*="company"]').first().text().trim(),
-          location: $el.find('[class*="location"]').first().text().trim() || city,
-          salary: $el
-            .find('[class*="salary"], [class*="compensation"]')
-            .first()
-            .text()
-            .trim(),
+          company,
+          location,
+          salary,
           url: jobUrl,
-          description: $el.find('[class*="description"]').first().html(),
+          description: null,
           city,
           page,
         })
@@ -128,8 +148,32 @@ export default async function scrapeBuiltIn(): Promise<ScraperStats> {
             continue
           }
 
-          const salaryMin = parseSalary(job?.salary ?? null, false)
-          const salaryMax = parseSalary(job?.salary ?? null, true)
+          const salaryText =
+            typeof job?.salary === 'string' && job.salary.trim() ? job.salary.trim() : null
+          const salaryMin = parseSalary(salaryText, false)
+          const salaryMax = parseSalary(salaryText, true)
+          const salaryRaw = salaryText || 'USD 100000+ (BuiltIn salary_floor filter)'
+
+          let applyUrl: string | null = job.url ?? null
+          if (applyUrl && applyUrl.toLowerCase().includes('builtin.com')) {
+            const discoveredApplyUrl = await discoverApplyUrlFromPage(applyUrl)
+            if (discoveredApplyUrl) applyUrl = discoveredApplyUrl
+          }
+
+          const atsType = detectATS(applyUrl || '')
+          const explicitAtsProvider = toAtsProvider(atsType)
+          const explicitAtsUrl =
+            explicitAtsProvider && applyUrl ? getCompanyJobsUrl(applyUrl, atsType) : null
+
+          const companyName = String(job.company || '').trim()
+          if (
+            companyName &&
+            explicitAtsProvider &&
+            applyUrl &&
+            isExternalToHost(applyUrl, 'builtin.com')
+          ) {
+            await saveCompanyATS(companyName, applyUrl, BOARD_NAME)
+          }
 
           const scrapedJob: ScrapedJobInput = {
             externalId: `builtin-${String(job.id || job.url)}`,
@@ -137,13 +181,14 @@ export default async function scrapeBuiltIn(): Promise<ScraperStats> {
             source: makeBoardSource(BOARD_NAME),
             rawCompanyName: job.company || 'Unknown',
             url: job.url,
-            applyUrl: job.url,
+            applyUrl,
             locationText: job.location || city,
             isRemote: Boolean(job.location?.toLowerCase?.().includes('remote')),
 
             descriptionHtml: job.description || null,
             descriptionText: stripHtml(job.description || ''),
 
+            salaryRaw,
             salaryMin,
             salaryMax,
             salaryCurrency: 'USD',
@@ -151,6 +196,9 @@ export default async function scrapeBuiltIn(): Promise<ScraperStats> {
 
             employmentType: 'Full-time',
             postedAt: null,
+
+            explicitAtsProvider,
+            explicitAtsUrl,
 
             raw: job,
           }
@@ -190,4 +238,3 @@ function parseSalary(text: string | null, isMax = false): number | null {
 function stripHtml(html: string): string {
   return (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
-

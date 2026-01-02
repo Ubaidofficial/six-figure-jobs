@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -12,7 +17,7 @@ async function main() {
     select: { id: true, title: true, currency: true, minAnnual: true, maxAnnual: true }
   })
 
-  console.log(`Found ${wrongCurrency.length} US jobs with wrong currency`)
+  __slog(`Found ${wrongCurrency.length} US jobs with wrong currency`)
 
   // For now, clear the salary data for these jobs (it's unreliable)
   // They'll need to be re-scraped with proper salary parsing
@@ -30,7 +35,7 @@ async function main() {
     }
   })
 
-  console.log(`Cleared salary for ${cleared.count} US jobs with wrong currency`)
+  __slog(`Cleared salary for ${cleared.count} US jobs with wrong currency`)
 
   // Check remaining salary distribution
   const withSalary = await prisma.job.count({
@@ -40,7 +45,7 @@ async function main() {
     where: { isExpired: false, isHighSalary: true }
   })
 
-  console.log(`\nRemaining: ${withSalary} jobs with salary, ${highSalary} high-salary`)
+  __slog(`\nRemaining: ${withSalary} jobs with salary, ${highSalary} high-salary`)
 
   await prisma.$disconnect()
 }

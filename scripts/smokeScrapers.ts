@@ -1,6 +1,11 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
 import type { AtsProvider } from '../lib/scrapers/ats/types'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 const UA = 'SixFigureJobsBot/1.0 (+https://www.6figjobs.com)'
@@ -40,12 +45,12 @@ async function checkBoardEndpoints() {
     ['JustJoin', 'https://justjoin.it'],
   ] as const
 
-  console.log('🌐 Board endpoint smoke check')
+  __slog('🌐 Board endpoint smoke check')
   for (const [name, url] of endpoints) {
     const { ok, status } = await fetchWithTimeout(url)
-    console.log(`  ${name.padEnd(22)} ${ok ? 'OK' : 'FAIL'} (status ${status})`)
+    __slog(`  ${name.padEnd(22)} ${ok ? 'OK' : 'FAIL'} (status ${status})`)
   }
-  console.log('')
+  __slog('')
 }
 
 async function checkAtsProviders() {
@@ -61,7 +66,7 @@ async function checkAtsProviders() {
     'workable',
   ]
 
-  console.log('🏢 ATS fetch smoke check (no DB writes)')
+  __slog('🏢 ATS fetch smoke check (no DB writes)')
 
   for (const provider of providers) {
     const company = await prisma.company.findFirst({
@@ -71,23 +76,23 @@ async function checkAtsProviders() {
     })
 
     if (!company?.atsUrl) {
-      console.log(`  ${provider.padEnd(16)} SKIP (no company with atsUrl)`)
+      __slog(`  ${provider.padEnd(16)} SKIP (no company with atsUrl)`)
       continue
     }
 
     try {
       const jobs = await scrapeCompanyAtsJobs(provider, company.atsUrl)
-      console.log(
+      __slog(
         `  ${provider.padEnd(16)} OK – ${jobs.length} jobs from ${company.name}`,
       )
     } catch (err: any) {
-      console.log(
+      __slog(
         `  ${provider.padEnd(16)} FAIL – ${err?.message || String(err)}`,
       )
     }
   }
 
-  console.log('')
+  __slog('')
 }
 
 async function main() {
@@ -97,6 +102,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err)
+  __serr(err)
   process.exit(1)
 })

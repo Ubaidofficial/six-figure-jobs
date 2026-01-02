@@ -2,9 +2,14 @@
  * Strategic AI Enrichment - Top jobs per category only
  * Enriches the best jobs from each role/category to maximize value
  */
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { enrichJobWithAI } from '../lib/ai/openaiEnricher'
 import { buildSnippetFromJob } from '../lib/jobs/snippet'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -31,11 +36,11 @@ const KEY_ROLES = [
 ]
 
 async function main() {
-  console.log('🎯 Strategic AI Enrichment')
-  console.log('===========================')
-  console.log(`Top N per category: ${TOP_N_PER_CATEGORY}`)
-  console.log(`Max total jobs: ${MAX_TOTAL_JOBS}`)
-  console.log(`Key roles: ${KEY_ROLES.length}\n`)
+  __slog('🎯 Strategic AI Enrichment')
+  __slog('===========================')
+  __slog(`Top N per category: ${TOP_N_PER_CATEGORY}`)
+  __slog(`Max total jobs: ${MAX_TOTAL_JOBS}`)
+  __slog(`Key roles: ${KEY_ROLES.length}\n`)
 
   const jobsToEnrich: any[] = []
 
@@ -66,7 +71,7 @@ async function main() {
     })
 
     if (topJobs.length > 0) {
-      console.log(`  ${roleSlug}: Found ${topJobs.length} top jobs`)
+      __slog(`  ${roleSlug}: Found ${topJobs.length} top jobs`)
       jobsToEnrich.push(...topJobs)
     }
   }
@@ -97,7 +102,7 @@ async function main() {
   })
 
   if (uncategorized.length > 0) {
-    console.log(`  uncategorized: Found ${uncategorized.length} jobs\n`)
+    __slog(`  uncategorized: Found ${uncategorized.length} jobs\n`)
     jobsToEnrich.push(...uncategorized)
   }
 
@@ -109,8 +114,8 @@ async function main() {
   // Limit to MAX_TOTAL_JOBS
   const jobsToProcess = uniqueJobs.slice(0, MAX_TOTAL_JOBS)
 
-  console.log(`\n📊 Total unique jobs to enrich: ${jobsToProcess.length}`)
-  console.log(`   Average salary: $${Math.round(
+  __slog(`\n📊 Total unique jobs to enrich: ${jobsToProcess.length}`)
+  __slog(`   Average salary: $${Math.round(
     Number(jobsToProcess.reduce((sum, j) => sum + (j.minAnnual || 0n), 0n)) / jobsToProcess.length / 1000
   )}k\n`)
 
@@ -148,19 +153,19 @@ async function main() {
 
       processed++
       if (processed % 10 === 0) {
-        console.log(`   ✓ Processed ${processed}/${jobsToProcess.length}`)
+        __slog(`   ✓ Processed ${processed}/${jobsToProcess.length}`)
       }
 
     } catch (err: any) {
       errors++
-      console.error(`   ✗ Failed: ${job.id} - ${err.message}`)
+      __serr(`   ✗ Failed: ${job.id} - ${err.message}`)
     }
   }
 
-  console.log(`\n✅ Strategic enrichment complete`)
-  console.log(`   Processed: ${processed}`)
-  console.log(`   Errors: ${errors}`)
-  console.log(`   Success rate: ${((processed / jobsToProcess.length) * 100).toFixed(1)}%`)
+  __slog(`\n✅ Strategic enrichment complete`)
+  __slog(`   Processed: ${processed}`)
+  __slog(`   Errors: ${errors}`)
+  __slog(`   Success rate: ${((processed / jobsToProcess.length) * 100).toFixed(1)}%`)
 
   await prisma.$disconnect()
 }

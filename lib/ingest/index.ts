@@ -31,6 +31,31 @@ import { makeJobDedupeKey, normalizeUrl } from './dedupeHelpers'
 import type { ScrapedJobInput, IngestResult, IngestStats, ResolvedCompany } from './types'
 import { isValidScrapedJob, getValidationErrors } from './types'
 
+function safeUrlsMatch(urlA: string | null | undefined, urlB: string | null | undefined): boolean {
+  if (!urlA || !urlB) return false
+  if (urlA === urlB) return true
+
+  const normA = normalizeUrl(urlA)
+  const normB = normalizeUrl(urlB)
+  if (!normA || !normB || normA !== normB) return false
+
+  try {
+    const a = new URL(urlA)
+    const b = new URL(urlB)
+
+    const aPath = a.pathname.replace(/\/$/, '')
+    const pathSegments = aPath.split('/').filter(Boolean)
+    const pathLooksSpecific = /\d/.test(aPath) || pathSegments.length >= 3
+
+    // If the path is too generic, avoid treating different query strings as the same job.
+    if (!pathLooksSpecific && a.search !== b.search) return false
+  } catch {
+    // If parsing fails, fall back to normalized comparison.
+  }
+
+  return true
+}
+
 // =============================================================================
 // Configuration
 // =============================================================================
@@ -87,19 +112,75 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
       },
     })
 
-    // 5. Also look for existing job by URL (fallback matching)
-    const normalizedUrl = normalizeUrl(input.url)
-    const existingByUrl = normalizedUrl
-      ? await prisma.job.findFirst({
-          where: {
-            url: input.url,
-            isExpired: false,
-          },
-        })
-      : null
+    // 5. Also look for existing job by URL (fallback matching).
+    // IMPORTANT: we normalize URLs to avoid duplicates caused by trailing slashes / query params / minor formatting differences.
+    const existingByUrl =
+      input.url || input.applyUrl
+        ? (
+            await prisma.job.findMany({
+              where: {
+                companyId: company.id,
+                source: input.source,
+                title: { equals: input.title, mode: 'insensitive' },
+                isExpired: false,
+              },
+              select: {
+                id: true,
+                source: true,
+                url: true,
+                applyUrl: true,
+                sourcePriority: true,
+                dedupeKey: true,
+              },
+            })
+          ).find(
+            (j) =>
+              safeUrlsMatch(j.url, input.url) ||
+              safeUrlsMatch(j.applyUrl, input.applyUrl) ||
+              safeUrlsMatch(j.url, input.applyUrl) ||
+              safeUrlsMatch(j.applyUrl, input.url),
+          ) ?? null
+        : null
+
+    // 5b. Guardrail: if companyId-based matching fails, fall back to title + company + source.
+    // This prevents duplicates when company resolution or URL formatting differs across runs.
+    const existingByTitleCompanySource =
+      !existingByKey && !existingByUrl
+        ? (
+            await prisma.job.findMany({
+              where: {
+                company: { equals: company.name, mode: 'insensitive' },
+                source: input.source,
+                title: { equals: input.title, mode: 'insensitive' },
+                isExpired: false,
+              },
+              select: {
+                id: true,
+                source: true,
+                url: true,
+                applyUrl: true,
+                sourcePriority: true,
+                dedupeKey: true,
+              },
+            })
+          ).find(
+            (j) =>
+              safeUrlsMatch(j.url, input.url) ||
+              safeUrlsMatch(j.applyUrl, input.applyUrl) ||
+              safeUrlsMatch(j.url, input.applyUrl) ||
+              safeUrlsMatch(j.applyUrl, input.url),
+          ) ?? null
+        : null
+
+    // 5c. Stable-id fallback: if we still can't match, use the deterministic job id (source + externalId).
+    // This prevents "missed match -> create -> P2002" churn when titles or company resolution changes slightly.
+    const stableJobId = buildJobId(input.source, input.externalId)
+    const existingById = await prisma.job.findUnique({
+      where: { id: stableJobId },
+    })
 
     // Use whichever match we found (prefer dedupe key match)
-    const existing = existingByKey || existingByUrl
+    const existing = existingByKey || existingByUrl || existingByTitleCompanySource || existingById
 
     // 6. Decision logic
     if (!existing) {
@@ -452,6 +533,29 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
   // Fill in missing logo
   if (!existing.companyLogo && input.companyLogoUrl) {
     updateData.companyLogo = input.companyLogoUrl
+  }
+
+  // Update applyUrl if we previously fell back to the board URL (or had none).
+  // This lets board scrapers "upgrade" applyUrl once we can resolve an external/mailto destination.
+  if (input.applyUrl && input.applyUrl !== existing.applyUrl) {
+    const existingApply = existing.applyUrl || ''
+    const existingUrl = existing.url || ''
+    const shouldUpgradeApplyUrl =
+      !existingApply ||
+      (existingUrl && existingApply === existingUrl) ||
+      (() => {
+        try {
+          const hostA = new URL(existingApply).hostname.replace(/^www\./, '').toLowerCase()
+          const hostB = new URL(existingUrl).hostname.replace(/^www\./, '').toLowerCase()
+          return hostA === hostB
+        } catch {
+          return false
+        }
+      })()
+
+    if (shouldUpgradeApplyUrl) {
+      updateData.applyUrl = input.applyUrl
+    }
   }
 
   await prisma.job.update({

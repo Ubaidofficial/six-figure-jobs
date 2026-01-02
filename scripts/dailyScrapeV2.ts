@@ -17,6 +17,7 @@
 //     npx tsx scripts/dailyScrapeV2.ts --mode=boards --fast
 // -------------------------------------------------------------
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 
 // Core board scrapers (default exports)
@@ -49,6 +50,10 @@ import scrapeOtta from '../lib/scrapers/otta'
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
 import type { AtsProvider } from '../lib/scrapers/ats/types'
 import { upsertJobsForCompanyFromAts } from '../lib/jobs/ingestFromAts'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -125,14 +130,14 @@ async function seedGenericSourcesForNonAts() {
   }
 
   if (created > 0) {
-    console.log(`🌱 Seeded ${created} generic career sources for non-ATS companies.`)
+    __slog(`🌱 Seeded ${created} generic career sources for non-ATS companies.`)
   }
 }
 
 async function runBoardScrapers(options: CliOptions) {
   const { fast } = options
 
-  console.log('🌐 Running BOARD scrapers…\n')
+  __slog('🌐 Running BOARD scrapers…\n')
 
   // Ensure generic scraper has sources to work with (non-ATS companies from seed)
   await seedGenericSourcesForNonAts()
@@ -181,7 +186,7 @@ async function runBoardScrapers(options: CliOptions) {
 	    : allScrapers
 
 	  await runWithConcurrency(scrapers, options.concurrency, async ([name, fn]) => {
-	    console.log(`\n▶ Running ${name}…`)
+	    __slog(`\n▶ Running ${name}…`)
 	    const startTime = Date.now()
 
 	    try {
@@ -193,20 +198,20 @@ async function runBoardScrapers(options: CliOptions) {
 	      const error = result?.error
 
 	      if (error) {
-	        console.log(`   ❌ ${name} failed: ${error}`)
+	        __slog(`   ❌ ${name} failed: ${error}`)
 	      } else {
-	        console.log(`   ✓ ${name}: ${created} created, ${skipped} skipped (${elapsed}s)`)
+	        __slog(`   ✓ ${name}: ${created} created, ${skipped} skipped (${elapsed}s)`)
 	      }
 	    } catch (err) {
 	      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
-	      console.error(`   ❌ ${name} crashed:`, err)
-	      console.log(`   Time: ${elapsed}s`)
+	      __serr(`   ❌ ${name} crashed:`, err)
+	      __slog(`   Time: ${elapsed}s`)
 	    }
 	  })
 	}
 
 async function runAtsScrapers() {
-  console.log('🏢 Running ATS scrapers…\n')
+  __slog('🏢 Running ATS scrapers…\n')
 
   const companies = await prisma.company.findMany({
     where: {
@@ -223,7 +228,7 @@ async function runAtsScrapers() {
   })
 
   if (!companies.length) {
-    console.log('   ⚠️  No companies with ATS metadata. Skipping ATS scrape.\n')
+    __slog('   ⚠️  No companies with ATS metadata. Skipping ATS scrape.\n')
     return
   }
 
@@ -236,7 +241,7 @@ async function runAtsScrapers() {
     const provider = company.atsProvider as AtsProvider
     const slug = company.slug ?? company.id
 
-    console.log(`▶ ${slug} (${provider})…`)
+    __slog(`▶ ${slug} (${provider})…`)
     try {
       const jobs = await scrapeCompanyAtsJobs(provider, company.atsUrl!)
       const stats = await upsertJobsForCompanyFromAts(company, jobs)
@@ -255,15 +260,15 @@ async function runAtsScrapers() {
         },
       })
 
-      console.log(
+      __slog(
         `   ✅ ${slug}: jobs=${jobs.length} created=${stats.created} updated=${stats.updated} skipped=${stats.skipped}`,
       )
-      console.log('')
+      __slog('')
     } catch (err: any) {
       totalErrors++
       const message = err?.message || String(err)
-      console.error(`   ❌ ${slug} failed:`, message)
-      console.error('')
+      __serr(`   ❌ ${slug} failed:`, message)
+      __serr('')
 
       await prisma.company.update({
         where: { id: company.id },
@@ -275,11 +280,11 @@ async function runAtsScrapers() {
     }
   })
 
-  console.log('ATS scrape totals:')
-  console.log(`  Created: ${totalCreated}`)
-  console.log(`  Updated: ${totalUpdated}`)
-  console.log(`  Skipped: ${totalSkipped}`)
-  console.log(`  Errors : ${totalErrors}\n`)
+  __slog('ATS scrape totals:')
+  __slog(`  Created: ${totalCreated}`)
+  __slog(`  Updated: ${totalUpdated}`)
+  __slog(`  Skipped: ${totalSkipped}`)
+  __slog(`  Errors : ${totalErrors}\n`)
 }
 
 async function printJobSummary() {
@@ -298,25 +303,25 @@ async function printJobSummary() {
     where: { minAnnual: { gte: 400_000 } },
   })
 
-  console.log('\n📊 Job Totals (for frontend parity)')
-  console.log('------------------------------------')
-  console.log(`Total jobs in DB          : ${totalJobs}`)
-  console.log(`Jobs ≥ $100k (minAnnual)  : ${jobs100k}`)
-  console.log(`Jobs ≥ $200k              : ${jobs200k}`)
-  console.log(`Jobs ≥ $300k              : ${jobs300k}`)
-  console.log(`Jobs ≥ $400k              : ${jobs400k}\n`)
+  __slog('\n📊 Job Totals (for frontend parity)')
+  __slog('------------------------------------')
+  __slog(`Total jobs in DB          : ${totalJobs}`)
+  __slog(`Jobs ≥ $100k (minAnnual)  : ${jobs100k}`)
+  __slog(`Jobs ≥ $200k              : ${jobs200k}`)
+  __slog(`Jobs ≥ $300k              : ${jobs300k}`)
+  __slog(`Jobs ≥ $400k              : ${jobs400k}\n`)
 }
 
 async function main() {
   const options = parseCliArgs()
 
-  console.log('===========================================')
-  console.log('  SixFigureJobs – Daily Scraper v2')
-  console.log('===========================================')
-  console.log(`Mode : ${options.mode}`)
-  console.log(`Fast : ${options.fast ? 'YES (skip slow boards)' : 'no'}`)
-  console.log(`Concurrency : ${options.concurrency}`)
-  console.log('')
+  __slog('===========================================')
+  __slog('  SixFigureJobs – Daily Scraper v2')
+  __slog('===========================================')
+  __slog(`Mode : ${options.mode}`)
+  __slog(`Fast : ${options.fast ? 'YES (skip slow boards)' : 'no'}`)
+  __slog(`Concurrency : ${options.concurrency}`)
+  __slog('')
 
   if (options.mode === 'boards' || options.mode === 'all') {
     await runBoardScrapers(options)
@@ -328,13 +333,13 @@ async function main() {
 
   await printJobSummary()
 
-  console.log('✅ Finished daily scrape run.')
+  __slog('✅ Finished daily scrape run.')
 }
 
 main()
   .catch((err) => {
-    console.error('💥 Fatal error in dailyScrapeV2.ts')
-    console.error(err)
+    __serr('💥 Fatal error in dailyScrapeV2.ts')
+    __serr(err)
     process.exitCode = 1
   })
   .finally(async () => {
@@ -356,7 +361,7 @@ async function runWithConcurrency<T>(
     try {
       await task(item)
     } catch (err) {
-      console.error(err)
+      __serr(err)
     }
     await runNext()
   }

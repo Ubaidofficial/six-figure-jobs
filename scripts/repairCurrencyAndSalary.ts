@@ -14,12 +14,16 @@
  *    npx tsx scripts/repairCurrencyAndSalary.ts --mode=repair
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient, Prisma, Job } from '@prisma/client'
 import {
   normalizeJobSalaryFields,
   checkCurrencyLocationMismatch,
   COUNTRY_TO_CURRENCY,
 } from '../lib/normalizers/salary'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + '\n')
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + '\n')
 
 const prisma = new PrismaClient()
 
@@ -54,11 +58,11 @@ function parseCliArgs(): CliOptions {
 async function main() {
   const { mode, dryRun, limit } = parseCliArgs()
 
-  console.log('🔧 Phase 4 – Currency & Salary Repair')
-  console.log(`   Mode    : ${mode}`)
-  console.log(`   Dry run : ${dryRun ? 'YES (no writes)' : 'no'}`)
-  console.log(`   Limit   : ${limit ?? 'none'}`)
-  console.log('')
+  __slog('🔧 Phase 4 – Currency & Salary Repair')
+  __slog(`   Mode    : ${mode}`)
+  __slog(`   Dry run : ${dryRun ? 'YES (no writes)' : 'no'}`)
+  __slog(`   Limit   : ${limit ?? 'none'}`)
+  __slog('')
 
   const countryCodesToCheck = Object.keys(COUNTRY_TO_CURRENCY)
 
@@ -92,9 +96,9 @@ async function main() {
     take: limit ?? undefined,
   })
 
-  console.log(`🔍 Loaded ${jobs.length} jobs for audit/repair`)
+  __slog(`🔍 Loaded ${jobs.length} jobs for audit/repair`)
   if (jobs.length === 0) {
-    console.log('✅ Nothing to do, exiting.')
+    __slog('✅ Nothing to do, exiting.')
     await prisma.$disconnect()
     return
   }
@@ -194,7 +198,7 @@ async function main() {
 
     if (dryRun) {
       if (fixed <= 20) {
-        console.log(
+        __slog(
           `• [DRY RUN] Job ${job.id} (${job.title}) – country=${countryCode}, ` +
             `oldCurrency=${job.currency ?? job.salaryCurrency ?? 'null'} → newCurrency=${
               data.currency ?? 'unchanged'
@@ -211,19 +215,19 @@ async function main() {
     })
 
     if (fixed % 500 === 0) {
-      console.log(`   …updated ${fixed} jobs so far`)
+      __slog(`   …updated ${fixed} jobs so far`)
     }
   }
 
-  console.log('')
-  console.log('📊 Summary')
-  console.log('----------')
-  console.log(`Jobs scanned                          : ${scanned}`)
-  console.log(`Jobs with salary data                 : ${withSalaryData}`)
-  console.log(`Currency/location mismatches detected : ${mismatches}`)
-  console.log(`Jobs with updated high-salary flags   : ${updatedHighSalaryFlag}`)
+  __slog('')
+  __slog('📊 Summary')
+  __slog('----------')
+  __slog(`Jobs scanned                          : ${scanned}`)
+  __slog(`Jobs with salary data                 : ${withSalaryData}`)
+  __slog(`Currency/location mismatches detected : ${mismatches}`)
+  __slog(`Jobs with updated high-salary flags   : ${updatedHighSalaryFlag}`)
   if (mode === 'repair') {
-    console.log(
+    __slog(
       `Jobs ${dryRun ? 'that WOULD be ' : ''}updated     : ${fixed}`,
     )
   }
@@ -232,8 +236,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('💥 Error in repairCurrencyAndSalary.ts')
-  console.error(err)
+  __serr('💥 Error in repairCurrencyAndSalary.ts')
+  __serr(err)
   prisma
     .$disconnect()
     .catch(() => {

@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -9,8 +14,8 @@ async function main() {
   })
 
   for (const job of jobs) {
-    console.log(`\n=== ${job.title} ===`)
-    console.log(`Location: ${job.locationRaw}`)
+    __slog(`\n=== ${job.title} ===`)
+    __slog(`Location: ${job.locationRaw}`)
     
     if (job.descriptionHtml) {
       // Look for salary patterns: $XXX,XXX or XXX,XXX USD/EUR etc
@@ -18,13 +23,13 @@ async function main() {
       const matches = job.descriptionHtml.match(salaryPattern)
       
       if (matches) {
-        console.log(`Salary matches: ${matches.join(' | ')}`)
+        __slog(`Salary matches: ${matches.join(' | ')}`)
       }
       
       // Also check for "Annual Salary" or compensation sections
       const compMatch = job.descriptionHtml.match(/(?:annual|base|salary|compensation)[^<]{0,100}[\d,]+/gi)
       if (compMatch) {
-        console.log(`Comp text: ${compMatch.slice(0, 2).join(' | ')}`)
+        __slog(`Comp text: ${compMatch.slice(0, 2).join(' | ')}`)
       }
     }
   }

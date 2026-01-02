@@ -109,6 +109,24 @@ model Job {
   @@index([lastAiEnrichedAt])
 }
 
+model CompanyATS {
+  id           String   @id @default(cuid())
+  companyName  String
+  companySlug  String   @unique
+  atsType      String
+  atsUrl       String   @unique
+  discoveredBy String
+  isActive     Boolean  @default(true)
+  lastScraped  DateTime?
+  jobCount     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([atsType])
+  @@index([isActive])
+  @@index([lastScraped])
+}
+
 model SalaryAggregate {
   id            String   @id @default(cuid())
   sliceType     String
@@ -268,4 +286,3 @@ model AiRunLedger {
   lastRunAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
 }
-

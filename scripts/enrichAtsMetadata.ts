@@ -1,8 +1,13 @@
 // scripts/enrichAtsMetadata.ts
 // Phase 3 – Enrich companies with atsProvider + atsUrl (self-contained)
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import * as cheerio from 'cheerio'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -194,7 +199,7 @@ async function findAtsLinkInHtml(
 // Main worker
 // -----------------------------------------------------
 async function main() {
-  console.log('🔍 Starting ATS metadata enrichment...')
+  __slog('🔍 Starting ATS metadata enrichment...')
 
   const companies = await prisma.company.findMany({
     where: {
@@ -205,14 +210,14 @@ async function main() {
     take: 100,
   })
 
-  console.log(`Found ${companies.length} companies to check.`)
+  __slog(`Found ${companies.length} companies to check.`)
 
   let updated = 0
 
   for (const company of companies) {
     if (!company.website) continue
 
-    console.log(`→ Checking ${company.name} (${company.website})`)
+    __slog(`→ Checking ${company.name} (${company.website})`)
 
     const html = await fetchHtml(company.website)
     let result = html
@@ -233,7 +238,7 @@ async function main() {
     }
 
     if (result) {
-      console.log(`   ✅ Found ATS: ${result.provider} → ${result.atsUrl}`)
+      __slog(`   ✅ Found ATS: ${result.provider} → ${result.atsUrl}`)
       await prisma.company.update({
         where: { id: company.id },
         data: {
@@ -243,18 +248,18 @@ async function main() {
       })
       updated++
     } else {
-      console.log('   ⚠️ No ATS found')
+      __slog('   ⚠️ No ATS found')
     }
 
     await new Promise((r) => setTimeout(r, 1000))
   }
 
-  console.log(`\n✨ Done. Updated ${updated} companies.`)
+  __slog(`\n✨ Done. Updated ${updated} companies.`)
 }
 
 main()
   .catch((err) => {
-    console.error(err)
+    __serr(err)
     process.exit(1)
   })
   .finally(async () => {

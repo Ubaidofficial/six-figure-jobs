@@ -12,7 +12,12 @@
  *   npx ts-node scripts/normalizeLocations.ts
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -24,7 +29,7 @@ function slugify(value: string): string {
 }
 
 async function main() {
-  console.log('🚀 Normalizing locations…')
+  __slog('🚀 Normalizing locations…')
 
   const jobs = await prisma.job.findMany({
     where: {
@@ -40,7 +45,7 @@ async function main() {
     },
   })
 
-  console.log(`Checking ${jobs.length} jobs…`)
+  __slog(`Checking ${jobs.length} jobs…`)
 
   let updated = 0
 
@@ -77,12 +82,12 @@ async function main() {
     updated++
   }
 
-  console.log(`✅ Updated ${updated} jobs with normalized locations.`)
+  __slog(`✅ Updated ${updated} jobs with normalized locations.`)
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

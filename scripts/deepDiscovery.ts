@@ -1,9 +1,14 @@
 // scripts/deepDiscovery.ts
 
+import { format as __format } from 'node:util'
 import { createHash } from 'node:crypto'
 import puppeteer, { Page } from 'puppeteer'
 import { prisma } from '../lib/prisma'
 import { makeBoardSource } from '../lib/ingest/sourcePriority'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 /**
  * Deep Company Discovery (Puppeteer + fallback generic scrape)
@@ -47,7 +52,7 @@ const JOB_TITLE_KEYWORDS = [
 ]
 
 async function main() {
-  console.log('🚀 Starting Deep Company Discovery (Puppeteer + Generic Fallback)...')
+  __slog('🚀 Starting Deep Company Discovery (Puppeteer + Generic Fallback)...')
 
   const companies = await prisma.company.findMany({
     where: {
@@ -58,7 +63,7 @@ async function main() {
     orderBy: { createdAt: 'desc' },
   })
 
-  console.log(`📋 Scanning ${companies.length} companies...`)
+  __slog(`📋 Scanning ${companies.length} companies...`)
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -73,7 +78,7 @@ async function main() {
       try {
         await processCompany(company, page)
       } catch (err) {
-        console.error(`❌ Error processing ${company?.name || company?.id}:`, err)
+        __serr(`❌ Error processing ${company?.name || company?.id}:`, err)
       } finally {
         await page.close()
       }
@@ -107,7 +112,7 @@ async function processCompany(company: any, page: Page) {
       // A) ATS detection
       const atsResult = await detectATS(page)
       if (atsResult) {
-        console.log(`✅ FOUND ATS: ${atsResult.provider} (${atsResult.slug})`)
+        __slog(`✅ FOUND ATS: ${atsResult.provider} (${atsResult.slug})`)
 
         await prisma.company.update({
           where: { id: company.id },
@@ -148,7 +153,7 @@ async function processCompany(company: any, page: Page) {
       const genericJobs = await scanGenericJobs(page)
       if (!genericJobs.length) continue
 
-      console.log(`✅ GENERIC SCRAPE: Found ${genericJobs.length} potential jobs on ${url}`)
+      __slog(`✅ GENERIC SCRAPE: Found ${genericJobs.length} potential jobs on ${url}`)
 
       await prisma.company.update({
         where: { id: company.id },
@@ -204,7 +209,7 @@ async function processCompany(company: any, page: Page) {
         upserted++
       }
 
-      console.log(`   -> Upserted ${upserted} jobs to DB`)
+      __slog(`   -> Upserted ${upserted} jobs to DB`)
       found = true
     } catch {
       // ignore navigation errors for guesses

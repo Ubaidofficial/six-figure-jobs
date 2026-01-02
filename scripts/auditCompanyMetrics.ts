@@ -21,7 +21,12 @@
  *    npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/auditCompanyMetrics.ts --mode=repair
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient, Prisma, Company } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -56,11 +61,11 @@ function parseCliArgs(): CliOptions {
 async function main() {
   const { mode, dryRun, limit } = parseCliArgs()
 
-  console.log('🏢 Phase 4 – Company Metrics Audit / Repair')
-  console.log(`   Mode    : ${mode}`)
-  console.log(`   Dry run : ${dryRun ? 'YES (no writes)' : 'no'}`)
-  console.log(`   Limit   : ${limit ?? 'none'}`)
-  console.log('')
+  __slog('🏢 Phase 4 – Company Metrics Audit / Repair')
+  __slog(`   Mode    : ${mode}`)
+  __slog(`   Dry run : ${dryRun ? 'YES (no writes)' : 'no'}`)
+  __slog(`   Limit   : ${limit ?? 'none'}`)
+  __slog('')
 
   // We care about all companies that either have jobs or ATS metadata
   const whereClause: Prisma.CompanyWhereInput = {
@@ -78,9 +83,9 @@ async function main() {
     orderBy: { name: 'asc' },
   })
 
-  console.log(`🔍 Loaded ${companies.length} companies for audit`)
+  __slog(`🔍 Loaded ${companies.length} companies for audit`)
   if (companies.length === 0) {
-    console.log('✅ Nothing to do, exiting.')
+    __slog('✅ Nothing to do, exiting.')
     await prisma.$disconnect()
     return
   }
@@ -139,7 +144,7 @@ async function main() {
 
     if (mode === 'audit') {
       if (hasMismatch && mismatchJobCount <= 20) {
-        console.log(
+        __slog(
           `• [AUDIT] ${company.name} (${company.slug}) – ` +
             `cached jobCount=${cachedJobCount}, active in DB=${activeJobsCount}, ` +
             `$100k+ active=${highSalaryJobsCount}, ` +
@@ -163,7 +168,7 @@ async function main() {
 
     if (dryRun) {
       if (updatedJobCount <= 20) {
-        console.log(
+        __slog(
           `• [DRY RUN] ${company.name} (${company.slug}) – ` +
             `jobCount: ${cachedJobCount} → ${data.jobCount}`
         )
@@ -180,33 +185,33 @@ async function main() {
   }
 
   if (mode === 'repair' && !dryRun && updates.length > 0) {
-    console.log(`💾 Applying ${updates.length} company metric updates...`)
+    __slog(`💾 Applying ${updates.length} company metric updates...`)
     await Promise.all(updates)
   }
 
-  console.log('')
-  console.log('📊 Company Metrics Summary')
-  console.log('--------------------------')
-  console.log(`Companies scanned                     : ${scanned}`)
-  console.log(`Companies with ≥1 active job in DB    : ${withJobs}`)
-  console.log(`Companies with jobCount mismatch      : ${mismatchJobCount}`)
+  __slog('')
+  __slog('📊 Company Metrics Summary')
+  __slog('--------------------------')
+  __slog(`Companies scanned                     : ${scanned}`)
+  __slog(`Companies with ≥1 active job in DB    : ${withJobs}`)
+  __slog(`Companies with jobCount mismatch      : ${mismatchJobCount}`)
   if (mode === 'repair') {
-    console.log(
+    __slog(
       `Companies ${dryRun ? 'that WOULD be ' : ''}updated jobCount : ${updatedJobCount}`
     )
   }
-  console.log('')
-  console.log('Global aggregates from Job table')
-  console.log('--------------------------------')
-  console.log(`Total active jobs (isExpired=false)   : ${totalDbActiveJobs}`)
-  console.log(`Total active $100k+ jobs (DB)         : ${totalDbHighSalaryJobs}`)
+  __slog('')
+  __slog('Global aggregates from Job table')
+  __slog('--------------------------------')
+  __slog(`Total active jobs (isExpired=false)   : ${totalDbActiveJobs}`)
+  __slog(`Total active $100k+ jobs (DB)         : ${totalDbHighSalaryJobs}`)
 
   await prisma.$disconnect()
 }
 
 main().catch((err) => {
-  console.error('💥 Error in auditCompanyMetrics.ts')
-  console.error(err)
+  __serr('💥 Error in auditCompanyMetrics.ts')
+  __serr(err)
   prisma
     .$disconnect()
     .catch(() => {

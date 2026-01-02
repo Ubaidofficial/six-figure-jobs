@@ -1,11 +1,16 @@
 // scripts/verifyAtsPipeline.ts
 // Phase 3 verification — ATS metadata + scraping sanity check
 
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
 
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
+
 async function main() {
-  console.log('🔍 Verifying ATS metadata + scrapers...\n')
+  __slog('🔍 Verifying ATS metadata + scrapers...\n')
 
   // 1) Basic counts
   const totalCompanies = await prisma.company.count()
@@ -17,14 +22,14 @@ async function main() {
   })
   const withoutAts = totalCompanies - withAts
 
-  console.log('📊 Company ATS coverage')
-  console.log('------------------------')
-  console.log(`Total companies:         ${totalCompanies}`)
-  console.log(`With atsProvider+atsUrl: ${withAts}`)
-  console.log(`Without ATS metadata:    ${withoutAts}\n`)
+  __slog('📊 Company ATS coverage')
+  __slog('------------------------')
+  __slog(`Total companies:         ${totalCompanies}`)
+  __slog(`With atsProvider+atsUrl: ${withAts}`)
+  __slog(`Without ATS metadata:    ${withoutAts}\n`)
 
   if (withAts === 0) {
-    console.log('⚠️  No companies have ATS metadata. Run enrichAtsMetadata.ts first.')
+    __slog('⚠️  No companies have ATS metadata. Run enrichAtsMetadata.ts first.')
     return
   }
 
@@ -60,29 +65,29 @@ async function main() {
     })
   }
 
-  console.log('📌 Companies by ATS provider')
-  console.log('----------------------------')
+  __slog('📌 Companies by ATS provider')
+  __slog('----------------------------')
   for (const [provider, list] of Object.entries(byProvider)) {
-    console.log(`- ${provider}: ${list.length} companies`)
+    __slog(`- ${provider}: ${list.length} companies`)
   }
-  console.log('')
+  __slog('')
 
   // 3) Test scraping a small sample per provider (NO DB WRITES)
-  console.log('🧪 Testing ATS scrapers (read-only)...')
-  console.log('--------------------------------------')
+  __slog('🧪 Testing ATS scrapers (read-only)...')
+  __slog('--------------------------------------')
 
   for (const [provider, list] of Object.entries(byProvider)) {
     const sample = list.slice(0, 3)
 
-    console.log(`\nProvider: ${provider}`)
+    __slog(`\nProvider: ${provider}`)
     if (sample.length === 0) {
-      console.log('  (no companies to test)')
+      __slog('  (no companies to test)')
       continue
     }
 
     for (const company of sample) {
       try {
-        console.log(
+        __slog(
           `  → ${company.name} (${company.slug ?? company.id}) — ${company.atsUrl}`,
         )
 
@@ -91,25 +96,25 @@ async function main() {
           company.atsUrl,
         )
 
-        console.log(`    Jobs fetched: ${jobs.length}`)
+        __slog(`    Jobs fetched: ${jobs.length}`)
         if (jobs.length > 0) {
           const j = jobs[0]
-          console.log(`    Sample: "${j.title}" — ${j.url}`)
+          __slog(`    Sample: "${j.title}" — ${j.url}`)
         }
       } catch (err: any) {
-        console.log(
+        __slog(
           `    ⚠️ Error scraping: ${err?.message ?? String(err)}`,
         )
       }
     }
   }
 
-  console.log('\n✅ Verification run complete.')
+  __slog('\n✅ Verification run complete.')
 }
 
 main()
   .catch((err) => {
-    console.error(err)
+    __serr(err)
     process.exit(1)
   })
   .finally(async () => {

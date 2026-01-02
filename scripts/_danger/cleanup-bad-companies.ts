@@ -1,10 +1,15 @@
 // scripts/_danger/cleanup-bad-companies.ts
 // Run: npx tsx scripts/_danger/cleanup-bad-companies.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
+
 if (process.env.ALLOW_DANGER !== 'true') {
-  console.error('Refusing to run. Set ALLOW_DANGER=true to proceed.')
+  __serr('Refusing to run. Set ALLOW_DANGER=true to proceed.')
   process.exit(1)
 }
 
@@ -161,7 +166,7 @@ async function main() {
 
 main()
   .catch(e => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(() => prisma.$disconnect())

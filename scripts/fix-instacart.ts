@@ -1,7 +1,12 @@
 // scripts/fix-instacart.ts
 // Run: npx tsx scripts/fix-instacart.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -12,12 +17,12 @@ async function main() {
   })
 
   if (!corrupted) {
-    console.log('No corrupted Instacart record found')
+    __slog('No corrupted Instacart record found')
     return
   }
 
-  console.log('Found corrupted record:', corrupted.id)
-  console.log('Current name:', corrupted.name)
+  __slog('Found corrupted record:', corrupted.id)
+  __slog('Current name:', corrupted.name)
 
   // Fix it
   await prisma.company.update({
@@ -31,14 +36,14 @@ async function main() {
     }
   })
 
-  console.log('✅ Fixed Instacart company record')
+  __slog('✅ Fixed Instacart company record')
 
   // Verify
   const fixed = await prisma.company.findUnique({
     where: { id: corrupted.id },
     select: { id: true, name: true, slug: true, logoUrl: true }
   })
-  console.log('Updated record:', fixed)
+  __slog('Updated record:', fixed)
 }
 
 main()

@@ -2,6 +2,9 @@
 import * as cheerio from 'cheerio'
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { discoverApplyUrlFromPage } from './utils/discoverApplyUrl'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD = '4dayweek'
 const BASE_URL = 'https://4dayweek.io'
@@ -111,17 +114,34 @@ export async function scrapeFourDayWeek() {
         }
       })
 
-      const applyUrl = absolute(normalizedHref)
+      const url = absolute(normalizedHref)
+      let applyUrl = url
+
+      const discoveredApplyUrl = await discoverApplyUrlFromPage(url)
+      if (discoveredApplyUrl && isExternalToHost(discoveredApplyUrl, '4dayweek.io')) {
+        applyUrl = discoveredApplyUrl
+      }
+
+      const atsType = detectATS(applyUrl)
+      const explicitAtsProvider = toAtsProvider(atsType)
+      const explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(applyUrl, atsType) : null
+
+      if (company && isExternalToHost(applyUrl, '4dayweek.io')) {
+        await saveCompanyATS(company, applyUrl, BOARD)
+      }
 
       const result = await upsertBoardJob({
         board: BOARD,
         externalId: normalizedHref.replace(/^\//, ''),
         title,
         company,
+        url,
         applyUrl,
         location,
         salaryText,
         remote: /remote/i.test(location || ''),
+        explicitAtsProvider,
+        explicitAtsUrl,
       })
       addBoardIngestResult(stats, result)
     }

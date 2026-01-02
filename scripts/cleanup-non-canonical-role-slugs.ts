@@ -1,8 +1,13 @@
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
 import { CANONICAL_ROLE_SLUGS } from '../lib/roles/canonicalSlugs'
 
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
+
 async function run() {
-  console.log('Starting cleanup of non-canonical role slugs...')
+  __slog('Starting cleanup of non-canonical role slugs...')
 
   const result = await prisma.job.updateMany({
     where: {
@@ -15,12 +20,12 @@ async function run() {
     },
   })
 
-  console.log(`✅ Cleaned ${result.count} jobs (roleSlug set to NULL)`)
+  __slog(`✅ Cleaned ${result.count} jobs (roleSlug set to NULL)`)
 }
 
 run()
   .catch((err) => {
-    console.error('❌ Cleanup failed:', err)
+    __serr('❌ Cleanup failed:', err)
     process.exit(1)
   })
   .finally(async () => {

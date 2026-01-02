@@ -5,7 +5,12 @@
 // Run:
 //   npx ts-node scripts/bootstrapRoleSalaryBands.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -24,7 +29,7 @@ function roleLabelFromSlug(slug: string): string {
 }
 
 async function main() {
-  console.log('🔧 Bootstrapping JobSlice for role + salary bands...\n')
+  __slog('🔧 Bootstrapping JobSlice for role + salary bands...\n')
 
   // summary counters
   let rolesProcessed = 0
@@ -44,7 +49,7 @@ async function main() {
   })
 
   if (roles.length === 0) {
-    console.log('No live roles found. Nothing to do.')
+    __slog('No live roles found. Nothing to do.')
     await prisma.$disconnect()
     return
   }
@@ -117,27 +122,27 @@ async function main() {
   }
 
   // final summary
-  console.log('\n==============================')
-  console.log('📊 SUMMARY')
-  console.log('==============================')
-  console.log(`Roles processed:        ${rolesProcessed}`)
-  console.log(`Slices created:         ${createdCount}`)
-  console.log(`Slices updated:         ${updatedCount}`)
-  console.log(`Slices skipped (empty): ${skippedEmpty}`)
-  console.log(`Total touched slugs:    ${touchedSlugs.length}`)
+  __slog('\n==============================')
+  __slog('📊 SUMMARY')
+  __slog('==============================')
+  __slog(`Roles processed:        ${rolesProcessed}`)
+  __slog(`Slices created:         ${createdCount}`)
+  __slog(`Slices updated:         ${updatedCount}`)
+  __slog(`Slices skipped (empty): ${skippedEmpty}`)
+  __slog(`Total touched slugs:    ${touchedSlugs.length}`)
 
-  console.log('\nExample slugs:')
-  touchedSlugs.slice(0, 10).forEach((slug) => console.log(`  - ${slug}`))
+  __slog('\nExample slugs:')
+  touchedSlugs.slice(0, 10).forEach((slug) => __slog(`  - ${slug}`))
   if (touchedSlugs.length > 10) {
-    console.log(`  ... +${touchedSlugs.length - 10} more`)
+    __slog(`  ... +${touchedSlugs.length - 10} more`)
   }
 
-  console.log('\n✅ Done.')
+  __slog('\n✅ Done.')
   await prisma.$disconnect()
 }
 
 main().catch((err) => {
-  console.error('Error:', err)
+  __serr('Error:', err)
   prisma.$disconnect()
   process.exit(1)
 })

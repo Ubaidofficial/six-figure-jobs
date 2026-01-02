@@ -2,8 +2,13 @@
 // Discovers companies from Y Combinator and other sources
 // Works with CURRENT schema (no CompanySource model yet)
 
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
 import slugify from 'slugify'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 interface DiscoveredCompany {
   name: string
@@ -79,7 +84,7 @@ function getCountryCode(country: string | null | undefined): string | null {
  * Scrape Y Combinator companies from their public Algolia API
  */
 export async function discoverYCombinatorCompanies(): Promise<DiscoveredCompany[]> {
-  console.log('[YC] Fetching Y Combinator companies...')
+  __slog('[YC] Fetching Y Combinator companies...')
   
   const companies: DiscoveredCompany[] = []
   const seenNames = new Set<string>()
@@ -91,7 +96,7 @@ export async function discoverYCombinatorCompanies(): Promise<DiscoveredCompany[
     
     // Fetch multiple pages
     for (let page = 0; page < 10; page++) {
-      console.log(`[YC] Fetching page ${page + 1}...`)
+      __slog(`[YC] Fetching page ${page + 1}...`)
       
       const response = await fetch('https://45bwzj1sgc-dsn.algolia.net/1/indexes/*/queries', {
         method: 'POST',
@@ -109,7 +114,7 @@ export async function discoverYCombinatorCompanies(): Promise<DiscoveredCompany[
       })
 
       if (!response.ok) {
-        console.error(`[YC] API error on page ${page}: ${response.status}`)
+        __serr(`[YC] API error on page ${page}: ${response.status}`)
         break
       }
 
@@ -117,11 +122,11 @@ export async function discoverYCombinatorCompanies(): Promise<DiscoveredCompany[
       const hits = data.results?.[0]?.hits || []
       
       if (hits.length === 0) {
-        console.log(`[YC] No more results after page ${page}`)
+        __slog(`[YC] No more results after page ${page}`)
         break
       }
 
-      console.log(`[YC] Page ${page + 1}: ${hits.length} companies`)
+      __slog(`[YC] Page ${page + 1}: ${hits.length} companies`)
 
       for (const hit of hits) {
         // Skip duplicates
@@ -156,10 +161,10 @@ export async function discoverYCombinatorCompanies(): Promise<DiscoveredCompany[
     }
 
   } catch (err) {
-    console.error('[YC] Error fetching companies:', err)
+    __serr('[YC] Error fetching companies:', err)
   }
 
-  console.log(`[YC] Total unique companies discovered: ${companies.length}`)
+  __slog(`[YC] Total unique companies discovered: ${companies.length}`)
   return companies
 }
 
@@ -227,7 +232,7 @@ export async function importCompanies(companies: DiscoveredCompany[]): Promise<{
         // Duplicate slug - skip
         skipped++
       } else {
-        console.error(`[Import] Error with ${company.name}:`, err?.message)
+        __serr(`[Import] Error with ${company.name}:`, err?.message)
         skipped++
       }
     }
@@ -240,24 +245,24 @@ export async function importCompanies(companies: DiscoveredCompany[]): Promise<{
  * Main discovery function
  */
 export async function runCompanyDiscovery() {
-  console.log('===========================================')
-  console.log('       COMPANY DISCOVERY PIPELINE')
-  console.log('===========================================\n')
+  __slog('===========================================')
+  __slog('       COMPANY DISCOVERY PIPELINE')
+  __slog('===========================================\n')
 
   const startTime = Date.now()
 
   // 1. Y Combinator companies
-  console.log('--- Source: Y Combinator ---')
+  __slog('--- Source: Y Combinator ---')
   const ycCompanies = await discoverYCombinatorCompanies()
   
   // Filter to only companies with ATS URLs (these are the ones we can scrape)
   const companiesWithAts = ycCompanies.filter(c => c.atsUrl && c.atsProvider)
-  console.log(`[YC] Companies with detectable ATS: ${companiesWithAts.length}`)
+  __slog(`[YC] Companies with detectable ATS: ${companiesWithAts.length}`)
   
   // Import all companies (even without ATS, they're still useful)
   const ycResults = await importCompanies(ycCompanies)
-  console.log(`[YC] Created: ${ycResults.created}, Updated: ${ycResults.updated}, Skipped: ${ycResults.skipped}`)
-  console.log('')
+  __slog(`[YC] Created: ${ycResults.created}, Updated: ${ycResults.updated}, Skipped: ${ycResults.skipped}`)
+  __slog('')
 
   // Final stats
   const totalCompanies = await prisma.company.count()
@@ -270,13 +275,13 @@ export async function runCompanyDiscovery() {
 
   const duration = ((Date.now() - startTime) / 1000).toFixed(1)
 
-  console.log('===========================================')
-  console.log('           DISCOVERY COMPLETE')
-  console.log('===========================================')
-  console.log(`Total Companies in DB: ${totalCompanies}`)
-  console.log(`Companies with ATS:    ${withAts}`)
-  console.log(`Duration:              ${duration}s`)
-  console.log('===========================================')
+  __slog('===========================================')
+  __slog('           DISCOVERY COMPLETE')
+  __slog('===========================================')
+  __slog(`Total Companies in DB: ${totalCompanies}`)
+  __slog(`Companies with ATS:    ${withAts}`)
+  __slog(`Duration:              ${duration}s`)
+  __slog('===========================================')
 }
 
 // Run if executed directly
@@ -284,7 +289,7 @@ if (require.main === module) {
   runCompanyDiscovery()
     .then(() => process.exit(0))
     .catch((err) => {
-      console.error('Discovery failed:', err)
+      __serr('Discovery failed:', err)
       process.exit(1)
     })
 }

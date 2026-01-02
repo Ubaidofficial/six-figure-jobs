@@ -10,7 +10,12 @@
 //   - Upsert JobSlice rows with slug = "jobs/<roleSlug>/100k-plus"
 //   - Print a short summary (role count + coverage)
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -30,7 +35,7 @@ function labelFromSlug(slug: string): string {
 }
 
 async function main() {
-  console.log('🔧 Bootstrapping JobSlice records for ALL inferred roles ($100k+)...\n')
+  __slog('🔧 Bootstrapping JobSlice records for ALL inferred roles ($100k+)...\n')
 
   // 1) Group jobs by roleSlug with salary >= MIN_SALARY
   const grouped = await prisma.job.groupBy({
@@ -53,12 +58,12 @@ async function main() {
     .sort((a, b) => b._count._all - a._count._all)
 
   if (roles.length === 0) {
-    console.log('⚠️ No roles found with enough $100k+ jobs. Nothing to do.')
+    __slog('⚠️ No roles found with enough $100k+ jobs. Nothing to do.')
     await prisma.$disconnect()
     return
   }
 
-  console.log(
+  __slog(
     `Found ${grouped.length} distinct roles with $100k+ jobs, ` +
       `${roles.length} have >= ${MIN_ROLE_JOBS} jobs.\n`
   )
@@ -102,33 +107,33 @@ async function main() {
 
     processed++
     if (processed <= 20) {
-      console.log(`✓ ${fullSlug} — jobCount=${jobCount}`)
+      __slog(`✓ ${fullSlug} — jobCount=${jobCount}`)
     }
   }
 
   // 2) Short summary so you don't have to paste long logs
-  console.log('\n📊 Summary')
-  console.log('----------')
-  console.log(`Roles processed: ${processed}`)
-  console.log(`Min jobs per role: ${MIN_ROLE_JOBS}`)
-  console.log(`Total $100k+ jobs covered across slices: ${totalJobsCovered}`)
+  __slog('\n📊 Summary')
+  __slog('----------')
+  __slog(`Roles processed: ${processed}`)
+  __slog(`Min jobs per role: ${MIN_ROLE_JOBS}`)
+  __slog(`Total $100k+ jobs covered across slices: ${totalJobsCovered}`)
 
   // Show top 10 roles by job count
   const top10 = roles.slice(0, 10)
-  console.log('\nTop 10 roles by $100k+ job count:')
+  __slog('\nTop 10 roles by $100k+ job count:')
   top10.forEach((r, idx) => {
     const label = labelFromSlug(r.roleSlug as string)
-    console.log(
+    __slog(
       `${idx + 1}. ${label} (${r.roleSlug}) — ${r._count._all} jobs`
     )
   })
 
   await prisma.$disconnect()
-  console.log('\n✅ Done seeding JobSlice role pages for all inferred roles.')
+  __slog('\n✅ Done seeding JobSlice role pages for all inferred roles.')
 }
 
 main().catch((err) => {
-  console.error('Error bootstrapping all role slices:', err)
+  __serr('Error bootstrapping all role slices:', err)
   prisma.$disconnect()
   process.exit(1)
 })

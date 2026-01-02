@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 // US State codes
@@ -17,7 +22,7 @@ async function main() {
     select: { id: true, locationRaw: true }
   })
 
-  console.log(`Found ${jobs.length} US jobs without countryCode`)
+  __slog(`Found ${jobs.length} US jobs without countryCode`)
 
   // Update them
   const updated = await prisma.job.updateMany({
@@ -27,7 +32,7 @@ async function main() {
     data: { countryCode: 'US' }
   })
 
-  console.log(`Updated ${updated.count} jobs to countryCode=US`)
+  __slog(`Updated ${updated.count} jobs to countryCode=US`)
 
   // Verify
   const sample = await prisma.job.findMany({
@@ -35,8 +40,8 @@ async function main() {
     take: 3,
     select: { title: true, locationRaw: true, countryCode: true }
   })
-  console.log('\nSample Anthropic US jobs:')
-  sample.forEach(j => console.log(`  ${j.title} | ${j.locationRaw} | ${j.countryCode}`))
+  __slog('\nSample Anthropic US jobs:')
+  sample.forEach(j => __slog(`  ${j.title} | ${j.locationRaw} | ${j.countryCode}`))
 
   await prisma.$disconnect()
 }

@@ -1,8 +1,13 @@
 // scripts/_danger/generateJobSlices.ts
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
+
 if (process.env.ALLOW_DANGER !== 'true') {
-  console.error('Refusing to run. Set ALLOW_DANGER=true to proceed.')
+  __serr('Refusing to run. Set ALLOW_DANGER=true to proceed.')
   process.exit(1)
 }
 
@@ -28,17 +33,17 @@ function bandWhere(band: number) {
 }
 
 async function main() {
-  console.log('Generating JobSlices with SEO-optimized slugs…')
+  __slog('Generating JobSlices with SEO-optimized slugs…')
 
   // Start clean so we don't mix old slug patterns with new ones
   await prisma.jobSlice.deleteMany()
-  console.log('Cleared existing JobSlices.')
+  __slog('Cleared existing JobSlices.')
 
   await generateGlobalSalarySlices()
   await generateRoleCountrySlices()
   await generateCountryAllRolesSlices()
 
-  console.log('JobSlices generated.')
+  __slog('JobSlices generated.')
 }
 
 /* -------------------------------------------------------
@@ -179,7 +184,7 @@ async function upsertSlice(args: {
     },
   })
 
-  console.log(`→ upserted slice ${slug} (${jobCount} jobs)`)
+  __slog(`→ upserted slice ${slug} (${jobCount} jobs)`)
 }
 
 /* -------------------------------------------------------
@@ -187,7 +192,7 @@ async function upsertSlice(args: {
 ------------------------------------------------------- */
 main()
   .catch((err) => {
-    console.error(err)
+    __serr(err)
     process.exit(1)
   })
   .finally(async () => {

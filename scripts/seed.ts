@@ -1,6 +1,11 @@
 // scripts/seed.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -757,7 +762,7 @@ const DISCOVERY_COMPANIES: CompanySeed[] = [
 async function main() {
   const ALL = [...COMPANIES, ...DISCOVERY_COMPANIES]
 
-  console.log(`🚀 Seeding ${ALL.length} companies (curated + discovery)...`)
+  __slog(`🚀 Seeding ${ALL.length} companies (curated + discovery)...`)
   let added = 0
   let skipped = 0
 
@@ -776,7 +781,7 @@ async function main() {
           where: { id: existing.id },
           data: { atsUrl: c.ats },
         })
-        console.log(`  Updated ATS for: ${c.name}`)
+        __slog(`  Updated ATS for: ${c.name}`)
       } else {
         skipped++
       }
@@ -834,17 +839,17 @@ async function main() {
       },
     })
 
-    console.log(`  + Added: ${c.name}`)
+    __slog(`  + Added: ${c.name}`)
     added++
   }
 
-  console.log(`\n✅ Done! Added ${added} new companies. Skipped ${skipped} existing.`)
-  console.log(`📊 Total companies in DB: ${await prisma.company.count()}`)
+  __slog(`\n✅ Done! Added ${added} new companies. Skipped ${skipped} existing.`)
+  __slog(`📊 Total companies in DB: ${await prisma.company.count()}`)
 
   await prisma.$disconnect()
 }
 
 main().catch((err) => {
-  console.error(err)
+  __serr(err)
   return prisma.$disconnect()
 })

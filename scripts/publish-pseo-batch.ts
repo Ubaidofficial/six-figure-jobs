@@ -11,7 +11,12 @@
  *   0 2 * * * npm run publish:pseo-batch
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -65,8 +70,8 @@ interface QualityFilterResult {
 // ============================================================================
 
 async function main() {
-  console.log('📊 Six Figure Jobs - pSEO Publishing Script v2.0')
-  console.log('================================================\n')
+  __slog('📊 Six Figure Jobs - pSEO Publishing Script v2.0')
+  __slog('================================================\n')
 
   try {
     // ============================================================================
@@ -74,25 +79,25 @@ async function main() {
     // ============================================================================
 
     const domainAgeWeeks = parseInt(process.env.DOMAIN_AGE_WEEKS || '0', 10)
-    console.log(`📅 Domain Age: ${domainAgeWeeks} weeks`)
+    __slog(`📅 Domain Age: ${domainAgeWeeks} weeks`)
 
     if (domainAgeWeeks < 2) {
-      console.log('\n🚨 DOMAIN TOO NEW (<2 weeks old)')
-      console.log('⚠️  Publishing is DISABLED for new domains')
-      console.log('📊 Current Strategy: Monitor GSC indexing only')
-      console.log('\n✅ What to do:')
-      console.log('   1. Check GSC → Pages → Coverage daily')
-      console.log('   2. Wait for 30-50% coverage (2-5k pages)')
-      console.log('   3. Set DOMAIN_AGE_WEEKS=3 on Dec 19')
-      console.log('   4. Set PSEO_ENABLED=true when ready')
-      console.log('\n🎯 Target: Week 3 (Dec 27) for first publishing\n')
+      __slog('\n🚨 DOMAIN TOO NEW (<2 weeks old)')
+      __slog('⚠️  Publishing is DISABLED for new domains')
+      __slog('📊 Current Strategy: Monitor GSC indexing only')
+      __slog('\n✅ What to do:')
+      __slog('   1. Check GSC → Pages → Coverage daily')
+      __slog('   2. Wait for 30-50% coverage (2-5k pages)')
+      __slog('   3. Set DOMAIN_AGE_WEEKS=3 on Dec 19')
+      __slog('   4. Set PSEO_ENABLED=true when ready')
+      __slog('\n🎯 Target: Week 3 (Dec 27) for first publishing\n')
       return
     }
 
     if (domainAgeWeeks < 4) {
-      console.log('⚠️  ULTRA CONSERVATIVE MODE (Domain 2-4 weeks)')
-      console.log('📊 Max Rate: 2 pages/day, 10 pages/week')
-      console.log('🎯 Min Quality: 100+ jobs per page only\n')
+      __slog('⚠️  ULTRA CONSERVATIVE MODE (Domain 2-4 weeks)')
+      __slog('📊 Max Rate: 2 pages/day, 10 pages/week')
+      __slog('🎯 Min Quality: 100+ jobs per page only\n')
     }
 
     // ============================================================================
@@ -100,19 +105,19 @@ async function main() {
     // ============================================================================
 
     if (process.env.PSEO_ENABLED !== 'true') {
-      console.log('❌ Publishing DISABLED (PSEO_ENABLED=false)\n')
-      console.log('Before enabling, verify ALL of the following:')
-      console.log('  ✅ Domain age: ≥3 weeks')
-      console.log('  ✅ GSC Manual Actions: 0 (zero)')
-      console.log('  ✅ GSC Coverage: >30%')
-      console.log('  ✅ Coverage trend: Stable or growing')
-      console.log('  ✅ No sudden drops (>10%) in past week')
-      console.log('  ✅ Quality gates tested on staging\n')
-      console.log('📋 Steps to enable:')
-      console.log('  1. Set DOMAIN_AGE_WEEKS=3 (or higher)')
-      console.log('  2. Set PSEO_ENABLED=true in .env.local')
-      console.log('  3. Run this script')
-      console.log('  4. Monitor GSC closely for 3 days\n')
+      __slog('❌ Publishing DISABLED (PSEO_ENABLED=false)\n')
+      __slog('Before enabling, verify ALL of the following:')
+      __slog('  ✅ Domain age: ≥3 weeks')
+      __slog('  ✅ GSC Manual Actions: 0 (zero)')
+      __slog('  ✅ GSC Coverage: >30%')
+      __slog('  ✅ Coverage trend: Stable or growing')
+      __slog('  ✅ No sudden drops (>10%) in past week')
+      __slog('  ✅ Quality gates tested on staging\n')
+      __slog('📋 Steps to enable:')
+      __slog('  1. Set DOMAIN_AGE_WEEKS=3 (or higher)')
+      __slog('  2. Set PSEO_ENABLED=true in .env.local')
+      __slog('  3. Run this script')
+      __slog('  4. Monitor GSC closely for 3 days\n')
       return
     }
 
@@ -185,12 +190,12 @@ async function main() {
       currentPhase = PHASE_CONFIG[1]
     }
 
-    console.log(`\n📈 Current Phase: ${currentPhase.phase}`)
-    console.log(`   Weeks: ${currentPhase.weeks}`)
-    console.log(`   Description: ${currentPhase.description}`)
-    console.log(`   Max per day: ${currentPhase.maxPagesPerDay} pages`)
-    console.log(`   Max per week: ${currentPhase.maxPagesPerWeek} pages`)
-    console.log(`   Min jobs/page: ${currentPhase.minJobsPerPage}\n`)
+    __slog(`\n📈 Current Phase: ${currentPhase.phase}`)
+    __slog(`   Weeks: ${currentPhase.weeks}`)
+    __slog(`   Description: ${currentPhase.description}`)
+    __slog(`   Max per day: ${currentPhase.maxPagesPerDay} pages`)
+    __slog(`   Max per week: ${currentPhase.maxPagesPerWeek} pages`)
+    __slog(`   Min jobs/page: ${currentPhase.minJobsPerPage}\n`)
 
     // ============================================================================
     // PHASE 4: REAL TRACKING (Replace placeholder "0" values)
@@ -198,23 +203,23 @@ async function main() {
 
     const budget = await getPublishingBudget(currentPhase)
 
-    console.log('📊 Publishing Activity:')
-    console.log(`   Today: ${budget.publishedToday} / ${currentPhase.maxPagesPerDay}`)
-    console.log(
+    __slog('📊 Publishing Activity:')
+    __slog(`   Today: ${budget.publishedToday} / ${currentPhase.maxPagesPerDay}`)
+    __slog(
       `   This week: ${budget.publishedThisWeek} / ${currentPhase.maxPagesPerWeek}\n`,
     )
 
     if (budget.remainingToday <= 0) {
-      console.log('❌ Daily limit reached. Stopping.')
-      console.log(
+      __slog('❌ Daily limit reached. Stopping.')
+      __slog(
         `   Come back tomorrow (max ${currentPhase.maxPagesPerDay}/day)\n`,
       )
       return
     }
 
     if (budget.remainingThisWeek <= 0) {
-      console.log('❌ Weekly limit reached. Stopping.')
-      console.log(
+      __slog('❌ Weekly limit reached. Stopping.')
+      __slog(
         `   Wait until next week (max ${currentPhase.maxPagesPerWeek}/week)\n`,
       )
       return
@@ -222,60 +227,60 @@ async function main() {
 
     const batchSize = Math.min(budget.remainingToday, budget.remainingThisWeek)
 
-    console.log(`✅ Can publish up to ${batchSize} pages today\n`)
+    __slog(`✅ Can publish up to ${batchSize} pages today\n`)
 
     // Step 1: Get candidate pages to publish
     const candidates = await getCandidatePages(currentPhase)
-    console.log(`📋 Found ${candidates.length} candidate pages`)
+    __slog(`📋 Found ${candidates.length} candidate pages`)
 
     if (candidates.length === 0) {
-      console.log('⚠️  No pages ready to publish today')
+      __slog('⚠️  No pages ready to publish today')
       return
     }
 
     // Step 2: Filter by quality gates
     const qualified = await filterByQuality(candidates, currentPhase)
-    console.log(`✅ ${qualified.passed.length} pages passed quality gates`)
-    console.log(`❌ ${qualified.failed.length} pages failed quality gates`)
+    __slog(`✅ ${qualified.passed.length} pages passed quality gates`)
+    __slog(`❌ ${qualified.failed.length} pages failed quality gates`)
 
     if (qualified.failed.length > 0) {
-      console.log('')
-      console.log('   Failed pages:')
+      __slog('')
+      __slog('   Failed pages:')
       qualified.failed.forEach(f => {
-        console.log(`     - ${f.slug}: ${f.reasons.join(', ')}`)
+        __slog(`     - ${f.slug}: ${f.reasons.join(', ')}`)
       })
     }
-    console.log('')
+    __slog('')
 
     // Step 3: Publish pages (up to daily + weekly limit)
     const toPublish = qualified.passed.slice(0, batchSize)
-    console.log(`🚀 Publishing ${toPublish.length} pages today`)
-    console.log('')
+    __slog(`🚀 Publishing ${toPublish.length} pages today`)
+    __slog('')
 
     let published = 0
     for (const page of toPublish) {
       try {
-        console.log(`   Publishing: ${page.url}`)
+        __slog(`   Publishing: ${page.url}`)
         await publishPage(page)
         published++
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        console.error(`   ❌ Failed: ${message}`)
+        __serr(`   ❌ Failed: ${message}`)
       }
     }
 
     // Step 6: Update sitemap
-    console.log('')
-    console.log('🗺️  Note: Run `npm run generate:sitemap` to update sitemap.xml')
+    __slog('')
+    __slog('🗺️  Note: Run `npm run generate:sitemap` to update sitemap.xml')
 
     // Done!
-    console.log('')
-    console.log('='.repeat(80))
-    console.log(`✅ Publishing complete! ${published} pages published`)
-    console.log('='.repeat(80))
+    __slog('')
+    __slog('='.repeat(80))
+    __slog(`✅ Publishing complete! ${published} pages published`)
+    __slog('='.repeat(80))
 
   } catch (error) {
-    console.error('❌ Fatal error:', error)
+    __serr('❌ Fatal error:', error)
     process.exit(1)
   } finally {
     await prisma.$disconnect()
@@ -470,7 +475,7 @@ async function publishPage(page: PageCandidate) {
   // 3. Updating the sitemap
   // 4. Notifying Google
 
-  console.log(`   ✅ Published ${page.type}/${page.slug} (${page.jobCount} jobs)`)
+  __slog(`   ✅ Published ${page.type}/${page.slug} (${page.jobCount} jobs)`)
 }
 
 // ============================================================================
@@ -480,6 +485,6 @@ async function publishPage(page: PageCandidate) {
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error)
+    __serr(error)
     process.exit(1)
   })

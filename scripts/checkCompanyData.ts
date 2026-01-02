@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -12,10 +17,10 @@ async function main() {
     where: { logoUrl: { not: null } }
   })
   
-  console.log('Company data stats:')
-  console.log('  Total companies:', total)
-  console.log('  With description:', withDesc)
-  console.log('  With logo:', withLogo)
+  __slog('Company data stats:')
+  __slog('  Total companies:', total)
+  __slog('  With description:', withDesc)
+  __slog('  With logo:', withLogo)
   
   await prisma.$disconnect()
 }

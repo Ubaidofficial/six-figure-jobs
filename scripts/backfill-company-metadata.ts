@@ -3,9 +3,14 @@
 //   npx tsx scripts/backfill-company-metadata.ts --limit 100
 //   npx tsx scripts/backfill-company-metadata.ts --dry-run
 
+import { format as __format } from 'node:util'
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 import { enrichCompanyWithAI } from '../lib/ai/companyEnricher'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -88,7 +93,7 @@ function mergeBenefitTags(existing: string[], benefits: {
 async function main() {
   const { dryRun, limit } = parseArgs(process.argv.slice(2))
 
-  console.log(`🏢 Backfill company metadata (dryRun=${dryRun}${limit ? `, limit=${limit}` : ''})`)
+  __slog(`🏢 Backfill company metadata (dryRun=${dryRun}${limit ? `, limit=${limit}` : ''})`)
 
   const companies = await prisma.company.findMany({
     where: {
@@ -106,7 +111,7 @@ async function main() {
     ...(limit ? { take: limit } : {}),
   })
 
-  console.log(`Found ${companies.length.toLocaleString()} companies missing size/industry.`)
+  __slog(`Found ${companies.length.toLocaleString()} companies missing size/industry.`)
   if (!companies.length) return
 
   let processed = 0
@@ -165,7 +170,7 @@ async function main() {
       }
 
       if (dryRun) {
-        console.log(
+        __slog(
           `➡️ [DRY RUN] ${company.name} (${company.slug}) size=${company.sizeBucket ?? '∅'}→${nextSize ?? '∅'} industry=${company.industry ?? '∅'}→${nextIndustry ?? '∅'} tags+benefits=${nextTags.length}`,
         )
         updated++
@@ -195,24 +200,24 @@ async function main() {
       }
     } catch (err: any) {
       failed++
-      console.error(`❌ ${company.name} (${company.slug}): ${err?.message || err}`)
+      __serr(`❌ ${company.name} (${company.slug}): ${err?.message || err}`)
     }
 
     if (processed % 10 === 0) {
-      console.log(
+      __slog(
         `[progress] processed=${processed}/${companies.length} updated=${updated} skippedNoJob=${skippedNoJob} skippedNoChanges=${skippedNoChanges} failed=${failed}`,
       )
     }
   }
 
-  console.log(
+  __slog(
     `Done. processed=${processed} updated=${updated} skippedNoJob=${skippedNoJob} skippedNoChanges=${skippedNoChanges} failed=${failed}`,
   )
 }
 
 main()
   .catch((err) => {
-    console.error(err)
+    __serr(err)
     process.exitCode = 1
   })
   .finally(async () => {

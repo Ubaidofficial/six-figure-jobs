@@ -1,5 +1,10 @@
 // scripts/setTestJobSalary.ts
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -15,11 +20,11 @@ async function main() {
   })
 
   if (!job) {
-    console.error('No ATS jobs found to update')
+    __serr('No ATS jobs found to update')
     return
   }
 
-  console.log('Updating job:', {
+  __slog('Updating job:', {
     id: job.id,
     title: job.title,
     roleSlug: job.roleSlug,
@@ -45,7 +50,7 @@ async function main() {
     },
   })
 
-  console.log('Updated row:', {
+  __slog('Updated row:', {
     id: updated.id,
     roleSlug: updated.roleSlug,
     minAnnual: updated.minAnnual?.toString(),
@@ -56,7 +61,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
   })
   .finally(async () => {
     await prisma.$disconnect()

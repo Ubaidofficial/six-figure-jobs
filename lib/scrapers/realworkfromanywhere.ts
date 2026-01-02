@@ -2,6 +2,8 @@
 import * as cheerio from 'cheerio'
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD = 'realworkfromanywhere'
 const BASE_URL = 'https://www.realworkfromanywhere.com'
@@ -87,14 +89,25 @@ export async function scrapeRealWorkFromAnywhere(): Promise<ScraperStats> {
             .first()
             .attr('href') || url
 
+        const atsType = detectATS(applyHref)
+        const explicitAtsProvider = toAtsProvider(atsType)
+        const explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(applyHref, atsType) : null
+
+        if (company && isExternalToHost(applyHref, 'realworkfromanywhere.com')) {
+          await saveCompanyATS(company, applyHref, BOARD)
+        }
+
         const externalId = href.replace(/^\/jobs\//, '')
         const result = await upsertBoardJob({
           board: BOARD,
           externalId,
           title,
           company,
+          url,
           applyUrl: applyHref,
           location,
+          explicitAtsProvider,
+          explicitAtsUrl,
         })
         addBoardIngestResult(stats, result)
       } catch (err) {

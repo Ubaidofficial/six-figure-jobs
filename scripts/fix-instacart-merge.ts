@@ -1,7 +1,12 @@
 // scripts/fix-instacart-merge.ts
 // Run: npx tsx scripts/fix-instacart-merge.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -17,8 +22,8 @@ async function main() {
     select: { id: true, name: true, slug: true, logoUrl: true, website: true }
   })
 
-  console.log('Found Instacart records:', instacarts.length)
-  instacarts.forEach(c => console.log(`  - ${c.id}: ${c.name?.slice(0, 40)}... | logo: ${c.logoUrl ? 'YES' : 'NO'}`))
+  __slog('Found Instacart records:', instacarts.length)
+  instacarts.forEach(c => __slog(`  - ${c.id}: ${c.name?.slice(0, 40)}... | logo: ${c.logoUrl ? 'YES' : 'NO'}`))
 
   // Find the one with the logo
   const withLogo = instacarts.find(c => c.logoUrl)
@@ -29,16 +34,16 @@ async function main() {
   })
 
   if (!jobsLinkedTo?.companyId) {
-    console.log('No jobs linked to Instacart')
+    __slog('No jobs linked to Instacart')
     return
   }
 
   const primaryId = jobsLinkedTo.companyId
-  console.log('\nJobs are linked to:', primaryId)
+  __slog('\nJobs are linked to:', primaryId)
 
   // Update the primary record with logo from the other
   if (withLogo && withLogo.id !== primaryId) {
-    console.log(`\nCopying logo from ${withLogo.id} to ${primaryId}`)
+    __slog(`\nCopying logo from ${withLogo.id} to ${primaryId}`)
     
     await prisma.company.update({
       where: { id: primaryId },
@@ -48,16 +53,16 @@ async function main() {
         description: 'A grocery technology platform connecting consumers with retailers through online shopping, delivery, and pickup services.',
       }
     })
-    console.log('✅ Updated primary Instacart record with logo')
+    __slog('✅ Updated primary Instacart record with logo')
 
     // Delete the duplicate
     await prisma.company.delete({
       where: { id: withLogo.id }
     })
-    console.log('✅ Deleted duplicate record:', withLogo.id)
+    __slog('✅ Deleted duplicate record:', withLogo.id)
   } else if (!withLogo) {
     // No logo anywhere, set a known good one
-    console.log('\nNo logo found, setting known Instacart logo...')
+    __slog('\nNo logo found, setting known Instacart logo...')
     await prisma.company.update({
       where: { id: primaryId },
       data: {
@@ -66,7 +71,7 @@ async function main() {
         description: 'A grocery technology platform connecting consumers with retailers through online shopping, delivery, and pickup services.',
       }
     })
-    console.log('✅ Set Instacart logo from Clearbit')
+    __slog('✅ Set Instacart logo from Clearbit')
   }
 
   // Verify
@@ -74,7 +79,7 @@ async function main() {
     where: { id: primaryId },
     select: { id: true, name: true, slug: true, logoUrl: true, website: true }
   })
-  console.log('\nFinal record:', fixed)
+  __slog('\nFinal record:', fixed)
 }
 
 main()

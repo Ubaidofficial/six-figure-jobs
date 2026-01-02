@@ -1,5 +1,10 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { scrapeGreenhouse } from '../lib/scrapers/ats/greenhouse'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -13,23 +18,23 @@ async function test() {
   })
   
   for (const company of companies) {
-    console.log(`\nTesting ${company.name} (${company.atsUrl})...`)
+    __slog(`\nTesting ${company.name} (${company.atsUrl})...`)
     
     const jobs = await scrapeGreenhouse(company.atsUrl!)
     
     if (jobs.length > 0) {
-      console.log(`✅ SUCCESS! Got ${jobs.length} jobs`)
-      console.log('Testing first job...')
+      __slog(`✅ SUCCESS! Got ${jobs.length} jobs`)
+      __slog('Testing first job...')
       
       const job = jobs[0]
       const content = (job.raw as any)?.content
       
-      console.log('Title:', job.title)
-      console.log('Has content?', !!content)
+      __slog('Title:', job.title)
+      __slog('Has content?', !!content)
       
       if (content) {
-        console.log('Content length:', content.length)
-        console.log('First 200 chars:', content.substring(0, 200))
+        __slog('Content length:', content.length)
+        __slog('First 200 chars:', content.substring(0, 200))
         break
       }
     }

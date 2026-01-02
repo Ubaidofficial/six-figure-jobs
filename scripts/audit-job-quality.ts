@@ -1,12 +1,17 @@
 // scripts/audit-job-quality.ts
 // Comprehensive data quality audit
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🔍 SixFigureJobs Data Quality Audit')
-  console.log('====================================\n')
+  __slog('🔍 SixFigureJobs Data Quality Audit')
+  __slog('====================================\n')
 
   // Get recent jobs (last 7 days)
   const recentJobs = await prisma.job.findMany({
@@ -46,10 +51,10 @@ async function main() {
     take: 1000
   })
 
-  console.log(`📊 Sample Size: ${recentJobs.length} jobs (last 7 days)\n`)
+  __slog(`📊 Sample Size: ${recentJobs.length} jobs (last 7 days)\n`)
 
   if (recentJobs.length === 0) {
-    console.log('⚠️  No jobs found in last 7 days. Checking all time...\n')
+    __slog('⚠️  No jobs found in last 7 days. Checking all time...\n')
     
     const allJobs = await prisma.job.findMany({
       where: { isExpired: false },
@@ -70,49 +75,49 @@ async function main() {
       orderBy: { createdAt: 'desc' }
     })
     
-    console.log(`Found ${allJobs.length} total active jobs`)
+    __slog(`Found ${allJobs.length} total active jobs`)
     if (allJobs.length > 0) {
-      console.log(`Most recent job: ${allJobs[0].createdAt}`)
+      __slog(`Most recent job: ${allJobs[0].createdAt}`)
     }
     return
   }
 
   // 1. AI ENRICHMENT AUDIT
-  console.log('🤖 AI ENRICHMENT STATUS')
-  console.log('========================')
+  __slog('🤖 AI ENRICHMENT STATUS')
+  __slog('========================')
   
   const aiEnriched = recentJobs.filter(j => j.aiOneLiner)
   const aiEnrichedPercent = ((aiEnriched.length / recentJobs.length) * 100).toFixed(1)
   
-  console.log(`AI Enriched: ${aiEnriched.length}/${recentJobs.length} (${aiEnrichedPercent}%)`)
-  console.log(`- aiOneLiner: ${recentJobs.filter(j => j.aiOneLiner).length}`)
-  console.log(`- aiSnippet: ${recentJobs.filter(j => j.aiSnippet).length}`)
-  console.log(`- aiSummaryJson: ${recentJobs.filter(j => j.aiSummaryJson).length}`)
-  console.log(`- aiEnrichedAt: ${recentJobs.filter(j => j.aiEnrichedAt).length}\n`)
+  __slog(`AI Enriched: ${aiEnriched.length}/${recentJobs.length} (${aiEnrichedPercent}%)`)
+  __slog(`- aiOneLiner: ${recentJobs.filter(j => j.aiOneLiner).length}`)
+  __slog(`- aiSnippet: ${recentJobs.filter(j => j.aiSnippet).length}`)
+  __slog(`- aiSummaryJson: ${recentJobs.filter(j => j.aiSummaryJson).length}`)
+  __slog(`- aiEnrichedAt: ${recentJobs.filter(j => j.aiEnrichedAt).length}\n`)
 
   if (aiEnriched.length > 0) {
     const sample = aiEnriched[0]
-    console.log('Sample AI Enrichment:')
-    console.log(`  Job: ${sample.title}`)
-    console.log(`  OneLiner: ${sample.aiOneLiner?.slice(0, 100)}...`)
-    console.log(`  Snippet: ${sample.aiSnippet?.slice(0, 100)}...`)
+    __slog('Sample AI Enrichment:')
+    __slog(`  Job: ${sample.title}`)
+    __slog(`  OneLiner: ${sample.aiOneLiner?.slice(0, 100)}...`)
+    __slog(`  Snippet: ${sample.aiSnippet?.slice(0, 100)}...`)
     if (sample.aiSummaryJson) {
-      console.log(`  Summary: ${JSON.stringify(sample.aiSummaryJson).slice(0, 100)}...\n`)
+      __slog(`  Summary: ${JSON.stringify(sample.aiSummaryJson).slice(0, 100)}...\n`)
     }
   } else {
-    console.log('⚠️  No AI-enriched jobs found. AI enrichment may not be running.\n')
+    __slog('⚠️  No AI-enriched jobs found. AI enrichment may not be running.\n')
   }
 
   // 2. SALARY DATA AUDIT
-  console.log('💰 SALARY DATA QUALITY')
-  console.log('=======================')
+  __slog('💰 SALARY DATA QUALITY')
+  __slog('=======================')
   
   const withSalary = recentJobs.filter(j => j.minAnnual && j.maxAnnual)
   const salaryPercent = ((withSalary.length / recentJobs.length) * 100).toFixed(1)
   
-  console.log(`With Salary: ${withSalary.length}/${recentJobs.length} (${salaryPercent}%)`)
-  console.log(`Salary Validated: ${recentJobs.filter(j => j.salaryValidated).length}`)
-  console.log(`Salary Confidence > 0: ${recentJobs.filter(j => j.salaryConfidence && j.salaryConfidence > 0).length}`)
+  __slog(`With Salary: ${withSalary.length}/${recentJobs.length} (${salaryPercent}%)`)
+  __slog(`Salary Validated: ${recentJobs.filter(j => j.salaryValidated).length}`)
+  __slog(`Salary Confidence > 0: ${recentJobs.filter(j => j.salaryConfidence && j.salaryConfidence > 0).length}`)
   
   // Currency breakdown
   const currencyBreakdown: Record<string, number> = {}
@@ -121,11 +126,11 @@ async function main() {
     currencyBreakdown[curr] = (currencyBreakdown[curr] || 0) + 1
   })
   
-  console.log('\nCurrency Breakdown:')
+  __slog('\nCurrency Breakdown:')
   Object.entries(currencyBreakdown)
     .sort((a, b) => b[1] - a[1])
     .forEach(([curr, count]) => {
-      console.log(`  ${curr}: ${count}`)
+      __slog(`  ${curr}: ${count}`)
     })
 
   // Salary ranges
@@ -137,59 +142,59 @@ async function main() {
       '300k+': withSalary.filter(j => j.minAnnual! >= 300000n).length,
     }
     
-    console.log('\nSalary Ranges (minAnnual):')
+    __slog('\nSalary Ranges (minAnnual):')
     Object.entries(salaryRanges).forEach(([range, count]) => {
-      console.log(`  ${range}: ${count}`)
+      __slog(`  ${range}: ${count}`)
     })
   }
-  console.log()
+  __slog()
 
   // 3. DESCRIPTION DATA AUDIT
-  console.log('📝 DESCRIPTION QUALITY')
-  console.log('=======================')
+  __slog('📝 DESCRIPTION QUALITY')
+  __slog('=======================')
   
   const withDescHtml = recentJobs.filter(j => j.descriptionHtml && j.descriptionHtml.length > 100)
   
-  console.log(`With HTML Description: ${withDescHtml.length}/${recentJobs.length}`)
+  __slog(`With HTML Description: ${withDescHtml.length}/${recentJobs.length}`)
   
   if (withDescHtml.length > 0) {
     const avgDescLength = withDescHtml.reduce((sum, j) => sum + (j.descriptionHtml?.length || 0), 0) / withDescHtml.length
-    console.log(`Average Description Length: ${Math.round(avgDescLength)} chars`)
+    __slog(`Average Description Length: ${Math.round(avgDescLength)} chars`)
     
     const thinDescriptions = withDescHtml.filter(j => j.descriptionHtml!.length < 500)
-    console.log(`Thin Descriptions (<500 chars): ${thinDescriptions.length}`)
+    __slog(`Thin Descriptions (<500 chars): ${thinDescriptions.length}`)
   }
-  console.log()
+  __slog()
 
   // 4. LOCATION DATA AUDIT
-  console.log('📍 LOCATION DATA QUALITY')
-  console.log('=========================')
+  __slog('📍 LOCATION DATA QUALITY')
+  __slog('=========================')
   
   const withLocation = recentJobs.filter(j => j.locationRaw)
   const withPrimaryLocation = recentJobs.filter(j => j.primaryLocation)
   const withLocationsJson = recentJobs.filter(j => j.locationsJson)
   
-  console.log(`With locationRaw: ${withLocation.length}/${recentJobs.length}`)
-  console.log(`With primaryLocation: ${withPrimaryLocation.length}/${recentJobs.length}`)
-  console.log(`With locationsJson: ${withLocationsJson.length}/${recentJobs.length}\n`)
+  __slog(`With locationRaw: ${withLocation.length}/${recentJobs.length}`)
+  __slog(`With primaryLocation: ${withPrimaryLocation.length}/${recentJobs.length}`)
+  __slog(`With locationsJson: ${withLocationsJson.length}/${recentJobs.length}\n`)
 
   // 5. COMPANY DATA AUDIT
-  console.log('🏢 COMPANY DATA QUALITY')
-  console.log('========================')
+  __slog('🏢 COMPANY DATA QUALITY')
+  __slog('========================')
   
   const withCompanyId = recentJobs.filter(j => j.companyId)
   const withCompanyName = recentJobs.filter(j => j.companyRef?.name || j.company)
   const withCompanyLogo = recentJobs.filter(j => j.companyRef?.logoUrl || j.companyLogo)
   const withCompanyWebsite = recentJobs.filter(j => j.companyRef?.website)
   
-  console.log(`With Company ID: ${withCompanyId.length}/${recentJobs.length}`)
-  console.log(`With Company Name: ${withCompanyName.length}/${recentJobs.length}`)
-  console.log(`With Company Logo: ${withCompanyLogo.length}/${recentJobs.length}`)
-  console.log(`With Company Website: ${withCompanyWebsite.length}/${recentJobs.length}\n`)
+  __slog(`With Company ID: ${withCompanyId.length}/${recentJobs.length}`)
+  __slog(`With Company Name: ${withCompanyName.length}/${recentJobs.length}`)
+  __slog(`With Company Logo: ${withCompanyLogo.length}/${recentJobs.length}`)
+  __slog(`With Company Website: ${withCompanyWebsite.length}/${recentJobs.length}\n`)
 
   // 6. SOURCE BREAKDOWN
-  console.log('📡 SOURCE BREAKDOWN')
-  console.log('====================')
+  __slog('📡 SOURCE BREAKDOWN')
+  __slog('====================')
   
   const sourceBreakdown: Record<string, number> = {}
   recentJobs.forEach(j => {
@@ -202,14 +207,14 @@ async function main() {
     .slice(0, 15)
     .forEach(([source, count]) => {
       const percent = ((count / recentJobs.length) * 100).toFixed(1)
-      console.log(`  ${source}: ${count} (${percent}%)`)
+      __slog(`  ${source}: ${count} (${percent}%)`)
     })
 
-  console.log()
+  __slog()
 
   // 7. DATA COMPLETENESS SCORE
-  console.log('⭐ DATA COMPLETENESS SCORE')
-  console.log('===========================')
+  __slog('⭐ DATA COMPLETENESS SCORE')
+  __slog('===========================')
   
   const scores = recentJobs.map(j => {
     let score = 0
@@ -230,18 +235,18 @@ async function main() {
   const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length
   const avgPercent = ((avgScore / 10) * 100).toFixed(1)
   
-  console.log(`Average Completeness: ${avgScore.toFixed(1)}/10 (${avgPercent}%)`)
+  __slog(`Average Completeness: ${avgScore.toFixed(1)}/10 (${avgPercent}%)`)
   
   const excellent = scores.filter(s => s >= 9).length
   const good = scores.filter(s => s >= 7 && s < 9).length
   const fair = scores.filter(s => s >= 5 && s < 7).length
   const poor = scores.filter(s => s < 5).length
   
-  console.log(`\nQuality Distribution:`)
-  console.log(`  Excellent (9-10): ${excellent}`)
-  console.log(`  Good (7-8): ${good}`)
-  console.log(`  Fair (5-6): ${fair}`)
-  console.log(`  Poor (<5): ${poor}`)
+  __slog(`\nQuality Distribution:`)
+  __slog(`  Excellent (9-10): ${excellent}`)
+  __slog(`  Good (7-8): ${good}`)
+  __slog(`  Fair (5-6): ${fair}`)
+  __slog(`  Poor (<5): ${poor}`)
 
   await prisma.$disconnect()
 }

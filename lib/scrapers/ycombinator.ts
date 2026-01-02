@@ -3,6 +3,8 @@
 import axios from 'axios'
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD = 'ycombinator'
 const BASE_URL = 'https://www.ycombinator.com'
@@ -104,19 +106,32 @@ export default async function scrapeYCombinator() {
         const companyName: string = company.name || 'YC company'
 
         // Better URL construction
+        const url = `${BASE_URL}/companies/${company.slug || company.id}/jobs/${job.id}`
+
         const applyUrl = job.apply_url 
           || (job.url?.startsWith('http') ? job.url : job.url?.startsWith('/') ? `${BASE_URL}${job.url}` : null)
-          || `${BASE_URL}/companies/${company.slug || company.id}/jobs/${job.id}`
+          || url
+
+        const atsType = detectATS(applyUrl)
+        const explicitAtsProvider = toAtsProvider(atsType)
+        const explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(applyUrl, atsType) : null
+
+        if (companyName && isExternalToHost(applyUrl, 'ycombinator.com')) {
+          await saveCompanyATS(companyName, applyUrl, BOARD)
+        }
 
         const result = await upsertBoardJob({
           board: BOARD,
           externalId: `yc-${job.id}`,
           title,
           company: companyName,
+          url,
           applyUrl,
           location,
           salaryText,
           remote: location === 'Remote',
+          explicitAtsProvider,
+          explicitAtsUrl,
         })
         addBoardIngestResult(stats, result)
       }

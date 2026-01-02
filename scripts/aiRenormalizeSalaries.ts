@@ -1,5 +1,10 @@
+import { format as __format } from 'node:util'
 import { prisma } from "../lib/prisma"
 import { annotateJobWithAI } from "../lib/ai/jobAnnotator"
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const TAKE = Number(process.env.AI_TAKE ?? 300)
 const CONCURRENCY = Number(process.env.AI_CONCURRENCY ?? 3)
@@ -55,7 +60,7 @@ async function run() {
     take: TAKE,
   })
 
-  console.log("Re-analyzing " + jobs.length + " jobs (concurrency=5)")
+  __slog("Re-analyzing " + jobs.length + " jobs (concurrency=5)")
 
   let done = 0
   let ok = 0
@@ -63,7 +68,7 @@ async function run() {
 
   await runWithPool(limited, CONCURRENCY, async (job, _idx) => {
     const n = ++done
-    console.log("[" + n + "/" + jobs.length + "] start " + job.id)
+    __slog("[" + n + "/" + jobs.length + "] start " + job.id)
 
     try {
       const enriched = await withRetry(
@@ -81,22 +86,22 @@ async function run() {
       })
 
       ok++
-      console.log("[" + n + "/" + jobs.length + "] done " + job.id)
+      __slog("[" + n + "/" + jobs.length + "] done " + job.id)
     } catch (e: any) {
       fail++
-      console.error(
+      __serr(
         "[" + n + "/" + jobs.length + "] fail " + job.id,
         e?.message ?? e
       )
     }
   })
 
-  console.log("Finished. ok=" + ok + " fail=" + fail)
+  __slog("Finished. ok=" + ok + " fail=" + fail)
 }
 
 run()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

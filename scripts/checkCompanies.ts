@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -9,14 +14,14 @@ async function main() {
     orderBy: { name: 'asc' }
   })
 
-  console.log(`Total companies with active jobs: ${companies.length}`)
-  console.log('\nCompanies:')
+  __slog(`Total companies with active jobs: ${companies.length}`)
+  __slog('\nCompanies:')
   companies.forEach(c => {
     const ats = c.atsUrl?.includes('greenhouse') ? 'greenhouse' 
       : c.atsUrl?.includes('lever') ? 'lever'
       : c.atsUrl?.includes('ashby') ? 'ashby'
       : 'other'
-    console.log(`  ${c.name} (${ats})`)
+    __slog(`  ${c.name} (${ats})`)
   })
 
   await prisma.$disconnect()

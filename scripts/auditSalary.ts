@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -14,7 +19,7 @@ async function main() {
     where: { isExpired: false, OR: [{ minAnnual: { gte: 200000n } }, { maxAnnual: { gte: 200000n } }] }
   })
 
-  console.log(`
+  __slog(`
 Total active jobs: ${total}
 Jobs with minAnnual: ${withMin}
 Jobs with maxAnnual: ${withMax}
@@ -28,8 +33,8 @@ $200k+: ${over200k}
     take: 5,
     select: { title: true, company: true, minAnnual: true, maxAnnual: true, currency: true, isHighSalary: true }
   })
-  console.log('Sample jobs:')
-  samples.forEach(j => console.log(`  ${j.title} | ${j.minAnnual}-${j.maxAnnual} ${j.currency} | isHighSalary: ${j.isHighSalary}`))
+  __slog('Sample jobs:')
+  samples.forEach(j => __slog(`  ${j.title} | ${j.minAnnual}-${j.maxAnnual} ${j.currency} | isHighSalary: ${j.isHighSalary}`))
 
   await prisma.$disconnect()
 }

@@ -11,7 +11,12 @@
  *   npx ts-node scripts/repairMinMaxSalary.ts
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -29,7 +34,7 @@ function toAnnual(amount: number, period: string | null): number {
 }
 
 async function main() {
-  console.log('🚀 Repairing min/max annual salary…')
+  __slog('🚀 Repairing min/max annual salary…')
 
   // ⭐ FIXED: no more  isHundredKLocal: null  (invalid type)
   const jobs = await prisma.job.findMany({
@@ -43,7 +48,7 @@ async function main() {
     },
   })
 
-  console.log(`Found ${jobs.length} jobs to inspect…`)
+  __slog(`Found ${jobs.length} jobs to inspect…`)
 
   let updated = 0
 
@@ -103,12 +108,12 @@ async function main() {
     updated++
   }
 
-  console.log(`✅ Updated ${updated} salary records.`)
+  __slog(`✅ Updated ${updated} salary records.`)
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 function parseLocationProperly(locationRaw: string): {
@@ -67,7 +72,7 @@ function parseLocationProperly(locationRaw: string): {
 }
 
 async function main() {
-  console.log('🔧 Fixing location data (v2)...\n')
+  __slog('🔧 Fixing location data (v2)...\n')
   
   const jobs = await prisma.job.findMany({
     where: {
@@ -80,7 +85,7 @@ async function main() {
     }
   })
 
-  console.log(`Found ${jobs.length} jobs\n`)
+  __slog(`Found ${jobs.length} jobs\n`)
 
   let fixed = 0
   for (const job of jobs) {
@@ -98,11 +103,11 @@ async function main() {
     
     fixed++
     if (fixed % 100 === 0) {
-      console.log(`✅ Fixed ${fixed}/${jobs.length}...`)
+      __slog(`✅ Fixed ${fixed}/${jobs.length}...`)
     }
   }
 
-  console.log(`\n✅ Complete! Fixed ${fixed} jobs`)
+  __slog(`\n✅ Complete! Fixed ${fixed} jobs`)
 
   // Show problematic samples
   const samples = await prisma.job.findMany({
@@ -120,13 +125,13 @@ async function main() {
     take: 3
   })
 
-  console.log('\n📋 Remote-Friendly samples:')
+  __slog('\n📋 Remote-Friendly samples:')
   samples.forEach(s => {
-    console.log(`\n${s.title}`)
-    console.log(`  Raw: ${s.locationRaw}`)
-    console.log(`  Primary: ${s.primaryLocation}`)
-    console.log(`  City: ${s.city}`)
-    console.log(`  Country: ${s.countryCode}`)
+    __slog(`\n${s.title}`)
+    __slog(`  Raw: ${s.locationRaw}`)
+    __slog(`  Primary: ${s.primaryLocation}`)
+    __slog(`  City: ${s.city}`)
+    __slog(`  Country: ${s.countryCode}`)
   })
 
   await prisma.$disconnect()

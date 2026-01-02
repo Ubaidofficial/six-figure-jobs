@@ -2,9 +2,14 @@
 // Run with:
 //   npx tsx scripts/qa.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import fs from 'fs'
 import path from 'path'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -28,7 +33,7 @@ function log(
 ) {
   results.push({ category, check, status, message })
   const icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : '⚠️'
-  console.log(`${icon} [${category}] ${check}: ${message}`)
+  __slog(`${icon} [${category}] ${check}: ${message}`)
 }
 
 function exists(relPath: string): boolean {
@@ -40,9 +45,9 @@ function exists(relPath: string): boolean {
 /* -------------------------------------------------------------------------- */
 
 async function checkDatabase() {
-  console.log('\n══════════════════════════════════════')
-  console.log('  📊 DATABASE CHECKS')
-  console.log('══════════════════════════════════════\n')
+  __slog('\n══════════════════════════════════════')
+  __slog('  📊 DATABASE CHECKS')
+  __slog('══════════════════════════════════════\n')
 
   // -----------------------------------------------------------------------
   // Basic volumes
@@ -351,9 +356,9 @@ async function checkDatabase() {
 /* -------------------------------------------------------------------------- */
 
 async function checkAPIs() {
-  console.log('\n══════════════════════════════════════')
-  console.log('  🌐 API CONNECTIVITY')
-  console.log('══════════════════════════════════════\n')
+  __slog('\n══════════════════════════════════════')
+  __slog('  🌐 API CONNECTIVITY')
+  __slog('══════════════════════════════════════\n')
 
   const apis = [
     {
@@ -393,9 +398,9 @@ async function checkAPIs() {
 /* -------------------------------------------------------------------------- */
 
 async function checkFiles() {
-  console.log('\n══════════════════════════════════════')
-  console.log('  📁 CORE FILES')
-  console.log('══════════════════════════════════════\n')
+  __slog('\n══════════════════════════════════════')
+  __slog('  📁 CORE FILES')
+  __slog('══════════════════════════════════════\n')
 
   const required = [
     'scripts/dailyScrapeV2.ts',
@@ -424,9 +429,9 @@ async function checkFiles() {
 /* -------------------------------------------------------------------------- */
 
 async function checkSEO() {
-  console.log('\n══════════════════════════════════════')
-  console.log('  🔍 SEO')
-  console.log('══════════════════════════════════════\n')
+  __slog('\n══════════════════════════════════════')
+  __slog('  🔍 SEO')
+  __slog('══════════════════════════════════════\n')
 
   const sitemapFiles = [
     'app/sitemap.xml/route.ts',
@@ -463,9 +468,9 @@ async function checkSEO() {
 /* -------------------------------------------------------------------------- */
 
 async function checkScraperHealth() {
-  console.log('\n══════════════════════════════════════')
-  console.log('  🔄 SCRAPER STATUS')
-  console.log('══════════════════════════════════════\n')
+  __slog('\n══════════════════════════════════════')
+  __slog('  🔄 SCRAPER STATUS')
+  __slog('══════════════════════════════════════\n')
 
   const withAts = await prisma.company.count({
     where: { atsUrl: { not: null } },
@@ -517,9 +522,9 @@ async function checkScraperHealth() {
 /* -------------------------------------------------------------------------- */
 
 async function main() {
-  console.log('╔═══════════════════════════════════════════════╗')
-  console.log('║     🔍 Remote100k QA Health Check             ║')
-  console.log('╚═══════════════════════════════════════════════╝')
+  __slog('╔═══════════════════════════════════════════════╗')
+  __slog('║     🔍 Remote100k QA Health Check             ║')
+  __slog('╚═══════════════════════════════════════════════╝')
 
   await checkDatabase()
   await checkAPIs()
@@ -531,33 +536,33 @@ async function main() {
   const warned = results.filter((r) => r.status === 'warn').length
   const failed = results.filter((r) => r.status === 'fail').length
 
-  console.log('\n══════════════════════════════════════')
-  console.log('  📋 SUMMARY')
-  console.log('══════════════════════════════════════')
-  console.log(
+  __slog('\n══════════════════════════════════════')
+  __slog('  📋 SUMMARY')
+  __slog('══════════════════════════════════════')
+  __slog(
     `\n  ✅ Passed: ${passed}  ⚠️ Warnings: ${warned}  ❌ Failed: ${failed}`
   )
 
   if (failed > 0) {
-    console.log('\n  ❌ FAILURES:')
+    __slog('\n  ❌ FAILURES:')
     results
       .filter((r) => r.status === 'fail')
-      .forEach((r) => console.log(`    • ${r.check}: ${r.message}`))
+      .forEach((r) => __slog(`    • ${r.check}: ${r.message}`))
   }
   if (warned > 0) {
-    console.log('\n  ⚠️ WARNINGS:')
+    __slog('\n  ⚠️ WARNINGS:')
     results
       .filter((r) => r.status === 'warn')
-      .forEach((r) => console.log(`    • ${r.check}: ${r.message}`))
+      .forEach((r) => __slog(`    • ${r.check}: ${r.message}`))
   }
 
-  console.log('\n══════════════════════════════════════\n')
+  __slog('\n══════════════════════════════════════\n')
   await prisma.$disconnect()
   process.exit(failed > 0 ? 1 : 0)
 }
 
 main().catch(async (err) => {
-  console.error(err)
+  __serr(err)
   await prisma.$disconnect()
   process.exit(1)
 })

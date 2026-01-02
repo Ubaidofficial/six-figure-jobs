@@ -5,7 +5,12 @@
  *   npx tsx scripts/qaSalaryCoverage.ts
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -14,10 +19,10 @@ function fmt(n: any) {
 }
 
 async function main() {
-  console.log('🔍 QA Salary Coverage Report\n')
+  __slog('🔍 QA Salary Coverage Report\n')
 
   const totalJobs = await prisma.job.count()
-  console.log(`Total jobs: ${totalJobs}\n`)
+  __slog(`Total jobs: ${totalJobs}\n`)
 
   const missingNormalized = await prisma.job.count({
     where: {
@@ -28,7 +33,7 @@ async function main() {
     },
   })
 
-  console.log(`❗ Jobs missing minAnnual/maxAnnual: ${missingNormalized}`)
+  __slog(`❗ Jobs missing minAnnual/maxAnnual: ${missingNormalized}`)
 
   const withNormalized = await prisma.job.count({
     where: {
@@ -39,7 +44,7 @@ async function main() {
     },
   })
 
-  console.log(`✔ Jobs with normalized salary: ${withNormalized}\n`)
+  __slog(`✔ Jobs with normalized salary: ${withNormalized}\n`)
 
   const invalidHighValues = await prisma.job.count({
     where: {
@@ -50,7 +55,7 @@ async function main() {
     },
   })
 
-  console.log(`⚠ Suspicious salary values (> $1M/yr): ${invalidHighValues}\n`)
+  __slog(`⚠ Suspicious salary values (> $1M/yr): ${invalidHighValues}\n`)
 
   const highSalary = await prisma.job.count({
     where: { isHighSalary: true },
@@ -60,10 +65,10 @@ async function main() {
     where: { isHundredKLocal: true },
   })
 
-  console.log(`💰 isHighSalary=true:      ${highSalary}`)
-  console.log(`💵 isHundredKLocal=true:  ${hundredK}\n`)
+  __slog(`💰 isHighSalary=true:      ${highSalary}`)
+  __slog(`💵 isHundredKLocal=true:  ${hundredK}\n`)
 
-  console.log('📌 Sample jobs missing normalized salary (first 10):')
+  __slog('📌 Sample jobs missing normalized salary (first 10):')
   const sampleMissing = await prisma.job.findMany({
     where: {
       OR: [
@@ -86,17 +91,17 @@ async function main() {
   })
 
   sampleMissing.forEach((j) => {
-    console.log(
+    __slog(
       `- ${j.id} | ${j.title} @ ${j.company}\n` +
       `   raw: ${fmt(j.salaryMin)}–${fmt(j.salaryMax)} ${j.salaryCurrency || ''} (${j.salaryPeriod})\n` +
       `   normalized: ${fmt(j.minAnnual)}–${fmt(j.maxAnnual)}`
     )
   })
 
-  console.log('\n🎉 Done.')
+  __slog('\n🎉 Done.')
 }
 
 main().catch((err) => {
-  console.error(err)
+  __serr(err)
   process.exit(1)
 })

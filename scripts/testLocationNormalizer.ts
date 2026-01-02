@@ -1,10 +1,15 @@
 // scripts/testLocationNormalizer.ts
 
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
 import { normalizeLocation } from '../lib/normalizers/location'
 
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
+
 async function main() {
-  console.log('✨ Sample normalized locations:\n')
+  __slog('✨ Sample normalized locations:\n')
 
   const jobs = await prisma.job.findMany({
     select: {
@@ -21,22 +26,22 @@ async function main() {
   for (const job of jobs) {
     const normalized = normalizeLocation(job.locationRaw)
 
-    console.log('────────────────────────────────────────')
-    console.log(`Job ID   : ${job.id}`)
-    console.log(`Title    : ${job.title}`)
-    console.log(`RAW      : ${job.locationRaw}`)
-    console.log('NORM     :', normalized)
-    console.log(
+    __slog('────────────────────────────────────────')
+    __slog(`Job ID   : ${job.id}`)
+    __slog(`Title    : ${job.title}`)
+    __slog(`RAW      : ${job.locationRaw}`)
+    __slog('NORM     :', normalized)
+    __slog(
       'Flags    :',
       `remote=${job.remote}  remoteMode=${job.remoteMode}  countryCode=${job.countryCode}`
     )
   }
 
-  console.log('\n✅ Done.\n')
+  __slog('\n✅ Done.\n')
   await prisma.$disconnect()
 }
 
 main().catch((err) => {
-  console.error('Error in testLocationNormalizer:', err)
+  __serr('Error in testLocationNormalizer:', err)
   prisma.$disconnect().finally(() => process.exit(1))
 })

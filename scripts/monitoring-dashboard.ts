@@ -7,7 +7,12 @@
  *   npx tsx scripts/monitoring-dashboard.ts
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -42,16 +47,16 @@ interface DashboardMetrics {
 
 async function main() {
   console.clear()
-  console.log('═'.repeat(80))
-  console.log(' '.repeat(20) + 'SIX FIGURE JOBS - pSEO DASHBOARD')
-  console.log('═'.repeat(80))
-  console.log('')
+  __slog('═'.repeat(80))
+  __slog(' '.repeat(20) + 'SIX FIGURE JOBS - pSEO DASHBOARD')
+  __slog('═'.repeat(80))
+  __slog('')
 
   try {
     const metrics = await gatherMetrics()
     displayMetrics(metrics)
   } catch (error) {
-    console.error('❌ Error gathering metrics:', error)
+    __serr('❌ Error gathering metrics:', error)
   } finally {
     await prisma.$disconnect()
   }
@@ -142,42 +147,42 @@ async function gatherMetrics(): Promise<DashboardMetrics> {
 
 function displayMetrics(m: DashboardMetrics) {
   // Overview Section
-  console.log('📊 OVERVIEW')
-  console.log('─'.repeat(80))
-  console.log(`   Total Active Pages:     ${m.totalActivePages.toLocaleString()}`)
-  console.log(`   Published Today:        ${m.pagesPublishedToday}`)
-  console.log(`   Published This Week:    ${m.pagesPublishedThisWeek}`)
-  console.log(`   Published This Month:   ${m.pagesPublishedThisMonth}`)
-  console.log('')
+  __slog('📊 OVERVIEW')
+  __slog('─'.repeat(80))
+  __slog(`   Total Active Pages:     ${m.totalActivePages.toLocaleString()}`)
+  __slog(`   Published Today:        ${m.pagesPublishedToday}`)
+  __slog(`   Published This Week:    ${m.pagesPublishedThisWeek}`)
+  __slog(`   Published This Month:   ${m.pagesPublishedThisMonth}`)
+  __slog('')
 
   // Quality Section
-  console.log('✅ QUALITY METRICS')
-  console.log('─'.repeat(80))
-  console.log(`   Avg Jobs per Page:      ${m.avgJobsPerPage}`)
-  console.log(`   Pages with <10 jobs:    ${m.pagesWithLowJobs} ${m.pagesWithLowJobs > 5 ? '⚠️' : ''}`)
-  console.log(`   Pages with 100+ jobs:   ${m.pagesWithHighJobs}`)
-  console.log('')
+  __slog('✅ QUALITY METRICS')
+  __slog('─'.repeat(80))
+  __slog(`   Avg Jobs per Page:      ${m.avgJobsPerPage}`)
+  __slog(`   Pages with <10 jobs:    ${m.pagesWithLowJobs} ${m.pagesWithLowJobs > 5 ? '⚠️' : ''}`)
+  __slog(`   Pages with 100+ jobs:   ${m.pagesWithHighJobs}`)
+  __slog('')
 
   // Content Stats
-  console.log('📈 CONTENT STATS')
-  console.log('─'.repeat(80))
-  console.log(`   Total $100k+ Jobs:      ${m.totalJobs.toLocaleString()}`)
-  console.log(`   Total Companies:        ${m.totalCompanies.toLocaleString()}`)
-  console.log(`   Avg Salary:             $${(m.avgSalary / 1000).toFixed(0)}k`)
-  console.log('')
+  __slog('📈 CONTENT STATS')
+  __slog('─'.repeat(80))
+  __slog(`   Total $100k+ Jobs:      ${m.totalJobs.toLocaleString()}`)
+  __slog(`   Total Companies:        ${m.totalCompanies.toLocaleString()}`)
+  __slog(`   Avg Salary:             $${(m.avgSalary / 1000).toFixed(0)}k`)
+  __slog('')
 
   // By Type
-  console.log('📑 PAGES BY TYPE')
-  console.log('─'.repeat(80))
-  console.log(`   Role Pages:             ${m.byType.role}`)
-  console.log(`   State Pages:            ${m.byType.state}`)
-  console.log(`   City Pages:             ${m.byType.city}`)
-  console.log(`   Combo Pages:            ${m.byType.combo}`)
-  console.log('')
+  __slog('📑 PAGES BY TYPE')
+  __slog('─'.repeat(80))
+  __slog(`   Role Pages:             ${m.byType.role}`)
+  __slog(`   State Pages:            ${m.byType.state}`)
+  __slog(`   City Pages:             ${m.byType.city}`)
+  __slog(`   Combo Pages:            ${m.byType.combo}`)
+  __slog('')
 
   // Health Check
-  console.log('🏥 HEALTH CHECK')
-  console.log('─'.repeat(80))
+  __slog('🏥 HEALTH CHECK')
+  __slog('─'.repeat(80))
 
   const checks = []
 
@@ -195,13 +200,13 @@ function displayMetrics(m: DashboardMetrics) {
     checks.push(`⚠️  ${m.pagesWithLowJobs} pages have <10 jobs - consider deactivating`)
   }
 
-  checks.forEach(check => console.log(`   ${check}`))
-  console.log('')
+  checks.forEach(check => __slog(`   ${check}`))
+  __slog('')
 
   // Footer
-  console.log('═'.repeat(80))
-  console.log(`Last updated: ${new Date().toLocaleString()}`)
-  console.log('═'.repeat(80))
+  __slog('═'.repeat(80))
+  __slog(`Last updated: ${new Date().toLocaleString()}`)
+  __slog('═'.repeat(80))
 }
 
 // ============================================================================
@@ -211,6 +216,6 @@ function displayMetrics(m: DashboardMetrics) {
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error)
+    __serr(error)
     process.exit(1)
   })

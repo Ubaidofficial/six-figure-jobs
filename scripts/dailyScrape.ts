@@ -1,3 +1,4 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { scrapeAshby } from '../lib/scrapers/ashby.js'
 import { ingestJob } from '../lib/ingest/index.js'
@@ -6,6 +7,10 @@ import { scrapeNodesk } from '../lib/scrapers/nodesk.js'
 import scrapeRemoteOK from '../lib/scrapers/remoteok.js'
 import fs from 'fs'
 import path from 'path'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -67,9 +72,9 @@ async function main() {
   const startTime = Date.now()
   const failures: any[] = []
   
-  console.log('═══════════════════════════════════════════════')
-  console.log('  🚀 Starting Daily Scrape')
-  console.log('═══════════════════════════════════════════════\n')
+  __slog('═══════════════════════════════════════════════')
+  __slog('  🚀 Starting Daily Scrape')
+  __slog('═══════════════════════════════════════════════\n')
 
   const companies = await prisma.company.findMany({
     where: { atsUrl: { not: null } },
@@ -80,11 +85,11 @@ async function main() {
   const leverCount = companies.filter(c => c.atsUrl?.includes('lever')).length
   const ashbyCount = companies.filter(c => c.atsUrl?.includes('ashby')).length
   
-  console.log(`Found ${companies.length} companies: ${ghCount} Greenhouse, ${leverCount} Lever, ${ashbyCount} Ashby\n`)
+  __slog(`Found ${companies.length} companies: ${ghCount} Greenhouse, ${leverCount} Lever, ${ashbyCount} Ashby\n`)
 
   let scraped = 0, failed = 0, totalNew = 0, totalUpdated = 0
 
-  console.log('── Scraping ATS Jobs ──')
+  __slog('── Scraping ATS Jobs ──')
   
   for (const company of companies) {
     if (!company.atsUrl) continue
@@ -148,37 +153,37 @@ async function main() {
     }
   }
 
-  console.log('\n\n── Expiring Old Jobs ──')
+  __slog('\n\n── Expiring Old Jobs ──')
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   const expired = await prisma.job.updateMany({
     where: { source: { startsWith: 'ats:' }, isExpired: false, updatedAt: { lt: thirtyDaysAgo } },
     data: { isExpired: true }
   })
-  console.log(`🗑️ Marked ${expired.count} jobs as expired\n`)
+  __slog(`🗑️ Marked ${expired.count} jobs as expired\n`)
 
-  console.log('── Scraping Job Boards ──')
+  __slog('── Scraping Job Boards ──')
   
   try {
-    console.log('  RemoteOK...')
+    __slog('  RemoteOK...')
     const rok = await scrapeRemoteOK()
-    console.log(`    ✓ ${rok.jobsNew} new, ${rok.jobsUpdated} updated`)
-  } catch (e: any) { console.log(`    ✗ ${e.message}`) }
+    __slog(`    ✓ ${rok.jobsNew} new, ${rok.jobsUpdated} updated`)
+  } catch (e: any) { __slog(`    ✗ ${e.message}`) }
 
   try {
-    console.log('  WeWorkRemotely...')
+    __slog('  WeWorkRemotely...')
     const wwr = await scrapeWeWorkRemotely()
     let n = 0
     for (const job of wwr) { if ((await ingestJob(job)).status === 'created') n++ }
-    console.log(`    ✓ ${wwr.length} jobs (${n} new)`)
-  } catch (e: any) { console.log(`    ✗ ${e.message}`) }
+    __slog(`    ✓ ${wwr.length} jobs (${n} new)`)
+  } catch (e: any) { __slog(`    ✗ ${e.message}`) }
 
   try {
-    console.log('  Nodesk...')
+    __slog('  Nodesk...')
     const nd = await scrapeNodesk()
     let n = 0
     for (const job of nd) { if ((await ingestJob(job)).status === 'created') n++ }
-    console.log(`    ✓ ${nd.length} jobs (${n} new)`)
-  } catch (e: any) { console.log(`    ✗ ${e.message}`) }
+    __slog(`    ✓ ${nd.length} jobs (${n} new)`)
+  } catch (e: any) { __slog(`    ✗ ${e.message}`) }
 
   const totalJobs = await prisma.job.count({ where: { isExpired: false } })
   const highSalary = await prisma.job.count({ where: { isExpired: false, OR: [{ salaryMin: { gte: 100000 } }, { salaryMax: { gte: 100000 } }] } })
@@ -190,18 +195,18 @@ async function main() {
   fs.writeFileSync(path.join(logDir, `scrape-${new Date().toISOString().split('T')[0]}.json`), 
     JSON.stringify({ date: new Date().toISOString(), duration, stats: { scraped, failed, totalNew, totalUpdated, totalJobs, highSalary }, failures }, null, 2))
 
-  console.log('\n═══════════════════════════════════════════════')
-  console.log('  ✅ Daily Scrape Complete')
-  console.log('═══════════════════════════════════════════════')
-  console.log(`  Duration: ${duration} min`)
-  console.log(`  Companies: ${scraped}/${companies.length} (${failed} failed)`)
-  console.log(`  Jobs: ${totalNew} new, ${totalUpdated} updated`)
-  console.log('───────────────────────────────────────────────')
-  console.log(`  Total Active: ${totalJobs}`)
-  console.log(`  High-Salary: ${highSalary}`)
+  __slog('\n═══════════════════════════════════════════════')
+  __slog('  ✅ Daily Scrape Complete')
+  __slog('═══════════════════════════════════════════════')
+  __slog(`  Duration: ${duration} min`)
+  __slog(`  Companies: ${scraped}/${companies.length} (${failed} failed)`)
+  __slog(`  Jobs: ${totalNew} new, ${totalUpdated} updated`)
+  __slog('───────────────────────────────────────────────')
+  __slog(`  Total Active: ${totalJobs}`)
+  __slog(`  High-Salary: ${highSalary}`)
   
   if (failures.length > 0) {
-    console.log(`\n⚠️  ${failures.length} failures (see logs)`)
+    __slog(`\n⚠️  ${failures.length} failures (see logs)`)
   }
   
   await prisma.$disconnect()

@@ -5,6 +5,9 @@ import * as cheerio from 'cheerio'
 
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { discoverApplyUrlFromPage } from './utils/discoverApplyUrl'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD = 'remoteleaf'
 const BASE_URL = 'https://remoteleaf.com'
@@ -68,6 +71,21 @@ export default async function scrapeRemoteLeaf(): Promise<ScraperStats> {
           null
 
         const url = absolute(href)
+        let applyUrl = url
+
+        const discoveredApplyUrl = await discoverApplyUrlFromPage(url)
+        if (discoveredApplyUrl && isExternalToHost(discoveredApplyUrl, 'remoteleaf.com')) {
+          applyUrl = discoveredApplyUrl
+        }
+
+        const atsType = detectATS(applyUrl)
+        const explicitAtsProvider = toAtsProvider(atsType)
+        const explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(applyUrl, atsType) : null
+
+        if (company && isExternalToHost(applyUrl, 'remoteleaf.com')) {
+          await saveCompanyATS(company, applyUrl, BOARD)
+        }
+
         const externalId = url.replace(BASE_URL, '').replace(/^\/+/, '').split('?')[0] || url
 
         const result = await upsertBoardJob({
@@ -75,9 +93,12 @@ export default async function scrapeRemoteLeaf(): Promise<ScraperStats> {
           externalId,
           title,
           company,
-          applyUrl: url,
+          url,
+          applyUrl,
           salaryText,
           remote: true,
+          explicitAtsProvider,
+          explicitAtsUrl,
         })
 
         addBoardIngestResult(stats, result)

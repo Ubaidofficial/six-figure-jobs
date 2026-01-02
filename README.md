@@ -100,6 +100,53 @@ Key rules:
 
 ---
 
+## Company Discovery System
+
+Six Figure Jobs uses a two-phase approach to job aggregation:
+
+### Phase 1: Company Discovery
+
+Board scrapers (Remotive, WeWorkRemotely, etc.) extract job listings and discover company ATS URLs.
+
+Discovered companies stored in `CompanyATS` table with:
+- Company name and slug
+- ATS type (Greenhouse, Lever, Ashby, etc.)
+- ATS URL for direct scraping
+- Discovery source (which board found it)
+
+### Phase 2: Direct ATS Scraping
+
+`scrapeDirectATS.ts` script scrapes companies directly from their ATS, bypassing job boards entirely.
+
+**Benefits:**
+- Higher job volume per company (boards show 1-2 jobs, ATS has 10-50)
+- Better data quality (direct from source)
+- Fewer duplicates
+- More sustainable (less board scraper maintenance)
+
+**Current Status:** 17+ companies discovered, scraped via `scrapeDirectATS.ts`.
+
+---
+
+## Known Limitations
+
+### WeWorkRemotely Cloudflare Protection
+
+WeWorkRemotely blocks automated extraction of final application URLs using Cloudflare "Just a moment..." challenge pages.
+
+**Current Status:** WeWorkRemotely jobs are ingested, but apply URLs remain board URLs.
+
+**Impact:** Users click through WeWorkRemotely before reaching the company site.
+
+**Future Solutions:**
+- Partnership with WeWorkRemotely
+- Browser automation (Playwright/Puppeteer) with challenge handling
+- Skip WeWorkRemotely for CompanyATS discovery
+
+Last investigated: January 2026
+
+---
+
 ## Change Gates
 
 Any change touching:

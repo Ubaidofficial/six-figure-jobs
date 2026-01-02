@@ -9,8 +9,13 @@
  * - If the unique constraint on shortId fails, log the conflicting job ids and stop.
  */
 
+import { format as __format } from 'node:util'
 import { Prisma, PrismaClient } from '@prisma/client'
 import { getShortStableIdForJobId } from '../lib/jobs/jobSlug'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -27,7 +32,7 @@ async function jobShortIdColumnExists(): Promise<boolean> {
     `
     return rows?.[0]?.exists === true
   } catch (error) {
-    console.error('❌ Failed to check for Job.shortId column:', error)
+    __serr('❌ Failed to check for Job.shortId column:', error)
     return false
   }
 }
@@ -44,10 +49,10 @@ async function logBatchCollisions(
 
   const dupes = [...byShortId.entries()].filter(([, ids]) => ids.length > 1)
   if (dupes.length > 0) {
-    console.error('❌ shortId collision detected within batch; stopping.')
+    __serr('❌ shortId collision detected within batch; stopping.')
     for (const [shortId, ids] of dupes) {
-      console.error(`  shortId: ${shortId}`)
-      console.error(`  jobIds: ${ids.join(', ')}`)
+      __serr(`  shortId: ${shortId}`)
+      __serr(`  jobIds: ${ids.join(', ')}`)
     }
     return
   }
@@ -58,44 +63,44 @@ async function logBatchCollisions(
   })
 
   if (existing.length === 0) {
-    console.error(
+    __serr(
       '❌ shortId unique constraint failed, but no conflicting rows were found.'
     )
     return
   }
 
-  console.error('❌ shortId collision detected; stopping.')
+  __serr('❌ shortId collision detected; stopping.')
   for (const row of existing) {
     const shortId = row.shortId
     if (!shortId) continue
     const attempted = byShortId.get(shortId)?.[0]
     if (attempted && attempted !== row.id) {
-      console.error(`  shortId: ${shortId}`)
-      console.error(`  jobId (attempted): ${attempted}`)
-      console.error(`  jobId (existing): ${row.id}`)
+      __serr(`  shortId: ${shortId}`)
+      __serr(`  jobId (attempted): ${attempted}`)
+      __serr(`  jobId (existing): ${row.id}`)
     }
   }
 }
 
 async function backfillShortId() {
-  console.log('🚀 Starting backfill for Job.shortId...')
-  console.log('')
+  __slog('🚀 Starting backfill for Job.shortId...')
+  __slog('')
 
   const hasColumn = await jobShortIdColumnExists()
   if (!hasColumn) {
-    console.error('❌ Job.shortId column not found. Run the Prisma migration first.')
+    __serr('❌ Job.shortId column not found. Run the Prisma migration first.')
     process.exitCode = 1
     return
   }
 
   const totalMissing = await prisma.job.count({ where: { shortId: null } })
   if (totalMissing === 0) {
-    console.log('✅ No jobs missing shortId. Nothing to do.')
+    __slog('✅ No jobs missing shortId. Nothing to do.')
     return
   }
 
-  console.log(`📊 Found ${totalMissing.toLocaleString()} jobs missing shortId`)
-  console.log('')
+  __slog(`📊 Found ${totalMissing.toLocaleString()} jobs missing shortId`)
+  __slog('')
 
   const batchSize = 500
   let processed = 0
@@ -144,14 +149,14 @@ async function backfillShortId() {
     lastId = jobs[jobs.length - 1].id
 
     const pct = ((processed / totalMissing) * 100).toFixed(1)
-    console.log(
+    __slog(
       `Progress: ${processed.toLocaleString()}/${totalMissing.toLocaleString()} (${pct}%)`
     )
   }
 
-  console.log('')
-  console.log('✅ Backfill complete!')
-  console.log(`  • Jobs updated: ${processed.toLocaleString()}`)
+  __slog('')
+  __slog('✅ Backfill complete!')
+  __slog(`  • Jobs updated: ${processed.toLocaleString()}`)
 }
 
 backfillShortId()
@@ -159,7 +164,7 @@ backfillShortId()
     await prisma.$disconnect()
   })
   .catch(async (error) => {
-    console.error('❌ Script failed:', error)
+    __serr('❌ Script failed:', error)
     await prisma.$disconnect()
     process.exit(1)
   })

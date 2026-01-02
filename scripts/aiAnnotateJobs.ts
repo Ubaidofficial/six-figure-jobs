@@ -1,9 +1,14 @@
 // scripts/aiAnnotateJobs.ts
+import { format as __format } from 'node:util'
 import 'dotenv/config'
 import { PrismaClient, type Prisma, type Job } from '@prisma/client'
 import { annotateJobWithAI } from '../lib/ai/jobAnnotator'
 import { getHighSalaryThresholdAnnual } from '../lib/currency/thresholds'
 import { HIGH_SALARY_MIN_CONFIDENCE } from '../lib/jobs/queryJobs'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -64,7 +69,7 @@ async function main() {
   const dryRun = process.argv.includes('--dry-run')
   const minQuality = Number(process.env.AI_MIN_QUALITY ?? 2) || 2
 
-  console.log(`🤖 AI annotate (limit=${limit}, dryRun=${dryRun})`)
+  __slog(`🤖 AI annotate (limit=${limit}, dryRun=${dryRun})`)
 
   // Pull only jobs that are likely eligible; final gate enforced in qualifiesForDisplay()
   const jobs = await prisma.job.findMany({
@@ -79,7 +84,7 @@ async function main() {
   })
 
   if (!jobs.length) {
-    console.log('No jobs found for enrichment query.')
+    __slog('No jobs found for enrichment query.')
     return
   }
 
@@ -112,7 +117,7 @@ async function main() {
         ((ai.techStack?.length ?? 0) >= 2 ? 1 : 0)
 
       if (qualityScore < minQuality) {
-        console.log(`⏭️ Skipped low quality (${qualityScore}/${minQuality}): ${job.title}`)
+        __slog(`⏭️ Skipped low quality (${qualityScore}/${minQuality}): ${job.title}`)
         skippedLowQuality++
         continue
       }
@@ -134,7 +139,7 @@ async function main() {
       }
 
       if (dryRun) {
-        console.log(`➡️ [DRY RUN] ${job.title}`, data)
+        __slog(`➡️ [DRY RUN] ${job.title}`, data)
         updated++
         continue
       }
@@ -144,22 +149,22 @@ async function main() {
         data,
       })
 
-      console.log(`✅ Enriched ${job.title}`)
+      __slog(`✅ Enriched ${job.title}`)
       updated++
     } catch (err: any) {
       failed++
-      console.error(`❌ ${job.title}:`, err?.message || err)
+      __serr(`❌ ${job.title}:`, err?.message || err)
     }
   }
 
-  console.log(
+  __slog(
     `\nDone. Updated ${updated} jobs. SkippedNotEligible=${skippedNotEligible}. SkippedLowQuality=${skippedLowQuality}. Failed=${failed}.`,
   )
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(() => prisma.$disconnect())

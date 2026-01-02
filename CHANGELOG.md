@@ -1,6 +1,28 @@
 # 1.0.0 (2026-01-01)
 
-## [Unreleased]
+## [Unreleased] - 2026-01-02
+
+### Added
+- CompanyATS discovery system for two-phase job aggregation
+- Apply URL extraction from job board pages
+- `scraperHealthCheck.ts` for monitoring extraction success rates
+- `scrapeDirectATS.ts` for direct company ATS scraping
+
+### Changed
+- Board scrapers now extract final company apply URLs
+- Remotive using internal API (100% extraction rate)
+- WeWorkRemotely and BuiltIn using extraction logic
+
+### Fixed
+- saveCompanyATS skips "Unknown company" to prevent slug collisions
+- Remote100k disabled due to Framer architecture issues
+- Duplicate detection in job ingestion pipeline
+- Remotive extraction: 17% → 100%
+- BuiltIn scraper URL and selectors updated
+
+### Known Issues
+- RemoteOK blocked by signup wall (16 jobs affected)
+- WeWorkRemotely blocked by Cloudflare (26 jobs affected)
 
 
 - chore: make changelog gate use staged diff
@@ -95,6 +117,5 @@
 * **seo:** canonical role slugs + remove 150k tier ([f9203ef](https://github.com/Ubaidofficial/six-figure-jobs/commit/f9203efc996748fc0fcbe83487920b17e2ec9078))
 * **seo:** implement v1.5 rules - 90% compliance ([5c7a9cf](https://github.com/Ubaidofficial/six-figure-jobs/commit/5c7a9cf81baae556738c9b59e2c3b9323741bab2))
 * **ui:** upgrade job cards, emojis, and job detail layout ([a37c06f](https://github.com/Ubaidofficial/six-figure-jobs/commit/a37c06f3d9c7e35508569698e7f0356ea4b594b5))
-
 
 

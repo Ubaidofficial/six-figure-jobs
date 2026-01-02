@@ -1,6 +1,11 @@
 // scripts/testLocationSamples.ts
 
+import { format as __format } from 'node:util'
 import { normalizeLocation } from '../lib/normalizers/location'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const samples = [
   'Remote',
@@ -16,6 +21,6 @@ const samples = [
 ]
 
 for (const raw of samples) {
-  console.log('\nRAW :', raw)
-  console.log('NORM:', normalizeLocation(raw))
+  __slog('\nRAW :', raw)
+  __slog('NORM:', normalizeLocation(raw))
 }

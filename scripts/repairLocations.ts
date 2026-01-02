@@ -20,6 +20,7 @@
  *    npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/repairLocations.ts --mode=repair
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient, Prisma, Job } from '@prisma/client'
 import slugify from 'slugify'
 import {
@@ -27,6 +28,9 @@ import {
   coerceRemoteFlag,
   type NormalizedLocation,
 } from '../lib/normalizers/location'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + '\n')
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + '\n')
 
 const prisma = new PrismaClient()
 
@@ -106,11 +110,11 @@ function getNormalized(job: Job): NormalizedLocation {
 async function main() {
   const { mode, dryRun, limit } = parseCliArgs()
 
-  console.log('🌍 Phase 4 – Location Repair / Audit')
-  console.log(`   Mode    : ${mode}`)
-  console.log(`   Dry run : ${dryRun ? 'YES (no writes)' : 'no'}`)
-  console.log(`   Limit   : ${limit ?? 'none'}`)
-  console.log('')
+  __slog('🌍 Phase 4 – Location Repair / Audit')
+  __slog(`   Mode    : ${mode}`)
+  __slog(`   Dry run : ${dryRun ? 'YES (no writes)' : 'no'}`)
+  __slog(`   Limit   : ${limit ?? 'none'}`)
+  __slog('')
 
   // We care about jobs that have some location/remote info at all
   const whereClause: Prisma.JobWhereInput = {
@@ -128,9 +132,9 @@ async function main() {
     take: limit ?? undefined,
   })
 
-  console.log(`🔍 Loaded ${jobs.length} jobs with location/remote data`)
+  __slog(`🔍 Loaded ${jobs.length} jobs with location/remote data`)
   if (jobs.length === 0) {
-    console.log('✅ Nothing to do, exiting.')
+    __slog('✅ Nothing to do, exiting.')
     await prisma.$disconnect()
     return
   }
@@ -221,7 +225,7 @@ async function main() {
 
     if (dryRun || mode === 'audit') {
       if (updatedJobs <= 20) {
-        console.log(
+        __slog(
           `• [DRY RUN] Job ${job.id} (${job.title}) – ` +
             `countryCode: ${oldCountryCode ?? 'null'} → ${data.countryCode ?? oldCountryCode ?? 'null'}, ` +
             `city: ${oldCity ?? 'null'} → ${data.city ?? oldCity ?? 'null'}, ` +
@@ -244,22 +248,22 @@ async function main() {
   }
 
   if (mode === 'repair' && !dryRun && updates.length > 0) {
-    console.log(`💾 Applying ${updates.length} job location updates...`)
+    __slog(`💾 Applying ${updates.length} job location updates...`)
     await Promise.all(updates)
   }
 
-  console.log('')
-  console.log('📊 Location Summary')
-  console.log('-------------------')
-  console.log(`Jobs scanned                         : ${scanned}`)
-  console.log(`Jobs still missing countryCode       : ${missingCountry}`)
-  console.log(`Jobs where countryCode was filled in : ${fixedCountry}`)
-  console.log(`Jobs where countryCode changed       : ${changedCountry}`)
-  console.log(`Jobs where city changed              : ${changedCity}`)
-  console.log(`Jobs where citySlug changed          : ${changedCitySlug}`)
-  console.log(`Jobs with remote flags updated       : ${changedRemoteFlags}`)
+  __slog('')
+  __slog('📊 Location Summary')
+  __slog('-------------------')
+  __slog(`Jobs scanned                         : ${scanned}`)
+  __slog(`Jobs still missing countryCode       : ${missingCountry}`)
+  __slog(`Jobs where countryCode was filled in : ${fixedCountry}`)
+  __slog(`Jobs where countryCode changed       : ${changedCountry}`)
+  __slog(`Jobs where city changed              : ${changedCity}`)
+  __slog(`Jobs where citySlug changed          : ${changedCitySlug}`)
+  __slog(`Jobs with remote flags updated       : ${changedRemoteFlags}`)
   if (mode === 'repair') {
-    console.log(
+    __slog(
       `Jobs ${dryRun ? 'that WOULD be ' : ''}updated      : ${updatedJobs}`
     )
   }
@@ -268,8 +272,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('💥 Error in repairLocations.ts')
-  console.error(err)
+  __serr('💥 Error in repairLocations.ts')
+  __serr(err)
   prisma
     .$disconnect()
     .catch(() => {

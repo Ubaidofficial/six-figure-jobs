@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -9,8 +14,8 @@ async function main() {
   })
 
   for (const job of jobs) {
-    console.log(`\n=== ${job.title} ===`)
-    console.log(`Location: ${job.locationRaw}`)
+    __slog(`\n=== ${job.title} ===`)
+    __slog(`Location: ${job.locationRaw}`)
     
     if (job.descriptionHtml) {
       // Find lines with salary/compensation
@@ -18,10 +23,10 @@ async function main() {
         /salary|compensation|\$|€|£|USD|EUR|GBP|AUD|annual|per year/i.test(line)
       )
       if (lines.length > 0) {
-        console.log('Salary text found:')
-        lines.slice(0, 3).forEach(l => console.log(`  ${l.trim().slice(0, 200)}`))
+        __slog('Salary text found:')
+        lines.slice(0, 3).forEach(l => __slog(`  ${l.trim().slice(0, 200)}`))
       } else {
-        console.log('No salary text found')
+        __slog('No salary text found')
       }
     }
   }

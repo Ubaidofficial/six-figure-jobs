@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -7,7 +12,7 @@ async function main() {
     select: { id: true, title: true, descriptionHtml: true, locationRaw: true, countryCode: true }
   })
 
-  console.log(`Processing ${jobs.length} Anthropic jobs...`)
+  __slog(`Processing ${jobs.length} Anthropic jobs...`)
   let updated = 0
 
   for (const job of jobs) {
@@ -53,11 +58,11 @@ async function main() {
     
     updated++
     if (updated <= 5) {
-      console.log(`  ${job.title}: ${symbol}${min.toLocaleString()}-${symbol}${max.toLocaleString()} ${currency}`)
+      __slog(`  ${job.title}: ${symbol}${min.toLocaleString()}-${symbol}${max.toLocaleString()} ${currency}`)
     }
   }
 
-  console.log(`\nUpdated ${updated} jobs with salary data`)
+  __slog(`\nUpdated ${updated} jobs with salary data`)
 
   // Verify
   const sample = await prisma.job.findMany({
@@ -65,8 +70,8 @@ async function main() {
     take: 3,
     select: { title: true, minAnnual: true, maxAnnual: true, currency: true }
   })
-  console.log('\nSample US Anthropic jobs:')
-  sample.forEach(j => console.log(`  ${j.title}: ${j.currency} ${j.minAnnual}-${j.maxAnnual}`))
+  __slog('\nSample US Anthropic jobs:')
+  sample.forEach(j => __slog(`  ${j.title}: ${j.currency} ${j.minAnnual}-${j.maxAnnual}`))
 
   await prisma.$disconnect()
 }

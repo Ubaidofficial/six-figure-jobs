@@ -1,11 +1,16 @@
 // scripts/clearCrazySalaries.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🧹 Clearing obviously broken salaries (> $1M/yr)…')
+  __slog('🧹 Clearing obviously broken salaries (> $1M/yr)…')
 
   // 1) Clear all jobs with *any* salary field > $1M (clearly broken)
   const cleared = await prisma.job.updateMany({
@@ -27,7 +32,7 @@ async function main() {
     },
   })
 
-  console.log(`✅ Cleared ${cleared.count} jobs with salary > $1M`)
+  __slog(`✅ Cleared ${cleared.count} jobs with salary > $1M`)
 
   // 2) Recalculate isHighSalary / isHundredKLocal for remaining jobs
   const setHigh = await prisma.job.updateMany({
@@ -44,7 +49,7 @@ async function main() {
     },
   })
 
-  console.log(
+  __slog(
     `✅ Set isHighSalary=true & isHundredKLocal=true for ${setHigh.count} jobs`,
   )
 
@@ -58,12 +63,12 @@ async function main() {
     },
   })
 
-  console.log(`📊 Final $100k–$1M jobs: ${final}`)
+  __slog(`📊 Final $100k–$1M jobs: ${final}`)
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

@@ -1,6 +1,11 @@
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
 import { normalizeLocation } from '../lib/normalizers/location'
 import { normalizeLocationRaw, hasMultiLocationSignals } from '../lib/location/locationRaw'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 function inferRemoteRegionFromScope(lr: string): string | null {
   // lr is normalized (lowercase, separators preserved)
@@ -109,12 +114,12 @@ async function main() {
       if (!DRY_RUN) {
         await prisma.job.update({ where: { id: job.id }, data: patch })
       } else {
-        console.log({ id: job.id, source: job.source, raw: job.locationRaw, patch })
+        __slog({ id: job.id, source: job.source, raw: job.locationRaw, patch })
       }
     }
   }
 
-  console.log({ scanned, updated, dryRun: DRY_RUN, take: TAKE, onlySource: ONLY_SOURCE || null })
+  __slog({ scanned, updated, dryRun: DRY_RUN, take: TAKE, onlySource: ONLY_SOURCE || null })
 }
 
 main().finally(() => prisma.$disconnect())

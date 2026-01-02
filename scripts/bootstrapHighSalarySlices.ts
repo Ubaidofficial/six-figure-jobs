@@ -4,6 +4,7 @@
 // Usage:
 //   npx tsx scripts/bootstrapHighSalarySlices.ts
 
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
 import { ALL_SALARY_ROLES } from '../lib/roles/salaryRoles'
 import {
@@ -11,6 +12,9 @@ import {
   highSalaryThresholdForCountry,
   REMOTE_REGIONS,
 } from '../lib/seo/regions'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + '\n')
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + '\n')
 
 type SliceTask = {
   slug: string
@@ -27,7 +31,7 @@ function parseConcurrency(): number {
 
 async function main() {
   const concurrency = parseConcurrency()
-  console.log(`🔄 Building high-salary slices (concurrency=${concurrency})…`)
+  __slog(`🔄 Building high-salary slices (concurrency=${concurrency})…`)
 
   const tasks: SliceTask[] = []
   const salaryBands = [100_000, 200_000, 300_000, 400_000]
@@ -273,7 +277,7 @@ async function main() {
     }
   }
 
-  console.log(`🧮 Calculating counts for ${tasks.length} slices…`)
+  __slog(`🧮 Calculating counts for ${tasks.length} slices…`)
 
   let processed = 0
   await runWithConcurrency(tasks, concurrency, async (task) => {
@@ -297,16 +301,16 @@ async function main() {
     })
 
     if (processed % 200 === 0) {
-      console.log(`   …${processed}/${tasks.length} processed`)
+      __slog(`   …${processed}/${tasks.length} processed`)
     }
   })
 
-  console.log('✅ Done.')
+  __slog('✅ Done.')
 }
 
 main()
   .catch((err) => {
-    console.error(err)
+    __serr(err)
     process.exitCode = 1
   })
   .finally(async () => {
@@ -327,7 +331,7 @@ async function runWithConcurrency<T>(
     try {
       await fn(item)
     } catch (err) {
-      console.error(err)
+      __serr(err)
     }
     await runNext()
   }

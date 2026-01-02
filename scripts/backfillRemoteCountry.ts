@@ -2,7 +2,12 @@
 // Fill countryCode for remote jobs when missing, using remoteRegion/locationRaw hints.
 // Usage: npx tsx scripts/backfillRemoteCountry.ts
 
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const REGION_COUNTRY_MAP: Record<string, string> = {
   'us-only': 'US',
@@ -48,7 +53,7 @@ async function main() {
     })
 
     if (jobs.length === 0) break
-    console.log(`Batch starting at ${skip}: ${jobs.length} jobs`)
+    __slog(`Batch starting at ${skip}: ${jobs.length} jobs`)
 
     for (const job of jobs) {
       const byRegion = job.remoteRegion ? REGION_COUNTRY_MAP[job.remoteRegion.toLowerCase()] : null
@@ -66,12 +71,12 @@ async function main() {
     skip += batchSize
   }
 
-  console.log(`Updated ${totalUpdated} jobs with inferred countryCode.`)
+  __slog(`Updated ${totalUpdated} jobs with inferred countryCode.`)
 }
 
 main()
   .catch((err) => {
-    console.error(err)
+    __serr(err)
     process.exitCode = 1
   })
   .finally(async () => {
