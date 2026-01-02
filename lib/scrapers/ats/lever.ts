@@ -175,6 +175,12 @@ async function fetchLeverWithRetry<T>(
         throw new Error(`HTTP ${res.status} ${res.statusText}`)
       }
 
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        console.error(`[Lever] Non-JSON response (${contentType || 'unknown'}) for ${url}`)
+        throw new Error('Lever returned HTML instead of JSON (likely rate limited or blocked)')
+      }
+
       return (await res.json()) as T
     } catch (err: any) {
       lastError = err

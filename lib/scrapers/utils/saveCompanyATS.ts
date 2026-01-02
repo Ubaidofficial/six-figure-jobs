@@ -5,6 +5,15 @@ import slugify from 'slugify'
 import { prisma } from '../../prisma'
 import { detectATS, getCompanyJobsUrl, isExternalToHost, type ATSType } from './detectATS'
 
+function isCompanySlugCollision(err: any): boolean {
+  if (!err || err.code !== 'P2002') return false
+
+  const target = err?.meta?.target
+  if (Array.isArray(target)) return target.includes('companySlug')
+  if (typeof target === 'string') return target.includes('companySlug')
+  return false
+}
+
 export async function saveCompanyATS(
   companyName: string,
   jobAtsUrl: string,
@@ -56,6 +65,10 @@ export async function saveCompanyATS(
       },
     })
   } catch (err: any) {
+    if (isCompanySlugCollision(err)) {
+      console.log(`[CompanyATS] ⏭️  Skipping ${cleanedCompanyName} (slug collision)`)
+      return
+    }
     const msg = err?.message ? String(err.message) : String(err)
     console.error(`[CompanyATS] Error saving ${cleanedCompanyName} (${atsUrl}): ${msg}`)
   }

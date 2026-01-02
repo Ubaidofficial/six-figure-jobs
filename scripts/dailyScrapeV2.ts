@@ -31,6 +31,7 @@ import scrapeRemoteAI from '../lib/scrapers/remoteai'
 import scrapeRemoteYeah from '../lib/scrapers/remoteyeah'
 import scrapeHimalayas from '../lib/scrapers/himalayas'
 import scrapeRemoteLeaf from '../lib/scrapers/remoteleaf'
+import { discoverRemote100kCompanies } from '../lib/scrapers/remote100k-companies'
 
 // New board scrapers (named exports)
 import { scrapeRealWorkFromAnywhere } from '../lib/scrapers/realworkfromanywhere'
@@ -148,6 +149,7 @@ async function runBoardScrapers(options: CliOptions) {
 	    ['WeWorkRemotely', scrapeWeWorkRemotely],
 	    ['NoDesk', scrapeNodesk],
 	    ['BuiltIn', scrapeBuiltIn],
+	    ['Remote100k-Companies', discoverRemote100kCompanies],
 	    ['RemoteRocketship', scrapeRemoteRocketship],
 	    ['Himalayas', scrapeHimalayas],
 	    ['RemoteLeaf', scrapeRemoteLeaf],
@@ -172,6 +174,7 @@ async function runBoardScrapers(options: CliOptions) {
 	        [
 	          'RemoteOK',
 	          'WeWorkRemotely',
+	          'Remote100k-Companies',
 	          'RemoteRocketship',
 	          'Himalayas',
 	          'RemoteLeaf',
