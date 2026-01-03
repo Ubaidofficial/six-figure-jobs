@@ -1,0 +1,7 @@
+ tablename |        indexname        |                                        indexdef                                        
+-----------+-------------------------+----------------------------------------------------------------------------------------
+ Job       | Job_isExpired_idx       | CREATE INDEX "Job_isExpired_idx" ON public."Job" USING btree ("isExpired")
+ Job       | Job_roleSlug_idx        | CREATE INDEX "Job_roleSlug_idx" ON public."Job" USING btree ("roleSlug")
+ Job       | Job_salaryValidated_idx | CREATE INDEX "Job_salaryValidated_idx" ON public."Job" USING btree ("salaryValidated")
+(3 rows)
+

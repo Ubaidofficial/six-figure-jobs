@@ -11,7 +11,6 @@
 import { ingestJob } from '../ingest'
 import { makeAtsSource } from '../ingest/sourcePriority'
 import type { ScrapedJobInput } from '../ingest/types'
-import type { CanonicalRoleSlug } from '../roles/canonicalSlugs'
 
 // =============================================================================
 // Types
@@ -32,14 +31,10 @@ export type UpsertAtsResult = {
 
 /**
  * Infer a canonical role slug from a job title
- * Returns null if no canonical match found (prevents garbage URLs)
- *
- * CRITICAL: This function must ONLY return slugs from CANONICAL_ROLE_SLUGS
- * DO NOT fall back to slugify(title) - that creates garbage URLs!
+ * Returns a canonical slug when matched; otherwise falls back to a normalized title slug.
+ * This prevents NULL `roleSlug` values (which can break filtering/SEO).
  */
-function inferRoleSlugFromTitle(
-  title: string | null | undefined,
-): CanonicalRoleSlug | null {
+function inferRoleSlugFromTitle(title: string | null | undefined): string | null {
   if (!title) return null
 
   const t = ` ${title.toLowerCase()} `
@@ -527,7 +522,17 @@ function inferRoleSlugFromTitle(
     return 'software-engineer'
   }
 
-  return null
+  // Fallback: generate slug from title if no pattern matched
+  const cleaned = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60)
+
+  return cleaned || null
 }
 
 // =============================================================================

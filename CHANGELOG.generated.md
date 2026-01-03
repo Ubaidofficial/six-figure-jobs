@@ -83,6 +83,7 @@
 * expand footer to 13 SEO-rich sections with 70+ internal links ([8576a30](https://github.com/Ubaidofficial/six-figure-jobs/commit/8576a307db50153f177e1c79d4b8c79cc99acd85))
 * implement AI enrichment display and Six Figure branding ([a175bcc](https://github.com/Ubaidofficial/six-figure-jobs/commit/a175bccadae221314c2401d84168998ed89de358))
 * implement shadcn/ui with Six Figure Jobs dark theme ([3cab8f4](https://github.com/Ubaidofficial/six-figure-jobs/commit/3cab8f40adcd941693eb7662a6655e7602970a67))
+* implement tech stack extraction and backfill ([15ae0db](https://github.com/Ubaidofficial/six-figure-jobs/commit/15ae0dbebf4c508739164b5b85731f17d822cbc5))
 * infinite scroll + new green brand color + apply URL enrichment ([2fd36a9](https://github.com/Ubaidofficial/six-figure-jobs/commit/2fd36a95fde985178f96f98ef0647b371aa92721))
 * **jobs:** permanent canonical redirects + shortId-backed job slugs ([06b72de](https://github.com/Ubaidofficial/six-figure-jobs/commit/06b72de0a560789232890d6640a5a04e8c0522ea))
 * major UI/UX improvements - navigation, job cards, AI enrichment, shadows ([40378a1](https://github.com/Ubaidofficial/six-figure-jobs/commit/40378a1b9a249007f9c64056a8e669d6eeec68fc))

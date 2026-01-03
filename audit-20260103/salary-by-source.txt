@@ -1,0 +1,9 @@
+        source        | total_jobs | validated | validated_pct | avg_confidence 
+----------------------+------------+-----------+---------------+----------------
+ ats:greenhouse       |      10307 |      5305 |          51.5 |           92.4
+ ats:ashby            |        559 |       559 |         100.0 |           80.0
+ board:weworkremotely |         27 |        27 |         100.0 |           95.0
+ board:remotive       |         21 |        21 |         100.0 |           95.0
+ board:remoteok       |         16 |        16 |         100.0 |           95.0
+(5 rows)
+

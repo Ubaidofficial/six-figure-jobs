@@ -1,0 +1,8 @@
+        source        | jobs_last_7d | null_slugs | has_slugs | null_pct 
+----------------------+--------------+------------+-----------+----------
+ ats:ashby            |          489 |        472 |        17 |     96.5
+ ats:greenhouse       |          295 |        257 |        38 |     87.1
+ board:weworkremotely |           27 |         22 |         5 |     81.5
+ board:remotive       |            1 |          1 |         0 |    100.0
+(4 rows)
+

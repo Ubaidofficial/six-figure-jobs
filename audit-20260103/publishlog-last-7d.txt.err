@@ -1,0 +1,3 @@
+psql:audit-20260103/sql/20_publishlog_last_7d.sql:8: ERROR:  relation "PublishLog" does not exist
+LINE 5: FROM "PublishLog"
+             ^

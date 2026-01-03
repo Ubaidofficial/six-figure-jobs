@@ -1,0 +1,34 @@
+   company   | atsProvider | active_jobs | null_slugs 
+-------------+-------------+-------------+------------
+ SpaceX      | greenhouse  |        1195 |        712
+ Samsara     | greenhouse  |         459 |        179
+ Cloudflare  | greenhouse  |         448 |        200
+ Stripe      | greenhouse  |         443 |        285
+ Airwallex   | ashby       |         404 |        390
+ MongoDB     | greenhouse  |         366 |        192
+ Coinbase    | greenhouse  |         348 |        129
+ SumUp       | greenhouse  |         342 |        278
+ Datadog     | greenhouse  |         323 |        153
+ Anthropic   | greenhouse  |         296 |        188
+ Okta        | greenhouse  |         276 |        143
+ Block       | greenhouse  |         270 |        145
+ Canonical   | greenhouse  |         260 |         97
+ Rocket Lab  | greenhouse  |         209 |        125
+ Adyen       | greenhouse  |         185 |        131
+ Airbnb      | greenhouse  |         184 |        112
+ Verkada Inc | greenhouse  |         181 |        157
+ StubHub     | greenhouse  |         177 |        171
+ Elastic     | greenhouse  |         156 |         89
+ Brex        | greenhouse  |         152 |         96
+ Flexport    | greenhouse  |         145 |        114
+ Figma       | greenhouse  |         144 |         80
+ Instacart   | greenhouse  |         142 |         76
+ Scale AI    | greenhouse  |         139 |         68
+ Mozilla     | greenhouse  |         132 |         44
+ Reddit      | greenhouse  |         130 |         66
+ Affirm      | greenhouse  |         127 |         48
+ GitLab      | greenhouse  |         119 |         50
+ Asana       | greenhouse  |         119 |         50
+ Pinterest   | greenhouse  |         100 |         38
+(30 rows)
+

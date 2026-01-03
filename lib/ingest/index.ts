@@ -68,6 +68,38 @@ const ingestLog = (...args: Parameters<typeof console.log>) => {
   if (shouldLogIngest) console.log(...args)
 }
 
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+async function retryPrismaWrite<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let lastErr: any
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await fn()
+    } catch (err: any) {
+      lastErr = err
+      const code = err?.code
+
+      // Prisma recommends retrying on transaction conflicts/deadlocks.
+      // Also retry transient connection pool issues.
+      const retryable =
+        code === 'P2034' || // transaction write conflict / deadlock
+        code === 'P2024' || // connection pool timeout
+        code === 'P1001' || // can't reach database
+        code === 'P1002' // database timeout
+
+      if (!retryable || attempt === 3) throw err
+
+      const backoffMs = 100 * 2 ** (attempt - 1)
+      ingestLog(`[ingest] retrying ${label} (attempt ${attempt + 1}/3) after ${backoffMs}ms`, code)
+      await sleep(backoffMs)
+    }
+  }
+
+  throw lastErr
+}
+
 // =============================================================================
 // Main Ingest Function
 // =============================================================================
@@ -355,7 +387,19 @@ async function createNewJob(
   }
 
   try {
-    await prisma.job.create({ data: jobData })
+    // Use an atomic upsert to avoid race-condition PK collisions when multiple
+    // concurrent ingests attempt to create the same deterministic job id.
+    await retryPrismaWrite('job.upsert', async () =>
+      prisma.job.upsert({
+        where: { id: jobId },
+        create: jobData,
+        update: {
+          lastSeenAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }),
+    )
+
     return { status: 'created', jobId, dedupeKey }
   } catch (error: any) {
     if (error?.code === 'P2002') {
@@ -369,8 +413,7 @@ async function createNewJob(
         console.error(`[ingest] shortId collision on create: ${jobId}`)
         throw error
       }
-      ingestLog(`[ingest] Job already exists (race condition): ${jobId}`)
-      return { status: 'skipped', reason: 'already-exists', jobId, dedupeKey }
+      // Other unique constraint collisions should remain visible.
     }
     throw error
   }

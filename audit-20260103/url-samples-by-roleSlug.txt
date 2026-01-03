@@ -1,0 +1,6 @@
+  slug_status  | count |                                                                                                    sample_urls                                                                                                     
+---------------+-------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Has roleSlug  |  4687 | {https://jobs.ashbyhq.com/eliseai/59d7a2a6-cb05-456f-bde7-5337f1d88589,https://job-boards.greenhouse.io/algolia/jobs/5740536004,https://boards.greenhouse.io/crunchyroll/jobs/7462442?gh_jid=7462442}
+ NULL roleSlug |  6243 | {https://jobs.ashbyhq.com/lambda/5a123686-0008-4ead-8083-ea84ee55a4e3,https://jobs.ashbyhq.com/eliseai/2a1f30d5-f1bc-45d7-a43c-974a33ad7efe,https://jobs.ashbyhq.com/eliseai/20a34eb4-d3bd-4a29-90db-782bccd25ea5}
+(2 rows)
+

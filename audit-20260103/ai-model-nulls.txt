@@ -1,0 +1,5 @@
+ enriched | enriched_model_missing 
+----------+------------------------
+     1179 |                   1175
+(1 row)
+

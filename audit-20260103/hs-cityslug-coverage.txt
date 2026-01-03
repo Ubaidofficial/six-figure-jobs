@@ -1,0 +1,5 @@
+ hs_validated | hs_validated_with_city | hs_validated_missing_city | hs_validated_with_country | hs_validated_missing_country 
+--------------+------------------------+---------------------------+---------------------------+------------------------------
+         5928 |                   3972 |                      1956 |                      3331 |                         2597
+(1 row)
+

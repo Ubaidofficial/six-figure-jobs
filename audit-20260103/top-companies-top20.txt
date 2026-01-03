@@ -1,0 +1,24 @@
+   company   | active_jobs |                                                             logoUrl                                                              
+-------------+-------------+----------------------------------------------------------------------------------------------------------------------------------
+ SpaceX      |         558 | https://img.logo.dev/spacex.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Airwallex   |         404 | 
+ Coinbase    |         283 | https://cdn.builtin.com/cdn-cgi/image/f=auto,fit=scale-down,w=128,h=128/sites/www.builtin.com/files/2025-05/502x282%20(2).png
+ Anthropic   |         266 | https://img.logo.dev/anthropic.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Samsara     |         214 | https://cdn.builtin.com/cdn-cgi/image/f=auto,fit=scale-down,w=128,h=128/sites/www.builtin.com/files/2021-08/Samsara.jpeg
+ Block       |         204 | https://img.logo.dev/block.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Verkada Inc |         181 | 
+ StubHub     |         177 | https://img.logo.dev/stubhub.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ MongoDB     |         177 | https://cdn.builtin.com/cdn-cgi/image/f=auto,fit=scale-down,w=128,h=128/sites/www.builtin.com/files/2025-04/mongodbinc_logo.jpeg
+ Okta        |         174 | https://img.logo.dev/okta.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Datadog     |         137 | https://img.logo.dev/datadog.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Cloudflare  |         126 | https://cdn.builtin.com/cdn-cgi/image/f=auto,fit=scale-down,w=128,h=128/sites/www.builtin.com/files/2021-04/CFLogo.png
+ Instacart   |         126 | https://img.logo.dev/instacart.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Brex        |         125 | https://img.logo.dev/brex.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Airbnb      |         115 | https://img.logo.dev/airbnb.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Reddit      |         107 | https://img.logo.dev/reddit.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Scale AI    |          95 | https://img.logo.dev/scale-ai.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Figma       |          92 | https://img.logo.dev/figma.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+ Affirm      |          92 | https://cdn.builtin.com/cdn-cgi/image/f=auto,fit=scale-down,w=128,h=128/sites/www.builtin.com/files/2021-06/Affirm%20Logo.png
+ Wirecutter  |          82 | https://img.logo.dev/wirecutter.com?token=pk_MxvH3NvfTD6CYFx-txjD2g
+(20 rows)
+
