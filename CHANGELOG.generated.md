@@ -1,4 +1,4 @@
-# 1.0.0 (2026-01-02)
+# 1.0.0 (2026-01-03)
 
 
 ### Bug Fixes
@@ -75,6 +75,7 @@
 * Add strategic AI enrichment and location parsing to scraping pipeline ([9ac3e13](https://github.com/Ubaidofficial/six-figure-jobs/commit/9ac3e13afce6e155dab0bb66a16357298c0742ab))
 * add WebSite and Organization schemas to homepage ([70607ab](https://github.com/Ubaidofficial/six-figure-jobs/commit/70607ab1148ce47ae54235e8dcd0ce0ef6089851))
 * auto-enrich apply URLs after daily scrape ([2d5a542](https://github.com/Ubaidofficial/six-figure-jobs/commit/2d5a5421de608a5d592c8d70f89f42257cebc6cc))
+* complete scraper improvements and company discovery ([93c9f2a](https://github.com/Ubaidofficial/six-figure-jobs/commit/93c9f2a645621584455a1417e696184727761863))
 * critical SEO fixes + publishing safety (Phase 1) - Add metadataBase, Twitter metadata, keyword optimization, publishing safety gates, real tracking, quality validation, rollback plan, test route noindex - PSEO_ENABLED=false, ultra-conservative rates for new domain - Audit compliance 90% to 98%, Publishing safety 3/8 to 8/8 - TypeScript: 0 errors ([15e4e1f](https://github.com/Ubaidofficial/six-figure-jobs/commit/15e4e1fa83ff71c7258e60a41037b8efc41584d8))
 * enhance job cards with primaryLocation, aiSnippet, and experience levels ([9134b6d](https://github.com/Ubaidofficial/six-figure-jobs/commit/9134b6df4eaf35c12a50843788da8dcf8e145908))
 * enhance job cards with prominent tech stack display ([00e095a](https://github.com/Ubaidofficial/six-figure-jobs/commit/00e095a30a39bfd581aba7889d205d97524fafde))

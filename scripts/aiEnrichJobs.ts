@@ -8,6 +8,7 @@ import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
 import { enrichJobWithAI } from '../lib/ai/openaiEnricher'
 import { buildSnippetFromJob } from '../lib/jobs/snippet'
+import { extractTechStackFromText } from '../lib/tech/extractTechStack'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -109,6 +110,8 @@ async function main() {
           maxOutputTokens,
         })
 
+        const tech = extractTechStackFromText(`${job.title}\n${roleSnippet}`)
+
         await prisma.$transaction([
           prisma.job.update({
             where: { id: job.id },
@@ -121,6 +124,8 @@ async function main() {
                 requirements: out.requirements || [],
                 benefits: out.benefits || [],
               },
+              techStack: tech.display.length ? JSON.stringify(tech.display) : undefined,
+              skillsJson: tech.slugs.length ? JSON.stringify(tech.slugs) : undefined,
               aiEnrichedAt: new Date(),
             },
           }),
