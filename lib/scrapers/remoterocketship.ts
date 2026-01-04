@@ -7,7 +7,11 @@
 
 import * as cheerio from 'cheerio'
 import { ingestBoardJob } from '../jobs/ingestBoardJob'
+import { parseSalaryFromText } from '../normalizers/salary'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
+import { extractApplyDestinationFromHtml } from './utils/extractApplyLink'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD_NAME = 'remoterocketship'
 const BASE_URL = 'https://www.remoterocketship.com'
@@ -19,6 +23,58 @@ const BASE_LISTING_URL =
 // Keep this very modest; RemoteRocketship is sensitive to scraping.
 const MAX_PAGES = 1
 const PAGE_DELAY_MS = 6000
+const JOB_DETAIL_DELAY_MS = 1200
+
+function extractDescriptionFromJobPageHtml(html: string): { html: string | null; text: string | null } {
+  if (!html) return { html: null, text: null }
+
+  const $ = cheerio.load(html)
+
+  const selectors = [
+    '[data-testid*="description"]',
+    '[class*="description"]',
+    '.job-description',
+    'article',
+    'main article',
+    'main',
+    '[role="main"]',
+  ]
+
+  for (const sel of selectors) {
+    const $el = $(sel).first()
+    const t = $el.text().replace(/\s+/g, ' ').trim()
+    if ($el.length && t.length >= 500) {
+      return { html: $.html($el.get(0)), text: t }
+    }
+  }
+
+  // Fallback: find the largest "contenty" container in main.
+  const candidates = $('main div, main section, main article, article, [role="main"] div, [role="main"] section')
+  let bestHtml: string | null = null
+  let bestText: string | null = null
+  let bestScore = 0
+
+  candidates.each((_i, el) => {
+    const $el = $(el)
+    const text = $el.text().replace(/\s+/g, ' ').trim()
+    if (text.length < 500) return
+
+    const pCount = $el.find('p').length
+    const liCount = $el.find('li').length
+    const linkCount = $el.find('a').length
+
+    let score = text.length + pCount * 120 + liCount * 80
+    if (linkCount > 20) score *= 0.2
+
+    if (score > bestScore) {
+      bestScore = score
+      bestHtml = $.html($el.get(0))
+      bestText = text
+    }
+  })
+
+  return { html: bestHtml, text: bestText }
+}
 
 async function fetchWithBackoff(url: string, attempt = 1): Promise<Response | null> {
   const maxAttempts = 3
@@ -136,26 +192,53 @@ export default async function scrapeRemoteRocketship() {
 
       for (const j of parsedJobs) {
         try {
+          let descriptionHtml: string | null = null
+          let descriptionText: string | null = null
+          let applyUrl: string = j.jobUrl
+
+          // RemoteRocketship doesn't expose description in list view; fetch detail page (lightly).
+          const detailRes = await fetchWithBackoff(j.jobUrl)
+          if (detailRes) {
+            const detailHtml = await detailRes.text()
+            const extracted = extractDescriptionFromJobPageHtml(detailHtml)
+            descriptionHtml = extracted.html
+            descriptionText = extracted.text
+
+            const discoveredApplyUrl = extractApplyDestinationFromHtml(detailHtml, j.jobUrl)
+            if (discoveredApplyUrl && isExternalToHost(discoveredApplyUrl, 'remoterocketship.com')) {
+              applyUrl = discoveredApplyUrl
+              if (j.company) {
+                await saveCompanyATS(j.company, discoveredApplyUrl, BOARD_NAME)
+              }
+            }
+          }
+
+          // Parse salary from the listing chip if present.
+          const parsedSalary = j.salaryText ? parseSalaryFromText(j.salaryText) : null
+          const atsType = detectATS(applyUrl)
+          const explicitAtsProvider = toAtsProvider(atsType)
+          const explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(applyUrl, atsType) : null
+
           const result = await ingestBoardJob(BOARD_NAME, {
             externalId: j.jobUrl,
             title: j.title,
             url: j.jobUrl,
             rawCompanyName: j.company,
             locationText: j.locationText,
-            salaryMin: null,
-            salaryMax: null,
-            salaryCurrency: null,
-            salaryInterval: 'year',
+            salaryMin: parsedSalary?.min ?? null,
+            salaryMax: parsedSalary?.max ?? null,
+            salaryCurrency: parsedSalary?.currency ?? null,
+            salaryInterval: parsedSalary?.interval ?? 'year',
             isRemote: true,
             employmentType: null,
             postedAt: null,
             updatedAt: null,
-            descriptionHtml: null,
-            descriptionText: j.salaryText || null,
+            descriptionHtml,
+            descriptionText,
             companyWebsiteUrl: null,
-            applyUrl: j.jobUrl,
-            explicitAtsProvider: null,
-            explicitAtsUrl: null,
+            applyUrl,
+            explicitAtsProvider,
+            explicitAtsUrl,
             raw: j,
           })
           addBoardIngestResult(stats, result)
@@ -163,6 +246,8 @@ export default async function scrapeRemoteRocketship() {
           console.error(`[${BOARD_NAME}] Error ingesting job ${j.jobUrl}:`, err?.message || err)
           stats.skipped++
         }
+
+        await new Promise((r) => setTimeout(r, JOB_DETAIL_DELAY_MS))
       }
 
       if (page < MAX_PAGES) {

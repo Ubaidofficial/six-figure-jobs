@@ -2,7 +2,7 @@
 // Filter out jobs older than a threshold
 
 export const MAX_INGEST_AGE_DAYS = 30  // Don't ingest jobs older than 30 days
-export const MAX_DISPLAY_AGE_DAYS = 21 // Only show jobs up to 21 days old
+export const MAX_DISPLAY_AGE_DAYS = 45 // Only show jobs up to 45 days old
 
 export function isJobTooOld(postedAt: Date | string | null | undefined, maxDays: number = MAX_INGEST_AGE_DAYS): boolean {
   if (!postedAt) return false

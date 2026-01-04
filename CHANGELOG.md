@@ -1,34 +1,4 @@
-# 1.0.0 (2026-01-01)
-
-## [Unreleased] - 2026-01-02
-
-### Added
-- CompanyATS discovery system for two-phase job aggregation
-- Apply URL extraction from job board pages
-- `scraperHealthCheck.ts` for monitoring extraction success rates
-- `scrapeDirectATS.ts` for direct company ATS scraping
-
-### Changed
-- Board scrapers now extract final company apply URLs
-- Remotive using internal API (100% extraction rate)
-- WeWorkRemotely and BuiltIn using extraction logic
-
-### Fixed
-- saveCompanyATS skips "Unknown company" to prevent slug collisions
-- Remote100k disabled due to Framer architecture issues
-- Duplicate detection in job ingestion pipeline
-- Remotive extraction: 17% → 100%
-- BuiltIn scraper URL and selectors updated
-
-### Known Issues
-- RemoteOK blocked by signup wall (16 jobs affected)
-- WeWorkRemotely blocked by Cloudflare (26 jobs affected)
-
-
-- chore: make changelog gate use staged diff
-
-- fix: harden job routing + remote100k scraper cleanup
-
+# 1.0.0 (2026-01-04)
 
 
 ### Bug Fixes
@@ -39,12 +9,15 @@
 * **changelog:** add security notes [PRD-3 Task 1] ([bf615f1](https://github.com/Ubaidofficial/six-figure-jobs/commit/bf615f1b109e17bc933a7ebbb93b7513e48ff4b2))
 * **changelog:** note PRD-2 SEO changes ([b9cea26](https://github.com/Ubaidofficial/six-figure-jobs/commit/b9cea26378da1ef936ee7ef9d1eb9c1030072133))
 * clean remote filters and metadataBase warning ([b779f1e](https://github.com/Ubaidofficial/six-figure-jobs/commit/b779f1ece3c8c1e9c27e9921f6c5ed0dfd1089e5))
+* complete systematic fixes for scrapers and code quality ([f5c05b0](https://github.com/Ubaidofficial/six-figure-jobs/commit/f5c05b08738e454eb2606bc2bf8e970fa721250e))
 * deepseek AI annotator + prisma pooling + remote role page revalidate ([a714264](https://github.com/Ubaidofficial/six-figure-jobs/commit/a7142642e668613176d40f17f10eb2a1972be8bc))
 * define totalJobs in remote role/city page ([6e42cb6](https://github.com/Ubaidofficial/six-figure-jobs/commit/6e42cb6ac5fe3953d0b966f0e7ea59c137a61bea))
 * define totalJobs in remote role/city page ([bc6bcf3](https://github.com/Ubaidofficial/six-figure-jobs/commit/bc6bcf3ea97abcf83503ddab44655c4d782d109a))
+* disable Remote100k scraper (13 bad jobs removed) ([99521eb](https://github.com/Ubaidofficial/six-figure-jobs/commit/99521eb9b4ab2396d3324708802a112dc4e8d9a5))
 * enforce annual-only salary display and prevent low/monthly leaks ([c804808](https://github.com/Ubaidofficial/six-figure-jobs/commit/c804808731ff2c2ef65418fe773cd364bb4fb9ba))
 * enhance main JobCard with primaryLocation and aiSnippet ([84e5de4](https://github.com/Ubaidofficial/six-figure-jobs/commit/84e5de49ca40272d8d1469787bcdae7d0dbe6225))
 * extract real employer apply URLs from remote100k job pages ([9f8a6c5](https://github.com/Ubaidofficial/six-figure-jobs/commit/9f8a6c5a2ff8e54bf789595d5e57aa3e2347770e))
+* harden job routing + remote100k scraper cleanup ([4186f0b](https://github.com/Ubaidofficial/six-figure-jobs/commit/4186f0b04eb159dcf871c16888c4eff915ae95f2))
 * **home:** restore job card snippets + emoji meta ([1f3ada2](https://github.com/Ubaidofficial/six-figure-jobs/commit/1f3ada225728d4c66bc8f562de9f13bb8331d1a0))
 * improve location parsing to handle Remote-Friendly prefix ([2d3e5fd](https://github.com/Ubaidofficial/six-figure-jobs/commit/2d3e5fdb5a61e70ef1f6e944a8bc3e02487a3e2e))
 * **ingest:** ensure shortId set during deep discovery job creation ([2658289](https://github.com/Ubaidofficial/six-figure-jobs/commit/26582896654d8baa819861dba70893d1ac1af397))
@@ -63,6 +36,7 @@
 * Remove unsupported fields from YC scraper ([fb34a95](https://github.com/Ubaidofficial/six-figure-jobs/commit/fb34a9519003bfb4f9d13043e7a8770d8fe0c5c4))
 * Repair syntax errors in generic.ts scraper ([41ba3a3](https://github.com/Ubaidofficial/six-figure-jobs/commit/41ba3a3c6ecc8c7990845c4e82ad8b1a7dfb33e4))
 * resolve double flag display in job location labels (🇺🇸 USA instead of 🇺🇸 🇺🇸 USA) ([9c55e4b](https://github.com/Ubaidofficial/six-figure-jobs/commit/9c55e4beedea0675c7c9db19acb2cf6f78842ef6))
+* resolve race condition in job ingestion ([bd7ea9b](https://github.com/Ubaidofficial/six-figure-jobs/commit/bd7ea9b4d8cc8a500a02a10a909375f43ae250b2))
 * **routes:** use numeric revalidate literals for Next route handlers ([cbe4cfa](https://github.com/Ubaidofficial/six-figure-jobs/commit/cbe4cfab6e6555372106943399a8a7b83aa73a15))
 * run AI enrichment in background to avoid timeout ([45a7272](https://github.com/Ubaidofficial/six-figure-jobs/commit/45a7272aa6ad799584302d01a82239039864a377))
 * **scrapers:** add no-fabricated-salary guardrail [PRD-1 Task 4] ([b8db1bb](https://github.com/Ubaidofficial/six-figure-jobs/commit/b8db1bb3a60ae07abadbe496c16b7cf101363ad3))
@@ -102,6 +76,7 @@
 * Add strategic AI enrichment and location parsing to scraping pipeline ([9ac3e13](https://github.com/Ubaidofficial/six-figure-jobs/commit/9ac3e13afce6e155dab0bb66a16357298c0742ab))
 * add WebSite and Organization schemas to homepage ([70607ab](https://github.com/Ubaidofficial/six-figure-jobs/commit/70607ab1148ce47ae54235e8dcd0ce0ef6089851))
 * auto-enrich apply URLs after daily scrape ([2d5a542](https://github.com/Ubaidofficial/six-figure-jobs/commit/2d5a5421de608a5d592c8d70f89f42257cebc6cc))
+* complete scraper improvements and company discovery ([93c9f2a](https://github.com/Ubaidofficial/six-figure-jobs/commit/93c9f2a645621584455a1417e696184727761863))
 * critical SEO fixes + publishing safety (Phase 1) - Add metadataBase, Twitter metadata, keyword optimization, publishing safety gates, real tracking, quality validation, rollback plan, test route noindex - PSEO_ENABLED=false, ultra-conservative rates for new domain - Audit compliance 90% to 98%, Publishing safety 3/8 to 8/8 - TypeScript: 0 errors ([15e4e1f](https://github.com/Ubaidofficial/six-figure-jobs/commit/15e4e1fa83ff71c7258e60a41037b8efc41584d8))
 * enhance job cards with primaryLocation, aiSnippet, and experience levels ([9134b6d](https://github.com/Ubaidofficial/six-figure-jobs/commit/9134b6df4eaf35c12a50843788da8dcf8e145908))
 * enhance job cards with prominent tech stack display ([00e095a](https://github.com/Ubaidofficial/six-figure-jobs/commit/00e095a30a39bfd581aba7889d205d97524fafde))
@@ -109,6 +84,7 @@
 * expand footer to 13 SEO-rich sections with 70+ internal links ([8576a30](https://github.com/Ubaidofficial/six-figure-jobs/commit/8576a307db50153f177e1c79d4b8c79cc99acd85))
 * implement AI enrichment display and Six Figure branding ([a175bcc](https://github.com/Ubaidofficial/six-figure-jobs/commit/a175bccadae221314c2401d84168998ed89de358))
 * implement shadcn/ui with Six Figure Jobs dark theme ([3cab8f4](https://github.com/Ubaidofficial/six-figure-jobs/commit/3cab8f40adcd941693eb7662a6655e7602970a67))
+* implement tech stack extraction and backfill ([15ae0db](https://github.com/Ubaidofficial/six-figure-jobs/commit/15ae0dbebf4c508739164b5b85731f17d822cbc5))
 * infinite scroll + new green brand color + apply URL enrichment ([2fd36a9](https://github.com/Ubaidofficial/six-figure-jobs/commit/2fd36a95fde985178f96f98ef0647b371aa92721))
 * **jobs:** permanent canonical redirects + shortId-backed job slugs ([06b72de](https://github.com/Ubaidofficial/six-figure-jobs/commit/06b72de0a560789232890d6640a5a04e8c0522ea))
 * major UI/UX improvements - navigation, job cards, AI enrichment, shadows ([40378a1](https://github.com/Ubaidofficial/six-figure-jobs/commit/40378a1b9a249007f9c64056a8e669d6eeec68fc))
@@ -117,5 +93,6 @@
 * **seo:** canonical role slugs + remove 150k tier ([f9203ef](https://github.com/Ubaidofficial/six-figure-jobs/commit/f9203efc996748fc0fcbe83487920b17e2ec9078))
 * **seo:** implement v1.5 rules - 90% compliance ([5c7a9cf](https://github.com/Ubaidofficial/six-figure-jobs/commit/5c7a9cf81baae556738c9b59e2c3b9323741bab2))
 * **ui:** upgrade job cards, emojis, and job detail layout ([a37c06f](https://github.com/Ubaidofficial/six-figure-jobs/commit/a37c06f3d9c7e35508569698e7f0356ea4b594b5))
+
 
 

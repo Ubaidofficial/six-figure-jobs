@@ -84,21 +84,23 @@ export interface CurrencyLocationCheck {
  * - IMPORTANT: "$" alone is ambiguous. We DO NOT treat "$" as USD here.
  */
 const CURRENCY_PATTERNS: Array<{ pattern: RegExp; currency: SupportedCurrency }> = [
-  { pattern: /A\$|AU\$|AUD/i, currency: 'AUD' },
-  { pattern: /C\$|CA\$|CAD/i, currency: 'CAD' },
-  { pattern: /NZ\$|NZD/i, currency: 'NZD' },
-  { pattern: /S\$|SG\$|SGD/i, currency: 'SGD' },
-  { pattern: /CHF|Fr\./i, currency: 'CHF' },
+  // Strong currency markers first (avoid false positives like "audit" => "AUD")
+  { pattern: /₹|\bINR\b|\blakhs?\b|\blpa\b/i, currency: 'INR' },
+
+  { pattern: /A\$|AU\$|\bAUD\b/i, currency: 'AUD' },
+  { pattern: /C\$|CA\$|\bCAD\b/i, currency: 'CAD' },
+  { pattern: /NZ\$|\bNZD\b/i, currency: 'NZD' },
+  { pattern: /S\$|SG\$|\bSGD\b/i, currency: 'SGD' },
+  { pattern: /\bCHF\b|Fr\./i, currency: 'CHF' },
 
   // NOTE: "kr" is ambiguous across SEK/NOK/DKK; only accept explicit codes.
   { pattern: /\bSEK\b/i, currency: 'SEK' },
   { pattern: /\bNOK\b/i, currency: 'NOK' },
   { pattern: /\bDKK\b/i, currency: 'DKK' },
 
-  { pattern: /₹|INR|lakh|lakhs/i, currency: 'INR' },
-  { pattern: /€|EUR/i, currency: 'EUR' },
-  { pattern: /£|GBP/i, currency: 'GBP' },
-  { pattern: /US\$|USD/i, currency: 'USD' },
+  { pattern: /€|\bEUR\b/i, currency: 'EUR' },
+  { pattern: /£|\bGBP\b/i, currency: 'GBP' },
+  { pattern: /US\$|\bUSD\b/i, currency: 'USD' },
 ]
 
 export interface RawSalaryInput {

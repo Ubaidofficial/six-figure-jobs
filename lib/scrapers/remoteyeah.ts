@@ -60,12 +60,26 @@ export async function scrapeRemoteYeahCompanies(): Promise<RemoteYeahCompany[]> 
     const $ = cheerio.load(response.data)
     const companies: RemoteYeahCompany[] = []
 
-    // Adapt selectors based on RemoteYeah's HTML structure
-    $('.company-card, .company-item, [data-company]').each((_, el) => {
+    function addCompanyFromElement(el: any) {
       const $el = $(el)
       const name = $el.find('.company-name, h3, h2').first().text().trim()
-      const website = $el.find('a[href*="http"]').first().attr('href') || ''
-      const careers = $el.find('a[href*="career"], a[href*="jobs"]').first().attr('href')
+      if (!name) return
+
+      const links = $el
+        .find('a[href]')
+        .toArray()
+        .map((a) => String($(a).attr('href') || '').trim())
+        .filter(Boolean)
+
+      const website =
+        links.find((href) => /^https?:\/\//i.test(href) && !isRemoteYeahUrl(href)) || ''
+      const careers =
+        links.find(
+          (href) =>
+            /^https?:\/\//i.test(href) &&
+            !isRemoteYeahUrl(href) &&
+            (href.toLowerCase().includes('career') || href.toLowerCase().includes('jobs')),
+        ) || undefined
 
       if (!name || !website) return
 
@@ -74,7 +88,26 @@ export async function scrapeRemoteYeahCompanies(): Promise<RemoteYeahCompany[]> 
 
       const normalizedCareers = careers ? normalizeUrl(careers) : undefined
       companies.push({ name, website: normalizedWebsite, careers: normalizedCareers })
-    })
+    }
+
+    // Primary: known-ish cards
+    $('.company-card, .company-item, [data-company]').each((_, el) => addCompanyFromElement(el))
+
+    // Fallback: heuristic scan for containers with a heading + an external website link.
+    if (companies.length === 0) {
+      $('article, li, div')
+        .filter((_i, el) => {
+          const $el = $(el)
+          const heading = $el.find('h3, h2').first().text().trim()
+          if (!heading || heading.length < 2 || heading.length > 80) return false
+
+          const href = $el.find('a[href^="http"]').first().attr('href') || ''
+          if (!href || isRemoteYeahUrl(href)) return false
+          return true
+        })
+        .slice(0, 500)
+        .each((_i, el) => addCompanyFromElement(el))
+    }
 
     console.log(`[RemoteYeah] Found ${companies.length} companies`)
     return companies

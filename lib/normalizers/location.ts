@@ -144,6 +144,17 @@ function emptyLocation(): NormalizedLocation {
 
 function stripRemoteQualifiers(text: string): string {
   let result = text
+  const original = result
+
+  // Remove leading qualifiers like "Hybrid - London" / "Remote: Berlin" / "Onsite in Dublin"
+  result = result.replace(
+    /^\s*(remote|hybrid|onsite|on[- ]site|in office|office based)\s*(?:[-|:/,]\s*)+/i,
+    '',
+  )
+  result = result.replace(
+    /^\s*(remote|hybrid|onsite|on[- ]site|in office|office based)\s+(?:in|at)\s+/i,
+    '',
+  )
 
   // Remove trailing parenthetical qualifiers
   result = result.replace(
@@ -157,7 +168,8 @@ function stripRemoteQualifiers(text: string): string {
     '',
   )
 
-  return result.trim()
+  result = result.trim()
+  return result ? result : original.trim()
 }
 
 function splitLocationParts(text: string): {
@@ -165,6 +177,23 @@ function splitLocationParts(text: string): {
   region: string | null
   country: string | null
 } {
+  const lower = text.toLowerCase().trim()
+  if (
+    lower === 'remote' ||
+    lower === 'hybrid' ||
+    lower === 'onsite' ||
+    lower === 'on site' ||
+    lower === 'on-site' ||
+    lower === 'anywhere' ||
+    lower === 'worldwide' ||
+    lower === 'global' ||
+    lower === 'emea' ||
+    lower === 'apac' ||
+    lower === 'latam'
+  ) {
+    return { city: null, region: null, country: null }
+  }
+
   const parts = text
     .split(',')
     .map((p) => p.trim())
@@ -177,6 +206,8 @@ function splitLocationParts(text: string): {
 
   if (parts.length === 1) {
     if (country) return { city: null, region: null, country }
+    const inferred = inferCountryFromCity(last)
+    if (inferred) return { city: inferred.city, region: null, country: inferred.country }
     return { city: last, region: null, country: null }
   }
 
@@ -193,6 +224,70 @@ function splitLocationParts(text: string): {
   if (c3) return { city: p1, region: p2, country: c3 }
 
   return { city: p1, region: p2, country: null }
+}
+
+function normalizeCityKey(city: string): string {
+  return String(city || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function inferCountryFromCity(cityRaw: string): { city: string; country: string } | null {
+  const key = normalizeCityKey(cityRaw)
+  if (!key) return null
+
+  const map: Record<string, { city: string; country: string }> = {
+    // Ireland
+    dublin: { city: 'Dublin', country: 'Ireland' },
+
+    // United Kingdom
+    london: { city: 'London', country: 'United Kingdom' },
+    manchester: { city: 'Manchester', country: 'United Kingdom' },
+    edinburgh: { city: 'Edinburgh', country: 'United Kingdom' },
+
+    // Germany
+    berlin: { city: 'Berlin', country: 'Germany' },
+    munich: { city: 'Munich', country: 'Germany' },
+    hamburg: { city: 'Hamburg', country: 'Germany' },
+
+    // France
+    paris: { city: 'Paris', country: 'France' },
+
+    // Netherlands
+    amsterdam: { city: 'Amsterdam', country: 'Netherlands' },
+
+    // Spain / Portugal / Italy
+    madrid: { city: 'Madrid', country: 'Spain' },
+    barcelona: { city: 'Barcelona', country: 'Spain' },
+    lisbon: { city: 'Lisbon', country: 'Portugal' },
+    milan: { city: 'Milan', country: 'Italy' },
+
+    // Nordics
+    stockholm: { city: 'Stockholm', country: 'Sweden' },
+    oslo: { city: 'Oslo', country: 'Norway' },
+    copenhagen: { city: 'Copenhagen', country: 'Denmark' },
+    helsinki: { city: 'Helsinki', country: 'Finland' },
+
+    // Switzerland
+    zurich: { city: 'Zurich', country: 'Switzerland' },
+
+    // US / Canada
+    'new york': { city: 'New York', country: 'United States' },
+    'san francisco': { city: 'San Francisco', country: 'United States' },
+    seattle: { city: 'Seattle', country: 'United States' },
+    austin: { city: 'Austin', country: 'United States' },
+    toronto: { city: 'Toronto', country: 'Canada' },
+    vancouver: { city: 'Vancouver', country: 'Canada' },
+
+    // Australia / Singapore
+    sydney: { city: 'Sydney', country: 'Australia' },
+    melbourne: { city: 'Melbourne', country: 'Australia' },
+    singapore: { city: 'Singapore', country: 'Singapore' },
+  }
+
+  return map[key] ?? null
 }
 
 function normalizeCountry(raw: string): string | null {
@@ -248,6 +343,28 @@ function normalizeCountry(raw: string): string | null {
     if (compact === 'uk' || lower === 'united kingdom' || lower === 'great britain' || lower === 'england' || lower === 'scotland') {
       return 'United Kingdom'
     }
+
+    // ISO2 country codes (commonly seen as "City, GB" or "Dublin, IE")
+    if (compact === 'ca') return 'Canada'
+    if (compact === 'de') return 'Germany'
+    if (compact === 'fr') return 'France'
+    if (compact === 'nl') return 'Netherlands'
+    if (compact === 'es') return 'Spain'
+    if (compact === 'it') return 'Italy'
+    if (compact === 'au') return 'Australia'
+    if (compact === 'nz') return 'New Zealand'
+    if (compact === 'se') return 'Sweden'
+    if (compact === 'no') return 'Norway'
+    if (compact === 'dk') return 'Denmark'
+    if (compact === 'fi') return 'Finland'
+    if (compact === 'ch') return 'Switzerland'
+    if (compact === 'ie') return 'Ireland'
+    if (compact === 'pl') return 'Poland'
+    if (compact === 'pt') return 'Portugal'
+    if (compact === 'br') return 'Brazil'
+    if (compact === 'mx') return 'Mexico'
+    if (compact === 'in') return 'India'
+    if (compact === 'sg') return 'Singapore'
 
     if (lower === 'canada') return 'Canada'
     if (lower === 'germany' || lower === 'deutschland') return 'Germany'

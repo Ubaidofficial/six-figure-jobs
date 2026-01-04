@@ -91,6 +91,11 @@
 - Investigate Job PK collision errors in Railway logs (likely ingestion attempting `create` vs `upsert` or duplicate scrape runs).
 - If pSEO slices are intended, fix `sitemap-slices` generation (currently 0 URLs).
 - Persist `aiModel` when saving enrichment (currently missing for 99.7% of enriched jobs).
+- Run user-facing data-quality remediation before exposing more jobs:
+  - Salary outliers (validated) exist across non-USD currencies (e.g., AUD maxAnnual up to 1,488,400; see `audit-20260103/salary-by-currency-validated.txt` and `audit-20260103/aud-outliers.txt`).
+  - `applyUrl` has 6 non-HTTP values (all `mailto:` from Remotive); ensure UI handles `mailto:` safely (`audit-20260103/applyurl-non-http-samples.txt`).
+  - `Job.companyLogo` is never populated (0%), but `Company.logoUrl` covers 55% of companies and 92.9% of active jobs via join (verify UI uses `companyRef.logoUrl`) (`audit-20260103/logo-coverage.txt`, `audit-20260103/jobs-with-company-logo-join.txt`).
+  - Location parsing misses common `locationRaw` values (e.g., Dublin/Berlin/London/Hybrid) and 1,497 jobs have no city/country and are not remote (`audit-20260103/location-parsing-issues.txt`, `audit-20260103/location-completeness.txt`).
 
 ## Safe to Proceed?
 - [ ] Yes, all systems healthy

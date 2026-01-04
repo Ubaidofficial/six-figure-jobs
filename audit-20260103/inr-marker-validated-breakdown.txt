@@ -1,0 +1,7 @@
+ currency | jobs 
+----------+------
+ USD      |   17
+ AUD      |    1
+ SEK      |    1
+(3 rows)
+

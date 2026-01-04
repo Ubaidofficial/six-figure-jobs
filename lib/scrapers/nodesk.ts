@@ -2,13 +2,19 @@
 // Nodesk.co scraper - Puppeteer-based for JavaScript-rendered content
 
 import puppeteer from 'puppeteer'
+import * as cheerio from 'cheerio'
 import type { ScrapedJobInput } from '../ingest/types'
 import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
 import { addIngestStatus, errorStats, type ScraperStats } from './scraperStats'
+import { extractApplyDestinationFromHtml } from './utils/extractApplyLink'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD_NAME = 'nodesk'
 const BASE_URL = 'https://nodesk.co'
+const JOB_DETAIL_TIMEOUT_MS = 15000
+const JOB_DETAIL_DELAY_MS = 750
 
 const CATEGORY_SLUGS = new Set([
   'customer-support', 'design', 'engineering', 'marketing', 'non-tech',
@@ -46,6 +52,60 @@ function extractCompanyFromSlug(slug: string, title: string): string {
     .join(' ')
   
   return company || 'Unknown'
+}
+
+async function fetchHtml(url: string): Promise<string | null> {
+  if (!url) return null
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), JOB_DETAIL_TIMEOUT_MS)
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; 6FigJobs/1.0)',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+
+    if (!res.ok) return null
+    const html = await res.text()
+    return html || null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function extractDescriptionFromHtml(html: string): { descriptionHtml: string | null; descriptionText: string | null } {
+  if (!html) return { descriptionHtml: null, descriptionText: null }
+
+  try {
+    const $ = cheerio.load(html)
+    const selectors = [
+      '.job-description',
+      '[class*="description" i]',
+      'article',
+      'main article',
+      'main',
+      '[role="main"]',
+    ]
+
+    for (const sel of selectors) {
+      const el = $(sel).first()
+      if (!el.length) continue
+      const text = el.text().replace(/\s+/g, ' ').trim()
+      if (text.length < 200) continue
+      return { descriptionHtml: $.html(el.get(0)) || null, descriptionText: text || null }
+    }
+  } catch {
+    // ignore
+  }
+
+  return { descriptionHtml: null, descriptionText: null }
 }
 
 export async function fetchNodeskJobs(): Promise<ScrapedJobInput[]> {
@@ -135,6 +195,33 @@ export default async function scrapeNodesk(): Promise<ScraperStats> {
 
     for (const job of jobs) {
       try {
+        // Enrich with apply URL + description when available (Nodesk listings are sparse).
+        const jobUrl = job.url || null
+        if (jobUrl) {
+          const html = await fetchHtml(jobUrl)
+          if (html) {
+            const discoveredApplyUrl = extractApplyDestinationFromHtml(html, jobUrl)
+            if (discoveredApplyUrl && isExternalToHost(discoveredApplyUrl, 'nodesk.co')) {
+              job.applyUrl = discoveredApplyUrl
+
+              const atsType = detectATS(discoveredApplyUrl)
+              const explicitAtsProvider = toAtsProvider(atsType)
+              job.explicitAtsProvider = explicitAtsProvider
+              job.explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(discoveredApplyUrl, atsType) : null
+
+              if (job.rawCompanyName && job.rawCompanyName.toLowerCase() !== 'unknown') {
+                await saveCompanyATS(job.rawCompanyName, discoveredApplyUrl, BOARD_NAME)
+              }
+            }
+
+            const desc = extractDescriptionFromHtml(html)
+            job.descriptionHtml = desc.descriptionHtml
+            job.descriptionText = desc.descriptionText
+          }
+
+          await new Promise((r) => setTimeout(r, JOB_DETAIL_DELAY_MS))
+        }
+
         const result = await ingestJob(job)
         addIngestStatus(stats, result.status)
       } catch (err) {

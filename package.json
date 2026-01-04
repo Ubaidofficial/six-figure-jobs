@@ -18,6 +18,7 @@
     "jobs:backfill:salary": "tsx scripts/backfill-high-salary-local.ts",
     "jobs:backfill:salary-quality:v2.9": "tsx scripts/backfill-salary-quality-v2.9.ts",
     "backfill:role-slugs": "tsx scripts/backfill-null-role-slugs.ts",
+    "backfill:locations": "tsx scripts/backfillLocations.ts",
     "audit:ci": "tsx scripts/audit-v2.9.ts",
     "scraper:smoke": "tsx scripts/smokeScrapers.ts",
     "scraper:ats:report": "tsx scripts/reportAtsCoverage.ts",
