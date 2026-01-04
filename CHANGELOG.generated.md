@@ -1,4 +1,4 @@
-# 1.0.0 (2026-01-03)
+# 1.0.0 (2026-01-04)
 
 
 ### Bug Fixes
@@ -36,6 +36,7 @@
 * Remove unsupported fields from YC scraper ([fb34a95](https://github.com/Ubaidofficial/six-figure-jobs/commit/fb34a9519003bfb4f9d13043e7a8770d8fe0c5c4))
 * Repair syntax errors in generic.ts scraper ([41ba3a3](https://github.com/Ubaidofficial/six-figure-jobs/commit/41ba3a3c6ecc8c7990845c4e82ad8b1a7dfb33e4))
 * resolve double flag display in job location labels (🇺🇸 USA instead of 🇺🇸 🇺🇸 USA) ([9c55e4b](https://github.com/Ubaidofficial/six-figure-jobs/commit/9c55e4beedea0675c7c9db19acb2cf6f78842ef6))
+* resolve race condition in job ingestion ([bd7ea9b](https://github.com/Ubaidofficial/six-figure-jobs/commit/bd7ea9b4d8cc8a500a02a10a909375f43ae250b2))
 * **routes:** use numeric revalidate literals for Next route handlers ([cbe4cfa](https://github.com/Ubaidofficial/six-figure-jobs/commit/cbe4cfab6e6555372106943399a8a7b83aa73a15))
 * run AI enrichment in background to avoid timeout ([45a7272](https://github.com/Ubaidofficial/six-figure-jobs/commit/45a7272aa6ad799584302d01a82239039864a377))
 * **scrapers:** add no-fabricated-salary guardrail [PRD-1 Task 4] ([b8db1bb](https://github.com/Ubaidofficial/six-figure-jobs/commit/b8db1bb3a60ae07abadbe496c16b7cf101363ad3))
