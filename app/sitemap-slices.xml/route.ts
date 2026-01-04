@@ -6,7 +6,7 @@ import { getSiteUrl } from '../../lib/seo/site'
 const SITE_URL = getSiteUrl()
 const BUILD_LASTMOD = new Date().toISOString()
 
-export const revalidate = 86400 // 24h
+export const revalidate = 43200 // 24h
 
 export async function GET() {
   const entries = ['sitemap-slices/priority', 'sitemap-slices/longtail']

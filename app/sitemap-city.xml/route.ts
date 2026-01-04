@@ -3,7 +3,7 @@ import { getSiteUrl } from '../../lib/seo/site'
 import { CITY_TARGETS } from '../../lib/seo/pseoTargets'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 86400
+export const revalidate = 43200
 
 const SITE_URL = getSiteUrl()
 
