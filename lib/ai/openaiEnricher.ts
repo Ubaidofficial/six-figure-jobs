@@ -29,7 +29,7 @@ export async function enrichJobWithAI(input: {
         max_tokens: input.maxOutputTokens,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: 'Return only valid JSON. No markdown. No extra keys.' },
+          { role: 'system', content: 'Return only valid JSON. No markdown. Use only the schema keys.' },
           { role: 'user', content: prompt },
         ],
       })

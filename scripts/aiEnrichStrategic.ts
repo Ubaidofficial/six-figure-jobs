@@ -4,8 +4,10 @@
  */
 import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+import slugify from 'slugify'
 import { enrichJobWithAI } from '../lib/ai/openaiEnricher'
 import { buildSnippetFromJob } from '../lib/jobs/snippet'
+import { extractTechStackFromText } from '../lib/tech/extractTechStack'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -34,6 +36,33 @@ const KEY_ROLES = [
   'backend-engineer',
   'full-stack-engineer',
 ]
+
+function normalizeSkillSlug(input: string): string | null {
+  const raw = String(input || '').trim()
+  if (!raw) return null
+  const lowered = raw.toLowerCase().replace(/\s+/g, ' ').trim()
+
+  if (lowered === 'c#' || lowered === 'c sharp' || lowered === 'csharp') return 'csharp'
+  if (lowered === 'c++' || lowered === 'cpp') return 'cpp'
+  if (lowered === '.net' || lowered === 'dotnet' || lowered === 'dot net') return 'dotnet'
+
+  const slug = slugify(raw, { lower: true, strict: true, trim: true })
+  return slug || null
+}
+
+function uniqSlugs(items: Array<string | null | undefined>): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const item of items) {
+    const s = typeof item === 'string' ? item.trim() : ''
+    if (!s) continue
+    const key = s.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(s)
+  }
+  return out
+}
 
 async function main() {
   __slog('🎯 Strategic AI Enrichment')
@@ -141,12 +170,31 @@ async function main() {
         maxOutputTokens: 220,
       })
 
+      const techFromText = extractTechStackFromText(`${job.title}\n${roleSnippet}`)
+      const aiTech = Array.isArray(out.techStack) ? out.techStack : []
+      const aiSkills = Array.isArray(out.skills) ? out.skills : []
+
+      const techDisplay = aiTech.length ? aiTech : techFromText.display
+      const techStack = techDisplay.length ? JSON.stringify(techDisplay) : undefined
+
+      const skillsSlugs = aiSkills.length
+        ? uniqSlugs(aiSkills.map(normalizeSkillSlug))
+        : techFromText.slugs
+      const skillsJson = skillsSlugs.length ? JSON.stringify(skillsSlugs) : undefined
+
       await prisma.job.update({
         where: { id: job.id },
         data: {
           aiOneLiner: out.oneLiner.trim(),
           aiSnippet: out.snippet.trim(),
-          aiSummaryJson: { bullets: out.bullets },
+          aiSummaryJson: {
+            bullets: out.bullets || [],
+            description: out.description || [],
+            requirements: out.requirements || [],
+            benefits: out.benefits || [],
+          },
+          techStack,
+          skillsJson,
           aiEnrichedAt: new Date(),
         },
       })

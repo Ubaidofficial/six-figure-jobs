@@ -96,6 +96,6 @@ export function buildSnippetFromJob(input: {
   const html = input.descriptionHtml || ''
   const txt = input.descriptionText || ''
   const base = (html && cleanText(html)) || txt || ''
-  const s = firstSentences(base, 220) || ''
+  const s = firstSentences(base, 800) || ''
   return decodeEntities(s).trim()
 }

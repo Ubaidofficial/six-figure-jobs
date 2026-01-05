@@ -4,7 +4,7 @@ export function buildAiEnrichPrompt(input: {
   locationHint?: string
   maxOutputTokens: number
 }): string {
-  return `Extract and structure the following job posting into a clean JSON format.
+  return `Extract and rewrite this job posting into a premium, role-focused summary in RemoteRocketship style.
 
 Job Title: ${input.title}
 ${input.locationHint ? `Location: ${input.locationHint}` : ''}
@@ -12,32 +12,36 @@ ${input.locationHint ? `Location: ${input.locationHint}` : ''}
 Job Content:
 ${input.roleSnippet}
 
-Parse this job posting and return ONLY valid JSON (no markdown, no extra text) with this exact structure:
+Return ONLY valid JSON (no markdown, no extra text) with this exact structure:
 
 {
   "oneLiner": "A single engaging sentence (max 180 chars) describing the core role",
-  "snippet": "A 2-3 sentence summary (max 300 chars) highlighting what makes this role interesting",
+  "snippet": "A 2-3 sentence role summary (max 300 chars). No company bio/mission.",
+  "bullets": [
+    "3-5 short, punchy highlights about the role (role-focused, not company marketing)"
+  ],
   "description": [
-    "List 5-10 clear bullet points describing key responsibilities",
-    "Focus on day-to-day work, main projects, technical challenges",
-    "What will the person actually be doing in this role"
+    "2 short paragraphs rewritten professionally (clear, structured, role-focused)"
   ],
   "requirements": [
-    "List 5-10 bullet points covering required skills and qualifications",
-    "Include years of experience, technical skills, education requirements",
-    "Be specific about technologies, tools, and expertise needed"
+    "5-8 bullets: technical skills, experience, education/certs if stated"
   ],
   "benefits": [
-    "List 3-8 bullet points about compensation, perks, and culture",
-    "Include salary if mentioned, PTO, insurance, remote work",
-    "Company culture highlights and unique benefits"
+    "3-6 bullets: compensation, equity, PTO, remote setup, perks (ONLY if mentioned)"
+  ],
+  "techStack": [
+    "3-10 technologies explicitly mentioned (canonical names like React, Node.js, PostgreSQL)"
+  ],
+  "skills": [
+    "6-12 skill tags grounded in the text (mix tech + responsibilities like API design)"
   ]
 }
 
 CRITICAL RULES:
 - Return ONLY valid JSON, no markdown code blocks, no extra text
-- Keep each bullet concise (1-2 lines maximum)
-- Extract from the original posting, don't invent details
+- Do NOT invent details (salary, benefits, sponsorship, remote policy, tech)
+- Keep bullets concise (1-2 lines max)
+- Keep paragraphs short (2-3 sentences each)
 - If a section has no information, use empty array: []
 - Maintain technical accuracy
 - Use active voice and present tense
@@ -51,6 +55,8 @@ export type AiEnrichOutput = {
   description: string[]
   requirements: string[]
   benefits: string[]
+  techStack?: string[]
+  skills?: string[]
 }
 
 export function parseAiEnrichJson(raw: string): AiEnrichOutput {
@@ -69,32 +75,44 @@ export function parseAiEnrichJson(raw: string): AiEnrichOutput {
     throw new Error('AI response missing required fields')
   }
 
+  const cleanArray = (v: any): string[] => {
+    if (!Array.isArray(v)) return []
+    const out: string[] = []
+    const seen = new Set<string>()
+    for (const item of v) {
+      if (item == null) continue
+      const s = String(item).trim()
+      if (!s) continue
+      const key = s.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(s)
+    }
+    return out
+  }
+
   const description = Array.isArray(parsed.description)
-    ? parsed.description
-        .filter((s: any) => s && String(s).trim())
-        .map((s: any) => String(s).trim())
-        .slice(0, 10)
+    ? cleanArray(parsed.description).slice(0, 8)
     : []
 
   const requirements = Array.isArray(parsed.requirements)
-    ? parsed.requirements
-        .filter((s: any) => s && String(s).trim())
-        .map((s: any) => String(s).trim())
-        .slice(0, 10)
+    ? cleanArray(parsed.requirements).slice(0, 12)
     : []
 
   const benefits = Array.isArray(parsed.benefits)
-    ? parsed.benefits
-        .filter((s: any) => s && String(s).trim())
-        .map((s: any) => String(s).trim())
-        .slice(0, 8)
+    ? cleanArray(parsed.benefits).slice(0, 12)
     : []
 
   const bullets = Array.isArray(parsed.bullets)
-    ? parsed.bullets
-        .filter((s: any) => s && String(s).trim())
-        .map((s: any) => String(s).trim())
-        .slice(0, 4)
+    ? cleanArray(parsed.bullets).slice(0, 6)
+    : []
+
+  const techStack = Array.isArray(parsed.techStack)
+    ? cleanArray(parsed.techStack).slice(0, 16)
+    : []
+
+  const skills = Array.isArray(parsed.skills)
+    ? cleanArray(parsed.skills).slice(0, 24)
     : []
 
   return {
@@ -104,5 +122,7 @@ export function parseAiEnrichJson(raw: string): AiEnrichOutput {
     description,
     requirements,
     benefits,
+    techStack,
+    skills,
   }
 }
