@@ -730,6 +730,7 @@ export const TIER_2_ROLES = [
   'scrum-master',
   'agile-coach',
   'consultant',
+  'other',
 
 ] as const
 

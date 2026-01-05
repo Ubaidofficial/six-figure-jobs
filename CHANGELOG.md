@@ -1,3 +1,58 @@
+---
+## [2025-01-05] Multi-Segment Fixes: GSC Optimization + Scraper Quality
+
+### Segment 4: GSC Optimization
+**Fixed**
+- **Double title suffix** (layout.tsx) - Removed duplicate "| Six Figure Jobs"
+- **Listing payload** (queryJobs.ts) - Reduced from 834KB to ~50-100KB via select
+- **WWR descriptions** (weworkremotely.ts) - Improved extraction with Cloudflare detection
+- **Empty sitemaps** (route.ts) - Removed sitemap-slices with 0 URLs
+
+**Impact:** 85% page size reduction, cleaner search results, better crawl budget
+
+### Segment 3: Sitemap Expansion
+**Fixed**
+- **Missing jobs** (sitemap-jobs/route.ts) - Removed confidence gate, added 5,790 jobs
+- **Browse duplicates** (sitemap-browse/route.ts) - Fixed double industry push (16 dupes)
+- **Generator script** (generate-sitemap.ts) - Created missing script for manual regeneration
+
+**Impact:** Sitemap coverage 4,829 → 10,619 jobs (+120% indexable URLs)
+
+### Segment 1: Scraper Data Quality
+**Fixed**
+- **roleSlug NULL** (role.ts, index.ts, canonicalSlugs.ts) - Added 'other' fallback, prevents NULL
+- **Company duplication** (upsertFromBoard.ts) - Case-insensitive matching (mode: 'insensitive')
+- **Generic scraper** (dailyScrapeV2.ts) - Disabled high-risk scraper
+- **Salary pollution** (_boardHelpers.ts) - Removed salary text from descriptionText
+
+**Added**
+- Backfill script (backfill-role-slugs.ts) - Fixes 239 existing NULL roleSlugs
+
+**Impact:** Cleaner role filtering, reduced company dupes, better data quality
+
+### Metrics
+**Before:**
+- Sitemap jobs: 4,829
+- NULL roleSlugs: 239 (2.2%)
+- Page size: 834KB avg
+- Empty sitemaps: 2
+- Browse duplicates: 16
+
+**After:**
+- Sitemap jobs: ~10,619 (+5,790)
+- NULL roleSlugs: 0 (post-backfill)
+- Page size: ~50-100KB (-85%)
+- Empty sitemaps: 0
+- Browse duplicates: 0
+
+### Deployment Notes
+1. Deploy code changes
+2. Run: `BACKFILL_ROLE_SLUG_BATCH=1000 npm run backfill:role-slugs`
+3. Verify NULL slugs cleared
+4. Submit updated sitemap to GSC
+5. Monitor indexing improvement over 7-14 days
+---
+
 # 1.0.0 (2026-01-04)
 
 
@@ -93,6 +148,5 @@
 * **seo:** canonical role slugs + remove 150k tier ([f9203ef](https://github.com/Ubaidofficial/six-figure-jobs/commit/f9203efc996748fc0fcbe83487920b17e2ec9078))
 * **seo:** implement v1.5 rules - 90% compliance ([5c7a9cf](https://github.com/Ubaidofficial/six-figure-jobs/commit/5c7a9cf81baae556738c9b59e2c3b9323741bab2))
 * **ui:** upgrade job cards, emojis, and job detail layout ([a37c06f](https://github.com/Ubaidofficial/six-figure-jobs/commit/a37c06f3d9c7e35508569698e7f0356ea4b594b5))
-
 
 

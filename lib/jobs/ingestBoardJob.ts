@@ -126,7 +126,14 @@ export async function ingestBoardJob(
     salaryMax: job.salaryMax ?? null,
     salaryCurrency: job.salaryCurrency ?? null,
     salaryInterval: job.salaryInterval ?? 'year',
-    salaryRaw: job.descriptionText ?? null,
+    salaryRaw:
+      (job.raw &&
+      typeof (job.raw as any).salaryText === 'string' &&
+      (job.raw as any).salaryText.trim()
+        ? String((job.raw as any).salaryText)
+        : null) ??
+      job.descriptionText ??
+      null,
 
     // Job details
     employmentType: job.employmentType ?? null,

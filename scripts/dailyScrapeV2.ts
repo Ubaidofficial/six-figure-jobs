@@ -26,7 +26,6 @@ import scrapeWeWorkRemotely from '../lib/scrapers/weworkremotely'
 import scrapeNodesk from '../lib/scrapers/nodesk'
 import scrapeBuiltIn from '../lib/scrapers/builtin'
 import scrapeRemoteRocketship from '../lib/scrapers/remoterocketship'
-import scrapeGenericSources from '../lib/scrapers/generic'
 import scrapeRemoteAI from '../lib/scrapers/remoteai'
 import scrapeRemoteYeah from '../lib/scrapers/remoteyeah'
 import scrapeHimalayas from '../lib/scrapers/himalayas'
@@ -91,57 +90,10 @@ function parseCliArgs(): CliOptions {
   return { mode, fast, concurrency }
 }
 
-/**
- * Seed generic career sources for companies that have a website but no ATS.
- * This lets the generic puppeteer scraper pick them up.
- */
-async function seedGenericSourcesForNonAts() {
-  const candidates = await prisma.company.findMany({
-    where: {
-      atsProvider: null,
-      atsUrl: null,
-      website: { not: null },
-    },
-    select: { id: true, website: true },
-  })
-
-  if (!candidates.length) return
-
-  let created = 0
-  for (const c of candidates) {
-    const existing = await prisma.companySource.findFirst({
-      where: {
-        companyId: c.id,
-        url: c.website!,
-      },
-      select: { id: true },
-    })
-    if (existing) continue
-
-    await prisma.companySource.create({
-      data: {
-        companyId: c.id,
-        url: c.website!,
-        sourceType: 'generic_careers_page',
-        isActive: true,
-        priority: 200, // lower priority than ATS/board
-      },
-    })
-    created++
-  }
-
-  if (created > 0) {
-    __slog(`🌱 Seeded ${created} generic career sources for non-ATS companies.`)
-  }
-}
-
 async function runBoardScrapers(options: CliOptions) {
   const { fast } = options
 
   __slog('🌐 Running BOARD scrapers…\n')
-
-  // Ensure generic scraper has sources to work with (non-ATS companies from seed)
-  await seedGenericSourcesForNonAts()
 
   // Ordered so we hit “core” boards first
 	  const allScrapers: Array<[string, () => Promise<unknown>]> = [
@@ -165,7 +117,6 @@ async function runBoardScrapers(options: CliOptions) {
 	    ['YCombinator', scrapeYCombinator],
 	    ['RemoteYeah', scrapeRemoteYeah],
 	    ['RemoteAI (companies only)', scrapeRemoteAI],
-	    ['GenericSources', scrapeGenericSources],
 	  ]
 
   // In fast mode, skip the slower / more experimental scrapers
@@ -183,7 +134,6 @@ async function runBoardScrapers(options: CliOptions) {
 	          'FourDayWeek',
 	          'RemoteYeah',
 	          'RemoteAI (companies only)',
-	          'GenericSources',
 	        ].includes(name),
 	      )
 	    : allScrapers

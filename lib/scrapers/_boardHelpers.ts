@@ -47,7 +47,7 @@ export async function upsertBoardJob(input: BoardJobInput) {
     locationText: location ?? null,
     isRemote: remote ?? null,
     applyUrl,
-    descriptionText: salaryText ?? null, // allow salary parsing from text if available
+    descriptionText: null,
     explicitAtsProvider: explicitAtsProvider ?? null,
     explicitAtsUrl: explicitAtsUrl ?? null,
     raw: {

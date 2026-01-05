@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
     default: '$100k+ Jobs | High-Paying Six Figure Positions',
-    template: '%s | Six Figure Jobs',
+    template: '%s',
   },
   description:
     'Find 5,945+ verified jobs paying $100k+ USD (or local equivalent). Premium roles from 333 verified companies. Updated daily.',

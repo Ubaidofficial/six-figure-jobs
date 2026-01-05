@@ -55,10 +55,6 @@ export async function GET() {
   CITY_TARGETS.forEach((city) => {
     urls.push(`${SITE_URL}/jobs/city/${city.slug}`)
   })
-  // Add industry landing pages
-  INDUSTRY_TARGETS.forEach((industry) => {
-    urls.push(`${SITE_URL}/jobs/industry/${industry.slug}`)
-  })
 
   // Combo routes: role + remote
   TOP_ROLE_SLUGS.forEach((roleSlug) => {
@@ -77,9 +73,11 @@ export async function GET() {
     })
   })
 
+  const uniqueUrls = Array.from(new Set(urls))
+
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls
+${uniqueUrls
   .map(
     (u) => `  <url>
     <loc>${u}</loc>

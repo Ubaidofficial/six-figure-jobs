@@ -194,7 +194,7 @@ export async function upsertCompanyFromBoard(
   // 1. Try find existing by name first (most stable)
   let existing = await companyClient.findFirst({
     where: {
-      name: cleanedName,
+      name: { equals: cleanedName, mode: 'insensitive' },
     },
   } as any)
 

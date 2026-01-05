@@ -5,7 +5,6 @@ import { buildJobSlug } from '../../../lib/jobs/jobSlug'
 import { getSiteUrl } from '../../../lib/seo/site'
 import {
   buildGlobalExclusionsWhere,
-  buildHighSalaryEligibilityWhere,
 } from '../../../lib/jobs/queryJobs'
 
 const SITE_URL = getSiteUrl()
@@ -26,7 +25,7 @@ function escapeXml(s: string) {
 function buildHundredKWhereBase() {
   return {
     isExpired: false,
-    AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
+    AND: [buildGlobalExclusionsWhere()],
   }
 }
 

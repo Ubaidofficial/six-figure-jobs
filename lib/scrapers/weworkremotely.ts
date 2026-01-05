@@ -26,9 +26,44 @@ async function fetchJobDescription(jobUrl: string): Promise<string | null> {
     const html = await res.text()
     const $ = cheerio.load(html)
     
-    // WWR puts job description in .listing-container
-    const descHtml = $('.listing-container').html()
-    return descHtml || null
+    const pageTitle = $('title').text().trim().toLowerCase()
+    if (
+      pageTitle.includes('just a moment') ||
+      pageTitle.includes('attention required') ||
+      html.toLowerCase().includes('cf-browser-verification')
+    ) {
+      return null
+    }
+
+    const selectors = [
+      '.listing-container',
+      'main .listing-container',
+      'article .listing-container',
+      '#job_listing',
+      '#job-listing',
+      'main article',
+      'main',
+      'article',
+    ]
+
+    let bestHtml: string | null = null
+    let bestLen = 0
+
+    for (const sel of selectors) {
+      const $el = $(sel).first()
+      if ($el.length === 0) continue
+      const textLen = $el.text().replace(/\s+/g, ' ').trim().length
+      if (textLen < 200) continue
+      if (textLen > bestLen) {
+        bestLen = textLen
+        bestHtml = $el.html() || null
+      }
+    }
+
+    // Guardrails: avoid saving entire page chrome if a selector matched too broadly
+    if (bestHtml && bestLen >= 200 && bestLen <= 80_000) return bestHtml
+
+    return null
   } catch (err) {
     console.warn(`[WWR] Failed to fetch description from ${jobUrl}:`, err)
     return null

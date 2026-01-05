@@ -68,8 +68,8 @@ export function normalizeRole(rawTitle: string | null | undefined): NormalizedRo
   if (!cleaned) {
     return {
       normalizedTitle: '',
-      roleSlug: '',
-      baseRoleSlug: '',
+      roleSlug: 'other',
+      baseRoleSlug: 'other',
       seniority: 'unknown',
       discipline: 'other',
       isManager: false,
@@ -87,7 +87,7 @@ export function normalizeRole(rawTitle: string | null | undefined): NormalizedRo
   const generatedRoleSlug = buildRoleSlug(generatedBaseRoleSlug, seniority)
 
   // v2.7: enforce canonical-only role slugs (prevents garbage URLs)
-  const canonicalRoleSlug = isCanonicalSlug(generatedRoleSlug) ? generatedRoleSlug : ''
+  const canonicalRoleSlug = isCanonicalSlug(generatedRoleSlug) ? generatedRoleSlug : 'other'
 
   // Derive canonical base role slug (remove seniority prefix when present)
   // Note: seniority "mid" and "unknown" do not prefix roleSlug.
