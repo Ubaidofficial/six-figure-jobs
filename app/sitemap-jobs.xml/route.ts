@@ -5,6 +5,7 @@ import { prisma } from '../../lib/prisma'
 import { getSiteUrl } from '../../lib/seo/site'
 import {
   buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
 } from '../../lib/jobs/queryJobs'
 
 const SITE_URL = getSiteUrl()
@@ -25,7 +26,7 @@ function escapeXml(s: string) {
 function buildHundredKWhereBase() {
   return {
     isExpired: false,
-    AND: [buildGlobalExclusionsWhere()],
+    AND: [buildGlobalExclusionsWhere(), buildHighSalaryEligibilityWhere()],
   }
 }
 

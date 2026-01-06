@@ -17,6 +17,7 @@
 * enforce annual-only salary display and prevent low/monthly leaks ([c804808](https://github.com/Ubaidofficial/six-figure-jobs/commit/c804808731ff2c2ef65418fe773cd364bb4fb9ba))
 * enhance main JobCard with primaryLocation and aiSnippet ([84e5de4](https://github.com/Ubaidofficial/six-figure-jobs/commit/84e5de49ca40272d8d1469787bcdae7d0dbe6225))
 * extract real employer apply URLs from remote100k job pages ([9f8a6c5](https://github.com/Ubaidofficial/six-figure-jobs/commit/9f8a6c5a2ff8e54bf789595d5e57aa3e2347770e))
+* greenhouse salary parser + salary outlier caps + needsReview field ([d93830e](https://github.com/Ubaidofficial/six-figure-jobs/commit/d93830e8a9284b840e2b5b26ab4033b43174ac5b))
 * GSC optimization (segments 1,3,4) - sitemaps, scrapers, meta tags ([3c47b95](https://github.com/Ubaidofficial/six-figure-jobs/commit/3c47b953379382658d9a889a5e7b54ca782a09e8))
 * harden job routing + remote100k scraper cleanup ([4186f0b](https://github.com/Ubaidofficial/six-figure-jobs/commit/4186f0b04eb159dcf871c16888c4eff915ae95f2))
 * **home:** restore job card snippets + emoji meta ([1f3ada2](https://github.com/Ubaidofficial/six-figure-jobs/commit/1f3ada225728d4c66bc8f562de9f13bb8331d1a0))
