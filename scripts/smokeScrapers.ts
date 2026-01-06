@@ -82,8 +82,14 @@ async function checkAtsProviders() {
 
     try {
       const jobs = await scrapeCompanyAtsJobs(provider, company.atsUrl)
+      if (!jobs.success) {
+        __slog(
+          `  ${provider.padEnd(16)} FAIL – ${jobs.error}`,
+        )
+        continue
+      }
       __slog(
-        `  ${provider.padEnd(16)} OK – ${jobs.length} jobs from ${company.name}`,
+        `  ${provider.padEnd(16)} OK – ${jobs.jobs.length} jobs from ${company.name}`,
       )
     } catch (err: any) {
       __slog(

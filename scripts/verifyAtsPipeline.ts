@@ -96,9 +96,14 @@ async function main() {
           company.atsUrl,
         )
 
-        __slog(`    Jobs fetched: ${jobs.length}`)
-        if (jobs.length > 0) {
-          const j = jobs[0]
+        if (!jobs.success) {
+          __slog(`    ❌ ATS failure: ${jobs.error}`)
+          continue
+        }
+
+        __slog(`    Jobs fetched: ${jobs.jobs.length}`)
+        if (jobs.jobs.length > 0) {
+          const j = jobs.jobs[0]
           __slog(`    Sample: "${j.title}" — ${j.url}`)
         }
       } catch (err: any) {

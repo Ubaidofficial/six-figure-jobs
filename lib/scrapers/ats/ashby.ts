@@ -1,6 +1,6 @@
 // lib/scrapers/ats/ashby.ts
 
-import type { AtsJob } from './types'
+import type { ATSResult, AtsJob } from './types'
 import * as cheerio from 'cheerio'
 import { writeFileSync } from 'node:fs'
 
@@ -299,7 +299,7 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
     console.log(`[Ashby] HTML length: ${html.length} chars`)
   } catch (err: any) {
     console.warn(`[Ashby] Network error fetching ${htmlUrl}: ${err?.message || err}`)
-    return []
+    throw new Error(`[Ashby] Network error fetching ${htmlUrl}: ${err?.message || err}`)
   }
 
   const $ = cheerio.load(html)
@@ -431,15 +431,25 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
   }
 
   if (!matches || matches.length === 0) {
-    console.warn(`[Ashby] ⚠️ No jobs found for ${atsUrl}`)
-    console.warn(`[Ashby] HTML preview:\n${html.slice(0, 1000)}`)
+    const noJobs =
+      /\bno\s+open\s+positions\b/i.test(html) ||
+      /\bno\s+job\s+openings\b/i.test(html) ||
+      /\bno\s+openings\b/i.test(html) ||
+      /\bno\s+positions\b/i.test(html)
+
+    if (noJobs) {
+      console.log(`[Ashby] No open positions for ${atsUrl}`)
+      return []
+    }
+
+    console.warn(`[Ashby] ⚠️ No jobs detected for ${atsUrl} (possible scraper breakage)`)
     try {
       writeFileSync('/tmp/ashby-debug.html', html)
       console.warn(`[Ashby] Saved HTML to /tmp/ashby-debug.html`)
     } catch (err: any) {
       console.warn(`[Ashby] Failed to save debug HTML: ${err?.message || err}`)
     }
-    return []
+    throw new Error(`[Ashby] No job postings detected (possible markup change): ${atsUrl}`)
   }
 
   // Extract job URLs from matches, then fetch each job page for full description.
@@ -628,15 +638,46 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
   console.log(`[Ashby] Extracted ${outJobs.length} jobs from HTML (${atsUrl})`)
 
   if (outJobs.length === 0) {
-    console.warn(`[Ashby] ⚠️ No jobs found for ${atsUrl}`)
-    console.warn(`[Ashby] HTML preview:\n${html.slice(0, 1000)}`)
-    try {
-      writeFileSync('/tmp/ashby-debug.html', html)
-      console.warn(`[Ashby] Saved HTML to /tmp/ashby-debug.html`)
-    } catch (err: any) {
-      console.warn(`[Ashby] Failed to save debug HTML: ${err?.message || err}`)
+    const noJobs =
+      /\bno\s+open\s+positions\b/i.test(html) ||
+      /\bno\s+job\s+openings\b/i.test(html) ||
+      /\bno\s+openings\b/i.test(html) ||
+      /\bno\s+positions\b/i.test(html)
+
+    if (!noJobs) {
+      try {
+        writeFileSync('/tmp/ashby-debug.html', html)
+        console.warn(`[Ashby] Saved HTML to /tmp/ashby-debug.html`)
+      } catch (err: any) {
+        console.warn(`[Ashby] Failed to save debug HTML: ${err?.message || err}`)
+      }
+      throw new Error(`[Ashby] Extracted 0 jobs (possible markup change): ${atsUrl}`)
     }
   }
 
   return outJobs
+}
+
+export async function scrapeAshbyResult(atsUrl: string): Promise<ATSResult> {
+  const clean = atsUrl.replace(/\/$/, '')
+  const companySlug = extractCompanySlug(clean)
+
+  try {
+    const jobs = await scrapeAshby(atsUrl)
+    return {
+      success: true,
+      source: 'ashby',
+      company: companySlug ?? undefined,
+      atsUrl,
+      jobs,
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      source: 'ashby',
+      company: companySlug ?? undefined,
+      atsUrl,
+      error: err?.message || String(err),
+    }
+  }
 }

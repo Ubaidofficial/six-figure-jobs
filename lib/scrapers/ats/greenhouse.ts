@@ -1,6 +1,6 @@
 // lib/scrapers/ats/greenhouse.ts
 
-import type { AtsJob } from './types'
+import type { ATSResult, AtsJob } from './types'
 
 interface GreenhouseLocation {
   name?: string
@@ -136,10 +136,7 @@ export async function scrapeGreenhouse(atsUrl: string): Promise<AtsJob[]> {
   const boardSlug = extractBoardSlug(atsUrl)
 
   if (!boardSlug) {
-    console.warn(
-      `[Greenhouse] Could not extract board slug from atsUrl=${atsUrl}`,
-    )
-    return []
+    throw new Error(`Could not extract board slug from atsUrl=${atsUrl}`)
   }
 
   const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${boardSlug}/jobs?content=true`
@@ -213,10 +210,39 @@ export async function scrapeGreenhouse(atsUrl: string): Promise<AtsJob[]> {
     return jobs
   } catch (err: any) {
     const msg = err?.message || String(err)
-    console.error(
-      `[Greenhouse] Error fetching/parsing jobs for board=${boardSlug} (atsUrl=${atsUrl}):`,
-      msg,
+    throw new Error(
+      `[Greenhouse] Error fetching/parsing jobs for board=${boardSlug} (atsUrl=${atsUrl}): ${msg}`,
     )
-    return []
+  }
+}
+
+export async function scrapeGreenhouseResult(atsUrl: string): Promise<ATSResult> {
+  const boardSlug = extractBoardSlug(atsUrl)
+  if (!boardSlug) {
+    return {
+      success: false,
+      source: 'greenhouse',
+      atsUrl,
+      error: 'Could not extract Greenhouse board slug',
+    }
+  }
+
+  try {
+    const jobs = await scrapeGreenhouse(atsUrl)
+    return {
+      success: true,
+      source: 'greenhouse',
+      company: boardSlug,
+      atsUrl,
+      jobs,
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      source: 'greenhouse',
+      company: boardSlug,
+      atsUrl,
+      error: err?.message || String(err),
+    }
   }
 }

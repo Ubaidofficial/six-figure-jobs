@@ -75,8 +75,11 @@ async function scrapeDirectATS() {
         atsUrl: company.atsUrl,
       })
 
-      const jobs = await scrapeCompanyAtsJobs(provider, company.atsUrl)
-      const result = await upsertJobsForCompanyFromAts(companyRow, jobs)
+      const scrape = await scrapeCompanyAtsJobs(provider, company.atsUrl)
+      if (!scrape.success) {
+        throw new Error(`[ATS FAILURE] ${provider}: ${scrape.error}`)
+      }
+      const result = await upsertJobsForCompanyFromAts(companyRow, scrape.jobs)
 
       stats.scraped++
       stats.jobs += result.created || 0
@@ -87,7 +90,7 @@ async function scrapeDirectATS() {
         where: { id: companyRow.id },
         data: {
           lastScrapedAt: new Date(),
-          jobCount: jobs.length,
+          jobCount: scrape.jobs.length,
           scrapeStatus: 'success',
           scrapeError: null,
         },
@@ -115,4 +118,3 @@ async function scrapeDirectATS() {
 scrapeDirectATS()
   .catch(console.error)
   .finally(() => prisma.$disconnect())
-

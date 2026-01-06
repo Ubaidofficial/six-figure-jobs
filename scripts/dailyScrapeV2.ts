@@ -189,6 +189,8 @@ async function runAtsScrapers() {
   let totalUpdated = 0
   let totalSkipped = 0
   let totalErrors = 0
+  const failedSources: string[] = []
+  const failedCompanies: string[] = []
 
   await runWithConcurrency(companies, 5, async (company) => {
     const provider = company.atsProvider as AtsProvider
@@ -196,7 +198,27 @@ async function runAtsScrapers() {
 
     __slog(`▶ ${slug} (${provider})…`)
     try {
-      const jobs = await scrapeCompanyAtsJobs(provider, company.atsUrl!)
+      const result = await scrapeCompanyAtsJobs(provider, company.atsUrl!)
+
+      if (!result.success) {
+        totalErrors++
+        failedSources.push(provider)
+        failedCompanies.push(slug)
+
+        __serr(`   ❌ [ATS FAILURE] ${slug} (${provider}): ${result.error}`)
+        __serr('')
+
+        await prisma.company.update({
+          where: { id: company.id },
+          data: {
+            scrapeStatus: 'failed',
+            scrapeError: String(result.error).slice(0, 500),
+          },
+        })
+        return
+      }
+
+      const jobs = result.jobs
       const stats = await upsertJobsForCompanyFromAts(company, jobs)
 
       totalCreated += stats.created
@@ -222,6 +244,8 @@ async function runAtsScrapers() {
       const message = err?.message || String(err)
       __serr(`   ❌ ${slug} failed:`, message)
       __serr('')
+      failedSources.push(provider)
+      failedCompanies.push(slug)
 
       await prisma.company.update({
         where: { id: company.id },
@@ -238,6 +262,14 @@ async function runAtsScrapers() {
   __slog(`  Updated: ${totalUpdated}`)
   __slog(`  Skipped: ${totalSkipped}`)
   __slog(`  Errors : ${totalErrors}\n`)
+
+  if (failedCompanies.length) {
+    const uniqProviders = Array.from(new Set(failedSources)).sort()
+    const uniqCompanies = Array.from(new Set(failedCompanies)).sort()
+    __slog(`  Failed providers: ${uniqProviders.join(', ')}`)
+    __slog(`  Failed companies: ${uniqCompanies.slice(0, 50).join(', ')}${uniqCompanies.length > 50 ? '…' : ''}`)
+    __slog('')
+  }
 }
 
 async function printJobSummary() {

@@ -1,6 +1,6 @@
 // lib/scrapers/ats/lever.ts
 
-import type { AtsJob } from './types'
+import type { ATSResult, AtsJob } from './types'
 
 const USER_AGENT = 'SixFigureJobs/1.0 (+job-board-scraper)'
 const TIMEOUT_MS = 15000
@@ -206,8 +206,7 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
   const companySlug = extractSlug(atsUrl)
 
   if (!companySlug) {
-    console.warn(`[Lever] Could not extract company slug from atsUrl=${atsUrl}`)
-    return []
+    throw new Error(`[Lever] Could not extract company slug from atsUrl=${atsUrl}`)
   }
 
   const limit = 100
@@ -221,14 +220,7 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
     const page = Math.floor(offset / limit) + 1
     const apiUrl = `https://jobs.lever.co/${companySlug}?mode=json&skip=${offset}&limit=${limit}`
 
-    let data: any
-    try {
-      data = await fetchLeverWithRetry<any>(apiUrl, 3, TIMEOUT_MS)
-    } catch (err: any) {
-      const msg = err?.message || String(err)
-      console.error(`[Lever] Error fetching jobs for slug=${companySlug} (page=${page}): ${msg}`)
-      break
-    }
+    const data = await fetchLeverWithRetry<any>(apiUrl, 3, TIMEOUT_MS)
 
     const pageJobs = Array.isArray(data) ? data : []
     console.log(`[Lever] Company: ${companySlug}, Page: ${page}, Jobs: ${pageJobs.length}`)
@@ -344,4 +336,35 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
   })
 
   return jobs
+}
+
+export async function scrapeLeverResult(atsUrl: string): Promise<ATSResult> {
+  const companySlug = extractSlug(atsUrl)
+  if (!companySlug) {
+    return {
+      success: false,
+      source: 'lever',
+      atsUrl,
+      error: 'Could not extract Lever company slug',
+    }
+  }
+
+  try {
+    const jobs = await scrapeLever(atsUrl)
+    return {
+      success: true,
+      source: 'lever',
+      company: companySlug,
+      atsUrl,
+      jobs,
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      source: 'lever',
+      company: companySlug,
+      atsUrl,
+      error: err?.message || String(err),
+    }
+  }
 }

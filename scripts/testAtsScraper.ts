@@ -19,9 +19,13 @@ async function main() {
 
         __slog(`Scraping ${slug} (${company.atsProvider})...`)
         const jobs = await scrapeCompanyAtsJobs(company.atsProvider as any, company.atsUrl)
-        __slog(`  Found ${jobs.length} jobs`)
-        if (jobs.length > 0) {
-            __slog('  Sample job:', jobs[0].title, jobs[0].url)
+        if (!jobs.success) {
+            __slog(`  ❌ ATS failure: ${jobs.error}`)
+            continue
+        }
+        __slog(`  Found ${jobs.jobs.length} jobs`)
+        if (jobs.jobs.length > 0) {
+            __slog('  Sample job:', jobs.jobs[0].title, jobs.jobs[0].url)
         }
     }
 }

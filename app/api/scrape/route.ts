@@ -57,6 +57,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 
+  const timestamp = new Date().toISOString()
   const { searchParams } = new URL(req.url)
   const target = (searchParams.get('target') ?? 'boards') as Target
 
@@ -65,6 +66,7 @@ export async function GET(req: Request) {
 
   const boardResults: any[] = []
   const atsResults: any[] = []
+  const atsFailures: string[] = []
 
   if (runBoards) {
     log('▶ Scraping BOARD sources…')
@@ -108,24 +110,36 @@ export async function GET(req: Request) {
     for (const company of companies) {
       try {
         const provider = company.atsProvider as AtsProvider
-        const rawJobs = await scrapeCompanyAtsJobs(
-          provider,
-          company.atsUrl as string,
-        )
-        const result = await upsertJobsForCompanyFromAts(
-          company,
-          rawJobs,
-        )
+        const scrape = await scrapeCompanyAtsJobs(provider, company.atsUrl as string)
+
+        if (!scrape.success) {
+          console.error(
+            `[ATS FAILURE] ${company.slug} (${provider}): ${scrape.error}`,
+          )
+          atsFailures.push(`${company.slug}:${provider}:${scrape.error}`)
+          atsResults.push({
+            company: company.slug,
+            provider,
+            success: false,
+            error: scrape.error,
+          })
+          continue
+        }
+
+        const upsert = await upsertJobsForCompanyFromAts(company, scrape.jobs)
         atsResults.push({
           company: company.slug,
           provider,
-          ...result,
+          success: true,
+          jobs: scrape.jobs.length,
+          ...upsert,
         })
       } catch (err: any) {
         console.error(
           `[ATS] ${company.slug} (${company.atsProvider}) failed`,
           err?.message || err,
         )
+        atsFailures.push(`${company.slug}:${company.atsProvider}:${err?.message || 'Unknown ATS error'}`)
         atsResults.push({
           company: company.slug,
           provider: company.atsProvider,
@@ -137,8 +151,11 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
+    started: true,
+    timestamp,
     target,
     boards: boardResults,
     ats: atsResults,
+    ...(atsFailures.length ? { failures: atsFailures } : {}),
   })
 }
