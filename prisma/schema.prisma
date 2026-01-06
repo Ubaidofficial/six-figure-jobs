@@ -78,6 +78,7 @@ model Job {
   salaryNormalizedAt        DateTime?      @db.Timestamptz(6)
   salaryRejectedAt          DateTime?      @db.Timestamptz(6)
   salaryRejectedReason      String?
+  needsReview               Boolean        @default(false)
   workArrangementNormalized String?
   companyRef                Company?       @relation(fields: [companyId], references: [id])
   locationRef               Location?      @relation(fields: [locationId], references: [id])
@@ -105,6 +106,7 @@ model Job {
   @@index([salaryConfidence])
   @@index([salarySource])
   @@index([salaryNormalizedAt])
+  @@index([needsReview])
   @@index([aiQualityScore])
   @@index([lastAiEnrichedAt])
 }

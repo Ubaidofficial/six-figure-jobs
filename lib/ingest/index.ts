@@ -18,6 +18,7 @@ import {
   normalizeSalary,
   parseSalaryFromText,
   validateHighSalaryEligibility,
+  estimateUsdAnnualFromNormalized,
   type SalarySource,
 } from '../normalizers/salary'
 import { normalizeLocation as normalizeLocationData } from '../normalizers/location'
@@ -365,6 +366,7 @@ async function createNewJob(
     salaryNormalizedAt: salaryData.salaryNormalizedAt,
     salaryRejectedAt: salaryData.salaryRejectedAt,
     salaryRejectedReason: salaryData.salaryRejectedReason,
+    needsReview: salaryData.needsReview,
 
     // Job details
     type: input.employmentType ?? 'Full-time',
@@ -500,6 +502,7 @@ async function upgradeJob(
     salaryNormalizedAt: salaryData.salaryNormalizedAt,
     salaryRejectedAt: salaryData.salaryRejectedAt,
     salaryRejectedReason: salaryData.salaryRejectedReason,
+    needsReview: salaryData.needsReview,
 
     // ✅ Force type fields to update (prevents old “Contract” from lingering)
     type: input.employmentType ?? existing.type,
@@ -570,6 +573,7 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
       updateData.salaryNormalizedAt = salaryData.salaryNormalizedAt
       updateData.salaryRejectedAt = salaryData.salaryRejectedAt
       updateData.salaryRejectedReason = salaryData.salaryRejectedReason
+      updateData.needsReview = salaryData.needsReview
     }
   }
 
@@ -630,12 +634,16 @@ function processSalary(input: ScrapedJobInput) {
   // Try Greenhouse-specific parsing first (more accurate)
   if (salaryMin === null && salaryMax === null && input.source === 'ats:greenhouse') {
     const html = input.descriptionHtml ?? ''
-    const greenhouseSalary = parseGreenhouseSalary(html)
+    const greenhouseSalary = parseGreenhouseSalary({
+      html,
+      locationText: input.locationText ?? null,
+      countryCode: null,
+    })
     if (greenhouseSalary) {
       salaryMin = greenhouseSalary.min
       salaryMax = greenhouseSalary.max
       salaryCurrency = greenhouseSalary.currency
-      salaryInterval = 'year'
+      salaryInterval = greenhouseSalary.interval ?? 'year'
       salarySource = 'descriptionText'
       if (!greenhouseSalary.currency) currencyAmbiguous = true
     }
@@ -683,6 +691,13 @@ function processSalary(input: ScrapedJobInput) {
     now,
   })
 
+  const usdAnnual = estimateUsdAnnualFromNormalized(normalized)
+  const needsReview =
+    validation.salaryValidated === true &&
+    usdAnnual != null &&
+    usdAnnual > 600_000 &&
+    usdAnnual < 2_000_000
+
   return {
     salaryMin: salaryMin !== null ? BigInt(Math.round(salaryMin)) : null,
     salaryMax: salaryMax !== null ? BigInt(Math.round(salaryMax)) : null,
@@ -692,6 +707,7 @@ function processSalary(input: ScrapedJobInput) {
     maxAnnual: normalized.maxAnnual,
     currency: normalized.currency,
     isHighSalary: validation.salaryValidated === true,
+    needsReview,
     ...validation,
   }
 }

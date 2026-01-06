@@ -127,6 +127,7 @@ export type SalaryParseReason =
   | 'bad_range'
   | 'ambiguous'
   | 'too_high'
+  | 'capped_description'
 
 export type SalaryValidationResult = {
   salaryValidated: boolean
@@ -271,6 +272,26 @@ export function validateHighSalaryEligibility(input: {
       salaryNormalizedAt,
       salaryRejectedAt: now,
       salaryRejectedReason: `annual-salary-over-cap:${cap}`,
+    }
+  }
+
+  // Additional guardrail: description-derived salaries are too noisy above ~$600k USD equivalent.
+  // We prefer rejecting these (rather than clamping) to avoid turning "7M users" into a fake salary.
+  if (input.source === 'descriptionText') {
+    const usdCap = 600_000
+    const annualToCheck = maxAnnual ?? minAnnual
+    const usd = toUsdAnnual(annualToCheck, input.normalized.currency)
+
+    if (usd != null && usd > usdCap) {
+      return {
+        salaryValidated: false,
+        salaryConfidence,
+        salarySource: input.source,
+        salaryParseReason: 'capped_description',
+        salaryNormalizedAt,
+        salaryRejectedAt: now,
+        salaryRejectedReason: `description-salary-over-usd-cap:${usdCap}`,
+      }
     }
   }
 
@@ -426,9 +447,24 @@ function extractNumbers(text: string, currency: SupportedCurrency | null): numbe
     if (suffix === 'k') num *= 1_000
     else if (suffix === 'm') num *= 1_000_000
 
-    // Filter out obviously wrong numbers (like years: 2024, 2025)
+    const idx = match.index ?? -1
+    const prefixWindow = idx >= 0 ? text.slice(Math.max(0, idx - 6), idx) : ''
+    const suffixWindow =
+      idx >= 0
+        ? text.slice(idx + match[0].length, Math.min(text.length, idx + match[0].length + 6))
+        : ''
+
+    const hasCurrencyNearNumber =
+      /(?:US\$|A\$|C\$|NZ\$|S\$|₹|€|£|\$)\s*$/i.test(prefixWindow) ||
+      /^\s*(?:USD|EUR|GBP|AUD|CAD|SGD|INR|CHF|SEK|NOK|DKK)\b/i.test(suffixWindow) ||
+      currency != null
+
+    // Filter out obviously wrong numbers (like years: 2024, 2025), but allow sub-1000 hourly/day rates
+    // when they are directly tied to a currency marker (e.g. "$150 per hour").
     if (num >= 1000 && num <= 50_000_000) {
       if (num < 1900 || num > 2100) numbers.push(num)
+    } else if (num >= 10 && num < 1000 && hasCurrencyNearNumber) {
+      numbers.push(num)
     }
   }
 
@@ -436,16 +472,74 @@ function extractNumbers(text: string, currency: SupportedCurrency | null): numbe
 }
 
 function detectInterval(text: string): SalaryInterval {
-  const lower = text.toLowerCase()
+  const raw = String(text || '')
+  const lower = raw.toLowerCase()
 
-  if (/per\s*hour|\/\s*h(?:ou)?r|hourly|\bph\b/i.test(lower)) return 'hour'
-  if (/per\s*day|\/\s*day|daily/i.test(lower)) return 'day'
-  if (/per\s*week|\/\s*week|weekly|\bpw\b/i.test(lower)) return 'week'
-  if (/per\s*month|\/\s*month|monthly|\bpm\b|\/mo\b/i.test(lower)) return 'month'
-  if (/per\s*(year|annum)|\/\s*y(?:ea)?r|annual|yearly|\bpa\b|\blpa\b/i.test(lower))
-    return 'year'
+  // Only accept interval keywords when they appear close to a money-ish token.
+  // This prevents phrases like "hourly employees" from impacting salary interval.
+  const window = 30
+
+  const moneyTokenRe =
+    /(?:US\$|A\$|C\$|NZ\$|S\$|CHF|SEK|NOK|DKK|USD|EUR|GBP|AUD|CAD|SGD|INR|₹|€|£|\$)\s*\d[\d,.\s]*[kKmM]?|\d[\d,.\s]*[kKmM]?\s*(?:USD|EUR|GBP|AUD|CAD|SGD|INR|CHF|SEK|NOK|DKK)\b/g
+
+  const matches = Array.from(raw.matchAll(moneyTokenRe))
+  if (matches.length === 0) return 'year'
+  for (const m of matches) {
+    const idx = m.index ?? -1
+    if (idx < 0) continue
+    const start = Math.max(0, idx - window)
+    const end = Math.min(raw.length, idx + String(m[0] || '').length + window)
+    const near = lower.slice(start, end)
+
+    if (/per\s*hour|\/\s*h(?:ou)?r|hourly|\bph\b/.test(near)) return 'hour'
+    if (/per\s*day|\/\s*day|daily/.test(near)) return 'day'
+    if (/per\s*week|\/\s*week|weekly|\bpw\b/.test(near)) return 'week'
+    if (/per\s*month|\/\s*month|monthly|\bpm\b|\/mo\b/.test(near)) return 'month'
+    if (/per\s*(year|annum)|\/\s*y(?:ea)?r|annual|yearly|\bpa\b|\blpa\b/.test(near)) return 'year'
+  }
 
   return 'year'
+}
+
+/* ------------------------------------------------------------------ */
+/* USD-equivalent helpers (approximate; used for guardrails only)      */
+/* ------------------------------------------------------------------ */
+
+export function estimateUsdAnnual(
+  localAnnual: bigint | number | null | undefined,
+  currency: string | null | undefined
+): number | null {
+  return toUsdAnnual(toNumberSafe(localAnnual ?? null), currency ?? null)
+}
+
+export function estimateUsdAnnualFromNormalized(normalized: NormalizedSalary): number | null {
+  const annual = normalized.maxAnnual ?? normalized.minAnnual
+  return estimateUsdAnnual(annual, normalized.currency)
+}
+
+// Currency-units per 1 USD (same orientation used by audit scripts).
+// This is intentionally small + conservative; override via env if needed.
+const USD_FX_UNITS_PER_1_USD: Record<string, number> = {
+  USD: 1,
+  EUR: 0.92,
+  GBP: 0.79,
+  CAD: 1.36,
+  AUD: 1.52,
+  CHF: 0.90,
+  SEK: 10.4,
+  NOK: 10.4,
+  DKK: 6.8,
+  SGD: 1.35,
+  INR: 83.0,
+  NZD: 1.65,
+}
+
+function toUsdAnnual(localAnnual: number | null, currency: string | null): number | null {
+  if (localAnnual == null || !Number.isFinite(localAnnual) || localAnnual <= 0) return null
+  const c = currency?.toUpperCase() ?? ''
+  const rate = USD_FX_UNITS_PER_1_USD[c]
+  if (!rate || !Number.isFinite(rate) || rate <= 0) return null
+  return localAnnual / rate
 }
 
 export function normalizeJobSalaryFields(job: {

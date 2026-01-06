@@ -1,59 +1,4 @@
----
-## [2025-01-05] Multi-Segment Fixes: GSC Optimization + Scraper Quality
-
-### Segment 4: GSC Optimization
-**Fixed**
-- **Double title suffix** (layout.tsx) - Removed duplicate "| Six Figure Jobs"
-- **Listing payload** (queryJobs.ts) - Reduced from 834KB to ~50-100KB via select
-- **WWR descriptions** (weworkremotely.ts) - Improved extraction with Cloudflare detection
-- **Empty sitemaps** (route.ts) - Removed sitemap-slices with 0 URLs
-
-**Impact:** 85% page size reduction, cleaner search results, better crawl budget
-
-### Segment 3: Sitemap Expansion
-**Fixed**
-- **Missing jobs** (sitemap-jobs/route.ts) - Removed confidence gate, added 5,790 jobs
-- **Browse duplicates** (sitemap-browse/route.ts) - Fixed double industry push (16 dupes)
-- **Generator script** (generate-sitemap.ts) - Created missing script for manual regeneration
-
-**Impact:** Sitemap coverage 4,829 → 10,619 jobs (+120% indexable URLs)
-
-### Segment 1: Scraper Data Quality
-**Fixed**
-- **roleSlug NULL** (role.ts, index.ts, canonicalSlugs.ts) - Added 'other' fallback, prevents NULL
-- **Company duplication** (upsertFromBoard.ts) - Case-insensitive matching (mode: 'insensitive')
-- **Generic scraper** (dailyScrapeV2.ts) - Disabled high-risk scraper
-- **Salary pollution** (_boardHelpers.ts) - Removed salary text from descriptionText
-
-**Added**
-- Backfill script (backfill-role-slugs.ts) - Fixes 239 existing NULL roleSlugs
-
-**Impact:** Cleaner role filtering, reduced company dupes, better data quality
-
-### Metrics
-**Before:**
-- Sitemap jobs: 4,829
-- NULL roleSlugs: 239 (2.2%)
-- Page size: 834KB avg
-- Empty sitemaps: 2
-- Browse duplicates: 16
-
-**After:**
-- Sitemap jobs: ~10,619 (+5,790)
-- NULL roleSlugs: 0 (post-backfill)
-- Page size: ~50-100KB (-85%)
-- Empty sitemaps: 0
-- Browse duplicates: 0
-
-### Deployment Notes
-1. Deploy code changes
-2. Run: `BACKFILL_ROLE_SLUG_BATCH=1000 npm run backfill:role-slugs`
-3. Verify NULL slugs cleared
-4. Submit updated sitemap to GSC
-5. Monitor indexing improvement over 7-14 days
----
-
-# 1.0.0 (2026-01-04)
+# 1.0.0 (2026-01-06)
 
 
 ### Bug Fixes
@@ -72,6 +17,7 @@
 * enforce annual-only salary display and prevent low/monthly leaks ([c804808](https://github.com/Ubaidofficial/six-figure-jobs/commit/c804808731ff2c2ef65418fe773cd364bb4fb9ba))
 * enhance main JobCard with primaryLocation and aiSnippet ([84e5de4](https://github.com/Ubaidofficial/six-figure-jobs/commit/84e5de49ca40272d8d1469787bcdae7d0dbe6225))
 * extract real employer apply URLs from remote100k job pages ([9f8a6c5](https://github.com/Ubaidofficial/six-figure-jobs/commit/9f8a6c5a2ff8e54bf789595d5e57aa3e2347770e))
+* GSC optimization (segments 1,3,4) - sitemaps, scrapers, meta tags ([3c47b95](https://github.com/Ubaidofficial/six-figure-jobs/commit/3c47b953379382658d9a889a5e7b54ca782a09e8))
 * harden job routing + remote100k scraper cleanup ([4186f0b](https://github.com/Ubaidofficial/six-figure-jobs/commit/4186f0b04eb159dcf871c16888c4eff915ae95f2))
 * **home:** restore job card snippets + emoji meta ([1f3ada2](https://github.com/Ubaidofficial/six-figure-jobs/commit/1f3ada225728d4c66bc8f562de9f13bb8331d1a0))
 * improve location parsing to handle Remote-Friendly prefix ([2d3e5fd](https://github.com/Ubaidofficial/six-figure-jobs/commit/2d3e5fdb5a61e70ef1f6e944a8bc3e02487a3e2e))
@@ -118,6 +64,7 @@
 * **snippet:** prevent company-bio text from job card snippet ([51a9188](https://github.com/Ubaidofficial/six-figure-jobs/commit/51a91889f7d842ae9e7722b6f60a2e51db5007da))
 * standardize all URLs to www.6figjobs.com for SEO consistency ([7db63cd](https://github.com/Ubaidofficial/six-figure-jobs/commit/7db63cda56c63e7c338382a796f7805a6a34cc9a))
 * **trust:** add about/privacy/terms/cookies pages and update footer links ([6b273fb](https://github.com/Ubaidofficial/six-figure-jobs/commit/6b273fb389e2fd91f337378101be610c02089431))
+* unify AI enrichment pipelines, improve extraction quality ([e6d3fd3](https://github.com/Ubaidofficial/six-figure-jobs/commit/e6d3fd3f527e50ae404f5ad0faaccc54f336f9e5))
 * use DEEPSEEK_API_KEY instead of OPENAI_API_KEY ([522f8af](https://github.com/Ubaidofficial/six-figure-jobs/commit/522f8af0d03370883d1de24b4588e8fc1d11709e))
 * use tsx instead of ts-node for AI enrichment script execution ([0a9310f](https://github.com/Ubaidofficial/six-figure-jobs/commit/0a9310f88cb181fade6b66cca3fb06d63f8dea7f))
 * **v2.9:** align backfill script with Prisma salary quality fields and types ([9bae481](https://github.com/Ubaidofficial/six-figure-jobs/commit/9bae481b7c9ccc25fa18eda7a700256825d4ba35))
@@ -148,5 +95,6 @@
 * **seo:** canonical role slugs + remove 150k tier ([f9203ef](https://github.com/Ubaidofficial/six-figure-jobs/commit/f9203efc996748fc0fcbe83487920b17e2ec9078))
 * **seo:** implement v1.5 rules - 90% compliance ([5c7a9cf](https://github.com/Ubaidofficial/six-figure-jobs/commit/5c7a9cf81baae556738c9b59e2c3b9323741bab2))
 * **ui:** upgrade job cards, emojis, and job detail layout ([a37c06f](https://github.com/Ubaidofficial/six-figure-jobs/commit/a37c06f3d9c7e35508569698e7f0356ea4b594b5))
+
 
 
