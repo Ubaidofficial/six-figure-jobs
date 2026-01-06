@@ -59,6 +59,12 @@ const prisma = new PrismaClient()
 
 type Mode = 'all' | 'boards' | 'ats'
 
+type DailyScrapeStats = {
+  jobsAdded: number
+  failures: number
+  failedSources: string[]
+}
+
 interface CliOptions {
   mode: Mode
   fast: boolean
@@ -90,10 +96,14 @@ function parseCliArgs(): CliOptions {
   return { mode, fast, concurrency }
 }
 
-async function runBoardScrapers(options: CliOptions) {
+async function runBoardScrapers(options: CliOptions): Promise<DailyScrapeStats> {
   const { fast } = options
 
   __slog('🌐 Running BOARD scrapers…\n')
+
+  let jobsAdded = 0
+  let failures = 0
+  const failedSources: string[] = []
 
   // Ordered so we hit “core” boards first
 	  const allScrapers: Array<[string, () => Promise<unknown>]> = [
@@ -139,7 +149,7 @@ async function runBoardScrapers(options: CliOptions) {
 	    : allScrapers
 
 	  await runWithConcurrency(scrapers, options.concurrency, async ([name, fn]) => {
-	    __slog(`\n▶ Running ${name}…`)
+	        __slog(`\n▶ Running ${name}…`)
 	    const startTime = Date.now()
 
 	    try {
@@ -151,19 +161,29 @@ async function runBoardScrapers(options: CliOptions) {
 	      const error = result?.error
 
 	      if (error) {
+          failures++
+          failedSources.push(name)
 	        __slog(`   ❌ ${name} failed: ${error}`)
 	      } else {
+          jobsAdded += created
 	        __slog(`   ✓ ${name}: ${created} created, ${skipped} skipped (${elapsed}s)`)
 	      }
 	    } catch (err) {
 	      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+        failures++
+        failedSources.push(name)
 	      __serr(`   ❌ ${name} crashed:`, err)
 	      __slog(`   Time: ${elapsed}s`)
 	    }
 	  })
-	}
+  return {
+    jobsAdded,
+    failures,
+    failedSources: Array.from(new Set(failedSources)).sort(),
+  }
+}
 
-async function runAtsScrapers() {
+async function runAtsScrapers(): Promise<DailyScrapeStats> {
   __slog('🏢 Running ATS scrapers…\n')
 
   const companies = await prisma.company.findMany({
@@ -182,7 +202,7 @@ async function runAtsScrapers() {
 
   if (!companies.length) {
     __slog('   ⚠️  No companies with ATS metadata. Skipping ATS scrape.\n')
-    return
+    return { jobsAdded: 0, failures: 0, failedSources: [] }
   }
 
   let totalCreated = 0
@@ -270,6 +290,12 @@ async function runAtsScrapers() {
     __slog(`  Failed companies: ${uniqCompanies.slice(0, 50).join(', ')}${uniqCompanies.length > 50 ? '…' : ''}`)
     __slog('')
   }
+
+  return {
+    jobsAdded: totalCreated,
+    failures: totalErrors,
+    failedSources: Array.from(new Set(failedSources)).sort(),
+  }
 }
 
 async function printJobSummary() {
@@ -300,6 +326,8 @@ async function printJobSummary() {
 async function main() {
   const options = parseCliArgs()
 
+  const stats: DailyScrapeStats = { jobsAdded: 0, failures: 0, failedSources: [] }
+
   __slog('===========================================')
   __slog('  SixFigureJobs – Daily Scraper v2')
   __slog('===========================================')
@@ -309,16 +337,27 @@ async function main() {
   __slog('')
 
   if (options.mode === 'boards' || options.mode === 'all') {
-    await runBoardScrapers(options)
+    const boardStats = await runBoardScrapers(options)
+    stats.jobsAdded += boardStats.jobsAdded
+    stats.failures += boardStats.failures
+    stats.failedSources.push(...boardStats.failedSources)
   }
 
   if (options.mode === 'ats' || options.mode === 'all') {
-    await runAtsScrapers()
+    const atsStats = await runAtsScrapers()
+    stats.jobsAdded += atsStats.jobsAdded
+    stats.failures += atsStats.failures
+    stats.failedSources.push(...atsStats.failedSources)
   }
 
   await printJobSummary()
 
   __slog('✅ Finished daily scrape run.')
+  __slog(`__SCRAPE_STATS__ ${JSON.stringify({
+    jobsAdded: stats.jobsAdded,
+    failures: stats.failures,
+    failedSources: Array.from(new Set(stats.failedSources)).sort(),
+  })}`)
 }
 
 main()

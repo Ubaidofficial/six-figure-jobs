@@ -18,6 +18,7 @@ jobs:
 
     steps:
       - name: Trigger Railway Scraper API
+        id: start
         shell: bash
         run: |
           set -euo pipefail
@@ -30,7 +31,6 @@ jobs:
             "https://www.6figjobs.com/api/cron/scrape?mode=all" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            --max-time 5400 \
             --retry 2 \
             --retry-delay 30)
 
@@ -40,13 +40,60 @@ jobs:
           echo "📊 Response Code: $HTTP_CODE"
           echo "📄 Response Body: $BODY"
 
-          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "✅ Scraper triggered successfully"
-            exit 0
-          else
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
             echo "❌ Scraper failed with code $HTTP_CODE"
             exit 1
           fi
+
+          JOB_ID=$(echo "$BODY" | jq -r '.jobId // empty')
+          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
+            echo "❌ Missing jobId in response"
+            exit 1
+          fi
+
+          echo "✅ Scraper started. jobId=$JOB_ID"
+          echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for completion
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          JOB_ID='${{ steps.start.outputs.job_id }}'
+          echo "⏳ Waiting for scrape completion. jobId=$JOB_ID"
+
+          # 90 minutes max (540 * 10s)
+          for i in $(seq 1 540); do
+            RESPONSE=$(curl -s -w "\n%{http_code}" \
+              "https://www.6figjobs.com/api/scrape/status/$JOB_ID" \
+              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | head -n-1)
+
+            if [ "$HTTP_CODE" -eq 404 ]; then
+              echo "❌ Status not found (jobId=$JOB_ID). The status store is in-memory; server restarts will lose it."
+              exit 1
+            fi
+
+            STATE=$(echo "$BODY" | jq -r '.status // empty')
+            if [ "$STATE" = "completed" ]; then
+              echo "✅ Completed"
+              echo "$BODY" | jq .
+              exit 0
+            fi
+
+            if [ "$STATE" = "failed" ]; then
+              echo "❌ Failed"
+              echo "$BODY" | jq .
+              exit 1
+            fi
+
+            echo "… $i/540 status=$STATE"
+            sleep 10
+          done
+
+          echo "❌ Timed out waiting for completion"
+          exit 1
 
       - name: Report Failure
         if: failure()

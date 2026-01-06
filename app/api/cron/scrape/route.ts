@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { spawn } from 'node:child_process'
+import { completeScrapeJob, createScrapeJob, failScrapeJob, updateScrapeStatus } from '../../../../lib/scrape-status'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
@@ -10,89 +11,153 @@ function authorized(req: Request) {
   return !!secret && auth === `Bearer ${secret}`
 }
 
-function runScrapeAndEnrichPipeline() {
+type Mode = 'all' | 'boards' | 'ats'
+
+function parseMode(req: Request): Mode {
+  const { searchParams } = new URL(req.url)
+  const raw = (searchParams.get('mode') ?? 'all').toLowerCase()
+  return raw === 'boards' || raw === 'ats' ? (raw as Mode) : 'all'
+}
+
+function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
   console.log('🚀 Starting full scrape and enrichment pipeline...')
-  
+
+  const stats = { jobsAdded: 0, failures: 0, failedSources: [] as string[] }
+
+  const spawnLogged = (cmd: string, args: string[], env: NodeJS.ProcessEnv) => {
+    const child = spawn(cmd, args, { env, stdio: ['ignore', 'pipe', 'pipe'] })
+    const MAX_BUFFER = 500_000
+    let stdout = ''
+    let stderr = ''
+
+    child.stdout?.on('data', (chunk) => {
+      stdout += chunk.toString()
+      if (stdout.length > MAX_BUFFER) stdout = stdout.slice(-MAX_BUFFER)
+      process.stdout.write(chunk)
+    })
+    child.stderr?.on('data', (chunk) => {
+      stderr += chunk.toString()
+      if (stderr.length > MAX_BUFFER) stderr = stderr.slice(-MAX_BUFFER)
+      process.stderr.write(chunk)
+    })
+
+    return { child, getStdout: () => stdout, getStderr: () => stderr }
+  }
+
   // Step 1: Run scraping
-  const scrapeProcess = spawn(
+  const scrape = spawnLogged(
     'npx',
-    ['tsx', 'scripts/dailyScrapeV2.ts', '--mode=all', '--concurrency=5'],
-    { env: process.env, stdio: 'inherit' }
+    ['tsx', 'scripts/dailyScrapeV2.ts', `--mode=${mode}`, '--concurrency=5'],
+    process.env,
   )
 
-  scrapeProcess.on('close', (scrapeCode) => {
+  scrape.child.on('error', (err) => {
+    failScrapeJob(jobId, `scraping spawn error: ${err?.message || String(err)}`)
+  })
+
+  scrape.child.on('close', (scrapeCode) => {
     if (scrapeCode !== 0) {
-      console.error(`❌ Scraping failed with code ${scrapeCode}, aborting pipeline`)
+      const stderr = scrape.getStderr().trim()
+      failScrapeJob(
+        jobId,
+        `scraping failed with code ${scrapeCode}${stderr ? `: ${stderr.slice(-500)}` : ''}`,
+      )
       return
+    }
+
+    const out = scrape.getStdout()
+    const marker = '__SCRAPE_STATS__'
+    const line = out
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith(marker))
+      .slice(-1)[0]
+
+    if (line) {
+      const json = line.slice(marker.length).trim()
+      try {
+        const parsed = JSON.parse(json)
+        stats.jobsAdded = Number(parsed?.jobsAdded ?? 0)
+        stats.failures = Number(parsed?.failures ?? 0)
+        stats.failedSources = Array.isArray(parsed?.failedSources) ? parsed.failedSources : []
+        updateScrapeStatus(jobId, { stats })
+      } catch {
+        // ignore parsing errors; we'll still track completion state
+      }
     }
 
     console.log('✅ Scraping complete, starting apply URL enrichment...')
 
     // Step 2: Apply URL enrichment
-    const applyUrlProcess = spawn(
-      'npx',
-      ['tsx', 'scripts/enrich-apply-urls.ts'],
-      { env: process.env, stdio: 'inherit' }
-    )
+    const applyUrl = spawnLogged('npx', ['tsx', 'scripts/enrich-apply-urls.ts'], process.env)
 
-    applyUrlProcess.on('close', (applyCode) => {
+    applyUrl.child.on('error', (err) => {
+      failScrapeJob(jobId, `apply URL enrichment spawn error: ${err?.message || String(err)}`)
+    })
+
+    applyUrl.child.on('close', (applyCode) => {
       if (applyCode !== 0) {
-        console.error(`⚠️  Apply URL enrichment failed with code ${applyCode}`)
-      } else {
-        console.log('✅ Apply URL enrichment complete')
+        failScrapeJob(jobId, `apply URL enrichment failed with code ${applyCode}`)
+        return
       }
 
-      console.log('🤖 Starting strategic AI enrichment...')
+      console.log('✅ Apply URL enrichment complete')
+      console.log('🤖 Starting AI enrichment (batch)...')
 
-      // Step 3: Strategic AI enrichment
-      const aiEnrichProcess = spawn(
+      // Step 3: AI enrichment (batch)
+      const aiEnrich = spawnLogged(
         'npx',
-        ['tsx', 'scripts/aiEnrichStrategic.ts'],
-        { 
-          env: {
-            ...process.env,
-            TOP_N: '30',           // Top 30 jobs per category
-            MAX_TOTAL: '500'       // Max 500 jobs total per run
-          },
-          stdio: 'inherit'
-        }
+        ['tsx', 'scripts/aiEnrichJobs.ts'],
+        {
+          ...process.env,
+          AI_ENRICH_MAX_JOBS_PER_RUN: process.env.AI_ENRICH_MAX_JOBS_PER_RUN || '200',
+          AI_ENRICH_MAX_DAILY_JOBS: process.env.AI_ENRICH_MAX_DAILY_JOBS || '500',
+          AI_ENRICH_MAX_DAILY_USD: process.env.AI_ENRICH_MAX_DAILY_USD || '0.33',
+        },
       )
 
-      aiEnrichProcess.on('close', (aiCode) => {
+      aiEnrich.child.on('error', (err) => {
+        failScrapeJob(jobId, `AI enrichment spawn error: ${err?.message || String(err)}`)
+      })
+
+      aiEnrich.child.on('close', (aiCode) => {
         if (aiCode !== 0) {
-          console.error(`⚠️  AI enrichment failed with code ${aiCode}`)
-        } else {
-          console.log('✅ AI enrichment complete')
+          failScrapeJob(jobId, `AI enrichment failed with code ${aiCode}`)
+          return
         }
-        
+
+        console.log('✅ AI enrichment complete')
         console.log('📍 Starting location parsing...')
 
         // Step 4: Location parsing
-        const locationProcess = spawn(
+        const location = spawnLogged(
           'npx',
           ['tsx', 'scripts/repair-location-v2.10.ts'],
-          { 
-            env: {
-              ...process.env,
-              DRY_RUN: '0',          // Actually write to DB
-              TAKE: '10000'          // Process up to 10k jobs per run
-            },
-            stdio: 'inherit'
-          }
+          {
+            ...process.env,
+            DRY_RUN: '0',
+            TAKE: '10000',
+          },
         )
 
-        locationProcess.on('close', (locationCode) => {
+        location.child.on('error', (err) => {
+          failScrapeJob(jobId, `location parsing spawn error: ${err?.message || String(err)}`)
+        })
+
+        location.child.on('close', (locationCode) => {
           if (locationCode !== 0) {
-            console.error(`⚠️  Location parsing failed with code ${locationCode}`)
-          } else {
-            console.log('✅ Location parsing complete')
+            failScrapeJob(jobId, `location parsing failed with code ${locationCode}`)
+            return
           }
-          
+
+          console.log('✅ Location parsing complete')
           console.log('🎉 Full pipeline complete!')
           console.log('   1. ✅ Scraping')
           console.log('   2. ✅ Apply URL enrichment')
-          console.log('   3. ✅ Strategic AI enrichment')
+          console.log('   3. ✅ AI enrichment')
           console.log('   4. ✅ Location parsing')
+
+          completeScrapeJob(jobId, stats)
         })
       })
     })
@@ -104,11 +169,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  runScrapeAndEnrichPipeline()
+  const mode = parseMode(req)
+  const jobId = createScrapeJob()
+
+  runScrapeAndEnrichPipeline(jobId, mode)
 
   return NextResponse.json({
     success: true,
-    message: 'Started full pipeline: scraping → apply URLs → AI enrichment → location parsing'
+    jobId,
+    statusUrl: `/api/scrape/status/${jobId}`,
+    message: 'Started full pipeline: scraping → apply URLs → AI enrichment → location parsing',
   })
 }
 

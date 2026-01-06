@@ -53,6 +53,10 @@ export type JobQueryResult = {
 }
 
 export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
+  const debugTiming =
+    process.env.DEBUG_DB_TIMING === '1' ||
+    process.env.DEBUG_QUERY_TIMES === '1'
+
   const page = Math.max(1, input.page ?? 1)
   const pageSize = Math.min(Math.max(input.pageSize ?? 20, 1), 100)
 
@@ -87,9 +91,20 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
     ]
   }
 
-  const [total, jobs] = await Promise.all([
-    prisma.job.count({ where }),
-    prisma.job.findMany({
+  const t0 = debugTiming ? Date.now() : 0
+  let countMs = 0
+  let findMs = 0
+
+  const countP = (async () => {
+    const s = debugTiming ? Date.now() : 0
+    const out = await prisma.job.count({ where })
+    if (debugTiming) countMs = Date.now() - s
+    return out
+  })()
+
+  const findP = (async () => {
+    const s = debugTiming ? Date.now() : 0
+    const out = await prisma.job.findMany({
       where,
       select: {
         id: true,
@@ -156,8 +171,35 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
-    }),
-  ])
+    })
+    if (debugTiming) findMs = Date.now() - s
+    return out
+  })()
+
+  const [total, jobs] = await Promise.all([countP, findP])
+
+  if (debugTiming) {
+    const ms = Date.now() - t0
+    const gate = {
+      page,
+      pageSize,
+      sortBy,
+      role: input.roleSlugs?.length ? input.roleSlugs.join(',') : undefined,
+      country: input.countryCode,
+      city: input.citySlug,
+      remoteOnly: input.remoteOnly ? '1' : undefined,
+      remoteMode: input.remoteMode,
+      remoteRegion: input.remoteRegion,
+      company: input.companySlug,
+    }
+    console.log(
+      '[db] queryJobs ms=%d countMs=%d findMs=%d meta=%s',
+      ms,
+      countMs,
+      findMs,
+      JSON.stringify(gate),
+    )
+  }
 
   return {
     jobs: jobs as JobWithCompany[],

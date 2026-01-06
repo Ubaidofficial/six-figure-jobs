@@ -109,6 +109,16 @@ model Job {
   @@index([needsReview])
   @@index([aiQualityScore])
   @@index([lastAiEnrichedAt])
+
+  // Composite indexes for common listing/filter pages (scale to 50k+ jobs)
+  @@index([isExpired, createdAt], map: "Job_active_createdAt_idx")
+  @@index([isExpired, updatedAt, id], map: "Job_active_updatedAt_id_idx")
+  @@index([roleSlug, isExpired, salaryValidated, salaryConfidence], map: "Job_role_salary_gate_idx")
+  @@index([countryCode, isExpired, salaryValidated, salaryConfidence], map: "Job_country_salary_gate_idx")
+  @@index([citySlug, isExpired, salaryValidated, salaryConfidence], map: "Job_city_salary_gate_idx")
+  @@index([remoteMode, remoteRegion, isExpired, salaryValidated, salaryConfidence], map: "Job_remote_salary_gate_idx")
+  @@index([companyId, isExpired], map: "Job_company_active_idx")
+  @@index([aiEnrichedAt], map: "Job_aiEnrichedAt_idx")
 }
 
 model CompanyATS {
