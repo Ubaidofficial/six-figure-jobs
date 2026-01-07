@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* exclude low-quality pages from sitemap-browse.xml
 * avoid dynamic route conflict by using /jobs/[role]/city/[city] ([06cf45c](https://github.com/Ubaidofficial/six-figure-jobs/commit/06cf45c644fe6a51693b487f6317a0f8083cbc48))
 * **build:** exclude scripts and prisma from TypeScript build ([c3eb04f](https://github.com/Ubaidofficial/six-figure-jobs/commit/c3eb04f2a8e1f3adba88bca9cd468d8543fe74b6))
 * canonical 308 redirects, quiet logs behind DEBUG flags, move apex->www to next redirects ([bea8c71](https://github.com/Ubaidofficial/six-figure-jobs/commit/bea8c712c50cf6b0c63ffb28a60eccb1d0a377bd))
@@ -97,6 +98,5 @@
 * **seo:** canonical role slugs + remove 150k tier ([f9203ef](https://github.com/Ubaidofficial/six-figure-jobs/commit/f9203efc996748fc0fcbe83487920b17e2ec9078))
 * **seo:** implement v1.5 rules - 90% compliance ([5c7a9cf](https://github.com/Ubaidofficial/six-figure-jobs/commit/5c7a9cf81baae556738c9b59e2c3b9323741bab2))
 * **ui:** upgrade job cards, emojis, and job detail layout ([a37c06f](https://github.com/Ubaidofficial/six-figure-jobs/commit/a37c06f3d9c7e35508569698e7f0356ea4b594b5))
-
 
 
