@@ -2,7 +2,7 @@ name: Daily Job Scraper (Automated)
 
 on:
   schedule:
-    - cron: "0 6,18 * * *"  # 6am and 6pm UTC daily
+    - cron: "0 6,18 * * *" # 6am and 6pm UTC daily
   workflow_dispatch:
 
 concurrency:
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 90  # Changed from 15 to 90 for full scrape
+    timeout-minutes: 90 # Changed from 15 to 90 for full scrape
 
     if: github.event_name == 'schedule' || github.ref == 'refs/heads/develop'
 
@@ -27,7 +27,7 @@ jobs:
           echo "Event: $GITHUB_EVENT_NAME"
           echo "Ref:   $GITHUB_REF"
 
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
             "https://www.6figjobs.com/api/cron/scrape?mode=all" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
@@ -41,30 +41,43 @@ jobs:
           echo "📄 Response Body: $BODY"
 
           if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-            echo "❌ Scraper failed with code $HTTP_CODE"
+            echo "❌ Scraper trigger failed with code $HTTP_CODE"
             exit 1
           fi
 
-          JOB_ID=$(echo "$BODY" | jq -r '.jobId // empty')
-          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
-            echo "❌ Missing jobId in response"
+          # Parse success flags defensively (do not fail the step if BODY isn't valid JSON)
+          SUCCESS="$(echo "$BODY" | jq -r '.success // .ok // false' 2>/dev/null || true)"
+          JOB_ID="$(echo "$BODY" | jq -r '.jobId // .runId // empty' 2>/dev/null || true)"
+
+          # If the API returns an explicit success=false, fail.
+          # If there's no success flag, we still allow success if a jobId/runId exists.
+          if [ "$SUCCESS" != "true" ] && [ -z "${JOB_ID:-}" ]; then
+            echo "❌ Trigger response did not indicate success and no jobId was provided."
             exit 1
+          fi
+
+          echo "job_id=${JOB_ID:-}" >> "$GITHUB_OUTPUT"
+
+          if [ -z "${JOB_ID:-}" ]; then
+            echo "⚠️ Trigger succeeded but no jobId returned; continuing in fire-and-forget mode (skipping wait)."
+            exit 0
           fi
 
           echo "✅ Scraper started. jobId=$JOB_ID"
-          echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
 
       - name: Wait for completion
+        if: steps.start.outputs.job_id != ''
         shell: bash
+        env:
+          JOB_ID: ${{ steps.start.outputs.job_id }}
         run: |
           set -euo pipefail
 
-          JOB_ID='${{ steps.start.outputs.job_id }}'
           echo "⏳ Waiting for scrape completion. jobId=$JOB_ID"
 
           # 90 minutes max (540 * 10s)
           for i in $(seq 1 540); do
-            RESPONSE=$(curl -s -w "\n%{http_code}" \
+            RESPONSE=$(curl -sS -w "\n%{http_code}" \
               "https://www.6figjobs.com/api/scrape/status/$JOB_ID" \
               -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
             HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
@@ -75,16 +88,17 @@ jobs:
               exit 1
             fi
 
-            STATE=$(echo "$BODY" | jq -r '.status // empty')
+            STATE=$(echo "$BODY" | jq -r '.status // empty' 2>/dev/null || true)
+
             if [ "$STATE" = "completed" ]; then
               echo "✅ Completed"
-              echo "$BODY" | jq .
+              echo "$BODY" | jq . || true
               exit 0
             fi
 
             if [ "$STATE" = "failed" ]; then
               echo "❌ Failed"
-              echo "$BODY" | jq .
+              echo "$BODY" | jq . || true
               exit 1
             fi
 
