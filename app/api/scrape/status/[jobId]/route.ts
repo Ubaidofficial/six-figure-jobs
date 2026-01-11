@@ -9,12 +9,17 @@ function authorized(req: Request) {
   return !!secret && auth === `Bearer ${secret}`
 }
 
-export async function GET(req: Request, { params }: { params: { jobId: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ jobId: string }> },
+) {
   if (!authorized(req)) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  const status = getScrapeStatus(params.jobId)
+  const { jobId } = await params
+
+  const status = getScrapeStatus(jobId)
   if (!status) {
     return NextResponse.json({ ok: false, error: 'Job not found' }, { status: 404 })
   }
