@@ -11,6 +11,8 @@ export type ScrapeStatus = {
     failedSources: string[]
   }
   error?: string
+  warnings?: string[]
+  aiEnrichmentError?: string
 }
 
 const statuses = new Map<string, ScrapeStatus>()
@@ -34,6 +36,14 @@ export function updateScrapeStatus(id: string, update: Partial<ScrapeStatus>) {
 
 export function getScrapeStatus(id: string) {
   return statuses.get(id)
+}
+
+export function addScrapeWarning(id: string, warning: string) {
+  const current = statuses.get(id)
+  if (!current) return
+  const warnings = Array.isArray(current.warnings) ? current.warnings.slice() : []
+  warnings.push(warning)
+  statuses.set(id, { ...current, warnings })
 }
 
 export function completeScrapeJob(id: string, stats: ScrapeStatus['stats']) {

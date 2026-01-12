@@ -7,6 +7,7 @@
 * update route handler params typing for Next
 * add `npm run typecheck` script
 * support `CRON_SECRET_NEXT` for rotation
+* don't fail full scrape when AI enrichment fails
 
 
 # 1.0.0 (2026-01-06)

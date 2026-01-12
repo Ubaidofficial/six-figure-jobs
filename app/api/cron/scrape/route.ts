@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { spawn } from 'node:child_process'
-import { completeScrapeJob, createScrapeJob, failScrapeJob, updateScrapeStatus } from '../../../../lib/scrape-status'
+import {
+  addScrapeWarning,
+  completeScrapeJob,
+  createScrapeJob,
+  failScrapeJob,
+  updateScrapeStatus,
+} from '../../../../lib/scrape-status'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
@@ -24,6 +30,24 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
   console.log('🚀 Starting full scrape and enrichment pipeline...')
 
   const stats = { jobsAdded: 0, failures: 0, failedSources: [] as string[] }
+
+  const tailLines = (input: string, maxLines: number): string => {
+    const lines = String(input || '')
+      .split('\n')
+      .map((l) => l.replace(/\r$/, ''))
+    return lines.slice(-maxLines).join('\n').trim()
+  }
+
+  const redactSecrets = (input: string): string => {
+    let out = String(input || '')
+    out = out.replace(/Bearer\\s+[^\\s]+/gi, 'Bearer [REDACTED]')
+    out = out.replace(/\\bsk-[A-Za-z0-9]{10,}\\b/g, 'sk-[REDACTED]')
+    out = out.replace(
+      /\\b(DEEPSEEK|OPENAI)_API_KEY\\b\\s*[:=]\\s*[^\\s]+/gi,
+      (_m, k) => `${k}_API_KEY=[REDACTED]`,
+    )
+    return out
+  }
 
   const spawnLogged = (cmd: string, args: string[], env: NodeJS.ProcessEnv) => {
     const child = spawn(cmd, args, { env, stdio: ['ignore', 'pipe', 'pipe'] })
@@ -117,17 +141,14 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
         },
       )
 
-      aiEnrich.child.on('error', (err) => {
-        failScrapeJob(jobId, `AI enrichment spawn error: ${err?.message || String(err)}`)
-      })
+      let aiEnrichmentOk = true
+      let aiFailureHandled = false
+      let locationStarted = false
 
-      aiEnrich.child.on('close', (aiCode) => {
-        if (aiCode !== 0) {
-          failScrapeJob(jobId, `AI enrichment failed with code ${aiCode}`)
-          return
-        }
+      const startLocation = () => {
+        if (locationStarted) return
+        locationStarted = true
 
-        console.log('✅ AI enrichment complete')
         console.log('📍 Starting location parsing...')
 
         // Step 4: Location parsing
@@ -155,11 +176,52 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
           console.log('🎉 Full pipeline complete!')
           console.log('   1. ✅ Scraping')
           console.log('   2. ✅ Apply URL enrichment')
-          console.log('   3. ✅ AI enrichment')
+          console.log(`   3. ${aiEnrichmentOk ? '✅' : '⚠️'} AI enrichment`)
           console.log('   4. ✅ Location parsing')
 
           completeScrapeJob(jobId, stats)
         })
+      }
+
+      const recordAiEnrichmentWarning = (reason: string) => {
+        if (aiFailureHandled) return
+        aiFailureHandled = true
+        aiEnrichmentOk = false
+
+        const stdoutTail = tailLines(aiEnrich.getStdout(), 40)
+        const stderrTail = tailLines(aiEnrich.getStderr(), 40)
+
+        const detail = [
+          `AI enrichment failed (${reason}). Continuing to location parsing.`,
+          stderrTail ? `--- stderr (tail) ---\n${stderrTail}` : null,
+          stdoutTail ? `--- stdout (tail) ---\n${stdoutTail}` : null,
+        ]
+          .filter(Boolean)
+          .join('\n')
+
+        const sanitized = redactSecrets(detail).slice(-20_000)
+        console.error('[pipeline] %s', sanitized)
+
+        addScrapeWarning(jobId, `AI enrichment failed: ${reason}`)
+        updateScrapeStatus(jobId, { aiEnrichmentError: sanitized })
+      }
+
+      // If the process fails to spawn, we may still see "close" after "error";
+      // ensure we only record the warning once.
+      aiEnrich.child.on('error', (err) => {
+        recordAiEnrichmentWarning(`spawn error: ${err?.message || String(err)}`)
+        startLocation()
+      })
+
+      aiEnrich.child.on('close', (aiCode) => {
+        if (aiCode !== 0) {
+          recordAiEnrichmentWarning(`exit code ${aiCode}`)
+          startLocation()
+          return
+        }
+
+        console.log('✅ AI enrichment complete')
+        startLocation()
       })
     })
   })
