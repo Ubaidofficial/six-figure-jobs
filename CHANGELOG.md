@@ -5,6 +5,7 @@
 
 * convert soft redirects to HTTP 308
 * update route handler params typing for Next
+* add `npm run typecheck` script
 
 
 # 1.0.0 (2026-01-06)

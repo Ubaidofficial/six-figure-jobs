@@ -9,6 +9,7 @@
     "build": "npx prisma generate && next build --webpack",
     "start": "next start -p 3000",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "db:push:staging": "dotenv -e .env.staging.local -- npx prisma db push",
     "db:migrate:staging": "dotenv -e .env.staging.local -- npx prisma migrate dev",
     "db:studio:staging": "dotenv -e .env.staging.local -- npx prisma studio",
