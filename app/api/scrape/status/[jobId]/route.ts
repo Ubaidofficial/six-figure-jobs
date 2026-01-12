@@ -4,9 +4,10 @@ import { getScrapeStatus } from '../../../../../lib/scrape-status'
 export const dynamic = 'force-dynamic'
 
 function authorized(req: Request) {
-  const secret = process.env.CRON_SECRET
   const auth = req.headers.get('authorization')
-  return !!secret && auth === `Bearer ${secret}`
+  const secrets = [process.env.CRON_SECRET, process.env.CRON_SECRET_NEXT].filter(Boolean)
+  if (!auth || secrets.length === 0) return false
+  return secrets.some((s) => auth === `Bearer ${s}`)
 }
 
 export async function GET(
