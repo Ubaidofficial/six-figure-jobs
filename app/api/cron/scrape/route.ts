@@ -144,6 +144,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
       let aiEnrichmentOk = true
       let aiFailureHandled = false
       let locationStarted = false
+      let aiTimeoutHandle: NodeJS.Timeout | null = null
 
       const startLocation = () => {
         if (locationStarted) return
@@ -183,6 +184,19 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
         })
       }
 
+      const recordAiEnrichmentTimeout = () => {
+        if (aiFailureHandled) return
+        aiFailureHandled = true
+        aiEnrichmentOk = false
+
+        const msg =
+          'AI enrichment timed out after 20 minutes; killed process; continuing to location parsing.'
+        console.error('[pipeline] %s', msg)
+
+        addScrapeWarning(jobId, 'AI enrichment timed out; continuing')
+        updateScrapeStatus(jobId, { aiEnrichmentError: msg })
+      }
+
       const recordAiEnrichmentWarning = (reason: string) => {
         if (aiFailureHandled) return
         aiFailureHandled = true
@@ -206,14 +220,38 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
         updateScrapeStatus(jobId, { aiEnrichmentError: sanitized })
       }
 
+      aiTimeoutHandle = setTimeout(() => {
+        recordAiEnrichmentTimeout()
+
+        try {
+          aiEnrich.child.kill('SIGTERM')
+        } catch {
+          // ignore
+        }
+
+        const killHard = setTimeout(() => {
+          try {
+            if (aiEnrich.child.exitCode == null) aiEnrich.child.kill('SIGKILL')
+          } catch {
+            // ignore
+          }
+        }, 10_000)
+        killHard.unref?.()
+
+        startLocation()
+      }, 20 * 60 * 1000)
+      aiTimeoutHandle.unref?.()
+
       // If the process fails to spawn, we may still see "close" after "error";
       // ensure we only record the warning once.
       aiEnrich.child.on('error', (err) => {
+        if (aiTimeoutHandle) clearTimeout(aiTimeoutHandle)
         recordAiEnrichmentWarning(`spawn error: ${err?.message || String(err)}`)
         startLocation()
       })
 
       aiEnrich.child.on('close', (aiCode) => {
+        if (aiTimeoutHandle) clearTimeout(aiTimeoutHandle)
         if (aiCode !== 0) {
           recordAiEnrichmentWarning(`exit code ${aiCode}`)
           startLocation()

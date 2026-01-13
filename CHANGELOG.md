@@ -9,6 +9,7 @@
 * support `CRON_SECRET_NEXT` for rotation
 * don't fail full scrape when AI enrichment fails
 * fix Prisma groupBy orderBy count in AI enrichment selection
+* timeout AI enrichment in full pipeline
 
 
 # 1.0.0 (2026-01-06)
