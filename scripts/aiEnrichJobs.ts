@@ -119,7 +119,7 @@ async function selectJobsToEnrich(params: {
       where: { ...baseWhere, roleSlug: { not: null } },
       _max: { minAnnual: true },
       _count: { _all: true },
-      orderBy: [{ _max: { minAnnual: 'desc' } }, { _count: { _all: 'desc' } }],
+      orderBy: [{ _max: { minAnnual: 'desc' } }, { _count: { id: 'desc' } }],
       take: params.roleGroupsPerRun,
     })
 
