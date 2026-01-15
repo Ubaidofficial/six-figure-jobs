@@ -4,6 +4,7 @@
 ### Bug Fixes
 
 * convert soft redirects to HTTP 308
+* exclude noindex pages from company/city/country/level/category sitemaps
 * update route handler params typing for Next
 * add `npm run typecheck` script
 * support `CRON_SECRET_NEXT` for rotation

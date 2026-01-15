@@ -10,20 +10,34 @@ const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200
 export async function GET() {
-  // Only include companies that actually have jobs (SEO best practice)
-  const companies = await prisma.company.findMany({
-    where: {
-      jobCount: { gte: 3 }, // match company page indexability gate
-    },
-    select: {
-      slug: true,
-      updatedAt: true,
-    },
-    orderBy: {
-      updatedAt: 'desc',
-    },
-    take: 50000, // Google soft limit
+  const MIN_INDEXABLE_JOBS = 3
+
+  const liveCounts = await prisma.job.groupBy({
+    by: ['companyId'],
+    where: { isExpired: false },
+    _count: { _all: true },
   })
+
+  const companyIds = liveCounts
+    .filter((row) => Number(row._count?._all ?? 0) >= MIN_INDEXABLE_JOBS)
+    .map((row) => row.companyId)
+    .filter((id): id is string => Boolean(id))
+
+  const companies = companyIds.length
+    ? await prisma.company.findMany({
+        where: {
+          id: { in: companyIds },
+        },
+        select: {
+          slug: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          updatedAt: 'desc',
+        },
+        take: 50000, // Google soft limit
+      })
+    : []
 
   const urls = companies
     // Explicitly type 'c' as any to satisfy TypeScript strict mode
