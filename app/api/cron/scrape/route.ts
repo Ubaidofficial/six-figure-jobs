@@ -170,7 +170,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
       let locationStarted = false;
       let aiTimeoutHandle: NodeJS.Timeout | null = null;
 
-      const startLocation = () => {
+      function startLocation() {
         if (locationStarted) return;
         locationStarted = true;
 
@@ -212,7 +212,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
 
           completeScrapeJob(jobId, stats);
         });
-      };
+      }
 
       const recordAiEnrichmentTimeout = () => {
         if (aiFailureHandled) return;

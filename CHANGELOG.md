@@ -115,3 +115,5 @@
 * **ui:** upgrade job cards, emojis, and job detail layout ([a37c06f](https://github.com/Ubaidofficial/six-figure-jobs/commit/a37c06f3d9c7e35508569698e7f0356ea4b594b5))
 
 * pause AI enrichment via AI_ENRICHMENT_PAUSED flag
+
+* fix: hoist startLocation to avoid TS use-before-declare
