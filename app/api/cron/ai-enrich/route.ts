@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "node:child_process";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 function authorized(req: Request) {
   const auth = req.headers.get("authorization");
   const secrets = [

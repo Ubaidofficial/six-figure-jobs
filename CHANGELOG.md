@@ -121,3 +121,5 @@
 * fix: hoist startLocation to avoid TS use-before-declare
 
 * fix: hoist startLocation to avoid TS use-before-declare
+
+* force node runtime for cron routes + add /api/cron/_debug-env
