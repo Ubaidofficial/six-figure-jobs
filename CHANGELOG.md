@@ -117,3 +117,5 @@
 * pause AI enrichment via AI_ENRICHMENT_PAUSED flag
 
 * fix: hoist startLocation to avoid TS use-before-declare
+
+* fix: hoist startLocation to avoid TS use-before-declare
