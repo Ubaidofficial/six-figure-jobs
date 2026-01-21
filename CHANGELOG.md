@@ -119,3 +119,5 @@
 * fix: hoist startLocation to avoid TS use-before-declare
 
 * fix: hoist startLocation to avoid TS use-before-declare
+
+* fix: hoist startLocation to avoid TS use-before-declare
