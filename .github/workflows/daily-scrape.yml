@@ -65,49 +65,10 @@ jobs:
 
           echo "✅ Scraper started. jobId=$JOB_ID"
 
-      - name: Wait for completion
+      - name: Fire-and-forget (no wait)
         if: steps.start.outputs.job_id != ''
-        shell: bash
-        env:
-          JOB_ID: ${{ steps.start.outputs.job_id }}
         run: |
-          set -euo pipefail
-
-          echo "⏳ Waiting for scrape completion. jobId=$JOB_ID"
-
-          # 90 minutes max (540 * 10s)
-          for i in $(seq 1 540); do
-            RESPONSE=$(curl -sS -w "\n%{http_code}" \
-              "https://www.6figjobs.com/api/scrape/status/$JOB_ID" \
-              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-            BODY=$(echo "$RESPONSE" | head -n-1)
-
-            if [ "$HTTP_CODE" -eq 404 ]; then
-              echo "❌ Status not found (jobId=$JOB_ID). The status store is in-memory; server restarts will lose it."
-              exit 1
-            fi
-
-            STATE=$(echo "$BODY" | jq -r '.status // empty' 2>/dev/null || true)
-
-            if [ "$STATE" = "completed" ]; then
-              echo "✅ Completed"
-              echo "$BODY" | jq . || true
-              exit 0
-            fi
-
-            if [ "$STATE" = "failed" ]; then
-              echo "❌ Failed"
-              echo "$BODY" | jq . || true
-              exit 1
-            fi
-
-            echo "… $i/540 status=$STATE"
-            sleep 10
-          done
-
-          echo "❌ Timed out waiting for completion"
-          exit 1
+          echo "✅ Triggered scrape jobId=${{ steps.start.outputs.job_id }} (not waiting for completion)."
 
       - name: Report Failure
         if: failure()
