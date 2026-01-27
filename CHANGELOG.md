@@ -1,3 +1,13 @@
+# 2.8.2 (2026-01-27)
+
+
+### Bug Fixes
+
+* persist scrape run status in DB for reliable polling
+* return 410 for expired legacy job alias URLs
+* include priority slice sitemap in index/robots
+
+
 # 2.8.1 (2026-01-08)
 
 

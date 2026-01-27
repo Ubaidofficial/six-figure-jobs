@@ -20,7 +20,7 @@ export async function GET(
 
   const { jobId } = await params
 
-  const status = getScrapeStatus(jobId)
+  const status = await getScrapeStatus(jobId)
   if (!status) {
     return NextResponse.json({ ok: false, error: 'Job not found' }, { status: 404 })
   }

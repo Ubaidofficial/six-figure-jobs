@@ -80,7 +80,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
   );
 
   scrape.child.on("error", (err) => {
-    failScrapeJob(
+    void failScrapeJob(
       jobId,
       `scraping spawn error: ${err?.message || String(err)}`,
     );
@@ -89,7 +89,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
   scrape.child.on("close", (scrapeCode) => {
     if (scrapeCode !== 0) {
       const stderr = scrape.getStderr().trim();
-      failScrapeJob(
+      void failScrapeJob(
         jobId,
         `scraping failed with code ${scrapeCode}${stderr ? `: ${stderr.slice(-500)}` : ""}`,
       );
@@ -113,7 +113,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
         stats.failedSources = Array.isArray(parsed?.failedSources)
           ? parsed.failedSources
           : [];
-        updateScrapeStatus(jobId, { stats });
+        void updateScrapeStatus(jobId, { stats });
       } catch {
         // ignore parsing errors; we'll still track completion state
       }
@@ -129,7 +129,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
     );
 
     applyUrl.child.on("error", (err) => {
-      failScrapeJob(
+      void failScrapeJob(
         jobId,
         `apply URL enrichment spawn error: ${err?.message || String(err)}`,
       );
@@ -137,7 +137,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
 
     applyUrl.child.on("close", (applyCode) => {
       if (applyCode !== 0) {
-        failScrapeJob(
+        void failScrapeJob(
           jobId,
           `apply URL enrichment failed with code ${applyCode}`,
         );
@@ -188,7 +188,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
         );
 
         location.child.on("error", (err) => {
-          failScrapeJob(
+          void failScrapeJob(
             jobId,
             `location parsing spawn error: ${err?.message || String(err)}`,
           );
@@ -196,7 +196,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
 
         location.child.on("close", (locationCode) => {
           if (locationCode !== 0) {
-            failScrapeJob(
+            void failScrapeJob(
               jobId,
               `location parsing failed with code ${locationCode}`,
             );
@@ -210,7 +210,7 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
           console.log(`   3. ${aiEnrichmentOk ? "✅" : "⚠️"} AI enrichment`);
           console.log("   4. ✅ Location parsing");
 
-          completeScrapeJob(jobId, stats);
+          void completeScrapeJob(jobId, stats);
         });
       }
 
@@ -223,8 +223,8 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
           "AI enrichment timed out after 20 minutes; killed process; continuing to location parsing.";
         console.error("[pipeline] %s", msg);
 
-        addScrapeWarning(jobId, "AI enrichment timed out; continuing");
-        updateScrapeStatus(jobId, { aiEnrichmentError: msg });
+        void addScrapeWarning(jobId, "AI enrichment timed out; continuing");
+        void updateScrapeStatus(jobId, { aiEnrichmentError: msg });
       };
 
       const recordAiEnrichmentWarning = (reason: string) => {
@@ -246,8 +246,8 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
         const sanitized = redactSecrets(detail).slice(-20_000);
         console.error("[pipeline] %s", sanitized);
 
-        addScrapeWarning(jobId, `AI enrichment failed: ${reason}`);
-        updateScrapeStatus(jobId, { aiEnrichmentError: sanitized });
+        void addScrapeWarning(jobId, `AI enrichment failed: ${reason}`);
+        void updateScrapeStatus(jobId, { aiEnrichmentError: sanitized });
       };
 
       aiTimeoutHandle = setTimeout(
@@ -310,7 +310,7 @@ export async function POST(req: Request) {
   }
 
   const mode = parseMode(req);
-  const jobId = createScrapeJob();
+  const jobId = await createScrapeJob();
 
   runScrapeAndEnrichPipeline(jobId, mode);
 

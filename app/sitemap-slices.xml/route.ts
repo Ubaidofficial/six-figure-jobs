@@ -1,5 +1,5 @@
 // app/sitemap-slices.xml/route.ts
-// Sitemap index for slice shards (priority + longtail)
+// Sitemap index for slice shards (priority only)
 
 import { getSiteUrl } from '../../lib/seo/site'
 
@@ -9,7 +9,7 @@ const BUILD_LASTMOD = new Date().toISOString()
 export const revalidate = 43200 // 24h
 
 export async function GET() {
-  const entries = ['sitemap-slices/priority', 'sitemap-slices/longtail']
+  const entries = ['sitemap-slices/priority']
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

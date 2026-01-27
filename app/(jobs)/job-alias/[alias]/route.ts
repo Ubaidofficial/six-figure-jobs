@@ -19,7 +19,7 @@ async function findJobByIncomingSlug(slug: string): Promise<JobWithCompany | nul
   if (ors.length === 0) return null
 
   return (await prisma.job.findFirst({
-    where: ors.length === 1 ? { ...ors[0], isExpired: false } : { OR: ors, isExpired: false },
+    where: ors.length === 1 ? ors[0] : { OR: ors },
     include: { companyRef: true },
   })) as JobWithCompany | null
 }
@@ -41,6 +41,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ alias: stri
 
   const job = await findJobByIncomingSlug(alias)
   if (!job) return new NextResponse('Not found', { status: 404 })
+  if (job.isExpired) return new NextResponse('Gone', { status: 410 })
 
   const canonicalSlug = buildJobSlug(job)
   return buildRedirectResponse(request, canonicalSlug)
@@ -49,4 +50,3 @@ export async function GET(request: Request, ctx: { params: Promise<{ alias: stri
 export async function HEAD(request: Request, ctx: { params: Promise<{ alias: string }> }) {
   return GET(request, ctx)
 }
-

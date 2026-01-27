@@ -27,6 +27,7 @@ export async function GET() {
     'sitemap-category.xml',
     'sitemap-level.xml',
     'sitemap-browse.xml',
+    'sitemap-slices.xml',
   ]
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
