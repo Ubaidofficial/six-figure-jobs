@@ -36,32 +36,41 @@ export async function GET() {
     take: 10000,
   })
 
-  const urls = slices
-    .map((s) => {
-      const filters: SliceFilters | null = (() => {
-        if (!s.filtersJson) return null
-        try {
-          return JSON.parse(s.filtersJson)
-        } catch {
-          return null
-        }
-      })()
+  const byLoc = new Map<string, string>()
 
-      const path = filters
-        ? resolveSliceCanonicalPath(filters, s.slug)
-        : `/${s.slug}`
+  for (const slice of slices) {
+    const filters: SliceFilters | null = (() => {
+      if (!slice.filtersJson) return null
+      try {
+        return JSON.parse(slice.filtersJson)
+      } catch {
+        return null
+      }
+    })()
 
-      if (!path || !path.startsWith('/')) return null
+    const path = filters
+      ? resolveSliceCanonicalPath(filters, slice.slug)
+      : `/${slice.slug}`
 
-      const loc = escapeXml(`${SITE_URL}${path}`)
-      const lastmod = (s.updatedAt ?? new Date()).toISOString()
+    if (!path || !path.startsWith('/')) continue
 
-      return `  <url>
+    const loc = escapeXml(`${SITE_URL}${path}`)
+    const lastmod = (slice.updatedAt ?? new Date()).toISOString()
+
+    const existing = byLoc.get(loc)
+    if (!existing || lastmod > existing) {
+      byLoc.set(loc, lastmod)
+    }
+  }
+
+  const urls = Array.from(byLoc.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(
+      ([loc, lastmod]) => `  <url>
     <loc>${loc}</loc>
     <lastmod>${lastmod}</lastmod>
-  </url>`
-    })
-    .filter(Boolean) as string[]
+  </url>`,
+    )
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
