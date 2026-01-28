@@ -30,7 +30,7 @@ export async function GET() {
     },
     where: {
       type: 'role-salary',
-      jobCount: { gte: 20 },
+      jobCount: { gte: 10 },
     },
     orderBy: [{ updatedAt: 'desc' }, { jobCount: 'desc' }],
     take: 10000,

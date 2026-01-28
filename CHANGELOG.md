@@ -5,6 +5,7 @@
 
 * seed role slices in pipeline and restrict priority slice sitemap to high-count role pages
 * run additional slice seeders (salary bands + country salary) after scrapes
+* lower priority slice threshold to 10 jobs to populate sitemap
 
 
 # 2.8.2 (2026-01-27)
