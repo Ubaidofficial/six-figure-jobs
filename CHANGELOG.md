@@ -4,6 +4,7 @@
 ### Bug Fixes
 
 * seed role slices in pipeline and restrict priority slice sitemap to high-count role pages
+* run additional slice seeders (salary bands + country salary) after scrapes
 
 
 # 2.8.2 (2026-01-27)

@@ -204,48 +204,62 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
           }
 
           console.log("✅ Location parsing complete");
-          console.log("🧩 Updating role slices...");
+          console.log("🧩 Updating role and salary slices...");
 
-          const slices = spawnLogged(
-            "npx",
-            ["tsx", "scripts/bootstrapRoleSlices.ts"],
-            process.env,
-          );
+          const scripts = [
+            "scripts/bootstrapRoleSlices.ts",
+            "scripts/seedJobSlices.ts",
+            "scripts/bootstrapCountrySalarySlices.ts",
+          ];
 
-          let slicesFinished = false;
-          const finish = (slicesOk: boolean) => {
-            if (slicesFinished) return;
-            slicesFinished = true;
+          let step = 0;
+          let slicesOk = true;
 
+          const finish = (ok: boolean) => {
             console.log("🎉 Full pipeline complete!");
             console.log("   1. ✅ Scraping");
             console.log("   2. ✅ Apply URL enrichment");
             console.log(`   3. ${aiEnrichmentOk ? "✅" : "⚠️"} AI enrichment`);
             console.log("   4. ✅ Location parsing");
-            console.log(`   5. ${slicesOk ? "✅" : "⚠️"} Slice bootstrap`);
+            console.log(`   5. ${ok ? "✅" : "⚠️"} Slice bootstrap`);
 
             void completeScrapeJob(jobId, stats);
           };
 
-          slices.child.on("error", (err) => {
-            const msg = `slice bootstrap spawn error: ${err?.message || String(err)}`;
-            console.error("[pipeline] %s", msg);
-            void addScrapeWarning(jobId, msg);
-            finish(false);
-          });
-
-          slices.child.on("close", (sliceCode) => {
-            if (sliceCode !== 0) {
-              const msg = `slice bootstrap failed with code ${sliceCode}`;
-              console.error("[pipeline] %s", msg);
-              void addScrapeWarning(jobId, msg);
-              finish(false);
+          const runNext = () => {
+            if (step >= scripts.length) {
+              finish(slicesOk);
               return;
             }
 
-            console.log("✅ Slice bootstrap complete");
-            finish(true);
-          });
+            const script = scripts[step++];
+            console.log(`📦 Running slice script: ${script}`);
+
+            const child = spawnLogged("npx", ["tsx", script], process.env);
+
+            child.child.on("error", (err) => {
+              const msg = `slice script ${script} spawn error: ${err?.message || String(err)}`;
+              console.error("[pipeline] %s", msg);
+              void addScrapeWarning(jobId, msg);
+              slicesOk = false;
+              runNext();
+            });
+
+            child.child.on("close", (code) => {
+              if (code !== 0) {
+                const msg = `slice script ${script} failed with code ${code}`;
+                console.error("[pipeline] %s", msg);
+                void addScrapeWarning(jobId, msg);
+                slicesOk = false;
+              } else {
+                console.log(`✅ Slice script complete: ${script}`);
+              }
+
+              runNext();
+            });
+          };
+
+          runNext();
         });
       }
 
