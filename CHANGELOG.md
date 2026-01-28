@@ -1,3 +1,11 @@
+# 2.8.3 (2026-01-28)
+
+
+### Bug Fixes
+
+* seed role slices in pipeline and restrict priority slice sitemap to high-count role pages
+
+
 # 2.8.2 (2026-01-27)
 
 

@@ -204,13 +204,48 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
           }
 
           console.log("✅ Location parsing complete");
-          console.log("🎉 Full pipeline complete!");
-          console.log("   1. ✅ Scraping");
-          console.log("   2. ✅ Apply URL enrichment");
-          console.log(`   3. ${aiEnrichmentOk ? "✅" : "⚠️"} AI enrichment`);
-          console.log("   4. ✅ Location parsing");
+          console.log("🧩 Updating role slices...");
 
-          void completeScrapeJob(jobId, stats);
+          const slices = spawnLogged(
+            "npx",
+            ["tsx", "scripts/bootstrapRoleSlices.ts"],
+            process.env,
+          );
+
+          let slicesFinished = false;
+          const finish = (slicesOk: boolean) => {
+            if (slicesFinished) return;
+            slicesFinished = true;
+
+            console.log("🎉 Full pipeline complete!");
+            console.log("   1. ✅ Scraping");
+            console.log("   2. ✅ Apply URL enrichment");
+            console.log(`   3. ${aiEnrichmentOk ? "✅" : "⚠️"} AI enrichment`);
+            console.log("   4. ✅ Location parsing");
+            console.log(`   5. ${slicesOk ? "✅" : "⚠️"} Slice bootstrap`);
+
+            void completeScrapeJob(jobId, stats);
+          };
+
+          slices.child.on("error", (err) => {
+            const msg = `slice bootstrap spawn error: ${err?.message || String(err)}`;
+            console.error("[pipeline] %s", msg);
+            void addScrapeWarning(jobId, msg);
+            finish(false);
+          });
+
+          slices.child.on("close", (sliceCode) => {
+            if (sliceCode !== 0) {
+              const msg = `slice bootstrap failed with code ${sliceCode}`;
+              console.error("[pipeline] %s", msg);
+              void addScrapeWarning(jobId, msg);
+              finish(false);
+              return;
+            }
+
+            console.log("✅ Slice bootstrap complete");
+            finish(true);
+          });
         });
       }
 

@@ -1,5 +1,5 @@
 // app/sitemap-slices/priority/route.ts
-// Priority slices: higher job counts or recently updated
+// Priority slices: high-signal role salary slices
 
 import { NextResponse } from 'next/server'
 import { prisma } from '../../../lib/prisma'
@@ -11,8 +11,6 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 86400 // 24h
 
 const SITE_URL = getSiteUrl()
-const RECENT_DAYS = 7
-
 function escapeXml(s: string) {
   return s
     .replace(/&/g, '&amp;')
@@ -23,9 +21,6 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - RECENT_DAYS)
-
   const slices = await prisma.jobSlice.findMany({
     select: {
       slug: true,
@@ -34,8 +29,8 @@ export async function GET() {
       filtersJson: true,
     },
     where: {
-      jobCount: { gt: 0 },
-      OR: [{ jobCount: { gte: 20 } }, { updatedAt: { gte: cutoff } }],
+      type: 'role-salary',
+      jobCount: { gte: 20 },
     },
     orderBy: [{ updatedAt: 'desc' }, { jobCount: 'desc' }],
     take: 10000,
