@@ -13,28 +13,26 @@ const MIN_INDEXABLE_JOBS = 3
 export async function GET() {
   const baseWhere = buildWhere({})
   const citySlugs = CITY_TARGETS.map((city) => city.slug)
-  const countryCodes = CITY_TARGETS.map((city) => city.countryCode)
-    .filter(Boolean)
-    .map((code) => String(code).toUpperCase())
 
+  // City routes are slug-only; countryCode is often missing, so group by citySlug.
   const rows = await prisma.job.groupBy({
-    by: ['citySlug', 'countryCode'],
+    by: ['citySlug'],
     where: {
       ...baseWhere,
       citySlug: { in: citySlugs },
-      countryCode: { in: countryCodes },
     },
     _count: { _all: true },
   })
 
   const counts = new Map<string, number>()
   for (const row of rows) {
-    const key = `${row.citySlug ?? ''}::${row.countryCode ?? ''}`.toLowerCase()
+    const key = String(row.citySlug ?? '').toLowerCase()
+    if (!key) continue
     counts.set(key, Number(row._count?._all ?? 0))
   }
 
   const urls = CITY_TARGETS.map((city) => {
-    const key = `${city.slug}::${String(city.countryCode || '').toUpperCase()}`.toLowerCase()
+    const key = city.slug.toLowerCase()
     const total = counts.get(key) ?? 0
     if (total < MIN_INDEXABLE_JOBS) return null
 

@@ -1,3 +1,12 @@
+# 2.8.4 (2026-02-01)
+
+
+### Bug Fixes
+
+* count city sitemap entries by citySlug only and include longtail slice index
+* add city sitemap coverage audit script
+
+
 # 2.8.3 (2026-01-28)
 
 
