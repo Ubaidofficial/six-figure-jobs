@@ -1,10 +1,9 @@
 import { prisma } from '../../lib/prisma'
 import { buildWhere } from '../../lib/jobs/queryJobs'
 import { countryCodeToSlug } from '../../lib/seo/countrySlug'
+import { getSiteUrl } from '../../lib/seo/site'
 
-const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-  : 'https://www.6figjobs.com'
+const SITE_URL = getSiteUrl()
 
 export async function GET() {
   const MIN_INDEXABLE_JOBS = 3
@@ -16,12 +15,16 @@ export async function GET() {
     by: ['countryCode'],
     where: { ...baseWhere, countryCode: { in: countryCodes } },
     _count: { _all: true },
+    _max: { updatedAt: true },
   })
 
   const counts = new Map<string, number>()
+  const lastmods = new Map<string, Date>()
   for (const row of rows) {
     if (!row.countryCode) continue
     counts.set(row.countryCode.toUpperCase(), Number(row._count?._all ?? 0))
+    const updatedAt = row._max?.updatedAt ?? null
+    if (updatedAt) lastmods.set(row.countryCode.toUpperCase(), updatedAt)
   }
 
   const urls = countries
@@ -29,9 +32,10 @@ export async function GET() {
       const total = counts.get(code.toUpperCase()) ?? 0
       if (total < MIN_INDEXABLE_JOBS) return null
       const slug = countryCodeToSlug(code)
+      const lastmod = (lastmods.get(code.toUpperCase()) ?? new Date()).toISOString()
       return {
         url: `${SITE_URL}/jobs/country/${slug}`,
-        lastModified: new Date().toISOString(),
+        lastModified: lastmod,
         changeFrequency: 'daily',
         priority: 0.8,
       }

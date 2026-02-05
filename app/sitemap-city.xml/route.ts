@@ -22,13 +22,17 @@ export async function GET() {
       citySlug: { in: citySlugs },
     },
     _count: { _all: true },
+    _max: { updatedAt: true },
   })
 
   const counts = new Map<string, number>()
+  const lastmods = new Map<string, Date>()
   for (const row of rows) {
     const key = String(row.citySlug ?? '').toLowerCase()
     if (!key) continue
     counts.set(key, Number(row._count?._all ?? 0))
+    const updatedAt = row._max?.updatedAt ?? null
+    if (updatedAt) lastmods.set(key, updatedAt)
   }
 
   const urls = CITY_TARGETS.map((city) => {
@@ -36,9 +40,10 @@ export async function GET() {
     const total = counts.get(key) ?? 0
     if (total < MIN_INDEXABLE_JOBS) return null
 
+    const lastmod = (lastmods.get(key) ?? new Date()).toISOString()
     return {
       loc: `${SITE_URL}/jobs/city/${city.slug}`,
-      lastmod: new Date().toISOString(),
+      lastmod,
       changefreq: 'daily',
       priority: 0.8,
     }

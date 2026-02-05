@@ -1,9 +1,8 @@
 import { prisma } from '../../lib/prisma'
 import { buildWhere } from '../../lib/jobs/queryJobs'
+import { getSiteUrl } from '../../lib/seo/site'
 
-const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-  : 'https://www.6figjobs.com'
+const SITE_URL = getSiteUrl()
 
 export async function GET() {
   const MIN_INDEXABLE_JOBS = 3
@@ -39,12 +38,14 @@ export async function GET() {
     by: ['roleSlug'],
     where: { ...baseWhere, roleSlug: { not: null } },
     _count: { _all: true },
+    _max: { updatedAt: true },
   })
 
-  const roleCounts = roleRows
+  const roleStats = roleRows
     .map((row) => ({
       slug: row.roleSlug ? String(row.roleSlug).toLowerCase() : '',
       count: Number(row._count?._all ?? 0),
+      lastmod: row._max?.updatedAt ?? null,
     }))
     .filter((row) => row.slug)
 
@@ -52,15 +53,19 @@ export async function GET() {
     .map((cat) => {
       const slugs = (CATEGORY_ROLE_MAP[cat] || []).map((s) => s.toLowerCase())
       let total = 0
-      for (const row of roleCounts) {
+      let lastmod: Date | null = null
+      for (const row of roleStats) {
         if (slugs.some((slug) => row.slug === slug || row.slug.includes(slug))) {
           total += row.count
+          if (row.lastmod && (!lastmod || row.lastmod > lastmod)) {
+            lastmod = row.lastmod
+          }
         }
       }
       if (total < MIN_INDEXABLE_JOBS) return null
       return {
         url: `${SITE_URL}/jobs/category/${cat}`,
-        lastModified: new Date().toISOString(),
+        lastModified: (lastmod ?? new Date()).toISOString(),
         changeFrequency: 'daily',
         priority: 0.8,
       }

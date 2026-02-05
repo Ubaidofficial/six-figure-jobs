@@ -1,3 +1,13 @@
+# 2.8.5 (2026-02-05)
+
+
+### Bug Fixes
+
+* harden sitemap indexing (lastmod accuracy, company shards, slice dedupe)
+* refine location normalization and backfill cleanup for invalid city slugs
+* add sitemap audit utilities for duplication and coverage checks
+
+
 # 2.8.4 (2026-02-01)
 
 

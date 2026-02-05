@@ -1,63 +1,72 @@
 // app/sitemap-company.xml/route.ts
-// Sitemap for all /company/[slug] pages
+// Sitemap index for /company/[slug] pages (sharded)
 
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma'
+import { getSiteUrl } from '../../lib/seo/site'
 
-const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-  : 'https://www.6figjobs.com'
+const SITE_URL = getSiteUrl()
+const PAGE_SIZE = 45000
+const MIN_INDEXABLE_JOBS = 3
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 43200
-export async function GET() {
-  const MIN_INDEXABLE_JOBS = 3
+export const revalidate = 43200 // 24h
 
-  const liveCounts = await prisma.job.groupBy({
-    by: ['companyId'],
-    where: { isExpired: false },
-    _count: { _all: true },
+function escapeXml(s: string) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === 'bigint') return Number(value)
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : 0
+  }
+  return 0
+}
+
+async function fetchEligibleCompanyCount(): Promise<number> {
+  const rows = await prisma.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`
+    SELECT COUNT(*)::bigint AS count
+    FROM (
+      SELECT 1
+      FROM "Job"
+      WHERE "isExpired" = false AND "companyId" IS NOT NULL
+      GROUP BY "companyId"
+      HAVING COUNT(*) >= ${MIN_INDEXABLE_JOBS}
+    ) t
+  `)
+
+  const raw = rows[0]?.count ?? 0
+  return toNumber(raw)
+}
+
+export async function GET() {
+  const total = await fetchEligibleCompanyCount()
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const lastmod = new Date().toISOString()
+
+  const entries = Array.from({ length: totalPages }).map((_, i) => {
+    const loc = escapeXml(`${SITE_URL}/sitemap-company/${i + 1}`)
+    return `  <sitemap>
+    <loc>${loc}</loc>
+    <lastmod>${lastmod}</lastmod>
+  </sitemap>`
   })
 
-  const companyIds = liveCounts
-    .filter((row) => Number(row._count?._all ?? 0) >= MIN_INDEXABLE_JOBS)
-    .map((row) => row.companyId)
-    .filter((id): id is string => Boolean(id))
-
-  const companies = companyIds.length
-    ? await prisma.company.findMany({
-        where: {
-          id: { in: companyIds },
-        },
-        select: {
-          slug: true,
-          updatedAt: true,
-        },
-        orderBy: {
-          updatedAt: 'desc',
-        },
-        take: 50000, // Google soft limit
-      })
-    : []
-
-  const urls = companies
-    // Explicitly type 'c' as any to satisfy TypeScript strict mode
-    .filter((c: any) => c.slug)
-    .map((c: any) => {
-      const loc = `${SITE_URL}/company/${c.slug}`
-      const lastmod = c.updatedAt.toISOString()
-      return `<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`
-    })
-    .join('\n')
-
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
-</urlset>`
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries.join('\n')}
+</sitemapindex>`
 
   return new Response(xml, {
     status: 200,
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-    },
+    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
   })
 }

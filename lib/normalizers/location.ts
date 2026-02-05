@@ -18,6 +18,69 @@ export interface NormalizedLocation {
   country: string | null
 }
 
+const NON_CITY_LABELS = new Set([
+  'remote',
+  'remote friendly',
+  'remote-friendly',
+  'remote worldwide',
+  'remote global',
+  'remote anywhere',
+  'work from home',
+  'wfh',
+  'anywhere',
+  'anywhere in the world',
+  'anywhere in world',
+  'worldwide',
+  'global',
+  'world',
+  'europe',
+  'emea',
+  'apac',
+  'latam',
+  'americas',
+  'north america',
+  'south america',
+  'central america',
+  'asia',
+  'asia pacific',
+  'middle east',
+  'africa',
+  'eu',
+  'uk',
+  'us',
+  'usa',
+  'united kingdom',
+  'united states',
+  'united states of america',
+  'canada',
+  'germany',
+  'france',
+  'spain',
+  'italy',
+  'australia',
+  'new zealand',
+  'india',
+  'singapore',
+])
+
+function normalizeLabel(value: string): string {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function isNonCityLabel(value: string | null | undefined): boolean {
+  const key = normalizeLabel(String(value || ''))
+  if (!key) return false
+  if (NON_CITY_LABELS.has(key)) return true
+  if (key.includes('remote') && (key.includes('anywhere') || key.includes('worldwide') || key.includes('global'))) {
+    return true
+  }
+  return false
+}
+
 /**
  * Normalize a raw location string coming from ATS or boards.
  *
@@ -38,25 +101,25 @@ export function normalizeLocation(raw: string | null | undefined): NormalizedLoc
   if (!display) return emptyLocation()
 
   // Deterministic normalized form for regex checks
-  const lr = normalizeLocationRaw(display)
+  const lrRaw = normalizeLocationRaw(display)
 
   // Detect remote/hybrid/onsite with separator-aware boundaries
   const hasRemote =
-    /(^|[ ,;|/])remote([ ,;|/]|$)/.test(lr) ||
-    /telecommute/.test(lr) ||
-    /work from home/.test(lr) ||
-    /(^|[ ,;|/])wfh([ ,;|/]|$)/.test(lr) ||
-    /(^|[ ,;|/])anywhere([ ,;|/]|$)/.test(lr) ||
-    /(^|[ ,;|/])global([ ,;|/]|$)/.test(lr)
+    /(^|[ ,;|/])remote([ ,;|/]|$)/.test(lrRaw) ||
+    /telecommute/.test(lrRaw) ||
+    /work from home/.test(lrRaw) ||
+    /(^|[ ,;|/])wfh([ ,;|/]|$)/.test(lrRaw) ||
+    /(^|[ ,;|/])anywhere([ ,;|/]|$)/.test(lrRaw) ||
+    /(^|[ ,;|/])global([ ,;|/]|$)/.test(lrRaw)
 
   const hasHybrid =
-    /(^|[ ,;|/])hybrid([ ,;|/]|$)/.test(lr) ||
-    /remote (and|\/) (on ?site|onsite|in office|office)/.test(lr) ||
-    /(on ?site|onsite|in office|office) (and|\/) remote/.test(lr)
+    /(^|[ ,;|/])hybrid([ ,;|/]|$)/.test(lrRaw) ||
+    /remote (and|\/) (on ?site|onsite|in office|office)/.test(lrRaw) ||
+    /(on ?site|onsite|in office|office) (and|\/) remote/.test(lrRaw)
 
   const hasOnsite =
-    /(^|[ ,;|/])(on ?site|onsite|in office|office based)([ ,;|/]|$)/.test(lr) ||
-    /(^|[ ,;|/])office([ ,;|/]|$)/.test(lr)
+    /(^|[ ,;|/])(on ?site|onsite|in office|office based)([ ,;|/]|$)/.test(lrRaw) ||
+    /(^|[ ,;|/])office([ ,;|/]|$)/.test(lrRaw)
 
   let kind: LocationKind | null = null
   let isRemote: boolean | null = null
@@ -80,6 +143,7 @@ export function normalizeLocation(raw: string | null | undefined): NormalizedLoc
   display = stripRemoteQualifiers(display)
 
   // If multi-location signals exist, do not attempt component parsing
+  const lr = normalizeLocationRaw(display)
   const multi = hasMultiLocationSignals(lr)
   if (multi) {
     return {
@@ -178,6 +242,12 @@ function splitLocationParts(text: string): {
   country: string | null
 } {
   const lower = text.toLowerCase().trim()
+  const normalized = normalizeLabel(lower)
+  const normalizedCountry = normalizeCountry(text)
+
+  if (isNonCityLabel(normalized)) {
+    return { city: null, region: null, country: normalizedCountry }
+  }
   if (
     lower === 'remote' ||
     lower === 'hybrid' ||
@@ -189,9 +259,18 @@ function splitLocationParts(text: string): {
     lower === 'global' ||
     lower === 'emea' ||
     lower === 'apac' ||
-    lower === 'latam'
+    lower === 'latam' ||
+    lower === 'anywhere in the world' ||
+    lower === 'anywhere in world' ||
+    lower === 'europe' ||
+    lower === 'north america' ||
+    lower === 'south america' ||
+    lower === 'asia' ||
+    lower === 'asia pacific' ||
+    lower === 'middle east' ||
+    lower === 'africa'
   ) {
-    return { city: null, region: null, country: null }
+    return { city: null, region: null, country: normalizedCountry }
   }
 
   const parts = text
@@ -215,6 +294,9 @@ function splitLocationParts(text: string): {
     const [p1, p2] = parts
     const c2 = normalizeCountry(p2)
     if (c2) return { city: p1, region: null, country: c2 }
+    const inferred = inferCountryFromCity(p1)
+    if (inferred) return { city: inferred.city, region: p2, country: inferred.country }
+    if (isUsState(p2)) return { city: p1, region: p2, country: 'United States' }
     return { city: p1, region: p2, country: null }
   }
 
@@ -223,7 +305,39 @@ function splitLocationParts(text: string): {
   const c3 = normalizeCountry(p3)
   if (c3) return { city: p1, region: p2, country: c3 }
 
+  const inferred = inferCountryFromCity(p1)
+  if (inferred) return { city: inferred.city, region: p2, country: inferred.country }
+  if (isUsState(p2)) return { city: p1, region: p2, country: 'United States' }
+
   return { city: p1, region: p2, country: null }
+}
+
+const US_STATE_CODES = new Set([
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+  'DC',
+])
+
+const US_STATE_NAMES = new Set([
+  'alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado',
+  'connecticut', 'delaware', 'florida', 'georgia', 'hawaii', 'idaho',
+  'illinois', 'indiana', 'iowa', 'kansas', 'kentucky', 'louisiana', 'maine',
+  'maryland', 'massachusetts', 'michigan', 'minnesota', 'mississippi', 'missouri',
+  'montana', 'nebraska', 'nevada', 'new hampshire', 'new jersey', 'new mexico',
+  'new york', 'north carolina', 'north dakota', 'ohio', 'oklahoma', 'oregon',
+  'pennsylvania', 'rhode island', 'south carolina', 'south dakota', 'tennessee',
+  'texas', 'utah', 'vermont', 'virginia', 'washington', 'west virginia',
+  'wisconsin', 'wyoming', 'district of columbia',
+])
+
+function isUsState(token: string): boolean {
+  const t = String(token || '').trim()
+  if (!t) return false
+  if (t.length === 2) return US_STATE_CODES.has(t.toUpperCase())
+  return US_STATE_NAMES.has(t.toLowerCase())
 }
 
 function normalizeCityKey(city: string): string {

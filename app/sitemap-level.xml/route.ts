@@ -1,9 +1,8 @@
 import { prisma } from '../../lib/prisma'
 import { buildWhere } from '../../lib/jobs/queryJobs'
+import { getSiteUrl } from '../../lib/seo/site'
 
-const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-  : 'https://www.6figjobs.com'
+const SITE_URL = getSiteUrl()
 
 export async function GET() {
   const MIN_INDEXABLE_JOBS = 3
@@ -14,21 +13,26 @@ export async function GET() {
     by: ['experienceLevel'],
     where: { ...baseWhere, experienceLevel: { in: levels } },
     _count: { _all: true },
+    _max: { updatedAt: true },
   })
 
   const counts = new Map<string, number>()
+  const lastmods = new Map<string, Date>()
   for (const row of rows) {
     if (!row.experienceLevel) continue
     counts.set(String(row.experienceLevel).toLowerCase(), Number(row._count?._all ?? 0))
+    const updatedAt = row._max?.updatedAt ?? null
+    if (updatedAt) lastmods.set(String(row.experienceLevel).toLowerCase(), updatedAt)
   }
 
   const urls = levels
     .map((level) => {
       const total = counts.get(level) ?? 0
       if (total < MIN_INDEXABLE_JOBS) return null
+      const lastmod = (lastmods.get(level) ?? new Date()).toISOString()
       return {
         url: `${SITE_URL}/jobs/level/${level}`,
-        lastModified: new Date().toISOString(),
+        lastModified: lastmod,
         changeFrequency: 'daily',
         priority: 0.7,
       }

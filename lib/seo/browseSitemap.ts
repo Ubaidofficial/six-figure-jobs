@@ -119,6 +119,8 @@ function initializeRoleSkillCounts(): Map<string, number> {
 export async function buildBrowseSitemapReport(
   minJobs: number = 3,
 ): Promise<BrowseSitemapReport> {
+  // Avoid duplicating salary tier pages across multiple sitemap families.
+  const INCLUDE_SALARY_TIERS = false
   const baseWhere = buildWhere({} as any)
   const remoteWhere = buildWhere({ remoteOnly: true } as any)
 
@@ -325,15 +327,17 @@ export async function buildBrowseSitemapReport(
     }
   }
 
-  for (const cat of CATEGORY_LINKS.salaryTiers) {
-    const tierId = extractSalaryTierIdFromHref(cat.href)
-    if (!tierId) continue
-    const total = salaryTierCounts.get(tierId) ?? 0
-    candidates.push({
-      path: cat.href,
-      total,
-      indexable: total >= minJobs,
-    })
+  if (INCLUDE_SALARY_TIERS) {
+    for (const cat of CATEGORY_LINKS.salaryTiers) {
+      const tierId = extractSalaryTierIdFromHref(cat.href)
+      if (!tierId) continue
+      const total = salaryTierCounts.get(tierId) ?? 0
+      candidates.push({
+        path: cat.href,
+        total,
+        indexable: total >= minJobs,
+      })
+    }
   }
 
   // Country/location pages
