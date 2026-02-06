@@ -1,0 +1,9 @@
+https://www.6figjobs.com/sitemap-jobs.xml
+https://www.6figjobs.com/sitemap-company.xml
+https://www.6figjobs.com/sitemap-city.xml
+https://www.6figjobs.com/sitemap-remote.xml
+https://www.6figjobs.com/sitemap-salary.xml
+https://www.6figjobs.com/sitemap-country.xml
+https://www.6figjobs.com/sitemap-category.xml
+https://www.6figjobs.com/sitemap-level.xml
+https://www.6figjobs.com/sitemap-browse.xml
