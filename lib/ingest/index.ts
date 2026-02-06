@@ -630,14 +630,20 @@ function processSalary(input: ScrapedJobInput) {
   let salarySource: SalarySource = 'none'
   let currencyAmbiguous = false
   const now = new Date()
+  const inferredCountryCode = input.locationText
+    ? countryToCode(normalizeLocationData(input.locationText).country)
+    : null
 
   // Try Greenhouse-specific parsing first (more accurate)
   if (salaryMin === null && salaryMax === null && input.source === 'ats:greenhouse') {
     const html = input.descriptionHtml ?? ''
+    const rawMeta =
+      (input.raw as any)?.metadata ?? (input.raw as any)?.greenhouseMetadata ?? null
     const greenhouseSalary = parseGreenhouseSalary({
       html,
       locationText: input.locationText ?? null,
-      countryCode: null,
+      countryCode: inferredCountryCode,
+      metadata: rawMeta,
     })
     if (greenhouseSalary) {
       salaryMin = greenhouseSalary.min

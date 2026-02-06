@@ -68,5 +68,25 @@ describe('parseGreenhouseSalary (real-world Greenhouse formats)', () => {
     expect(parsed?.currency).toBe('USD')
     expect(parsed?.interval).toBe('year')
   })
-})
 
+  it('parses salary from metadata when available', () => {
+    const html = '&lt;p&gt;Role details&lt;/p&gt;'
+    const parsed = parseGreenhouseSalary({
+      html,
+      locationText: 'Remote',
+      countryCode: null,
+      metadata: [
+        {
+          name: 'Compensation',
+          value: '$150,000 - $180,000 USD',
+        },
+      ],
+    })
+
+    expect(parsed).not.toBeNull()
+    expect(parsed?.min).toBe(150000)
+    expect(parsed?.max).toBe(180000)
+    expect(parsed?.currency).toBe('USD')
+    expect(parsed?.interval).toBe('year')
+  })
+})

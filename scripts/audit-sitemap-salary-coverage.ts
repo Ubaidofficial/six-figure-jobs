@@ -1,8 +1,9 @@
 /**
  * Deep audit: sitemap job quality vs salary validation coverage.
  *
- * This matches current sitemap inclusion logic:
- *   isExpired=false AND buildGlobalExclusionsWhere()
+ * This matches current job sitemap eligibility:
+ *   isExpired=false AND buildGlobalExclusionsWhere() AND buildHighSalaryEligibilityWhere()
+ * The report also includes pre-gate coverage diagnostics.
  *
  * Usage:
  *   npx tsx scripts/audit-sitemap-salary-coverage.ts
@@ -29,107 +30,134 @@ function sortDescByCount<T extends { count: number }>(rows: T[]): T[] {
 }
 
 async function main() {
-  const sitemapWhere = {
+  const baseWhere = {
     isExpired: false,
     AND: [buildGlobalExclusionsWhere()],
   } as const
 
+  const sitemapWhere = {
+    isExpired: false,
+    AND: [buildGlobalExclusionsWhere(), buildHighSalaryEligibilityWhere()],
+  } as const
+
   const validatedWhere = {
-    ...sitemapWhere,
+    ...baseWhere,
     salaryValidated: true,
   } as const
 
   const validatedHighConfidenceWhere = {
-    ...sitemapWhere,
+    ...baseWhere,
     salaryValidated: true,
     salaryConfidence: { gte: HIGH_CONFIDENCE_MIN },
   } as const
 
-  const strictHighSalaryWhere = {
-    ...sitemapWhere,
-    AND: [buildGlobalExclusionsWhere(), buildHighSalaryEligibilityWhere()],
-  } as const
-
   const [
     totalActive,
+    totalBase,
     totalInSitemap,
-    validatedInSitemap,
-    confidenceNullInSitemap,
-    confidenceLt80InSitemap,
-    confidenceNullValidatedInSitemap,
-    confidenceLt80ValidatedInSitemap,
-    validatedHighConfidenceInSitemap,
-    strictHighSalaryInSitemap,
-    validatedConfidenceAgg,
+    validatedInBase,
+    confidenceNullInBase,
+    confidenceLt80InBase,
+    confidenceNullValidatedInBase,
+    confidenceLt80ValidatedInBase,
+    validatedHighConfidenceInBase,
+    validatedConfidenceAggBase,
+    validatedConfidenceAggSitemap,
   ] = await Promise.all([
     prisma.job.count({ where: { isExpired: false } }),
+    prisma.job.count({ where: baseWhere }),
     prisma.job.count({ where: sitemapWhere }),
     prisma.job.count({ where: validatedWhere }),
-    prisma.job.count({ where: { ...sitemapWhere, salaryConfidence: null } }),
-    prisma.job.count({ where: { ...sitemapWhere, salaryConfidence: { lt: HIGH_CONFIDENCE_MIN } } }),
+    prisma.job.count({ where: { ...baseWhere, salaryConfidence: null } }),
+    prisma.job.count({ where: { ...baseWhere, salaryConfidence: { lt: HIGH_CONFIDENCE_MIN } } }),
     prisma.job.count({ where: { ...validatedWhere, salaryConfidence: null } }),
     prisma.job.count({ where: { ...validatedWhere, salaryConfidence: { lt: HIGH_CONFIDENCE_MIN } } }),
     prisma.job.count({ where: validatedHighConfidenceWhere }),
-    prisma.job.count({ where: strictHighSalaryWhere }),
     prisma.job.aggregate({
       where: validatedWhere,
       _avg: { salaryConfidence: true },
       _min: { salaryConfidence: true },
       _max: { salaryConfidence: true },
     }),
+    prisma.job.aggregate({
+      where: sitemapWhere,
+      _avg: { salaryConfidence: true },
+      _min: { salaryConfidence: true },
+      _max: { salaryConfidence: true },
+    }),
   ])
 
-  const nonValidatedInSitemap = totalInSitemap - validatedInSitemap
-  const excludedFromSitemap = totalActive - totalInSitemap
+  const nonValidatedInBase = totalBase - validatedInBase
+  const excludedFromSitemap = totalBase - totalInSitemap
 
-  __slog('**Active Jobs vs Sitemap Inclusion**')
+  __slog('**Active Jobs vs Sitemap Eligibility**')
   __slog(`- Active (isExpired=false): ${totalActive}`)
-  __slog(`- Included in sitemap: ${totalInSitemap} (${pct(totalInSitemap, totalActive)})`)
-  __slog(`- Excluded by sitemap filters: ${excludedFromSitemap} (${pct(excludedFromSitemap, totalActive)})`)
+  __slog(`- Base (active + global exclusions): ${totalBase}`)
+  __slog(
+    `- Eligible for sitemap (high-salary gate): ${totalInSitemap} (${pct(
+      totalInSitemap,
+      totalBase,
+    )})`,
+  )
+  __slog(
+    `- Excluded by sitemap gate: ${excludedFromSitemap} (${pct(
+      excludedFromSitemap,
+      totalBase,
+    )})`,
+  )
   __slog('')
 
-  __slog('**Current Sitemap Composition**')
-  __slog(`- Total: ${totalInSitemap}`)
-  __slog(`- Validated: ${validatedInSitemap} (${pct(validatedInSitemap, totalInSitemap)})`)
-  __slog(`- Non-validated: ${nonValidatedInSitemap} (${pct(nonValidatedInSitemap, totalInSitemap)})`)
+  __slog('**Base Pool Composition (pre-salary gate)**')
+  __slog(`- Total: ${totalBase}`)
+  __slog(`- Validated: ${validatedInBase} (${pct(validatedInBase, totalBase)})`)
+  __slog(`- Non-validated: ${nonValidatedInBase} (${pct(nonValidatedInBase, totalBase)})`)
   __slog(
-    `- salaryConfidence null: ${confidenceNullInSitemap} (${pct(
-      confidenceNullInSitemap,
-      totalInSitemap,
+    `- salaryConfidence null: ${confidenceNullInBase} (${pct(
+      confidenceNullInBase,
+      totalBase,
     )})`,
   )
   __slog(
-    `- salaryConfidence < ${HIGH_CONFIDENCE_MIN}: ${confidenceLt80InSitemap} (${pct(
-      confidenceLt80InSitemap,
-      totalInSitemap,
+    `- salaryConfidence < ${HIGH_CONFIDENCE_MIN}: ${confidenceLt80InBase} (${pct(
+      confidenceLt80InBase,
+      totalBase,
     )})`,
   )
   __slog(
-    `- Validated but confidence null: ${confidenceNullValidatedInSitemap} (${pct(
-      confidenceNullValidatedInSitemap,
-      validatedInSitemap,
+    `- Validated but confidence null: ${confidenceNullValidatedInBase} (${pct(
+      confidenceNullValidatedInBase,
+      validatedInBase,
     )})`,
   )
   __slog(
-    `- Validated but confidence < ${HIGH_CONFIDENCE_MIN}: ${confidenceLt80ValidatedInSitemap} (${pct(
-      confidenceLt80ValidatedInSitemap,
-      validatedInSitemap,
+    `- Validated but confidence < ${HIGH_CONFIDENCE_MIN}: ${confidenceLt80ValidatedInBase} (${pct(
+      confidenceLt80ValidatedInBase,
+      validatedInBase,
     )})`,
   )
   __slog(
     `- Validated confidence avg/min/max: ${Math.round(
-      Number(validatedConfidenceAgg._avg.salaryConfidence ?? 0),
-    )}/${validatedConfidenceAgg._min.salaryConfidence ?? 'null'}/${validatedConfidenceAgg._max.salaryConfidence ?? 'null'}`,
+      Number(validatedConfidenceAggBase._avg.salaryConfidence ?? 0),
+    )}/${validatedConfidenceAggBase._min.salaryConfidence ?? 'null'}/${validatedConfidenceAggBase._max.salaryConfidence ?? 'null'}`,
+  )
+  __slog('')
+
+  __slog('**Sitemap Composition (high-salary eligible)**')
+  __slog(`- Total: ${totalInSitemap}`)
+  __slog(
+    `- Eligible confidence avg/min/max: ${Math.round(
+      Number(validatedConfidenceAggSitemap._avg.salaryConfidence ?? 0),
+    )}/${validatedConfidenceAggSitemap._min.salaryConfidence ?? 'null'}/${validatedConfidenceAggSitemap._max.salaryConfidence ?? 'null'}`,
   )
   __slog('')
 
   const byValidatedAndReason = await prisma.job.groupBy({
     by: ['salaryValidated', 'salaryParseReason'],
-    where: sitemapWhere,
+    where: baseWhere,
     _count: { _all: true },
   })
 
-  __slog('**Sitemap Parse Reason Breakdown**')
+  __slog('**Salary Parse Reason Breakdown (base pool)**')
   for (const row of sortDescByCount(
     byValidatedAndReason.map((r) => ({
       salaryValidated: r.salaryValidated,
@@ -140,7 +168,7 @@ async function main() {
     __slog(
       `- salaryValidated=${row.salaryValidated} salaryParseReason=${row.salaryParseReason}: ${row.count} (${pct(
         row.count,
-        totalInSitemap,
+        totalBase,
       )})`,
     )
   }
@@ -148,29 +176,29 @@ async function main() {
 
   const nonValidatedSources = await prisma.job.groupBy({
     by: ['source'],
-    where: { ...sitemapWhere, salaryValidated: false },
+    where: { ...baseWhere, salaryValidated: false },
     _count: { _all: true },
   })
 
-  __slog('**Top Sources Contributing Non-Validated Sitemap Jobs**')
+  __slog('**Top Sources Contributing Non-Validated Jobs (base pool)**')
   for (const row of sortDescByCount(
     nonValidatedSources.map((r) => ({ source: r.source ?? 'null', count: r._count._all })),
   ).slice(0, 15)) {
-    __slog(`- ${row.source}: ${row.count} (${pct(row.count, nonValidatedInSitemap)})`)
+    __slog(`- ${row.source}: ${row.count} (${pct(row.count, nonValidatedInBase)})`)
   }
   __slog('')
 
   // Impact analysis: salaryValidated=true filter (only)
-  const removedByValidatedOnly = totalInSitemap - validatedInSitemap
+  const removedByValidatedOnly = totalBase - validatedInBase
 
   __slog('**Impact of salaryValidated=true Filter**')
   __slog(`- Jobs removed: ${removedByValidatedOnly}`)
-  __slog(`- Jobs remaining: ${validatedInSitemap}`)
+  __slog(`- Jobs remaining: ${validatedInBase}`)
   __slog('')
 
   const roleCountsAll = await prisma.job.groupBy({
     by: ['roleSlug'],
-    where: sitemapWhere,
+    where: baseWhere,
     _count: { _all: true },
   })
   const roleCountsValidated = await prisma.job.groupBy({
@@ -234,69 +262,69 @@ async function main() {
   __slog(`- Companies losing all sitemap jobs: ${companiesLosingAll}`)
   __slog('')
 
-  const [topCountriesValidated, topRemoteModesValidated, topRolesValidated, topCompaniesValidated] =
+  const [topCountriesSitemap, topRemoteModesSitemap, topRolesSitemap, topCompaniesSitemap] =
     await Promise.all([
       prisma.job.groupBy({
         by: ['countryCode'],
-        where: validatedWhere,
+        where: sitemapWhere,
         _count: { _all: true },
       }),
       prisma.job.groupBy({
         by: ['remoteMode'],
-        where: validatedWhere,
+        where: sitemapWhere,
         _count: { _all: true },
       }),
       prisma.job.groupBy({
         by: ['roleSlug'],
-        where: validatedWhere,
+        where: sitemapWhere,
         _count: { _all: true },
       }),
       prisma.job.groupBy({
         by: ['company'],
-        where: validatedWhere,
+        where: sitemapWhere,
         _count: { _all: true },
       }),
     ])
 
-  __slog('**Quality Metrics for salaryValidated=true Jobs (in sitemap scope)**')
+  __slog('**Quality Metrics for eligible high-salary jobs (sitemap scope)**')
   __slog('- Top countries:')
   for (const row of sortDescByCount(
-    topCountriesValidated.map((r) => ({ k: r.countryCode ?? 'null', count: r._count._all })),
+    topCountriesSitemap.map((r) => ({ k: r.countryCode ?? 'null', count: r._count._all })),
   ).slice(0, 10)) {
-    __slog(`  - ${row.k}: ${row.count} (${pct(row.count, validatedInSitemap)})`)
+    __slog(`  - ${row.k}: ${row.count} (${pct(row.count, totalInSitemap)})`)
   }
   __slog('- Remote modes:')
   for (const row of sortDescByCount(
-    topRemoteModesValidated.map((r) => ({ k: r.remoteMode ?? 'null', count: r._count._all })),
+    topRemoteModesSitemap.map((r) => ({ k: r.remoteMode ?? 'null', count: r._count._all })),
   ).slice(0, 10)) {
-    __slog(`  - ${row.k}: ${row.count} (${pct(row.count, validatedInSitemap)})`)
+    __slog(`  - ${row.k}: ${row.count} (${pct(row.count, totalInSitemap)})`)
   }
   __slog('- Top roles:')
   for (const row of sortDescByCount(
-    topRolesValidated.map((r) => ({ k: r.roleSlug ?? 'null', count: r._count._all })),
+    topRolesSitemap.map((r) => ({ k: r.roleSlug ?? 'null', count: r._count._all })),
   ).slice(0, 10)) {
-    __slog(`  - ${row.k}: ${row.count} (${pct(row.count, validatedInSitemap)})`)
+    __slog(`  - ${row.k}: ${row.count} (${pct(row.count, totalInSitemap)})`)
   }
   __slog('- Top companies:')
   for (const row of sortDescByCount(
-    topCompaniesValidated.map((r) => ({ k: r.company ?? 'null', count: r._count._all })),
+    topCompaniesSitemap.map((r) => ({ k: r.company ?? 'null', count: r._count._all })),
   ).slice(0, 10)) {
-    __slog(`  - ${row.k}: ${row.count} (${pct(row.count, validatedInSitemap)})`)
+    __slog(`  - ${row.k}: ${row.count} (${pct(row.count, totalInSitemap)})`)
   }
   __slog('')
 
   // Alternative strategy sizing
   __slog('**Alternative Strategy Sizing**')
   __slog(
-    `- salaryValidated=true AND confidence>=${HIGH_CONFIDENCE_MIN}: ${validatedHighConfidenceInSitemap} (${pct(
-      validatedHighConfidenceInSitemap,
-      totalInSitemap,
+    `- salaryValidated=true AND confidence>=${HIGH_CONFIDENCE_MIN}: ${validatedHighConfidenceInBase} (${pct(
+      validatedHighConfidenceInBase,
+      totalBase,
     )})`,
   )
   __slog(
-    `- Full site gate (buildHighSalaryEligibilityWhere): ${strictHighSalaryInSitemap} (${pct(
-      strictHighSalaryInSitemap,
+    `- Full site gate (buildHighSalaryEligibilityWhere): ${totalInSitemap} (${pct(
       totalInSitemap,
+      totalBase,
     )})`,
   )
 }

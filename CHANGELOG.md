@@ -1,3 +1,13 @@
+# 2.8.6 (2026-02-06)
+
+
+### Bug Fixes
+
+* parse Greenhouse salary metadata and decode currency symbols
+* infer country code for Greenhouse salary parsing
+* expand salary coverage audit and add indexing/sitemap verification scripts
+
+
 # 2.8.5 (2026-02-05)
 
 

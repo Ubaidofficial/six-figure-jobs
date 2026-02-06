@@ -22,6 +22,10 @@ function decodeHtml(html: string): string {
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, ' ')
     .replace(/&mdash;/g, '—')
+    .replace(/&dollar;|&#36;|&#x24;/gi, '$')
+    .replace(/&euro;|&#8364;|&#x20ac;/gi, '€')
+    .replace(/&pound;|&#163;|&#x0a3;|&#xa3;/gi, '£')
+    .replace(/&yen;|&#165;|&#x0a5;|&#xa5;/gi, '¥')
 }
 
 /**
@@ -52,12 +56,23 @@ export function parseGreenhouseSalary(input: {
   html: string | null | undefined
   locationText?: string | null
   countryCode?: string | null
+  metadata?: unknown
 }): ParsedSalary | null {
   const html = input.html
   if (!html) return null
 
   const decoded = decodeHtml(html)
   const text = htmlToText(decoded)
+
+  const metadataText = extractMetadataSalaryText(input.metadata)
+  if (metadataText) {
+    const metaParsed = parseRangeFromText(
+      htmlToText(decodeHtml(metadataText)),
+      input.locationText ?? null,
+      input.countryCode ?? null,
+    )
+    if (metaParsed) return metaParsed
+  }
 
   // 1) Legacy: pay-range div containing salary spans (most structured when present).
   // Example:
@@ -88,6 +103,61 @@ export function parseGreenhouseSalary(input: {
 
   // 2) Match common pay/salary formats in the compensation snippet (avoids scanning full HTML).
   return parseRangeFromText(compSnippet, input.locationText ?? null, input.countryCode ?? null)
+}
+
+function extractMetadataSalaryText(metadata: unknown): string | null {
+  if (!metadata) return null
+
+  const hits: string[] = []
+  const pushValue = (value: unknown) => {
+    if (value == null) return
+    if (typeof value === 'string') {
+      const s = value.trim()
+      if (s) hits.push(s)
+      return
+    }
+    if (typeof value === 'number') {
+      hits.push(String(value))
+      return
+    }
+  }
+
+  if (Array.isArray(metadata)) {
+    for (const item of metadata) {
+      if (!item || typeof item !== 'object') continue
+      const label = String(
+        (item as any).name ??
+          (item as any).label ??
+          (item as any).key ??
+          (item as any).field ??
+          '',
+      ).toLowerCase()
+      if (!label) continue
+      if (!/(compensation|salary|pay|base|range|ote)/i.test(label)) continue
+      const value =
+        (item as any).value ??
+        (item as any).text ??
+        (item as any).content ??
+        (item as any).data
+      if (Array.isArray(value)) {
+        for (const v of value) pushValue(v)
+      } else {
+        pushValue(value)
+      }
+    }
+  } else if (typeof metadata === 'object') {
+    for (const [key, value] of Object.entries(metadata as Record<string, unknown>)) {
+      if (!/(compensation|salary|pay|base|range|ote)/i.test(key)) continue
+      if (Array.isArray(value)) {
+        for (const v of value) pushValue(v)
+      } else {
+        pushValue(value)
+      }
+    }
+  }
+
+  if (hits.length === 0) return null
+  return hits.join(' ')
 }
 
 function normalizeCurrencyCode(v: string | null | undefined): string | null {
@@ -190,6 +260,11 @@ function extractCompensationSnippet(text: string): string | null {
     /(pay\s*range)\b/i,
     /(salary\s*range)\b/i,
     /(base\s*salary)\b/i,
+    /(salary\s*band)\b/i,
+    /(pay\s*transparency)\b/i,
+    /(compensation\s*range)\b/i,
+    /(target\s*base\s*pay)\b/i,
+    /(target\s*compensation)\b/i,
     /(compensation)\b/i,
   ]
 
@@ -219,6 +294,7 @@ function parseRangeFromText(
 
   const currencyCodes =
     '(USD|EUR|GBP|AUD|CAD|NZD|SGD|CHF|INR|SEK|NOK|DKK)'
+  const codePrefix = `(?<codePrefix>${currencyCodes})\\s*`
   const sym = '(US\\$|A\\$|C\\$|NZ\\$|S\\$|[£$€₹])'
   const amt = '([\\d][\\d,]*(?:\\.\\d+)?\\s*[kKmM]?)'
   const intervalRe =
@@ -227,19 +303,19 @@ function parseRangeFromText(
   const keyword = '(?:pay\\s*range|salary\\s*range|compensation|base\\s*salary|salary|pay)'
 
   const rangeWithKeyword = new RegExp(
-    `${keyword}\\s*[:\\-]?\\s*(?<sym1>${sym})?\\s*(?<a>${amt})\\s*(?:-|–|—|to)\\s*(?<sym2>${sym})?\\s*(?<b>${amt})\\s*(?<code>${currencyCodes})?\\s*(?:\\/|per\\s*)?\\s*${intervalRe}`,
+    `${keyword}\\s*[:\\-]?\\s*(?:${codePrefix})?(?<sym1>${sym})?\\s*(?<a>${amt})\\s*(?:-|–|—|to)\\s*(?<sym2>${sym})?\\s*(?<b>${amt})\\s*(?<code>${currencyCodes})?\\s*(?:\\/|per\\s*)?\\s*${intervalRe}`,
     'ig',
   )
   const rangeWithMoney = new RegExp(
-    `(?<sym1>${sym})\\s*(?<a>${amt})\\s*(?:-|–|—|to)\\s*(?<sym2>${sym})?\\s*(?<b>${amt})\\s*(?<code>${currencyCodes})?\\s*(?:\\/|per\\s*)?\\s*${intervalRe}`,
+    `(?:${codePrefix})?(?<sym1>${sym})\\s*(?<a>${amt})\\s*(?:-|–|—|to)\\s*(?<sym2>${sym})?\\s*(?<b>${amt})\\s*(?<code>${currencyCodes})?\\s*(?:\\/|per\\s*)?\\s*${intervalRe}`,
     'ig',
   )
   const singleWithKeyword = new RegExp(
-    `${keyword}\\s*[:\\-]?\\s*(?<sym1>${sym})?\\s*(?<a>${amt})\\s*(?<code>${currencyCodes})?\\s*(?:\\/|per\\s*)?\\s*${intervalRe}`,
+    `${keyword}\\s*[:\\-]?\\s*(?:${codePrefix})?(?<sym1>${sym})?\\s*(?<a>${amt})\\s*(?<code>${currencyCodes})?\\s*(?:\\/|per\\s*)?\\s*${intervalRe}`,
     'ig',
   )
   const singleWithMoney = new RegExp(
-    `(?<sym1>${sym})\\s*(?<a>${amt})\\s*(?<code>${currencyCodes})?\\s*(?:\\/|per\\s*)?\\s*${intervalRe}`,
+    `(?:${codePrefix})?(?<sym1>${sym})\\s*(?<a>${amt})\\s*(?<code>${currencyCodes})?\\s*(?:\\/|per\\s*)?\\s*${intervalRe}`,
     'ig',
   )
 
@@ -269,7 +345,7 @@ function parseRangeFromText(
 
     const sym1 = g.sym1 ?? null
     const sym2 = g.sym2 ?? null
-    const code = normalizeCurrencyCode(g.code ?? null)
+    const code = normalizeCurrencyCode(g.code ?? g.codePrefix ?? null)
 
     // Reject candidates that have neither symbol nor currency code; too error-prone.
     if (!code && !sym1 && !sym2) return
