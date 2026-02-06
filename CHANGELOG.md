@@ -1,3 +1,11 @@
+# 2.8.7 (2026-02-06)
+
+
+### Bug Fixes
+
+* add automated sitemap health checks and URL sampling guardrails
+
+
 # 2.8.6 (2026-02-06)
 
 

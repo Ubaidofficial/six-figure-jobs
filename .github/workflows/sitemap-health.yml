@@ -1,0 +1,33 @@
+name: Sitemap Health Check
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours
+  workflow_dispatch:
+
+concurrency:
+  group: sitemap-health
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run sitemap health check
+        env:
+          SITE_URL: "https://www.6figjobs.com"
+          CHILD_SITEMAP_SAMPLE: "3"
+          JOB_URL_SAMPLE: "20"
+          GENERAL_URL_SAMPLE: "5"
+          MAX_BAD_URLS: "2"
+        run: node scripts/sitemap-health-check.mjs
