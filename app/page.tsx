@@ -32,6 +32,7 @@ import {
   type PremiumRoleCard,
 } from '@/components/home/ExplorePremiumRoles'
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
+import { getThresholdLabelForCountry } from '@/lib/seo/salaryLabels'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
 import { WhySixFigureJobs } from '@/components/home/WhySixFigureJobs'
 
@@ -98,12 +99,12 @@ const PREMIUM_ROLE_DEFS = [
 ] as const satisfies ReadonlyArray<{ slug: string; name: string; emoji: string }>
 
 const TOP_LOCATION_DEFS = [
-  { code: 'US', flag: '🇺🇸', thresholdLabel: '$100k USD' },
-  { code: 'GB', flag: '🇬🇧', thresholdLabel: '£80k GBP' },
-  { code: 'CA', flag: '🇨🇦', thresholdLabel: '$100k CAD' },
-  { code: 'DE', flag: '🇩🇪', thresholdLabel: '€90k EUR' },
-  { code: 'AU', flag: '🇦🇺', thresholdLabel: '$150k AUD' },
-  { code: 'NL', flag: '🇳🇱', thresholdLabel: '€85k EUR' },
+  { code: 'US', flag: '🇺🇸', thresholdLabel: getThresholdLabelForCountry('US') },
+  { code: 'GB', flag: '🇬🇧', thresholdLabel: getThresholdLabelForCountry('GB') },
+  { code: 'CA', flag: '🇨🇦', thresholdLabel: getThresholdLabelForCountry('CA') },
+  { code: 'DE', flag: '🇩🇪', thresholdLabel: getThresholdLabelForCountry('DE') },
+  { code: 'AU', flag: '🇦🇺', thresholdLabel: getThresholdLabelForCountry('AU') },
+  { code: 'NL', flag: '🇳🇱', thresholdLabel: getThresholdLabelForCountry('NL') },
 ] as const satisfies ReadonlyArray<{ code: string; flag: string; thresholdLabel: string }>
 
 // Deduped, extended role list for the search dropdown

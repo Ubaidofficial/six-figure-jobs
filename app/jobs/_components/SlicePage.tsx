@@ -32,8 +32,14 @@ export function SlicePage({ slice, data }: Props) {
   const heading = slice.h1 || slice.title || defaultTitleFromSlug(slice.slug)
   const description =
     slice.description ||
-    defaultDescriptionFromSlug(slice.slug, slice.filters?.minAnnual ?? null, countryLabel)
+    defaultDescriptionFromSlug(
+      slice.slug,
+      slice.filters?.minAnnual ?? null,
+      countryLabel,
+      countryCode,
+    )
   const salaryBand = formatSalaryBandLabel(minAnnual ?? 100_000, countryCode)
+  const baseBandLabel = formatSalaryBandLabel(100_000, countryCode)
   const roleLabel = roleSlug ? prettyRole(roleSlug) : null
 
   const seoBody = buildSeoBodyCopy({
@@ -68,30 +74,30 @@ export function SlicePage({ slice, data }: Props) {
   if (roleSlug) {
     relatedLinks.push({
       href: `/jobs/${roleSlug}/100k-plus`,
-      label: `$100k+ ${prettyRole(roleSlug)} jobs`,
+      label: `${baseBandLabel} ${prettyRole(roleSlug)} jobs`,
     })
     relatedLinks.push({
       href: `/jobs/${roleSlug}/remote/100k-plus`,
-      label: `Remote $100k+ ${prettyRole(roleSlug)} jobs`,
+      label: `Remote ${baseBandLabel} ${prettyRole(roleSlug)} jobs`,
     })
   }
   if (roleSlug && countryCode) {
     const ccLower = countryCode.toLowerCase()
     relatedLinks.push({
       href: `/jobs/${roleSlug}/${ccLower}/200k-plus`,
-      label: `$200k+ ${prettyRole(roleSlug)} jobs in ${countryCode.toUpperCase()}`,
+      label: `${formatSalaryBandLabel(200_000, countryCode)} ${prettyRole(roleSlug)} jobs in ${countryCode.toUpperCase()}`,
     })
   } else {
-    relatedLinks.push({ href: '/jobs/200k-plus', label: '$200k+ jobs' })
+    relatedLinks.push({ href: '/jobs/200k-plus', label: `${formatSalaryBandLabel(200_000)} jobs` })
   }
   if (countryCode) {
     relatedLinks.push({
       href: `/jobs/location/${countryCode.toLowerCase()}`,
-      label: `$100k+ jobs in ${countryCode.toUpperCase()}`,
+      label: `${baseBandLabel} jobs in ${countryCode.toUpperCase()}`,
     })
     relatedLinks.push({
       href: `/jobs/location/remote`,
-      label: 'Remote $100k+ jobs',
+      label: `Remote ${baseBandLabel} jobs`,
     })
   }
 
@@ -108,7 +114,7 @@ export function SlicePage({ slice, data }: Props) {
       {
         '@type': 'ListItem',
         position: 2,
-        name: '$100k+ jobs',
+        name: `${baseBandLabel} jobs`,
         item: `${siteUrl}/jobs/100k-plus`,
       },
       {
@@ -140,7 +146,7 @@ export function SlicePage({ slice, data }: Props) {
         name: `Are these ${salaryBand} ${roleLabel || 'tech'} jobs verified?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. We ingest directly from company ATS feeds and trusted boards, then filter to $100k+ (or local equivalent) and dedupe.',
+          text: `Yes. We ingest directly from company ATS feeds and trusted boards, then filter to ${baseBandLabel} (or local equivalent) and dedupe.`,
         },
       },
       {
@@ -156,7 +162,7 @@ export function SlicePage({ slice, data }: Props) {
         name: `Do salaries include local currencies?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'We normalize to USD for bands like $100k+, but also display local currency when provided (e.g., CHF, GBP, EUR, CAD, AUD, SGD).',
+          text: 'We normalize to annual salary bands and display local currency when provided (e.g., CHF, GBP, EUR, CAD, AUD, SGD).',
         },
       },
     ],
@@ -184,7 +190,7 @@ export function SlicePage({ slice, data }: Props) {
         </Link>
         <span>/</span>
         <Link href="/jobs/100k-plus" className="hover:underline">
-          $100k+ jobs
+          {baseBandLabel} jobs
         </Link>
         <span>/</span>
         <span className="text-slate-200">{heading}</span>
@@ -289,12 +295,12 @@ export function SlicePage({ slice, data }: Props) {
       <section id="jobs" className="scroll-mt-20">
         {!allowIndex && (
           <p className="mb-3 text-xs text-amber-300">
-            We’ll index this page once more live $100k+ jobs are available in this slice.
+            We’ll index this page once more live {salaryBand} jobs are available in this slice.
           </p>
         )}
         {jobs.length === 0 ? (
           <p className="py-4 text-sm text-slate-400">
-            No jobs found. Try another salary band, region, or explore all $100k+ opportunities.
+            No jobs found. Try another salary band, region, or explore all {baseBandLabel} opportunities.
           </p>
         ) : (
           <JobList jobs={jobs} />
@@ -447,18 +453,13 @@ function defaultTitleFromSlug(slug: string): string {
 function defaultDescriptionFromSlug(
   slug: string,
   minAnnual: number | null,
-  countryLabel: string | null
+  countryLabel: string | null,
+  countryCode?: string | null
 ): string | null {
   const clean = slug.replace(/^\/+|\/+$/g, '')
   const parts = clean.split('/').filter(Boolean)
 
-  const salaryBand = (() => {
-    if (!minAnnual) return '$100k+'
-    if (minAnnual >= 400_000) return '$400k+'
-    if (minAnnual >= 300_000) return '$300k+'
-    if (minAnnual >= 200_000) return '$200k+'
-    return '$100k+'
-  })()
+  const salaryBand = formatSalaryBandLabel(minAnnual ?? 100_000, countryCode)
 
   const loc = countryLabel ? ` in ${countryLabel}` : ''
   return `Browse verified ${salaryBand} roles${loc}, including remote and hybrid options, refreshed daily from ATS and trusted boards.`

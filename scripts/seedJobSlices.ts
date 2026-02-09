@@ -13,6 +13,7 @@
 import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { countryCodeToSlug } from '../lib/seo/countrySlug'
+import { getMinSalaryForCountry } from '../lib/jobs/salaryThresholds'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -55,12 +56,14 @@ function countryNameFromCode(code: string): string {
 }
 
 function qualifiesForBand(job: JobLite, band: Band): boolean {
-  if (job.isHundredKLocal) return true
+  const effectiveBand =
+    band === 100_000 && job.countryCode
+      ? getMinSalaryForCountry(job.countryCode) ?? band
+      : band
+  const b = BigInt(effectiveBand)
 
-  if (job.minAnnual != null && job.maxAnnual != null) {
-    const b = BigInt(band)
-    return job.minAnnual >= b && job.maxAnnual >= b
-  }
+  if (job.minAnnual != null && job.minAnnual >= b) return true
+  if (job.maxAnnual != null && job.maxAnnual >= b) return true
 
   return false
 }
@@ -71,6 +74,7 @@ async function seedBandBaseSlice(band: Band) {
 
   const filters = {
     minAnnual: band,
+    currency: 'USD',
   }
 
   const title = `$${band / 1000}k+ tech jobs from top companies`
@@ -160,6 +164,7 @@ async function seedRoleCountrySlicesForBand(band: Band) {
       minAnnual: band,
       roleSlugs: [roleSlug],
       countryCode,
+      isHundredKLocal: true,
     }
 
     const roleLabel = humanize(roleSlug)

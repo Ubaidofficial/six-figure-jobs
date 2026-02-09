@@ -7,6 +7,7 @@ import { countryCodeToSlug } from '../../../../lib/seo/countrySlug'
 import { notFound, redirect } from 'next/navigation'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 import { queryJobs } from '../../../../lib/jobs/queryJobs'
+import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 
 import { CountryLocationTemplate } from '../_components/CountryLocationTemplate'
 
@@ -69,13 +70,15 @@ export async function generateMetadata({
     pageSize: 1,
   })
 
+  const salaryLabel = getThresholdLabelForCountry(loc.countryCode ?? null)
+
   const title = loc.remoteOnly
-    ? `Remote $100k+ jobs (${total.toLocaleString()}) | ${SITE_NAME}`
-    : `$100k+ jobs in ${loc.label} (${total.toLocaleString()}) | ${SITE_NAME}`
+    ? `Remote ${salaryLabel} jobs (${total.toLocaleString()}) | ${SITE_NAME}`
+    : `${salaryLabel} jobs in ${loc.label} (${total.toLocaleString()}) | ${SITE_NAME}`
 
   const description = loc.remoteOnly
-    ? `Browse ${total.toLocaleString()} remote $100k jobs, remote high paying jobs, six figure remote jobs across engineering, product, and data.`
-    : `Browse ${total.toLocaleString()} $100k jobs in ${loc.label}. ${loc.label} $100k jobs, high paying jobs ${loc.label}, six figure ${loc.label} roles with verified pay.`
+    ? `Browse ${total.toLocaleString()} remote ${salaryLabel} jobs, remote high paying roles, six figure remote jobs across engineering, product, and data.`
+    : `Browse ${total.toLocaleString()} ${salaryLabel} jobs in ${loc.label}. ${loc.label} ${salaryLabel} jobs, high paying jobs ${loc.label}, six figure ${loc.label} roles with verified pay.`
 
   const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
   const allowIndex = total >= 3

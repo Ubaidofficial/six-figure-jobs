@@ -5,6 +5,7 @@ import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl } from '../../../../lib/seo/site'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
+import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 import { redirect } from 'next/navigation'
 
 export const revalidate = 300
@@ -23,18 +24,7 @@ const COUNTRIES: Record<string, { name: string; flag: string }> = {
 }
 
 function getSalaryLabel(code: string): string {
-  const upper = code.toUpperCase()
-  const map: Record<string, string> = {
-    US: '$100k+',
-    GB: '£75k+',
-    CA: '$120k+ CAD',
-    DE: '€80k+',
-    AU: '$140k+ AUD',
-    NL: '€80k+',
-    FR: '€80k+',
-    SE: '1M+ SEK',
-  }
-  return map[upper] || '$100k+'
+  return getThresholdLabelForCountry(code)
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
@@ -117,6 +107,7 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
 
   const countryCode = countrySlugToCode(code)
   if (!countryCode) notFound()
+  const salaryLabel = getSalaryLabel(countryCode)
 
   const { jobs, total } = await queryJobs({
     countryCode: countryCode.toUpperCase(),
@@ -137,14 +128,14 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
       </nav>
 
       <h1 className="mb-4 text-2xl font-semibold text-slate-50">
-        {country.flag} {getSalaryLabel(countryCode)} Jobs in {country.name} ({total.toLocaleString()})
+        {country.flag} {salaryLabel} Jobs in {country.name} ({total.toLocaleString()})
       </h1>
       <p className="mb-6 text-sm text-slate-300">
-        High-salary tech positions (starting {getSalaryLabel(countryCode)}) in {country.name} from top companies.
+        High-salary tech positions (starting {salaryLabel}) in {country.name} from top companies.
       </p>
 
       {jobs.length === 0 ? (
-        <p className="text-slate-400">No jobs found. Try exploring all $100k+ opportunities.</p>
+        <p className="text-slate-400">No jobs found. Try exploring all {salaryLabel} opportunities.</p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}
@@ -165,7 +156,7 @@ export default async function CountryPage({ params }: { params: Promise<{ code: 
             $200k+ Jobs in {country.name}
           </Link>
           <Link href="/jobs/100k-plus" className="text-blue-400 hover:underline">
-            All $100k+ Jobs
+            All {salaryLabel} Jobs
           </Link>
           {Object.entries(COUNTRIES)
             .filter(([c]) => c !== code.toLowerCase())

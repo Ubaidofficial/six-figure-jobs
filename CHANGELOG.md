@@ -1,3 +1,13 @@
+# 2.8.8 (2026-02-09)
+
+
+### Bug Fixes
+
+* localize salary threshold labels across PSEO pages
+* fix salary band filtering with currency inference and local thresholds
+* seed USD band slices with explicit currency and localize role+country slices
+
+
 # 2.8.7 (2026-02-06)
 
 

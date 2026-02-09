@@ -4,6 +4,8 @@ import type { Job, Company, Prisma, RoleInference } from '@prisma/client'
 import { prisma } from '../prisma'
 import { getDateThreshold, MAX_DISPLAY_AGE_DAYS } from '../ingest/jobAgeFilter'
 import { HIGH_SALARY_THRESHOLDS } from '../currency/thresholds'
+import { inferCurrencyFromCountryCode } from '../normalizers/salary'
+import { getMinSalaryForCountry } from './salaryThresholds'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -256,9 +258,9 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
     where.countryCode = filters.countryCode.toUpperCase()
   }
 
-  if (filters.currency) {
-    where.currency = filters.currency.toUpperCase()
-  }
+  const requestedCurrency = filters.currency
+    ? filters.currency.toUpperCase()
+    : null
 
   if (filters.stateCode) {
     where.stateCode = filters.stateCode.toUpperCase()
@@ -301,14 +303,45 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
     where.companyRef = companyFilter
   }
 
-  // Salary range filters (only safe when caller pins currency)
-  const hasCurrencyFilter = Boolean(filters.currency)
+  // Salary range filters (ensure we have a currency when min/max is provided)
+  const hasMinAnnual =
+    typeof filters.minAnnual === 'number' && filters.minAnnual > 0
+  const hasMaxAnnual =
+    typeof filters.maxAnnual === 'number' && filters.maxAnnual > 0
+  const hasAnnualFilter = hasMinAnnual || hasMaxAnnual
+
+  let annualCurrency = requestedCurrency
+
+  if (hasAnnualFilter && !annualCurrency) {
+    const inferred = filters.countryCode
+      ? inferCurrencyFromCountryCode(filters.countryCode)
+      : null
+    annualCurrency = inferred || 'USD'
+  }
+
+  if (annualCurrency) {
+    where.currency = annualCurrency
+  }
+
+  const hasCurrencyFilter = Boolean(annualCurrency)
+  const localThreshold =
+    filters.isHundredKLocal && filters.countryCode
+      ? getMinSalaryForCountry(filters.countryCode)
+      : null
+  const effectiveMinAnnual =
+    hasMinAnnual &&
+    localThreshold &&
+    filters.minAnnual != null &&
+    filters.minAnnual <= 100_000
+      ? localThreshold
+      : filters.minAnnual
+
   if (
     hasCurrencyFilter &&
-    typeof filters.minAnnual === 'number' &&
-    filters.minAnnual > 0
+    typeof effectiveMinAnnual === 'number' &&
+    effectiveMinAnnual > 0
   ) {
-    const min = filters.minAnnual
+    const min = effectiveMinAnnual
     addAnd({
       OR: [
         { minAnnual: { gte: BigInt(min) } },

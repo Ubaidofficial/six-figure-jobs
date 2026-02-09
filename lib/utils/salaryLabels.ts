@@ -1,5 +1,7 @@
 // lib/utils/salaryLabels.ts
-// Generate localized salary band labels (e.g., CHF 100k+ / €92k+)
+// Generate localized salary band labels (e.g., £75k+ or A$140k+)
+
+import { getCurrencyForCountry, getMinSalaryForCountry } from '../jobs/salaryThresholds'
 
 type CurrencyMeta = {
   symbol: string
@@ -8,37 +10,16 @@ type CurrencyMeta = {
 
 const CURRENCY_META: Record<string, CurrencyMeta> = {
   USD: { symbol: '$', eurRate: 0.92 },
-  CAD: { symbol: '$', eurRate: 0.67 },
+  CAD: { symbol: 'C$', eurRate: 0.67 },
   GBP: { symbol: '£', eurRate: 1.15 },
   EUR: { symbol: '€', eurRate: 1 },
   CHF: { symbol: 'CHF', eurRate: 1.04 },
   AUD: { symbol: 'A$', eurRate: 0.62 },
   NZD: { symbol: 'NZ$', eurRate: 0.57 },
   SGD: { symbol: 'S$', eurRate: 0.69 },
-  NOK: { symbol: 'kr', eurRate: 0.09 },
-  SEK: { symbol: 'kr', eurRate: 0.09 },
-  DKK: { symbol: 'kr', eurRate: 0.13 },
-}
-
-const COUNTRY_TO_CURRENCY: Record<string, string> = {
-  US: 'USD',
-  CA: 'CAD',
-  GB: 'GBP',
-  IE: 'EUR',
-  DE: 'EUR',
-  FR: 'EUR',
-  ES: 'EUR',
-  NL: 'EUR',
-  SE: 'SEK',
-  NO: 'NOK',
-  DK: 'DKK',
-  BE: 'EUR',
-  AT: 'EUR',
-  FI: 'EUR',
-  CH: 'CHF',
-  SG: 'SGD',
-  AU: 'AUD',
-  NZ: 'NZD',
+  NOK: { symbol: 'NOK', eurRate: 0.09 },
+  SEK: { symbol: 'SEK', eurRate: 0.09 },
+  DKK: { symbol: 'DKK', eurRate: 0.13 },
 }
 
 function bandToK(minAnnual: number): number {
@@ -50,14 +31,20 @@ export function formatSalaryBandLabel(
   countryCode?: string | null
 ): string {
   const cc = (countryCode || '').toUpperCase()
-  const currency = COUNTRY_TO_CURRENCY[cc] || 'USD'
+  const localCurrency = getCurrencyForCountry(cc)
+  const localThreshold = getMinSalaryForCountry(cc)
+
+  const resolvedMinAnnual =
+    minAnnual <= 100_000 && localThreshold ? localThreshold : minAnnual
+
+  const currency = localCurrency || 'USD'
   const meta = CURRENCY_META[currency] || { symbol: '$' }
 
-  const primary = `${meta.symbol}${bandToK(minAnnual)}k+`
+  const primary = `${meta.symbol}${bandToK(resolvedMinAnnual)}k+`
 
   // For non-EUR European currencies, show an approximate EUR band as well.
   if (currency !== 'EUR' && meta.eurRate) {
-    const eurK = Math.round((minAnnual * meta.eurRate) / 1000)
+    const eurK = Math.round((resolvedMinAnnual * meta.eurRate) / 1000)
     // Avoid duplicating if EUR would be identical (e.g., close to USD)
     if (eurK && currency !== 'USD') {
       return `${primary} / €${eurK}k+`
