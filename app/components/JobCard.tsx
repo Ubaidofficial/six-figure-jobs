@@ -23,6 +23,7 @@ export type JobCardJob = JobWithCompany & {
   locationsJson?: any
   aiSnippet?: string | null
   experienceLevel?: string | null
+  salarySource?: string | null
 }
 
 export default function JobCard({
@@ -187,7 +188,9 @@ export default function JobCard({
           )}
 
           <div className={styles.pills}>
-            {salaryDisplay && job.salaryValidated && <StatusPill tone="success">Verified</StatusPill>}
+            {salaryDisplay && job.salaryValidated && job.salarySource === 'ats' && (
+              <StatusPill tone="success">Verified</StatusPill>
+            )}
             {isNew && <StatusPill tone="neutral">NEW</StatusPill>}
             {isFeatured && <StatusPill tone="warning">FEATURED</StatusPill>}
           </div>
@@ -377,7 +380,7 @@ function inferSeniorityFromTitle(title: string): string | null {
   if (t.includes('senior') || t.includes('sr.') || t.includes('sr ')) return 'Senior'
   if (t.includes('junior') || t.includes('jr.') || t.includes('jr ') || t.includes('associate')) return 'Junior'
   if (t.includes('mid-level') || t.includes('mid level') || t.includes('intermediate')) return 'Mid-level'
-  return 'Mid-level'
+  return null
 }
 
 function getSeniorityIcon(seniority: string): string {

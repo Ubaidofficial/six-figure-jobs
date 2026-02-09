@@ -1,3 +1,12 @@
+# 2.8.11 (2026-02-09)
+
+
+### Bug Fixes
+
+* stop remotive salary estimates and board salary text fallbacks
+* only show salary verified for ATS sources and avoid default mid-level labels
+
+
 # 2.8.10 (2026-02-09)
 
 

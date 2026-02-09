@@ -633,6 +633,7 @@ function processSalary(input: ScrapedJobInput) {
   const inferredCountryCode = input.locationText
     ? countryToCode(normalizeLocationData(input.locationText).country)
     : null
+  const isBoardSource = String(input.source || '').startsWith('board:')
 
   // Try Greenhouse-specific parsing first (more accurate)
   if (salaryMin === null && salaryMax === null && input.source === 'ats:greenhouse') {
@@ -661,7 +662,7 @@ function processSalary(input: ScrapedJobInput) {
     (input.salaryMin != null || input.salaryMax != null) &&
     input.salaryCurrency != null
   ) {
-    salarySource = 'ats'
+    salarySource = isBoardSource ? 'salaryRaw' : 'ats'
     if (String(input.salaryCurrency).trim() === '$') currencyAmbiguous = true
   }
 
@@ -735,7 +736,7 @@ function getStrictExclusionReason(
   return null
 }
 
-function inferExperienceLevelFromTitle(title: string | null | undefined): string {
+function inferExperienceLevelFromTitle(title: string | null | undefined): string | null {
   const t = ` ${String(title ?? '').toLowerCase()} `
   if (/\b(principal)\b/.test(t)) return 'principal'
   if (/\b(staff)\b/.test(t)) return 'staff'
@@ -744,7 +745,7 @@ function inferExperienceLevelFromTitle(title: string | null | undefined): string
   if (/\b(director)\b/.test(t)) return 'director'
   if (/\b(vp|vice president)\b/.test(t)) return 'vp'
   if (/\b(chief|cto|ceo|cpo|coo|ciso|cio)\b/.test(t)) return 'c-level'
-  return 'mid'
+  return null
 }
 
 /**

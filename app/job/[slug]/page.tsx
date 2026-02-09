@@ -193,6 +193,7 @@ export default async function JobPage({
   const postedLabel = formatRelativeTime(
     typedJob.postedAt ?? typedJob.createdAt ?? typedJob.updatedAt ?? null,
   )
+  const hasSalary = Boolean(salaryText)
 
   const requirements = parseArray(typedJob.requirementsJson)
   const benefitItems = ((): string[] => {
@@ -273,7 +274,15 @@ export default async function JobPage({
   const similarJobs = similarResult.jobs.filter((j) => j.id !== typedJob.id).slice(0, 3)
 
   const companyCountry = company?.countryCode || typedJob.countryCode || 'Global'
-  const isSalaryVerified = Boolean((typedJob as any)?.salaryValidated)
+  const isSalaryVerified =
+    hasSalary &&
+    typedJob.salaryValidated === true &&
+    typedJob.salarySource === 'ats'
+  const salaryBadgeLabel = hasSalary
+    ? isSalaryVerified
+      ? 'Salary verified'
+      : 'Salary listed'
+    : 'Verified listing'
   const companyProfileVerified = Boolean(company?.slug)
   const lastUpdatedDays = daysSince(typedJob.updatedAt ?? typedJob.lastSeenAt ?? null)
 
@@ -347,7 +356,7 @@ export default async function JobPage({
 
                 <span className={styles.verifiedBadge}>
                   <BadgeCheck className={styles.metaIcon} aria-hidden="true" />
-                  {isSalaryVerified ? 'Salary verified' : 'Verified listing'}
+                  {salaryBadgeLabel}
                 </span>
               </div>
 

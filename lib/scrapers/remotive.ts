@@ -15,9 +15,9 @@ type ProcessedJob = {
   company: string
   companyLogo?: string
   location: string
-  salary: string
-  minSalary: number
-  maxSalary: number
+  salary?: string | null
+  minSalary?: number | null
+  maxSalary?: number | null
   type: string
   url: string
   applyUrl: string
@@ -121,7 +121,9 @@ export default async function scrapeRemotive() {
     )
 
     // Strict $100k+ filter
-    const highPayingJobs = uniqueJobs.filter((job) => job.minSalary >= 100)
+    const highPayingJobs = uniqueJobs.filter(
+      (job) => job.minSalary != null && job.minSalary >= 100,
+    )
 
     const avgDescLength =
       uniqueJobs.length > 0
@@ -263,6 +265,9 @@ function processJob(job: any): ProcessedJob | null {
     }
 
     const salaryInfo = extractSalary(job, title, job.description)
+    const salaryText = salaryInfo?.salaryText ?? null
+    const minSalary = salaryInfo?.minSalary ?? null
+    const maxSalary = salaryInfo?.maxSalary ?? null
 
     let jobType = 'Full-time'
     if (job.job_type) {
@@ -281,8 +286,8 @@ function processJob(job: any): ProcessedJob | null {
       location = 'Anywhere in the World'
     }
 
-    const tags: string[] = ['Remote', 'Verified']
-    if (salaryInfo.minSalary >= 100) tags.push('$100k+')
+    const tags: string[] = ['Remote']
+    if (minSalary != null && minSalary >= 100) tags.push('$100k+')
 
     if (titleLower.includes('senior')) tags.push('Senior')
     if (titleLower.includes('lead')) tags.push('Lead')
@@ -305,7 +310,7 @@ function processJob(job: any): ProcessedJob | null {
     const description = fullDescription
 
     const requirements = generateRequirements(tags, titleLower, skills)
-    const benefits = generateBenefits(salaryInfo.salary, location)
+    const benefits = generateBenefits(salaryText ?? '', location)
 
     let postedDate = 'Recently'
     if (job.publication_date) {
@@ -326,9 +331,9 @@ function processJob(job: any): ProcessedJob | null {
           ? `https://logo.clearbit.com/${logoCompany}.com`
           : ''),
       location,
-      salary: salaryInfo.salary,
-      minSalary: salaryInfo.minSalary,
-      maxSalary: salaryInfo.maxSalary,
+      salary: salaryText,
+      minSalary,
+      maxSalary,
       type: jobType,
       url: job.url,
       postedDate,
@@ -351,6 +356,7 @@ function processJob(job: any): ProcessedJob | null {
         _sixFigureJobs: {
           descriptionText: stripHtml(fullDescription),
         },
+        salaryText: salaryText ?? null,
       },
     }
   } catch (err: any) {
@@ -359,11 +365,17 @@ function processJob(job: any): ProcessedJob | null {
   }
 }
 
+type SalaryInfo = {
+  salaryText: string
+  minSalary: number
+  maxSalary: number
+}
+
 function extractSalary(
   job: any,
   title: string,
   description: string | null
-): { salary: string; minSalary: number; maxSalary: number } {
+): SalaryInfo | null {
   // FIRST: Check if API provides salary directly
   if (job && job.salary_min != null && job.salary_max != null) {
     const minRaw = Number(job.salary_min)
@@ -378,7 +390,7 @@ function extractSalary(
       const min = minRaw >= 1000 ? Math.round(minRaw / 1000) : minRaw
       const max = maxRaw >= 1000 ? Math.round(maxRaw / 1000) : maxRaw
       return {
-        salary: `$${min}k - $${max}k`,
+        salaryText: `$${min}k - $${max}k`,
         minSalary: min,
         maxSalary: max,
       }
@@ -393,7 +405,7 @@ function extractSalary(
         : baseRaw
     if (Number.isFinite(base) && base > 0) {
       return {
-        salary: `$${base}k`,
+        salaryText: `$${base}k`,
         minSalary: base,
         maxSalary: base + 50,
       }
@@ -423,7 +435,7 @@ function extractSalary(
       }
 
       return {
-        salary: `$${min}k - $${max}k`,
+        salaryText: `$${min}k - $${max}k`,
         minSalary: min,
         maxSalary: max,
       }
@@ -433,7 +445,7 @@ function extractSalary(
     if (match) {
       const min = parseInt(match[1], 10)
       return {
-        salary: `$${min}k+`,
+        salaryText: `$${min}k+`,
         minSalary: min,
         maxSalary: min + 100,
       }
@@ -444,7 +456,7 @@ function extractSalary(
       const min = parseInt(match[1], 10) / 1000
       const max = parseInt(match[2], 10) / 1000
       return {
-        salary: `$${min}k - $${max}k`,
+        salaryText: `$${min}k - $${max}k`,
         minSalary: min,
         maxSalary: max,
       }
@@ -461,25 +473,13 @@ function extractSalary(
     const max =
       parseInt(descMatch[3] + (descMatch[4] || '000'), 10) / 1000
     return {
-      salary: `$${min}k - $${max}k`,
+      salaryText: `$${min}k - $${max}k`,
       minSalary: min,
       maxSalary: max,
     }
   }
 
-  const titleLower = title.toLowerCase()
-
-  if (titleLower.includes('staff') || titleLower.includes('principal')) {
-    return { salary: '$180k - $300k (est.)', minSalary: 180, maxSalary: 300 }
-  } else if (titleLower.includes('senior') || titleLower.includes('lead')) {
-    return { salary: '$130k - $220k (est.)', minSalary: 130, maxSalary: 220 }
-  } else if (titleLower.includes('director') || titleLower.includes('head')) {
-    return { salary: '$200k - $300k (est.)', minSalary: 200, maxSalary: 300 }
-  } else if (titleLower.includes('manager')) {
-    return { salary: '$140k - $200k (est.)', minSalary: 140, maxSalary: 200 }
-  }
-
-  return { salary: '$100k - $160k (est.)', minSalary: 100, maxSalary: 160 }
+  return null
 }
 
 function stripHtml(html: string): string {
