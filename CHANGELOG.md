@@ -1,3 +1,11 @@
+# 2.8.10 (2026-02-09)
+
+
+### Bug Fixes
+
+* allow nullable country codes in salary threshold helpers
+
+
 # 2.8.9 (2026-02-09)
 
 
