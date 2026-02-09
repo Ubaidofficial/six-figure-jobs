@@ -58,35 +58,21 @@ async function main() {
     ORDER BY t.sort;
   `
 
-  // eslint-disable-next-line no-console
   console.log('=== GSC / Indexing DB Audit (DB-only) ===')
-  // eslint-disable-next-line no-console
   console.log(`site=${SITE_URL}`)
-  // eslint-disable-next-line no-console
   console.log(`totalJobs=${totalJobs}`)
-  // eslint-disable-next-line no-console
   console.log(`activeJobs=${activeJobs}`)
-  // eslint-disable-next-line no-console
   console.log(`eligibleJobs(highSalaryGate)=${eligibleJobs}`)
-  // eslint-disable-next-line no-console
   console.log('')
-  // eslint-disable-next-line no-console
   console.log(`enrichedActive=${enrichedActive} (${pct(enrichedActive, activeJobs)})`)
-  // eslint-disable-next-line no-console
   console.log(`enrichedEligible=${enrichedEligible} (${pct(enrichedEligible, eligibleJobs)})`)
-  // eslint-disable-next-line no-console
   console.log('')
-  // eslint-disable-next-line no-console
   console.log(`missingShortIdActive=${missingShortIdActive} (${pct(missingShortIdActive, activeJobs)})`)
-  // eslint-disable-next-line no-console
   console.log(`missingShortIdEligible=${missingShortIdEligible} (${pct(missingShortIdEligible, eligibleJobs)})`)
-  // eslint-disable-next-line no-console
   console.log('')
 
-  // eslint-disable-next-line no-console
   console.log('thinContent(activeJobs, by descriptionHtml length):')
   for (const row of thinRows) {
-    // eslint-disable-next-line no-console
     console.log(`  ${row.bucket}: ${Number(row.count)}`)
   }
 
@@ -99,11 +85,9 @@ async function main() {
       select: { id: true, title: true, externalId: true, source: true, createdAt: true },
     })
 
-    // eslint-disable-next-line no-console
     console.log('\nSample eligible jobs missing shortId (likely sitemap/404 risk):')
     for (const j of sample) {
       const canonical = buildJobSlug({ id: j.id, title: j.title })
-      // eslint-disable-next-line no-console
       console.log(
         `- id=${j.id} source=${j.source} createdAt=${j.createdAt.toISOString()} url=${SITE_URL}/job/${canonical}`,
       )
@@ -113,7 +97,6 @@ async function main() {
 
 main()
   .catch((e) => {
-    // eslint-disable-next-line no-console
     console.error(e)
     process.exitCode = 1
   })

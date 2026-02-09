@@ -9,7 +9,6 @@ async function main() {
   const SITE_URL = getSiteUrl()
 
   const totalExpired = await prisma.job.count({ where: { isExpired: true } })
-  // eslint-disable-next-line no-console
   console.log(`expiredJobs=${totalExpired}`)
 
   const sample = await prisma.job.findMany({
@@ -19,22 +18,18 @@ async function main() {
     select: { id: true, title: true, updatedAt: true },
   })
 
-  // eslint-disable-next-line no-console
   console.log('sample:')
   for (const j of sample) {
     const slug = buildJobSlug({ id: j.id, title: j.title })
-    // eslint-disable-next-line no-console
     console.log(`${SITE_URL}/job/${slug}\tupdatedAt=${j.updatedAt.toISOString()}\tid=${j.id}`)
   }
 }
 
 main()
   .catch((e) => {
-    // eslint-disable-next-line no-console
     console.error(e)
     process.exitCode = 1
   })
   .finally(async () => {
     await prisma.$disconnect()
   })
-

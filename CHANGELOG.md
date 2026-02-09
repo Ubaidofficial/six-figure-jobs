@@ -1,3 +1,11 @@
+# 2.8.9 (2026-02-09)
+
+
+### Bug Fixes
+
+* fix eslint globals and cleanup directives in node scripts
+
+
 # 2.8.8 (2026-02-09)
 
 

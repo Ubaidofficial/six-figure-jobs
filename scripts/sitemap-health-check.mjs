@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/* global console, process, URL, AbortController, setTimeout, clearTimeout, fetch */
 // Simple, dependency-free sitemap health check.
 // - Fetches robots.txt for sitemap list
 // - Validates sitemap XML responses

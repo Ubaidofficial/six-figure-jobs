@@ -25,7 +25,6 @@ async function main() {
   for (const url of urls) {
     const shortId = extractShortIdFromJobUrl(url)
     if (!shortId) {
-      // eslint-disable-next-line no-console
       console.log(`bad_url\t${url}`)
       missing++
       continue
@@ -37,26 +36,22 @@ async function main() {
     })
 
     if (!job) {
-      // eslint-disable-next-line no-console
       console.log(`missing_db\tshortId=${shortId}\t${url}`)
       missing++
       continue
     }
 
     ok++
-    // eslint-disable-next-line no-console
     console.log(
       `ok\tshortId=${shortId}\tisExpired=${job.isExpired}\tid=${job.id}\tupdatedAt=${job.updatedAt.toISOString()}\t${url}`,
     )
   }
 
-  // eslint-disable-next-line no-console
   console.log(`\nsummary\tok=${ok}\tmissing=${missing}\ttotal=${urls.length}`)
 }
 
 main()
   .catch((e) => {
-    // eslint-disable-next-line no-console
     console.error(e)
     process.exitCode = 1
   })

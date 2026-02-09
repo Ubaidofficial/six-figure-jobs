@@ -17,7 +17,6 @@ async function time<T>(name: string, fn: () => Promise<T>) {
   const t0 = Date.now()
   const out = await fn()
   const ms = Date.now() - t0
-  // eslint-disable-next-line no-console
   console.log(`${name}: ${ms}ms`)
   return out
 }
@@ -118,7 +117,6 @@ async function main() {
   await time('warmup', () => prisma.job.findMany({ take: 1, select: { id: true } }))
 
   for (let r = 1; r <= repeats; r++) {
-    // eslint-disable-next-line no-console
     console.log(`\n--- run ${r}/${repeats} ---`)
     for (const q of queries) {
       await time(q.name, q.run)
@@ -128,11 +126,9 @@ async function main() {
 
 main()
   .catch((e) => {
-    // eslint-disable-next-line no-console
     console.error(e)
     process.exitCode = 1
   })
   .finally(async () => {
     await prisma.$disconnect()
   })
-

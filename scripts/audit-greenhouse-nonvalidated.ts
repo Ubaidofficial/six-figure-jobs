@@ -42,7 +42,6 @@ function clip(s: unknown, max = 140): string {
 }
 
 async function many<T extends Row>(q: TemplateStringsArray, ...vals: any[]): Promise<T[]> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   return prisma.$queryRaw<T[]>(q, ...vals)
 }
 
