@@ -1,6 +1,7 @@
 // app/robots.txt/route.ts
 import { NextResponse } from 'next/server'
 import { getSiteUrl } from '../../lib/seo/site'
+import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
 
 const SITE_URL = getSiteUrl()
 
@@ -16,6 +17,7 @@ export async function GET() {
     })
   }
 
+  const cityUrls = await getCitySitemapUrls()
   const body = [
     'User-agent: *',
     'Allow: /',
@@ -32,7 +34,7 @@ export async function GET() {
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     `Sitemap: ${SITE_URL}/sitemap-jobs.xml`,
     `Sitemap: ${SITE_URL}/sitemap-company.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-city.xml`,
+    ...(cityUrls.length > 0 ? [`Sitemap: ${SITE_URL}/sitemap-city.xml`] : []),
     `Sitemap: ${SITE_URL}/sitemap-salary.xml`,
     `Sitemap: ${SITE_URL}/sitemap-remote.xml`,
     `Sitemap: ${SITE_URL}/sitemap-country.xml`,

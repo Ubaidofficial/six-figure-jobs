@@ -1,6 +1,7 @@
 // app/sitemap.xml/route.ts
 
 import { getSiteUrl } from '../../lib/seo/site'
+import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
 
 const SITE_URL = getSiteUrl()
 const BUILD_LASTMOD = new Date().toISOString()
@@ -17,10 +18,11 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
+  const cityUrls = await getCitySitemapUrls()
   const sitemaps = [
     'sitemap-jobs.xml',
     'sitemap-company.xml',
-    'sitemap-city.xml',
+    ...(cityUrls.length > 0 ? ['sitemap-city.xml'] : []),
     'sitemap-remote.xml',
     'sitemap-salary.xml',
     'sitemap-country.xml',

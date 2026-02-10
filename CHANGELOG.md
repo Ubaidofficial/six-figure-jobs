@@ -1,3 +1,19 @@
+# 2.8.12 (2026-02-09)
+
+
+### Bug Fixes
+
+* omit city sitemap from index/robots when empty
+
+
+# 2.8.12 (2026-02-09)
+
+
+### Bug Fixes
+
+* omit city sitemap from index/robots when empty
+
+
 # 2.8.11 (2026-02-09)
 
 
