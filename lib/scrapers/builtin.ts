@@ -152,7 +152,7 @@ export default async function scrapeBuiltIn(): Promise<ScraperStats> {
             typeof job?.salary === 'string' && job.salary.trim() ? job.salary.trim() : null
           const salaryMin = parseSalary(salaryText, false)
           const salaryMax = parseSalary(salaryText, true)
-          const salaryRaw = salaryText || 'USD 100000+ (BuiltIn salary_floor filter)'
+          const salaryRaw = salaryText || null
 
           let applyUrl: string | null = job.url ?? null
           if (applyUrl && applyUrl.toLowerCase().includes('builtin.com')) {
@@ -191,8 +191,8 @@ export default async function scrapeBuiltIn(): Promise<ScraperStats> {
             salaryRaw,
             salaryMin,
             salaryMax,
-            salaryCurrency: 'USD',
-            salaryInterval: 'year',
+            salaryCurrency: salaryText ? 'USD' : null,
+            salaryInterval: salaryText ? 'year' : null,
 
             employmentType: 'Full-time',
             postedAt: null,

@@ -70,9 +70,9 @@ export default async function scrapeYCombinator() {
 
         // REMOVED ML FILTER - get all tech jobs from YC companies
         
-        let minSalary = 100
-        let maxSalary = 180
-        let salaryText = '$100k+ (estimated)'
+        let minSalary: number | null = null
+        let maxSalary: number | null = null
+        let salaryText: string | null = null
 
         // Better salary extraction from compensation object
         if (job.compensation) {
@@ -86,17 +86,26 @@ export default async function scrapeYCombinator() {
             const sal = String(job.compensation.salary).toLowerCase()
             const match = sal.match(/(\d{2,3})k/)
             if (match) {
-              minSalary = parseInt(match[1], 10)
-              maxSalary = minSalary + 40
+              const parsed = parseInt(match[1], 10)
+              minSalary = Number.isFinite(parsed) ? parsed : minSalary
+              if (minSalary != null && maxSalary == null) {
+                maxSalary = minSalary + 40
+              }
             }
           }
           
-          if (minSalary && maxSalary) {
+          if (minSalary != null && maxSalary != null) {
             salaryText = `$${minSalary}k - $${maxSalary}k`
+          } else if (minSalary != null) {
+            salaryText = `$${minSalary}k+`
+          } else if (maxSalary != null) {
+            salaryText = `$${maxSalary}k`
           }
         }
 
-        if (minSalary < 100) continue
+        if (!salaryText) continue
+        const salaryCheck = minSalary ?? maxSalary ?? 0
+        if (salaryCheck < 100) continue
 
         let location: string = job.location || 'Remote'
         if (location.toLowerCase().includes('remote')) {

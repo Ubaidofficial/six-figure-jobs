@@ -1,3 +1,11 @@
+# 2.8.13 (2026-02-10)
+
+
+### Bug Fixes
+
+* remove estimated salary injection in WWR, BuiltIn, and YC scrapers
+
+
 # 2.8.12 (2026-02-09)
 
 

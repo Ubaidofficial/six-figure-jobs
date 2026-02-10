@@ -117,11 +117,6 @@ export async function fetchWeWorkRemotelyJobs(): Promise<ScrapedJobInput[]> {
       rawCompanyName: listing.company || 'Unknown',
       locationText: listing.location || 'Remote',
       url: listing.url,
-      salaryMin: 100_000,
-      salaryMax: null,
-      salaryCurrency: 'USD',
-      salaryInterval: 'year',
-      salaryRaw: '$100,000 or more USD',
       isRemote: true,
       descriptionHtml,
     })
