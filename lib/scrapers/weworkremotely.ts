@@ -11,6 +11,59 @@ import { saveCompanyATS } from './utils/saveCompanyATS'
 const BOARD_NAME = 'weworkremotely'
 const BASE_URL = 'https://weworkremotely.com'
 
+function detectCurrencyFromText(text: string | null): string | null {
+  if (!text) return null
+  const t = text.toLowerCase()
+  if (t.includes('usd') || t.includes('us$')) return 'USD'
+  if (t.includes('cad') || t.includes('c$') || t.includes('ca$')) return 'CAD'
+  if (t.includes('aud') || t.includes('a$') || t.includes('au$')) return 'AUD'
+  if (t.includes('nzd') || t.includes('nz$')) return 'NZD'
+  if (t.includes('sgd') || t.includes('s$')) return 'SGD'
+  if (t.includes('eur') || t.includes('€')) return 'EUR'
+  if (t.includes('gbp') || t.includes('£')) return 'GBP'
+  if (t.includes('chf')) return 'CHF'
+  if (t.includes('inr') || t.includes('₹')) return 'INR'
+  if (t.includes('$')) return 'USD'
+  return null
+}
+
+function detectIntervalFromText(text: string | null): string | null {
+  if (!text) return null
+  const t = text.toLowerCase()
+  if (/hour|hr|hourly|\/\s*h/.test(t)) return 'hour'
+  if (/day|daily|\/\s*d/.test(t)) return 'day'
+  if (/week|weekly|\/\s*w/.test(t)) return 'week'
+  if (/month|monthly|\/\s*m/.test(t)) return 'month'
+  if (/year|annual|annually|\/\s*y/.test(t)) return 'year'
+  return null
+}
+
+function parseSalary(text: string | null, isMax = false): number | null {
+  if (!text) return null
+  const matches = text.match(/([\d,]+)\s*k?/gi)
+  if (!matches) return null
+
+  const numbers = matches
+    .map((m) => parseInt(m.replace(/[^0-9]/g, ''), 10))
+    .filter((n) => Number.isFinite(n) && n > 0)
+
+  if (numbers.length === 0) return null
+
+  const vals = numbers.map((n) => (n < 1000 ? n * 1000 : n))
+  return isMax ? Math.max(...vals) : Math.min(...vals)
+}
+
+function extractSalaryFromListing($el: cheerio.Cheerio<cheerio.Element>): string | null {
+  const salaryText =
+    $el
+      .find('[data-id*="salary"], [data-testid*="salary"], [class*="salary"], [class*="compensation"], [class*="pay"]')
+      .first()
+      .text()
+      .trim() || null
+  if (!salaryText || !/\\d/.test(salaryText)) return null
+  return salaryText
+}
+
 async function fetchJobDescription(jobUrl: string): Promise<string | null> {
   try {
     const res = await fetch(jobUrl, {
@@ -87,7 +140,14 @@ export async function fetchWeWorkRemotelyJobs(): Promise<ScrapedJobInput[]> {
   const html = await res.text()
   const $ = cheerio.load(html)
   
-  const listings: Array<{ title: string; company: string; location: string; url: string; externalId: string }> = []
+  const listings: Array<{
+    title: string
+    company: string
+    location: string
+    url: string
+    externalId: string
+    salaryText: string | null
+  }> = []
   
   $('li.new-listing-container').each((_, el) => {
     const $el = $(el)
@@ -100,8 +160,9 @@ export async function fetchWeWorkRemotelyJobs(): Promise<ScrapedJobInput[]> {
     const location = $el.find('.new-listing__company-headquarters').text().trim()
     const url = href.startsWith('http') ? href : BASE_URL + href
     const externalId = href.split('/').pop() || String(Date.now())
+    const salaryText = extractSalaryFromListing($el)
     
-    listings.push({ title, company, location, url, externalId })
+    listings.push({ title, company, location, url, externalId, salaryText })
   })
   
   console.log(`[WWR] Found ${listings.length} listings, fetching descriptions...`)
@@ -109,6 +170,11 @@ export async function fetchWeWorkRemotelyJobs(): Promise<ScrapedJobInput[]> {
   // Fetch descriptions in parallel (with rate limiting)
   for (const listing of listings) {
     const descriptionHtml = await fetchJobDescription(listing.url)
+    const salaryText = listing.salaryText
+    const salaryMin = parseSalary(salaryText, false)
+    const salaryMax = parseSalary(salaryText, true)
+    const salaryCurrency = salaryText ? detectCurrencyFromText(salaryText) ?? 'USD' : null
+    const salaryInterval = salaryText ? detectIntervalFromText(salaryText) ?? 'year' : null
     
     jobs.push({
       source: makeBoardSource(BOARD_NAME),
@@ -119,6 +185,11 @@ export async function fetchWeWorkRemotelyJobs(): Promise<ScrapedJobInput[]> {
       url: listing.url,
       isRemote: true,
       descriptionHtml,
+      salaryRaw: salaryText,
+      salaryMin,
+      salaryMax,
+      salaryCurrency,
+      salaryInterval,
     })
     
     // Rate limit: 100ms between requests

@@ -1,3 +1,12 @@
+# 2.8.14 (2026-02-11)
+
+
+### Bug Fixes
+
+* add BuiltIn detail-page salary extraction with JSON-LD fallback
+* capture explicit salary chips on WeWorkRemotely listings only when present
+
+
 # 2.8.13 (2026-02-10)
 
 

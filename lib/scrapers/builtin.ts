@@ -21,6 +21,309 @@ const CITIES = [
 
 const PAGE_DELAY_MS = 2000
 const MAX_PAGES_PER_CITY = 10
+const DETAIL_FETCH_DELAY_MS = 350
+const DETAIL_FETCH_TIMEOUT_MS = 15000
+const MAX_DETAIL_FETCHES_TOTAL = Number(process.env.BUILTIN_DETAIL_FETCH_LIMIT ?? 150)
+
+type JobDetail = {
+  descriptionHtml: string | null
+  salaryText: string | null
+  salaryMin: number | null
+  salaryMax: number | null
+  salaryCurrency: string | null
+  salaryInterval: string | null
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+function detectCurrencyFromText(text: string | null): string | null {
+  if (!text) return null
+  const t = text.toLowerCase()
+  if (t.includes('usd') || t.includes('us$')) return 'USD'
+  if (t.includes('cad') || t.includes('c$') || t.includes('ca$')) return 'CAD'
+  if (t.includes('aud') || t.includes('a$') || t.includes('au$')) return 'AUD'
+  if (t.includes('nzd') || t.includes('nz$')) return 'NZD'
+  if (t.includes('sgd') || t.includes('s$')) return 'SGD'
+  if (t.includes('eur') || t.includes('€')) return 'EUR'
+  if (t.includes('gbp') || t.includes('£')) return 'GBP'
+  if (t.includes('chf')) return 'CHF'
+  if (t.includes('inr') || t.includes('₹')) return 'INR'
+  if (t.includes('$')) return 'USD'
+  return null
+}
+
+function detectIntervalFromText(text: string | null): string | null {
+  if (!text) return null
+  const t = text.toLowerCase()
+  if (/hour|hr|hourly|\/\s*h/.test(t)) return 'hour'
+  if (/day|daily|\/\s*d/.test(t)) return 'day'
+  if (/week|weekly|\/\s*w/.test(t)) return 'week'
+  if (/month|monthly|\/\s*m/.test(t)) return 'month'
+  if (/year|annual|annually|\/\s*y/.test(t)) return 'year'
+  return null
+}
+
+function extractJobPostingFromJsonLd($: cheerio.CheerioAPI): Record<string, any> | null {
+  const scripts = $('script[type="application/ld+json"]')
+  for (const el of scripts.toArray()) {
+    const raw = $(el).contents().text().trim()
+    if (!raw) continue
+    try {
+      const parsed = JSON.parse(raw)
+      const found = findJobPosting(parsed)
+      if (found) return found
+    } catch {
+      continue
+    }
+  }
+  return null
+}
+
+function findJobPosting(node: any): Record<string, any> | null {
+  if (!node) return null
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const found = findJobPosting(item)
+      if (found) return found
+    }
+    return null
+  }
+  if (typeof node !== 'object') return null
+
+  const type = node['@type']
+  if (type === 'JobPosting' || (Array.isArray(type) && type.includes('JobPosting'))) {
+    return node
+  }
+
+  if (node['@graph']) {
+    const found = findJobPosting(node['@graph'])
+    if (found) return found
+  }
+
+  for (const value of Object.values(node)) {
+    if (typeof value === 'object' && value !== null) {
+      const found = findJobPosting(value)
+      if (found) return found
+    }
+  }
+
+  return null
+}
+
+function normalizeSchemaInterval(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const v = String(raw).toLowerCase()
+  if (v.startsWith('year') || v === 'annual' || v === 'annually' || v === 'pa') return 'year'
+  if (v.startsWith('month') || v === 'pm') return 'month'
+  if (v.startsWith('week') || v === 'pw') return 'week'
+  if (v.startsWith('day') || v === 'pd') return 'day'
+  if (v.startsWith('hour') || v === 'ph') return 'hour'
+  return null
+}
+
+function toNumber(value: unknown): number | null {
+  if (value == null) return null
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const cleaned = value.replace(/[^0-9.]/g, '')
+    if (!cleaned) return null
+    const num = Number(cleaned)
+    return Number.isFinite(num) ? num : null
+  }
+  return null
+}
+
+function buildSalaryText(
+  currency: string | null,
+  min: number | null,
+  max: number | null,
+  interval: string | null,
+): string | null {
+  if (!currency || (!min && !max)) return null
+  const fmt = (v: number) => Math.round(v).toLocaleString()
+  const range =
+    min != null && max != null && min !== max
+      ? `${fmt(min)} - ${fmt(max)}`
+      : `${fmt(min ?? max ?? 0)}`
+  const suffix = interval ? ` / ${interval}` : ''
+  return `${currency} ${range}${suffix}`
+}
+
+function parseSchemaSalary(baseSalary: any): JobDetail | null {
+  if (!baseSalary) return null
+  if (Array.isArray(baseSalary)) {
+    for (const entry of baseSalary) {
+      const parsed = parseSchemaSalary(entry)
+      if (parsed) return parsed
+    }
+    return null
+  }
+  if (typeof baseSalary === 'string') {
+    const salaryText = baseSalary.trim()
+    if (!salaryText || !/\d/.test(salaryText)) return null
+    const min = parseSalary(salaryText, false)
+    const max = parseSalary(salaryText, true)
+    const salaryCurrency = detectCurrencyFromText(salaryText)
+    const salaryInterval = detectIntervalFromText(salaryText) ?? 'year'
+    if (!salaryCurrency || (!min && !max)) return null
+    return {
+      descriptionHtml: null,
+      salaryText,
+      salaryMin: min,
+      salaryMax: max,
+      salaryCurrency,
+      salaryInterval,
+    }
+  }
+  if (typeof baseSalary === 'object') {
+    const currency =
+      baseSalary.currency ||
+      baseSalary?.value?.currency ||
+      baseSalary?.value?.currencyCode ||
+      null
+    if (!currency) return null
+
+    const valueNode = baseSalary.value ?? baseSalary
+    let min = toNumber(valueNode.minValue ?? valueNode.lowValue ?? valueNode.min)
+    let max = toNumber(valueNode.maxValue ?? valueNode.highValue ?? valueNode.max)
+    const single = toNumber(valueNode.value ?? valueNode.amount)
+    if (min == null && max == null && single != null) {
+      min = single
+      max = single
+    }
+
+    if (min == null && max == null) return null
+
+    const interval = normalizeSchemaInterval(valueNode.unitText ?? baseSalary.unitText) ?? 'year'
+    const salaryText = buildSalaryText(String(currency), min, max, interval)
+
+    return {
+      descriptionHtml: null,
+      salaryText,
+      salaryMin: min,
+      salaryMax: max,
+      salaryCurrency: String(currency),
+      salaryInterval: interval,
+    }
+  }
+
+  return null
+}
+
+function extractSalaryTextFromDom($: cheerio.CheerioAPI): string | null {
+  const salaryText =
+    $('[data-id*="salary"], [data-testid*="salary"], [class*="salary"], [class*="compensation"], [class*="pay"]')
+      .first()
+      .text()
+      .trim() || null
+  if (!salaryText || !/\d/.test(salaryText)) return null
+  return salaryText
+}
+
+function selectBestDescriptionHtml($: cheerio.CheerioAPI): string | null {
+  const selectors = ['article', 'main article', 'main', '[class*="job-description"]', '#job-description']
+  let bestHtml: string | null = null
+  let bestLen = 0
+
+  for (const sel of selectors) {
+    const el = $(sel).first()
+    if (!el.length) continue
+    const textLen = el.text().replace(/\s+/g, ' ').trim().length
+    if (textLen < 200 || textLen > 80_000) continue
+    if (textLen > bestLen) {
+      bestLen = textLen
+      bestHtml = el.html() || null
+    }
+  }
+
+  return bestHtml
+}
+
+async function fetchJobDetails(jobUrl: string): Promise<JobDetail | null> {
+  try {
+    const controller = new AbortController()
+    const id = setTimeout(() => controller.abort(), DETAIL_FETCH_TIMEOUT_MS)
+    const res = await fetch(jobUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        Accept: 'text/html',
+      },
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+    clearTimeout(id)
+
+    if (!res.ok) return null
+
+    const html = await res.text()
+    if (
+      html.toLowerCase().includes('attention required') ||
+      html.toLowerCase().includes('cf-browser-verification')
+    ) {
+      return null
+    }
+
+    const $ = cheerio.load(html)
+    const jobPosting = extractJobPostingFromJsonLd($)
+
+    let descriptionHtml: string | null = null
+    let salaryText: string | null = null
+    let salaryMin: number | null = null
+    let salaryMax: number | null = null
+    let salaryCurrency: string | null = null
+    let salaryInterval: string | null = null
+
+    if (jobPosting) {
+      if (typeof jobPosting.description === 'string') {
+        descriptionHtml = jobPosting.description
+      }
+      const salaryData = parseSchemaSalary(jobPosting.baseSalary)
+      if (salaryData) {
+        salaryText = salaryData.salaryText
+        salaryMin = salaryData.salaryMin
+        salaryMax = salaryData.salaryMax
+        salaryCurrency = salaryData.salaryCurrency
+        salaryInterval = salaryData.salaryInterval
+      }
+    }
+
+    if (!descriptionHtml) {
+      descriptionHtml = selectBestDescriptionHtml($)
+    }
+
+    if (!salaryText) {
+      salaryText = extractSalaryTextFromDom($)
+    }
+
+    if (!salaryMin && !salaryMax && salaryText) {
+      salaryMin = parseSalary(salaryText, false)
+      salaryMax = parseSalary(salaryText, true)
+    }
+
+    if (!salaryCurrency && salaryText) {
+      salaryCurrency = detectCurrencyFromText(salaryText)
+    }
+
+    if (!salaryInterval && salaryText) {
+      salaryInterval = detectIntervalFromText(salaryText) ?? 'year'
+    }
+
+    return {
+      descriptionHtml,
+      salaryText,
+      salaryMin,
+      salaryMax,
+      salaryCurrency,
+      salaryInterval,
+    }
+  } catch (err) {
+    console.warn(`[BuiltIn] Failed to fetch job details for ${jobUrl}:`, err)
+    return null
+  }
+}
 
 async function fetchCityJobs(city: string): Promise<any[]> {
   const jobs: any[] = []
@@ -135,6 +438,8 @@ export default async function scrapeBuiltIn(): Promise<ScraperStats> {
 
   try {
     const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
+    const detailCache = new Map<string, JobDetail | null>()
+    let detailFetches = 0
 
     for (const city of CITIES) {
       try {
@@ -148,10 +453,67 @@ export default async function scrapeBuiltIn(): Promise<ScraperStats> {
             continue
           }
 
-          const salaryText =
+          let salaryText =
             typeof job?.salary === 'string' && job.salary.trim() ? job.salary.trim() : null
-          const salaryMin = parseSalary(salaryText, false)
-          const salaryMax = parseSalary(salaryText, true)
+          let salaryMin = parseSalary(salaryText, false)
+          let salaryMax = parseSalary(salaryText, true)
+          let salaryCurrency = salaryText ? detectCurrencyFromText(salaryText) ?? 'USD' : null
+          let salaryInterval = salaryText ? detectIntervalFromText(salaryText) ?? 'year' : null
+
+          let descriptionHtml: string | null = job.description || null
+
+          if ((!salaryMin && !salaryMax) || !descriptionHtml) {
+            if (detailFetches < MAX_DETAIL_FETCHES_TOTAL) {
+              detailFetches += 1
+              const cached = detailCache.has(job.url) ? detailCache.get(job.url) : undefined
+              const detail = cached ?? (await fetchJobDetails(job.url))
+              if (!detailCache.has(job.url)) detailCache.set(job.url, detail ?? null)
+
+              if (detail) {
+                if (!descriptionHtml && detail.descriptionHtml) {
+                  descriptionHtml = detail.descriptionHtml
+                }
+
+                if (!salaryText && detail.salaryText) {
+                  salaryText = detail.salaryText
+                }
+
+                if ((!salaryMin && !salaryMax) && (detail.salaryMin || detail.salaryMax)) {
+                  salaryMin = detail.salaryMin
+                  salaryMax = detail.salaryMax
+                }
+
+                if (!salaryCurrency && detail.salaryCurrency) {
+                  salaryCurrency = detail.salaryCurrency
+                }
+
+                if (!salaryInterval && detail.salaryInterval) {
+                  salaryInterval = detail.salaryInterval
+                }
+              }
+
+              await sleep(DETAIL_FETCH_DELAY_MS)
+            }
+          }
+
+          if (!salaryMin && !salaryMax && salaryText) {
+            salaryMin = parseSalary(salaryText, false)
+            salaryMax = parseSalary(salaryText, true)
+          }
+
+          if (!salaryCurrency && salaryText) {
+            salaryCurrency = detectCurrencyFromText(salaryText) ?? 'USD'
+          }
+
+          if (!salaryInterval && salaryText) {
+            salaryInterval = detectIntervalFromText(salaryText) ?? 'year'
+          }
+
+          if (!salaryMin && !salaryMax && !salaryText) {
+            stats.skipped++
+            continue
+          }
+
           const salaryRaw = salaryText || null
 
           let applyUrl: string | null = job.url ?? null
@@ -185,14 +547,14 @@ export default async function scrapeBuiltIn(): Promise<ScraperStats> {
             locationText: job.location || city,
             isRemote: Boolean(job.location?.toLowerCase?.().includes('remote')),
 
-            descriptionHtml: job.description || null,
-            descriptionText: stripHtml(job.description || ''),
+            descriptionHtml,
+            descriptionText: stripHtml(descriptionHtml || ''),
 
             salaryRaw,
             salaryMin,
             salaryMax,
-            salaryCurrency: salaryText ? 'USD' : null,
-            salaryInterval: salaryText ? 'year' : null,
+            salaryCurrency,
+            salaryInterval,
 
             employmentType: 'Full-time',
             postedAt: null,
