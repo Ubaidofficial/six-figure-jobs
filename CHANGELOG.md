@@ -9,6 +9,7 @@
 * fix WWR scraper type reference for Cheerio v1 builds
 * normalize metadataBase to shared site URL helper and remove static job counts
 * wait for scrape pipeline completion in daily GitHub Action
+* add cache headers for sitemaps/pages and disable Next image optimization to reduce Railway usage
 
 
 # 2.8.14 (2026-02-11)
