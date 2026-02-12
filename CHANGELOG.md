@@ -1,3 +1,13 @@
+# 2.8.15 (2026-02-12)
+
+
+### Bug Fixes
+
+* avoid false S$ currency detection and infer USD when $ + US context is present
+* generalize apply URL enrichment to extract external apply links across board sources
+* re-enable Remote100k job scraping in the daily board pipeline
+
+
 # 2.8.14 (2026-02-11)
 
 

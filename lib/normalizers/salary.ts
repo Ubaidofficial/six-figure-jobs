@@ -87,10 +87,11 @@ const CURRENCY_PATTERNS: Array<{ pattern: RegExp; currency: SupportedCurrency }>
   // Strong currency markers first (avoid false positives like "audit" => "AUD")
   { pattern: /₹|\bINR\b|\blakhs?\b|\blpa\b/i, currency: 'INR' },
 
-  { pattern: /A\$|AU\$|\bAUD\b/i, currency: 'AUD' },
-  { pattern: /C\$|CA\$|\bCAD\b/i, currency: 'CAD' },
-  { pattern: /NZ\$|\bNZD\b/i, currency: 'NZD' },
-  { pattern: /S\$|SG\$|\bSGD\b/i, currency: 'SGD' },
+  // Require a word boundary before $-prefixed codes to avoid matching inside words like "shoots$"
+  { pattern: /\bA\$|\bAU\$|\bAUD\b/i, currency: 'AUD' },
+  { pattern: /\bC\$|\bCA\$|\bCAD\b/i, currency: 'CAD' },
+  { pattern: /\bNZ\$|\bNZD\b/i, currency: 'NZD' },
+  { pattern: /\bS\$|\bSG\$|\bSGD\b/i, currency: 'SGD' },
   { pattern: /\bCHF\b|Fr\./i, currency: 'CHF' },
 
   // NOTE: "kr" is ambiguous across SEK/NOK/DKK; only accept explicit codes.
@@ -100,7 +101,7 @@ const CURRENCY_PATTERNS: Array<{ pattern: RegExp; currency: SupportedCurrency }>
 
   { pattern: /€|\bEUR\b/i, currency: 'EUR' },
   { pattern: /£|\bGBP\b/i, currency: 'GBP' },
-  { pattern: /US\$|\bUSD\b/i, currency: 'USD' },
+  { pattern: /\bUS\$|\bUSD\b/i, currency: 'USD' },
 ]
 
 export interface RawSalaryInput {
@@ -417,6 +418,14 @@ function detectCurrency(text: string): SupportedCurrency | null {
   for (const { pattern, currency } of CURRENCY_PATTERNS) {
     if (pattern.test(text)) return currency
   }
+
+  // Fallback: if only "$" is present, infer USD when the text explicitly signals US.
+  if (/\$/.test(text)) {
+    if (/\bUS\b|\bUSA\b|United States|U\.S\.|Remote\s*US/i.test(text)) {
+      return 'USD'
+    }
+  }
+
   return null
 }
 

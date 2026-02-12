@@ -23,6 +23,10 @@ const BOARD_HOSTS: Record<string, string> = {
   wellfound: 'wellfound.com',
   otta: 'otta.com',
   ycombinator: 'ycombinator.com',
+  remote100k: 'remote100k.com',
+  realworkfromanywhere: 'realworkfromanywhere.com',
+  justjoin: 'justjoin.it',
+  nodesk: 'nodesk.co',
 }
 
 function normalizeHost(host: string): string {
@@ -123,4 +127,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect()
   })
-

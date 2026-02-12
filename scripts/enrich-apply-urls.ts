@@ -4,6 +4,8 @@
 import { format as __format } from 'node:util'
 import puppeteer from 'puppeteer'
 import { PrismaClient } from '@prisma/client'
+import { extractApplyDestination, extractApplyDestinationFromHtml } from '../lib/scrapers/utils/extractApplyLink'
+import { isExternalToHost } from '../lib/scrapers/utils/detectATS'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -14,17 +16,68 @@ const prisma = new PrismaClient()
 const BATCH_SIZE = 50
 const DELAY_BETWEEN_REQUESTS = 2000 // 2 seconds
 
+const BOARD_HOSTS: Record<string, string> = {
+  remoteok: 'remoteok.com',
+  remotive: 'remotive.com',
+  himalayas: 'himalayas.app',
+  remoteleaf: 'remoteleaf.com',
+  weworkremotely: 'weworkremotely.com',
+  remoterocketship: 'remoterocketship.com',
+  remoteotter: 'remoteotter.com',
+  trawle: 'trawle.com',
+  '4dayweek': '4dayweek.io',
+  builtin: 'builtin.com',
+  dice: 'dice.com',
+  wellfound: 'wellfound.com',
+  otta: 'otta.com',
+  ycombinator: 'ycombinator.com',
+  remote100k: 'remote100k.com',
+  realworkfromanywhere: 'realworkfromanywhere.com',
+  justjoin: 'justjoin.it',
+  nodesk: 'nodesk.co',
+}
+
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 interface JobToEnrich {
   id: string
   url: string
   source: string
+  applyUrl: string | null
 }
 
-async function extractApplyUrl(page: any, url: string, source: string): Promise<string | null> {
+function normalizeHost(host: string): string {
+  return String(host || '').replace(/^www\./, '').toLowerCase()
+}
+
+function hostOf(url: string | null | undefined): string | null {
+  if (!url) return null
   try {
-    await page.goto(url, {
+    return normalizeHost(new URL(url).hostname)
+  } catch {
+    return null
+  }
+}
+
+function isInternalApplyUrl(applyUrl: string | null | undefined, boardHost: string): boolean {
+  const host = hostOf(applyUrl)
+  if (!host) return false
+  return host === normalizeHost(boardHost)
+}
+
+function getBoardHost(source: string): string | null {
+  if (!source.startsWith('board:')) return null
+  const board = source.replace(/^board:/, '')
+  return BOARD_HOSTS[board] ?? null
+}
+
+async function extractApplyUrl(
+  page: any,
+  jobUrl: string,
+  boardHost: string,
+): Promise<string | null> {
+  try {
+    await page.goto(jobUrl, {
       waitUntil: 'domcontentloaded',
       timeout: 30000,
     })
@@ -33,77 +86,25 @@ async function extractApplyUrl(page: any, url: string, source: string): Promise<
 
     let applyUrl: string | null = null
 
-    // Source-specific extraction logic
-    if (source === 'board:remote100k') {
-      applyUrl = await page.evaluate(() => {
-        // Find "Apply Now" button - look for common ATS domains first
-        const atsLinks = Array.from(document.querySelectorAll('a[href]')).filter((link) => {
-          const href = (link as HTMLAnchorElement).href
-          return href.includes('greenhouse.io') || 
-                 href.includes('lever.co') || 
-                 href.includes('ashbyhq.com') ||
-                 href.includes('workday.com') ||
-                 href.includes('myworkdayjobs.com')
-        })
-        
-        if (atsLinks.length > 0) {
-          return (atsLinks[0] as HTMLAnchorElement).href
-        }
-        
-        // Fallback: find "Apply" button
-        const applyButtons = Array.from(document.querySelectorAll('a, button')).filter((el) => {
-          const text = el.textContent?.toLowerCase() || ''
-          return text.includes('apply now') || text.includes('apply for this job')
-        })
-        
-        if (applyButtons.length > 0) {
-          const btn = applyButtons[0] as HTMLAnchorElement
-          if (btn.href && !btn.href.includes('remote100k.com')) {
-            return btn.href
-          }
-        }
-        
-        return null
-      })
-    } else if (source === 'board:remoteotter') {
-      applyUrl = await page.evaluate(() => {
-        const links = Array.from(document.querySelectorAll('a[href]'))
-        for (const link of links) {
-          const href = (link as HTMLAnchorElement).href
-          if (href.includes('greenhouse.io') || href.includes('lever.co') || href.includes('ashbyhq.com')) {
-            return href
-          }
-        }
-        return null
-      })
-    } else if (source === 'board:realworkfromanywhere') {
-      applyUrl = await page.evaluate(() => {
-        const links = Array.from(document.querySelectorAll('a[href]'))
-        for (const link of links) {
-          const href = (link as HTMLAnchorElement).href
-          if (href.includes('greenhouse.io') || href.includes('lever.co') || href.includes('ashbyhq.com')) {
-            return href
-          }
-        }
-        return null
-      })
-    } else if (source === 'board:remotive') {
-      applyUrl = await page.evaluate(() => {
-        const links = Array.from(document.querySelectorAll('a[href]'))
-        for (const link of links) {
-          const href = (link as HTMLAnchorElement).href
-          if (href.includes('greenhouse.io') || href.includes('lever.co') || href.includes('ashbyhq.com')) {
-            return href
-          }
-        }
-        return null
-      })
+    try {
+      const html = await page.content()
+      applyUrl = extractApplyDestinationFromHtml(html, jobUrl)
+    } catch {
+      applyUrl = null
     }
 
-    return applyUrl
+    if (!applyUrl) {
+      applyUrl = await extractApplyDestination(page, jobUrl)
+    }
+
+    if (applyUrl && !isExternalToHost(applyUrl, boardHost)) {
+      return null
+    }
+
+    return applyUrl || null
 
   } catch (err) {
-    __serr(`❌ Error extracting apply URL from ${url}:`, err)
+    __serr(`❌ Error extracting apply URL from ${jobUrl}:`, err)
     return null
   }
 }
@@ -121,18 +122,28 @@ async function enrichApplyUrls(sources: string[], dryRun = false) {
     for (const source of sources) {
       __slog(`\n📋 Processing source: ${source}`)
 
+      const boardHost = getBoardHost(source)
+      if (!boardHost) {
+        __slog(`  ⚠️  No board host mapping for ${source}; skipping`)
+        continue
+      }
+
       // Get jobs that need enrichment
       const jobs = await prisma.job.findMany({
         where: {
           source,
-          applyUrl: {
-            contains: source.replace('board:', ''),
-          },
+          isExpired: false,
+          OR: [
+            { applyUrl: null },
+            { applyUrl: { contains: boardHost } },
+            { applyUrl: { contains: `www.${boardHost}` } },
+          ],
         },
         select: {
           id: true,
           url: true,
           source: true,
+          applyUrl: true,
         },
         take: BATCH_SIZE,
       })
@@ -150,9 +161,27 @@ async function enrichApplyUrls(sources: string[], dryRun = false) {
       let failed = 0
 
       for (const job of jobs) {
+        if (!job.url) {
+          __slog(`Skipping (missing url): ${job.id}`)
+          failed++
+          continue
+        }
+
+        const urlHost = hostOf(job.url)
+        if (urlHost && urlHost !== normalizeHost(boardHost)) {
+          __slog(`Skipping (non-board url): ${job.url}`)
+          failed++
+          continue
+        }
+
+        if (!isInternalApplyUrl(job.applyUrl, boardHost) && job.applyUrl) {
+          __slog(`Skipping (already external): ${job.url}`)
+          continue
+        }
+
         __slog(`Processing: ${job.url}`)
 
-        const directUrl = await extractApplyUrl(page, job.url, job.source)
+        const directUrl = await extractApplyUrl(page, job.url, boardHost)
 
         if (directUrl) {
           __slog(`  ✅ Found: ${directUrl}`)
@@ -185,12 +214,7 @@ async function enrichApplyUrls(sources: string[], dryRun = false) {
 }
 
 // Run enrichment
-const sources = [
-  'board:remote100k',
-  // 'board:remoteotter', // TODO: Fix scraper - storing category pages instead of job URLs // Disabled: scraper has bugs
-  'board:realworkfromanywhere',
-  'board:remotive',
-]
+const sources = Object.keys(BOARD_HOSTS).map((board) => `board:${board}`)
 
 const dryRun = process.argv.includes('--dry-run')
 
