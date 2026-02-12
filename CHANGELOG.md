@@ -7,6 +7,8 @@
 * generalize apply URL enrichment to extract external apply links across board sources
 * re-enable Remote100k job scraping in the daily board pipeline
 * fix WWR scraper type reference for Cheerio v1 builds
+* normalize metadataBase to shared site URL helper and remove static job counts
+* wait for scrape pipeline completion in daily GitHub Action
 
 
 # 2.8.14 (2026-02-11)

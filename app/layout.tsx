@@ -6,16 +6,13 @@ import { Space_Grotesk } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
+import { getSiteUrl } from '../lib/seo/site'
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   display: 'swap',
   weight: ['400', '500', '600', '700'],
 })
-
-function getSiteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL || 'https://www.6figjobs.com'
-}
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -24,7 +21,7 @@ export const metadata: Metadata = {
     template: '%s',
   },
   description:
-    'Find 5,945+ verified jobs paying $100k+ USD (or local equivalent). Premium roles from 333 verified companies. Updated daily.',
+    'Find verified $100k+ jobs with clear salary ranges and trusted employers. Premium roles across engineering, product, data, and design. Updated daily.',
   robots: process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')
     ? { index: false, follow: false }
     : undefined,
