@@ -6,6 +6,7 @@
 * avoid false S$ currency detection and infer USD when $ + US context is present
 * generalize apply URL enrichment to extract external apply links across board sources
 * re-enable Remote100k job scraping in the daily board pipeline
+* fix WWR scraper type reference for Cheerio v1 builds
 
 
 # 2.8.14 (2026-02-11)

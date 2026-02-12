@@ -1,5 +1,6 @@
 // lib/scrapers/weworkremotely.ts
 import * as cheerio from 'cheerio'
+import type { AnyNode } from 'domhandler'
 import type { ScrapedJobInput } from '../ingest/types'
 import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
@@ -53,7 +54,7 @@ function parseSalary(text: string | null, isMax = false): number | null {
   return isMax ? Math.max(...vals) : Math.min(...vals)
 }
 
-function extractSalaryFromListing($el: cheerio.Cheerio<cheerio.Element>): string | null {
+function extractSalaryFromListing($el: cheerio.Cheerio<AnyNode>): string | null {
   const salaryText =
     $el
       .find('[data-id*="salary"], [data-testid*="salary"], [class*="salary"], [class*="compensation"], [class*="pay"]')
