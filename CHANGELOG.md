@@ -1,3 +1,11 @@
+# 2.8.17 (2026-02-13)
+
+
+### Bug Fixes
+
+* cap Prisma connection pool size and add pool timeout to reduce P2037 errors
+
+
 # 2.8.16 (2026-02-13)
 
 
