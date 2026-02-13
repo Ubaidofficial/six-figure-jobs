@@ -1,3 +1,11 @@
+# 2.8.16 (2026-02-13)
+
+
+### Bug Fixes
+
+* force dynamic rendering for sitemap routes to avoid build-time DB connections
+
+
 # 2.8.15 (2026-02-12)
 
 

@@ -4,6 +4,8 @@ import { getSiteUrl } from '../../lib/seo/site'
 
 const SITE_URL = getSiteUrl()
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const MIN_INDEXABLE_JOBS = 3
   const CATEGORY_ROLE_MAP: Record<string, string[]> = {

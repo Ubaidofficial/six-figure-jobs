@@ -6,6 +6,7 @@ import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
 const SITE_URL = getSiteUrl()
 const BUILD_LASTMOD = new Date().toISOString()
 
+export const dynamic = 'force-dynamic'
 export const revalidate = 43200 // 24h
 
 function escapeXml(s: string) {

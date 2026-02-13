@@ -5,6 +5,8 @@ import { getSiteUrl } from '../../lib/seo/site'
 
 const SITE_URL = getSiteUrl()
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const tiers: Array<{ slug: string; min: number; max?: number | null }> = [
     { slug: '100k-plus', min: 100_000, max: 199_999 },
