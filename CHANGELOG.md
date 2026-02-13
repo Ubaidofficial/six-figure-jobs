@@ -11,6 +11,7 @@
 * wait for scrape pipeline completion in daily GitHub Action
 * add cache headers for sitemaps/pages and disable Next image optimization to reduce Railway usage
 * move scrape pipeline to GitHub Actions and remove Puppeteer from production dependencies
+* fix invalid sitemap header route pattern in Next config
 
 
 # 2.8.14 (2026-02-11)

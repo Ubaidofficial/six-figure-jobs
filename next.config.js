@@ -6,6 +6,30 @@ const sitemapCacheHeaders = [
   },
 ]
 
+const sitemapSources = [
+  '/sitemap.xml',
+  '/sitemap-jobs.xml',
+  '/sitemap-company.xml',
+  '/sitemap-city.xml',
+  '/sitemap-remote.xml',
+  '/sitemap-salary.xml',
+  '/sitemap-country.xml',
+  '/sitemap-category.xml',
+  '/sitemap-level.xml',
+  '/sitemap-browse.xml',
+  '/sitemap-slices.xml',
+  '/sitemap-jobs/:path*',
+  '/sitemap-slices/:path*',
+  '/sitemap-company/:path*',
+  '/sitemap-city/:path*',
+  '/sitemap-remote/:path*',
+  '/sitemap-salary/:path*',
+  '/sitemap-country/:path*',
+  '/sitemap-category/:path*',
+  '/sitemap-level/:path*',
+  '/sitemap-browse/:path*',
+]
+
 const pageCacheHeaders = [
   {
     key: 'Cache-Control',
@@ -26,7 +50,7 @@ const nextConfig = {
   },
   async headers() {
     return [
-      { source: '/sitemap:rest*', headers: sitemapCacheHeaders },
+      ...sitemapSources.map((source) => ({ source, headers: sitemapCacheHeaders })),
       { source: '/robots.txt', headers: sitemapCacheHeaders },
       { source: '/job/:path*', headers: pageCacheHeaders },
       { source: '/remote/:path*', headers: pageCacheHeaders },
