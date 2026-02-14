@@ -5,6 +5,7 @@ import { JobSlice, parseSliceFilters } from './types'
 import type { JobSlice as JobSliceRow } from '@prisma/client'
 import { parseJobsSlug } from '../jobs/searchSlug'
 import { countryCodeToSlug, countrySlugToCode } from '../seo/countrySlug'
+import { isCanonicalSlug } from '../roles/canonicalSlugs'
 
 /**
  * Load a JobSlice for /jobs/[...slug] URLs.
@@ -54,7 +55,8 @@ export async function loadSliceFromParams(
     const isRemote = parsed.remoteOnly
 
     // --- Pure salary page: /jobs/100k-plus-jobs ---
-    if (!role && !country && !city && !isRemote) {
+    // Only when the parsed URL truly contains a single tail segment.
+    if (!role && !country && !city && !isRemote && segments.length === 1) {
       // If you seed JobSlice rows like "jobs/100k-plus"
       candidates.add(`jobs/${salarySlug}`)
     }
@@ -130,7 +132,7 @@ export async function loadSliceFromParams(
   })
 
   if (!slice) {
-    const fallback = buildFallbackSlice(segments)
+    const fallback = await buildFallbackSlice(segments)
     if (fallback) {
       return parseSliceFilters(fallback)
     }
@@ -145,40 +147,65 @@ export async function loadSliceFromParams(
   return parseSliceFilters(slice)
 }
 
-function buildFallbackSlice(segments: string[]): JobSliceRow | null {
+async function buildFallbackSlice(segments: string[]): Promise<JobSliceRow | null> {
   // Support role/country/band pattern even if not pre-seeded
   if (segments.length === 3) {
-        const [roleSlug, countryCodeRaw, bandSlug] = segments
-        const bandMap: Record<string, number> = {
-          '100k-plus': 100_000,
-          '200k-plus': 200_000,
-          '300k-plus': 300_000,
-          '400k-plus': 400_000,
-        }
-        const minAnnual = bandMap[bandSlug]
-        if (minAnnual) {
-      const countryCode =
-        countryCodeRaw.length === 2
-          ? countryCodeRaw.toUpperCase()
-          : countrySlugToCode(countryCodeRaw) || countryCodeRaw.toUpperCase()
-          const slug = `jobs/${segments.join('/')}`
-          return {
-            id: slug,
-            slug: `jobs/${segments.join('/')}`,
-            type: 'role-country',
-        filtersJson: JSON.stringify({
-          roleSlugs: [roleSlug],
-          countryCode,
-          minAnnual,
-          isHundredKLocal: true,
-        }),
-        jobCount: 0,
-        title: null,
-        description: null,
-        h1: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
+    const [roleSlugRaw, countryCodeRaw, bandSlug] = segments
+    const roleSlug = roleSlugRaw.toLowerCase()
+    if (!isCanonicalSlug(roleSlug)) return null
+
+    const bandMap: Record<string, number> = {
+      '100k-plus': 100_000,
+      '200k-plus': 200_000,
+      '300k-plus': 300_000,
+      '400k-plus': 400_000,
+    }
+    const minAnnual = bandMap[bandSlug]
+    if (!minAnnual) return null
+
+    const countryCode =
+      countryCodeRaw.length === 2
+        ? countryCodeRaw.toUpperCase()
+        : countrySlugToCode(countryCodeRaw)
+
+    if (!countryCode || countryCode.length !== 2) return null
+
+    // Guardrail: do not synthesize arbitrary 200 pages with zero backing jobs.
+    const count = await prisma.job.count({
+      where: {
+        isExpired: false,
+        roleSlug,
+        countryCode,
+        salaryValidated: true,
+        salaryConfidence: { gte: 80 },
+        OR: [
+          { minAnnual: { gte: BigInt(minAnnual) } },
+          { maxAnnual: { gte: BigInt(minAnnual) } },
+        ],
+      },
+    })
+
+    if (count <= 0) return null
+
+    const canonicalCountry = countryCodeToSlug(countryCode) ?? countryCode.toLowerCase()
+    const slug = `jobs/${roleSlug}/${canonicalCountry}/${bandSlug}`
+
+    return {
+      id: slug,
+      slug,
+      type: 'role-country',
+      filtersJson: JSON.stringify({
+        roleSlugs: [roleSlug],
+        countryCode,
+        minAnnual,
+        isHundredKLocal: true,
+      }),
+      jobCount: count,
+      title: null,
+      description: null,
+      h1: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
   }
 

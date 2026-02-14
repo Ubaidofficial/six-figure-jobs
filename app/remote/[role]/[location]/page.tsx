@@ -38,7 +38,7 @@ function parsePage(searchParams?: SearchParams): number {
 }
 
 function buildCanonicalPath(roleSlug: string, cityParam: string, sp: SearchParams | undefined) {
-  const base = `/remote/${roleSlug}/${cityParam}`
+  const base = `/remote/${roleSlug}/city/${cityParam}`
   const params = new URLSearchParams()
 
   const minParam = normalizeStringParam(sp?.min)
@@ -509,12 +509,12 @@ export default async function RemoteRoleCityPage({
         </h2>
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
           <li>
-            <Link href={`/jobs/100k-plus/${roleSlug}`} className="hover:underline">
+            <Link href={`/jobs/${roleSlug}/100k-plus`} className="hover:underline">
               $100k+ {prettyRole(roleSlug)} jobs →
             </Link>
           </li>
           <li>
-            <Link href={`/jobs/200k-plus/${roleSlug}`} className="hover:underline">
+            <Link href={`/jobs/${roleSlug}/200k-plus`} className="hover:underline">
               $200k+ {prettyRole(roleSlug)} jobs →
             </Link>
           </li>

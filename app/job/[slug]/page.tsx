@@ -9,6 +9,7 @@ import { parseJobSlugParam, buildJobSlug } from '../../../lib/jobs/jobSlug'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
 import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { buildSalaryText } from '../../../lib/jobs/salary'
@@ -142,10 +143,14 @@ export async function generateMetadata({
   const canonicalSlug = buildJobSlug(job)
   const canonicalUrl = `${SITE_URL}/job/${canonicalSlug}`
   const base = buildJobMetadata(job)
+  const qualityGate = evaluateJobIndexability(job)
 
   return {
     ...base,
     alternates: { ...(base.alternates ?? {}), canonical: canonicalUrl },
+    robots: qualityGate.indexable
+      ? (base.robots ?? { index: true, follow: true })
+      : { index: false, follow: false },
   }
 }
 

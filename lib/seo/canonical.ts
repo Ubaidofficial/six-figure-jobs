@@ -25,40 +25,48 @@ function bandSlugFromMinAnnual(minAnnual?: number): string {
   return '100k-plus'
 }
 
+function cleanSlug(input?: string | null): string | null {
+  if (!input) return null
+  const out = String(input)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return out || null
+}
+
 /**
- * Build the canonical path for a JobSlice based on its filters.
- *
- * Canonical pattern:
- *   /jobs/{band}/{remote?}/{role?}/{country?}/{city?}
- *
- * Notes:
- *  - Salary band is always first to consolidate variants.
- *  - Remote-only slices get a "remote" segment after the band.
- *  - Country/city segments are lowercase to avoid duplicates.
+ * Canonical slice policy (v2.10):
+ *  - Keep role-first path family to match seeded JobSlice slugs and avoid redirect churn.
+ *  - Pattern:
+ *      /jobs/{role?}/{remote?}/{country?}/{city?}/{band}
  */
 export function buildSliceCanonicalPath(filters: SliceFilters): string {
   const band = bandSlugFromMinAnnual(filters.minAnnual)
-  const role = filters.roleSlugs?.[0]
+  const role = cleanSlug(filters.roleSlugs?.[0] ?? null)
   const country = filters.countryCode
-  const city = filters.citySlug
+    ? cleanSlug(countryCodeToSlug(filters.countryCode) ?? filters.countryCode)
+    : null
+  const city = cleanSlug(filters.citySlug)
+  const remoteOnly =
+    filters.remoteOnly === true ||
+    (filters.remoteMode === 'remote' && !country && !city)
 
-  const parts: string[] = ['jobs', band]
+  const parts: string[] = ['jobs']
 
-  if (filters.remoteOnly) parts.push('remote')
   if (role) parts.push(role)
-
-  if (country) {
-    const countrySlug = countryCodeToSlug(country)
-    parts.push(countrySlug ?? country.toLowerCase())
-  }
-  if (city) parts.push(city.toLowerCase())
+  if (remoteOnly) parts.push('remote')
+  if (country) parts.push(country)
+  if (city) parts.push(city)
+  parts.push(band)
 
   return '/' + parts.join('/')
 }
 
 /**
  * Resolve canonical path.
- * For SEO, always prefer the built canonical. Handle legacy slugs via redirects.
+ * Keep route canonicalization deterministic and non-redirecting.
  */
 export function resolveSliceCanonicalPath(
   filters: SliceFilters,

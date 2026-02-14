@@ -268,6 +268,10 @@ export async function generateMetadata({
     alternates: {
       canonical: canonicalUrl,
     },
+    robots:
+      totalJobs >= 3
+        ? { index: true, follow: true }
+        : { index: false, follow: true },
     openGraph: {
       title,
       description: `Find remote ${prettyRole(

@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound, permanentRedirect, redirect } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl } from '../../../../lib/seo/site'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
+import { isCanonicalSlug } from '../../../../lib/roles/canonicalSlugs'
+import { findBestMatchingRole } from '../../../../lib/roles/slugMatcher'
 
 export const revalidate = 300
 
@@ -64,77 +66,91 @@ export async function generateMetadata({
 }: { 
   params: Promise<{ role: string; filter: string }> 
 }): Promise<Metadata> {
-  const { role, filter } = await params
-  
+  const { role: roleRaw, filter: filterRaw } = await params
+  const role = roleRaw.toLowerCase()
+  const filter = filterRaw.toLowerCase()
+
+  if (!isCanonicalSlug(role)) {
+    const matched = findBestMatchingRole(role)
+    if (matched) {
+      permanentRedirect(`/jobs/${matched}/${filter}`)
+    }
+    notFound()
+  }
+
+  let parsed: { type: 'location' | 'salary'; value: string | number; label: string }
   try {
-    const parsed = parseFilter(filter)
-    const roleTitle = formatRoleTitle(role)
-    
-    const queryInput: any = {
-      roleSlugs: [role],
-      minAnnual: parsed.type === 'salary' ? parsed.value as number : 100_000,
-      pageSize: 40,
-    }
-    
-    if (parsed.type === 'location') {
-      queryInput.countryCode = parsed.value
-    }
-    
-    const { jobs, total } = await queryJobs(queryInput)
-    
-    if (total === 0) {
-      return { title: 'Jobs Not Found | Six Figure Jobs' }
-    }
-    
-    // Calculate actual salary range
-    const salaries = jobs
-      .map(j => Number(j.minAnnual || 0))
-      .filter(s => s > 0)
-      .sort((a, b) => a - b)
-    
-    const minSalary = salaries[0] || 100000
-    const maxSalary = salaries[salaries.length - 1] || 200000
-    const salaryRange = `$${Math.floor(minSalary / 1000)}k-$${Math.floor(maxSalary / 1000)}k`
-    
-    // Build optimized title
-    let title: string
-    let description: string
-    
-    if (parsed.type === 'location') {
-      const remoteCount = jobs.filter(j => j.remote || j.remoteMode === 'remote').length
-      const shortLoc = parsed.value as string
-      
-      title = remoteCount > total * 0.3
+    parsed = parseFilter(filter)
+  } catch {
+    notFound()
+  }
+
+  const roleTitle = formatRoleTitle(role)
+
+  const queryInput: any = {
+    roleSlugs: [role],
+    minAnnual: parsed.type === 'salary' ? parsed.value as number : 100_000,
+    pageSize: 40,
+  }
+
+  if (parsed.type === 'location') {
+    queryInput.countryCode = parsed.value
+  }
+
+  const { jobs, total } = await queryJobs(queryInput)
+
+  if (total === 0) {
+    notFound()
+  }
+
+  // Calculate actual salary range
+  const salaries = jobs
+    .map((j) => Number(j.minAnnual || 0))
+    .filter((s) => s > 0)
+    .sort((a, b) => a - b)
+
+  const minSalary = salaries[0] || 100000
+  const maxSalary = salaries[salaries.length - 1] || 200000
+  const salaryRange = `$${Math.floor(minSalary / 1000)}k-$${Math.floor(maxSalary / 1000)}k`
+
+  // Build optimized title
+  let title: string
+  let description: string
+
+  if (parsed.type === 'location') {
+    const remoteCount = jobs.filter((j) => j.remote || j.remoteMode === 'remote').length
+    const shortLoc = parsed.value as string
+
+    title =
+      remoteCount > total * 0.3
         ? `${roleTitle} Jobs ${shortLoc} - ${total} Remote (${salaryRange})`
         : `${roleTitle} Jobs in ${parsed.label} - ${total} Positions`
-      
-      description = `${total} ${roleTitle.toLowerCase()} jobs in ${parsed.label} paying ${salaryRange}. ${remoteCount > 0 ? `${remoteCount} remote positions.` : ''} Top companies hiring now.`
-    } else {
-      const salaryLabel = parsed.label
-      
-      title = `${roleTitle} ${salaryLabel} Jobs - ${total} Elite Positions`
-      description = `${total} ${roleTitle.toLowerCase()} jobs paying ${salaryLabel}. Senior and staff-level positions at top tech companies. Updated daily.`
-    }
 
-    return {
+    description = `${total} ${roleTitle.toLowerCase()} jobs in ${parsed.label} paying ${salaryRange}. ${remoteCount > 0 ? `${remoteCount} remote positions.` : ''} Top companies hiring now.`
+  } else {
+    const salaryLabel = parsed.label
+
+    title = `${roleTitle} ${salaryLabel} Jobs - ${total} Elite Positions`
+    description = `${total} ${roleTitle.toLowerCase()} jobs paying ${salaryLabel}. Senior and staff-level positions at top tech companies. Updated daily.`
+  }
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `${SITE_URL}/jobs/${role}/${filter}` },
+    robots: { index: true, follow: true },
+    openGraph: {
+      title: `${roleTitle} Jobs ${parsed.label} - ${total} High-Paying Roles`,
+      description,
+      url: `${SITE_URL}/jobs/${role}/${filter}`,
+      siteName: 'Six Figure Jobs',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
       title,
       description,
-      alternates: { canonical: `${SITE_URL}/jobs/${role}/${filter}` },
-      openGraph: {
-        title: `${roleTitle} Jobs ${parsed.label} - ${total} High-Paying Roles`,
-        description,
-        url: `${SITE_URL}/jobs/${role}/${filter}`,
-        siteName: 'Six Figure Jobs',
-        type: 'website',
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title,
-        description,
-      },
-    }
-  } catch {
-    return { title: 'Not Found' }
+    },
   }
 }
 
@@ -143,12 +159,22 @@ export default async function RoleFilterPage({
 }: { 
   params: Promise<{ role: string; filter: string }> 
 }) {
-  const { role, filter } = await params
+  const { role: roleRaw, filter: filterRaw } = await params
+  const role = roleRaw.toLowerCase()
+  const filter = filterRaw.toLowerCase()
+
+  if (!isCanonicalSlug(role)) {
+    const matched = findBestMatchingRole(role)
+    if (matched) {
+      permanentRedirect(`/jobs/${matched}/${filter}`)
+    }
+    notFound()
+  }
 
   if (filter.length === 2) {
     const slug = countryCodeToSlug(filter.toUpperCase())
     if (slug && LOCATIONS[slug]) {
-      redirect(`/jobs/${role}/${slug}`)
+      permanentRedirect(`/jobs/${role}/${slug}`)
     }
   }
   

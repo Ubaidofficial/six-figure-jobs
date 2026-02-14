@@ -6,6 +6,8 @@ import { prisma } from '../../../lib/prisma'
 import { getSiteUrl } from '../../../lib/seo/site'
 import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
 import type { SliceFilters } from '../../../lib/slices/types'
+import { buildWhere } from '../../../lib/jobs/queryJobs'
+import { isCanonicalSlug } from '../../../lib/roles/canonicalSlugs'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 86400 // 24h
@@ -17,28 +19,15 @@ const SALARY_TIER_PATHS = new Set([
   '/jobs/300k-plus',
   '/jobs/400k-plus',
 ])
-const SALARY_BANDS = new Set(['100k-plus', '200k-plus', '300k-plus', '400k-plus'])
 
 function normalizeSlicePath(pathOrSlug: string): string | null {
   const raw = pathOrSlug.startsWith('/') ? pathOrSlug : `/${pathOrSlug}`
-  const parts = raw.split('/').filter(Boolean)
+  const parts = raw
+    .split('/')
+    .filter(Boolean)
+    .map((p) => p.trim().toLowerCase())
   if (parts.length === 0) return null
-  if (parts[0] !== 'jobs') return raw
-
-  const bandIndex = parts.findIndex((p) => SALARY_BANDS.has(p))
-  if (bandIndex === -1) return raw
-
-  const band = parts[bandIndex]
-  const remote = parts.includes('remote')
-  const rest = parts.slice(1).filter((p) => p !== band && p !== 'remote')
-  const role = rest[0]
-  const tail = rest.slice(1)
-
-  const out: string[] = ['jobs', band]
-  if (remote) out.push('remote')
-  if (role) out.push(role)
-  if (tail.length) out.push(...tail)
-  return '/' + out.join('/')
+  return '/' + parts.join('/')
 }
 
 function normalizeSliceFilters(filters: SliceFilters | null): SliceFilters | null {
@@ -49,6 +38,30 @@ function normalizeSliceFilters(filters: SliceFilters | null): SliceFilters | nul
   }
   return next as SliceFilters
 }
+
+function getPrimaryRole(filters: SliceFilters): string | null {
+  const first = filters.roleSlugs?.[0]
+  if (!first) return null
+  const role = String(first).trim().toLowerCase()
+  return role || null
+}
+
+async function getLiveCount(filters: SliceFilters): Promise<number> {
+  const where = buildWhere({
+    roleSlugs: filters.roleSlugs,
+    countryCode: filters.countryCode,
+    citySlug: filters.citySlug,
+    minAnnual: filters.minAnnual,
+    remoteOnly: filters.remoteOnly,
+    remoteMode: filters.remoteMode,
+    remoteRegion: filters.remoteRegion,
+    isHundredKLocal: filters.isHundredKLocal,
+    page: 1,
+    pageSize: 1,
+  })
+  return prisma.job.count({ where })
+}
+
 function escapeXml(s: string) {
   return s
     .replace(/&/g, '&amp;')
@@ -88,14 +101,34 @@ export async function GET() {
 
     const normalizedFilters = normalizeSliceFilters(filters)
 
-    const rawPath = normalizedFilters
-      ? resolveSliceCanonicalPath(normalizedFilters, slice.slug)
-      : `/${slice.slug}`
+    // Hard requirement: sitemap must only contain canonical URLs.
+    // If filters are missing/corrupt, skip instead of falling back to raw DB slug.
+    if (!normalizedFilters) continue
+
+    const primaryRole = getPrimaryRole(normalizedFilters)
+    // Prevent country-only/invalid role paths from resolving to soft-404 /jobs/[role]/[filter].
+    if (!primaryRole || !isCanonicalSlug(primaryRole)) continue
+
+    const rawPath = resolveSliceCanonicalPath(normalizedFilters, slice.slug)
 
     const path = rawPath ? normalizeSlicePath(rawPath) : null
 
     if (!path || !path.startsWith('/')) continue
     if (SALARY_TIER_PATHS.has(path)) continue
+
+    let liveCount = 0
+    try {
+      liveCount = await getLiveCount(normalizedFilters)
+    } catch (error) {
+      console.error('[sitemap-slices/priority] skipping slice due to live count error', {
+        slug: slice.slug,
+        error,
+      })
+      continue
+    }
+
+    // Keep only pages that still meet the indexability threshold.
+    if (liveCount < 10) continue
 
     const loc = escapeXml(`${SITE_URL}${path}`)
     const lastmod = (slice.updatedAt ?? new Date()).toISOString()

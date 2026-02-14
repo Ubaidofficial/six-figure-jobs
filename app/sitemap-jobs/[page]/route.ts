@@ -7,6 +7,11 @@ import {
   buildGlobalExclusionsWhere,
   buildHighSalaryEligibilityWhere,
 } from '../../../lib/jobs/queryJobs'
+import {
+  buildIndexableJobStructureWhere,
+  dedupeIndexableJobs,
+  evaluateJobIndexability,
+} from '../../../lib/jobs/qualityGate'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
@@ -26,7 +31,11 @@ function escapeXml(s: string) {
 function buildHundredKWhereBase() {
   return {
     isExpired: false,
-    AND: [buildGlobalExclusionsWhere(), buildHighSalaryEligibilityWhere()],
+    AND: [
+      buildGlobalExclusionsWhere(),
+      buildHighSalaryEligibilityWhere(),
+      buildIndexableJobStructureWhere(),
+    ],
   }
 }
 
@@ -93,14 +102,37 @@ export async function GET(
     where,
     select: {
       id: true,
+      externalId: true,
       title: true,
+      roleSlug: true,
+      company: true,
+      companyId: true,
+      locationRaw: true,
+      citySlug: true,
+      countryCode: true,
+      remote: true,
+      remoteMode: true,
+      descriptionHtml: true,
+      aiSnippet: true,
+      aiOneLiner: true,
+      salaryValidated: true,
+      salaryConfidence: true,
+      minAnnual: true,
+      maxAnnual: true,
+      currency: true,
+      isExpired: true,
+      postedAt: true,
       updatedAt: true,
     },
     orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
     take: PAGE_SIZE,
   })
 
-  const urlXml = jobs
+  const indexableJobs = dedupeIndexableJobs(
+    jobs.filter((job) => evaluateJobIndexability(job).indexable),
+  )
+
+  const urlXml = indexableJobs
     .map((job) => {
       // ✅ Always generate canonical v2.8 URL (no legacy/roleSlug risk)
       const slug = buildJobSlug({ id: job.id, title: job.title })

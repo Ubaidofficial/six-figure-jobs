@@ -7,6 +7,7 @@ import {
   buildGlobalExclusionsWhere,
   buildHighSalaryEligibilityWhere,
 } from '../../lib/jobs/queryJobs'
+import { buildIndexableJobStructureWhere } from '../../lib/jobs/qualityGate'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
@@ -26,7 +27,11 @@ function escapeXml(s: string) {
 function buildHundredKWhereBase() {
   return {
     isExpired: false,
-    AND: [buildGlobalExclusionsWhere(), buildHighSalaryEligibilityWhere()],
+    AND: [
+      buildGlobalExclusionsWhere(),
+      buildHighSalaryEligibilityWhere(),
+      buildIndexableJobStructureWhere(),
+    ],
   }
 }
 

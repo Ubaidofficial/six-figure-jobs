@@ -32,7 +32,7 @@ export default async function Head({
   return (
     <>
       <link rel="canonical" href={canonical} />
-      {liveJobCount <= 0 && <meta name="robots" content="noindex,follow" />}
+      {liveJobCount < 3 && <meta name="robots" content="noindex,follow" />}
     </>
   )
 }

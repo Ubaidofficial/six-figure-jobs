@@ -16,37 +16,68 @@ jobs:
 
     if: github.event_name == 'schedule' || github.ref == 'refs/heads/develop'
 
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      AI_ENRICHMENT_PAUSED: "true"
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Prisma generate
-        run: npx prisma generate
-
-      - name: Run scrapers (boards + ATS)
-        run: npx tsx scripts/dailyScrapeV2.ts --mode=all --concurrency=3
-
-      - name: Enrich apply URLs
-        run: npx tsx scripts/enrich-apply-urls.ts
-
-      - name: Location parsing
-        run: DRY_RUN=0 TAKE=10000 npx tsx scripts/repair-location-v2.10.ts
-
-      - name: Update slices
+      - name: Trigger Railway Scraper API
+        id: start
+        shell: bash
         run: |
-          npx tsx scripts/bootstrapRoleSlices.ts
-          npx tsx scripts/seedJobSlices.ts
-          npx tsx scripts/bootstrapCountrySalarySlices.ts
+          set -euo pipefail
+
+          echo "🚀 Triggering job scraper on Railway..."
+          echo "Event: $GITHUB_EVENT_NAME"
+          echo "Ref:   $GITHUB_REF"
+
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
+            "https://www.6figjobs.com/api/cron/scrape?mode=all" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --retry 2 \
+            --retry-delay 30)
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+
+          echo "📊 Response Code: $HTTP_CODE"
+          echo "📄 Response Body: $BODY"
+
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "❌ Scraper trigger failed with code $HTTP_CODE"
+            exit 1
+          fi
+
+          # Parse success flags defensively (do not fail the step if BODY isn't valid JSON)
+          SUCCESS="$(echo "$BODY" | jq -r '.success // .ok // false' 2>/dev/null || true)"
+          JOB_ID="$(echo "$BODY" | jq -r '.jobId // .runId // empty' 2>/dev/null || true)"
+
+          # If the API returns an explicit success=false, fail.
+          # If there's no success flag, we still allow success if a jobId/runId exists.
+          if [ "$SUCCESS" != "true" ] && [ -z "${JOB_ID:-}" ]; then
+            echo "❌ Trigger response did not indicate success and no jobId was provided."
+            exit 1
+          fi
+
+          echo "job_id=${JOB_ID:-}" >> "$GITHUB_OUTPUT"
+
+          if [ -z "${JOB_ID:-}" ]; then
+            echo "⚠️ Trigger succeeded but no jobId returned; continuing in fire-and-forget mode (skipping wait)."
+            exit 0
+          fi
+
+          echo "✅ Scraper started. jobId=$JOB_ID"
+
+      - name: Fire-and-forget (no wait)
+        if: steps.start.outputs.job_id != ''
+        run: |
+          echo "✅ Triggered scrape jobId=${{ steps.start.outputs.job_id }} (not waiting for completion)."
+
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "⚠️ Scraper failed!"
+          echo "🔍 Check Railway logs in your Railway project Deployments tab."
+
+
+
+
+
+          

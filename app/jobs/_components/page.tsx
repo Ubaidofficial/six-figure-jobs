@@ -1,7 +1,7 @@
 // app/jobs/_components/[Slug]/page.tsx
 
 import type { Metadata } from 'next'
-import { permanentRedirect, redirect } from 'next/navigation'
+import { notFound, permanentRedirect, redirect } from 'next/navigation'
 import { loadSliceFromParams } from '../../../lib/slices/loadSlice'
 import { queryJobs } from '../../../lib/jobs/queryJobs'
 import { SlicePage } from './SlicePage'
@@ -109,6 +109,10 @@ export async function generateMetadata({
     page,
     pageSize: PAGE_SIZE,
   })
+
+  if (data.total === 0) {
+    notFound()
+  }
 
   return buildSliceMetadata(slice, {
     page,

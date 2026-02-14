@@ -34,11 +34,14 @@ function buildRemoteHundredKWhere(extra: any = {}) {
 }
 
 export async function GET() {
+  const MIN_INDEXABLE_JOBS = 3
+
   // IMPORTANT:
   // Using distinct + updatedAt is not deterministic. Use groupBy to get max(updatedAt) per role.
   const rows = await prisma.job.groupBy({
     by: ['roleSlug'],
     where: buildRemoteHundredKWhere({ roleSlug: { not: null } }),
+    _count: { _all: true },
     _max: { updatedAt: true },
     orderBy: { _max: { updatedAt: 'desc' } },
   })
@@ -48,6 +51,8 @@ export async function GET() {
   for (const row of rows) {
     const role = row.roleSlug
     if (!role) continue
+    const total = Number(row._count?._all ?? 0)
+    if (total < MIN_INDEXABLE_JOBS) continue
     if (!isCanonicalSlug(role)) continue
     if (!isTier1Role(role)) continue
 

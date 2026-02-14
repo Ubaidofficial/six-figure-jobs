@@ -195,6 +195,10 @@ export async function generateMetadata({
     alternates: {
       canonical: canonicalUrl,
     },
+    robots:
+      totalJobs >= 3
+        ? { index: true, follow: true }
+        : { index: false, follow: true },
     openGraph: {
       title,
       description: `Find remote ${roleName} roles in ${countryCode} with at least $100k total compensation.`,

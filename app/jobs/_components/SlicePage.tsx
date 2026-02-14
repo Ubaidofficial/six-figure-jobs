@@ -9,6 +9,7 @@ import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { formatNumberCompact } from '../../../lib/utils/number'
 import { formatSalaryBandLabel } from '../../../lib/utils/salaryLabels'
 import { getSiteUrl } from '../../../lib/seo/site'
+import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 
 type SliceForPage = JobSlice
 
@@ -23,6 +24,9 @@ export function SlicePage({ slice, data }: Props) {
 
   const roleSlug = slice.filters?.roleSlugs?.[0]
   const countryCode = (slice.filters as any)?.countryCode || (slice.filters as any)?.country
+  const countrySlug = countryCode
+    ? countryCodeToSlug(String(countryCode)) ?? String(countryCode).toLowerCase()
+    : null
   const minAnnual = slice.filters?.minAnnual ?? null
   const allowIndex = total >= 3
   const countryLabel =
@@ -82,9 +86,8 @@ export function SlicePage({ slice, data }: Props) {
     })
   }
   if (roleSlug && countryCode) {
-    const ccLower = countryCode.toLowerCase()
     relatedLinks.push({
-      href: `/jobs/${roleSlug}/${ccLower}/200k-plus`,
+      href: `/jobs/${roleSlug}/${countrySlug ?? String(countryCode).toLowerCase()}/200k-plus`,
       label: `${formatSalaryBandLabel(200_000, countryCode)} ${prettyRole(roleSlug)} jobs in ${countryCode.toUpperCase()}`,
     })
   } else {
@@ -255,7 +258,7 @@ export function SlicePage({ slice, data }: Props) {
         <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-200">
           {countryCode && roleSlug && (
             <Link
-              href={`/jobs/${roleSlug}/remote/${(slice.filters as any)?.remoteRegion || '100k-plus'}`}
+              href={`/remote/${roleSlug}`}
               className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600"
             >
               🌎 Remote {roleLabel} roles
@@ -263,7 +266,7 @@ export function SlicePage({ slice, data }: Props) {
           )}
           {roleSlug && (
             <Link
-              href={`/jobs/${roleSlug}/remote/${(slice.filters as any)?.remoteRegion || '100k-plus'}`}
+              href={`/remote/${roleSlug}`}
               className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600"
             >
               Remote regions →
@@ -351,12 +354,12 @@ export function SlicePage({ slice, data }: Props) {
                 : '400k-plus'
             const basePath = roleSlug
               ? countryCode
-                ? `/jobs/${roleSlug}/${countryCode}/${slug}`
+                ? `/jobs/${roleSlug}/${countrySlug ?? String(countryCode).toLowerCase()}/${slug}`
                 : (slice.filters as any)?.remoteOnly || (slice.filters as any)?.remoteRegion
                 ? `/jobs/${roleSlug}/remote/${slug}`
                 : `/jobs/${roleSlug}/${slug}`
               : countryCode
-              ? `/jobs/${countryCode}/${slug}`
+              ? `/jobs/${countrySlug ?? String(countryCode).toLowerCase()}/${slug}`
               : `/jobs/${slug}`
 
             return (

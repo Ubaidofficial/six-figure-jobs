@@ -446,7 +446,8 @@ function extractNumbers(text: string, currency: SupportedCurrency | null): numbe
     }
   }
 
-  const regex = /(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\s*([kKmM])?/g
+  // Comma-grouped numbers first, then plain digit runs.
+  const regex = /(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*([kKmM])?/g
   let match: RegExpExecArray | null
 
   while ((match = regex.exec(text)) !== null) {

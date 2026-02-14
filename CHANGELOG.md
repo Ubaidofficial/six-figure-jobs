@@ -1,3 +1,15 @@
+# 2.8.18 (2026-02-14)
+
+
+### Bug Fixes
+
+* harden sitemap integrity and strict validation (canonical/indexable/non-redirecting URL checks)
+* enforce centralized job indexability quality gate in job sitemap and job page robots logic
+* add duplicate-control checks across sitemap buckets and template sanity sampling reports
+* make city sitemap fallback observable and test XML well-formedness under failure and normal paths
+* tighten salary parsing/validation edge cases and add fixture coverage for threshold + dedupe behavior
+
+
 # 2.8.17 (2026-02-13)
 
 
