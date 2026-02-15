@@ -52,7 +52,7 @@ jobs:
         run: npm test
 
       - name: Prepare database schema
-        run: npx prisma migrate deploy
+        run: npx prisma db push
 
       - name: Build
         run: npm run build
