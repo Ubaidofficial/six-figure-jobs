@@ -10,6 +10,7 @@
 * fix CI checkout depth so changelog gate can diff HEAD~1...HEAD on pull requests
 * add scripts/audit-v2.9.ts so CI audit step references a real, deterministic script
 * make SEO local gate use isolated Postgres service + prisma db push for reproducible startup validation
+* make company sitemap index/page return valid XML in zero-data scenarios instead of emitting 404 shard URLs
 
 
 # 2.8.18 (2026-02-14)

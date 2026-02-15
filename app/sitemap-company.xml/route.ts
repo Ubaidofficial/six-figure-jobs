@@ -50,7 +50,7 @@ async function fetchEligibleCompanyCount(): Promise<number> {
 
 export async function GET() {
   const total = await fetchEligibleCompanyCount()
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const totalPages = Math.ceil(total / PAGE_SIZE)
   const lastmod = new Date().toISOString()
 
   const entries = Array.from({ length: totalPages }).map((_, i) => {
