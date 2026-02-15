@@ -7,6 +7,7 @@
 * switch city/country sitemap counts to page-equivalent query filters to prevent noindex URLs from entering sitemaps
 * add CI-grade SEO gates workflow for PR local validation and main-branch production proof retries
 * add targeted sitemap threshold tests for city/country and alignment coverage for company/city/country gates
+* fix CI checkout depth so changelog gate can diff HEAD~1...HEAD on pull requests
 
 
 # 2.8.18 (2026-02-14)
