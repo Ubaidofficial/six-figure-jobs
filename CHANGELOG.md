@@ -8,6 +8,8 @@
 * add CI-grade SEO gates workflow for PR local validation and main-branch production proof retries
 * add targeted sitemap threshold tests for city/country and alignment coverage for company/city/country gates
 * fix CI checkout depth so changelog gate can diff HEAD~1...HEAD on pull requests
+* add scripts/audit-v2.9.ts so CI audit step references a real, deterministic script
+* make SEO local gate use isolated Postgres service + prisma migrate deploy for reproducible startup validation
 
 
 # 2.8.18 (2026-02-14)

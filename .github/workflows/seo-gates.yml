@@ -16,8 +16,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: six_figure_jobs_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d six_figure_jobs_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/six_figure_jobs_ci?schema=public
       SITE_URL: http://localhost:3000
 
     steps:
@@ -35,6 +50,9 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Prepare database schema
+        run: npx prisma migrate deploy
 
       - name: Build
         run: npm run build
@@ -75,9 +93,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -112,4 +127,3 @@ jobs:
             echo "Retrying in ${DELAY_SECONDS}s..."
             sleep "$DELAY_SECONDS"
           done
-
