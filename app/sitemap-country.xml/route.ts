@@ -2,47 +2,49 @@ import { prisma } from '../../lib/prisma'
 import { buildWhere } from '../../lib/jobs/queryJobs'
 import { countryCodeToSlug } from '../../lib/seo/countrySlug'
 import { getSiteUrl } from '../../lib/seo/site'
+import {
+  MIN_COUNTRY_INDEXABLE_JOBS,
+  isCountryPageIndexable,
+} from '../../lib/seo/indexabilityGates'
 
 const SITE_URL = getSiteUrl()
+const MIN_INDEXABLE_JOBS = MIN_COUNTRY_INDEXABLE_JOBS
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const MIN_INDEXABLE_JOBS = 3
-  const countries = ['us', 'gb', 'ca', 'de', 'au', 'fr', 'nl', 'se']
-  const countryCodes = countries.map((code) => code.toUpperCase())
+  const countryCodes = ['US', 'GB', 'CA', 'DE', 'AU', 'FR', 'NL', 'SE']
 
-  const baseWhere = buildWhere({})
-  const rows = await prisma.job.groupBy({
-    by: ['countryCode'],
-    where: { ...baseWhere, countryCode: { in: countryCodes } },
-    _count: { _all: true },
-    _max: { updatedAt: true },
-  })
+  const urls = (
+    await Promise.all(
+      countryCodes.map(async (countryCode) => {
+        const where = buildWhere({
+          countryCode,
+          isHundredKLocal: true,
+          page: 1,
+          pageSize: 1,
+        })
 
-  const counts = new Map<string, number>()
-  const lastmods = new Map<string, Date>()
-  for (const row of rows) {
-    if (!row.countryCode) continue
-    counts.set(row.countryCode.toUpperCase(), Number(row._count?._all ?? 0))
-    const updatedAt = row._max?.updatedAt ?? null
-    if (updatedAt) lastmods.set(row.countryCode.toUpperCase(), updatedAt)
-  }
+        const agg = await prisma.job.aggregate({
+          where,
+          _count: { _all: true },
+          _max: { updatedAt: true },
+        })
 
-  const urls = countries
-    .map((code) => {
-      const total = counts.get(code.toUpperCase()) ?? 0
-      if (total < MIN_INDEXABLE_JOBS) return null
-      const slug = countryCodeToSlug(code)
-      const lastmod = (lastmods.get(code.toUpperCase()) ?? new Date()).toISOString()
+        const total = Number(agg._count?._all ?? 0)
+        if (!isCountryPageIndexable(total)) return null
+
+        const slug = countryCodeToSlug(countryCode)
+        const lastmod = (agg._max.updatedAt ?? new Date()).toISOString()
       return {
         url: `${SITE_URL}/jobs/country/${slug}`,
         lastModified: lastmod,
         changeFrequency: 'daily',
         priority: 0.8,
       }
-    })
-    .filter(Boolean) as Array<{
+      }),
+    )
+  ).filter(Boolean) as Array<{
       url: string
       lastModified: string
       changeFrequency: string

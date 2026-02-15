@@ -4,10 +4,11 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../../lib/prisma'
 import { getSiteUrl } from '../../../lib/seo/site'
+import { MIN_COMPANY_INDEXABLE_JOBS } from '../../../lib/seo/indexabilityGates'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 45000
-const MIN_INDEXABLE_JOBS = 3
+const MIN_INDEXABLE_JOBS = MIN_COMPANY_INDEXABLE_JOBS
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200 // 24h
@@ -72,6 +73,17 @@ export async function GET(
   const rows = await fetchCompanyPage(page)
 
   if (rows.length === 0) {
+    if (page === 1) {
+      const emptyXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+</urlset>`
+
+      return new Response(emptyXml, {
+        status: 200,
+        headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+      })
+    }
+
     return new Response('Not found', { status: 404 })
   }
 

@@ -3,6 +3,7 @@
 
 import { prisma } from '../../../lib/prisma'
 import { getSiteUrl } from '../../../lib/seo/site'
+import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 
 const SITE_URL = getSiteUrl()
 
@@ -32,7 +33,9 @@ export default async function Head({
   return (
     <>
       <link rel="canonical" href={canonical} />
-      {liveJobCount < 3 && <meta name="robots" content="noindex,follow" />}
+      {!isCompanyPageIndexable(liveJobCount) && (
+        <meta name="robots" content="noindex,follow" />
+      )}
     </>
   )
 }

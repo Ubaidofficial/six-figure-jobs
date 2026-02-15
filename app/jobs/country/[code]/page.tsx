@@ -7,6 +7,7 @@ import { getSiteUrl } from '../../../../lib/seo/site'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 import { redirect } from 'next/navigation'
+import { isCountryPageIndexable } from '../../../../lib/seo/indexabilityGates'
 
 export const revalidate = 300
 
@@ -58,7 +59,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     ? `Find ${total.toLocaleString()} high-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions starting at ${getSalaryLabel(resolvedCode)}. Engineering, product, data roles. Updated daily.`
     : `High-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions starting at ${getSalaryLabel(resolvedCode)} at top companies.`
 
-  const allowIndex = total >= 3
+  const allowIndex = isCountryPageIndexable(total)
   const canonical = `${SITE_URL}/jobs/country/${code.toLowerCase()}`
 
   return {

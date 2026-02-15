@@ -1,3 +1,18 @@
+# 2.8.19 (2026-02-15)
+
+
+### Bug Fixes
+
+* align company/city/country sitemap inclusion with page robots thresholds via shared indexability gates
+* switch city/country sitemap counts to page-equivalent query filters to prevent noindex URLs from entering sitemaps
+* add CI-grade SEO gates workflow for PR local validation and main-branch production proof retries
+* add targeted sitemap threshold tests for city/country and alignment coverage for company/city/country gates
+* fix CI checkout depth so changelog gate can diff HEAD~1...HEAD on pull requests
+* add scripts/audit-v2.9.ts so CI audit step references a real, deterministic script
+* make SEO local gate use isolated Postgres service + prisma db push for reproducible startup validation
+* make company sitemap index/page return valid XML in zero-data scenarios instead of emitting 404 shard URLs
+
+
 # 2.8.18 (2026-02-14)
 
 
