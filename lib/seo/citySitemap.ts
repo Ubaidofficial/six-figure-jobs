@@ -2,48 +2,42 @@ import { prisma } from '../prisma'
 import { buildWhere } from '../jobs/queryJobs'
 import { getSiteUrl } from './site'
 import { CITY_TARGETS } from './pseoTargets'
+import { isCityPageIndexable } from './indexabilityGates'
 
 const SITE_URL = getSiteUrl()
-const MIN_INDEXABLE_JOBS = 3
 
 export async function getCitySitemapUrls() {
-  const baseWhere = buildWhere({})
-  const citySlugs = CITY_TARGETS.map((city) => city.slug)
+  const rows = await Promise.all(
+    CITY_TARGETS.map(async (city) => {
+      // Keep sitemap inclusion aligned with page robots logic:
+      // use the same queryJobs filter shape (city + country + local threshold mode).
+      const where = buildWhere({
+        citySlug: city.slug,
+        countryCode: city.countryCode,
+        isHundredKLocal: true,
+        page: 1,
+        pageSize: 1,
+      })
 
-  // City routes are slug-only; countryCode is often missing, so group by citySlug.
-  const rows = await prisma.job.groupBy({
-    by: ['citySlug'],
-    where: {
-      ...baseWhere,
-      citySlug: { in: citySlugs },
-    },
-    _count: { _all: true },
-    _max: { updatedAt: true },
-  })
+      const agg = await prisma.job.aggregate({
+        where,
+        _count: { _all: true },
+        _max: { updatedAt: true },
+      })
 
-  const counts = new Map<string, number>()
-  const lastmods = new Map<string, Date>()
-  for (const row of rows) {
-    const key = String(row.citySlug ?? '').toLowerCase()
-    if (!key) continue
-    counts.set(key, Number(row._count?._all ?? 0))
-    const updatedAt = row._max?.updatedAt ?? null
-    if (updatedAt) lastmods.set(key, updatedAt)
-  }
+      const total = Number(agg._count?._all ?? 0)
+      if (!isCityPageIndexable(total)) return null
 
-  return CITY_TARGETS.map((city) => {
-    const key = city.slug.toLowerCase()
-    const total = counts.get(key) ?? 0
-    if (total < MIN_INDEXABLE_JOBS) return null
+      return {
+        loc: `${SITE_URL}/jobs/city/${city.slug}`,
+        lastmod: (agg._max.updatedAt ?? new Date()).toISOString(),
+        changefreq: 'daily',
+        priority: 0.8,
+      }
+    }),
+  )
 
-    const lastmod = (lastmods.get(key) ?? new Date()).toISOString()
-    return {
-      loc: `${SITE_URL}/jobs/city/${city.slug}`,
-      lastmod,
-      changefreq: 'daily',
-      priority: 0.8,
-    }
-  }).filter(Boolean) as Array<{
+  return rows.filter(Boolean) as Array<{
     loc: string
     lastmod: string
     changefreq: string

@@ -10,6 +10,7 @@ import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
+import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 
 export const revalidate = 3600
 
@@ -62,7 +63,7 @@ export async function generateMetadata({
     .length
 
   // Keep your rule: index only when enough content
-  const allowIndex = jobCount >= 3
+  const allowIndex = isCompanyPageIndexable(jobCount)
 
   const title = `${company.name} Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
 

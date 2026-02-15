@@ -4,10 +4,11 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../../lib/prisma'
 import { getSiteUrl } from '../../../lib/seo/site'
+import { MIN_COMPANY_INDEXABLE_JOBS } from '../../../lib/seo/indexabilityGates'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 45000
-const MIN_INDEXABLE_JOBS = 3
+const MIN_INDEXABLE_JOBS = MIN_COMPANY_INDEXABLE_JOBS
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200 // 24h

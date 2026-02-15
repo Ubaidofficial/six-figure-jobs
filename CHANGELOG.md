@@ -1,3 +1,14 @@
+# 2.8.19 (2026-02-15)
+
+
+### Bug Fixes
+
+* align company/city/country sitemap inclusion with page robots thresholds via shared indexability gates
+* switch city/country sitemap counts to page-equivalent query filters to prevent noindex URLs from entering sitemaps
+* add CI-grade SEO gates workflow for PR local validation and main-branch production proof retries
+* add targeted sitemap threshold tests for city/country and alignment coverage for company/city/country gates
+
+
 # 2.8.18 (2026-02-14)
 
 

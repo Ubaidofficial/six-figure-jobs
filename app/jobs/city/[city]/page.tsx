@@ -8,6 +8,7 @@ import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getCurrencyForCountry } from '../../../../lib/jobs/salaryThresholds'
 import { formatCurrencyShort, getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
+import { isCityPageIndexable } from '../../../../lib/seo/indexabilityGates'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -44,7 +45,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   })
 
   const salaryLabel = getThresholdLabelForCountry(resolved.countryCode ?? null)
-  const allowIndex = total >= 3
+  const allowIndex = isCityPageIndexable(total)
   const titleBase = `${salaryLabel} jobs in ${resolved.label}`
   const title =
     total > 0
