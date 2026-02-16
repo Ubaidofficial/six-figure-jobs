@@ -13,6 +13,7 @@
 * make company sitemap index/page return valid XML in zero-data scenarios instead of emitting 404 shard URLs
 * include slice sitemap children in sitemap-slices index only when shard has at least one URL entry
 * harden sitemap health check so index-listed child sitemaps with zero loc entries fail deterministically
+* run sitemap health workflow against local app on pull requests while keeping scheduled production checks
 
 
 # 2.8.18 (2026-02-14)

@@ -1,6 +1,7 @@
 name: Sitemap Health Check
 
 on:
+  pull_request:
   schedule:
     - cron: "0 */6 * * *" # every 6 hours
   workflow_dispatch:
@@ -10,7 +11,83 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  health:
+  health-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: six_figure_jobs_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d six_figure_jobs_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/six_figure_jobs_ci?schema=public
+      SITE_URL: http://localhost:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare database schema
+        run: npx prisma db push
+
+      - name: Build
+        run: npm run build
+
+      - name: Start app
+        run: |
+          SITE_URL=http://localhost:3000 npm run start >/tmp/sitemap-health-next.log 2>&1 &
+          echo $! >/tmp/sitemap-health-next.pid
+
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3000/sitemap.xml >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "App failed to start in time."
+          cat /tmp/sitemap-health-next.log || true
+          exit 1
+
+      - name: Run sitemap health check
+        env:
+          SITE_URL: "http://localhost:3000"
+          CHILD_SITEMAP_SAMPLE: "3"
+          JOB_URL_SAMPLE: "20"
+          GENERAL_URL_SAMPLE: "5"
+          MAX_BAD_URLS: "2"
+        run: node scripts/sitemap-health-check.mjs
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -f /tmp/sitemap-health-next.pid ]; then
+            kill "$(cat /tmp/sitemap-health-next.pid)" || true
+          fi
+
+  health-prod:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
