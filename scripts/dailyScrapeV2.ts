@@ -66,39 +66,92 @@ type DailyScrapeStats = {
   failedSources: string[]
 }
 
+type BoardScraperTask = {
+  key: string
+  name: string
+  run: () => Promise<unknown>
+  dryRunSafe?: boolean
+}
+
 interface CliOptions {
   mode: Mode
   fast: boolean
   concurrency: number
+  atsConcurrency: number
+  dryRun: boolean
+  maxAtsCompanies: number | null
+  sourceFilter: string[] | null
 }
 
 function parseCliArgs(): CliOptions {
   const args = process.argv.slice(2)
 
   const getFlagValue = (name: string): string | null => {
-    const idx = args.indexOf(name)
-    if (idx === -1) return null
-    return args[idx + 1] ?? null
+    const exactIdx = args.indexOf(name)
+    if (exactIdx !== -1) {
+      return args[exactIdx + 1] ?? null
+    }
+
+    const withEquals = args.find((a) => a.startsWith(`${name}=`))
+    if (withEquals) {
+      return withEquals.slice(name.length + 1) || null
+    }
+
+    return null
+  }
+
+  const hasFlag = (name: string): boolean => {
+    return args.includes(name)
+  }
+
+  const parsePositiveInt = (value: string | null, fallback: number, max: number): number => {
+    if (!value) return fallback
+    const parsed = Number(value)
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+    return Math.min(Math.floor(parsed), max)
   }
 
   const modeArg = (getFlagValue('--mode') || 'all').toLowerCase()
   const mode: Mode =
     modeArg === 'boards' || modeArg === 'ats' ? (modeArg as Mode) : 'all'
 
-  const fast = args.includes('--fast')
-  const concurrencyFlag = args.find((a) => a.startsWith('--concurrency='))
-  const parsedConcurrency = concurrencyFlag
-    ? Number(concurrencyFlag.split('=')[1])
-    : 4
-  const concurrency = Number.isFinite(parsedConcurrency) && parsedConcurrency > 0
-    ? Math.min(parsedConcurrency, 8)
-    : 4
+  const fast = hasFlag('--fast')
+  const dryRun = hasFlag('--dry-run')
+  const concurrency = parsePositiveInt(getFlagValue('--concurrency'), 4, 8)
+  const atsConcurrency = parsePositiveInt(getFlagValue('--ats-concurrency'), 5, 12)
 
-  return { mode, fast, concurrency }
+  const maxAtsCompaniesRaw = getFlagValue('--max-ats-companies')
+  const maxAtsCompanies =
+    maxAtsCompaniesRaw && Number(maxAtsCompaniesRaw) > 0
+      ? Math.min(Math.floor(Number(maxAtsCompaniesRaw)), 5000)
+      : null
+
+  const sourceArg = (getFlagValue('--source') || '').trim().toLowerCase()
+  const sourceFilter =
+    sourceArg && sourceArg !== 'all'
+      ? Array.from(
+          new Set(
+            sourceArg
+              .split(',')
+              .map((v) => v.trim().toLowerCase())
+              .filter(Boolean),
+          ),
+        )
+      : null
+
+  return {
+    mode,
+    fast,
+    concurrency,
+    atsConcurrency,
+    dryRun,
+    maxAtsCompanies,
+    sourceFilter,
+  }
 }
 
 async function runBoardScrapers(options: CliOptions): Promise<DailyScrapeStats> {
-  const { fast } = options
+  const { fast, dryRun, sourceFilter } = options
 
   __slog('🌐 Running BOARD scrapers…\n')
 
@@ -107,77 +160,92 @@ async function runBoardScrapers(options: CliOptions): Promise<DailyScrapeStats> 
   const failedSources: string[] = []
 
   // Ordered so we hit “core” boards first
-	  const allScrapers: Array<[string, () => Promise<unknown>]> = [
-	    ['RemoteOK', scrapeRemoteOK],
-	    ['WeWorkRemotely', scrapeWeWorkRemotely],
-	    ['NoDesk', scrapeNodesk],
-	    ['BuiltIn', scrapeBuiltIn],
-	    ['Remote100k', scrapeRemote100k],
-	    ['Remote100k-Companies', discoverRemote100kCompanies],
-	    ['RemoteRocketship', scrapeRemoteRocketship],
-	    ['Himalayas', scrapeHimalayas],
-	    ['RemoteLeaf', scrapeRemoteLeaf],
-	    ['RealWorkFromAnywhere', scrapeRealWorkFromAnywhere],
-	    ['JustJoin', scrapeJustJoin],
-	    ['RemoteOtter', scrapeRemoteOtter],
-	    ['Trawle', scrapeTrawle],
-	    ['FourDayWeek', scrapeFourDayWeek],
-	    ['Remotive', scrapeRemotive],
-	    ['Dice', scrapeDice],
-	    ['Wellfound', scrapeWellfound],
-	    ['Otta', scrapeOtta],
-	    ['YCombinator', scrapeYCombinator],
-	    ['RemoteYeah', scrapeRemoteYeah],
-	    ['RemoteAI (companies only)', scrapeRemoteAI],
-	  ]
+  const allScrapers: BoardScraperTask[] = [
+    { key: 'remoteok', name: 'RemoteOK', run: scrapeRemoteOK },
+    { key: 'weworkremotely', name: 'WeWorkRemotely', run: scrapeWeWorkRemotely },
+    { key: 'nodesk', name: 'NoDesk', run: scrapeNodesk },
+    { key: 'builtin', name: 'BuiltIn', run: scrapeBuiltIn },
+    { key: 'remote100k', name: 'Remote100k', run: scrapeRemote100k },
+    { key: 'remote100k-companies', name: 'Remote100k-Companies', run: discoverRemote100kCompanies },
+    { key: 'remoterocketship', name: 'RemoteRocketship', run: scrapeRemoteRocketship },
+    { key: 'himalayas', name: 'Himalayas', run: scrapeHimalayas },
+    { key: 'remoteleaf', name: 'RemoteLeaf', run: scrapeRemoteLeaf },
+    { key: 'realworkfromanywhere', name: 'RealWorkFromAnywhere', run: scrapeRealWorkFromAnywhere },
+    { key: 'justjoin', name: 'JustJoin', run: scrapeJustJoin },
+    { key: 'remoteotter', name: 'RemoteOtter', run: scrapeRemoteOtter },
+    { key: 'trawle', name: 'Trawle', run: scrapeTrawle },
+    { key: 'fourdayweek', name: 'FourDayWeek', run: scrapeFourDayWeek },
+    { key: 'remotive', name: 'Remotive', run: scrapeRemotive },
+    { key: 'dice', name: 'Dice', run: scrapeDice },
+    { key: 'wellfound', name: 'Wellfound', run: scrapeWellfound },
+    { key: 'otta', name: 'Otta', run: scrapeOtta },
+    { key: 'ycombinator', name: 'YCombinator', run: scrapeYCombinator },
+    { key: 'remoteyeah', name: 'RemoteYeah', run: scrapeRemoteYeah, dryRunSafe: false },
+    { key: 'remoteai', name: 'RemoteAI (companies only)', run: scrapeRemoteAI, dryRunSafe: false },
+  ]
 
-  // In fast mode, skip the slower / more experimental scrapers
-	  const scrapers = fast
-	    ? allScrapers.filter(([name]) =>
-	        [
-	          'RemoteOK',
-	          'WeWorkRemotely',
-	          'Remote100k-Companies',
-	          'RemoteRocketship',
-	          'Himalayas',
-	          'RemoteLeaf',
-	          'RealWorkFromAnywhere',
-	          'JustJoin',
-	          'FourDayWeek',
-	          'RemoteYeah',
-	          'RemoteAI (companies only)',
-	        ].includes(name),
-	      )
-	    : allScrapers
+  const fastKeys = new Set([
+    'remoteok',
+    'weworkremotely',
+    'remote100k-companies',
+    'remoterocketship',
+    'himalayas',
+    'remoteleaf',
+    'realworkfromanywhere',
+    'justjoin',
+    'fourdayweek',
+    'remoteyeah',
+    'remoteai',
+  ])
 
-	  await runWithConcurrency(scrapers, options.concurrency, async ([name, fn]) => {
-	        __slog(`\n▶ Running ${name}…`)
-	    const startTime = Date.now()
+  let scrapers = fast ? allScrapers.filter((s) => fastKeys.has(s.key)) : allScrapers
 
-	    try {
-	      const result = (await fn()) as any
-	      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+  if (sourceFilter?.length) {
+    const allowed = new Set(sourceFilter)
+    scrapers = scrapers.filter((s) => allowed.has(s.key))
+  }
 
-	      const created = Number(result?.created ?? 0)
-	      const skipped = Number(result?.skipped ?? 0)
-	      const error = result?.error
+  if (dryRun) {
+    const blocked = scrapers.filter((s) => s.dryRunSafe === false).map((s) => s.name)
+    if (blocked.length) {
+      __slog(`⚠️ Dry run: skipping write-unsafe scrapers: ${blocked.join(', ')}`)
+    }
+    scrapers = scrapers.filter((s) => s.dryRunSafe !== false)
+  }
 
-	      if (error) {
-          failures++
-          failedSources.push(name)
-	        __slog(`   ❌ ${name} failed: ${error}`)
-	      } else {
-          jobsAdded += created
-	        __slog(`   ✓ ${name}: ${created} created, ${skipped} skipped (${elapsed}s)`)
-	      }
-	    } catch (err) {
-	      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+  if (scrapers.length === 0) {
+    __slog('⚠️ No board scrapers selected for this run.')
+    return { jobsAdded: 0, failures: 0, failedSources: [] }
+  }
+
+  await runWithConcurrency(scrapers, options.concurrency, async ({ name, run }) => {
+    __slog(`\n▶ Running ${name}…`)
+    const startTime = Date.now()
+
+    try {
+      const result = (await run()) as any
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+
+      const created = Number(result?.created ?? 0)
+      const skipped = Number(result?.skipped ?? 0)
+      const error = result?.error
+
+      if (error) {
         failures++
         failedSources.push(name)
-	      __serr(`   ❌ ${name} crashed:`, err)
-	      __slog(`   Time: ${elapsed}s`)
-	    }
-	  })
+        __slog(`   ❌ ${name} failed: ${error}`)
+      } else {
+        jobsAdded += created
+        __slog(`   ✓ ${name}: ${created} created, ${skipped} skipped (${elapsed}s)`)
+      }
+    } catch (err) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+      failures++
+      failedSources.push(name)
+      __serr(`   ❌ ${name} crashed:`, err)
+      __slog(`   Time: ${elapsed}s`)
+    }
+  })
   return {
     jobsAdded,
     failures,
@@ -185,10 +253,10 @@ async function runBoardScrapers(options: CliOptions): Promise<DailyScrapeStats> 
   }
 }
 
-async function runAtsScrapers(): Promise<DailyScrapeStats> {
+async function runAtsScrapers(options: CliOptions): Promise<DailyScrapeStats> {
   __slog('🏢 Running ATS scrapers…\n')
 
-  const companies = await prisma.company.findMany({
+  let companies = await prisma.company.findMany({
     where: {
       atsProvider: { not: null },
       atsUrl: { not: null },
@@ -202,6 +270,10 @@ async function runAtsScrapers(): Promise<DailyScrapeStats> {
     },
   })
 
+  if (options.maxAtsCompanies && companies.length > options.maxAtsCompanies) {
+    companies = companies.slice(0, options.maxAtsCompanies)
+  }
+
   if (!companies.length) {
     __slog('   ⚠️  No companies with ATS metadata. Skipping ATS scrape.\n')
     return { jobsAdded: 0, failures: 0, failedSources: [] }
@@ -214,7 +286,7 @@ async function runAtsScrapers(): Promise<DailyScrapeStats> {
   const failedSources: string[] = []
   const failedCompanies: string[] = []
 
-  await runWithConcurrency(companies, 5, async (company) => {
+  await runWithConcurrency(companies, options.atsConcurrency, async (company) => {
     const provider = company.atsProvider as AtsProvider
     const slug = company.slug ?? company.id
 
@@ -230,13 +302,15 @@ async function runAtsScrapers(): Promise<DailyScrapeStats> {
         __serr(`   ❌ [ATS FAILURE] ${slug} (${provider}): ${result.error}`)
         __serr('')
 
-        await prisma.company.update({
-          where: { id: company.id },
-          data: {
-            scrapeStatus: 'failed',
-            scrapeError: String(result.error).slice(0, 500),
-          },
-        })
+        if (!options.dryRun) {
+          await prisma.company.update({
+            where: { id: company.id },
+            data: {
+              scrapeStatus: 'failed',
+              scrapeError: String(result.error).slice(0, 500),
+            },
+          })
+        }
         return
       }
 
@@ -247,15 +321,17 @@ async function runAtsScrapers(): Promise<DailyScrapeStats> {
       totalUpdated += stats.updated
       totalSkipped += stats.skipped
 
-      await prisma.company.update({
-        where: { id: company.id },
-        data: {
-          lastScrapedAt: new Date(),
-          jobCount: jobs.length,
-          scrapeStatus: 'success',
-          scrapeError: null,
-        },
-      })
+      if (!options.dryRun) {
+        await prisma.company.update({
+          where: { id: company.id },
+          data: {
+            lastScrapedAt: new Date(),
+            jobCount: jobs.length,
+            scrapeStatus: 'success',
+            scrapeError: null,
+          },
+        })
+      }
 
       __slog(
         `   ✅ ${slug}: jobs=${jobs.length} created=${stats.created} updated=${stats.updated} skipped=${stats.skipped}`,
@@ -269,13 +345,15 @@ async function runAtsScrapers(): Promise<DailyScrapeStats> {
       failedSources.push(provider)
       failedCompanies.push(slug)
 
-      await prisma.company.update({
-        where: { id: company.id },
-        data: {
-          scrapeStatus: 'failed',
-          scrapeError: message.slice(0, 500),
-        },
-      })
+      if (!options.dryRun) {
+        await prisma.company.update({
+          where: { id: company.id },
+          data: {
+            scrapeStatus: 'failed',
+            scrapeError: message.slice(0, 500),
+          },
+        })
+      }
     }
   })
 
@@ -327,6 +405,10 @@ async function printJobSummary() {
 
 async function main() {
   const options = parseCliArgs()
+  if (options.dryRun) {
+    process.env.SCRAPE_DRY_RUN = '1'
+    process.env.DRY_RUN = '1'
+  }
 
   const stats: DailyScrapeStats = { jobsAdded: 0, failures: 0, failedSources: [] }
 
@@ -335,7 +417,11 @@ async function main() {
   __slog('===========================================')
   __slog(`Mode : ${options.mode}`)
   __slog(`Fast : ${options.fast ? 'YES (skip slow boards)' : 'no'}`)
-  __slog(`Concurrency : ${options.concurrency}`)
+  __slog(`Dry run : ${options.dryRun ? 'YES (no DB writes)' : 'no'}`)
+  __slog(`Board concurrency : ${options.concurrency}`)
+  __slog(`ATS concurrency : ${options.atsConcurrency}`)
+  __slog(`Max ATS companies : ${options.maxAtsCompanies ?? 'all'}`)
+  __slog(`Source filter : ${options.sourceFilter?.join(', ') || 'all'}`)
   __slog('')
 
   if (options.mode === 'boards' || options.mode === 'all') {
@@ -346,7 +432,7 @@ async function main() {
   }
 
   if (options.mode === 'ats' || options.mode === 'all') {
-    const atsStats = await runAtsScrapers()
+    const atsStats = await runAtsScrapers(options)
     stats.jobsAdded += atsStats.jobsAdded
     stats.failures += atsStats.failures
     stats.failedSources.push(...atsStats.failedSources)

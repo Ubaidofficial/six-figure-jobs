@@ -5,6 +5,10 @@ import slugify from 'slugify'
 import { prisma } from '../../prisma'
 import { detectATS, getCompanyJobsUrl, isExternalToHost, type ATSType } from './detectATS'
 
+function isScrapeDryRun(): boolean {
+  return process.env.SCRAPE_DRY_RUN === '1' || process.env.DRY_RUN === '1'
+}
+
 function isCompanySlugCollision(err: any): boolean {
   if (!err || err.code !== 'P2002') return false
 
@@ -19,6 +23,10 @@ export async function saveCompanyATS(
   jobAtsUrl: string,
   discoveredBy: string,
 ): Promise<void> {
+  if (isScrapeDryRun()) {
+    return
+  }
+
   const cleanedCompanyName = String(companyName || '').trim()
   if (!cleanedCompanyName) return
   if (cleanedCompanyName.toLowerCase() === 'unknown company') return
