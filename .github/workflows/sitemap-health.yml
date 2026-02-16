@@ -57,6 +57,11 @@ jobs:
           import { prisma } from './lib/prisma'
 
           const now = new Date()
+          const descriptionHtml =
+            '<p>Design, build, and operate distributed backend systems for a global product. Own architecture decisions, write production-grade code, improve reliability, mentor engineers, and ship measurable improvements across APIs, data pipelines, and platform services.</p>'
+          const aiSnippet =
+            'Senior software engineering role focused on architecture, reliability, and delivery in a high-scale distributed environment.'
+          const aiOneLiner = 'Build and scale distributed systems as a senior engineer.'
           const company = await prisma.company.upsert({
             where: { slug: 'seed-sitemap-company' },
             update: { name: 'Seed Sitemap Company' },
@@ -81,8 +86,9 @@ jobs:
                 countryCode: 'US',
                 remote: true,
                 remoteMode: 'remote',
-                descriptionHtml:
-                  '<p>Build and ship distributed systems at scale with strong engineering standards and clear ownership.</p>',
+                descriptionHtml,
+                aiSnippet,
+                aiOneLiner,
                 source: 'seed:health-check',
                 url: `https://example.com/jobs/${id}`,
                 applyUrl: `https://example.com/jobs/${id}/apply`,
@@ -118,8 +124,9 @@ jobs:
                 countryCode: 'US',
                 remote: true,
                 remoteMode: 'remote',
-                descriptionHtml:
-                  '<p>Build and ship distributed systems at scale with strong engineering standards and clear ownership.</p>',
+                descriptionHtml,
+                aiSnippet,
+                aiOneLiner,
                 source: 'seed:health-check',
                 url: `https://example.com/jobs/${id}`,
                 applyUrl: `https://example.com/jobs/${id}/apply`,
