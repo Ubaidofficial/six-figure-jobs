@@ -178,6 +178,37 @@ async function checkSitemap(url, depth = 0) {
   }
 
   if (type === 'index') {
+    const childResults = await mapLimit(locs, CONCURRENCY, async (childUrl) => {
+      try {
+        const { body: childBody } = await fetchText(childUrl, { expectXml: true })
+        const childType = detectSitemapType(childBody)
+        if (childType === 'unknown') {
+          return { url: childUrl, error: 'Unknown sitemap type' }
+        }
+
+        const childLocs = extractLocs(childBody)
+        if (childLocs.length === 0) {
+          return { url: childUrl, error: 'No <loc> entries found' }
+        }
+
+        return { url: childUrl, error: null }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { url: childUrl, error: msg }
+      }
+    })
+
+    const childErrors = childResults.filter((row) => row.error)
+    if (childErrors.length > 0) {
+      const preview = childErrors
+        .slice(0, 5)
+        .map((row) => `${row.url} (${row.error})`)
+        .join('; ')
+      const suffix =
+        childErrors.length > 5 ? `; ...and ${childErrors.length - 5} more` : ''
+      throw new Error(`Index references invalid child sitemap(s): ${preview}${suffix}`)
+    }
+
     const sample = sampleArray(locs, CHILD_SITEMAP_SAMPLE)
     console.log(`${indent}Index entries: ${locs.length} (sampling ${sample.length})`)
     for (const child of sample) {

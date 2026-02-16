@@ -2,6 +2,7 @@
 // Sitemap index for slice shards (priority + longtail)
 
 import { getSiteUrl } from '../../lib/seo/site'
+import { buildSliceSitemapEntries, type SliceShard } from '../../lib/seo/slicesSitemap'
 
 const SITE_URL = getSiteUrl()
 const BUILD_LASTMOD = new Date().toISOString()
@@ -9,8 +10,25 @@ const BUILD_LASTMOD = new Date().toISOString()
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200 // 24h
 
+type ShardConfig = {
+  shard: SliceShard
+  path: string
+}
+
+const SHARDS: ShardConfig[] = [
+  { shard: 'priority', path: 'sitemap-slices/priority' },
+  { shard: 'longtail', path: 'sitemap-slices/longtail' },
+]
+
 export async function GET() {
-  const entries = ['sitemap-slices/priority', 'sitemap-slices/longtail']
+  const checks = await Promise.all(
+    SHARDS.map(async ({ shard, path }) => {
+      const hasUrls = (await buildSliceSitemapEntries(shard, { limit: 1 })).length > 0
+      return hasUrls ? path : null
+    }),
+  )
+
+  const entries = checks.filter(Boolean) as string[]
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

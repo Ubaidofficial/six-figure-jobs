@@ -11,6 +11,8 @@
 * add scripts/audit-v2.9.ts so CI audit step references a real, deterministic script
 * make SEO local gate use isolated Postgres service + prisma db push for reproducible startup validation
 * make company sitemap index/page return valid XML in zero-data scenarios instead of emitting 404 shard URLs
+* include slice sitemap children in sitemap-slices index only when shard has at least one URL entry
+* harden sitemap health check so index-listed child sitemaps with zero loc entries fail deterministically
 
 
 # 2.8.18 (2026-02-14)
