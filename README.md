@@ -171,12 +171,27 @@ CHANGELOG.generated.md Auto generated from commits
 npm install
 npm run dev
 
-Scrape:
-npm run ts-node scripts/dailyScrapeV2.ts
+Scrape (local, writes enabled):
+npx tsx scripts/dailyScrapeV2.ts --mode=all --concurrency=4 --ats-concurrency=5
+
+Scrape (local dry run, no DB writes):
+npx tsx scripts/dailyScrapeV2.ts --mode=all --dry-run --concurrency=4 --ats-concurrency=5
+
+Scrape (GitHub Actions):
+- Scheduled: `.github/workflows/daily-scrape.yml`
+- Manual: run the same workflow with `workflow_dispatch` inputs (`source`, `max_pages`, `dry_run`, `concurrency`, `ats_concurrency`)
 
 Audit:
-npm run ts-node scripts/qaScrapers.ts
-npm run ts-node scripts/audit-v2.9.ts
+npm test
+npm run lint
+npm run typecheck
+npm run build
+SEO_BASE_URL=http://localhost:3000 SEO_FULL=1 SEO_STRICT=1 npm run seo:validate:strict
+SEO_BASE_URL=http://localhost:3000 SEO_TEMPLATE_SAMPLE_TOTAL=20 npm run seo:sample
+
+Deploy:
+- Merge PR into `main` after CI + SEO gates pass.
+- Production sitemap proof runs in `.github/workflows/seo-gates.yml` (`seo-production-proof` job).
 
 ---
 

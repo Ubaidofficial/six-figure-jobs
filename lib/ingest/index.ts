@@ -69,6 +69,10 @@ const ingestLog = (...args: Parameters<typeof console.log>) => {
   if (shouldLogIngest) console.log(...args)
 }
 
+function isIngestDryRun(): boolean {
+  return process.env.SCRAPE_DRY_RUN === '1' || process.env.DRY_RUN === '1'
+}
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
 }
@@ -388,6 +392,11 @@ async function createNewJob(
     updatedAt: new Date(),
   }
 
+  if (isIngestDryRun()) {
+    ingestLog(`[ingest:dry-run] would create job ${jobId}`)
+    return { status: 'skipped', reason: 'dry-run-create', jobId, dedupeKey }
+  }
+
   try {
     // Use an atomic upsert to avoid race-condition PK collisions when multiple
     // concurrent ingests attempt to create the same deterministic job id.
@@ -526,6 +535,11 @@ async function upgradeJob(
     experienceLevel: inferExperienceLevelFromTitle(input.title),
   }
 
+  if (isIngestDryRun()) {
+    ingestLog(`[ingest:dry-run] would upgrade job ${existing.id}`)
+    return { status: 'skipped', reason: 'dry-run-upgrade', jobId: existing.id, dedupeKey }
+  }
+
   await prisma.job.update({
     where: { id: existing.id },
     data: updateData,
@@ -603,6 +617,11 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
     if (shouldUpgradeApplyUrl) {
       updateData.applyUrl = input.applyUrl
     }
+  }
+
+  if (isIngestDryRun()) {
+    ingestLog(`[ingest:dry-run] would refresh job ${existing.id}`)
+    return { status: 'skipped', reason: 'dry-run-refresh', jobId: existing.id, dedupeKey: existing.dedupeKey }
   }
 
   await prisma.job.update({

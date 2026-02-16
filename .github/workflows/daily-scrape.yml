@@ -1,9 +1,31 @@
-name: Daily Job Scraper (Automated)
+name: Daily Job Scraper (GitHub Runner)
 
 on:
   schedule:
     - cron: "0 6,18 * * *" # 6am and 6pm UTC daily
   workflow_dispatch:
+    inputs:
+      source:
+        description: "all | boards | ats | board key (for example remoteok)"
+        required: false
+        default: "all"
+      max_pages:
+        description: "Max ATS companies to process (0 = all)"
+        required: false
+        default: "0"
+      dry_run:
+        description: "Dry run mode (no DB writes)"
+        type: boolean
+        required: false
+        default: false
+      concurrency:
+        description: "Board scraper concurrency (1-8)"
+        required: false
+        default: "4"
+      ats_concurrency:
+        description: "ATS scraper concurrency (1-12)"
+        required: false
+        default: "5"
 
 concurrency:
   group: daily-scrape
@@ -12,72 +34,161 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 90 # Changed from 15 to 90 for full scrape
+    timeout-minutes: 120
 
-    if: github.event_name == 'schedule' || github.ref == 'refs/heads/develop'
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      AI_ENRICHMENT_PAUSED: "true"
 
     steps:
-      - name: Trigger Railway Scraper API
-        id: start
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare scrape inputs
+        id: prep
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "🚀 Triggering job scraper on Railway..."
-          echo "Event: $GITHUB_EVENT_NAME"
-          echo "Ref:   $GITHUB_REF"
-
-          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
-            "https://www.6figjobs.com/api/cron/scrape?mode=all" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            --retry 2 \
-            --retry-delay 30)
-
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | head -n-1)
-
-          echo "📊 Response Code: $HTTP_CODE"
-          echo "📄 Response Body: $BODY"
-
-          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-            echo "❌ Scraper trigger failed with code $HTTP_CODE"
-            exit 1
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            SOURCE_RAW="${{ github.event.inputs.source }}"
+            DRY_RUN_RAW="${{ github.event.inputs.dry_run }}"
+            MAX_PAGES_RAW="${{ github.event.inputs.max_pages }}"
+            CONCURRENCY_RAW="${{ github.event.inputs.concurrency }}"
+            ATS_CONCURRENCY_RAW="${{ github.event.inputs.ats_concurrency }}"
+          else
+            SOURCE_RAW="all"
+            DRY_RUN_RAW="false"
+            MAX_PAGES_RAW="0"
+            CONCURRENCY_RAW="4"
+            ATS_CONCURRENCY_RAW="5"
           fi
 
-          # Parse success flags defensively (do not fail the step if BODY isn't valid JSON)
-          SUCCESS="$(echo "$BODY" | jq -r '.success // .ok // false' 2>/dev/null || true)"
-          JOB_ID="$(echo "$BODY" | jq -r '.jobId // .runId // empty' 2>/dev/null || true)"
+          SOURCE_RAW="$(echo "${SOURCE_RAW:-all}" | tr '[:upper:]' '[:lower:]' | xargs)"
+          MODE="$SOURCE_RAW"
+          SOURCE_FILTER=""
+          case "$SOURCE_RAW" in
+            all|boards|ats) ;;
+            "")
+              MODE="all"
+              ;;
+            *)
+              MODE="boards"
+              SOURCE_FILTER="$SOURCE_RAW"
+              ;;
+          esac
 
-          # If the API returns an explicit success=false, fail.
-          # If there's no success flag, we still allow success if a jobId/runId exists.
-          if [ "$SUCCESS" != "true" ] && [ -z "${JOB_ID:-}" ]; then
-            echo "❌ Trigger response did not indicate success and no jobId was provided."
-            exit 1
+          DRY_RUN="false"
+          if [ "${DRY_RUN_RAW:-false}" = "true" ] || [ "${DRY_RUN_RAW:-false}" = "1" ]; then
+            DRY_RUN="true"
           fi
 
-          echo "job_id=${JOB_ID:-}" >> "$GITHUB_OUTPUT"
+          MAX_PAGES="$(echo "${MAX_PAGES_RAW:-0}" | tr -cd '0-9')"
+          MAX_PAGES="${MAX_PAGES:-0}"
 
-          if [ -z "${JOB_ID:-}" ]; then
-            echo "⚠️ Trigger succeeded but no jobId returned; continuing in fire-and-forget mode (skipping wait)."
-            exit 0
+          CONCURRENCY="$(echo "${CONCURRENCY_RAW:-4}" | tr -cd '0-9')"
+          CONCURRENCY="${CONCURRENCY:-4}"
+
+          ATS_CONCURRENCY="$(echo "${ATS_CONCURRENCY_RAW:-5}" | tr -cd '0-9')"
+          ATS_CONCURRENCY="${ATS_CONCURRENCY:-5}"
+
+          MODE_HAS_BOARDS="false"
+          if [ "$MODE" = "all" ] || [ "$MODE" = "boards" ]; then
+            MODE_HAS_BOARDS="true"
           fi
 
-          echo "✅ Scraper started. jobId=$JOB_ID"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "source_filter=$SOURCE_FILTER" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$DRY_RUN" >> "$GITHUB_OUTPUT"
+          echo "max_ats_companies=$MAX_PAGES" >> "$GITHUB_OUTPUT"
+          echo "concurrency=$CONCURRENCY" >> "$GITHUB_OUTPUT"
+          echo "ats_concurrency=$ATS_CONCURRENCY" >> "$GITHUB_OUTPUT"
+          echo "mode_has_boards=$MODE_HAS_BOARDS" >> "$GITHUB_OUTPUT"
 
-      - name: Fire-and-forget (no wait)
-        if: steps.start.outputs.job_id != ''
+          echo "Resolved inputs:"
+          echo "  mode=$MODE"
+          echo "  source_filter=$SOURCE_FILTER"
+          echo "  dry_run=$DRY_RUN"
+          echo "  max_ats_companies=$MAX_PAGES"
+          echo "  board_concurrency=$CONCURRENCY"
+          echo "  ats_concurrency=$ATS_CONCURRENCY"
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run scrape (boards/ats)
+        shell: bash
         run: |
-          echo "✅ Triggered scrape jobId=${{ steps.start.outputs.job_id }} (not waiting for completion)."
+          set -euo pipefail
+
+          ARGS=(
+            "--mode=${{ steps.prep.outputs.mode }}"
+            "--concurrency=${{ steps.prep.outputs.concurrency }}"
+            "--ats-concurrency=${{ steps.prep.outputs.ats_concurrency }}"
+          )
+
+          if [ "${{ steps.prep.outputs.dry_run }}" = "true" ]; then
+            ARGS+=("--dry-run")
+          fi
+
+          if [ "${{ steps.prep.outputs.max_ats_companies }}" != "0" ]; then
+            ARGS+=("--max-ats-companies=${{ steps.prep.outputs.max_ats_companies }}")
+          fi
+
+          if [ -n "${{ steps.prep.outputs.source_filter }}" ]; then
+            ARGS+=("--source=${{ steps.prep.outputs.source_filter }}")
+          fi
+
+          echo "Running: npx tsx scripts/dailyScrapeV2.ts ${ARGS[*]}"
+          npx tsx scripts/dailyScrapeV2.ts "${ARGS[@]}" | tee /tmp/daily-scrape.log
+
+      - name: Enrich apply URLs
+        if: steps.prep.outputs.dry_run != 'true' && steps.prep.outputs.mode_has_boards == 'true'
+        run: npx tsx scripts/enrich-apply-urls.ts | tee /tmp/daily-scrape-enrich.log
+
+      - name: Optional AI enrichment
+        if: steps.prep.outputs.dry_run != 'true' && env.AI_ENRICHMENT_PAUSED != 'true'
+        run: npx tsx scripts/aiEnrichJobs.ts | tee /tmp/daily-scrape-ai.log
+
+      - name: Repair locations
+        if: steps.prep.outputs.dry_run != 'true'
+        env:
+          DRY_RUN: "0"
+          TAKE: "10000"
+        run: npx tsx scripts/repair-location-v2.10.ts | tee /tmp/daily-scrape-location.log
+
+      - name: Refresh slices
+        if: steps.prep.outputs.dry_run != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx tsx scripts/bootstrapRoleSlices.ts | tee /tmp/daily-scrape-slices-role.log
+          npx tsx scripts/seedJobSlices.ts | tee /tmp/daily-scrape-slices-seed.log
+          npx tsx scripts/bootstrapCountrySalarySlices.ts | tee /tmp/daily-scrape-slices-country.log
+
+      - name: Upload scrape logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-scrape-logs-${{ github.run_id }}
+          path: /tmp/daily-scrape*.log
+          if-no-files-found: ignore
 
       - name: Report Failure
         if: failure()
         run: |
-          echo "⚠️ Scraper failed!"
-          echo "🔍 Check Railway logs in your Railway project Deployments tab."
-
-
-
-
-
-          
+          echo "⚠️ Daily scrape workflow failed."
+          echo "🔍 Inspect run logs + uploaded artifacts for the failing stage."

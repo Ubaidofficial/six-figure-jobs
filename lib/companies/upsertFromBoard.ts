@@ -7,6 +7,10 @@ import type { AtsProvider } from '../scrapers/ats/types'
 
 const companyClient = (prisma as any).company
 
+function isScrapeDryRun(): boolean {
+  return process.env.SCRAPE_DRY_RUN === '1' || process.env.DRY_RUN === '1'
+}
+
 export interface BoardCompanyInput {
   /** Raw company name scraped from the board */
   rawName: string | null | undefined
@@ -157,6 +161,7 @@ async function ensureUniqueSlug(baseName: string): Promise<string> {
 export async function upsertCompanyFromBoard(
   input: BoardCompanyInput,
 ): Promise<any | null> {
+  const dryRun = isScrapeDryRun()
   const inferredWebsite =
     input.websiteUrl ??
     (input.applyUrl ? inferWebsiteFromUrl(input.applyUrl) : null)
@@ -228,6 +233,9 @@ export async function upsertCompanyFromBoard(
     }
 
     if (Object.keys(updateData).length > 0) {
+      if (dryRun) {
+        return { ...existing, ...updateData }
+      }
       return await companyClient.update({
         where: { id: existing.id },
         data: updateData,
@@ -235,6 +243,20 @@ export async function upsertCompanyFromBoard(
     }
 
     return existing
+  }
+
+  if (dryRun) {
+    const syntheticSlug = slugifyCompanyName(cleanedName)
+    return {
+      id: `dryrun:${syntheticSlug}`,
+      name: cleanedName,
+      slug: syntheticSlug,
+      atsProvider,
+      atsUrl,
+      website: inferredWebsite,
+      linkedinUrl: input.linkedinUrl ?? null,
+      lastScrapedAt: null,
+    }
   }
 
   // Create new company row

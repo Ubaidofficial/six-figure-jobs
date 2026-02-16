@@ -1,3 +1,15 @@
+# 2.8.20 (2026-02-16)
+
+
+### Bug Fixes
+
+* move scheduled scrape/ingest pipeline from Railway trigger calls to direct GitHub Actions execution with workflow_dispatch controls
+* add daily scraper dry-run + source/concurrency/ATS-limit CLI controls and fix `--mode=value` parsing
+* enforce dry-run no-write behavior across ingest company upsert, job create/update paths, and CompanyATS discovery upserts
+* add dry-run guard tests for company upsert + CompanyATS persistence
+* document scrape, SEO gate, and deployment commands in README
+
+
 # 2.8.19 (2026-02-15)
 
 
