@@ -55,6 +55,7 @@ jobs:
         run: |
           node --import tsx <<'NODE'
           import { prisma } from './lib/prisma'
+          import { getShortStableIdForJobId } from './lib/jobs/jobSlug'
 
           const now = new Date()
           const descriptionHtml =
@@ -73,6 +74,7 @@ jobs:
 
           for (let i = 1; i <= 12; i += 1) {
             const id = `seed-health-job-${i}`
+            const shortId = getShortStableIdForJobId(id)
             await prisma.job.upsert({
               where: { id },
               update: {
@@ -93,6 +95,7 @@ jobs:
                 url: `https://example.com/jobs/${id}`,
                 applyUrl: `https://example.com/jobs/${id}/apply`,
                 externalId: `seed-ext-${i}`,
+                shortId,
                 type: 'full-time',
                 experienceLevel: 'senior',
                 employmentType: 'full-time',
@@ -131,6 +134,7 @@ jobs:
                 url: `https://example.com/jobs/${id}`,
                 applyUrl: `https://example.com/jobs/${id}/apply`,
                 externalId: `seed-ext-${i}`,
+                shortId,
                 type: 'full-time',
                 experienceLevel: 'senior',
                 employmentType: 'full-time',
