@@ -51,6 +51,125 @@ jobs:
       - name: Prepare database schema
         run: npx prisma db push
 
+      - name: Seed sitemap fixture data
+        run: |
+          node --import tsx <<'NODE'
+          import { prisma } from './lib/prisma'
+
+          const now = new Date()
+          const company = await prisma.company.upsert({
+            where: { slug: 'seed-sitemap-company' },
+            update: { name: 'Seed Sitemap Company' },
+            create: {
+              name: 'Seed Sitemap Company',
+              slug: 'seed-sitemap-company',
+            },
+          })
+
+          for (let i = 1; i <= 12; i += 1) {
+            const id = `seed-health-job-${i}`
+            await prisma.job.upsert({
+              where: { id },
+              update: {
+                title: `Senior Software Engineer ${i}`,
+                company: company.name,
+                companyId: company.id,
+                roleSlug: 'software-engineer',
+                locationRaw: 'New York, NY, US',
+                city: 'New York',
+                citySlug: 'new-york',
+                countryCode: 'US',
+                remote: true,
+                remoteMode: 'remote',
+                descriptionHtml:
+                  '<p>Build and ship distributed systems at scale with strong engineering standards and clear ownership.</p>',
+                source: 'seed:health-check',
+                url: `https://example.com/jobs/${id}`,
+                applyUrl: `https://example.com/jobs/${id}/apply`,
+                externalId: `seed-ext-${i}`,
+                type: 'full-time',
+                experienceLevel: 'senior',
+                employmentType: 'full-time',
+                postedAt: now,
+                salaryRaw: '$180k-$220k',
+                salaryMin: BigInt(180000),
+                salaryMax: BigInt(220000),
+                salaryCurrency: 'USD',
+                salaryPeriod: 'yearly',
+                minAnnual: BigInt(180000),
+                maxAnnual: BigInt(220000),
+                currency: 'USD',
+                salaryValidated: true,
+                salaryConfidence: 95,
+                isHighSalary: true,
+                isHundredKLocal: true,
+                isHighSalaryLocal: true,
+                isExpired: false,
+              },
+              create: {
+                id,
+                title: `Senior Software Engineer ${i}`,
+                company: company.name,
+                companyId: company.id,
+                roleSlug: 'software-engineer',
+                locationRaw: 'New York, NY, US',
+                city: 'New York',
+                citySlug: 'new-york',
+                countryCode: 'US',
+                remote: true,
+                remoteMode: 'remote',
+                descriptionHtml:
+                  '<p>Build and ship distributed systems at scale with strong engineering standards and clear ownership.</p>',
+                source: 'seed:health-check',
+                url: `https://example.com/jobs/${id}`,
+                applyUrl: `https://example.com/jobs/${id}/apply`,
+                externalId: `seed-ext-${i}`,
+                type: 'full-time',
+                experienceLevel: 'senior',
+                employmentType: 'full-time',
+                postedAt: now,
+                salaryRaw: '$180k-$220k',
+                salaryMin: BigInt(180000),
+                salaryMax: BigInt(220000),
+                salaryCurrency: 'USD',
+                salaryPeriod: 'yearly',
+                minAnnual: BigInt(180000),
+                maxAnnual: BigInt(220000),
+                currency: 'USD',
+                salaryValidated: true,
+                salaryConfidence: 95,
+                isHighSalary: true,
+                isHundredKLocal: true,
+                isHighSalaryLocal: true,
+                isExpired: false,
+              },
+            })
+          }
+
+          await prisma.jobSlice.upsert({
+            where: { slug: 'seed-priority-software-engineer' },
+            update: {
+              type: 'role-salary',
+              filtersJson: JSON.stringify({
+                roleSlugs: ['software-engineer'],
+                minAnnual: 100000,
+              }),
+              jobCount: 12,
+            },
+            create: {
+              slug: 'seed-priority-software-engineer',
+              type: 'role-salary',
+              filtersJson: JSON.stringify({
+                roleSlugs: ['software-engineer'],
+                minAnnual: 100000,
+              }),
+              jobCount: 12,
+            },
+          })
+
+          await prisma.$disconnect()
+          NODE
+
       - name: Build
         run: npm run build
 

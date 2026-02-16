@@ -14,6 +14,7 @@
 * include slice sitemap children in sitemap-slices index only when shard has at least one URL entry
 * harden sitemap health check so index-listed child sitemaps with zero loc entries fail deterministically
 * run sitemap health workflow against local app on pull requests while keeping scheduled production checks
+* seed deterministic sitemap fixture data in PR health workflow to avoid false failures from empty test databases
 
 
 # 2.8.18 (2026-02-14)
