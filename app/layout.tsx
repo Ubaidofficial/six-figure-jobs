@@ -2,7 +2,6 @@ import './globals.css'
 import type { Metadata } from 'next'
 import type { Viewport } from 'next'
 
-import { ThemeProvider } from '@/components/theme-provider'
 import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { getSiteUrl } from '../lib/seo/site'
@@ -33,22 +32,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="h-full">
       <body className="min-h-full bg-background text-foreground">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <div className="flex min-h-screen flex-col">
-            <SiteHeader />
+        <div className="flex min-h-screen flex-col">
+          <SiteHeader />
 
-            <div id="main-content" className="flex-1">
-              {children}
-            </div>
-
-            <Footer />
+          <div id="main-content" className="flex-1">
+            {children}
           </div>
-        </ThemeProvider>
+
+          <Footer />
+        </div>
       </body>
     </html>
   )

@@ -1,3 +1,14 @@
+# 2.8.21 (2026-02-18)
+
+
+### Bug Fixes
+
+* reduce homepage client-side JavaScript by moving hero search and role filtering controls to server-rendered form/select markup
+* replace homepage latest-opportunity cards with server-rendered markup and explicit company logo alt text
+* shorten homepage title tag to reduce SERP truncation risk
+* remove unused layout ThemeProvider wrapper to cut shared client bundle overhead
+
+
 # 2.8.20 (2026-02-16)
 
 

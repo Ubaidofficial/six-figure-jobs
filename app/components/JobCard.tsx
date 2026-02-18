@@ -92,7 +92,7 @@ export default function JobCard({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={logo ?? ''}
-                    alt=""
+                    alt={`${companyName} logo`}
                     className={styles.logoImg}
                     loading="lazy"
                     decoding="async"
@@ -109,7 +109,7 @@ export default function JobCard({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={logo ?? ''}
-                  alt=""
+                  alt={`${companyName} logo`}
                   className={styles.logoImg}
                   loading="lazy"
                   decoding="async"

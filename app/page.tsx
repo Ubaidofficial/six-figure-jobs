@@ -15,7 +15,6 @@ import { SEARCH_ROLE_OPTIONS } from '../lib/roles/searchRoles'
 import { TARGET_COUNTRIES } from '../lib/seo/regions'
 import { buildSliceCanonicalPath } from '../lib/seo/canonical'
 import { HomeFAQ } from './pageFAQ'
-import RoleTypeahead from './components/RoleTypeahead'
 import { CATEGORY_LINKS } from '@/lib/constants/category-links'
 import { LOCATIONS, SALARY_BANDS } from '@/lib/constants/homepage'
 import { countryCodeToSlug } from '@/lib/seo/countrySlug'
@@ -40,7 +39,7 @@ export const revalidate = 300 // 5min instead of 10min
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: '6 Figure Jobs & Six Figure Jobs | High Paying $100k+ Positions Without Degree',
+  title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
   description:
     'Find 5,945+ verified jobs paying $100k+ USD (or local equivalent). Premium roles from 333 verified companies. Updated daily.',
   keywords:
@@ -528,11 +527,19 @@ export default async function HomePage() {
             >
               Role
             </label>
-            <RoleTypeahead
-              options={ROLE_OPTIONS}
+            <select
+              id="role"
               name="role"
-              placeholder="Start typing a $100k+ role…"
-            />
+              className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
+              defaultValue=""
+            >
+              <option value="">All roles</option>
+              {ROLE_OPTIONS.map((opt) => (
+                <option key={opt.slug} value={opt.slug}>
+                  {opt.emoji ? `${opt.emoji} ${opt.label}` : opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
