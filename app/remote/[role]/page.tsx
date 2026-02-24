@@ -11,9 +11,11 @@ import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import JobList from '../../components/JobList'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { isRemoteRolePageIndexable } from '../../../lib/seo/indexabilityGates'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20
+const DEFAULT_REMOTE_MIN_ANNUAL = 100_000
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -55,6 +57,33 @@ function buildRequestedPath(roleSlug: string, sp: SearchParams) {
 function normalizeStringParam(value?: string | string[]): string | undefined {
   if (!value) return undefined
   return Array.isArray(value) ? value[0] : value
+}
+
+function parseRemoteMinAnnual(sp: SearchParams): {
+  minAnnualForQuery: number | undefined
+  activeMinAnnual: number
+} {
+  const minParam = normalizeStringParam(sp.min)
+  if (!minParam) {
+    return {
+      minAnnualForQuery: undefined,
+      activeMinAnnual: DEFAULT_REMOTE_MIN_ANNUAL,
+    }
+  }
+
+  const parsed = Number(minParam)
+  if (!Number.isFinite(parsed)) {
+    return {
+      minAnnualForQuery: undefined,
+      activeMinAnnual: DEFAULT_REMOTE_MIN_ANNUAL,
+    }
+  }
+
+  const normalized = Math.max(DEFAULT_REMOTE_MIN_ANNUAL, parsed)
+  return {
+    minAnnualForQuery: normalized,
+    activeMinAnnual: normalized,
+  }
 }
 
 function prettyRole(slug: string | undefined): string {
@@ -195,21 +224,19 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   const selectedCountry = normalizeStringParam(sp.country)
   const selectedRegion = normalizeStringParam(sp.remoteRegion)
-  const minParam = normalizeStringParam(sp.min)
-  const minAnnual =
-    minParam && !Number.isNaN(Number(minParam)) ? Math.max(100_000, Number(minParam)) : 100_000
+  const { minAnnualForQuery } = parseRemoteMinAnnual(sp)
 
   const result = await queryJobs({
     roleSlugs: [roleSlug],
     countryCode: selectedCountry || undefined,
     remoteRegion: selectedRegion || undefined,
-    minAnnual,
+    minAnnual: minAnnualForQuery,
     page,
     pageSize: 1,
   })
 
   const jobCount = result.total
-  const shouldIndex = isTier1Role(roleSlug)
+  const shouldIndex = isTier1Role(roleSlug) && isRemoteRolePageIndexable(jobCount)
 
   const title = `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs | ${SITE_NAME}`
   const description = `Find ${jobCount.toLocaleString()} remote ${roleName} jobs paying $100k+. Browse high paying remote ${roleName.toLowerCase()} positions with verified six figure salaries.`
@@ -272,15 +299,13 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
 
   const selectedCountry = normalizeStringParam(sp.country)
   const selectedRegion = normalizeStringParam(sp.remoteRegion)
-  const minParam = normalizeStringParam(sp.min)
-  const minAnnual =
-    minParam && !Number.isNaN(Number(minParam)) ? Math.max(100_000, Number(minParam)) : 100_000
+  const { minAnnualForQuery, activeMinAnnual } = parseRemoteMinAnnual(sp)
 
   const data = await queryJobs({
     roleSlugs: [roleSlug],
     countryCode: selectedCountry || undefined,
     remoteRegion: selectedRegion || undefined,
-    minAnnual,
+    minAnnual: minAnnualForQuery,
     page,
     pageSize: PAGE_SIZE,
   })
@@ -445,7 +470,9 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
                 key={s}
                 href={buildFilterHref(basePath, sp, { min: s })}
                 className={`rounded-full px-2 py-1 ${
-                  minAnnual === s ? 'bg-slate-200 text-slate-900' : 'bg-slate-900 text-slate-200'
+                  activeMinAnnual === s
+                    ? 'bg-slate-200 text-slate-900'
+                    : 'bg-slate-900 text-slate-200'
                 }`}
               >
                 ${Math.round(s / 1000)}k+

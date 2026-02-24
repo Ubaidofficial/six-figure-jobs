@@ -5,9 +5,11 @@ import {
   MIN_CITY_INDEXABLE_JOBS,
   MIN_COMPANY_INDEXABLE_JOBS,
   MIN_COUNTRY_INDEXABLE_JOBS,
+  MIN_REMOTE_ROLE_INDEXABLE_JOBS,
   isCityPageIndexable,
   isCompanyPageIndexable,
   isCountryPageIndexable,
+  isRemoteRolePageIndexable,
 } from '../../lib/seo/indexabilityGates'
 
 function readRepoFile(relativePath: string): string {
@@ -40,5 +42,17 @@ describe('indexability gates alignment', () => {
     expect(MIN_CITY_INDEXABLE_JOBS).toBe(3)
     expect(isCityPageIndexable(2)).toBe(false)
     expect(isCityPageIndexable(3)).toBe(true)
+  })
+
+  it('shares remote role threshold between page robots and remote sitemap route', () => {
+    expect(MIN_REMOTE_ROLE_INDEXABLE_JOBS).toBe(3)
+    expect(isRemoteRolePageIndexable(2)).toBe(false)
+    expect(isRemoteRolePageIndexable(3)).toBe(true)
+
+    const remotePage = readRepoFile('app/remote/[role]/page.tsx')
+    const remoteSitemap = readRepoFile('app/sitemap-remote.xml/route.ts')
+
+    expect(remotePage).toContain('isRemoteRolePageIndexable')
+    expect(remoteSitemap).toContain('isRemoteRolePageIndexable')
   })
 })

@@ -1,3 +1,13 @@
+# 2.8.22 (2026-02-24)
+
+
+### Bug Fixes
+
+* align remote role page robots gating and remote sitemap inclusion using shared indexability thresholds
+* make remote role queries/sitemap use consistent filter semantics to prevent empty thin remote role URLs from being indexed
+* add regression coverage for remote role indexability gate alignment between page and sitemap routes
+
+
 # 2.8.21 (2026-02-18)
 
 

@@ -4,6 +4,7 @@
 export const MIN_COMPANY_INDEXABLE_JOBS = 3
 export const MIN_CITY_INDEXABLE_JOBS = 3
 export const MIN_COUNTRY_INDEXABLE_JOBS = 3
+export const MIN_REMOTE_ROLE_INDEXABLE_JOBS = 3
 
 function toSafeCount(value: number | null | undefined): number {
   const n = Number(value ?? 0)
@@ -22,3 +23,6 @@ export function isCountryPageIndexable(liveJobCount: number | null | undefined):
   return toSafeCount(liveJobCount) >= MIN_COUNTRY_INDEXABLE_JOBS
 }
 
+export function isRemoteRolePageIndexable(liveJobCount: number | null | undefined): boolean {
+  return toSafeCount(liveJobCount) >= MIN_REMOTE_ROLE_INDEXABLE_JOBS
+}
