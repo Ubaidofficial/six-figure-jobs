@@ -1,3 +1,12 @@
+# 2.8.23 (2026-02-26)
+
+
+### Bug Fixes
+
+* add `scripts/classify-gsc-urls.ts` to classify GSC URL exports by live HTTP, canonical/noindex, sitemap presence, and DB state
+* emit JSON + TSV audit outputs for evidence-based indexing triage without manual URL-by-URL checks
+
+
 # 2.8.22 (2026-02-24)
 
 
