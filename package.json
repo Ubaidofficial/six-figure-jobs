@@ -28,6 +28,7 @@
     "scrape:otta": "tsx scripts/scrapeOtta.ts",
     "scrape:builtin": "tsx scripts/scrapeBuiltIn.ts",
     "publish:pseo-batch": "tsx scripts/publish-pseo-batch.ts",
+    "pseo:generate:playbook-batch": "tsx scripts/generate-playbook-batch.ts",
     "dashboard:pseo": "tsx scripts/monitoring-dashboard.ts",
     "generate:sitemap": "tsx scripts/generate-sitemap.ts",
     "seo:validate": "tsx scripts/seo-validate.ts",

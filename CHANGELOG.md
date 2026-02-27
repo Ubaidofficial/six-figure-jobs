@@ -1,3 +1,13 @@
+# 2.8.24 (2026-02-27)
+
+
+### Bug Fixes
+
+* add a strict pSEO playbook batch generator that supports 12 playbook types and enforces slug/intent/keyword uniqueness with cannibalization checks
+* add CLI dataset-driven batch generation command with machine-readable `OK`/`SKIPPED` JSON outputs and batch-level validation gates
+* add example dynamic dataset for safe large-scale pSEO page generation and internal linking rule compliance
+
+
 # 2.8.23 (2026-02-26)
 
 

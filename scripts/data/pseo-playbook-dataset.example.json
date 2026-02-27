@@ -1,0 +1,271 @@
+{
+  "categories": [
+    { "slug": "software-engineer", "label": "Software Engineer" },
+    { "slug": "product-manager", "label": "Product Manager" },
+    { "slug": "data-engineer", "label": "Data Engineer" },
+    { "slug": "security-engineer", "label": "Security Engineer" },
+    { "slug": "engineering-manager", "label": "Engineering Manager" },
+    { "slug": "analytics-engineer", "label": "Analytics Engineer" }
+  ],
+  "subcategories": [
+    { "slug": "backend", "label": "Backend" },
+    { "slug": "platform", "label": "Platform" },
+    { "slug": "data", "label": "Data" },
+    { "slug": "security", "label": "Security" }
+  ],
+  "tools": [
+    { "slug": "python", "label": "Python" },
+    { "slug": "typescript", "label": "TypeScript" },
+    { "slug": "aws", "label": "AWS" },
+    { "slug": "kubernetes", "label": "Kubernetes" },
+    { "slug": "postgresql", "label": "PostgreSQL" },
+    { "slug": "terraform", "label": "Terraform" }
+  ],
+  "products": [
+    { "slug": "greenhouse", "label": "Greenhouse" },
+    { "slug": "lever", "label": "Lever" },
+    { "slug": "ashby", "label": "Ashby" },
+    { "slug": "workday", "label": "Workday" }
+  ],
+  "locations": [
+    {
+      "slug": "united-states",
+      "label": "United States",
+      "country_code": "US",
+      "pricing_insight": "Senior compensation varies significantly by state and city, with premiums for AI, platform, and security leadership roles.",
+      "regulation_insight": "Pay transparency regulations in multiple states require clear salary bands and consistent compensation language.",
+      "trend_insight": "Remote and hybrid patterns remain strong for staff-level engineering and product roles.",
+      "local_recommendation": "Publish salary and location eligibility rules with state-level clarity to improve candidate fit."
+    },
+    {
+      "slug": "canada",
+      "label": "Canada",
+      "country_code": "CA",
+      "pricing_insight": "Toronto and Vancouver compensation bands often diverge from national remote benchmarks.",
+      "regulation_insight": "Provincial employment standards affect compensation communication and offer structure requirements.",
+      "trend_insight": "Data, AI, and product leadership hiring remain competitive in cross-border pipelines.",
+      "local_recommendation": "Use CAD-based examples and province-aware notes to reduce ambiguity."
+    },
+    {
+      "slug": "united-kingdom",
+      "label": "United Kingdom",
+      "country_code": "GB",
+      "pricing_insight": "London salary bands are often benchmarked separately from national ranges.",
+      "regulation_insight": "Right-to-work and location eligibility constraints should be explicit in role pages.",
+      "trend_insight": "Hybrid-first hiring remains active in fintech, platform engineering, and security functions.",
+      "local_recommendation": "Combine compensation detail with role-location eligibility in metadata and body copy."
+    },
+    {
+      "slug": "germany",
+      "label": "Germany",
+      "country_code": "DE",
+      "pricing_insight": "Compensation patterns differ across Berlin, Munich, and remote-first hiring hubs.",
+      "regulation_insight": "Employment classification and privacy requirements shape hiring operations workflows.",
+      "trend_insight": "Demand continues for platform, data, and applied AI specialists.",
+      "local_recommendation": "Pair location pages with compliance-safe process guidance and language expectations."
+    }
+  ],
+  "personas": [
+    {
+      "slug": "recruiter",
+      "label": "Recruiter",
+      "pain_points": [
+        "slow shortlist quality for senior candidates",
+        "inconsistent panel feedback structures",
+        "late-stage salary mismatch"
+      ],
+      "benefits": [
+        "faster signal-rich screening",
+        "stronger hiring-manager handoffs",
+        "higher close rates for top candidates"
+      ],
+      "use_cases": [
+        "pipeline calibration",
+        "interview scorecard design",
+        "offer planning"
+      ]
+    },
+    {
+      "slug": "hiring-manager",
+      "label": "Hiring Manager",
+      "pain_points": [
+        "inconsistent candidate differentiation",
+        "unclear role-level expectations",
+        "decision delays in final debriefs"
+      ],
+      "benefits": [
+        "repeatable evaluation quality",
+        "faster final decisions",
+        "better fit for high-salary roles"
+      ],
+      "use_cases": [
+        "role scoping",
+        "panel alignment",
+        "debrief workflows"
+      ]
+    },
+    {
+      "slug": "candidate",
+      "label": "Candidate",
+      "pain_points": [
+        "generic applications that do not stand out",
+        "unclear market compensation expectations",
+        "difficulty prioritizing best-fit opportunities"
+      ],
+      "benefits": [
+        "better application targeting",
+        "stronger interview conversion",
+        "more confident salary negotiation"
+      ],
+      "use_cases": [
+        "resume optimization",
+        "role targeting",
+        "compensation planning"
+      ]
+    }
+  ],
+  "file_formats": [
+    { "slug": "google-docs", "label": "Google Docs" },
+    { "slug": "notion", "label": "Notion" },
+    { "slug": "markdown", "label": "Markdown" },
+    { "slug": "pdf", "label": "PDF" }
+  ],
+  "industries": [
+    { "slug": "fintech", "label": "Fintech" },
+    { "slug": "ai-ml", "label": "AI / ML" },
+    { "slug": "saas", "label": "SaaS" },
+    { "slug": "cybersecurity", "label": "Cybersecurity" }
+  ],
+  "languages": [
+    {
+      "slug": "english",
+      "label": "English",
+      "native_name": "English",
+      "locale": "en-US",
+      "hreflang": "en-us",
+      "cultural_note": "Keep role scope and compensation detail explicit with direct call-to-action language."
+    },
+    {
+      "slug": "spanish",
+      "label": "Spanish",
+      "native_name": "Espanol",
+      "locale": "es-ES",
+      "hreflang": "es-es",
+      "cultural_note": "Prioritize natural local phrasing and clarify compensation period terms."
+    },
+    {
+      "slug": "german",
+      "label": "German",
+      "native_name": "Deutsch",
+      "locale": "de-DE",
+      "hreflang": "de-de",
+      "cultural_note": "Use precise terminology and explicit process detail for professional trust."
+    }
+  ],
+  "integrations": [
+    { "slug": "greenhouse", "label": "Greenhouse" },
+    { "slug": "lever", "label": "Lever" },
+    { "slug": "workday", "label": "Workday" },
+    { "slug": "zapier", "label": "Zapier" },
+    { "slug": "slack", "label": "Slack" }
+  ],
+  "use_cases": [
+    { "slug": "resume-review", "label": "Resume Review" },
+    { "slug": "interview-calibration", "label": "Interview Calibration" },
+    { "slug": "salary-benchmarking", "label": "Salary Benchmarking" },
+    { "slug": "offer-strategy", "label": "Offer Strategy" }
+  ],
+  "glossary_terms": [
+    {
+      "slug": "canonical-url",
+      "label": "Canonical URL",
+      "beginner_explanation": "A canonical URL tells search engines which page version should be treated as the primary source.",
+      "technical_depth": "In large pSEO systems, canonicalization consolidates ranking signals across overlapping combinations and prevents duplicate clusters.",
+      "related_terms": ["keyword cannibalization", "redirect mapping", "indexability gate"]
+    },
+    {
+      "slug": "keyword-cannibalization",
+      "label": "Keyword Cannibalization",
+      "beginner_explanation": "Keyword cannibalization happens when multiple pages compete for the same search intent.",
+      "technical_depth": "Prevention requires intent fingerprinting, strict primary-keyword ownership, and one canonical URL per intent.",
+      "related_terms": ["search intent", "canonical URL", "internal linking"]
+    },
+    {
+      "slug": "hreflang",
+      "label": "Hreflang",
+      "beginner_explanation": "Hreflang signals the language and regional version of a page for search engines.",
+      "technical_depth": "Reliable hreflang implementation requires reciprocal mapping across canonical, localized, and x-default pages.",
+      "related_terms": ["translation SEO", "localization", "canonical URL"]
+    }
+  ],
+  "directory_entries": [
+    {
+      "slug": "greenhouse",
+      "label": "Greenhouse",
+      "attributes": ["ATS workflow controls", "reporting depth", "scorecard templates"],
+      "tags": ["hiring-ops", "enterprise-ready", "analytics"],
+      "category_slug": "software-engineer",
+      "location_slug": "united-states"
+    },
+    {
+      "slug": "lever",
+      "label": "Lever",
+      "attributes": ["CRM-style sourcing", "pipeline visibility", "automation support"],
+      "tags": ["talent-acquisition", "workflow-automation", "mid-market"],
+      "category_slug": "product-manager",
+      "location_slug": "canada"
+    },
+    {
+      "slug": "ashby",
+      "label": "Ashby",
+      "attributes": ["analytics-first design", "structured workflows", "cross-team visibility"],
+      "tags": ["high-growth", "ops-rigor", "reporting"],
+      "category_slug": "engineering-manager",
+      "location_slug": "united-kingdom"
+    }
+  ],
+  "profiles": [
+    {
+      "slug": "greenhouse-profile",
+      "label": "Greenhouse",
+      "category_slug": "software-engineer",
+      "verified_facts": [
+        "Widely used ATS in high-growth and enterprise recruiting organizations.",
+        "Known for structured interview and scorecard workflows."
+      ],
+      "milestones": [
+        "Expanded from startup hiring focus to enterprise recruiting operations support.",
+        "Developed deeper analytics and governance controls for distributed teams."
+      ],
+      "unique_insight": "Greenhouse is strongest when teams enforce strict scorecard discipline and centralized hiring governance."
+    },
+    {
+      "slug": "lever-profile",
+      "label": "Lever",
+      "category_slug": "product-manager",
+      "verified_facts": [
+        "Combines ATS and candidate relationship management approaches.",
+        "Frequently adopted by teams balancing inbound and outbound hiring."
+      ],
+      "milestones": [
+        "Scaled adoption in high-growth recruiting functions.",
+        "Expanded integration ecosystem for workflow automation."
+      ],
+      "unique_insight": "Lever performs best when teams need unified sourcing and pipeline workflow visibility."
+    },
+    {
+      "slug": "ashby-profile",
+      "label": "Ashby",
+      "category_slug": "engineering-manager",
+      "verified_facts": [
+        "Positioned around analytics depth and configurable recruiting workflows.",
+        "Adopted by operations-focused teams prioritizing reporting quality."
+      ],
+      "milestones": [
+        "Introduced integrated scheduling and analytics workflow features.",
+        "Expanded governance controls for larger recruiting organizations."
+      ],
+      "unique_insight": "Ashby is differentiated by analytics-first decision support for recruiter and manager collaboration."
+    }
+  ]
+}
