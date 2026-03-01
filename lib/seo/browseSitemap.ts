@@ -6,7 +6,6 @@ import { buildWhere } from '@/lib/jobs/queryJobs'
 import { SALARY_TIERS, type SalaryTierId } from '@/lib/jobs/salaryTiers'
 import { prisma } from '@/lib/prisma'
 import { isTier1Role } from '@/lib/roles/canonicalSlugs'
-import { countrySlugToCode } from '@/lib/seo/countrySlug'
 import {
   CITY_TARGETS,
   INDUSTRY_TARGETS,
@@ -124,12 +123,6 @@ export async function buildBrowseSitemapReport(
   const baseWhere = buildWhere({} as any)
   const remoteWhere = buildWhere({ remoteOnly: true } as any)
 
-  const countryCodes = uniq(
-    LOCATIONS.filter((l) => l.code !== 'remote')
-      .map((l) => countrySlugToCode(l.code))
-      .filter(Boolean) as string[],
-  )
-
   const stateCodes = uniq(STATE_TARGETS.map((s) => s.code.toUpperCase()))
   const industryLabels = uniq(INDUSTRY_TARGETS.map((i) => i.label))
   const citySlugs = uniq(CITY_TARGETS.map((c) => c.slug))
@@ -144,14 +137,9 @@ export async function buildBrowseSitemapReport(
       .filter(Boolean),
   ]) as string[]
 
-  const [remoteTotal, countryRows, stateRows, industryRows, cityRows, roleRows, remoteRoleRows, roleCityRows] =
+  const [remoteTotal, stateRows, industryRows, cityRows, roleRows, remoteRoleRows, roleCityRows] =
     await Promise.all([
       prisma.job.count({ where: remoteWhere }),
-      prisma.job.groupBy({
-        by: ['countryCode'],
-        where: { ...baseWhere, countryCode: { in: countryCodes } },
-        _count: { _all: true },
-      }),
       prisma.job.groupBy({
         by: ['stateCode'],
         where: { ...baseWhere, stateCode: { in: stateCodes } },
@@ -191,13 +179,6 @@ export async function buildBrowseSitemapReport(
         _count: { _all: true },
       }),
     ])
-
-  const countryCounts = mapCountRows(
-    countryRows.map((r: any) => ({
-      key: (r as any).countryCode as string | null,
-      count: Number((r as any)._count?._all ?? 0),
-    })),
-  )
 
   const stateCounts = mapCountRows(
     stateRows.map((r: any) => ({
@@ -340,7 +321,7 @@ export async function buildBrowseSitemapReport(
     }
   }
 
-  // Country/location pages
+  // Root remote listing only (country/location pages live in sitemap-country.xml)
   for (const loc of LOCATIONS) {
     if (loc.code === 'remote') {
       candidates.push({
@@ -348,17 +329,7 @@ export async function buildBrowseSitemapReport(
         total: remoteTotal,
         indexable: remoteTotal >= minJobs,
       })
-      continue
     }
-
-    const countryCode = countrySlugToCode(loc.code)
-    const total = countryCode ? (countryCounts.get(countryCode) ?? 0) : 0
-    candidates.push({
-      path: `/jobs/location/${loc.code}`,
-      total,
-      indexable: total >= minJobs,
-      reason: countryCode ? undefined : 'unknown_country_slug',
-    })
   }
 
   // States

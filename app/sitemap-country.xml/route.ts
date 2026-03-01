@@ -36,12 +36,12 @@ export async function GET() {
 
         const slug = countryCodeToSlug(countryCode)
         const lastmod = (agg._max.updatedAt ?? new Date()).toISOString()
-      return {
-        url: `${SITE_URL}/jobs/country/${slug}`,
-        lastModified: lastmod,
-        changeFrequency: 'daily',
-        priority: 0.8,
-      }
+        return {
+          url: `${SITE_URL}/jobs/location/${slug}`,
+          lastModified: lastmod,
+          changeFrequency: 'daily',
+          priority: 0.8,
+        }
       }),
     )
   ).filter(Boolean) as Array<{

@@ -1,174 +1,28 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
-import JobList from '../../../components/JobList'
-import { getSiteUrl } from '../../../../lib/seo/site'
+import { notFound, permanentRedirect } from 'next/navigation'
+
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
-import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
-import { redirect } from 'next/navigation'
-import { isCountryPageIndexable } from '../../../../lib/seo/indexabilityGates'
 
 export const revalidate = 300
 
-const SITE_URL = getSiteUrl()
+export default async function LegacyCountryRedirectPage({
+  params,
+}: {
+  params: Promise<{ code: string }>
+}) {
+  const { code: rawCode } = await params
+  const code = rawCode.toLowerCase()
 
-const COUNTRIES: Record<string, { name: string; flag: string }> = {
-  'united-states': { name: 'United States', flag: '🇺🇸' },
-  'united-kingdom': { name: 'United Kingdom', flag: '🇬🇧' },
-  canada: { name: 'Canada', flag: '🇨🇦' },
-  germany: { name: 'Germany', flag: '🇩🇪' },
-  australia: { name: 'Australia', flag: '🇦🇺' },
-  france: { name: 'France', flag: '🇫🇷' },
-  netherlands: { name: 'Netherlands', flag: '🇳🇱' },
-  sweden: { name: 'Sweden', flag: '🇸🇪' },
-}
+  let canonicalSlug: string | null = null
 
-function getSalaryLabel(code: string): string {
-  return getThresholdLabelForCountry(code)
-}
-
-export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
-  const { code } = await params
-  const country = COUNTRIES[code.toLowerCase()]
-  if (!country) return { title: 'Not Found' }
-
-  // Support legacy code-based slugs by redirecting
-  const legacyCode = countrySlugToCode(code)
-  if (legacyCode) {
-    const legacySlug = countryCodeToSlug(legacyCode)
-    if (legacySlug && COUNTRIES[legacySlug.toLowerCase()]) {
-      // canonical will use the full-name slug
-    }
+  if (code.length === 2) {
+    canonicalSlug = countryCodeToSlug(code.toUpperCase())
+  } else if (countrySlugToCode(code)) {
+    canonicalSlug = code
   }
 
-  const resolvedCode = countrySlugToCode(code)
-  if (!resolvedCode) return { title: 'Not Found' }
-
-  const { total } = await queryJobs({
-    countryCode: resolvedCode.toUpperCase(),
-    isHundredKLocal: true,
-    pageSize: 1,
-  })
-
-  const title = total > 0
-    ? `${getSalaryLabel(resolvedCode)} Jobs in ${country.name} - ${total.toLocaleString()} Positions | Six Figure Jobs`
-    : `${getSalaryLabel(resolvedCode)} Jobs in ${country.name} | Six Figure Jobs`
-
-  const description = total > 0
-    ? `Find ${total.toLocaleString()} high-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions starting at ${getSalaryLabel(resolvedCode)}. Engineering, product, data roles. Updated daily.`
-    : `High-salary tech jobs in ${country.name}. Remote, hybrid, and on-site positions starting at ${getSalaryLabel(resolvedCode)} at top companies.`
-
-  const allowIndex = isCountryPageIndexable(total)
-  const canonical = `${SITE_URL}/jobs/country/${code.toLowerCase()}`
-
-  return {
-    title,
-    description,
-    alternates: { canonical },
-    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
-      title,
-      description,
-      url: canonical,
-      siteName: 'Six Figure Jobs',
-      type: 'website',
-      images: [
-        {
-          url: `${SITE_URL}/og-country-${code.toLowerCase()}.png`,
-          width: 1200,
-          height: 630,
-          alt: `${getSalaryLabel(resolvedCode)} Jobs in ${country.name}`,
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [`${SITE_URL}/og-country-${code.toLowerCase()}.png`],
-    },
-  }
-}
-
-export default async function CountryPage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params
-  const normalizedSlug = code.toLowerCase()
-  const country = COUNTRIES[normalizedSlug]
-
-  // Redirect legacy code slugs (us/gb/ca) to full-name slug if present
-  if (!country) {
-    const asCode = code.toUpperCase()
-    const slugFromCode = countryCodeToSlug(asCode)
-    if (slugFromCode && COUNTRIES[slugFromCode]) {
-      redirect(`/jobs/country/${slugFromCode}`)
-    }
+  if (!canonicalSlug) {
     notFound()
   }
 
-  const countryCode = countrySlugToCode(code)
-  if (!countryCode) notFound()
-  const salaryLabel = getSalaryLabel(countryCode)
-
-  const { jobs, total } = await queryJobs({
-    countryCode: countryCode.toUpperCase(),
-    isHundredKLocal: true,
-    pageSize: 40,
-  })
-
-  return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
-        <ol className="flex items-center gap-1">
-          <li><Link href="/">Home</Link></li>
-          <li className="px-1">/</li>
-          <li><Link href="/jobs/100k-plus">Jobs</Link></li>
-          <li className="px-1">/</li>
-          <li>{country.flag} {country.name}</li>
-        </ol>
-      </nav>
-
-      <h1 className="mb-4 text-2xl font-semibold text-slate-50">
-        {country.flag} {salaryLabel} Jobs in {country.name} ({total.toLocaleString()})
-      </h1>
-      <p className="mb-6 text-sm text-slate-300">
-        High-salary tech positions (starting {salaryLabel}) in {country.name} from top companies.
-      </p>
-
-      {jobs.length === 0 ? (
-        <p className="text-slate-400">No jobs found. Try exploring all {salaryLabel} opportunities.</p>
-      ) : (
-        <JobList jobs={jobs as JobWithCompany[]} />
-      )}
-
-      <section className="mt-12 rounded-xl border border-slate-800 bg-slate-950/50 p-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">Related Searches</h2>
-        <div className="grid gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
-          <Link href="/jobs/category/engineering" className="text-blue-400 hover:underline">
-            Engineering Jobs in {country.name}
-          </Link>
-          <Link href="/jobs/category/product" className="text-blue-400 hover:underline">
-            Product Jobs in {country.name}
-          </Link>
-          <Link href="/jobs/level/senior" className="text-blue-400 hover:underline">
-            Senior Jobs in {country.name}
-          </Link>
-          <Link href="/jobs/200k-plus" className="text-blue-400 hover:underline">
-            $200k+ Jobs in {country.name}
-          </Link>
-          <Link href="/jobs/100k-plus" className="text-blue-400 hover:underline">
-            All {salaryLabel} Jobs
-          </Link>
-          {Object.entries(COUNTRIES)
-            .filter(([c]) => c !== code.toLowerCase())
-            .slice(0, 3)
-            .map(([c, info]) => (
-              <Link key={c} href={`/jobs/country/${c}`} className="text-blue-400 hover:underline">
-                Jobs in {info.name}
-              </Link>
-            ))}
-        </div>
-      </section>
-    </main>
-  )
+  permanentRedirect(`/jobs/location/${canonicalSlug}`)
 }

@@ -127,7 +127,7 @@ export default async function LevelPage({
           <Link href="/jobs/category/product" className="text-blue-400 hover:underline">
             {info.label} Product Jobs
           </Link>
-          <Link href="/jobs/country/united-states" className="text-blue-400 hover:underline">
+          <Link href="/jobs/location/united-states" className="text-blue-400 hover:underline">
             {info.label} Jobs in USA
           </Link>
           <Link href="/jobs/200k-plus" className="text-blue-400 hover:underline">

@@ -6,10 +6,12 @@ import {
   MIN_COMPANY_INDEXABLE_JOBS,
   MIN_COUNTRY_INDEXABLE_JOBS,
   MIN_REMOTE_ROLE_INDEXABLE_JOBS,
+  MIN_ROLE_FILTER_INDEXABLE_JOBS,
   isCityPageIndexable,
   isCompanyPageIndexable,
   isCountryPageIndexable,
   isRemoteRolePageIndexable,
+  isRoleFilterPageIndexable,
 } from '../../lib/seo/indexabilityGates'
 
 function readRepoFile(relativePath: string): string {
@@ -54,5 +56,14 @@ describe('indexability gates alignment', () => {
 
     expect(remotePage).toContain('isRemoteRolePageIndexable')
     expect(remoteSitemap).toContain('isRemoteRolePageIndexable')
+  })
+
+  it('uses role filter threshold in role/filter metadata robots gate', () => {
+    expect(MIN_ROLE_FILTER_INDEXABLE_JOBS).toBe(5)
+    expect(isRoleFilterPageIndexable(4)).toBe(false)
+    expect(isRoleFilterPageIndexable(5)).toBe(true)
+
+    const roleFilterPage = readRepoFile('app/jobs/[role]/[filter]/page.tsx')
+    expect(roleFilterPage).toContain('isRoleFilterPageIndexable')
   })
 })

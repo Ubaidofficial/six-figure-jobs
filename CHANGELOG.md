@@ -1,3 +1,13 @@
+# 2.8.25 (2026-03-01)
+
+
+### Bug Fixes
+
+* consolidate country-family canonical URLs to `/jobs/location/*` and remove duplicate country URL emission from browse sitemap generation
+* add role-filter robots indexability gate (`MIN_ROLE_FILTER_INDEXABLE_JOBS`) and regression coverage to prevent thin salary filter pages from being indexed too early
+* add production noindex guard step in daily scrape workflow and publish a dedicated GSC-safe pSEO publishing guide
+
+
 # 2.8.24 (2026-02-27)
 
 

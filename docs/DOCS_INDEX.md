@@ -16,3 +16,4 @@ If docs conflict → follow order.
 ## Recent Updates
 - 2025-12-20: Added SCRAPER_SPEC.md
 - 2025-12-20: Updated .chatgpt-rules to v2.7
+- 2026-03-01: Added PSEO_PUBLISHING_GSC_GUIDE.md

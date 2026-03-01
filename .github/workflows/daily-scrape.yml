@@ -179,6 +179,32 @@ jobs:
           npx tsx scripts/seedJobSlices.ts | tee /tmp/daily-scrape-slices-seed.log
           npx tsx scripts/bootstrapCountrySalarySlices.ts | tee /tmp/daily-scrape-slices-country.log
 
+      - name: SEO noindex guard (production sample)
+        if: steps.prep.outputs.dry_run != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ATTEMPTS=3
+          DELAY_SECONDS=90
+
+          for attempt in $(seq 1 "$ATTEMPTS"); do
+            echo "SEO validation attempt ${attempt}/${ATTEMPTS}"
+
+            if SEO_BASE_URL=https://www.6figjobs.com SEO_SAMPLE_PER_SITEMAP=100 SEO_STRICT=1 SEO_TIMEOUT_MS=30000 SEO_CONCURRENCY=8 npm run seo:validate; then
+              echo "SEO noindex guard passed."
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$ATTEMPTS" ]; then
+              echo "SEO noindex guard failed after retries."
+              exit 1
+            fi
+
+            echo "Retrying in ${DELAY_SECONDS}s..."
+            sleep "$DELAY_SECONDS"
+          done
+
       - name: Upload scrape logs
         if: always()
         uses: actions/upload-artifact@v4

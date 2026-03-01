@@ -31,8 +31,7 @@ describe('country sitemap route filters', () => {
     const xml = await response.text()
 
     expect(response.status).toBe(200)
-    expect(xml).toContain('/jobs/country/united-kingdom')
-    expect(xml).not.toContain('/jobs/country/united-states')
+    expect(xml).toContain('/jobs/location/united-kingdom')
+    expect(xml).not.toContain('/jobs/location/united-states')
   })
 })
-
