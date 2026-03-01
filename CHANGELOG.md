@@ -1,3 +1,14 @@
+# 2.8.26 (2026-03-01)
+
+
+### Bug Fixes
+
+* omit `sitemap-remote.xml` and `sitemap-slices.xml` from `sitemap.xml`/`robots.txt` when those families have zero URL entries to prevent empty-child sitemap integrity failures
+* add remote/slices sitemap availability helpers and regression coverage for conditional sitemap index + robots declarations
+* archive legacy salary debug/cleanup variants and remove obsolete `dailyScrape.ts` entrypoint
+* repoint board-specific npm scrape commands to `dailyScrapeV2` so package scripts no longer reference missing files
+
+
 # 2.8.25 (2026-03-01)
 
 

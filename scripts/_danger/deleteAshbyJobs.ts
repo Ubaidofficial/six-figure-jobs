@@ -23,7 +23,7 @@ async function deleteAshbyJobs() {
   })
 
   __slog(`✅ Deleted ${result.count} Ashby jobs\n`)
-  __slog('Now run: npx tsx scripts/dailyScrape.ts\n')
+  __slog('Now run: npx tsx scripts/dailyScrapeV2.ts --mode=all\n')
 }
 
 deleteAshbyJobs()

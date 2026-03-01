@@ -158,3 +158,12 @@ export async function buildSliceSitemapEntries(
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([loc, lastmod]) => ({ loc, lastmod }))
 }
+
+export async function hasSliceSitemapEntries(): Promise<boolean> {
+  const [priority, longtail] = await Promise.all([
+    buildSliceSitemapEntries('priority', { limit: 1 }),
+    buildSliceSitemapEntries('longtail', { limit: 1 }),
+  ])
+
+  return priority.length > 0 || longtail.length > 0
+}

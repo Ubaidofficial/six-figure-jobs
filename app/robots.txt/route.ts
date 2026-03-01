@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server'
 import { getSiteUrl } from '../../lib/seo/site'
 import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
+import { hasRemoteRoleSitemapEntries } from '../../lib/seo/remoteSitemap'
+import { hasSliceSitemapEntries } from '../../lib/seo/slicesSitemap'
 
 const SITE_URL = getSiteUrl()
 
@@ -17,7 +19,11 @@ export async function GET() {
     })
   }
 
-  const cityUrls = await getCitySitemapUrls()
+  const [cityUrls, hasRemoteUrls, hasSliceUrls] = await Promise.all([
+    getCitySitemapUrls(),
+    hasRemoteRoleSitemapEntries(),
+    hasSliceSitemapEntries(),
+  ])
   const body = [
     'User-agent: *',
     'Allow: /',
@@ -36,12 +42,12 @@ export async function GET() {
     `Sitemap: ${SITE_URL}/sitemap-company.xml`,
     ...(cityUrls.length > 0 ? [`Sitemap: ${SITE_URL}/sitemap-city.xml`] : []),
     `Sitemap: ${SITE_URL}/sitemap-salary.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-remote.xml`,
+    ...(hasRemoteUrls ? [`Sitemap: ${SITE_URL}/sitemap-remote.xml`] : []),
     `Sitemap: ${SITE_URL}/sitemap-country.xml`,
     `Sitemap: ${SITE_URL}/sitemap-category.xml`,
     `Sitemap: ${SITE_URL}/sitemap-level.xml`,
     `Sitemap: ${SITE_URL}/sitemap-browse.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-slices.xml`,
+    ...(hasSliceUrls ? [`Sitemap: ${SITE_URL}/sitemap-slices.xml`] : []),
     '',
   ].join('\n')
 

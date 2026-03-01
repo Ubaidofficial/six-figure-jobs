@@ -53,9 +53,11 @@ describe('indexability gates alignment', () => {
 
     const remotePage = readRepoFile('app/remote/[role]/page.tsx')
     const remoteSitemap = readRepoFile('app/sitemap-remote.xml/route.ts')
+    const remoteSitemapHelper = readRepoFile('lib/seo/remoteSitemap.ts')
 
     expect(remotePage).toContain('isRemoteRolePageIndexable')
-    expect(remoteSitemap).toContain('isRemoteRolePageIndexable')
+    expect(remoteSitemap).toContain('collectRemoteRoleRows')
+    expect(remoteSitemapHelper).toContain('isRemoteRolePageIndexable')
   })
 
   it('uses role filter threshold in role/filter metadata robots gate', () => {
