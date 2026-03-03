@@ -7,6 +7,7 @@
 * add remote/slices sitemap availability helpers and regression coverage for conditional sitemap index + robots declarations
 * archive legacy salary debug/cleanup variants and remove obsolete `dailyScrape.ts` entrypoint
 * repoint board-specific npm scrape commands to `dailyScrapeV2` so package scripts no longer reference missing files
+* make robots sitemap regression tests environment-agnostic so CI `SITE_URL` host differences do not produce false failures
 
 
 # 2.8.25 (2026-03-01)
