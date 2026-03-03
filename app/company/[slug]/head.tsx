@@ -3,6 +3,7 @@
 
 import { prisma } from '../../../lib/prisma'
 import { getSiteUrl } from '../../../lib/seo/site'
+import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 
 const SITE_URL = getSiteUrl()
 
@@ -15,17 +16,24 @@ export default async function Head({
 
   const company = await prisma.company.findUnique({
     where: { slug },
-    select: { slug: true, jobCount: true, updatedAt: true },
+    select: { id: true, slug: true },
   })
 
   if (!company) return null
+
+  const liveJobCount = await prisma.job.count({
+    where: {
+      isExpired: false,
+      companyId: company.id,
+    },
+  })
 
   const canonical = `${SITE_URL}/company/${company.slug}`
 
   return (
     <>
       <link rel="canonical" href={canonical} />
-      {(!company.jobCount || company.jobCount <= 0) && (
+      {!isCompanyPageIndexable(liveJobCount) && (
         <meta name="robots" content="noindex,follow" />
       )}
     </>

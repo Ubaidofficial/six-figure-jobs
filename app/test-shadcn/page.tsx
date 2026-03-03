@@ -31,6 +31,7 @@ export default function TestShadcnPage() {
     isRemote: true,
     salaryMin: 180000,
     salaryMax: 250000,
+  currency: "USD",
     skills: ['React', 'TypeScript', 'Node.js', 'AWS'],
     postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
   }
@@ -52,9 +53,9 @@ export default function TestShadcnPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-2">
-              <Button>Primary Button</Button>
+              <Button variant="primary">Primary</Button>
               <Button variant="secondary">Secondary</Button>
-              <Button variant="outline">Outline</Button>
+              <Button variant="tertiary">Tertiary</Button>
               <Button variant="ghost">Ghost</Button>
             </div>
 

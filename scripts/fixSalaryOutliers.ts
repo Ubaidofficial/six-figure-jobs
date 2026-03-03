@@ -2,7 +2,12 @@
 // Lists jobs with maxAnnual > $1M and clamps them to null to avoid UI pollution.
 // Usage: npx tsx scripts/fixSalaryOutliers.ts
 
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const OUTLIER_THRESHOLD = 1_000_000
 
@@ -22,11 +27,11 @@ async function main() {
   })
 
   if (jobs.length === 0) {
-    console.log('No salary outliers found.')
+    __slog('No salary outliers found.')
     return
   }
 
-  console.log(`Found ${jobs.length} outlier jobs. Clamping salaries...`)
+  __slog(`Found ${jobs.length} outlier jobs. Clamping salaries...`)
 
   for (const job of jobs) {
     await prisma.job.update({
@@ -43,12 +48,12 @@ async function main() {
     })
   }
 
-  console.log('Clamped outlier salaries.')
+  __slog('Clamped outlier salaries.')
 }
 
 main()
   .catch((err) => {
-    console.error(err)
+    __serr(err)
     process.exitCode = 1
   })
   .finally(async () => {

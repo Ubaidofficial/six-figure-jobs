@@ -1,7 +1,10 @@
 // lib/seo/regions.ts
 // Target regions + high-salary thresholds used for programmatic slices
 
-import { HIGH_SALARY_THRESHOLDS } from '../currency/thresholds'
+import {
+  HIGH_SALARY_THRESHOLDS,
+  getHighSalaryThresholdAnnual,
+} from '../currency/thresholds'
 
 export type TargetCountry = {
   code: string
@@ -48,13 +51,13 @@ export const REMOTE_REGIONS: RemoteRegion[] = [
 
 /**
  * Returns the high-salary annual threshold for the country,
- * falling back to USD 100k if currency is unknown.
+ * or null if unknown/unsupported.
  */
-export function highSalaryThresholdForCountry(code: string): number {
+export function highSalaryThresholdForCountry(code: string): number | null {
   const entry = TARGET_COUNTRIES.find(
     (c) => c.code.toUpperCase() === code.toUpperCase(),
   )
-  if (!entry) return HIGH_SALARY_THRESHOLDS.USD
+  if (!entry) return null
 
-  return HIGH_SALARY_THRESHOLDS[entry.currency] ?? HIGH_SALARY_THRESHOLDS.USD
+  return getHighSalaryThresholdAnnual(entry.currency)
 }

@@ -1,0 +1,5 @@
+           id           | has_kr | has_sek | has_sgd | has_dollar 
+------------------------+--------+---------+---------+------------
+ ats:greenhouse:7454771 | t      | f       | f       | f
+(1 row)
+

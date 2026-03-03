@@ -10,9 +10,14 @@
 // Run with:
 //   npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/fixLeverSlugs.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { scrapeLever } from '../lib/scrapers/ats/lever'
 import type { AtsJob } from '../lib/scrapers/ats/types'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -72,7 +77,7 @@ async function resolveFinalUrl(url: string): Promise<string | null> {
     const finalUrl = res.url || url
     return finalUrl.replace(/\/$/, '')
   } catch (err: any) {
-    console.error(`  ⚠️ Error resolving ${url}: ${err?.message || err}`)
+    __serr(`  ⚠️ Error resolving ${url}: ${err?.message || err}`)
     return null
   }
 }
@@ -82,7 +87,7 @@ async function checkLeverJobs(atsSlugOrUrl: string): Promise<number | null> {
     const jobs: AtsJob[] = await scrapeLever(atsSlugOrUrl)
     return jobs.length
   } catch (err: any) {
-    console.error(
+    __serr(
       `  ⚠️ scrapeLever error for ${atsSlugOrUrl}: ${err?.message || err}`,
     )
     return null
@@ -90,7 +95,7 @@ async function checkLeverJobs(atsSlugOrUrl: string): Promise<number | null> {
 }
 
 async function main() {
-  console.log('🔧 Fixing Lever slugs based on redirects...\n')
+  __slog('🔧 Fixing Lever slugs based on redirects...\n')
 
   const companies = await prisma.company.findMany({
     where: {
@@ -106,7 +111,7 @@ async function main() {
     orderBy: { name: 'asc' },
   })
 
-  console.log(`Found ${companies.length} Lever companies to inspect.\n`)
+  __slog(`Found ${companies.length} Lever companies to inspect.\n`)
 
   let fixedCount = 0
   let unchangedCount = 0
@@ -114,36 +119,36 @@ async function main() {
 
   for (const c of companies) {
     const currentUrl = normalizeLeverUrl(c.atsUrl as string)
-    console.log(`▶ ${c.name}`)
-    console.log(`   Current atsUrl:  ${currentUrl}`)
-    console.log(`   Current atsSlug: ${c.atsSlug || '(none)'}`)
+    __slog(`▶ ${c.name}`)
+    __slog(`   Current atsUrl:  ${currentUrl}`)
+    __slog(`   Current atsSlug: ${c.atsSlug || '(none)'}`)
 
     const initialSlug =
       c.atsSlug || extractLeverSlug(currentUrl) || '(unknown)'
 
     const finalUrl = await resolveFinalUrl(currentUrl)
     if (!finalUrl) {
-      console.log('   ❌ Could not resolve final URL, skipping.\n')
+      __slog('   ❌ Could not resolve final URL, skipping.\n')
       errorCount++
       continue
     }
 
     const finalSlug = extractLeverSlug(finalUrl)
     if (!finalSlug) {
-      console.log(`   ❌ Could not extract slug from final URL: ${finalUrl}\n`)
+      __slog(`   ❌ Could not extract slug from final URL: ${finalUrl}\n`)
       errorCount++
       continue
     }
 
-    console.log(`   → Final URL:   ${finalUrl}`)
-    console.log(`   → Initial slug: ${initialSlug}`)
-    console.log(`   → Final slug:   ${finalSlug}`)
+    __slog(`   → Final URL:   ${finalUrl}`)
+    __slog(`   → Initial slug: ${initialSlug}`)
+    __slog(`   → Final slug:   ${finalSlug}`)
 
     let jobCount: number | null = null
     if (CHECK_LEVER_JOBS) {
       jobCount = await checkLeverJobs(finalSlug)
       if (jobCount != null) {
-        console.log(`   → scrapeLever("${finalSlug}") jobs: ${jobCount}`)
+        __slog(`   → scrapeLever("${finalSlug}") jobs: ${jobCount}`)
       }
     }
 
@@ -153,7 +158,7 @@ async function main() {
     const urlChanged = currentUrl !== normalizedFinalUrl
 
     if (!slugChanged && !urlChanged) {
-      console.log('   ✅ Slug/URL already up to date.\n')
+      __slog('   ✅ Slug/URL already up to date.\n')
       unchangedCount++
       continue
     }
@@ -167,30 +172,30 @@ async function main() {
         },
       })
 
-      console.log(
+      __slog(
         `   ✅ Updated atsSlug="${finalSlug}", atsUrl="${normalizedFinalUrl}"\n`,
       )
       fixedCount++
     } catch (err: any) {
-      console.error(
+      __serr(
         `   💥 Failed to update company ${c.name}: ${err?.message || err}\n`,
       )
       errorCount++
     }
   }
 
-  console.log('════════════════════════════════════════════')
-  console.log(' Lever slug fix complete')
-  console.log('════════════════════════════════════════════')
-  console.log(`  Updated companies:   ${fixedCount}`)
-  console.log(`  Unchanged companies: ${unchangedCount}`)
-  console.log(`  Errors:              ${errorCount}`)
+  __slog('════════════════════════════════════════════')
+  __slog(' Lever slug fix complete')
+  __slog('════════════════════════════════════════════')
+  __slog(`  Updated companies:   ${fixedCount}`)
+  __slog(`  Unchanged companies: ${unchangedCount}`)
+  __slog(`  Errors:              ${errorCount}`)
 }
 
 if (require.main === module) {
   main()
     .catch((err) => {
-      console.error('\n💥 Script failed:', err)
+      __serr('\n💥 Script failed:', err)
       process.exit(1)
     })
     .finally(async () => {

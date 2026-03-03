@@ -5,7 +5,8 @@ import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl } from '../../../../lib/seo/site'
 
-export const revalidate = 300
+export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 const SITE_URL = getSiteUrl()
 
@@ -17,31 +18,34 @@ const LEVELS: Record<string, { label: string; description: string }> = {
   executive: { label: 'Executive', description: 'Executive and C-level positions' },
 }
 
-export async function generateStaticParams() {
-  return Object.keys(LEVELS).map(level => ({ level }))
-}
-
-export async function generateMetadata({ params }: { params: Promise<{ level: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ level: string }>
+}): Promise<Metadata> {
   const { level } = await params
   const info = LEVELS[level]
   if (!info) return { title: 'Not Found' }
 
+  // Runs at request-time (cached via revalidate), not during build.
   const { total } = await queryJobs({
     experienceLevel: level,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     pageSize: 1,
   })
 
   const allowIndex = total >= 3
   const canonical = `${SITE_URL}/jobs/level/${level}`
 
-  const title = total > 0
-    ? `${info.label} $100k+ Jobs - ${total.toLocaleString()} Positions | Six Figure Jobs`
-    : `${info.label} $100k+ Jobs | Six Figure Jobs`
+  const title =
+    total > 0
+      ? `${info.label} $100k+ Jobs - ${total.toLocaleString()} Positions | Six Figure Jobs`
+      : `${info.label} $100k+ Jobs | Six Figure Jobs`
 
-  const description = total > 0
-    ? `Find ${total.toLocaleString()} ${info.label.toLowerCase()} tech jobs paying $100k+. ${info.description} at top companies. Updated daily.`
-    : `${info.description} paying $100k+ at top tech companies.`
+  const description =
+    total > 0
+      ? `Find ${total.toLocaleString()} ${info.label.toLowerCase()} tech jobs paying $100k+. ${info.description} at top companies. Updated daily.`
+      : `${info.description} paying $100k+ at top tech companies.`
 
   return {
     title,
@@ -72,14 +76,18 @@ export async function generateMetadata({ params }: { params: Promise<{ level: st
   }
 }
 
-export default async function LevelPage({ params }: { params: Promise<{ level: string }> }) {
+export default async function LevelPage({
+  params,
+}: {
+  params: Promise<{ level: string }>
+}) {
   const { level } = await params
   const info = LEVELS[level]
   if (!info) notFound()
 
   const { jobs, total } = await queryJobs({
     experienceLevel: level,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     pageSize: 40,
   })
 
@@ -87,9 +95,13 @@ export default async function LevelPage({ params }: { params: Promise<{ level: s
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
         <ol className="flex items-center gap-1">
-          <li><Link href="/">Home</Link></li>
+          <li>
+            <Link href="/">Home</Link>
+          </li>
           <li className="px-1">/</li>
-          <li><Link href="/jobs/100k-plus">Jobs</Link></li>
+          <li>
+            <Link href="/jobs/100k-plus">Jobs</Link>
+          </li>
           <li className="px-1">/</li>
           <li>{info.label}</li>
         </ol>
@@ -101,7 +113,7 @@ export default async function LevelPage({ params }: { params: Promise<{ level: s
       <p className="mb-6 text-sm text-slate-300">{info.description}</p>
 
       {jobs.length === 0 ? (
-        <p className="text-slate-400">No jobs found.</p>
+        <p className="text-slate-400">No jobs found. Try exploring all $100k+ opportunities.</p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}
@@ -115,7 +127,7 @@ export default async function LevelPage({ params }: { params: Promise<{ level: s
           <Link href="/jobs/category/product" className="text-blue-400 hover:underline">
             {info.label} Product Jobs
           </Link>
-          <Link href="/jobs/country/united-states" className="text-blue-400 hover:underline">
+          <Link href="/jobs/location/united-states" className="text-blue-400 hover:underline">
             {info.label} Jobs in USA
           </Link>
           <Link href="/jobs/200k-plus" className="text-blue-400 hover:underline">

@@ -2,7 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { prisma } from '../../../../../lib/prisma'
 import {
   queryJobs,
@@ -11,6 +11,7 @@ import {
 import { buildJobSlugHref } from '../../../../../lib/jobs/jobSlug'
 import JobList from '../../../../components/JobList'
 import { SITE_NAME, getSiteUrl } from '../../../../../lib/seo/site'
+import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 
 export const revalidate = 300
 
@@ -128,69 +129,6 @@ function buildFilterHref(
   return query ? `${basePath}?${query}` : basePath
 }
 
-function buildJobListJsonLd(
-  roleSlug: string,
-  countryCode: string,
-  jobs: JobWithCompany[],
-  page: number
-) {
-  const roleName = prettyRole(roleSlug)
-  const cc = prettyCountryCode(countryCode)
-
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `Remote ${roleName} jobs in ${cc} paying $100k+`,
-    itemListElement: jobs.map((job, index) => {
-      const href = buildJobSlugHref(job)
-
-      return {
-        '@type': 'ListItem',
-        position: (page - 1) * PAGE_SIZE + index + 1,
-        item: {
-          '@type': 'JobPosting',
-          title: job.title,
-          description: job.descriptionHtml || undefined,
-          datePosted: job.postedAt?.toISOString(),
-          employmentType: (job as any).type || undefined,
-          hiringOrganization: {
-            '@type': 'Organization',
-            name: job.companyRef?.name || job.company,
-            sameAs: job.companyRef?.website || undefined,
-          },
-          jobLocationType: job.remote ? 'TELECOMMUTE' : undefined,
-          jobLocation: {
-            '@type': 'Place',
-            address: {
-              '@type': 'PostalAddress',
-              addressCountry: job.countryCode || countryCode,
-              addressLocality: job.city || undefined,
-            },
-          },
-          baseSalary:
-            job.minAnnual || job.maxAnnual
-              ? {
-                  '@type': 'MonetaryAmount',
-                  currency: job.currency || 'USD',
-                  value: {
-                    '@type': 'QuantitativeValue',
-                    minValue: job.minAnnual
-                      ? Number(job.minAnnual)
-                      : undefined,
-                    maxValue: job.maxAnnual
-                      ? Number(job.maxAnnual)
-                      : undefined,
-                    unitText: 'YEAR',
-                  },
-                }
-              : undefined,
-          url: `${SITE_URL}${href}`,
-        },
-      }
-    }),
-  }
-}
-
 /* -------------------------------------------------------------------------- */
 /* Metadata                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -226,7 +164,7 @@ export async function generateMetadata({
     return qs ? `/remote/${roleSlug}/country/${countryParam}?${qs}` : `/remote/${roleSlug}/country/${countryParam}`
   })()
   if (requested !== canonicalPathname) {
-    redirect(canonicalPathname)
+    permanentRedirect(canonicalPathname)
   }
 
   const minParam = normalizeStringParam(sp.min)
@@ -257,6 +195,10 @@ export async function generateMetadata({
     alternates: {
       canonical: canonicalUrl,
     },
+    robots:
+      totalJobs >= 3
+        ? { index: true, follow: true }
+        : { index: false, follow: true },
     openGraph: {
       title,
       description: `Find remote ${roleName} roles in ${countryCode} with at least $100k total compensation.`,
@@ -303,7 +245,7 @@ export default async function RemoteRoleCountryPage({
   // Sanity check: does this combination exist at all?
   const hasAnyJobs = await prisma.job.count({
     where: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       ...( { roleSlug } as any ),
       countryCode,
     },
@@ -327,7 +269,12 @@ export default async function RemoteRoleCountryPage({
       ? Math.max(1, Math.ceil(data.total / PAGE_SIZE))
       : 1
 
-  const jsonLd = buildJobListJsonLd(roleSlug, countryCode, jobs, page)
+  const jsonLd = buildItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs,
+    page,
+    pageSize: PAGE_SIZE,
+  })
   const salaryOptions = [100_000, 200_000, 300_000, 400_000]
 
   return (

@@ -1,28 +1,43 @@
 // lib/currency/thresholds.ts
 // Defines what counts as a "High Salary" in different currencies.
-// Values are roughly normalized to equivalent purchasing power of $100k USD in tech hubs.
+// Keep this as the SINGLE source of truth for per-currency thresholds.
 
-export const HIGH_SALARY_THRESHOLDS: Record<string, number> = {
-  USD: 100000, // United States
-  EUR: 80000,  // Europe (approx ~85k USD, adjusted for lower cost of living/taxes)
-  GBP: 70000,  // UK (approx ~88k USD)
-  CAD: 120000, // Canada (approx ~88k USD)
-  AUD: 140000, // Australia (approx ~92k USD)
-  SGD: 120000, // Singapore
-  CHF: 110000, // Switzerland (High cost of living)
-  NOK: 1_000_000, // Norway (~$100k USD equivalent)
-  SEK: 1_000_000, // Sweden (~$100k USD equivalent)
-  DKK: 700_000,   // Denmark (~$100k USD equivalent)
+export const HIGH_SALARY_THRESHOLDS = {
+  USD: BigInt(100_000), // United States
+  GBP: BigInt(75_000), // United Kingdom
+  EUR: BigInt(80_000), // Eurozone
+  CAD: BigInt(120_000), // Canada
+  AUD: BigInt(140_000), // Australia
+  CHF: BigInt(90_000), // Switzerland
+  SGD: BigInt(130_000), // Singapore
+
+  // Additional currencies used across the site (keep in sync with target regions/slices)
+  NZD: BigInt(150_000), // New Zealand (roughly aligned with AU/NZ market)
+  NOK: BigInt(1_000_000), // Norway
+  SEK: BigInt(1_000_000), // Sweden
+  DKK: BigInt(700_000), // Denmark
+} as const satisfies Record<string, bigint>
+
+export type HighSalaryCurrency = keyof typeof HIGH_SALARY_THRESHOLDS
+
+export function getHighSalaryThresholdAnnual(
+  currency: string | null | undefined
+): number | null {
+  if (!currency) return null
+  const code = String(currency).trim().toUpperCase()
+  if (!code) return null
+  if (code in HIGH_SALARY_THRESHOLDS) {
+    const v = HIGH_SALARY_THRESHOLDS[code as HighSalaryCurrency]
+    return typeof v === 'bigint' ? Number(v) : null
+  }
+  return null
 }
 
-const DEFAULT_THRESHOLD_USD = 100000
-
 /**
- * Checks if a salary is considered "High" based on its currency.
+ * Checks if a salary is considered "High" based on its currency threshold.
  */
 export function isHighSalary(amount: number, currency: string): boolean {
-  const code = currency.toUpperCase()
-  const threshold = HIGH_SALARY_THRESHOLDS[code] || DEFAULT_THRESHOLD_USD
-  
+  const threshold = getHighSalaryThresholdAnnual(currency)
+  if (threshold == null) return false
   return amount >= threshold
 }

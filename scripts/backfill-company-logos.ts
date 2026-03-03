@@ -1,7 +1,12 @@
 // scripts/backfill-company-logos.ts
 // Run: npx tsx scripts/backfill-company-logos.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -58,7 +63,7 @@ async function main() {
     }
   })
 
-  console.log(`Found ${companiesWithoutLogos.length} companies without logos\n`)
+  __slog(`Found ${companiesWithoutLogos.length} companies without logos\n`)
 
   let updated = 0
   let skipped = 0
@@ -73,7 +78,7 @@ async function main() {
     }
 
     if (!domain) {
-      console.log(`⏭ Skipped: ${company.name} (no domain found)`)
+      __slog(`⏭ Skipped: ${company.name} (no domain found)`)
       skipped++
       continue
     }
@@ -85,14 +90,14 @@ async function main() {
       data: { logoUrl }
     })
 
-    console.log(`✅ ${company.name} → ${logoUrl}`)
+    __slog(`✅ ${company.name} → ${logoUrl}`)
     updated++
   }
 
-  console.log(`\n--- Summary ---`)
-  console.log(`Updated: ${updated}`)
-  console.log(`Skipped: ${skipped}`)
-  console.log(`Total: ${companiesWithoutLogos.length}`)
+  __slog(`\n--- Summary ---`)
+  __slog(`Updated: ${updated}`)
+  __slog(`Skipped: ${skipped}`)
+  __slog(`Total: ${companiesWithoutLogos.length}`)
 
   // Also update companies that have broken/old logo URLs
   const companiesWithOldLogos = await prisma.company.findMany({
@@ -105,8 +110,8 @@ async function main() {
     select: { id: true, name: true, website: true, logoUrl: true }
   })
 
-  console.log(`\nFound ${companiesWithOldLogos.length} companies with non-Clearbit logos`)
-  console.log(`(Keeping existing logos - they may be higher quality)`)
+  __slog(`\nFound ${companiesWithOldLogos.length} companies with non-Clearbit logos`)
+  __slog(`(Keeping existing logos - they may be higher quality)`)
 }
 
 main()

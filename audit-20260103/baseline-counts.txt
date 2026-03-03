@@ -1,0 +1,5 @@
+ active_jobs | active_null_roleslug | null_roleslug_pct | active_salary_validated | active_high_salary | active_high_salary_validated | active_ai_enriched | active_has_tech_stack 
+-------------+----------------------+-------------------+-------------------------+--------------------+------------------------------+--------------------+-----------------------
+       10930 |                 6243 |              57.1 |                    5928 |               5935 |                         5928 |               1179 |                   630
+(1 row)
+

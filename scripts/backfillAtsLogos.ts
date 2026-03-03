@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -10,7 +15,7 @@ async function main() {
     }
   })
 
-  console.log(`Found ${companies.length} ATS companies without logos\n`)
+  __slog(`Found ${companies.length} ATS companies without logos\n`)
 
   for (const c of companies) {
     // Extract domain from atsUrl or website
@@ -32,13 +37,13 @@ async function main() {
         where: { id: c.id },
         data: { logoUrl }
       })
-      console.log(`✓ ${c.name} → ${logoUrl}`)
+      __slog(`✓ ${c.name} → ${logoUrl}`)
     } else {
-      console.log(`✗ ${c.name} - no domain found`)
+      __slog(`✗ ${c.name} - no domain found`)
     }
   }
 
-  console.log('\nDone!')
+  __slog('\nDone!')
   await prisma.$disconnect()
 }
 

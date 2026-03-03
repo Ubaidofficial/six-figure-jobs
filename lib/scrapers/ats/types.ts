@@ -39,3 +39,7 @@ export interface AtsJob {
 
   raw?: any
 }
+
+export type ATSResult =
+  | { success: true; jobs: AtsJob[]; source: AtsProvider; company?: string; atsUrl?: string }
+  | { success: false; error: string; source: AtsProvider; company?: string; atsUrl?: string }

@@ -119,7 +119,7 @@ export default function RoleTypeahead({
         onKeyDown={onKeyDown}
         aria-autocomplete="list"
         aria-expanded={open}
-        aria-label="Search $100k+ job roles"
+        aria-label="Find $100k+ job roles"
       />
       <input type="hidden" name={name} value={selectedSlug} />
       

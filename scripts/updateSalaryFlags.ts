@@ -1,11 +1,16 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { HIGH_SALARY_THRESHOLDS, isHighSalary } from '../lib/currency/thresholds'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🔄 Updating High Salary Flags based on new currency thresholds...')
-  console.log('Thresholds:', HIGH_SALARY_THRESHOLDS)
+  __slog('🔄 Updating High Salary Flags based on new currency thresholds...')
+  __slog('Thresholds:', HIGH_SALARY_THRESHOLDS)
 
   const jobs = await prisma.job.findMany({
     where: { isExpired: false },
@@ -28,12 +33,12 @@ async function main() {
         where: { id: job.id },
         data: { isHighSalary: shouldBeHigh }
       })
-      // console.log(`  Updated ${job.id}: ${salary} ${job.currency} -> High? ${shouldBeHigh}`)
+      // __slog(`  Updated ${job.id}: ${salary} ${job.currency} -> High? ${shouldBeHigh}`)
       updated++
     }
   }
 
-  console.log(`✅ Done! Updated ${updated} jobs to reflect local market rates.`)
+  __slog(`✅ Done! Updated ${updated} jobs to reflect local market rates.`)
 }
 
 main()

@@ -1,0 +1,9 @@
+        source        | active_jobs | null_slugs | null_pct 
+----------------------+-------------+------------+----------
+ ats:greenhouse       |       10307 |       5669 |     55.0
+ ats:ashby            |         559 |        537 |     96.1
+ board:weworkremotely |          27 |         22 |     81.5
+ board:remotive       |          21 |         15 |     71.4
+ board:remoteok       |          16 |          0 |      0.0
+(5 rows)
+

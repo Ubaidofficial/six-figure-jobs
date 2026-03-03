@@ -3,13 +3,21 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
-import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
+import {
+  queryJobs,
+  type JobWithCompany,
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+} from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { formatSalaryBandLabel } from '../../../../lib/utils/salaryLabels'
 import { formatNumberCompact } from '../../../../lib/utils/number'
 import type { Job } from '@prisma/client'
 import { SITE_NAME, getSiteUrl } from '../../../../lib/seo/site'
+import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
+import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 
 export const revalidate = 1800
 
@@ -108,6 +116,44 @@ function humanizeCountry(code?: string | null): string {
   return map[code.toUpperCase()] || code.toUpperCase()
 }
 
+function normalizeLocationSegments(loc: string[]): {
+  countryCode: string
+  countrySlug: string
+  citySlug: string | null
+  canonicalSegments: string[]
+} | null {
+  if (!Array.isArray(loc) || loc.length === 0 || loc.length > 2) return null
+
+  const rawCountry = String(loc[0] ?? '')
+    .trim()
+    .toLowerCase()
+  if (!rawCountry) return null
+
+  const countryCode =
+    rawCountry.length === 2
+      ? rawCountry.toUpperCase()
+      : countrySlugToCode(rawCountry)
+  if (!countryCode) return null
+
+  const countrySlug = countryCodeToSlug(countryCode) ?? rawCountry
+
+  const rawCity = loc[1]
+    ? String(loc[1]).trim().toLowerCase()
+    : null
+  if (rawCity && !/^[a-z0-9-]{2,80}$/.test(rawCity)) return null
+
+  const canonicalSegments = rawCity
+    ? [countrySlug, rawCity]
+    : [countrySlug]
+
+  return {
+    countryCode,
+    countrySlug,
+    citySlug: rawCity,
+    canonicalSegments,
+  }
+}
+
 function buildBandHref(
   basePath: string,
   sp: SearchParams | undefined,
@@ -142,11 +188,19 @@ export async function generateMetadata({
   searchParams?: Promise<SearchParams>
 }): Promise<Metadata> {
   const { role, loc = [] } = await params
+  const normalizedLoc = normalizeLocationSegments(loc)
+  if (!normalizedLoc) {
+    return {
+      title: `Not Found | ${SITE_NAME}`,
+      robots: { index: false, follow: false },
+    }
+  }
+
   const sp = searchParams ? await resolveSearchParams(searchParams) : {}
   const roleSlug = role
   const roleName = prettyRole(roleSlug)
-  const countryCode = loc[0]?.toUpperCase()
-  const citySlug = loc[1]
+  const countryCode = normalizedLoc.countryCode
+  const citySlug = normalizedLoc.citySlug
   const locationLabel = citySlug
     ? `${prettyRole(citySlug)}, ${humanizeCountry(countryCode)}`
     : humanizeCountry(countryCode)
@@ -156,17 +210,40 @@ export async function generateMetadata({
     bandSlug && BAND_MAP[bandSlug] ? BAND_MAP[bandSlug] : 100_000
   const bandLabel = formatSalaryBandLabel(minAnnual, countryCode)
 
-  const title = `${bandLabel} ${roleName} salary in ${locationLabel || 'top regions'} | ${SITE_NAME}`
-  const canonicalBase = `${SITE_URL}/salary/${roleSlug}${loc.length ? `/${loc.join('/')}` : ''}`
+  const title = `${bandLabel} ${roleName} salary in ${locationLabel} | ${SITE_NAME}`
+  const canonicalBase = `${SITE_URL}/salary/${roleSlug}/${normalizedLoc.canonicalSegments.join('/')}`
   const canonical = `${canonicalBase}${bandSlug ? `?band=${bandSlug}` : ''}`
+
+  const raw = await prisma.job.findMany({
+    where: {
+      isExpired: false,
+      roleSlug: roleSlug,
+      countryCode,
+      ...(citySlug ? { citySlug } : {}),
+      AND: [
+        buildHighSalaryEligibilityWhere(),
+        buildGlobalExclusionsWhere(),
+        {
+          OR: [
+            { maxAnnual: { gte: BigInt(minAnnual) } },
+            { minAnnual: { gte: BigInt(minAnnual) } },
+          ],
+        },
+      ],
+    },
+    select: { id: true },
+    take: 3,
+  })
+  const allowIndex = raw.length >= 3
 
   return {
     title,
-    description: `Live ${roleName} salary data in ${locationLabel || 'top regions'} using verified ${bandLabel} tech jobs. $100k+ ${roleName} salaries, high paying ${roleName} jobs, six figure ${roleName} roles with real pay ranges.`,
+    description: `Live ${roleName} salary data in ${locationLabel} using verified ${bandLabel} tech jobs. $100k+ ${roleName} salaries, high paying ${roleName} jobs, six figure ${roleName} roles with real pay ranges.`,
     alternates: { canonical },
+    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,
-      description: `Median and range for ${roleName} in ${locationLabel || 'top regions'} using live ${bandLabel} job data.`,
+      description: `Median and range for ${roleName} in ${locationLabel} using live ${bandLabel} job data.`,
       url: canonical,
       siteName: SITE_NAME,
       type: 'website',
@@ -190,16 +267,31 @@ type PageProps = {
 
 export default async function SalaryRoleLocationPage(props: PageProps) {
   const { role, loc = [] } = await props.params
+  const normalizedLoc = normalizeLocationSegments(loc)
+  if (!normalizedLoc) notFound()
+
   const sp = await resolveSearchParams(props.searchParams)
   const roleSlug = role
   const roleName = prettyRole(roleSlug)
-  const countryCode = loc[0]?.toUpperCase()
-  const citySlug = loc[1] || null
+  const countryCode = normalizedLoc.countryCode
+  const citySlug = normalizedLoc.citySlug
   const locationLabel = citySlug
     ? `${prettyRole(citySlug)}, ${humanizeCountry(countryCode)}`
     : humanizeCountry(countryCode)
   const page = parsePage(sp)
-  const basePath = `/salary/${roleSlug}${loc.length ? `/${loc.join('/')}` : ''}`
+  const basePath = `/salary/${roleSlug}/${normalizedLoc.canonicalSegments.join('/')}`
+
+  const incomingPath = `/salary/${roleSlug}/${loc.join('/')}`
+  if (incomingPath !== basePath) {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(sp)) {
+      if (Array.isArray(value)) value.forEach((v) => v != null && params.append(key, v))
+      else if (value != null) params.set(key, value)
+    }
+    const qs = params.toString()
+    permanentRedirect(qs ? `${basePath}?${qs}` : basePath)
+  }
+
   const bandSlug = typeof sp.band === 'string' ? sp.band : undefined
   const minAnnual =
     bandSlug && BAND_MAP[bandSlug] ? BAND_MAP[bandSlug] : 100_000
@@ -212,10 +304,15 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
       roleSlug: roleSlug,
       ...(countryCode ? { countryCode } : {}),
       ...(citySlug ? { citySlug } : {}),
-      OR: [
-        { maxAnnual: { gte: BigInt(minAnnual) } },
-        { minAnnual: { gte: BigInt(minAnnual) } },
-        { isHundredKLocal: true },
+      AND: [
+        buildHighSalaryEligibilityWhere(),
+        buildGlobalExclusionsWhere(),
+        {
+          OR: [
+            { maxAnnual: { gte: BigInt(minAnnual) } },
+            { minAnnual: { gte: BigInt(minAnnual) } },
+          ],
+        },
       ],
     },
     select: {
@@ -266,6 +363,10 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
     page,
     pageSize: PAGE_SIZE,
   })
+
+  if (jobsResult.total === 0) {
+    notFound()
+  }
 
   const faqJsonLd = {
     '@context': 'https://schema.org',
@@ -512,46 +613,12 @@ function StructuredData({
   locationLabel: string | null
 }) {
   if (!jobs.length) return null
-  const items = jobs.slice(0, 10).map((job) => ({
-    '@type': 'JobPosting',
-    title: job.title,
-    description: job.descriptionHtml
-      ? job.descriptionHtml.slice(0, 1000)
-      : undefined,
-    hiringOrganization: {
-      '@type': 'Organization',
-      name:
-        job.company ||
-        (job as any).companyRef?.name ||
-        'Unknown company',
-    },
-    datePosted: job.postedAt || job.createdAt,
-    employmentType: job.type || 'FULL_TIME',
-    jobLocationType: job.remote === true ? 'TELECOMMUTE' : undefined,
-    applicantLocationRequirements: job.remote === true ? 'REMOTE' : undefined,
-    jobLocation: job.countryCode
-      ? {
-          '@type': 'Country',
-          addressCountry: job.countryCode,
-        }
-      : undefined,
-    identifier: {
-      '@type': 'PropertyValue',
-      name: job.source,
-      value: job.id,
-    },
-  }))
-
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `${roleName} job openings${locationLabel ? ` in ${locationLabel}` : ''}`,
-    itemListElement: items.map((item, idx) => ({
-      '@type': 'ListItem',
-      position: idx + 1,
-      item,
-    })),
-  }
+  const jsonLd = buildItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs: jobs.slice(0, 10),
+    page: 1,
+    pageSize: 10,
+  })
 
   return (
     <script

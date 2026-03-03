@@ -11,7 +11,12 @@
  *   npx ts-node scripts/fixMissingCompanySlugs.ts
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -37,13 +42,13 @@ async function ensureUniqueSlug(base: string, existing: Set<string>) {
 }
 
 async function main() {
-  console.log('🚀 Fixing missing company slugs…')
+  __slog('🚀 Fixing missing company slugs…')
 
   const companies = await prisma.company.findMany({
     orderBy: { createdAt: 'asc' },
   })
 
-  console.log(`Loaded ${companies.length} companies…`)
+  __slog(`Loaded ${companies.length} companies…`)
 
   const existingSlugs = new Set<string>()
   for (const c of companies) {
@@ -71,12 +76,12 @@ async function main() {
     updated++
   }
 
-  console.log(`✅ Updated ${updated} companies with slugs.`)
+  __slog(`✅ Updated ${updated} companies with slugs.`)
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

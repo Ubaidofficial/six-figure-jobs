@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -7,14 +12,14 @@ async function main() {
     where: { maxAnnual: 1000000n },
     data: { maxAnnual: null }
   })
-  console.log(`Cleared maxAnnual for ${cleared.count} jobs with exactly $1M`)
+  __slog(`Cleared maxAnnual for ${cleared.count} jobs with exactly $1M`)
 
   // Also clear any with max > $500k (unrealistic)
   const cleared2 = await prisma.job.updateMany({
     where: { maxAnnual: { gt: 500000n } },
     data: { maxAnnual: null }
   })
-  console.log(`Cleared ${cleared2.count} jobs with max > $500k`)
+  __slog(`Cleared ${cleared2.count} jobs with max > $500k`)
 
   // Show top salaries now
   const top = await prisma.job.findMany({
@@ -23,8 +28,8 @@ async function main() {
     take: 10,
     select: { title: true, company: true, minAnnual: true, maxAnnual: true, currency: true }
   })
-  console.log('\nTop 10 salaries now:')
-  top.forEach(j => console.log(`  ${Number(j.maxAnnual)} ${j.currency} - ${j.title} @ ${j.company}`))
+  __slog('\nTop 10 salaries now:')
+  top.forEach(j => __slog(`  ${Number(j.maxAnnual)} ${j.currency} - ${j.title} @ ${j.company}`))
 
   await prisma.$disconnect()
 }

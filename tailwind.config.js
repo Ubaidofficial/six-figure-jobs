@@ -7,6 +7,13 @@ module.exports = {
   ],
   theme: {
   	extend: {
+  		boxShadow: {
+  			xs: '0 1px 2px 0 rgba(0, 0, 0, 0.25)',
+  			sm: '0 1px 3px 0 rgba(0, 0, 0, 0.3)',
+  			md: '0 4px 6px -1px rgba(0, 0, 0, 0.4)',
+  			lg: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+  			glow: '0 0 20px rgba(132, 204, 22, 0.15)',
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',

@@ -5,7 +5,7 @@ import { SKILL_TARGETS } from '../../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJobs'
 import JobList from '../../../../components/JobList'
 import { getSiteUrl, SITE_NAME } from '../../../../../lib/seo/site'
-import { buildJobSlugHref } from '../../../../../lib/jobs/jobSlug'
+import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { total } = await queryJobs({
     roleSlugs: [role],
     skillSlugs: [skillInfo.slug],
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: 1,
   })
@@ -61,7 +61,7 @@ export default async function RoleSkillPage({ params }: { params: Params }) {
   const { jobs, total, totalPages, page } = await queryJobs({
     roleSlugs: [role],
     skillSlugs: [skillInfo.slug],
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: PAGE_SIZE,
   })
@@ -79,21 +79,12 @@ export default async function RoleSkillPage({ params }: { params: Params }) {
     ],
   }
 
-  const itemListJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `${roleName} ${skillInfo.label} jobs paying $100k+`,
-    itemListElement: (jobs as JobWithCompany[]).slice(0, PAGE_SIZE).map((job, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      item: {
-        '@type': 'JobPosting',
-        title: job.title,
-        hiringOrganization: { '@type': 'Organization', name: job.companyRef?.name || job.company },
-        url: `${SITE_URL}${buildJobSlugHref(job)}`,
-      },
-    })),
-  }
+  const itemListJsonLd = buildItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs: (jobs as JobWithCompany[]).slice(0, PAGE_SIZE),
+    page: 1,
+    pageSize: PAGE_SIZE,
+  })
 
   const faqJsonLd = {
     '@context': 'https://schema.org',

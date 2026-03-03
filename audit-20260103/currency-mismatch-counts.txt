@@ -1,0 +1,5 @@
+ aud_jobs_with_inr_markers | cad_jobs_with_inr_markers | eur_jobs_with_inr_markers | gbp_jobs_with_inr_markers | any_currency_with_inr_markers 
+---------------------------+---------------------------+---------------------------+---------------------------+-------------------------------
+                         1 |                         0 |                         0 |                         0 |                            19
+(1 row)
+

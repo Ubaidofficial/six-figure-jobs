@@ -7,10 +7,15 @@ import {
   queryJobs,
   type JobWithCompany,
 } from '../../../lib/jobs/queryJobs'
+import {
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+} from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import type { Job } from '@prisma/client'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
+import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 
 export const revalidate = 1800
 
@@ -116,10 +121,15 @@ export async function generateMetadata({
     where: {
       isExpired: false,
       roleSlug: roleSlug,
-      OR: [
-        { maxAnnual: { gte: BigInt(minAnnual) } },
-        { minAnnual: { gte: BigInt(minAnnual) } },
-        { isHundredKLocal: true },
+      AND: [
+        buildHighSalaryEligibilityWhere(),
+        buildGlobalExclusionsWhere(),
+        {
+          OR: [
+            { maxAnnual: { gte: BigInt(minAnnual) } },
+            { minAnnual: { gte: BigInt(minAnnual) } },
+          ],
+        },
       ],
     },
     select: {
@@ -205,40 +215,12 @@ function StructuredData({
   roleName: string
 }) {
   if (!jobs.length) return null
-  const items = jobs.slice(0, 10).map((job) => ({
-    '@type': 'JobPosting',
-    title: job.title,
-    description: job.descriptionHtml
-      ? job.descriptionHtml.slice(0, 1000)
-      : undefined,
-    hiringOrganization: {
-      '@type': 'Organization',
-      name:
-        job.company ||
-        (job as any).companyRef?.name ||
-        'Unknown company',
-    },
-    datePosted: job.postedAt || job.createdAt,
-    employmentType: job.type || 'FULL_TIME',
-    jobLocationType: job.remote === true ? 'TELECOMMUTE' : undefined,
-    applicantLocationRequirements: job.remote === true ? 'REMOTE' : undefined,
-    identifier: {
-      '@type': 'PropertyValue',
-      name: job.source,
-      value: job.id,
-    },
-  }))
-
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `${roleName} job openings`,
-    itemListElement: items.map((item, idx) => ({
-      '@type': 'ListItem',
-      position: idx + 1,
-      item,
-    })),
-  }
+  const jsonLd = buildItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs: jobs.slice(0, 10),
+    page: 1,
+    pageSize: 10,
+  })
 
   return (
     <script
@@ -272,10 +254,15 @@ export default async function SalaryRolePage(props: PageProps) {
     where: {
       isExpired: false,
       roleSlug: roleSlug,
-      OR: [
-        { maxAnnual: { gte: BigInt(minAnnual) } },
-        { minAnnual: { gte: BigInt(minAnnual) } },
-        { isHundredKLocal: true },
+      AND: [
+        buildHighSalaryEligibilityWhere(),
+        buildGlobalExclusionsWhere(),
+        {
+          OR: [
+            { maxAnnual: { gte: BigInt(minAnnual) } },
+            { minAnnual: { gte: BigInt(minAnnual) } },
+          ],
+        },
       ],
     },
     select: {
@@ -488,7 +475,7 @@ export default async function SalaryRolePage(props: PageProps) {
             )
           })}
           <Link
-            href={`/jobs/${minAnnual / 1000}k-plus/${roleSlug}`}
+            href={`/jobs/${roleSlug}/${minAnnual / 1000}k-plus`}
             className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-blue-300 hover:border-slate-600"
           >
             Browse {getBandLabel(minAnnual)} {roleName} jobs →
@@ -578,7 +565,7 @@ export default async function SalaryRolePage(props: PageProps) {
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
           <li>
             <Link
-              href={`/jobs/${minAnnual / 1000}k-plus/${roleSlug}`}
+              href={`/jobs/${roleSlug}/${minAnnual / 1000}k-plus`}
               className="hover:underline"
             >
               {getBandLabel(minAnnual)} {roleName} jobs →
@@ -603,7 +590,7 @@ export default async function SalaryRolePage(props: PageProps) {
           {Object.keys(byCountry).slice(0, 3).map((cc) => (
             <li key={cc}>
               <Link
-                href={`/jobs/${minAnnual / 1000}k-plus/${roleSlug}/${countryCodeToSlug(cc)}`}
+                href={`/jobs/${roleSlug}/${countryCodeToSlug(cc)}/${minAnnual / 1000}k-plus`}
                 className="hover:underline"
               >
                 {getBandLabel(minAnnual)} {roleName} jobs in {cc} →

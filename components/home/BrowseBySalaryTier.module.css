@@ -1,0 +1,205 @@
+/* ==========================================================================
+   Six Figure Jobs — Browse By Salary Tier
+   - Premium, token-driven cards
+   - 4/2/1 responsive grid with 20px gap
+   ========================================================================== */
+
+.section {
+  margin: var(--space-48) 0;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--space-24);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.02em;
+  color: var(--color-text-0);
+  font-size: var(--text-xl);
+  line-height: var(--line-height-tight);
+}
+
+.subtitle {
+  margin-top: var(--space-8);
+  color: var(--color-text-1);
+  font-size: var(--text-base);
+  line-height: var(--line-height-normal);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-20); /* 20px */
+  align-items: stretch;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 180px;
+  padding: var(--space-24);
+  border-radius: var(--radius-xl); /* 16px */
+  background: var(--color-bg-1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-text-0);
+  text-decoration: none;
+  overflow: hidden;
+
+  transition:
+    transform 300ms ease,
+    box-shadow 300ms ease,
+    border-color 300ms ease,
+    filter 300ms ease;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.icon {
+  position: relative;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.content {
+  position: relative;
+  margin-top: var(--space-20);
+}
+
+.tierLabel {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.count {
+  margin-top: var(--space-8);
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-2xl);
+  color: var(--color-text-0);
+}
+
+.countSuffix {
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-sm);
+  color: var(--color-text-2);
+}
+
+.arrow {
+  position: absolute;
+  right: var(--space-16);
+  bottom: var(--space-16);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  background: rgba(10, 10, 10, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  transition: transform 300ms ease, border-color 300ms ease, background-color 300ms ease;
+}
+
+.arrowIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-0);
+}
+
+.card:hover .arrow {
+  transform: translateY(-2px);
+}
+
+/* Tier backgrounds / accents */
+
+.tier_100k-plus::before {
+  background:
+    radial-gradient(60% 55% at 20% 20%, rgba(132, 204, 22, 0.55), transparent 60%),
+    radial-gradient(55% 50% at 85% 70%, rgba(132, 204, 22, 0.18), transparent 65%);
+}
+
+.tier_100k-plus:hover {
+  border-color: rgba(132, 204, 22, 0.35);
+  box-shadow: var(--shadow-xl-glow);
+}
+
+.tier_100k-plus:hover .arrow {
+  border-color: rgba(132, 204, 22, 0.25);
+}
+
+.tier_200k-plus::before {
+  background:
+    radial-gradient(60% 55% at 18% 18%, rgba(132, 204, 22, 0.70), transparent 60%),
+    radial-gradient(65% 55% at 82% 78%, rgba(132, 204, 22, 0.22), transparent 65%);
+}
+
+.tier_200k-plus:hover {
+  border-color: rgba(132, 204, 22, 0.45);
+  box-shadow: var(--shadow-xl-glow);
+  filter: brightness(1.02);
+}
+
+.tier_200k-plus:hover .arrow {
+  border-color: rgba(132, 204, 22, 0.30);
+}
+
+.tier_300k-plus::before {
+  background:
+    radial-gradient(60% 55% at 18% 18%, rgba(245, 158, 11, 0.30), transparent 60%),
+    radial-gradient(60% 55% at 78% 70%, rgba(132, 204, 22, 0.25), transparent 65%),
+    linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(132, 204, 22, 0.10));
+}
+
+.tier_300k-plus:hover {
+  border-color: rgba(245, 158, 11, 0.25);
+  box-shadow: var(--shadow-xl);
+}
+
+.tier_400k-plus::before {
+  background:
+    radial-gradient(60% 55% at 18% 18%, rgba(245, 158, 11, 0.40), transparent 60%),
+    radial-gradient(70% 60% at 85% 85%, rgba(245, 158, 11, 0.22), transparent 65%),
+    linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(10, 10, 10, 0));
+}
+
+.tier_400k-plus:hover {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: var(--shadow-xl);
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .header {
+    text-align: left;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

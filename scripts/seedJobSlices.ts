@@ -10,7 +10,14 @@
  *   npx tsx scripts/seedJobSlices.ts
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+import { countryCodeToSlug } from '../lib/seo/countrySlug'
+import { getMinSalaryForCountry } from '../lib/jobs/salaryThresholds'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -49,12 +56,14 @@ function countryNameFromCode(code: string): string {
 }
 
 function qualifiesForBand(job: JobLite, band: Band): boolean {
-  if (job.isHundredKLocal) return true
+  const effectiveBand =
+    band === 100_000 && job.countryCode
+      ? getMinSalaryForCountry(job.countryCode) ?? band
+      : band
+  const b = BigInt(effectiveBand)
 
-  if (job.minAnnual != null && job.maxAnnual != null) {
-    const b = BigInt(band)
-    return job.minAnnual >= b && job.maxAnnual >= b
-  }
+  if (job.minAnnual != null && job.minAnnual >= b) return true
+  if (job.maxAnnual != null && job.maxAnnual >= b) return true
 
   return false
 }
@@ -65,6 +74,7 @@ async function seedBandBaseSlice(band: Band) {
 
   const filters = {
     minAnnual: band,
+    currency: 'USD',
   }
 
   const title = `$${band / 1000}k+ tech jobs from top companies`
@@ -90,11 +100,11 @@ async function seedBandBaseSlice(band: Band) {
     },
   })
 
-  console.log('✅ Base slice upserted:', slice.slug)
+  __slog('✅ Base slice upserted:', slice.slug)
 }
 
 async function seedRoleCountrySlicesForBand(band: Band) {
-  console.log(`\n▶ Seeding role+country slices for band ${band}...`)
+  __slog(`\n▶ Seeding role+country slices for band ${band}...`)
 
   const jobs = await prisma.job.findMany({
     where: {
@@ -136,23 +146,25 @@ async function seedRoleCountrySlicesForBand(band: Band) {
   )
 
   if (entries.length === 0) {
-    console.log(`  (No combos with >= ${MIN_JOBS_FOR_SLICE} jobs for band ${band})`)
+    __slog(`  (No combos with >= ${MIN_JOBS_FOR_SLICE} jobs for band ${band})`)
     return
   }
 
-  console.log(
+  __slog(
     `  Found ${entries.length} (role,country) combos with >= ${MIN_JOBS_FOR_SLICE} jobs for band ${band}`
   )
 
-  for (const [key, jobCount] of entries) {
-    const [roleSlug, countryCode] = key.split('|')
-    const bandSlug = `${band / 1000}k-plus`
-    const slug = `jobs/${bandSlug}/${roleSlug}/${countryCode.toLowerCase()}`
+	  for (const [key, jobCount] of entries) {
+	    const [roleSlug, countryCode] = key.split('|')
+	    const bandSlug = `${band / 1000}k-plus`
+	    const countrySlug = countryCodeToSlug(countryCode) ?? countryCode.toLowerCase()
+	    const slug = `jobs/${bandSlug}/${roleSlug}/${countrySlug}`
 
     const filters = {
       minAnnual: band,
       roleSlugs: [roleSlug],
       countryCode,
+      isHundredKLocal: true,
     }
 
     const roleLabel = humanize(roleSlug)
@@ -180,25 +192,25 @@ async function seedRoleCountrySlicesForBand(band: Band) {
       },
     })
 
-    console.log(`  • Upserted slice: ${slug} (jobs=${jobCount})`)
+    __slog(`  • Upserted slice: ${slug} (jobs=${jobCount})`)
   }
 }
 
 async function main() {
-  console.log('🚀 Seeding JobSlices for programmatic SEO...')
+  __slog('🚀 Seeding JobSlices for programmatic SEO...')
 
   for (const band of SALARY_BANDS) {
-    console.log(`\n=== Band $${band / 1000}k+ ===`)
+    __slog(`\n=== Band $${band / 1000}k+ ===`)
     await seedBandBaseSlice(band)
     await seedRoleCountrySlicesForBand(band)
   }
 
-  console.log('\n✅ Done seeding JobSlices.')
+  __slog('\n✅ Done seeding JobSlices.')
 }
 
 main()
   .catch((err) => {
-    console.error('Error seeding job slices:', err)
+    __serr('Error seeding job slices:', err)
     process.exit(1)
   })
   .finally(async () => {

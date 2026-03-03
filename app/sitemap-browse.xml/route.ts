@@ -2,84 +2,35 @@
 // Sitemap for category + location browse pages (programmatic SEO)
 
 import { NextResponse } from 'next/server'
-import { CATEGORY_LINKS } from '@/lib/constants/category-links'
-import { LOCATIONS } from '@/lib/constants/homepage'
-import {
-  STATE_TARGETS,
-  SKILL_TARGETS,
-  INDUSTRY_TARGETS,
-  CITY_TARGETS,
-} from '../../lib/seo/pseoTargets'
 
-const SITE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-  : 'https://www.6figjobs.com'
+import { buildBrowseSitemapReport } from '@/lib/seo/browseSitemap'
+import { getSiteUrl } from '@/lib/seo/site'
 
+const SITE_URL = getSiteUrl()
+
+export const dynamic = 'force-dynamic'
 export const revalidate = 3600
 
+function escapeXml(s: string) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
 export async function GET() {
-  const urls: string[] = []
-
-  CATEGORY_LINKS.roles.forEach((cat) => {
-    urls.push(`${SITE_URL}${cat.href}`)
-  })
-  CATEGORY_LINKS.locations.forEach((cat) => {
-    urls.push(`${SITE_URL}${cat.href}`)
-  })
-  CATEGORY_LINKS.salaryTiers.forEach((cat) => {
-    urls.push(`${SITE_URL}${cat.href}`)
-  })
-
-  LOCATIONS.forEach((loc) => {
-    urls.push(
-      loc.code === 'remote'
-        ? `${SITE_URL}/jobs/location/remote`
-        : `${SITE_URL}/jobs/location/${loc.code}`,
-    )
-  })
-
-  STATE_TARGETS.forEach((state) => {
-    urls.push(`${SITE_URL}/jobs/state/${state.slug}`)
-  })
-
-  SKILL_TARGETS.forEach((skill) => {
-    urls.push(`${SITE_URL}/jobs/skills/${skill.slug}`)
-  })
-
-  INDUSTRY_TARGETS.forEach((industry) => {
-    urls.push(`${SITE_URL}/jobs/industry/${industry.slug}`)
-  })
-
-  CITY_TARGETS.forEach((city) => {
-    urls.push(`${SITE_URL}/jobs/city/${city.slug}`)
-  })
-  // Add industry landing pages
-  INDUSTRY_TARGETS.forEach((industry) => {
-    urls.push(`${SITE_URL}/jobs/industry/${industry.slug}`)
-  })
-
-  // Combo routes: role + remote
-  TOP_ROLE_SLUGS.forEach((roleSlug) => {
-    urls.push(`${SITE_URL}/jobs/${roleSlug}/remote`)
-    TOP_CITIES.forEach((city) => {
-      urls.push(`${SITE_URL}/jobs/${roleSlug}/city/${city.slug}`)
-    })
-  })
-
-  // Combo routes: skill + remote
-  TOP_SKILLS.forEach((skill) => {
-    urls.push(`${SITE_URL}/jobs/skills/${skill.slug}/remote`)
-    TOP_ROLE_SLUGS.forEach((roleSlug) => {
-      urls.push(`${SITE_URL}/jobs/${roleSlug}/skills/${skill.slug}`)
-    })
-  })
+  const report = await buildBrowseSitemapReport(3)
+  const urls = report.included.map((row) => `${SITE_URL}${row.path}`)
+  const uniqueUrls = Array.from(new Set(urls))
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls
+${uniqueUrls
   .map(
     (u) => `  <url>
-    <loc>${u}</loc>
+    <loc>${escapeXml(u)}</loc>
     <changefreq>daily</changefreq>
   </url>`,
   )
@@ -93,18 +44,3 @@ ${urls
     },
   })
 }
-const TOP_ROLE_SLUGS = [
-  'software-engineer',
-  'product-manager',
-  'data-scientist',
-  'data-engineer',
-  'backend-engineer',
-  'frontend-engineer',
-  'full-stack-engineer',
-  'devops-engineer',
-  'machine-learning-engineer',
-  'engineering-manager',
-]
-
-const TOP_CITIES = CITY_TARGETS.slice(0, 10)
-const TOP_SKILLS = SKILL_TARGETS.slice(0, 15)

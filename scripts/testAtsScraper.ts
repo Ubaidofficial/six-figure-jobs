@@ -1,6 +1,11 @@
 
+import { format as __format } from 'node:util'
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
 import { prisma } from '../lib/prisma'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 async function main() {
     const slugs = ['personio-test', 'teamtailor-test', 'figma-test']
@@ -8,15 +13,19 @@ async function main() {
     for (const slug of slugs) {
         const company = await prisma.company.findUnique({ where: { slug } })
         if (!company || !company.atsProvider || !company.atsUrl) {
-            console.log(`Skipping ${slug} - missing metadata`)
+            __slog(`Skipping ${slug} - missing metadata`)
             continue
         }
 
-        console.log(`Scraping ${slug} (${company.atsProvider})...`)
+        __slog(`Scraping ${slug} (${company.atsProvider})...`)
         const jobs = await scrapeCompanyAtsJobs(company.atsProvider as any, company.atsUrl)
-        console.log(`  Found ${jobs.length} jobs`)
-        if (jobs.length > 0) {
-            console.log('  Sample job:', jobs[0].title, jobs[0].url)
+        if (!jobs.success) {
+            __slog(`  ❌ ATS failure: ${jobs.error}`)
+            continue
+        }
+        __slog(`  Found ${jobs.jobs.length} jobs`)
+        if (jobs.jobs.length > 0) {
+            __slog('  Sample job:', jobs.jobs[0].title, jobs.jobs[0].url)
         }
     }
 }

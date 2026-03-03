@@ -144,7 +144,7 @@ export function parseJobsSlug(
   //
   // Strip "-jobs" suffix.
   const jobsSuffix = '-jobs'
-  let core = tail.endsWith(jobsSuffix)
+  const core = tail.endsWith(jobsSuffix)
     ? tail.slice(0, -jobsSuffix.length)
     : tail
 

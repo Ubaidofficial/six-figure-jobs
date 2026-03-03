@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -8,8 +13,8 @@ async function main() {
     select: { name: true }
   })
   
-  console.log('Found', failed.length, 'companies with 404 errors')
-  console.log('Sample:', failed.slice(0, 10).map(c => c.name).join(', '))
+  __slog('Found', failed.length, 'companies with 404 errors')
+  __slog('Sample:', failed.slice(0, 10).map(c => c.name).join(', '))
   
   // Clear their atsUrl since it's wrong
   const result = await prisma.company.updateMany({
@@ -17,11 +22,11 @@ async function main() {
     data: { atsUrl: null, scrapeStatus: null, scrapeError: null }
   })
   
-  console.log('Cleared atsUrl for', result.count, 'companies')
+  __slog('Cleared atsUrl for', result.count, 'companies')
   
   // Show remaining companies with valid ATS URLs
   const remaining = await prisma.company.count({ where: { atsUrl: { not: null } } })
-  console.log('Remaining companies with ATS URLs:', remaining)
+  __slog('Remaining companies with ATS URLs:', remaining)
   
   // Show successful companies
   const successful = await prisma.company.findMany({
@@ -30,9 +35,9 @@ async function main() {
     orderBy: { jobCount: 'desc' },
     take: 20
   })
-  console.log('\nTop successful companies:')
+  __slog('\nTop successful companies:')
   for (const c of successful) {
-    console.log(' ', c.name, '-', c.jobCount, 'jobs')
+    __slog(' ', c.name, '-', c.jobCount, 'jobs')
   }
   
   await prisma.$disconnect()

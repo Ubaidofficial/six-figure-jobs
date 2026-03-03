@@ -1,10 +1,16 @@
 // lib/jobs/queryJobs.ts
 
-import type { Job, Company, Prisma } from '@prisma/client'
+import type { Job, Company, Prisma, RoleInference } from '@prisma/client'
 import { prisma } from '../prisma'
 import { getDateThreshold, MAX_DISPLAY_AGE_DAYS } from '../ingest/jobAgeFilter'
+import { HIGH_SALARY_THRESHOLDS } from '../currency/thresholds'
+import { inferCurrencyFromCountryCode } from '../normalizers/salary'
+import { getMinSalaryForCountry } from './salaryThresholds'
 
-export type JobWithCompany = Job & { companyRef: Company | null }
+export type JobWithCompany = Job & {
+  companyRef: Company | null
+  roleInference?: RoleInference | null
+}
 
 export type JobQueryInput = {
   page?: number
@@ -12,9 +18,11 @@ export type JobQueryInput = {
 
   roleSlugs?: string[]
   skillSlugs?: string[]
+  tech?: string
   stateCode?: string
   minAnnual?: number
   maxAnnual?: number
+  currency?: string
   countryCode?: string
   citySlug?: string
   remoteOnly?: boolean
@@ -34,10 +42,7 @@ export type JobQueryInput = {
   workArrangement?: string
 
   // Control ordering and internship leakage
-  //  - 'salary' (default) → salary-first ranking
-  //  - 'date' → newest jobs first
   sortBy?: 'salary' | 'date'
-  // If not provided, we default to true in queryJobs()
   excludeInternships?: boolean
 }
 
@@ -49,13 +54,15 @@ export type JobQueryResult = {
   totalPages: number
 }
 
-export async function queryJobs(
-  input: JobQueryInput
-): Promise<JobQueryResult> {
+export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
+  const debugTiming =
+    process.env.DEBUG_DB_TIMING === '1' ||
+    process.env.DEBUG_QUERY_TIMES === '1'
+
   const page = Math.max(1, input.page ?? 1)
   const pageSize = Math.min(Math.max(input.pageSize ?? 20, 1), 100)
 
-  // Apply defaults here so buildWhere + ordering logic both see them
+  // Defaults applied here so buildWhere + ordering logic both see them
   const normalizedInput: JobQueryInput = {
     ...input,
     sortBy: input.sortBy ?? 'salary',
@@ -63,53 +70,141 @@ export async function queryJobs(
   }
 
   const where = buildWhere(normalizedInput)
-
   const sortBy = normalizedInput.sortBy ?? 'salary'
 
   let orderBy: Prisma.JobOrderByWithRelationInput[]
 
   if (sortBy === 'date') {
-    // For "Latest $100k+ jobs" etc.
+    // ✅ Date-first ranking - prioritize when WE scraped it (createdAt)
     orderBy = [
-      { postedAt: 'desc' },
-      { createdAt: 'desc' },
+      { createdAt: 'desc' }, // FIRST: When we scraped it (most accurate)
+      { updatedAt: 'desc' }, // SECOND: When job was updated
+      { postedAt: 'desc' }, // THIRD: Company's post date (fallback)
       { maxAnnual: 'desc' },
       { minAnnual: 'desc' },
     ]
   } else {
-    // Default behaviour – salary-first
-    const isMinSalaryFilter =
-      typeof normalizedInput.minAnnual === 'number' &&
-      normalizedInput.minAnnual > 100_000
-
-    orderBy = isMinSalaryFilter
-      ? [
-          { minAnnual: 'desc' },
-          { maxAnnual: 'desc' },
-          { postedAt: 'desc' },
-          { createdAt: 'desc' },
-        ]
-      : [
-          { maxAnnual: 'desc' },
-          { minAnnual: 'desc' },
-          { postedAt: 'desc' },
-          { createdAt: 'desc' },
-        ]
+    // Salary-first ranking
+    orderBy = [
+      { maxAnnual: 'desc' },
+      { minAnnual: 'desc' },
+      { postedAt: 'desc' },
+      { createdAt: 'desc' },
+    ]
   }
 
-  const [total, jobs] = await Promise.all([
-    prisma.job.count({ where }),
-    prisma.job.findMany({
+  const t0 = debugTiming ? Date.now() : 0
+  let countMs = 0
+  let findMs = 0
+
+  const countP = (async () => {
+    const s = debugTiming ? Date.now() : 0
+    const out = await prisma.job.count({ where })
+    if (debugTiming) countMs = Date.now() - s
+    return out
+  })()
+
+  const findP = (async () => {
+    const s = debugTiming ? Date.now() : 0
+    const out = await prisma.job.findMany({
       where,
-      include: { companyRef: true, roleInference: true },
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        companyLogo: true,
+        companyId: true,
+        source: true,
+        roleSlug: true,
+        externalId: true,
+        url: true,
+        applyUrl: true,
+        postedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        isHighSalary: true,
+        isHundredKLocal: true,
+        isHighSalaryLocal: true,
+        salaryRaw: true,
+        salaryMin: true,
+        salaryMax: true,
+        salaryCurrency: true,
+        salaryPeriod: true,
+        minAnnual: true,
+        maxAnnual: true,
+        currency: true,
+        salaryValidated: true,
+        salaryConfidence: true,
+        type: true,
+        employmentType: true,
+        experienceLevel: true,
+        industry: true,
+        workArrangement: true,
+        workArrangementNormalized: true,
+        remote: true,
+        remoteMode: true,
+        remoteRegion: true,
+        locationRaw: true,
+        city: true,
+        citySlug: true,
+        stateCode: true,
+        countryCode: true,
+        primaryLocation: true,
+        locationsJson: true,
+        benefitsJson: true,
+        aiBenefits: true,
+        aiSnippet: true,
+        aiOneLiner: true,
+        skillsJson: true,
+        techStack: true,
+        companyRef: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logoUrl: true,
+            website: true,
+            sizeBucket: true,
+            industry: true,
+          },
+        },
+        roleInference: true,
+      },
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
-    }),
-  ])
+    })
+    if (debugTiming) findMs = Date.now() - s
+    return out
+  })()
+
+  const [total, jobs] = await Promise.all([countP, findP])
+
+  if (debugTiming) {
+    const ms = Date.now() - t0
+    const gate = {
+      page,
+      pageSize,
+      sortBy,
+      role: input.roleSlugs?.length ? input.roleSlugs.join(',') : undefined,
+      country: input.countryCode,
+      city: input.citySlug,
+      remoteOnly: input.remoteOnly ? '1' : undefined,
+      remoteMode: input.remoteMode,
+      remoteRegion: input.remoteRegion,
+      company: input.companySlug,
+    }
+    console.log(
+      '[db] queryJobs ms=%d countMs=%d findMs=%d meta=%s',
+      ms,
+      countMs,
+      findMs,
+      JSON.stringify(gate),
+    )
+  }
 
   return {
-    jobs,
+    jobs: jobs as JobWithCompany[],
     total,
     page,
     pageSize,
@@ -117,11 +212,10 @@ export async function queryJobs(
   }
 }
 
-export function buildWhere(
-  filters: JobQueryInput
-): Prisma.JobWhereInput {
+export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
     isExpired: false,
+    // Base freshness rule (keep this as OR to support postedAt null)
     OR: [
       { postedAt: { gte: getDateThreshold(MAX_DISPLAY_AGE_DAYS) } },
       {
@@ -132,20 +226,30 @@ export function buildWhere(
   }
 
   const addAnd = (clause: Prisma.JobWhereInput) => {
-    if (!where.AND) {
-      where.AND = [clause]
-    } else if (Array.isArray(where.AND)) {
-      where.AND.push(clause)
-    } else {
-      where.AND = [where.AND, clause]
-    }
+    if (!where.AND) where.AND = [clause]
+    else if (Array.isArray(where.AND)) where.AND.push(clause)
+    else where.AND = [where.AND, clause]
   }
+
+  // v2.9 hard gates (canonical, deterministic)
+  addAnd(buildHighSalaryEligibilityWhere())
+
+  // 🔒 Annual salary sanity guard (blocks monthly / low local salaries)
+  addAnd({
+    OR: [
+      { minAnnual: { gte: BigInt(50000) } },
+      { maxAnnual: { gte: BigInt(50000) } },
+    ],
+  });
+
+  // Global exclusions (never show anywhere)
+  addAnd(buildGlobalExclusionsWhere())
 
   // Role / basic filters
   if (filters.roleSlugs?.length) {
     addAnd({
       OR: filters.roleSlugs.map((slug) => ({
-        roleSlug: { contains: slug },
+        OR: [{ roleSlug: slug }, { roleSlug: { contains: slug } }],
       })),
     })
   }
@@ -153,6 +257,10 @@ export function buildWhere(
   if (filters.countryCode) {
     where.countryCode = filters.countryCode.toUpperCase()
   }
+
+  const requestedCurrency = filters.currency
+    ? filters.currency.toUpperCase()
+    : null
 
   if (filters.stateCode) {
     where.stateCode = filters.stateCode.toUpperCase()
@@ -163,7 +271,7 @@ export function buildWhere(
   }
 
   if (filters.remoteOnly) {
-    where.remote = true
+    addAnd({ OR: [{ remote: true }, { remoteMode: 'remote' }] })
   }
 
   if (filters.remoteRegion) {
@@ -195,62 +303,113 @@ export function buildWhere(
     where.companyRef = companyFilter
   }
 
-  // Salary filters / 100k logic
-  if (typeof filters.minAnnual === 'number' && filters.minAnnual > 0) {
-    const min = filters.minAnnual
+  // Salary range filters (ensure we have a currency when min/max is provided)
+  const hasMinAnnual =
+    typeof filters.minAnnual === 'number' && filters.minAnnual > 0
+  const hasMaxAnnual =
+    typeof filters.maxAnnual === 'number' && filters.maxAnnual > 0
+  const hasAnnualFilter = hasMinAnnual || hasMaxAnnual
 
-    if (min <= 100_000 && filters.isHundredKLocal !== false) {
-      addAnd({
-        OR: [
-          { minAnnual: { gte: BigInt(min) } },
-          { isHundredKLocal: true },
-        ],
-      })
-    } else {
-      addAnd({ minAnnual: { gte: BigInt(min) } })
-    }
-  } else if (filters.isHundredKLocal === true) {
-    addAnd({ isHundredKLocal: true })
+  let annualCurrency = requestedCurrency
+
+  if (hasAnnualFilter && !annualCurrency) {
+    const inferred = filters.countryCode
+      ? inferCurrencyFromCountryCode(filters.countryCode)
+      : null
+    annualCurrency = inferred || 'USD'
   }
 
-  if (typeof filters.maxAnnual === 'number' && filters.maxAnnual > 0) {
-    where.maxAnnual = { lte: BigInt(filters.maxAnnual) }
+  if (annualCurrency) {
+    where.currency = annualCurrency
   }
 
-  if (filters.maxJobAgeDays && filters.maxJobAgeDays > 0) {
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - filters.maxJobAgeDays)
-    where.postedAt = { gte: cutoff }
-  }
+  const hasCurrencyFilter = Boolean(annualCurrency)
+  const localThreshold =
+    filters.isHundredKLocal && filters.countryCode
+      ? getMinSalaryForCountry(filters.countryCode)
+      : null
+  const effectiveMinAnnual =
+    hasMinAnnual &&
+    localThreshold &&
+    filters.minAnnual != null &&
+    filters.minAnnual <= 100_000
+      ? localThreshold
+      : filters.minAnnual
 
-  // Seniority via RoleInference relation
-  if (filters.seniorityLevels?.length) {
-    const roleInferenceFilter: Prisma.RoleInferenceWhereInput = {
-      seniority: { in: filters.seniorityLevels },
-    }
-    where.roleInference = roleInferenceFilter
-  }
-
-  // Employment type + internship exclusion
-  if (filters.employmentTypes?.length) {
-    // Caller wants explicit types → respect that
-    where.type = { in: filters.employmentTypes }
-  } else if (filters.excludeInternships) {
-    // Generic “no internships” filter – use title, case-insensitive
+  if (
+    hasCurrencyFilter &&
+    typeof effectiveMinAnnual === 'number' &&
+    effectiveMinAnnual > 0
+  ) {
+    const min = effectiveMinAnnual
     addAnd({
-      NOT: [
-        { title: { contains: 'Intern' } },
-        { title: { contains: 'intern' } },
+      OR: [
+        { minAnnual: { gte: BigInt(min) } },
+        { maxAnnual: { gte: BigInt(min) } },
       ],
     })
   }
 
+  if (
+    hasCurrencyFilter &&
+    typeof filters.maxAnnual === 'number' &&
+    filters.maxAnnual > 0
+  ) {
+    const max = BigInt(filters.maxAnnual)
+    addAnd({
+      OR: [
+        { maxAnnual: { lte: max } },
+        { maxAnnual: null, minAnnual: { lte: max } },
+      ],
+    })
+  }
+
+  // IMPORTANT: do NOT overwrite where.postedAt (it breaks the base OR)
+  if (filters.maxJobAgeDays && filters.maxJobAgeDays > 0) {
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - filters.maxJobAgeDays)
+
+    addAnd({
+      OR: [
+        { postedAt: { gte: cutoff } },
+        { postedAt: null, createdAt: { gte: cutoff } },
+      ],
+    })
+  }
+
+  // Seniority via RoleInference relation
+  if (filters.seniorityLevels?.length) {
+    where.roleInference = {
+      seniority: { in: filters.seniorityLevels },
+    }
+  }
+
+  // Employment type + optional internship exclusion (kept for legacy call sites)
+  if (filters.employmentTypes?.length) {
+    where.type = { in: filters.employmentTypes }
+  } else if (filters.excludeInternships) {
+    // Intern is excluded globally below; keep for backward-compat.
+  }
+
   // Skills
   if (filters.skillSlugs?.length) {
-    const ors = filters.skillSlugs.map((slug) => ({
-      skillsJson: { contains: slug },
-    }))
-    addAnd({ OR: ors })
+    addAnd({
+      OR: filters.skillSlugs.map((slug) => ({
+        skillsJson: { contains: slug },
+      })),
+    })
+  }
+
+  if (filters.tech) {
+    const tech = String(filters.tech).trim()
+    if (tech) {
+      addAnd({
+        OR: [
+          { techStack: { contains: tech, mode: 'insensitive' } },
+          { skillsJson: { contains: tech, mode: 'insensitive' } },
+        ],
+      })
+    }
   }
 
   // Extra SEO-ish filters
@@ -267,4 +426,55 @@ export function buildWhere(
   }
 
   return where
+}
+
+export const HIGH_SALARY_MIN_CONFIDENCE = 80
+
+export function buildHighSalaryEligibilityWhere(): Prisma.JobWhereInput {
+  const currencyClauses: Prisma.JobWhereInput[] = Object.entries(
+    HIGH_SALARY_THRESHOLDS,
+  ).map(([currency, threshold]) => ({
+    currency,
+    OR: [
+      { minAnnual: { gte: threshold } },
+      { maxAnnual: { gte: threshold } },
+    ]
+  }))
+
+  return {
+    salaryValidated: true,
+    salaryConfidence: { gte: HIGH_SALARY_MIN_CONFIDENCE },
+    OR: currencyClauses,
+  }
+}
+
+export function buildGlobalExclusionsWhere(): Prisma.JobWhereInput {
+  return {
+    NOT: [
+      { title: { contains: 'intern', mode: 'insensitive' } },
+      { title: { contains: 'internship', mode: 'insensitive' } },
+      { title: { contains: 'junior', mode: 'insensitive' } },
+      { title: { contains: ' jr', mode: 'insensitive' } },
+      { title: { contains: 'jr.', mode: 'insensitive' } },
+      { title: { contains: 'entry', mode: 'insensitive' } },
+      { title: { contains: 'entry level', mode: 'insensitive' } },
+
+      { title: { contains: 'graduate', mode: 'insensitive' } },
+      { title: { contains: 'new grad', mode: 'insensitive' } },
+      { title: { contains: 'new-gr', mode: 'insensitive' } },
+      { title: { contains: '(new grad', mode: 'insensitive' } },
+      { title: { contains: 'new graduate', mode: 'insensitive' } },
+      { title: { contains: 'phd graduate', mode: 'insensitive' } },
+
+      { type: { contains: 'part-time', mode: 'insensitive' } },
+      { type: { contains: 'part time', mode: 'insensitive' } },
+      { type: { contains: 'contract', mode: 'insensitive' } },
+      { type: { contains: 'temporary', mode: 'insensitive' } },
+
+      { employmentType: { contains: 'part-time', mode: 'insensitive' } },
+      { employmentType: { contains: 'part time', mode: 'insensitive' } },
+      { employmentType: { contains: 'contract', mode: 'insensitive' } },
+      { employmentType: { contains: 'temporary', mode: 'insensitive' } },
+    ],
+  }
 }

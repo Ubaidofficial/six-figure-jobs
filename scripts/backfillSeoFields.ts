@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -49,14 +54,14 @@ function inferStateCode(city: string | null, countryCode: string | null): string
 }
 
 async function backfill() {
-  console.log('Starting SEO fields backfill...')
+  __slog('Starting SEO fields backfill...')
   
   const jobs = await prisma.job.findMany({
     where: { isExpired: false },
     select: { id: true, title: true, roleSlug: true, remoteMode: true, remote: true, city: true, countryCode: true }
   })
   
-  console.log(`Processing ${jobs.length} jobs...`)
+  __slog(`Processing ${jobs.length} jobs...`)
   
   let updated = 0
   for (const job of jobs) {
@@ -70,10 +75,10 @@ async function backfill() {
       }
     })
     updated++
-    if (updated % 1000 === 0) console.log(`Updated ${updated}/${jobs.length}`)
+    if (updated % 1000 === 0) __slog(`Updated ${updated}/${jobs.length}`)
   }
   
-  console.log(`✅ Backfilled ${updated} jobs`)
+  __slog(`✅ Backfilled ${updated} jobs`)
 }
 
 backfill()

@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowUpRight, BadgeCheck, Clock, Globe, MapPin } from 'lucide-react'
+import { ArrowUpRight, BadgeCheck, Clock, Globe, MapPin, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
+import { buildJobSlug, buildJobSlugHref } from '@/lib/jobs/jobSlug'
+import { formatSalaryRange } from "@/lib/normalizers/salary"
 
 interface JobCardV2Props {
   job: {
@@ -17,34 +19,44 @@ interface JobCardV2Props {
     }
     location: string | null
     isRemote: boolean
-    salaryMin: number
+    salaryMin: number | null
     salaryMax: number | null
+    currency: string | null | undefined
     skills: string[]
     postedAt: Date
+    snippet?: string | null
   }
   featured?: boolean
 }
 
+function formatRelativeTime(date: Date): string {
+  const ts = new Date(date as any).getTime()
+  if (!Number.isFinite(ts)) return 'recently'
+
+  const seconds = Math.floor((Date.now() - ts) / 1000)
+  if (seconds < 0) return 'just now'
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
+  return `${Math.floor(seconds / 604800)}w ago`
+}
+
 export function JobCardV2({ job, featured = false }: JobCardV2Props) {
-  const formatSalary = (min: number, max: number | null) => {
-    const minK = Math.round(min / 1000)
-    const maxK = max ? Math.round(max / 1000) : null
-    return maxK ? `$${minK}k - $${maxK}k` : `$${minK}k+`
-  }
+  const postedTs = new Date(job.postedAt as any).getTime()
+  const isNew =
+    Number.isFinite(postedTs) &&
+    Date.now() - postedTs < 3 * 24 * 60 * 60 * 1000
+  const hasSalary = job.salaryMin != null || job.salaryMax != null
 
-  const isNew = Date.now() - new Date(job.postedAt).getTime() < 3 * 24 * 60 * 60 * 1000
-
-  const formatRelativeTime = (date: Date): string => {
-    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-    if (seconds < 60) return 'just now'
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
-    return `${Math.floor(seconds / 604800)}w ago`
-  }
+  // Prefer canonical helper if present (keeps routing consistent)
+  const href =
+    typeof buildJobSlugHref === 'function'
+      ? buildJobSlugHref({ id: job.id, title: job.title } as any)
+      : `/job/${buildJobSlug({ id: job.id, title: job.title })}`
 
   return (
-    <Link href={`/job/${job.id}`} className="focus-ring group block rounded-2xl">
+    <Link href={href} className="focus-ring group block rounded-2xl">
       <Card
         className={`h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_55px_rgba(16,185,129,0.14)] focus-within:ring-2 focus-within:ring-emerald-400/70 focus-within:ring-offset-2 focus-within:ring-offset-background ${
           featured
@@ -61,7 +73,7 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
                   alt={`${job.company.name} logo`}
                 />
                 <AvatarFallback className="rounded-xl bg-secondary">
-                  {job.company.name[0]}
+                  {job.company.name?.[0] || 'C'}
                 </AvatarFallback>
               </Avatar>
 
@@ -78,12 +90,13 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
             <div className="flex flex-col items-end gap-2">
               {featured && (
                 <Badge className="border-amber-500/20 bg-amber-500/10 text-[11px] font-semibold text-amber-300">
+                  <Sparkles className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                   FEATURED
                 </Badge>
               )}
               {isNew && (
                 <Badge className="border-emerald-500/20 bg-emerald-500/10 text-[11px] font-semibold text-emerald-300">
-                  NEW
+                  ✨ NEW
                 </Badge>
               )}
             </div>
@@ -94,14 +107,16 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
 
         <CardContent className="space-y-4 pt-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="border-emerald-500/20 bg-emerald-500/10 text-[11px] font-semibold text-emerald-300">
-              <BadgeCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-              VERIFIED SALARY
-            </Badge>
+            {hasSalary && (
+              <Badge className="border-emerald-500/20 bg-emerald-500/10 text-[11px] font-semibold text-emerald-300">
+                <BadgeCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                VERIFIED SALARY
+              </Badge>
+            )}
           </div>
 
           <div className="inline-flex items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 font-mono text-lg font-semibold text-emerald-200">
-            {formatSalary(job.salaryMin, job.salaryMax)}
+            💰 {formatSalaryRange(job.salaryMin, job.salaryMax, job.currency ?? null)}
           </div>
 
           <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
@@ -111,18 +126,22 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
                 {job.location}
               </span>
             )}
-            {job.isRemote && (
-              <>
-                {job.location && <span className="text-muted-foreground/60">•</span>}
-                <span className="flex items-center gap-1 text-emerald-300">
-                  <Globe className="h-3.5 w-3.5" aria-hidden="true" />
-                  Remote
-                </span>
-              </>
-            )}
+{job.isRemote && !job.location?.includes('Remote') && (
+  <span className="flex items-center gap-1 text-emerald-300">
+    <Globe className="h-3.5 w-3.5" />
+    Remote
+  </span>
+)}
           </div>
 
-          {job.skills && job.skills.length > 0 && (
+          {/* ✅ snippet */}
+          {typeof job.snippet === 'string' && job.snippet.trim() && (
+            <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+              {job.snippet.trim()}
+            </p>
+          )}
+
+          {Array.isArray(job.skills) && job.skills.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {job.skills.slice(0, 4).map((skill) => (
                 <Badge key={skill} variant="secondary" className="text-xs">
@@ -130,10 +149,7 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
                 </Badge>
               ))}
               {job.skills.length > 4 && (
-                <Badge
-                  variant="secondary"
-                  className="text-xs text-muted-foreground"
-                >
+                <Badge variant="secondary" className="text-xs text-muted-foreground">
                   +{job.skills.length - 4}
                 </Badge>
               )}
@@ -146,7 +162,7 @@ export function JobCardV2({ job, featured = false }: JobCardV2Props) {
         <CardFooter className="flex flex-wrap items-center justify-between gap-3 pt-3">
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-            Apply on company site
+            Apply now on company site
             <span className="text-muted-foreground/60">•</span>
             <Clock className="h-3.5 w-3.5" aria-hidden="true" />
             Posted {formatRelativeTime(job.postedAt)}

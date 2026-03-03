@@ -11,7 +11,13 @@
  *   npx ts-node scripts/repairMinMaxSalary.ts
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+import { estimateUsdAnnual } from '../lib/normalizers/salary'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -28,8 +34,15 @@ function toAnnual(amount: number, period: string | null): number {
   return amount // Unknown → assume annual
 }
 
+function isAnnualizationTooHigh(annualLocal: number, currency: string | null): boolean {
+  if (!Number.isFinite(annualLocal) || annualLocal <= 0) return true
+  const usd = estimateUsdAnnual(annualLocal, currency)
+  if (usd != null) return usd > 2_000_000
+  return annualLocal > 10_000_000
+}
+
 async function main() {
-  console.log('🚀 Repairing min/max annual salary…')
+  __slog('🚀 Repairing min/max annual salary…')
 
   // ⭐ FIXED: no more  isHundredKLocal: null  (invalid type)
   const jobs = await prisma.job.findMany({
@@ -43,7 +56,7 @@ async function main() {
     },
   })
 
-  console.log(`Found ${jobs.length} jobs to inspect…`)
+  __slog(`Found ${jobs.length} jobs to inspect…`)
 
   let updated = 0
 
@@ -62,15 +75,30 @@ async function main() {
       (salaryMinNum != null || salaryMaxNum != null)
     ) {
       const period = job.salaryPeriod ?? null
+      const currencyForCheck = job.currency ?? job.salaryCurrency ?? null
 
       if (salaryMinNum != null && minAnnualNum == null) {
-        minAnnualNum = toAnnual(salaryMinNum, period)
-        data.minAnnual = BigInt(Math.round(minAnnualNum))
+        const proposed = toAnnual(salaryMinNum, period)
+        if (isAnnualizationTooHigh(proposed, currencyForCheck)) {
+          __slog(
+            `[skip] minAnnual too high after annualize: ${job.id} | ${currencyForCheck ?? 'n/a'} | ${job.salaryMin?.toString() ?? 'n/a'} ${job.salaryPeriod ?? ''} -> ${Math.round(proposed)}`
+          )
+        } else {
+          minAnnualNum = proposed
+          data.minAnnual = BigInt(Math.round(minAnnualNum))
+        }
       }
 
       if (salaryMaxNum != null && maxAnnualNum == null) {
-        maxAnnualNum = toAnnual(salaryMaxNum, period)
-        data.maxAnnual = BigInt(Math.round(maxAnnualNum))
+        const proposed = toAnnual(salaryMaxNum, period)
+        if (isAnnualizationTooHigh(proposed, currencyForCheck)) {
+          __slog(
+            `[skip] maxAnnual too high after annualize: ${job.id} | ${currencyForCheck ?? 'n/a'} | ${job.salaryMax?.toString() ?? 'n/a'} ${job.salaryPeriod ?? ''} -> ${Math.round(proposed)}`
+          )
+        } else {
+          maxAnnualNum = proposed
+          data.maxAnnual = BigInt(Math.round(maxAnnualNum))
+        }
       }
     }
 
@@ -103,12 +131,12 @@ async function main() {
     updated++
   }
 
-  console.log(`✅ Updated ${updated} salary records.`)
+  __slog(`✅ Updated ${updated} salary records.`)
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

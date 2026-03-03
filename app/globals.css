@@ -2,7 +2,7 @@
 /* FONTS — MUST BE FIRST                                                     */
 /* -------------------------------------------------------------------------- */
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import "../src/styles/globals.css";
 
 /* -------------------------------------------------------------------------- */
 /* TAILWIND LAYERS                                                            */
@@ -50,8 +50,14 @@
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -185,6 +191,14 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
     --radius: 0.75rem;
+
+    /* Shadow system */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 20px rgba(132, 204, 22, 0.15);
   }
 }
 
@@ -194,9 +208,11 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-primary);
     font-feature-settings: "rlig" 1, "calt" 1;
-    line-height: 1.65;
+    line-height: var(--leading-normal);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
   }
@@ -287,5 +303,63 @@
   .animate-glow-pulse,
   .skeleton-shimmer {
     animation: none !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* TOKEN OVERRIDES (APPEND-ONLY)                                              */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  :root,
+  .dark {
+    /* Align shadcn/tailwind tokens with src/styles/design-tokens.css palette */
+    --background: 0 0% 4%; /* #0a0a0a */
+    --foreground: 0 0% 100%; /* #ffffff */
+    --card: 0 0% 8%; /* #141414 */
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 100%;
+    --secondary: 0 0% 12%; /* #1f1f1f */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 64%; /* #a3a3a3 */
+    --border: 0 0% 16%; /* #2a2a2a */
+    --input: 0 0% 16%;
+
+    /* Brand primary (RemoteYeah green #84cc16 -> hsl(83.7 80.5% 44.3%)) */
+    --primary: 83.7 80.5% 44.3%;
+    --accent: 83.7 80.5% 44.3%;
+    --ring: 83.7 80.5% 44.3%;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* BRAND COLOR UPDATE - New Green                                             */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  :root,
+  .dark {
+    /* New brand green: rgb(171, 251, 83) = hsl(83, 95%, 65%) */
+    --primary: 83 95% 65%;
+    --accent: 83 95% 65%;
+    --ring: 83 95% 65%;
+    --chart-1: 83 95% 65%;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* BRAND COLOR UPDATE - New Green                                             */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  :root,
+  .dark {
+    /* New brand green: rgb(171, 251, 83) = hsl(83, 95%, 65%) */
+    --primary: 83 95% 65%;
+    --accent: 83 95% 65%;
+    --ring: 83 95% 65%;
+    --chart-1: 83 95% 65%;
   }
 }

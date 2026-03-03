@@ -1,0 +1,5 @@
+           id           | has_salary_raw |  len  | comma_decimal | comma_thousands | dot_decimal 
+------------------------+----------------+-------+---------------+-----------------+-------------
+ ats:greenhouse:6804253 | t              | 10596 |               | 1,488,400       | 6.1
+(1 row)
+

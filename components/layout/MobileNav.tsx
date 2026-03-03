@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Button } from '@/components/ui/button'
 
 const NAV_ITEMS = [
-  { href: '/jobs', label: 'Find $100k+ roles' },
+  { href: '/jobs', label: 'Find six-figure roles' },
   { href: '/salary', label: 'Salary guides' },
 ] as const
 
@@ -16,10 +16,11 @@ export function MobileNav() {
       <SheetTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
+          size="md"
+          icon={<Menu className="h-5 w-5" aria-hidden="true" />}
+          aria-label="Open menu"
           className="focus-ring h-11 w-11 rounded-full border border-slate-800/70 bg-slate-950/40 text-slate-200 hover:bg-slate-900/60"
         >
-          <Menu className="h-5 w-5" aria-hidden="true" />
           <span className="sr-only">Open menu</span>
         </Button>
       </SheetTrigger>
@@ -28,7 +29,7 @@ export function MobileNav() {
         <SheetHeader className="space-y-2 text-left">
           <SheetTitle className="text-slate-50">Six Figure Jobs</SheetTitle>
           <p className="text-sm text-slate-400">
-            Premium $100k+ roles with verified salary ranges.
+            Premium six-figure roles with verified salary ranges.
           </p>
         </SheetHeader>
 
@@ -49,14 +50,13 @@ export function MobileNav() {
             href="/post-a-job"
             className="focus-ring inline-flex w-full items-center justify-center rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] hover:bg-emerald-300"
           >
-            Hire $100k+ Talent
+            Hire six-figure talent
           </Link>
           <p className="mt-2 text-xs text-slate-500">
-            Source-linked listings. Apply direct on the company site.
+            Source-linked listings. Apply directly on the company site.
           </p>
         </div>
       </SheetContent>
     </Sheet>
   )
 }
-

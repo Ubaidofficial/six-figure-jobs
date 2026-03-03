@@ -1,18 +1,25 @@
-import { scrapeWeWorkRemotely } from '../lib/scrapers/weworkremotely'
-import scrapeNodesk from '../lib/scrapers/nodesk'
+import { format as __format } from 'node:util'
+import scrapeWeWorkRemotely, { fetchWeWorkRemotelyJobs } from '../lib/scrapers/weworkremotely'
+import scrapeNodesk, { fetchNodeskJobs } from '../lib/scrapers/nodesk'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 async function main() {
-  console.log('Testing job board scrapers...\n')
+  __slog('Testing job board scrapers...\n')
   
-  console.log('=== WeWorkRemotely ===')
-  const wwrJobs = await scrapeWeWorkRemotely()
-  console.log('Sample:', wwrJobs[0]?.title, '-', wwrJobs[0]?.rawCompanyName)
+  __slog('=== WeWorkRemotely ===')
+  const wwrJobs = await fetchWeWorkRemotelyJobs()
+  __slog('Sample:', wwrJobs[0]?.title, '-', wwrJobs[0]?.rawCompanyName)
+  __slog('Stats:', await scrapeWeWorkRemotely())
   
-  console.log('\n=== Nodesk ===')
-  const nodeskJobs = await scrapeNodesk()
-  console.log('Sample:', nodeskJobs[0]?.title, '-', nodeskJobs[0]?.rawCompanyName)
+  __slog('\n=== Nodesk ===')
+  const nodeskJobs = await fetchNodeskJobs()
+  __slog('Sample:', nodeskJobs[0]?.title, '-', nodeskJobs[0]?.rawCompanyName)
+  __slog('Stats:', await scrapeNodesk())
   
-  console.log('\nTotal: WWR=' + wwrJobs.length + ', Nodesk=' + nodeskJobs.length)
+  __slog('\nTotal: WWR=' + wwrJobs.length + ', Nodesk=' + nodeskJobs.length)
 }
 
 main()

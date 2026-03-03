@@ -1,0 +1,5 @@
+ total_active | has_salary_raw | has_min_annual | has_max_annual | validated | high_confidence | avg_confidence 
+--------------+----------------+----------------+----------------+-----------+-----------------+----------------
+        10930 |           9351 |           6577 |           6550 |      5928 |           10930 |           91.7
+(1 row)
+

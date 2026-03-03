@@ -3,6 +3,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
@@ -95,11 +96,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { category } = await params
   const cfg = resolveCategory(category)
-  if (!cfg) return { title: 'Jobs | Six Figure Jobs' }
+  if (!cfg) {
+    return {
+      title: 'Category not found | Six Figure Jobs',
+      robots: { index: false, follow: false },
+    }
+  }
 
   const { total } = await queryJobs({
     roleSlugs: cfg.roleSlugs,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: 1,
   })
@@ -131,20 +137,14 @@ export default async function CategoryPage({
 }) {
   const { category } = await params
   const cfg = resolveCategory(category)
-  if (!cfg) {
-    return (
-      <main className="mx-auto max-w-4xl px-4 py-12">
-        <h1 className="text-xl font-semibold text-slate-50">Category not found</h1>
-      </main>
-    )
-  }
+  if (!cfg) notFound()
 
   const sp = (await searchParams) || {}
   const page = Math.max(1, Number(sp.page || '1') || 1)
 
   const { jobs, total } = await queryJobs({
     roleSlugs: cfg.roleSlugs,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page,
     pageSize: PAGE_SIZE,
     sortBy: 'date',

@@ -5,11 +5,16 @@
 // Run:
 //   npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/disableBadAtsCompanies.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { scrapeGreenhouse } from '../lib/scrapers/ats/greenhouse'
 import { scrapeLever } from '../lib/scrapers/ats/lever'
 import { scrapeAshby } from '../lib/scrapers/ats/ashby'
 import { scrapeWorkday } from '../lib/scrapers/ats/workday'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -39,7 +44,7 @@ function shouldDisableFromError(err: unknown): boolean {
 }
 
 async function main() {
-  console.log('🔍 Checking ATS companies for permanent failures...\n')
+  __slog('🔍 Checking ATS companies for permanent failures...\n')
 
   const companies = await prisma.company.findMany({
     where: {
@@ -55,7 +60,7 @@ async function main() {
     orderBy: [{ name: 'asc' }],
   })
 
-  console.log(`Found ${companies.length} companies with atsProvider+atsUrl\n`)
+  __slog(`Found ${companies.length} companies with atsProvider+atsUrl\n`)
 
   let disabledCount = 0
 
@@ -65,27 +70,27 @@ async function main() {
 
     const scraper = getScraper(provider)
     if (!scraper) {
-      console.log(
+      __slog(
         `⚠️  Skipping ${company.name} (${provider}) – no scraper registered`,
       )
       continue
     }
 
-    console.log(
+    __slog(
       `\n▶ Testing ${company.name} (${provider}) — ${atsUrl}`,
     )
 
     try {
       const jobs = await scraper(atsUrl)
-      console.log(
+      __slog(
         `   ✅ Scraper returned ${jobs.length} jobs — keeping ATS metadata`,
       )
     } catch (err: any) {
       const msg = err?.message || String(err)
-      console.error(`   ❌ Error: ${msg}`)
+      __serr(`   ❌ Error: ${msg}`)
 
       if (shouldDisableFromError(err)) {
-        console.log(
+        __slog(
           `   → Disabling ATS for ${company.name} (clearing atsProvider/atsUrl)`,
         )
 
@@ -100,22 +105,22 @@ async function main() {
 
         disabledCount++
       } else {
-        console.log(
+        __slog(
           `   → Non-fatal error, leaving ATS metadata in place for now.`,
         )
       }
     }
   }
 
-  console.log('\nDone.')
-  console.log(`🚫 Disabled ATS for ${disabledCount} companies`)
+  __slog('\nDone.')
+  __slog(`🚫 Disabled ATS for ${disabledCount} companies`)
 
   await prisma.$disconnect()
 }
 
 if (require.main === module) {
   main().catch((err) => {
-    console.error('💥 Script failed:', err)
+    __serr('💥 Script failed:', err)
     process.exit(1)
   })
 }

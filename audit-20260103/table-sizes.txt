@@ -1,0 +1,14 @@
+ schemaname |       tablename       |  size  
+------------+-----------------------+--------
+ public     | Job                   | 174 MB
+ public     | Job_Backup_2025_12_25 | 130 MB
+ public     | Company               | 888 kB
+ public     | CompanySource         | 704 kB
+ public     | CompanyATS            | 200 kB
+ public     | AiRunLedger           | 80 kB
+ public     | SalaryAggregate       | 48 kB
+ public     | JobSlice              | 40 kB
+ public     | ScrapeRun             | 32 kB
+ public     | _prisma_migrations    | 32 kB
+(10 rows)
+

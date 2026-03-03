@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 function slugify(name: string): string {
@@ -356,7 +361,7 @@ const COMPANIES = [
 ]
 
 async function main() {
-  console.log('Adding remote-first companies...\n')
+  __slog('Adding remote-first companies...\n')
   let added = 0, existed = 0
   
   for (const c of COMPANIES) {
@@ -378,7 +383,7 @@ async function main() {
   }
   
   const total = await prisma.company.count()
-  console.log('Existed:', existed, '| Added:', added, '| Total:', total)
+  __slog('Existed:', existed, '| Added:', added, '| Total:', total)
   await prisma.$disconnect()
 }
 

@@ -3,7 +3,12 @@
 // Run: npx ts-node scripts/salarySanityCleanup.ts
 // Run with --fix flag to actually apply fixes: npx ts-node scripts/salarySanityCleanup.ts --fix
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -212,18 +217,18 @@ function displayOutliers(outliers: SalaryOutlier[]): void {
     return acc
   }, {} as Record<string, SalaryOutlier[]>)
   
-  console.log('\n' + '='.repeat(80))
-  console.log('SALARY OUTLIER ANALYSIS')
-  console.log('='.repeat(80))
+  __slog('\n' + '='.repeat(80))
+  __slog('SALARY OUTLIER ANALYSIS')
+  __slog('='.repeat(80))
   
   for (const [issueType, jobs] of Object.entries(grouped)) {
-    console.log(`\n📊 ${issueType} (${jobs.length} jobs)`)
-    console.log('-'.repeat(60))
+    __slog(`\n📊 ${issueType} (${jobs.length} jobs)`)
+    __slog('-'.repeat(60))
     
     // Show first 10 examples
     const examples = jobs.slice(0, 10)
     for (const job of examples) {
-      console.log(`
+      __slog(`
   ID: ${job.id}
   Title: ${job.title}
   Company: ${job.company}
@@ -237,7 +242,7 @@ function displayOutliers(outliers: SalaryOutlier[]): void {
     }
     
     if (jobs.length > 10) {
-      console.log(`  ... and ${jobs.length - 10} more`)
+      __slog(`  ... and ${jobs.length - 10} more`)
     }
   }
 }
@@ -309,7 +314,7 @@ async function fixOutliers(outliers: SalaryOutlier[], dryRun: boolean = true): P
     
     if (Object.keys(updates).length > 0) {
       if (dryRun) {
-        console.log(`  [DRY RUN] Would update ${outlier.id}: ${JSON.stringify(updates)}`)
+        __slog(`  [DRY RUN] Would update ${outlier.id}: ${JSON.stringify(updates)}`)
       } else {
         await prisma.job.update({
           where: { id: outlier.id },
@@ -331,7 +336,7 @@ async function main() {
   const args = process.argv.slice(2)
   const shouldFix = args.includes('--fix')
   
-  console.log('🔍 Analyzing salary data...\n')
+  __slog('🔍 Analyzing salary data...\n')
   
   // Get total stats
   const totalJobs = await prisma.job.count()
@@ -344,8 +349,8 @@ async function main() {
     }
   })
   
-  console.log(`📈 Total jobs: ${totalJobs.toLocaleString()}`)
-  console.log(`💰 Jobs with salary data: ${jobsWithSalary.toLocaleString()}`)
+  __slog(`📈 Total jobs: ${totalJobs.toLocaleString()}`)
+  __slog(`💰 Jobs with salary data: ${jobsWithSalary.toLocaleString()}`)
   
   // Quick stats on extreme values
   const extremeHigh = await prisma.job.count({
@@ -366,8 +371,8 @@ async function main() {
     }
   })
   
-  console.log(`\n⚠️  Jobs with salary > $1M: ${extremeHigh}`)
-  console.log(`🚨 Jobs with salary > $10M: ${extremeVeryHigh}`)
+  __slog(`\n⚠️  Jobs with salary > $1M: ${extremeHigh}`)
+  __slog(`🚨 Jobs with salary > $10M: ${extremeVeryHigh}`)
   
   // Find outliers
   const outliers = await findSalaryOutliers()
@@ -376,39 +381,39 @@ async function main() {
   displayOutliers(outliers)
   
   // Summary
-  console.log('\n' + '='.repeat(80))
-  console.log('SUMMARY')
-  console.log('='.repeat(80))
+  __slog('\n' + '='.repeat(80))
+  __slog('SUMMARY')
+  __slog('='.repeat(80))
   
   const byType = outliers.reduce((acc, o) => {
     acc[o.issueType] = (acc[o.issueType] || 0) + 1
     return acc
   }, {} as Record<string, number>)
   
-  console.log('\nOutliers by type:')
+  __slog('\nOutliers by type:')
   for (const [type, count] of Object.entries(byType)) {
-    console.log(`  ${type}: ${count}`)
+    __slog(`  ${type}: ${count}`)
   }
-  console.log(`\nTotal outliers: ${outliers.length}`)
+  __slog(`\nTotal outliers: ${outliers.length}`)
   
   // Fix if requested
   if (shouldFix) {
-    console.log('\n🔧 Applying fixes...')
+    __slog('\n🔧 Applying fixes...')
     const fixed = await fixOutliers(outliers, false)
-    console.log(`✅ Fixed ${fixed} jobs`)
+    __slog(`✅ Fixed ${fixed} jobs`)
   } else {
-    console.log('\n💡 Run with --fix flag to apply corrections:')
-    console.log('   npx ts-node scripts/salarySanityCleanup.ts --fix')
+    __slog('\n💡 Run with --fix flag to apply corrections:')
+    __slog('   npx ts-node scripts/salarySanityCleanup.ts --fix')
     
     // Show dry run preview
-    console.log('\n📝 Dry run preview (first 5 fixes):')
+    __slog('\n📝 Dry run preview (first 5 fixes):')
     await fixOutliers(outliers.slice(0, 5), true)
   }
   
   // Show top outliers for manual review
-  console.log('\n' + '='.repeat(80))
-  console.log('TOP 20 HIGHEST SALARY VALUES (for manual review)')
-  console.log('='.repeat(80))
+  __slog('\n' + '='.repeat(80))
+  __slog('TOP 20 HIGHEST SALARY VALUES (for manual review)')
+  __slog('='.repeat(80))
   
   const topHighest = await prisma.job.findMany({
     where: {
@@ -432,7 +437,7 @@ async function main() {
   })
   
   for (const job of topHighest) {
-    console.log(`
+    __slog(`
 ${job.title} @ ${job.company}
   Raw: ${job.salaryRaw || 'N/A'}
   Range: ${formatCurrency(job.minAnnual, job.currency || 'USD')} - ${formatCurrency(job.maxAnnual, job.currency || 'USD')}
@@ -444,7 +449,7 @@ ${job.title} @ ${job.company}
 }
 
 main().catch((e) => {
-  console.error('Error:', e)
+  __serr('Error:', e)
   prisma.$disconnect()
   process.exit(1)
 })

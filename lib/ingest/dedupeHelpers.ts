@@ -113,10 +113,10 @@ export function normalizeUrl(url: string | null | undefined): string | null {
     const parsed = new URL(url)
     
     // Get hostname without www
-    let host = parsed.hostname.replace(/^www\./, '')
+    const host = parsed.hostname.replace(/^www\./, '')
     
     // Get pathname without trailing slash
-    let path = parsed.pathname.replace(/\/$/, '')
+    const path = parsed.pathname.replace(/\/$/, '')
     
     return `${host}${path}`.toLowerCase()
   } catch {
@@ -170,6 +170,8 @@ export function debugDedupeKey(
   title: string,
   location: string | null | undefined
 ): void {
+  if (process.env.DEBUG_DEDUPE !== '1') return
+
   console.log('--- Dedupe Key Debug ---')
   console.log('Input:')
   console.log('  companyId:', companyId)

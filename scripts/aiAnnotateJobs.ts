@@ -1,142 +1,145 @@
 // scripts/aiAnnotateJobs.ts
-// ---------------------------------------------------------------------
-// AI enrichment script:
-//  - Generates short summaries + bullets
-//  - Extracts tech stack + keywords
-//  - Infers experience level, work arrangement, visa sponsorship
-//
-// Usage:
-//   OPENAI_API_KEY=... npx tsx scripts/aiAnnotateJobs.ts --limit=10 --dry-run
-//
-// Flags:
-//   --limit=<n>      Limit number of jobs processed (default 10)
-//   --dry-run        Do not write to DB; just log proposed updates
-//   --company=<slug> Only process jobs for a specific company slug
-// ---------------------------------------------------------------------
-
+import { format as __format } from 'node:util'
 import 'dotenv/config'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, type Prisma, type Job } from '@prisma/client'
 import { annotateJobWithAI } from '../lib/ai/jobAnnotator'
+import { getHighSalaryThresholdAnnual } from '../lib/currency/thresholds'
+import { HIGH_SALARY_MIN_CONFIDENCE } from '../lib/jobs/queryJobs'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
-type CliOptions = {
-  limit: number
-  dryRun: boolean
-  company?: string | null
+const LIMIT_DEFAULT = 10
+
+function stripHtml(html: string): string {
+  return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function parseArgs(): CliOptions {
-  const args = process.argv.slice(2)
-  const limitFlag = args.find((a) => a.startsWith('--limit='))
-  const companyFlag = args.find((a) => a.startsWith('--company='))
-
-  const limit = limitFlag ? Number(limitFlag.split('=')[1]) : 10
-  const company = companyFlag ? companyFlag.split('=')[1] : null
-  const dryRun = args.includes('--dry-run')
-
-  return {
-    limit: Number.isFinite(limit) && limit > 0 ? Math.min(limit, 50) : 10,
-    dryRun,
-    company,
+function safeToNumber(v: any): number | null {
+  if (v == null) return null
+  if (typeof v === 'bigint') {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
   }
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
 }
 
-function safeParseJson(raw: string | null | undefined): any {
-  if (!raw) return {}
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return {}
-  }
+/**
+ * v2.9: Only enrich jobs we actually publish (numeric + validated only)
+ * - salaryValidated=true
+ * - salaryConfidence>=HIGH_SALARY_MIN_CONFIDENCE
+ * - per-currency threshold via getHighSalaryThresholdAnnual(currency)
+ * - descriptionHtml required
+ */
+function qualifiesForDisplay(job: Job): boolean {
+  if (job.isExpired) return false
+  if (!job.descriptionHtml) return false
+
+  // v2.9 hard gate
+  if (job.salaryValidated !== true) return false
+  if ((job.salaryConfidence ?? 0) < HIGH_SALARY_MIN_CONFIDENCE) return false
+
+  const threshold = getHighSalaryThresholdAnnual(job.currency)
+  if (!threshold) return false
+
+  const minAnnual = safeToNumber(job.minAnnual)
+  const maxAnnual = safeToNumber(job.maxAnnual)
+
+  // If either side qualifies, we consider it eligible
+  if (minAnnual != null && minAnnual >= threshold) return true
+  if (maxAnnual != null && maxAnnual >= threshold) return true
+
+  return false
+}
+
+function safeSnippet(s: string | null): string | null {
+  const t = (s || '').trim()
+  if (!t) return null
+  if (t.length <= 160) return t
+  return t.slice(0, 157).trimEnd() + '...'
 }
 
 async function main() {
-  const options = parseArgs()
-  console.log(
-    `🔎 Running AI annotation (limit=${options.limit}, dryRun=${options.dryRun}, company=${options.company ?? 'any'})`,
-  )
+  const limitArg = process.argv.find((a) => a.startsWith('--limit='))
+  const limit = limitArg ? Math.min(Number(limitArg.split('=')[1]), 50) : LIMIT_DEFAULT
+  const dryRun = process.argv.includes('--dry-run')
+  const minQuality = Number(process.env.AI_MIN_QUALITY ?? 2) || 2
 
+  __slog(`🤖 AI annotate (limit=${limit}, dryRun=${dryRun})`)
+
+  // Pull only jobs that are likely eligible; final gate enforced in qualifiesForDisplay()
   const jobs = await prisma.job.findMany({
     where: {
       isExpired: false,
       descriptionHtml: { not: null },
-      ...(options.company
-        ? {
-            companyRef: {
-              slug: options.company,
-            },
-          }
-        : {}),
-      OR: [
-        { techStack: null },
-        { experienceLevel: null },
-        { workArrangement: null },
-        { requirementsJson: null },
-      ],
+      salaryValidated: true,
+      salaryConfidence: { gte: HIGH_SALARY_MIN_CONFIDENCE },
     },
-    take: options.limit,
     orderBy: { createdAt: 'desc' },
-    include: { companyRef: true },
+    take: limit,
   })
 
   if (!jobs.length) {
-    console.log('No jobs found that need annotation.')
+    __slog('No jobs found for enrichment query.')
     return
   }
 
   let updated = 0
+  let skippedLowQuality = 0
+  let skippedNotEligible = 0
+  let failed = 0
 
   for (const job of jobs) {
-    const description =
-      (job.descriptionHtml ?? '').replace(/<[^>]+>/g, ' ').slice(0, 7000)
+    if (!qualifiesForDisplay(job)) {
+      skippedNotEligible++
+      continue
+    }
+
+    const description = stripHtml(job.descriptionHtml!).slice(0, 7000)
 
     try {
-      const annotation = await annotateJobWithAI({
+      const ai = await annotateJobWithAI({
         title: job.title,
         description,
       })
 
-      const requirements = safeParseJson(job.requirementsJson)
-      const requirementsUpdated = {
-        ...requirements,
-        summary: annotation.summary ?? requirements.summary ?? null,
-        bullets:
-          annotation.bullets?.length > 0
-            ? annotation.bullets
-            : requirements.bullets ?? [],
+      // Quality gate:
+      // - summary present
+      // - >=2 bullets
+      // - >=2 real tech terms (after filtering in annotator)
+      const qualityScore =
+        (ai.summary ? 1 : 0) +
+        ((ai.bullets?.length ?? 0) >= 2 ? 1 : 0) +
+        ((ai.techStack?.length ?? 0) >= 2 ? 1 : 0)
+
+      if (qualityScore < minQuality) {
+        __slog(`⏭️ Skipped low quality (${qualityScore}/${minQuality}): ${job.title}`)
+        skippedLowQuality++
+        continue
       }
 
-      const data: any = {}
-
-      if (annotation.techStack?.length) {
-        const stack = Array.from(new Set(annotation.techStack.map((s) => s.toLowerCase())))
-        data.techStack = JSON.stringify(stack)
-        data.skillsJson = JSON.stringify(stack)
+      const aiSummaryJson: Prisma.JsonObject = {
+        summary: ai.summary,
+        bullets: ai.bullets,
+        techStack: ai.techStack,
+        keywords: ai.keywords,
       }
 
-      if (annotation.keywords?.length) {
-        data.skillsJson = JSON.stringify(annotation.keywords)
+      const data: Prisma.JobUpdateInput = {
+        aiModel: process.env.AI_MODEL ?? 'deepseek-chat',
+        aiVersion: process.env.AI_VERSION ?? 'v1',
+        lastAiEnrichedAt: new Date(),
+        aiQualityScore: qualityScore,
+        aiSnippet: safeSnippet(ai.summary),
+        aiSummaryJson,
       }
 
-      if (annotation.experienceLevel) {
-        data.experienceLevel = annotation.experienceLevel
-      }
-
-      if (annotation.workArrangement) {
-        data.workArrangement = annotation.workArrangement
-      }
-
-      if (typeof annotation.visaSponsorship === 'boolean') {
-        data.visaSponsorship = annotation.visaSponsorship
-      }
-
-      data.requirementsJson = JSON.stringify(requirementsUpdated)
-
-      const logContext = `${job.title} @ ${job.companyRef?.slug ?? job.company ?? 'unknown'}`
-
-      if (options.dryRun) {
-        console.log(`➡️  [DRY RUN] Would update ${logContext}`, data)
+      if (dryRun) {
+        __slog(`➡️ [DRY RUN] ${job.title}`, data)
         updated++
         continue
       }
@@ -146,24 +149,22 @@ async function main() {
         data,
       })
 
-      console.log(`✅ Annotated ${logContext}`)
+      __slog(`✅ Enriched ${job.title}`)
       updated++
     } catch (err: any) {
-      console.error(
-        `❌ Failed to annotate job ${job.id} (${job.title}):`,
-        err?.message || err,
-      )
+      failed++
+      __serr(`❌ ${job.title}:`, err?.message || err)
     }
   }
 
-  console.log(`\nDone. Annotated ${updated} job(s).`)
+  __slog(
+    `\nDone. Updated ${updated} jobs. SkippedNotEligible=${skippedNotEligible}. SkippedLowQuality=${skippedLowQuality}. Failed=${failed}.`,
+  )
 }
 
 main()
-  .catch((err) => {
-    console.error(err)
+  .catch((e) => {
+    __serr(e)
     process.exit(1)
   })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+  .finally(() => prisma.$disconnect())

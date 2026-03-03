@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -10,17 +15,17 @@ async function check() {
   })
   
   if (job) {
-    console.log('\n📋 Anthropic Job Check:\n')
-    console.log('Title:', job.title)
-    console.log('Source:', job.source)
-    console.log('Has descriptionHtml?', !!job.descriptionHtml)
-    console.log('descriptionHtml length:', job.descriptionHtml?.length || 0)
+    __slog('\n📋 Anthropic Job Check:\n')
+    __slog('Title:', job.title)
+    __slog('Source:', job.source)
+    __slog('Has descriptionHtml?', !!job.descriptionHtml)
+    __slog('descriptionHtml length:', job.descriptionHtml?.length || 0)
     
     if (job.descriptionHtml) {
-      console.log('First 200 chars:', job.descriptionHtml.substring(0, 200))
+      __slog('First 200 chars:', job.descriptionHtml.substring(0, 200))
     }
   } else {
-    console.log('No Anthropic jobs found!')
+    __slog('No Anthropic jobs found!')
   }
 }
 

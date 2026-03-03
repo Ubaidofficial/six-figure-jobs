@@ -1,9 +1,14 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
 async function fixCorruptSalaries() {
-  console.log('\n🔧 FIXING CORRUPT SALARIES...\n')
+  __slog('\n🔧 FIXING CORRUPT SALARIES...\n')
 
   const corruptJobs = await prisma.job.findMany({
     where: {
@@ -23,7 +28,7 @@ async function fixCorruptSalaries() {
     }
   })
 
-  console.log(`Found ${corruptJobs.length} jobs with corrupt salaries\n`)
+  __slog(`Found ${corruptJobs.length} jobs with corrupt salaries\n`)
 
   for (const job of corruptJobs) {
     const min = job.minAnnual ? Number(job.minAnnual) : null
@@ -39,9 +44,9 @@ async function fixCorruptSalaries() {
       fixedMax = Math.round(max / 100)
     }
 
-    console.log(`${job.company}: ${job.title}`)
-    console.log(`  Before: ${min?.toLocaleString()} - ${max?.toLocaleString()}`)
-    console.log(`  After:  ${fixedMin?.toLocaleString()} - ${fixedMax?.toLocaleString()}`)
+    __slog(`${job.company}: ${job.title}`)
+    __slog(`  Before: ${min?.toLocaleString()} - ${max?.toLocaleString()}`)
+    __slog(`  After:  ${fixedMin?.toLocaleString()} - ${fixedMax?.toLocaleString()}`)
 
     await prisma.job.update({
       where: { id: job.id },
@@ -52,7 +57,7 @@ async function fixCorruptSalaries() {
     })
   }
 
-  console.log(`\n✅ Fixed ${corruptJobs.length} corrupt salaries\n`)
+  __slog(`\n✅ Fixed ${corruptJobs.length} corrupt salaries\n`)
 }
 
 fixCorruptSalaries()

@@ -4,7 +4,12 @@
 // Run:
 //   npx ts-node scripts/bootstrapRoleSlices.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -36,7 +41,7 @@ const ROLE_SLICES = [
 const MIN_SALARY = 100_000
 
 async function main() {
-  console.log('🔧 Bootstrapping JobSlice records for role $100k+ pages...\n')
+  __slog('🔧 Bootstrapping JobSlice records for role $100k+ pages...\n')
 
   for (const role of ROLE_SLICES) {
     const fullSlug = `jobs/${role.slug}/100k-plus`
@@ -80,15 +85,15 @@ async function main() {
       },
     })
 
-    console.log(`✓ ${fullSlug} — jobCount=${jobCount}`)
+    __slog(`✓ ${fullSlug} — jobCount=${jobCount}`)
   }
 
   await prisma.$disconnect()
-  console.log('\n✅ Done seeding JobSlice role pages.')
+  __slog('\n✅ Done seeding JobSlice role pages.')
 }
 
 main().catch((err) => {
-  console.error('Error bootstrapping role slices:', err)
+  __serr('Error bootstrapping role slices:', err)
   prisma.$disconnect()
   process.exit(1)
 })

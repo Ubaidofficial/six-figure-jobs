@@ -1,0 +1,129 @@
+name: SEO Gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: seo-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  seo-local-gates:
+    name: SEO Local Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: six_figure_jobs_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d six_figure_jobs_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/six_figure_jobs_ci?schema=public
+      SITE_URL: http://localhost:3000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Prepare database schema
+        run: npx prisma db push
+
+      - name: Build
+        run: npm run build
+
+      - name: Start app
+        run: |
+          SITE_URL=http://localhost:3000 npm run start >/tmp/seo-next-start.log 2>&1 &
+          echo $! >/tmp/seo-next-start.pid
+
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3000/sitemap.xml >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "App failed to start in time."
+          cat /tmp/seo-next-start.log || true
+          exit 1
+
+      - name: Strict sitemap validation (local)
+        run: SEO_BASE_URL=http://localhost:3000 SEO_FULL=1 SEO_STRICT=1 npm run seo:validate:strict
+
+      - name: Template sanity sample (local)
+        run: SEO_BASE_URL=http://localhost:3000 SEO_TEMPLATE_SAMPLE_TOTAL=20 npm run seo:sample
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -f /tmp/seo-next-start.pid ]; then
+            kill "$(cat /tmp/seo-next-start.pid)" || true
+          fi
+
+  seo-production-proof:
+    name: SEO Production Proof
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: seo-local-gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Strict sitemap validation (production)
+        run: |
+          ATTEMPTS=8
+          DELAY_SECONDS=90
+
+          for attempt in $(seq 1 "$ATTEMPTS"); do
+            echo "Production SEO proof attempt ${attempt}/${ATTEMPTS}"
+
+            if SEO_BASE_URL=https://www.6figjobs.com SEO_SAMPLE_PER_SITEMAP=1000 SEO_STRICT=1 npm run seo:validate:strict; then
+              echo "Production SEO proof passed."
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$ATTEMPTS" ]; then
+              echo "Production SEO proof failed after retries."
+              exit 1
+            fi
+
+            echo "Retrying in ${DELAY_SECONDS}s..."
+            sleep "$DELAY_SECONDS"
+          done

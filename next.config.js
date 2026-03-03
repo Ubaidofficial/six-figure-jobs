@@ -1,76 +1,66 @@
 /** @type {import('next').NextConfig} */
-
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.6figjobs.com').replace(/\/+$/, '')
-
-const securityHeaders = [
-  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-  { key: 'X-Frame-Options', value: 'DENY' },
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'X-XSS-Protection', value: '1; mode=block' },
-  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+const sitemapCacheHeaders = [
   {
-    key: 'Content-Security-Policy',
-    value: "default-src 'self'; img-src 'self' https: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:;",
+    key: 'Cache-Control',
+    value: 'public, max-age=300, s-maxage=86400, stale-while-revalidate=86400',
+  },
+]
+
+const sitemapSources = [
+  '/sitemap.xml',
+  '/sitemap-jobs.xml',
+  '/sitemap-company.xml',
+  '/sitemap-city.xml',
+  '/sitemap-remote.xml',
+  '/sitemap-salary.xml',
+  '/sitemap-country.xml',
+  '/sitemap-category.xml',
+  '/sitemap-level.xml',
+  '/sitemap-browse.xml',
+  '/sitemap-slices.xml',
+  '/sitemap-jobs/:path*',
+  '/sitemap-slices/:path*',
+  '/sitemap-company/:path*',
+  '/sitemap-city/:path*',
+  '/sitemap-remote/:path*',
+  '/sitemap-salary/:path*',
+  '/sitemap-country/:path*',
+  '/sitemap-category/:path*',
+  '/sitemap-level/:path*',
+  '/sitemap-browse/:path*',
+]
+
+const pageCacheHeaders = [
+  {
+    key: 'Cache-Control',
+    value: 'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400',
   },
 ]
 
 const nextConfig = {
-  reactStrictMode: true,
-
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "logo.clearbit.com",
-      },
-      {
-        protocol: "https",
-        hostname: "remoteok.com",
-      },
-      {
-        protocol: "https",
-        hostname: "weworkremotely.com",
-      },
-      {
-        protocol: "https",
-        hostname: "lever-client-logos.s3.us-west-2.amazonaws.com",
-      },
-      {
-        protocol: "https",
-        hostname: "boards.greenhouse.io",
-      },
-      {
-        protocol: "https",
-        hostname: "prod.builtassets.com",
-      },
-      {
-        protocol: "https",
-        hostname: "ashbyhq.com",
-      }
+      { protocol: 'https', hostname: 'logo.clearbit.com' },
+      { protocol: 'https', hostname: 'img.logo.dev' },
+      { protocol: 'https', hostname: '**.amazonaws.com' },
+      { protocol: 'https', hostname: 'cdn.builtin.com' },
     ],
+    // Reduce Railway CPU/egress by skipping on-the-fly image optimization.
+    unoptimized: true,
   },
-
-  // Remove `experimental.serverActions: true`
-  // Next.js 16 automatically handles server actions.
-  experimental: {
-    serverActions: {},
-  },
-
-  // Remove eslint key (not supported in config anymore)
-  // Use .eslintrc.json instead.
-
   async headers() {
     return [
-      {
-        source: "/api/:path*",
-        headers: [
-          { key: "Cache-Control", value: "no-cache" },
-        ],
-      },
-      {
-        source: "/:path*",
-        headers: securityHeaders,
-      },
+      ...sitemapSources.map((source) => ({ source, headers: sitemapCacheHeaders })),
+      { source: '/robots.txt', headers: sitemapCacheHeaders },
+      { source: '/job/:path*', headers: pageCacheHeaders },
+      { source: '/remote/:path*', headers: pageCacheHeaders },
+      { source: '/jobs/:path*', headers: pageCacheHeaders },
+      { source: '/company/:path*', headers: pageCacheHeaders },
+      { source: '/companies/:path*', headers: pageCacheHeaders },
+      { source: '/salary/:path*', headers: pageCacheHeaders },
+      { source: '/country/:path*', headers: pageCacheHeaders },
+      { source: '/city/:path*', headers: pageCacheHeaders },
+      { source: '/role/:path*', headers: pageCacheHeaders },
     ]
   },
 }

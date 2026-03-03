@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 function decodeHtml(html: string): string {
@@ -23,20 +28,20 @@ async function main() {
   })
 
   if (!job?.descriptionHtml) {
-    console.log('No US job found')
+    __slog('No US job found')
     return
   }
 
-  console.log(`Job: ${job.title}`)
-  console.log(`Location: ${job.locationRaw}`)
+  __slog(`Job: ${job.title}`)
+  __slog(`Location: ${job.locationRaw}`)
 
   const decoded = decodeHtml(job.descriptionHtml)
   
   // Find text around "Annual Salary"
   const annualIdx = decoded.indexOf('Annual Salary')
   if (annualIdx > -1) {
-    console.log('\nSalary section:')
-    console.log(decoded.slice(annualIdx, annualIdx + 250))
+    __slog('\nSalary section:')
+    __slog(decoded.slice(annualIdx, annualIdx + 250))
   }
 
   await prisma.$disconnect()

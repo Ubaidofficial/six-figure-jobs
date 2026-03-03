@@ -4,7 +4,12 @@
 //   npx ts-node scripts/auditCurrencyLocationMismatches.ts
 //   npx ts-node scripts/auditCurrencyLocationMismatches.ts --fix
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -32,7 +37,7 @@ async function main() {
   const args = process.argv.slice(2)
   const shouldFix = args.includes('--fix')
 
-  console.log('🔍 Auditing currency/location mismatches...\n')
+  __slog('🔍 Auditing currency/location mismatches...\n')
 
   const jobs = await prisma.job.findMany({
     where: {
@@ -72,20 +77,20 @@ async function main() {
     }
   }
 
-  console.log(`Total live jobs with salary + country: ${jobs.length}`)
-  console.log(
+  __slog(`Total live jobs with salary + country: ${jobs.length}`)
+  __slog(
     `👉 Mismatches (currency != expected for country): ${mismatches.length}`
   )
-  console.log(
+  __slog(
     `👉 Jobs in countries without mapping: ${unknownCountry.length}\n`
   )
 
   // Show a sample of mismatches
-  console.log('=== SAMPLE MISMATCHES (first 20) ===')
+  __slog('=== SAMPLE MISMATCHES (first 20) ===')
   for (const job of mismatches.slice(0, 20)) {
     const country = (job.countryCode || '').toUpperCase()
     const expected = COUNTRY_CURRENCY[country]
-    console.log(`
+    __slog(`
 ${job.title} @ ${job.company}
   Location: ${job.city || 'N/A'}, ${country}
   Location raw: ${job.locationRaw || 'N/A'}
@@ -97,15 +102,15 @@ ${job.title} @ ${job.company}
   }
 
   if (!shouldFix) {
-    console.log(
+    __slog(
       '\n💡 Dry run only. To auto-fix the *obvious* ones (set currency = expected for country), run:'
     )
-    console.log('   npx ts-node scripts/auditCurrencyLocationMismatches.ts --fix')
+    __slog('   npx ts-node scripts/auditCurrencyLocationMismatches.ts --fix')
     await prisma.$disconnect()
     return
   }
 
-  console.log('\n🔧 Applying auto-fix for obvious mismatches...')
+  __slog('\n🔧 Applying auto-fix for obvious mismatches...')
 
   let fixed = 0
   for (const job of mismatches) {
@@ -132,12 +137,12 @@ ${job.title} @ ${job.company}
     fixed++
   }
 
-  console.log(`✅ Updated currency on ${fixed} jobs`)
+  __slog(`✅ Updated currency on ${fixed} jobs`)
   await prisma.$disconnect()
 }
 
 main().catch((e) => {
-  console.error(e)
+  __serr(e)
   prisma.$disconnect()
   process.exit(1)
 })

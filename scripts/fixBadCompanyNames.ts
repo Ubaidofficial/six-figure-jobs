@@ -1,6 +1,11 @@
 // scripts/fixBadCompanyNames.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -20,10 +25,10 @@ async function main() {
     },
   })
 
-  console.log(`Found ${badCompanies.length} suspicious companies`)
+  __slog(`Found ${badCompanies.length} suspicious companies`)
 
   for (const c of badCompanies) {
-    console.log(`\nCompany id=${c.id} name="${c.name}" atsUrl=${c.atsUrl}`)
+    __slog(`\nCompany id=${c.id} name="${c.name}" atsUrl=${c.atsUrl}`)
 
     // If we know specific ones, we can hardcode:
     let fixedName: string | null = null
@@ -42,7 +47,7 @@ async function main() {
       continue
     }
 
-    console.log(`  -> Setting name="${fixedName}"`)
+    __slog(`  -> Setting name="${fixedName}"`)
 
     // 2. Update the Company name
     await prisma.company.update({
@@ -56,15 +61,15 @@ async function main() {
       data: { company: fixedName },
     })
 
-    console.log(`  -> Updated ${updatedJobs.count} jobs.company values`)
+    __slog(`  -> Updated ${updatedJobs.count} jobs.company values`)
   }
 
-  console.log('\nDone.')
+  __slog('\nDone.')
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

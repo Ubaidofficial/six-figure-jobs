@@ -1,21 +1,52 @@
 // lib/seo/structuredData.ts
+
 import type { JobSlice } from '../slices/types'
 import type { JobQueryResult } from '../jobs/queryJobs'
 import { buildCanonicalUrl, buildSliceDescription, buildSliceTitle } from './meta'
 import { getSiteUrl, SITE_NAME } from './site'
+import { resolveSliceCanonicalPath } from './canonical'
 import { buildJobSlugHref } from '../jobs/jobSlug'
-import { SliceFilters } from '../slices/types'
+import type { SliceFilters } from '../slices/types'
 
 const SITE_ORIGIN = getSiteUrl()
 
-export function buildJobListJsonLd(
-  slice: JobSlice,
-  data: JobQueryResult
-): any {
+/**
+ * Build the most canonical / non-redirecting job URL we can.
+ * Order of preference:
+ *  1) job.canonicalSlug / job.jobSlug (if your DB/query exposes it)
+ *  2) v2.8 generated href from title + shortStableId
+ */
+function getCanonicalJobUrl(job: any): string {
+  const rawSlug =
+    (typeof job?.canonicalSlug === 'string' && job.canonicalSlug) ||
+    (typeof job?.jobSlug === 'string' && job.jobSlug) ||
+    null
+
+  if (rawSlug) {
+    const s = String(rawSlug).trim()
+
+    // If already absolute, return as-is
+    if (s.startsWith('http://') || s.startsWith('https://')) return s
+
+    // If it's already a "/job/..." path
+    if (s.startsWith('/job/')) return `${SITE_ORIGIN}${s}`
+
+    // If it looks like just the slug segment
+    if (s && !s.includes('/')) return `${SITE_ORIGIN}/job/${encodeURIComponent(s)}`
+
+    // Fallback: if it’s some other path
+    if (s.startsWith('/')) return `${SITE_ORIGIN}${s}`
+  }
+
+  // v2.8 fallback (should be canonical if title used matches)
+  return `${SITE_ORIGIN}${buildJobSlugHref(job)}`
+}
+
+export function buildJobListJsonLd(slice: JobSlice, data: JobQueryResult): any {
   const url = buildCanonicalUrl(slice, data.page)
 
-  const itemListElement = data.jobs.map((job, index) => {
-    const jobUrl = `${SITE_ORIGIN}${buildJobSlugHref(job)}`
+  const itemListElement = data.jobs.map((job: any, index: number) => {
+    const jobUrl = getCanonicalJobUrl(job)
 
     return {
       '@type': 'ListItem',
@@ -35,7 +66,8 @@ export function buildJobListJsonLd(
 }
 
 export function buildBreadcrumbJsonLd(slice: JobSlice): any {
-  const segments = slice.slug.split('/').filter(Boolean)
+  const canonicalPath = resolveSliceCanonicalPath(slice.filters, slice.slug)
+  const segments = canonicalPath.split('/').filter(Boolean)
   const items: any[] = []
 
   // Always add homepage
@@ -66,7 +98,7 @@ export function buildBreadcrumbJsonLd(slice: JobSlice): any {
 
 export function buildSliceWebPageJsonLd(
   slice: JobSlice,
-  data: JobQueryResult
+  data: JobQueryResult,
 ): any {
   const url = buildCanonicalUrl(slice, data.page)
   const name = buildSliceTitle(slice, { page: data.page })
@@ -114,7 +146,7 @@ function countryNameFromCode(code?: string | null): string | null {
 
 export function buildSliceFaqJsonLd(
   slice: JobSlice,
-  totalJobs?: number
+  totalJobs?: number,
 ): any {
   const f: SliceFilters = slice.filters
   const role = humanizeRole(f.roleSlugs?.[0])
@@ -122,17 +154,13 @@ export function buildSliceFaqJsonLd(
     f.minAnnual && f.minAnnual >= 400000
       ? '$400k+'
       : f.minAnnual && f.minAnnual >= 300000
-      ? '$300k+'
-      : f.minAnnual && f.minAnnual >= 200000
-      ? '$200k+'
-      : '$100k+'
+        ? '$300k+'
+        : f.minAnnual && f.minAnnual >= 200000
+          ? '$200k+'
+          : '$100k+'
   const country = countryNameFromCode(f.countryCode)
 
-  const locationPhrase = f.remoteOnly
-    ? 'remote roles'
-    : country
-    ? `${country}`
-    : 'global roles'
+  const locationPhrase = f.remoteOnly ? 'remote roles' : country ? `${country}` : 'global roles'
 
   const jobCountText =
     typeof totalJobs === 'number' && totalJobs > 0
@@ -175,10 +203,6 @@ export function buildSliceSpeakableJsonLd(): any {
   return {
     '@context': 'https://schema.org',
     '@type': 'SpeakableSpecification',
-    cssSelector: [
-      'main h1',
-      'main h2',
-      '[data-speakable="summary"]',
-    ],
+    cssSelector: ['main h1', 'main h2', '[data-speakable="summary"]'],
   }
 }

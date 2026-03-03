@@ -1,0 +1,7 @@
+           id           | company  |                         title                          | countryCode | citySlug  |     locationRaw      | remote | salaryCurrency | currency 
+------------------------+----------+--------------------------------------------------------+-------------+-----------+----------------------+--------+----------------+----------
+ ats:greenhouse:6804253 | Coinbase | TMS Compliance Analyst III                             | IN          | hyderabad | Hyderabad, India     | f      | AUD            | AUD
+ ats:greenhouse:7302982 | Asana    | Customer Success Manager, Scaled Accounts [Fixed-term] |             |           | Sydney               | f      | AUD            | AUD
+ ats:greenhouse:7454771 | Airbnb   | Community Regional Lead, APAC                          | SG          | singapore | Singapore, Singapore | f      | SEK            | SEK
+(3 rows)
+

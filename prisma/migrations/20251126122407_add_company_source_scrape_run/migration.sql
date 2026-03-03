@@ -1,169 +1,161 @@
--- AlterTable
-ALTER TABLE "JobSlice" ADD COLUMN "description" TEXT;
-ALTER TABLE "JobSlice" ADD COLUMN "h1" TEXT;
-ALTER TABLE "JobSlice" ADD COLUMN "title" TEXT;
+/*
+  Postgres-safe rewrite:
+  - Add JobSlice SEO fields (description/title/h1) idempotently
+  - Create CompanySource + ScrapeRun
+  - Add Company meta columns with ALTER TABLE (no DROP/RENAME)
+  - Add Job columns (descriptionHtml, isHighSalary, remoteMode, currency, externalId) with ALTER TABLE (no DROP/RENAME)
+  - Ensure RoleInference FK delete cascade matches later behavior (skip redefine-table)
+*/
 
--- CreateTable
-CREATE TABLE "CompanySource" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "companyId" TEXT NOT NULL,
-    "sourceType" TEXT NOT NULL,
-    "url" TEXT NOT NULL,
-    "atsProvider" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "lastScrapedAt" DATETIME,
-    "lastJobCount" INTEGER NOT NULL DEFAULT 0,
-    "scrapeStatus" TEXT,
-    "scrapeError" TEXT,
-    "priority" INTEGER NOT NULL DEFAULT 100,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "CompanySource_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+-- JobSlice fields
+ALTER TABLE "JobSlice" ADD COLUMN IF NOT EXISTS "description" TEXT;
+ALTER TABLE "JobSlice" ADD COLUMN IF NOT EXISTS "h1" TEXT;
+ALTER TABLE "JobSlice" ADD COLUMN IF NOT EXISTS "title" TEXT;
+
+-- CompanySource
+CREATE TABLE IF NOT EXISTS "CompanySource" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "companyId" TEXT NOT NULL,
+  "sourceType" TEXT NOT NULL,
+  "url" TEXT NOT NULL,
+  "atsProvider" TEXT,
+  "isActive" BOOLEAN NOT NULL DEFAULT true,
+  "lastScrapedAt" timestamp(3),
+  "lastJobCount" INTEGER NOT NULL DEFAULT 0,
+  "scrapeStatus" TEXT,
+  "scrapeError" TEXT,
+  "priority" INTEGER NOT NULL DEFAULT 100,
+  "createdAt" timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" timestamp(3) NOT NULL
 );
 
--- CreateTable
-CREATE TABLE "ScrapeRun" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "startedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "completedAt" DATETIME,
-    "companiesTotal" INTEGER NOT NULL DEFAULT 0,
-    "companiesScraped" INTEGER NOT NULL DEFAULT 0,
-    "companiesFailed" INTEGER NOT NULL DEFAULT 0,
-    "jobsFound" INTEGER NOT NULL DEFAULT 0,
-    "jobsNew" INTEGER NOT NULL DEFAULT 0,
-    "jobsUpdated" INTEGER NOT NULL DEFAULT 0,
-    "jobsExpired" INTEGER NOT NULL DEFAULT 0,
-    "status" TEXT NOT NULL DEFAULT 'running',
-    "errorLog" TEXT,
-    "triggerType" TEXT
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'CompanySource_companyId_fkey'
+  ) THEN
+    ALTER TABLE "CompanySource"
+      ADD CONSTRAINT "CompanySource_companyId_fkey"
+      FOREIGN KEY ("companyId") REFERENCES "Company" ("id")
+      ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
+
+-- ScrapeRun
+CREATE TABLE IF NOT EXISTS "ScrapeRun" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "startedAt" timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "completedAt" timestamp(3),
+  "companiesTotal" INTEGER NOT NULL DEFAULT 0,
+  "companiesScraped" INTEGER NOT NULL DEFAULT 0,
+  "companiesFailed" INTEGER NOT NULL DEFAULT 0,
+  "jobsFound" INTEGER NOT NULL DEFAULT 0,
+  "jobsNew" INTEGER NOT NULL DEFAULT 0,
+  "jobsUpdated" INTEGER NOT NULL DEFAULT 0,
+  "jobsExpired" INTEGER NOT NULL DEFAULT 0,
+  "status" TEXT NOT NULL DEFAULT 'running',
+  "errorLog" TEXT,
+  "triggerType" TEXT
 );
 
--- RedefineTables
-PRAGMA defer_foreign_keys=ON;
-PRAGMA foreign_keys=OFF;
-CREATE TABLE "new_Company" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "website" TEXT,
-    "logoUrl" TEXT,
-    "description" TEXT,
-    "sizeBucket" TEXT,
-    "tagsJson" TEXT,
-    "fundingSummary" TEXT,
-    "industry" TEXT,
-    "atsProvider" TEXT,
-    "atsUrl" TEXT,
-    "atsSlug" TEXT,
-    "lastScrapedAt" DATETIME,
-    "scrapeStatus" TEXT,
-    "scrapeError" TEXT,
-    "jobCount" INTEGER NOT NULL DEFAULT 0,
-    "countryCode" TEXT,
-    "headquarters" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
-);
-INSERT INTO "new_Company" ("atsProvider", "atsUrl", "countryCode", "createdAt", "description", "fundingSummary", "id", "logoUrl", "name", "sizeBucket", "slug", "tagsJson", "updatedAt", "website") SELECT "atsProvider", "atsUrl", "countryCode", "createdAt", "description", "fundingSummary", "id", "logoUrl", "name", "sizeBucket", "slug", "tagsJson", "updatedAt", "website" FROM "Company";
-DROP TABLE "Company";
-ALTER TABLE "new_Company" RENAME TO "Company";
-CREATE UNIQUE INDEX "Company_slug_key" ON "Company"("slug");
-CREATE INDEX "Company_atsProvider_idx" ON "Company"("atsProvider");
-CREATE INDEX "Company_scrapeStatus_idx" ON "Company"("scrapeStatus");
-CREATE INDEX "Company_sizeBucket_idx" ON "Company"("sizeBucket");
-CREATE INDEX "Company_industry_idx" ON "Company"("industry");
-CREATE TABLE "new_Job" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "title" TEXT NOT NULL,
-    "company" TEXT NOT NULL,
-    "companyLogo" TEXT,
-    "locationRaw" TEXT,
-    "city" TEXT,
-    "citySlug" TEXT,
-    "countryCode" TEXT,
-    "remote" BOOLEAN,
-    "remoteRegion" TEXT,
-    "remoteMode" TEXT,
-    "salaryRaw" TEXT,
-    "descriptionHtml" TEXT,
-    "salaryMin" BIGINT,
-    "salaryMax" BIGINT,
-    "salaryCurrency" TEXT,
-    "salaryPeriod" TEXT,
-    "minAnnual" BIGINT,
-    "maxAnnual" BIGINT,
-    "currency" TEXT,
-    "isHighSalary" BOOLEAN NOT NULL DEFAULT false,
-    "isHundredKLocal" BOOLEAN NOT NULL DEFAULT false,
-    "type" TEXT,
-    "source" TEXT NOT NULL,
-    "applyUrl" TEXT,
-    "url" TEXT,
-    "roleSlug" TEXT,
-    "skillsJson" TEXT,
-    "requirementsJson" TEXT,
-    "benefitsJson" TEXT,
-    "externalId" TEXT,
-    "isExpired" BOOLEAN NOT NULL DEFAULT false,
-    "lastSeenAt" DATETIME,
-    "postedAt" DATETIME,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    "companyId" TEXT,
-    "locationId" TEXT,
-    CONSTRAINT "Job_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "Job_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
-INSERT INTO "new_Job" ("applyUrl", "benefitsJson", "city", "citySlug", "company", "companyId", "companyLogo", "countryCode", "createdAt", "currency", "descriptionHtml", "externalId", "id", "isExpired", "isHundredKLocal", "lastSeenAt", "locationId", "locationRaw", "maxAnnual", "minAnnual", "postedAt", "remote", "remoteMode", "remoteRegion", "requirementsJson", "roleSlug", "salaryCurrency", "salaryMax", "salaryMin", "salaryPeriod", "salaryRaw", "skillsJson", "source", "title", "type", "updatedAt", "url") SELECT "applyUrl", "benefitsJson", "city", "citySlug", "company", "companyId", "companyLogo", "countryCode", "createdAt", "currency", "descriptionHtml", "externalId", "id", "isExpired", "isHundredKLocal", "lastSeenAt", "locationId", "locationRaw", "maxAnnual", "minAnnual", "postedAt", "remote", "remoteMode", "remoteRegion", "requirementsJson", "roleSlug", "salaryCurrency", "salaryMax", "salaryMin", "salaryPeriod", "salaryRaw", "skillsJson", "source", "title", "type", "updatedAt", "url" FROM "Job";
-DROP TABLE "Job";
-ALTER TABLE "new_Job" RENAME TO "Job";
-CREATE INDEX "Job_source_idx" ON "Job"("source");
-CREATE INDEX "Job_roleSlug_idx" ON "Job"("roleSlug");
-CREATE INDEX "Job_countryCode_idx" ON "Job"("countryCode");
-CREATE INDEX "Job_isHighSalary_idx" ON "Job"("isHighSalary");
-CREATE INDEX "Job_isHundredKLocal_idx" ON "Job"("isHundredKLocal");
-CREATE INDEX "Job_companyId_idx" ON "Job"("companyId");
-CREATE INDEX "Job_externalId_idx" ON "Job"("externalId");
-CREATE INDEX "Job_remoteMode_idx" ON "Job"("remoteMode");
-CREATE INDEX "Job_currency_idx" ON "Job"("currency");
-CREATE UNIQUE INDEX "Job_externalId_source_key" ON "Job"("externalId", "source");
-CREATE TABLE "new_RoleInference" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "jobId" TEXT NOT NULL,
-    "roleSlug" TEXT,
-    "seniority" TEXT,
-    "tagsJson" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "RoleInference_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-INSERT INTO "new_RoleInference" ("createdAt", "id", "jobId", "roleSlug", "seniority", "tagsJson", "updatedAt") SELECT "createdAt", "id", "jobId", "roleSlug", "seniority", "tagsJson", "updatedAt" FROM "RoleInference";
-DROP TABLE "RoleInference";
-ALTER TABLE "new_RoleInference" RENAME TO "RoleInference";
-CREATE UNIQUE INDEX "RoleInference_jobId_key" ON "RoleInference"("jobId");
-PRAGMA foreign_keys=ON;
-PRAGMA defer_foreign_keys=OFF;
+-- Company meta columns
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "description" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "sizeBucket" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "tagsJson" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "fundingSummary" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "industry" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "atsSlug" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "lastScrapedAt" timestamp(3);
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "scrapeStatus" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "scrapeError" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "jobCount" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "headquarters" TEXT;
 
--- CreateIndex
-CREATE INDEX "CompanySource_atsProvider_idx" ON "CompanySource"("atsProvider");
+-- Job fields
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "remoteMode" TEXT;
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "descriptionHtml" TEXT;
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "isHighSalary" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "currency" TEXT;
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "externalId" TEXT;
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "companyId" TEXT;
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "locationId" TEXT;
 
--- CreateIndex
-CREATE INDEX "CompanySource_isActive_idx" ON "CompanySource"("isActive");
+-- Add FKs if missing
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'Job_companyId_fkey') THEN
+    ALTER TABLE "Job"
+      ADD CONSTRAINT "Job_companyId_fkey"
+      FOREIGN KEY ("companyId") REFERENCES "Company" ("id")
+      ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
 
--- CreateIndex
-CREATE INDEX "CompanySource_scrapeStatus_idx" ON "CompanySource"("scrapeStatus");
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'Job_locationId_fkey') THEN
+    ALTER TABLE "Job"
+      ADD CONSTRAINT "Job_locationId_fkey"
+      FOREIGN KEY ("locationId") REFERENCES "Location" ("id")
+      ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
 
--- CreateIndex
-CREATE INDEX "CompanySource_priority_idx" ON "CompanySource"("priority");
+-- Indexes (create if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'Company_atsProvider_idx') THEN
+    CREATE INDEX "Company_atsProvider_idx" ON "Company"("atsProvider");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'Company_scrapeStatus_idx') THEN
+    CREATE INDEX "Company_scrapeStatus_idx" ON "Company"("scrapeStatus");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'Company_sizeBucket_idx') THEN
+    CREATE INDEX "Company_sizeBucket_idx" ON "Company"("sizeBucket");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'Company_industry_idx') THEN
+    CREATE INDEX "Company_industry_idx" ON "Company"("industry");
+  END IF;
 
--- CreateIndex
-CREATE UNIQUE INDEX "CompanySource_companyId_url_key" ON "CompanySource"("companyId", "url");
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'CompanySource_atsProvider_idx') THEN
+    CREATE INDEX "CompanySource_atsProvider_idx" ON "CompanySource"("atsProvider");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'CompanySource_isActive_idx') THEN
+    CREATE INDEX "CompanySource_isActive_idx" ON "CompanySource"("isActive");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'CompanySource_scrapeStatus_idx') THEN
+    CREATE INDEX "CompanySource_scrapeStatus_idx" ON "CompanySource"("scrapeStatus");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'CompanySource_priority_idx') THEN
+    CREATE INDEX "CompanySource_priority_idx" ON "CompanySource"("priority");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'CompanySource_companyId_url_key') THEN
+    CREATE UNIQUE INDEX "CompanySource_companyId_url_key" ON "CompanySource"("companyId","url");
+  END IF;
 
--- CreateIndex
-CREATE INDEX "ScrapeRun_status_idx" ON "ScrapeRun"("status");
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'ScrapeRun_status_idx') THEN
+    CREATE INDEX "ScrapeRun_status_idx" ON "ScrapeRun"("status");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'ScrapeRun_startedAt_idx') THEN
+    CREATE INDEX "ScrapeRun_startedAt_idx" ON "ScrapeRun"("startedAt");
+  END IF;
 
--- CreateIndex
-CREATE INDEX "ScrapeRun_startedAt_idx" ON "ScrapeRun"("startedAt");
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'Job_isHighSalary_idx') THEN
+    CREATE INDEX "Job_isHighSalary_idx" ON "Job"("isHighSalary");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'Job_remoteMode_idx') THEN
+    CREATE INDEX "Job_remoteMode_idx" ON "Job"("remoteMode");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'Job_currency_idx') THEN
+    CREATE INDEX "Job_currency_idx" ON "Job"("currency");
+  END IF;
 
--- CreateIndex
-CREATE INDEX "JobSlice_jobCount_idx" ON "JobSlice"("jobCount");
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'Job_companyId_idx') THEN
+    CREATE INDEX "Job_companyId_idx" ON "Job"("companyId");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'Job_externalId_source_key') THEN
+    CREATE UNIQUE INDEX "Job_externalId_source_key" ON "Job"("externalId","source");
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'JobSlice_jobCount_idx') THEN
+    CREATE INDEX "JobSlice_jobCount_idx" ON "JobSlice"("jobCount");
+  END IF;
+END $$;

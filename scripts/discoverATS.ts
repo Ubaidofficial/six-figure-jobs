@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 // Use pooled URL with a longer pool timeout to avoid P2024 timeouts
 const baseUrl =
@@ -73,7 +78,7 @@ async function detectATS(companyName: string, website: string): Promise<{ ats: s
       const match = html.match(pattern)
       if (match) {
         const atsUrl = urlTemplate.replace('$1', match[1])
-        console.log(`  ✓ Found ${name}: ${atsUrl}`)
+        __slog(`  ✓ Found ${name}: ${atsUrl}`)
         return { ats: name, url: atsUrl }
       }
     }
@@ -86,7 +91,7 @@ async function detectATS(companyName: string, website: string): Promise<{ ats: s
       const match = html.match(pattern)
       if (match) {
         const atsUrl = urlTemplate.replace('$1', match[1])
-        console.log(`  ✓ Found ${name} on homepage: ${atsUrl}`)
+        __slog(`  ✓ Found ${name} on homepage: ${atsUrl}`)
         return { ats: name, url: atsUrl }
       }
     }
@@ -115,7 +120,7 @@ async function main() {
 
     if (companies.length === 0) break
 
-    console.log(`\n🔍 Scanning ${companies.length} companies (skip=${skip})...\n`)
+    __slog(`\n🔍 Scanning ${companies.length} companies (skip=${skip})...\n`)
 
     for (const company of companies) {
       processed++
@@ -130,10 +135,10 @@ async function main() {
           where: { id: company.id },
           data: { atsUrl: result.url, atsProvider: result.ats },
         })
-        console.log(` ✓ ${result.ats}`)
+        __slog(` ✓ ${result.ats}`)
         found++
       } else {
-        console.log(' ✗ No ATS found')
+        __slog(' ✗ No ATS found')
         notFound++
       }
 
@@ -145,15 +150,15 @@ async function main() {
     if (companies.length < batch) break
   }
 
-  console.log(`\n═══════════════════════════════════`)
-  console.log(`  ✅ Found ATS: ${found}`)
-  console.log(`  ❌ No ATS: ${notFound}`)
-  console.log(`  Processed: ${processed}`)
-  console.log(`═══════════════════════════════════\n`)
+  __slog(`\n═══════════════════════════════════`)
+  __slog(`  ✅ Found ATS: ${found}`)
+  __slog(`  ❌ No ATS: ${notFound}`)
+  __slog(`  Processed: ${processed}`)
+  __slog(`═══════════════════════════════════\n`)
 
   // Show updated count
   const totalWithAts = await prisma.company.count({ where: { atsUrl: { not: null } } })
-  console.log(`Total companies with ATS URLs: ${totalWithAts}`)
+  __slog(`Total companies with ATS URLs: ${totalWithAts}`)
 
   await prisma.$disconnect()
 }

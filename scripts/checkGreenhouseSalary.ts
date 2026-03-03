@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -20,12 +25,12 @@ async function main() {
     }
   })
   
-  console.log('Anthropic jobs salary data:')
+  __slog('Anthropic jobs salary data:')
   jobs.forEach(j => {
-    console.log(`\n${j.title}`)
-    console.log(`  Location: ${j.locationRaw} (${j.countryCode})`)
-    console.log(`  Salary raw: ${j.salaryRaw || 'null'}`)
-    console.log(`  Range: ${j.minAnnual}-${j.maxAnnual} ${j.currency}`)
+    __slog(`\n${j.title}`)
+    __slog(`  Location: ${j.locationRaw} (${j.countryCode})`)
+    __slog(`  Salary raw: ${j.salaryRaw || 'null'}`)
+    __slog(`  Range: ${j.minAnnual}-${j.maxAnnual} ${j.currency}`)
   })
 
   await prisma.$disconnect()

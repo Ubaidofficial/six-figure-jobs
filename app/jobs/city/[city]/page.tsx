@@ -5,6 +5,10 @@ import { CITY_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
+import { getCurrencyForCountry } from '../../../../lib/jobs/salaryThresholds'
+import { formatCurrencyShort, getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
+import { isCityPageIndexable } from '../../../../lib/seo/indexabilityGates'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -15,44 +19,15 @@ function resolveCity(slug: string) {
   return CITY_TARGETS.find((c) => c.slug === slug.toLowerCase()) || null
 }
 
-function buildBreadcrumbJsonLd(citySlug: string, cityLabel: string) {
+function buildBreadcrumbJsonLd(citySlug: string, cityLabel: string, salaryLabel: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
-      { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${SITE_URL}/jobs/100k-plus` },
+      { '@type': 'ListItem', position: 2, name: `${salaryLabel} jobs`, item: `${SITE_URL}/jobs/100k-plus` },
       { '@type': 'ListItem', position: 3, name: `${cityLabel} jobs`, item: `${SITE_URL}/jobs/city/${citySlug}` },
     ],
-  }
-}
-
-function buildItemListJsonLd(jobs: JobWithCompany[], cityLabel: string) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `$100k+ jobs in ${cityLabel}`,
-    itemListElement: jobs.slice(0, PAGE_SIZE).map((job, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      item: {
-        '@type': 'JobPosting',
-        title: job.title,
-        hiringOrganization: {
-          '@type': 'Organization',
-          name: job.companyRef?.name || job.company,
-        },
-        jobLocation: {
-          '@type': 'Place',
-          address: {
-            '@type': 'PostalAddress',
-            addressLocality: job.city || cityLabel,
-            addressCountry: job.countryCode || undefined,
-          },
-        },
-        url: `${SITE_URL}/job/${job.id}`,
-      },
-    })),
   }
 }
 
@@ -64,18 +39,19 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { total } = await queryJobs({
     citySlug: resolved.slug,
     countryCode: resolved.countryCode,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: 1,
   })
 
-  const allowIndex = total >= 3
-  const titleBase = `$100k+ jobs in ${resolved.label}`
+  const salaryLabel = getThresholdLabelForCountry(resolved.countryCode ?? null)
+  const allowIndex = isCityPageIndexable(total)
+  const titleBase = `${salaryLabel} jobs in ${resolved.label}`
   const title =
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `$100k jobs ${resolved.label}, ${resolved.label} $100k jobs, high paying jobs ${resolved.label}, six figure ${resolved.label} jobs. ${total.toLocaleString()} roles with salary transparency.`
+  const description = `${salaryLabel} jobs ${resolved.label}, ${resolved.label} ${salaryLabel} jobs, high paying jobs ${resolved.label}, six figure ${resolved.label} jobs. ${total.toLocaleString()} roles with salary transparency.`
   const canonical = `${SITE_URL}/jobs/city/${resolved.slug}`
 
   return {
@@ -106,10 +82,13 @@ export default async function CityPage({ params }: { params: Params }) {
   const { jobs, total, totalPages, page } = await queryJobs({
     citySlug: resolved.slug,
     countryCode: resolved.countryCode,
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: PAGE_SIZE,
   })
+
+  const salaryLabel = getThresholdLabelForCountry(resolved.countryCode ?? null)
+  const currencyCode = getCurrencyForCountry(resolved.countryCode ?? null) ?? 'USD'
 
   const minAnnualValues = jobs
     .map((j) => (j.minAnnual != null ? Number(j.minAnnual) : null))
@@ -124,27 +103,34 @@ export default async function CityPage({ params }: { params: Params }) {
     maxAnnualValues.length > 0
       ? Math.max(...maxAnnualValues)
       : Math.max(salaryMin, 200_000)
+  const salaryMinLabel = formatCurrencyShort(salaryMin, currencyCode)
+  const salaryMaxLabel = formatCurrencyShort(salaryMax, currencyCode)
 
-  const breadcrumbJsonLd = buildBreadcrumbJsonLd(resolved.slug, resolved.label)
-  const itemListJsonLd = buildItemListJsonLd(jobs as JobWithCompany[], resolved.label)
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd(resolved.slug, resolved.label, salaryLabel)
+  const itemListJsonLd = buildSafeItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs: (jobs as JobWithCompany[]).slice(0, PAGE_SIZE),
+    page: 1,
+    pageSize: PAGE_SIZE,
+  })
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     mainEntity: [
       {
         '@type': 'Question',
-        name: `How many $100k+ jobs are in ${resolved.label}?`,
+        name: `How many ${salaryLabel} jobs are in ${resolved.label}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `${total.toLocaleString()} live roles meet the $100k+ bar in ${resolved.label}, updated frequently from company ATS feeds.`,
+          text: `${total.toLocaleString()} live roles meet the ${salaryLabel} bar in ${resolved.label}, updated frequently from company ATS feeds.`,
         },
       },
       {
         '@type': 'Question',
-        name: `What is the salary range for ${resolved.label} $100k+ jobs?`,
+        name: `What is the salary range for ${resolved.label} ${salaryLabel} jobs?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'All listings are $100k+; senior roles can exceed $200k-$300k depending on level, company, and remote eligibility.',
+          text: `All listings are ${salaryLabel}; senior roles can exceed top-of-band ranges depending on level, company, and remote eligibility.`,
         },
       },
       {
@@ -171,16 +157,16 @@ export default async function CityPage({ params }: { params: Params }) {
       </nav>
 
       <h1 className="mb-3 text-2xl font-semibold text-slate-50">
-        {resolved.label} $100k+ jobs ({total.toLocaleString()})
+        {salaryLabel} jobs in {resolved.label} ({total.toLocaleString()})
       </h1>
       <p className="mb-4 text-sm text-slate-300">
         Find <strong className="text-white">{total.toLocaleString()}</strong>{' '}
         <strong className="text-white">high paying</strong>{' '}
-        <strong className="text-green-500">$100k</strong> jobs in {resolved.label}{' '}
+        <strong className="text-green-500">{salaryLabel}</strong> jobs in {resolved.label}{' '}
         with verified{' '}
         <strong className="text-green-500">six figure salaries</strong>. Browse{' '}
-        <strong className="text-green-500">$100k+</strong> roles from $
-        {salaryMin.toLocaleString()} to ${salaryMax.toLocaleString()} across
+        <strong className="text-green-500">{salaryLabel}</strong> roles from{' '}
+        {salaryMinLabel} to {salaryMaxLabel} across
         remote, hybrid, and on-site teams.
       </p>
       <p className="mb-6 text-xs text-slate-400">
@@ -188,7 +174,7 @@ export default async function CityPage({ params }: { params: Params }) {
       </p>
 
       {jobs.length === 0 ? (
-        <p className="text-sm text-slate-400">No $100k+ roles in {resolved.label} yet. New postings land daily.</p>
+        <p className="text-sm text-slate-400">No {salaryLabel} roles in {resolved.label} yet. New postings land daily.</p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}

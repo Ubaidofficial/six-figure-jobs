@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 async function analyzeRoles() {
   const roles = await prisma.job.groupBy({
@@ -13,9 +18,9 @@ async function analyzeRoles() {
     take: 50,
   })
 
-  console.log('\n📊 TOP 50 ROLES:\n')
+  __slog('\n📊 TOP 50 ROLES:\n')
   roles.forEach((role, i) => {
-    console.log(`${i + 1}. ${role.roleSlug} (${role._count} jobs)`)
+    __slog(`${i + 1}. ${role.roleSlug} (${role._count} jobs)`)
   })
 }
 

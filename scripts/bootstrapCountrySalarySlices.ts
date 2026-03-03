@@ -4,7 +4,12 @@
 // Run:
 //   npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/bootstrapCountrySalarySlices.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -40,7 +45,7 @@ function countryLabelFromCode(code: string): string {
 }
 
 async function main() {
-  console.log('🔧 Bootstrapping JobSlice records for global + country salary pages...\n')
+  __slog('🔧 Bootstrapping JobSlice records for global + country salary pages...\n')
 
   let createdCount = 0
   let updatedCount = 0
@@ -96,7 +101,7 @@ async function main() {
     if (existing) updatedCount++
     else createdCount++
 
-    console.log(`✓ ${slug} — jobCount=${jobCount}`)
+    __slog(`✓ ${slug} — jobCount=${jobCount}`)
   }
 
   // 2) COUNTRY + salary bands: jobs/gb/100k-plus, jobs/us/100k-plus, etc.
@@ -165,29 +170,29 @@ async function main() {
       if (existing) updatedCount++
       else createdCount++
 
-      console.log(`✓ ${slug} — jobCount=${jobCount}`)
+      __slog(`✓ ${slug} — jobCount=${jobCount}`)
     }
   }
 
-  console.log('\n==============================')
-  console.log('📊 SUMMARY')
-  console.log('==============================')
-  console.log(`Slices created:         ${createdCount}`)
-  console.log(`Slices updated:         ${updatedCount}`)
-  console.log(`Total touched slugs:    ${touchedSlugs.length}`)
+  __slog('\n==============================')
+  __slog('📊 SUMMARY')
+  __slog('==============================')
+  __slog(`Slices created:         ${createdCount}`)
+  __slog(`Slices updated:         ${updatedCount}`)
+  __slog(`Total touched slugs:    ${touchedSlugs.length}`)
 
-  console.log('\nExample slugs:')
-  touchedSlugs.slice(0, 10).forEach((slug) => console.log(`  - ${slug}`))
+  __slog('\nExample slugs:')
+  touchedSlugs.slice(0, 10).forEach((slug) => __slog(`  - ${slug}`))
   if (touchedSlugs.length > 10) {
-    console.log(`  ... +${touchedSlugs.length - 10} more`)
+    __slog(`  ... +${touchedSlugs.length - 10} more`)
   }
 
-  console.log('\n✅ Done.')
+  __slog('\n✅ Done.')
   await prisma.$disconnect()
 }
 
 main().catch((err) => {
-  console.error('Error bootstrapping country salary slices:', err)
+  __serr('Error bootstrapping country salary slices:', err)
   prisma.$disconnect()
   process.exit(1)
 })

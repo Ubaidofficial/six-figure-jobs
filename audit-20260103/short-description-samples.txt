@@ -1,0 +1,5 @@
+           id           |         title          | company |     source     | len 
+------------------------+------------------------+---------+----------------+-----
+ ats:greenhouse:6970051 | Senior Data Analyst II | MongoDB | ats:greenhouse |  78
+(1 row)
+

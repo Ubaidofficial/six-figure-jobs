@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -17,7 +22,7 @@ async function main() {
       isHundredKLocal: false
     }
   })
-  console.log(`Cleared ${cleared.count} jobs with salary > $1M`)
+  __slog(`Cleared ${cleared.count} jobs with salary > $1M`)
 
   // Recalculate isHighSalary for remaining
   const setHigh = await prisma.job.updateMany({
@@ -29,13 +34,13 @@ async function main() {
     },
     data: { isHighSalary: true, isHundredKLocal: true }
   })
-  console.log(`Set isHighSalary=true for ${setHigh.count} jobs`)
+  __slog(`Set isHighSalary=true for ${setHigh.count} jobs`)
 
   // Final count
   const final = await prisma.job.count({
     where: { isExpired: false, maxAnnual: { gte: 100000n, lte: 1000000n } }
   })
-  console.log(`\nFinal $100k-$1M jobs: ${final}`)
+  __slog(`\nFinal $100k-$1M jobs: ${final}`)
 
   await prisma.$disconnect()
 }

@@ -18,6 +18,7 @@ export const COUNTRY_CODE_TO_NAME: Record<string, string> = {
   FI: 'Finland',
   AU: 'Australia',
   NZ: 'New Zealand',
+  SG: 'Singapore',
   // you can extend this list as needed; unknown codes will fall back to the raw code
 }
 
@@ -38,6 +39,7 @@ export const COUNTRY_CODE_TO_SLUG: Record<string, string> = {
   FI: 'finland',
   AU: 'australia',
   NZ: 'new-zealand',
+  SG: 'singapore',
 }
 
 // Reverse lookup: slug → ISO code

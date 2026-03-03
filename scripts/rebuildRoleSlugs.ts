@@ -7,7 +7,12 @@
  *   npx ts-node scripts/rebuildRoleSlugs.ts
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -49,7 +54,7 @@ function inferRoleSlug(title: string): string {
 }
 
 async function main() {
-  console.log('🚀 Rebuilding role slugs…')
+  __slog('🚀 Rebuilding role slugs…')
 
   const jobs = await prisma.job.findMany({
     where: {
@@ -59,7 +64,7 @@ async function main() {
     select: { id: true, title: true },
   })
 
-  console.log(`Found ${jobs.length} jobs missing roleSlug…`)
+  __slog(`Found ${jobs.length} jobs missing roleSlug…`)
 
   let updated = 0
 
@@ -74,12 +79,12 @@ async function main() {
     updated++
   }
 
-  console.log(`✅ Updated ${updated} role slugs.`)
+  __slog(`✅ Updated ${updated} role slugs.`)
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

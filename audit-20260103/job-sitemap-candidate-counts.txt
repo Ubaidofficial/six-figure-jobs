@@ -1,0 +1,5 @@
+ hs_validated | hs_validated_with_company | hs_validated_missing_company | hs_validated_with_primary_location | hs_validated_missing_primary_location | hs_validated_with_apply 
+--------------+---------------------------+------------------------------+------------------------------------+---------------------------------------+-------------------------
+         5928 |                      5928 |                            0 |                               1565 |                                  4363 |                    5928
+(1 row)
+

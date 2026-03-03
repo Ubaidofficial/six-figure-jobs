@@ -1,0 +1,5 @@
+           id           | has_month | has_year | first_big_number |                                                                                                                      sample                                                                                                                      
+------------------------+-----------+----------+------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ ats:greenhouse:7302982 | f         | t        | 111,200          | &lt;p&gt;At Asana, we’re building collaboration software to help every team in the world become more effective in working together and realising their goals. Our Customer Success team is committed to helping customers adopt Asana as both a 
+(1 row)
+

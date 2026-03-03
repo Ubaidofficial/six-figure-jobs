@@ -5,9 +5,14 @@
 //
 // CSV columns (header optional): name,website,linkedin,description,logo
 
+import { format as __format } from 'node:util'
 import fs from 'fs'
 import path from 'path'
 import { prisma } from '../lib/prisma'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 type CompanyInput = {
   name: string
@@ -41,18 +46,18 @@ function parseCsv(filePath: string): CompanyInput[] {
 async function main() {
   const file = process.argv[2]
   if (!file) {
-    console.error('Usage: npx tsx scripts/backfillCompanyProfiles.ts companies.csv')
+    __serr('Usage: npx tsx scripts/backfillCompanyProfiles.ts companies.csv')
     process.exit(1)
   }
 
   const filePath = path.resolve(process.cwd(), file)
   if (!fs.existsSync(filePath)) {
-    console.error(`File not found: ${filePath}`)
+    __serr(`File not found: ${filePath}`)
     process.exit(1)
   }
 
   const companies = parseCsv(filePath)
-  console.log(`Parsed ${companies.length} rows from CSV`)
+  __slog(`Parsed ${companies.length} rows from CSV`)
 
   let updated = 0
 
@@ -78,12 +83,12 @@ async function main() {
     updated++
   }
 
-  console.log(`Updated ${updated} companies with profile data.`)
+  __slog(`Updated ${updated} companies with profile data.`)
 }
 
 main()
   .catch((err) => {
-    console.error(err)
+    __serr(err)
     process.exitCode = 1
   })
   .finally(async () => {

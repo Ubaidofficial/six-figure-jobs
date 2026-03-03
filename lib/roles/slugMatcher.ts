@@ -80,7 +80,7 @@ export function findBestMatchingRole(badSlug: string): CanonicalRoleSlug | null 
 
   for (const canonical of sortedSlugs) {
     if (slug.includes(canonical)) {
-      return canonical
+      return canonical as CanonicalRoleSlug
     }
   }
 

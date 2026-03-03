@@ -2,12 +2,22 @@
 // Redirect helper: /jobs/{role}/country/{country} → canonical slice
 
 import type { NextRequest } from 'next/server'
-import { redirect } from 'next/navigation'
+import { NextResponse } from 'next/server'
+import { countryCodeToSlug, countrySlugToCode } from '../../../../../lib/seo/countrySlug'
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ role: string; country: string }> },
 ) {
   const params = await context.params
-  redirect(`/jobs/${params.role}/${params.country}/100k-plus`)
+  const role = params.role.toLowerCase()
+  const rawCountry = params.country.toLowerCase()
+  const countryCode =
+    rawCountry.length === 2
+      ? rawCountry.toUpperCase()
+      : countrySlugToCode(rawCountry)
+
+  const canonicalCountry = countryCodeToSlug(countryCode ?? '') ?? rawCountry
+  const target = new URL(`/jobs/${role}/${canonicalCountry}/100k-plus`, request.url)
+  return NextResponse.redirect(target, 308)
 }

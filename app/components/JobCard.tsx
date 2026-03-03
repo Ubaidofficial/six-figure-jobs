@@ -1,14 +1,17 @@
+// app/components/JobCard.tsx
+
 'use client'
 
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
 import type { JobWithCompany } from '../../lib/jobs/queryJobs'
-import { buildSalaryText } from '../../lib/jobs/salary' // ← unified helper
+import { buildSalaryText } from '../../lib/jobs/salary'
 import { formatRelativeTime } from '../../lib/utils/time'
 import { buildLogoUrl } from '../../lib/companies/logo'
 
-/** Extend queryJobs result with UI-only optional fields */
+import styles from './JobCard.module.css'
+
 export type JobCardJob = JobWithCompany & {
   snippet?: string | null
   description?: string | null
@@ -16,16 +19,22 @@ export type JobCardJob = JobWithCompany & {
   postedAt?: string | Date | null
   requirementsJson?: string | null
   techStack?: string | null
+  primaryLocation?: any
+  locationsJson?: any
+  aiSnippet?: string | null
+  experienceLevel?: string | null
+  salarySource?: string | null
 }
 
-/* -------------------------------------------------------------------------- */
-/* Component                                                                   */
-/* -------------------------------------------------------------------------- */
-
-export default function JobCard({ job }: { job: JobCardJob }) {
+export default function JobCard({
+  job,
+  variant = 'full',
+}: {
+  job: JobCardJob
+  variant?: 'full' | 'compact'
+}) {
   const [logoFailed, setLogoFailed] = useState(false)
-  const companyName =
-    job.companyRef?.name ?? job.company ?? 'Unknown company'
+  const companyName = job.companyRef?.name ?? job.company ?? 'Unknown company'
   const companyInitials = companyName
     .split(/\s+/)
     .map((w) => w[0])
@@ -39,21 +48,20 @@ export default function JobCard({ job }: { job: JobCardJob }) {
       ? new Date((job as any).featureExpiresAt).getTime() > Date.now()
       : false
 
-  // Prefer DB logo first, fallback to Clearbit from website
-  // Stronger logo fallback: prefer stored logo → Clearbit/logo.dev → initials
   const logo = buildLogoUrl(
     job.companyRef?.logoUrl ?? job.companyLogo ?? null,
     job.companyRef?.website ?? null,
   )
-  const showLogo = logo && !logoFailed
+  const showLogo = Boolean(logo) && !logoFailed
 
   const companySlug = job.companyRef?.slug ?? null
-  const companySize = job.companyRef?.sizeBucket || null
-  const companyTags = parseJsonArray(job.companyRef?.tagsJson)
-  const companyDesc = getCompanyBlurb(job.companyRef?.description)
+  const snippet = buildSnippet(job)
+  const techStack = parseJsonArray(job.techStack).slice(0, variant === 'compact' ? 0 : 5)
 
-  const location = buildLocation(job)
-  const salaryText = buildSalaryText(job) // ← UNIFIED salary logic
+  // Enhanced location handling with primaryLocation
+  const locationData = buildLocationData(job)
+  
+  const salaryText = buildSalaryText(job)
   const salaryDisplay =
     salaryText &&
     /\d/.test(salaryText) &&
@@ -61,218 +69,147 @@ export default function JobCard({ job }: { job: JobCardJob }) {
     isReasonableSalary(job)
       ? salaryText
       : null
-  const snippet = buildSnippet(job, companyDesc)
 
-  const seniority = inferSeniorityFromTitle(job.title)
-  const category = inferCategoryFromRoleSlug(job.roleSlug)
+  const seniority = job.experienceLevel || inferSeniorityFromTitle(job.title)
   const remoteMode = getRemoteMode(job)
 
   const postedLabel = formatRelativeTime(
     job.postedAt ?? job.createdAt ?? job.updatedAt ?? null,
   )
+
   const isNew =
     !!(job.postedAt ?? job.createdAt) &&
-    Date.now() - new Date(job.postedAt ?? job.createdAt as any).getTime() < 1000 * 60 * 60 * 48
-
-  const techStack = parseJsonArray(job.techStack).slice(0, 3)
+    Date.now() - new Date((job.postedAt ?? job.createdAt) as any).getTime() < 1000 * 60 * 60 * 48
 
   return (
-    <article
-      className={`group relative rounded-3xl border p-5 transition-all duration-200 focus-within:ring-2 focus-within:ring-emerald-400/70 focus-within:ring-offset-2 focus-within:ring-offset-background ${
-        isFeatured
-          ? 'border-amber-400/50 bg-slate-950/55 ring-1 ring-amber-300/20 hover:-translate-y-0.5 hover:border-amber-300/60 hover:shadow-[0_18px_60px_rgba(251,191,36,0.12)]'
-          : 'border-slate-800/70 bg-slate-950/55 hover:-translate-y-0.5 hover:border-emerald-400/30 hover:shadow-[0_18px_60px_rgba(16,185,129,0.12)]'
-      }`}
-    >
-      <div className="flex gap-4">
-        {companySlug ? (
-          <Link
-            href={`/company/${companySlug}`}
-            className="focus-ring mt-0.5 inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900/60 ring-1 ring-slate-800/70"
-          >
-            {showLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logo ?? ''}
-                alt={`${companyName} logo`}
-                className="h-12 w-12 rounded-xl object-contain p-2"
-                onError={() => setLogoFailed(true)}
-              />
-            ) : (
-              <span className="text-xs font-semibold text-slate-200">
-                {companyInitials || '?'}
-              </span>
-            )}
-          </Link>
-        ) : (
-          <div className="mt-0.5 inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900/60 ring-1 ring-slate-800/70">
-            {showLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logo ?? ''}
-                alt={`${companyName} logo`}
-                className="h-12 w-12 rounded-xl object-contain p-2"
-                onError={() => setLogoFailed(true)}
-              />
-            ) : (
-              <span className="text-xs font-semibold text-slate-200">
-                {companyInitials || '?'}
-              </span>
-            )}
-          </div>
-        )}
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <h3 className="line-clamp-2 text-base font-semibold text-slate-50">
-                <Link
-                  href={buildJobSlugHref(job)}
-                  className="focus-ring rounded-md text-slate-50 transition-colors hover:text-white"
-                >
-                  {job.title}
-                </Link>
-              </h3>
-
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-300">
-                {companySlug ? (
-                  <Link
-                    href={`/company/${companySlug}`}
-                    className="focus-ring rounded-md font-medium text-slate-200 hover:text-white hover:underline"
-                  >
-                    {companyName}
-                  </Link>
+    <article className={`${styles.card} ${isFeatured ? styles.featured : ''}`}>
+      <div className={styles.cardInner}>
+        <div className={styles.logoContainer}>
+          {companySlug ? (
+            <Link href={`/company/${companySlug}`} className={styles.logoLink}>
+              <div className={styles.logoBox} aria-hidden="true">
+                {showLogo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logo ?? ''}
+                    alt={`${companyName} logo`}
+                    className={styles.logoImg}
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setLogoFailed(true)}
+                  />
                 ) : (
-                  <span className="font-medium text-slate-200">{companyName}</span>
-                )}
-
-                {companySize && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-xs text-slate-400">
-                      {companySize} employees
-                    </span>
-                  </>
-                )}
-
-                {companyTags.length > 0 && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-xs text-slate-400">
-                      {companyTags.slice(0, 2).join(' • ')}
-                    </span>
-                  </>
+                  <span className={styles.logoFallback}>{companyInitials || '?'}</span>
                 )}
               </div>
-
-              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
-                {remoteMode && <span>{remoteMode}</span>}
-                {location && (
-                  <>
-                    {remoteMode && <span className="text-slate-600">•</span>}
-                    <span>{location}</span>
-                  </>
-                )}
-                {job.type && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span>{job.type}</span>
-                  </>
-                )}
-                {category && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span>{category}</span>
-                  </>
-                )}
-                {seniority && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span>{seniority}</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-start gap-2 sm:items-end">
-              {salaryDisplay ? (
-                <div className="inline-flex rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 font-mono text-lg font-semibold text-emerald-200">
-                  {salaryDisplay}
-                </div>
+            </Link>
+          ) : (
+            <div className={styles.logoBox} aria-hidden="true">
+              {showLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logo ?? ''}
+                  alt={`${companyName} logo`}
+                  className={styles.logoImg}
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => setLogoFailed(true)}
+                />
               ) : (
-                <div className="text-xs text-slate-500">Salary disclosed in posting</div>
+                <span className={styles.logoFallback}>{companyInitials || '?'}</span>
               )}
+            </div>
+          )}
+        </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {salaryDisplay && (
-                  <StatusPill tone="success">VERIFIED SALARY</StatusPill>
-                )}
-                {isNew && <StatusPill tone="neutral">NEW</StatusPill>}
-                {isFeatured && <StatusPill tone="warning">FEATURED</StatusPill>}
-              </div>
+        <div className={styles.content}>
+          <div className={styles.titleRow}>
+            <h3 className={styles.title}>
+              <Link href={buildJobSlugHref(job)} className={styles.titleLink}>
+                {job.title}
+              </Link>
+            </h3>
+            <div className={styles.companyRow}>
+              {companySlug ? (
+                <Link href={`/company/${companySlug}`} className={styles.companyLink}>
+                  {companyName}
+                </Link>
+              ) : (
+                <span className={styles.companyName}>{companyName}</span>
+              )}
             </div>
           </div>
 
-          {snippet && (
-            <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-slate-300">
-              {snippet}
-            </p>
+          {/* Enhanced metadata row */}
+          <div className={styles.metadata}>
+            {/* Location badge */}
+            {locationData && (
+              <span className={styles.badge}>
+                {locationData.flag} {locationData.primary}
+                {locationData.hasMultiple && ` +${locationData.count - 1}`}
+              </span>
+            )}
+            
+            {/* Remote mode */}
+            {remoteMode && (
+              <span className={styles.badge}>
+                {remoteMode === 'Remote' ? '🌍' : remoteMode === 'Hybrid' ? '🏢' : '📍'} {remoteMode}
+              </span>
+            )}
+
+            {/* Seniority level */}
+            {seniority && (
+              <span className={styles.badge}>
+                {getSeniorityIcon(seniority)} {seniority}
+              </span>
+            )}
+
+            {/* Posted time */}
+            {postedLabel && (
+              <span className={styles.badgeTime}>
+                📅 {postedLabel}
+              </span>
+            )}
+          </div>
+
+          {/* Snippet - prioritize AI-generated content */}
+          {snippet ? <p className={styles.snippet}>{snippet}</p> : null}
+        </div>
+
+        {/* Salary section */}
+        <div className={styles.actions}>
+          {salaryDisplay ? (
+            <div className={styles.salaryBadge}>
+              <span className={styles.salaryLabel}>Salary</span>
+              <span className={styles.salaryAmount}>{salaryDisplay}</span>
+            </div>
+          ) : (
+            <div className={styles.salaryPlaceholder}>Salary not disclosed</div>
           )}
 
-          {techStack.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              {techStack.map((tech) => (
-                <span
-                  key={tech}
-                  className="rounded-full bg-slate-900/60 px-3 py-1 text-slate-300 ring-1 ring-slate-800/70"
-                >
-                  {tech}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/60 pt-4">
-            <p className="text-xs text-slate-400">
-              Apply on company site
-              {postedLabel ? (
-                <>
-                  <span className="text-slate-600"> • </span>
-                  Posted {postedLabel}
-                </>
-              ) : null}
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {isValidUrl(job.companyRef?.website) && (
-                <a
-                  href={cleanUrl(job.companyRef!.website!)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="focus-ring inline-flex h-11 items-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
-                >
-                  Company site
-                </a>
-              )}
-              {companySlug && (
-                <Link
-                  href={`/company/${companySlug}`}
-                  className="focus-ring inline-flex h-11 items-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
-                >
-                  More roles
-                </Link>
-              )}
-            </div>
+          <div className={styles.pills}>
+            {salaryDisplay && job.salaryValidated && job.salarySource === 'ats' && (
+              <StatusPill tone="success">Verified</StatusPill>
+            )}
+            {isNew && <StatusPill tone="neutral">NEW</StatusPill>}
+            {isFeatured && <StatusPill tone="warning">FEATURED</StatusPill>}
           </div>
         </div>
       </div>
+
+      {/* Tech stack section */}
+      {variant === 'full' && techStack.length > 0 ? (
+        <div className={styles.techStack}>
+          {techStack.map((tech) => (
+            <span key={tech} className={styles.techChip}>
+              {tech}
+            </span>
+          ))}
+        </div>
+      ) : null}
     </article>
   )
 }
-
-/* -------------------------------------------------------------------------- */
-/* Status Pill                                                                 */
-/* -------------------------------------------------------------------------- */
 
 function StatusPill({
   children,
@@ -281,50 +218,122 @@ function StatusPill({
   children: ReactNode
   tone?: 'neutral' | 'success' | 'warning'
 }) {
-  const base =
-    'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ring-1'
-
-  const classes =
-    tone === 'success'
-      ? `${base} bg-emerald-500/10 text-emerald-300 ring-emerald-500/20`
-      : tone === 'warning'
-      ? `${base} bg-amber-500/10 text-amber-300 ring-amber-500/20`
-      : `${base} bg-slate-900/60 text-slate-200 ring-slate-800/70`
-
-  return <span className={classes}>{children}</span>
+  return (
+    <span
+      className={`${styles.pill} ${
+        tone === 'success'
+          ? styles.pillSuccess
+          : tone === 'warning'
+          ? styles.pillWarning
+          : styles.pillNeutral
+      }`}
+    >
+      {children}
+    </span>
+  )
 }
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
-
-function buildLocation(job: JobCardJob): string | null {
-  const rawCode = job.countryCode
-  const code = rawCode ? rawCode.toString().toUpperCase() : null
-  const city = job.city ?? null
-  const isRemote = job.remote === true || job.remoteMode === 'remote'
-
-  if (isRemote) {
-    if (code) return code
-    return 'Worldwide'
+// Enhanced location builder using primaryLocation and locationsJson
+function buildLocationData(job: JobCardJob): {
+  primary: string
+  flag: string
+  hasMultiple: boolean
+  count: number
+} | null {
+  // Country code to name mapping
+  const countryNames: Record<string, string> = {
+    'US': 'USA', 'GB': 'UK', 'CA': 'Canada', 'AU': 'Australia',
+    'DE': 'Germany', 'FR': 'France', 'NL': 'Netherlands', 'ES': 'Spain',
+    'IT': 'Italy', 'SE': 'Sweden', 'NO': 'Norway', 'DK': 'Denmark',
+    'FI': 'Finland', 'IE': 'Ireland', 'CH': 'Switzerland', 'AT': 'Austria',
+    'BE': 'Belgium', 'PT': 'Portugal', 'PL': 'Poland', 'CZ': 'Czech Republic',
+    'SG': 'Singapore', 'JP': 'Japan', 'KR': 'South Korea', 'IN': 'India',
+    'BR': 'Brazil', 'MX': 'Mexico', 'AR': 'Argentina', 'CL': 'Chile', 'NZ': 'New Zealand',
   }
-
-  if (city && code) return `${city}, ${code}`
-  if (code) return code
-  if (job.locationRaw) return String(job.locationRaw)
-
+  // Try primaryLocation first (new field)
+  if (job.primaryLocation) {
+    const primary = String(job.primaryLocation)
+    const locations = parseJsonArray(job.locationsJson)
+    const countryCode = job.countryCode || detectCountryCode(primary)
+    
+    // For primaryLocation that's already descriptive (like "Remote, USA" or "New Jersey, USA"),
+    // just return it as-is without adding country name mapping
+    // Only map if it's a bare 2-letter code (US, GB, CA, etc.)
+    let displayName = primary
+    if (primary.length === 2 && primary === primary.toUpperCase()) {
+      // It's a 2-letter country code, map it to full name
+      displayName = countryNames[primary] || primary
+    }
+    
+    return {
+      primary: displayName,
+      flag: getCountryFlag(countryCode),
+      hasMultiple: locations.length > 1,
+      count: locations.length
+    }
+  }
+  // Fallback to existing logic
+  const isRemote = job.remote === true || job.remoteMode === 'remote'
+  const code = job.countryCode ? job.countryCode.toString().toUpperCase() : null
+  if (isRemote) {
+    // Only add flag for 2-letter country codes
+    // If primaryLocation exists and is descriptive, it was already handled above
+    const displayName = code ? (countryNames[code] || code) : 'Worldwide'
+    return {
+      primary: displayName,
+      flag: getCountryFlag(code),
+      hasMultiple: false,
+      count: 1
+    }
+  }
+  if (job.city && code) {
+    return {
+      primary: `${job.city}, ${code}`,
+      flag: getCountryFlag(code),
+      hasMultiple: false,
+      count: 1
+    }
+  }
+  if (code) {
+    const displayName = countryNames[code] || code
+    return {
+      primary: displayName,
+      flag: getCountryFlag(code),
+      hasMultiple: false,
+      count: 1
+    }
+  }
+  if (job.locationRaw) {
+    const raw = String(job.locationRaw)
+    const detectedCode = detectCountryCode(raw)
+    return {
+      primary: raw.split(/[;,]/)[0].trim(),
+      flag: getCountryFlag(detectedCode),
+      hasMultiple: raw.includes(';') || raw.includes(','),
+      count: raw.split(/[;,]/).length
+    }
+  }
   return null
 }
 
-function buildSnippet(job: JobCardJob, companyDesc?: string | null): string | null {
+function buildSnippet(job: JobCardJob): string | null {
+  // Priority 1: AI-generated snippet (shortest, most concise)
+  if (job.aiSnippet) return job.aiSnippet
+
+  // Priority 2: AI summary from requirementsJson
   const aiSummary = extractSummary(job.requirementsJson)
   if (aiSummary) return aiSummary
 
+  // Priority 3: Job description
   const rawPrimary = job.snippet ?? job.descriptionHtml ?? null
   const rawSecondary = job.description ?? null
-  const raw = rawPrimary || rawSecondary || companyDesc || null
-  if (!raw) return null
-  return truncateText(stripTags(decodeHtmlEntities(raw)), 160)
+  const raw = rawPrimary || rawSecondary
+
+  if (raw) {
+    return truncateText(stripTags(decodeHtmlEntities(raw)), 140)
+  }
+
+  return null
 }
 
 function isReasonableSalary(job: JobCardJob) {
@@ -366,26 +375,22 @@ function truncateText(str: string, maxChars: number) {
 function inferSeniorityFromTitle(title: string): string | null {
   const t = title.toLowerCase()
   if (t.includes('intern')) return 'Internship'
-  if (t.includes('principal') || t.includes('staff')) return 'Staff / Principal'
-  if (t.includes('lead') || t.includes('head')) return 'Lead'
-  if (t.includes('senior') || t.includes('sr')) return 'Senior'
-  if (t.includes('junior') || t.includes('jr')) return 'Junior'
+  if (t.includes('principal') || t.includes('staff') || t.includes('distinguished')) return 'Staff+'
+  if (t.includes('lead') || t.includes('head') || t.includes('director')) return 'Lead'
+  if (t.includes('senior') || t.includes('sr.') || t.includes('sr ')) return 'Senior'
+  if (t.includes('junior') || t.includes('jr.') || t.includes('jr ') || t.includes('associate')) return 'Junior'
+  if (t.includes('mid-level') || t.includes('mid level') || t.includes('intermediate')) return 'Mid-level'
   return null
 }
 
-function inferCategoryFromRoleSlug(roleSlug?: string | null) {
-  if (!roleSlug) return null
-  const s = roleSlug.toLowerCase()
-  if (s.includes('data')) return 'Data'
-  if (s.includes('ml') || s.includes('machine-learning')) return 'ML / AI'
-  if (s.includes('engineer') || s.includes('developer')) return 'Engineering'
-  if (s.includes('product')) return 'Product'
-  if (s.includes('design')) return 'Design'
-  if (s.includes('ops') || s.includes('operations')) return 'Operations'
-  if (s.includes('sales')) return 'Sales'
-  if (s.includes('marketing')) return 'Marketing'
-  if (s.includes('legal') || s.includes('counsel')) return 'Legal'
-  return null
+function getSeniorityIcon(seniority: string): string {
+  const s = seniority.toLowerCase()
+  if (s.includes('intern')) return '🎓'
+  if (s.includes('junior')) return '🌱'
+  if (s.includes('mid')) return '⚡'
+  if (s.includes('senior')) return '⭐'
+  if (s.includes('staff') || s.includes('lead') || s.includes('principal')) return '🚀'
+  return '💼'
 }
 
 function getRemoteMode(job: JobCardJob): string | null {
@@ -397,8 +402,10 @@ function getRemoteMode(job: JobCardJob): string | null {
   return null
 }
 
-function parseJsonArray(raw?: string | null): string[] {
+function parseJsonArray(raw?: any): string[] {
   if (!raw) return []
+  if (Array.isArray(raw)) return raw.filter((x) => typeof x === 'string')
+  if (typeof raw !== 'string') return []
   try {
     const parsed = JSON.parse(raw)
     if (Array.isArray(parsed)) {
@@ -423,31 +430,28 @@ function extractSummary(requirementsJson?: string | null): string | null {
   return null
 }
 
-function getCompanyBlurb(description?: string | null): string | null {
-  if (!description) return null
-  const clean = stripTags(decodeHtmlEntities(description)).trim()
-  if (!clean) return null
-  // take first sentence-ish
-  const cutoff = clean.indexOf('.')
-  if (cutoff > 50 && cutoff < 220) {
-    return clean.slice(0, cutoff + 1)
-  }
-  return clean.slice(0, 220)
+function detectCountryCode(text: string): string | null {
+  const t = text.toLowerCase()
+  if (t.includes('usa') || t.includes('united states') || t.includes('🇺🇸')) return 'US'
+  if (t.includes('canada') || t.includes('🇨🇦')) return 'CA'
+  if (t.includes('uk') || t.includes('united kingdom') || t.includes('🇬🇧')) return 'GB'
+  if (t.includes('germany') || t.includes('🇩🇪')) return 'DE'
+  if (t.includes('australia') || t.includes('🇦🇺')) return 'AU'
+  if (t.includes('france') || t.includes('🇫🇷')) return 'FR'
+  if (t.includes('netherlands') || t.includes('🇳🇱')) return 'NL'
+  return null
 }
 
-function isValidUrl(url?: string | null) {
-  if (!url) return false
-  try {
-    // new URL will throw if invalid; we also reject localhost/file protocols
-    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
-    return ['http:', 'https:'].includes(parsed.protocol)
-  } catch {
-    return false
-  }
-}
+function getCountryFlag(countryCode?: string | null): string {
+  if (!countryCode) return '🌍'
 
-function cleanUrl(url: string) {
-  if (!url) return '#'
-  if (url.startsWith('http://') || url.startsWith('https://')) return url
-  return `https://${url}`
+  const flags: Record<string, string> = {
+    US: '🇺🇸', GB: '🇬🇧', UK: '🇬🇧', CA: '🇨🇦', DE: '🇩🇪',
+    FR: '🇫🇷', NL: '🇳🇱', AU: '🇦🇺', IE: '🇮🇪', ES: '🇪🇸',
+    IT: '🇮🇹', SE: '🇸🇪', CH: '🇨🇭', IN: '🇮🇳', SG: '🇸🇬',
+    BR: '🇧🇷', MX: '🇲🇽', PL: '🇵🇱', NO: '🇳🇴', DK: '🇩🇰',
+    AT: '🇦🇹', BE: '🇧🇪', FI: '🇫🇮', PT: '🇵🇹', NZ: '🇳🇿',
+  }
+
+  return flags[countryCode.toUpperCase()] || '🌍'
 }

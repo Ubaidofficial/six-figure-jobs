@@ -1,0 +1,5 @@
+ companies | companies_with_logo | company_logo_pct 
+-----------+---------------------+------------------
+      2153 |                1192 |             55.4
+(1 row)
+

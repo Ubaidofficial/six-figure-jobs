@@ -2,6 +2,9 @@
 
 import axios from 'axios'
 import { upsertBoardJob } from './_boardHelpers'
+import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD = 'ycombinator'
 const BASE_URL = 'https://www.ycombinator.com'
@@ -13,12 +16,11 @@ async function fetchCompanies(attempt = 1): Promise<any | null> {
     const url = `${BASE_URL}/companies?include=jobs`
     const response = await axios.get(url, {
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         Accept: 'application/json',
       },
       timeout: 20000,
-      validateStatus: (s) => s >= 200 && s < 500, // allow 429/500 handling below
+      validateStatus: (s) => s >= 200 && s < 500,
     })
 
     if (response.status >= 500) {
@@ -41,41 +43,22 @@ async function fetchCompanies(attempt = 1): Promise<any | null> {
 }
 
 export default async function scrapeYCombinator() {
-  try {
-    console.log('▶ Scraping Y Combinator Startup Jobs…')
+  console.log('[YCombinator] Starting scrape...')
 
+  try {
     const data = (await fetchCompanies()) as any
     if (!data) {
-      return { board: BOARD, found: 0, stored: 0, error: 'Failed to fetch YC data' }
+      return { created: 0, updated: 0, skipped: 0, error: 'Failed to fetch YC data' } satisfies ScraperStats
     }
 
     if (!data || !Array.isArray(data.companies)) {
       console.log('YC returned unexpected format for companies:')
       console.log(Object.keys(data || {}))
-      return { board: BOARD, found: 0, stored: 0 }
+      return { created: 0, updated: 0, skipped: 0, error: 'unexpected-format' } satisfies ScraperStats
     }
 
     const companies: any[] = data.companies
-
-    const mlKeywords = [
-      'machine learning',
-      ' ml ',
-      'artificial intelligence',
-      ' ai ',
-      'deep learning',
-      'data scientist',
-      'computer vision',
-      'nlp',
-      'llm',
-      'generative ai',
-      'gen ai',
-      'ai engineer',
-      'ml engineer',
-      'research engineer',
-    ]
-
-    let found = 0
-    let stored = 0
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
 
     for (const company of companies) {
       const jobs: any[] = company.jobs || []
@@ -84,32 +67,46 @@ export default async function scrapeYCombinator() {
       for (const job of jobs) {
         const title: string = job.title || ''
         const description: string = job.description || ''
-        const combinedText = (title + ' ' + description).toLowerCase()
 
-        const isMLJob = mlKeywords.some((kw) => combinedText.includes(kw))
-        if (!isMLJob) continue
+        // REMOVED ML FILTER - get all tech jobs from YC companies
+        
+        let minSalary: number | null = null
+        let maxSalary: number | null = null
+        let salaryText: string | null = null
 
-        found++
-
-        // --- Salary estimation (very rough) --------------------
-        let minSalary = 100
-        let maxSalary = 180
-        let salaryText = '$100k+ (estimated)'
-
-        if (job.compensation && job.compensation.salary) {
-          const sal = String(job.compensation.salary).toLowerCase()
-          const match = sal.match(/(\d{2,3})k/)
-          if (match) {
-            minSalary = parseInt(match[1], 10)
-            maxSalary = minSalary + 40
+        // Better salary extraction from compensation object
+        if (job.compensation) {
+          if (job.compensation.min_salary) {
+            minSalary = Math.round(job.compensation.min_salary / 1000)
+          }
+          if (job.compensation.max_salary) {
+            maxSalary = Math.round(job.compensation.max_salary / 1000)
+          }
+          if (job.compensation.salary) {
+            const sal = String(job.compensation.salary).toLowerCase()
+            const match = sal.match(/(\d{2,3})k/)
+            if (match) {
+              const parsed = parseInt(match[1], 10)
+              minSalary = Number.isFinite(parsed) ? parsed : minSalary
+              if (minSalary != null && maxSalary == null) {
+                maxSalary = minSalary + 40
+              }
+            }
+          }
+          
+          if (minSalary != null && maxSalary != null) {
             salaryText = `$${minSalary}k - $${maxSalary}k`
+          } else if (minSalary != null) {
+            salaryText = `$${minSalary}k+`
+          } else if (maxSalary != null) {
+            salaryText = `$${maxSalary}k`
           }
         }
 
-        // Skip clearly sub-100k roles
-        if (minSalary < 100) continue
+        if (!salaryText) continue
+        const salaryCheck = minSalary ?? maxSalary ?? 0
+        if (salaryCheck < 100) continue
 
-        // --- Location handling ---------------------------------
         let location: string = job.location || 'Remote'
         if (location.toLowerCase().includes('remote')) {
           location = 'Remote'
@@ -117,36 +114,42 @@ export default async function scrapeYCombinator() {
 
         const companyName: string = company.name || 'YC company'
 
-        // YC job URLs are relative; prefix with BASE_URL
-        const applyUrl =
-          job.url && job.url.startsWith('/')
-            ? `${BASE_URL}${job.url}`
-            : `${BASE_URL}/companies/${company.slug || ''}`
+        // Better URL construction
+        const url = `${BASE_URL}/companies/${company.slug || company.id}/jobs/${job.id}`
 
-        await upsertBoardJob({
+        const applyUrl = job.apply_url 
+          || (job.url?.startsWith('http') ? job.url : job.url?.startsWith('/') ? `${BASE_URL}${job.url}` : null)
+          || url
+
+        const atsType = detectATS(applyUrl)
+        const explicitAtsProvider = toAtsProvider(atsType)
+        const explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(applyUrl, atsType) : null
+
+        if (companyName && isExternalToHost(applyUrl, 'ycombinator.com')) {
+          await saveCompanyATS(companyName, applyUrl, BOARD)
+        }
+
+        const result = await upsertBoardJob({
           board: BOARD,
           externalId: `yc-${job.id}`,
           title,
           company: companyName,
+          url,
           applyUrl,
           location,
           salaryText,
           remote: location === 'Remote',
+          explicitAtsProvider,
+          explicitAtsUrl,
         })
-
-        stored++
+        addBoardIngestResult(stats, result)
       }
     }
 
-    console.log(`✅ Y Combinator: Found ${found} AI/ML jobs, upserted ${stored}`)
-
-    return {
-      board: BOARD,
-      found,
-      stored,
-    }
-  } catch (err: any) {
-    console.error('YC scraper error:', err?.message ?? err)
-    return { board: BOARD, found: 0, stored: 0, error: String(err) }
+    console.log(`[YCombinator] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[YCombinator] ❌ Scrape failed:', error)
+    return errorStats(error)
   }
 }

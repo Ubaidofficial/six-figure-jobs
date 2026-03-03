@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -15,7 +20,7 @@ async function check() {
     where: { isExpired: false }
   })
   
-  console.log(`\n📊 Jobs with descriptions: ${withDesc} / ${total} (${Math.round(withDesc/total*100)}%)`)
+  __slog(`\n📊 Jobs with descriptions: ${withDesc} / ${total} (${Math.round(withDesc/total*100)}%)`)
   
   // Show a job that HAS description
   const jobWithDesc = await prisma.job.findFirst({
@@ -25,13 +30,13 @@ async function check() {
   })
   
   if (jobWithDesc) {
-    console.log('\n✅ FOUND JOB WITH DESCRIPTION:')
-    console.log('Title:', jobWithDesc.title)
-    console.log('Company:', jobWithDesc.company)
-    console.log('Source:', jobWithDesc.source)
-    console.log('Description length:', jobWithDesc.descriptionHtml?.length)
+    __slog('\n✅ FOUND JOB WITH DESCRIPTION:')
+    __slog('Title:', jobWithDesc.title)
+    __slog('Company:', jobWithDesc.company)
+    __slog('Source:', jobWithDesc.source)
+    __slog('Description length:', jobWithDesc.descriptionHtml?.length)
   } else {
-    console.log('\n❌ NO JOBS HAVE DESCRIPTIONS!')
+    __slog('\n❌ NO JOBS HAVE DESCRIPTIONS!')
   }
 }
 

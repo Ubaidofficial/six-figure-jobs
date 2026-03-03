@@ -1,53 +1,242 @@
 // lib/scrapers/weworkremotely.ts
 import * as cheerio from 'cheerio'
+import type { AnyNode } from 'domhandler'
 import type { ScrapedJobInput } from '../ingest/types'
+import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
+import { addIngestStatus, errorStats, type ScraperStats } from './scraperStats'
+import { discoverApplyUrlFromPage } from './utils/discoverApplyUrl'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD_NAME = 'weworkremotely'
 const BASE_URL = 'https://weworkremotely.com'
 
-export async function scrapeWeWorkRemotely(): Promise<ScrapedJobInput[]> {
-  console.log('Scraping WeWorkRemotely...')
+function detectCurrencyFromText(text: string | null): string | null {
+  if (!text) return null
+  const t = text.toLowerCase()
+  if (t.includes('usd') || t.includes('us$')) return 'USD'
+  if (t.includes('cad') || t.includes('c$') || t.includes('ca$')) return 'CAD'
+  if (t.includes('aud') || t.includes('a$') || t.includes('au$')) return 'AUD'
+  if (t.includes('nzd') || t.includes('nz$')) return 'NZD'
+  if (t.includes('sgd') || t.includes('s$')) return 'SGD'
+  if (t.includes('eur') || t.includes('€')) return 'EUR'
+  if (t.includes('gbp') || t.includes('£')) return 'GBP'
+  if (t.includes('chf')) return 'CHF'
+  if (t.includes('inr') || t.includes('₹')) return 'INR'
+  if (t.includes('$')) return 'USD'
+  return null
+}
+
+function detectIntervalFromText(text: string | null): string | null {
+  if (!text) return null
+  const t = text.toLowerCase()
+  if (/hour|hr|hourly|\/\s*h/.test(t)) return 'hour'
+  if (/day|daily|\/\s*d/.test(t)) return 'day'
+  if (/week|weekly|\/\s*w/.test(t)) return 'week'
+  if (/month|monthly|\/\s*m/.test(t)) return 'month'
+  if (/year|annual|annually|\/\s*y/.test(t)) return 'year'
+  return null
+}
+
+function parseSalary(text: string | null, isMax = false): number | null {
+  if (!text) return null
+  const matches = text.match(/([\d,]+)\s*k?/gi)
+  if (!matches) return null
+
+  const numbers = matches
+    .map((m) => parseInt(m.replace(/[^0-9]/g, ''), 10))
+    .filter((n) => Number.isFinite(n) && n > 0)
+
+  if (numbers.length === 0) return null
+
+  const vals = numbers.map((n) => (n < 1000 ? n * 1000 : n))
+  return isMax ? Math.max(...vals) : Math.min(...vals)
+}
+
+function extractSalaryFromListing($el: cheerio.Cheerio<AnyNode>): string | null {
+  const salaryText =
+    $el
+      .find('[data-id*="salary"], [data-testid*="salary"], [class*="salary"], [class*="compensation"], [class*="pay"]')
+      .first()
+      .text()
+      .trim() || null
+  if (!salaryText || !/\\d/.test(salaryText)) return null
+  return salaryText
+}
+
+async function fetchJobDescription(jobUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(jobUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      cache: 'no-store',
+    })
+    if (!res.ok) return null
+    
+    const html = await res.text()
+    const $ = cheerio.load(html)
+    
+    const pageTitle = $('title').text().trim().toLowerCase()
+    if (
+      pageTitle.includes('just a moment') ||
+      pageTitle.includes('attention required') ||
+      html.toLowerCase().includes('cf-browser-verification')
+    ) {
+      return null
+    }
+
+    const selectors = [
+      '.listing-container',
+      'main .listing-container',
+      'article .listing-container',
+      '#job_listing',
+      '#job-listing',
+      'main article',
+      'main',
+      'article',
+    ]
+
+    let bestHtml: string | null = null
+    let bestLen = 0
+
+    for (const sel of selectors) {
+      const $el = $(sel).first()
+      if ($el.length === 0) continue
+      const textLen = $el.text().replace(/\s+/g, ' ').trim().length
+      if (textLen < 200) continue
+      if (textLen > bestLen) {
+        bestLen = textLen
+        bestHtml = $el.html() || null
+      }
+    }
+
+    // Guardrails: avoid saving entire page chrome if a selector matched too broadly
+    if (bestHtml && bestLen >= 200 && bestLen <= 80_000) return bestHtml
+
+    return null
+  } catch (err) {
+    console.warn(`[WWR] Failed to fetch description from ${jobUrl}:`, err)
+    return null
+  }
+}
+
+export async function fetchWeWorkRemotelyJobs(): Promise<ScrapedJobInput[]> {
   const jobs: ScrapedJobInput[] = []
-  
   const res = await fetch(BASE_URL + '/remote-100k-or-more-salary-jobs', {
-    headers: { 'User-Agent': 'Mozilla/5.0' }
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml',
+    },
+    cache: 'no-store',
   })
-  
+  if (!res.ok) {
+    console.warn(`[WeWorkRemotely] HTTP ${res.status} for listing page`)
+    return []
+  }
   const html = await res.text()
   const $ = cheerio.load(html)
   
+  const listings: Array<{
+    title: string
+    company: string
+    location: string
+    url: string
+    externalId: string
+    salaryText: string | null
+  }> = []
+  
   $('li.new-listing-container').each((_, el) => {
     const $el = $(el)
-    
     const $link = $el.find('a.listing-link--unlocked').first()
     const href = $link.attr('href')
     if (!href) return
-    
     const title = $el.find('.new-listing__header__title').text().trim()
     if (!title) return
-    
     const company = $el.find('.new-listing__company-name').text().trim().replace(/\s+/g, ' ')
     const location = $el.find('.new-listing__company-headquarters').text().trim()
-    
     const url = href.startsWith('http') ? href : BASE_URL + href
     const externalId = href.split('/').pop() || String(Date.now())
+    const salaryText = extractSalaryFromListing($el)
+    
+    listings.push({ title, company, location, url, externalId, salaryText })
+  })
+  
+  console.log(`[WWR] Found ${listings.length} listings, fetching descriptions...`)
+  
+  // Fetch descriptions in parallel (with rate limiting)
+  for (const listing of listings) {
+    const descriptionHtml = await fetchJobDescription(listing.url)
+    const salaryText = listing.salaryText
+    const salaryMin = parseSalary(salaryText, false)
+    const salaryMax = parseSalary(salaryText, true)
+    const salaryCurrency = salaryText ? detectCurrencyFromText(salaryText) ?? 'USD' : null
+    const salaryInterval = salaryText ? detectIntervalFromText(salaryText) ?? 'year' : null
     
     jobs.push({
       source: makeBoardSource(BOARD_NAME),
-      externalId,
-      title,
-      rawCompanyName: company || 'Unknown',
-      locationText: location || 'Remote',
-      url,
+      externalId: listing.externalId,
+      title: listing.title,
+      rawCompanyName: listing.company || 'Unknown',
+      locationText: listing.location || 'Remote',
+      url: listing.url,
       isRemote: true,
-      salaryMin: 100000,
-      salaryCurrency: 'USD',
+      descriptionHtml,
+      salaryRaw: salaryText,
+      salaryMin,
+      salaryMax,
+      salaryCurrency,
+      salaryInterval,
     })
-  })
+    
+    // Rate limit: 100ms between requests
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
   
-  console.log('  Found ' + jobs.length + ' jobs')
+  console.log(`[WWR] Extracted ${jobs.filter(j => j.descriptionHtml).length}/${jobs.length} descriptions`)
   return jobs
 }
 
-export default scrapeWeWorkRemotely
+export default async function scrapeWeWorkRemotely(): Promise<ScraperStats> {
+  console.log('[WeWorkRemotely] Starting scrape...')
+  try {
+    const jobs = await fetchWeWorkRemotelyJobs()
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
+    for (const job of jobs) {
+      try {
+        let applyUrl = job.url
+        if (applyUrl && applyUrl.toLowerCase().includes('weworkremotely.com')) {
+          const discoveredApplyUrl = await discoverApplyUrlFromPage(applyUrl)
+          if (discoveredApplyUrl) applyUrl = discoveredApplyUrl
+        }
+        const atsType = detectATS(applyUrl || '')
+        const explicitAtsProvider = toAtsProvider(atsType)
+        const explicitAtsUrl =
+          explicitAtsProvider && applyUrl ? getCompanyJobsUrl(applyUrl, atsType) : null
+        const companyName = job.rawCompanyName || ''
+        if (companyName && applyUrl && isExternalToHost(applyUrl, 'weworkremotely.com')) {
+          await saveCompanyATS(companyName, applyUrl, BOARD_NAME)
+        }
+        const result = await ingestJob({
+          ...job,
+          applyUrl: applyUrl ?? job.applyUrl,
+          explicitAtsProvider,
+          explicitAtsUrl,
+        })
+        addIngestStatus(stats, result.status)
+      } catch (err) {
+        console.error('[WeWorkRemotely] Job ingest failed:', err)
+        stats.skipped++
+      }
+    }
+    console.log(`[WeWorkRemotely] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[WeWorkRemotely] ❌ Scrape failed:', error)
+    return errorStats(error)
+  }
+}

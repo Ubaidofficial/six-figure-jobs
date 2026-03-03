@@ -8,14 +8,19 @@
  * 3. Updates isHighSalaryLocal and isHundredKLocal accordingly
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { getMinSalaryForCountry, isVeryHighSalary } from '../lib/jobs/salaryThresholds'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
 async function backfillHighSalaryLocal() {
-  console.log('🚀 Starting backfill for isHighSalaryLocal...')
-  console.log('')
+  __slog('🚀 Starting backfill for isHighSalaryLocal...')
+  __slog('')
 
   try {
     // Get all jobs with salary data
@@ -33,8 +38,8 @@ async function backfillHighSalaryLocal() {
       },
     })
 
-    console.log(`📊 Found ${jobs.length.toLocaleString()} jobs to process`)
-    console.log('')
+    __slog(`📊 Found ${jobs.length.toLocaleString()} jobs to process`)
+    __slog('')
 
     let updated = 0
     let alreadyCorrect = 0
@@ -54,7 +59,7 @@ async function backfillHighSalaryLocal() {
           
           // Get threshold for this country
           const threshold = getMinSalaryForCountry(countryCode)
-          if (!threshold) {
+          if (threshold == null) {
             noThreshold++
             return null
           }
@@ -99,21 +104,21 @@ async function backfillHighSalaryLocal() {
       // Progress indicator
       const progress = Math.min(i + batchSize, jobs.length)
       const percentage = ((progress / jobs.length) * 100).toFixed(1)
-      console.log(`Progress: ${progress.toLocaleString()}/${jobs.length.toLocaleString()} (${percentage}%)`)
+      __slog(`Progress: ${progress.toLocaleString()}/${jobs.length.toLocaleString()} (${percentage}%)`)
     }
 
-    console.log('')
-    console.log('✅ Backfill complete!')
-    console.log('')
-    console.log('📈 Summary:')
-    console.log(`  • Total jobs processed: ${jobs.length.toLocaleString()}`)
-    console.log(`  • Jobs updated: ${updated.toLocaleString()}`)
-    console.log(`  • Already correct: ${alreadyCorrect.toLocaleString()}`)
-    console.log(`  • No threshold found: ${noThreshold.toLocaleString()}`)
-    console.log('')
+    __slog('')
+    __slog('✅ Backfill complete!')
+    __slog('')
+    __slog('📈 Summary:')
+    __slog(`  • Total jobs processed: ${jobs.length.toLocaleString()}`)
+    __slog(`  • Jobs updated: ${updated.toLocaleString()}`)
+    __slog(`  • Already correct: ${alreadyCorrect.toLocaleString()}`)
+    __slog(`  • No threshold found: ${noThreshold.toLocaleString()}`)
+    __slog('')
 
   } catch (error) {
-    console.error('❌ Error during backfill:', error)
+    __serr('❌ Error during backfill:', error)
     throw error
   } finally {
     await prisma.$disconnect()
@@ -123,10 +128,10 @@ async function backfillHighSalaryLocal() {
 // Run the backfill
 backfillHighSalaryLocal()
   .then(() => {
-    console.log('✅ Script completed successfully')
+    __slog('✅ Script completed successfully')
     process.exit(0)
   })
   .catch((error) => {
-    console.error('❌ Script failed:', error)
+    __serr('❌ Script failed:', error)
     process.exit(1)
   })

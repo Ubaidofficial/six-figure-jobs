@@ -9,7 +9,12 @@
 // 3. Updates jobs in batches
 // 4. Reports on any potential duplicates found
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -87,10 +92,10 @@ function makeJobDedupeKey(
 const BATCH_SIZE = 100
 
 async function backfillDedupeKeys() {
-  console.log('═══════════════════════════════════════════════')
-  console.log('  Backfill Dedupe Keys')
-  console.log('═══════════════════════════════════════════════')
-  console.log('')
+  __slog('═══════════════════════════════════════════════')
+  __slog('  Backfill Dedupe Keys')
+  __slog('═══════════════════════════════════════════════')
+  __slog('')
 
   // Count jobs without dedupe key
   const totalWithoutKey = await prisma.job.count({
@@ -99,17 +104,17 @@ async function backfillDedupeKeys() {
 
   const totalJobs = await prisma.job.count()
 
-  console.log(`Total jobs: ${totalJobs}`)
-  console.log(`Jobs without dedupeKey: ${totalWithoutKey}`)
-  console.log('')
+  __slog(`Total jobs: ${totalJobs}`)
+  __slog(`Jobs without dedupeKey: ${totalWithoutKey}`)
+  __slog('')
 
   if (totalWithoutKey === 0) {
-    console.log('✅ All jobs already have dedupe keys!')
+    __slog('✅ All jobs already have dedupe keys!')
     return
   }
 
-  console.log(`Processing ${totalWithoutKey} jobs in batches of ${BATCH_SIZE}...`)
-  console.log('')
+  __slog(`Processing ${totalWithoutKey} jobs in batches of ${BATCH_SIZE}...`)
+  __slog('')
 
   let processed = 0
   let updated = 0
@@ -176,24 +181,24 @@ async function backfillDedupeKeys() {
 
         updated++
       } catch (err: any) {
-        console.error(`  Error updating job ${job.id}: ${err.message}`)
+        __serr(`  Error updating job ${job.id}: ${err.message}`)
         errors++
       }
     }
 
     processed += jobs.length
     const percent = Math.round((processed / totalWithoutKey) * 100)
-    console.log(`  Progress: ${processed}/${totalWithoutKey} (${percent}%) - ${updated} updated, ${errors} errors`)
+    __slog(`  Progress: ${processed}/${totalWithoutKey} (${percent}%) - ${updated} updated, ${errors} errors`)
   }
 
-  console.log('')
-  console.log('═══════════════════════════════════════════════')
-  console.log('  Results')
-  console.log('═══════════════════════════════════════════════')
-  console.log(`  Jobs processed: ${processed}`)
-  console.log(`  Jobs updated: ${updated}`)
-  console.log(`  Errors: ${errors}`)
-  console.log('')
+  __slog('')
+  __slog('═══════════════════════════════════════════════')
+  __slog('  Results')
+  __slog('═══════════════════════════════════════════════')
+  __slog(`  Jobs processed: ${processed}`)
+  __slog(`  Jobs updated: ${updated}`)
+  __slog(`  Errors: ${errors}`)
+  __slog('')
 
   // Find duplicates
   const duplicates: { key: string; jobIds: string[] }[] = []
@@ -204,44 +209,44 @@ async function backfillDedupeKeys() {
   }
 
   if (duplicates.length > 0) {
-    console.log('═══════════════════════════════════════════════')
-    console.log('  ⚠️  Potential Duplicates Found')
-    console.log('═══════════════════════════════════════════════')
-    console.log(`  Found ${duplicates.length} dedupe keys with multiple jobs`)
-    console.log('')
+    __slog('═══════════════════════════════════════════════')
+    __slog('  ⚠️  Potential Duplicates Found')
+    __slog('═══════════════════════════════════════════════')
+    __slog(`  Found ${duplicates.length} dedupe keys with multiple jobs`)
+    __slog('')
 
     // Show first 10 duplicates
     const samplesToShow = duplicates.slice(0, 10)
     for (const dup of samplesToShow) {
-      console.log(`  Key: ${dup.key.slice(0, 60)}...`)
-      console.log(`  Jobs: ${dup.jobIds.length}`)
+      __slog(`  Key: ${dup.key.slice(0, 60)}...`)
+      __slog(`  Jobs: ${dup.jobIds.length}`)
       for (const jobId of dup.jobIds.slice(0, 3)) {
-        console.log(`    - ${jobId}`)
+        __slog(`    - ${jobId}`)
       }
       if (dup.jobIds.length > 3) {
-        console.log(`    ... and ${dup.jobIds.length - 3} more`)
+        __slog(`    ... and ${dup.jobIds.length - 3} more`)
       }
-      console.log('')
+      __slog('')
     }
 
     if (duplicates.length > 10) {
-      console.log(`  ... and ${duplicates.length - 10} more duplicate groups`)
+      __slog(`  ... and ${duplicates.length - 10} more duplicate groups`)
     }
 
-    console.log('')
-    console.log('  Run scripts/mergeDuplicates.ts to merge these duplicates')
+    __slog('')
+    __slog('  Run scripts/mergeDuplicates.ts to merge these duplicates')
   } else {
-    console.log('✅ No duplicates found!')
+    __slog('✅ No duplicates found!')
   }
 
-  console.log('')
-  console.log('Done!')
+  __slog('')
+  __slog('Done!')
 }
 
 // Run
 backfillDedupeKeys()
   .catch((err) => {
-    console.error('Script failed:', err)
+    __serr('Script failed:', err)
     process.exit(1)
   })
   .finally(async () => {

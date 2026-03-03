@@ -1,11 +1,15 @@
 // app/robots.txt/route.ts
 import { NextResponse } from 'next/server'
 import { getSiteUrl } from '../../lib/seo/site'
+import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
+import { hasRemoteRoleSitemapEntries } from '../../lib/seo/remoteSitemap'
+import { hasSliceSitemapEntries } from '../../lib/seo/slicesSitemap'
 
 const SITE_URL = getSiteUrl()
 
-export const dynamic = "force-static"
+export const dynamic = 'force-dynamic'
 
+export const revalidate = 86400
 export async function GET() {
   // Block staging from indexing entirely
   if (process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')) {
@@ -15,6 +19,11 @@ export async function GET() {
     })
   }
 
+  const [cityUrls, hasRemoteUrls, hasSliceUrls] = await Promise.all([
+    getCitySitemapUrls(),
+    hasRemoteRoleSitemapEntries(),
+    hasSliceSitemapEntries(),
+  ])
   const body = [
     'User-agent: *',
     'Allow: /',
@@ -31,13 +40,14 @@ export async function GET() {
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     `Sitemap: ${SITE_URL}/sitemap-jobs.xml`,
     `Sitemap: ${SITE_URL}/sitemap-company.xml`,
+    ...(cityUrls.length > 0 ? [`Sitemap: ${SITE_URL}/sitemap-city.xml`] : []),
     `Sitemap: ${SITE_URL}/sitemap-salary.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-remote.xml`,
+    ...(hasRemoteUrls ? [`Sitemap: ${SITE_URL}/sitemap-remote.xml`] : []),
     `Sitemap: ${SITE_URL}/sitemap-country.xml`,
     `Sitemap: ${SITE_URL}/sitemap-category.xml`,
     `Sitemap: ${SITE_URL}/sitemap-level.xml`,
     `Sitemap: ${SITE_URL}/sitemap-browse.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-slices.xml`,
+    ...(hasSliceUrls ? [`Sitemap: ${SITE_URL}/sitemap-slices.xml`] : []),
     '',
   ].join('\n')
 

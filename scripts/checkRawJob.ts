@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -18,14 +23,14 @@ async function main() {
     // Search for salary-related text in description
     const desc = job.descriptionHtml.toLowerCase()
     const hasSalary = desc.includes('salary') || desc.includes('compensation') || desc.includes('$') || desc.includes('usd')
-    console.log(`Job: ${job.title}`)
-    console.log(`Source: ${job.source}`)
-    console.log(`Has salary keywords in description: ${hasSalary}`)
+    __slog(`Job: ${job.title}`)
+    __slog(`Source: ${job.source}`)
+    __slog(`Has salary keywords in description: ${hasSalary}`)
     
     // Extract any dollar amounts
     const matches = job.descriptionHtml.match(/\$[\d,]+|\d+k/gi)
     if (matches) {
-      console.log(`Dollar amounts found: ${matches.slice(0, 5).join(', ')}`)
+      __slog(`Dollar amounts found: ${matches.slice(0, 5).join(', ')}`)
     }
   }
 

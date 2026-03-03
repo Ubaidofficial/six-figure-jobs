@@ -1,0 +1,4 @@
+ company | companyLogo 
+---------+-------------
+(0 rows)
+

@@ -1,5 +1,10 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import slugify from 'slugify'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -46,7 +51,7 @@ const REMOTE_COMPANIES = [
 ]
 
 async function main() {
-  console.log('Checking for missing companies...\n')
+  __slog('Checking for missing companies...\n')
 
   let added = 0
   let existing = 0
@@ -70,11 +75,11 @@ async function main() {
         logoUrl: `https://logo.clearbit.com/${slug}.com`,
       }
     })
-    console.log(`  Added: ${company.name}`)
+    __slog(`  Added: ${company.name}`)
     added++
   }
 
-  console.log(`\nDone: ${added} added, ${existing} already existed`)
+  __slog(`\nDone: ${added} added, ${existing} already existed`)
   await prisma.$disconnect()
 }
 

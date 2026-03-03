@@ -1,7 +1,12 @@
 // scripts/seedTopCompanies.ts
 // Seeds 150+ top tech companies with their ATS URLs
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -183,8 +188,8 @@ function getAtsUrl(provider: string, slug: string): string {
 // ============================================================================
 
 async function main() {
-  console.log('=== Seeding Top Companies ===')
-  console.log('')
+  __slog('=== Seeding Top Companies ===')
+  __slog('')
 
   const allCompanies = [
     ...GREENHOUSE_COMPANIES,
@@ -217,7 +222,7 @@ async function main() {
               countryCode: company.countryCode || existing.countryCode,
             },
           })
-          console.log('✓ Updated: ' + company.name + ' (' + company.atsProvider + ')')
+          __slog('✓ Updated: ' + company.name + ' (' + company.atsProvider + ')')
           updated++
         } else {
           skipped++
@@ -234,14 +239,14 @@ async function main() {
             countryCode: company.countryCode || null,
           },
         })
-        console.log('+ Created: ' + company.name + ' (' + company.atsProvider + ')')
+        __slog('+ Created: ' + company.name + ' (' + company.atsProvider + ')')
         created++
       }
     } catch (err: any) {
       if (err?.code === 'P2002') {
         skipped++
       } else {
-        console.error('✗ Error with ' + company.name + ':', err?.message)
+        __serr('✗ Error with ' + company.name + ':', err?.message)
         skipped++
       }
     }
@@ -257,19 +262,19 @@ async function main() {
     },
   })
 
-  console.log('')
-  console.log('=== Seed Complete ===')
-  console.log('Created: ' + created)
-  console.log('Updated: ' + updated)
-  console.log('Skipped: ' + skipped)
-  console.log('')
-  console.log('Total companies in DB: ' + totalCompanies)
-  console.log('Companies with ATS: ' + withAts)
+  __slog('')
+  __slog('=== Seed Complete ===')
+  __slog('Created: ' + created)
+  __slog('Updated: ' + updated)
+  __slog('Skipped: ' + skipped)
+  __slog('')
+  __slog('Total companies in DB: ' + totalCompanies)
+  __slog('Companies with ATS: ' + withAts)
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

@@ -4,7 +4,11 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { prisma } from '../../lib/prisma'
-import type { JobWithCompany } from '../../lib/jobs/queryJobs'
+import {
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+  type JobWithCompany,
+} from '../../lib/jobs/queryJobs'
 import JobList from '../components/JobList'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
@@ -181,7 +185,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const remoteMode = getParam(sp, 'remoteMode')?.trim() || ''
   const remoteRegion = getParam(sp, 'remoteRegion')?.trim() || ''
   const seniority = getParam(sp, 'seniority')?.trim() || ''
-  const minSalaryRaw = Number(getParam(sp, 'minSalary') || '100000')
+  const minSalaryParam = getParam(sp, 'minSalary')
+  const minSalaryRaw = Number(minSalaryParam || '100000')
   const page = Math.max(1, Number(getParam(sp, 'page') || '1') || 1)
 
   const aiFilters = parseSearchQuery(q)
@@ -204,14 +209,20 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   const andConditions: any[] = []
 
-  // High-salary enforcement
-  andConditions.push({
-    OR: [
-      { maxAnnual: { gte: BigInt(minAnnual) } },
-      { minAnnual: { gte: BigInt(minAnnual) } },
-      { isHighSalary: true },
-    ],
-  })
+  // v2.9 hard gates: eligibility + global exclusions
+  andConditions.push(buildHighSalaryEligibilityWhere())
+  andConditions.push(buildGlobalExclusionsWhere())
+
+  // Optional user min-salary filter (additional constraint on top of eligibility)
+  const hasUserMinSalary = Boolean(minSalaryParam) || aiFilters.minAnnual != null
+  if (hasUserMinSalary) {
+    andConditions.push({
+      OR: [
+        { maxAnnual: { gte: BigInt(minAnnual) } },
+        { minAnnual: { gte: BigInt(minAnnual) } },
+      ],
+    })
+  }
 
   if (q) {
     andConditions.push({
@@ -282,7 +293,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
     prisma.job.findMany({
       where,
       orderBy: [
-        { isHighSalary: 'desc' },
         { maxAnnual: 'desc' },
         { createdAt: 'desc' },
       ],
@@ -317,14 +327,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
             {/* Search Query */}
             <div className="md:col-span-2">
               <label htmlFor="q" className="mb-1.5 block text-xs font-medium text-slate-400">
-                Search
+                Find your next six-figure job
               </label>
               <input
                 type="text"
                 id="q"
                 name="q"
                 defaultValue={q}
-                placeholder="Job title, company, or keyword..."
+                placeholder="Role, company, or skill…"
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
             </div>
@@ -463,7 +473,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <span className="font-semibold text-slate-100">
                 {total.toLocaleString()}
               </span>{' '}
-              roles found
+              opportunities found
               {resolvedLocation &&
                 ` in ${resolvedLocation === 'remote' ? 'Remote' : resolvedLocation.toUpperCase()}`}
               {minAnnual > 100000 && ` paying $${(minAnnual / 1000).toFixed(0)}k+`}
@@ -476,10 +486,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
       {jobs.length === 0 ? (
         <div className="surface p-10 text-center">
           <p className="text-base font-semibold text-slate-100">
-            No matches — try removing one filter.
+            No jobs found.
           </p>
           <p className="mt-2 text-sm text-slate-400">
-            Clear filters to broaden results, or jump to the newest $100k+ roles.
+            Try adjusting your filters, or clear them to explore all $100k+ opportunities.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
@@ -492,7 +502,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               href="/"
               className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-emerald-400 px-6 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300"
             >
-              Show newest jobs
+              Explore newest opportunities
             </Link>
           </div>
         </div>

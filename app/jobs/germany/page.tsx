@@ -3,5 +3,5 @@ import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 
 export default function GermanyRedirect() {
   const slug = countryCodeToSlug('DE')
-  redirect(`/jobs/country/${slug}`)
+  redirect(`/jobs/location/${slug}`)
 }

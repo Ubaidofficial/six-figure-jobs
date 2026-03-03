@@ -8,12 +8,17 @@
  * Run with:  npx ts-node scripts/backfillJobLogos.ts
  */
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🚀 Starting job logo backfill…')
+  __slog('🚀 Starting job logo backfill…')
 
   const jobs = await prisma.job.findMany({
     where: {
@@ -25,7 +30,7 @@ async function main() {
     include: { companyRef: true },
   })
 
-  console.log(`Found ${jobs.length} jobs missing logo…`)
+  __slog(`Found ${jobs.length} jobs missing logo…`)
 
   let updated = 0
 
@@ -41,13 +46,13 @@ async function main() {
     updated++
   }
 
-  console.log(`✅ Updated ${updated} job logos.`)
-  console.log('🎉 Backfill complete.')
+  __slog(`✅ Updated ${updated} job logos.`)
+  __slog('🎉 Backfill complete.')
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

@@ -1,7 +1,12 @@
 // scripts/disableBadGreenhouseSlugs.ts
 // One-off helper to clear ATS for known-bad Greenhouse slugs.
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -26,7 +31,7 @@ const BAD_GREENHOUSE_SLUGS = [
 ]
 
 async function main() {
-  console.log('Disabling ATS for known-bad Greenhouse slugs...\n')
+  __slog('Disabling ATS for known-bad Greenhouse slugs...\n')
 
   const res = await prisma.company.updateMany({
     where: {
@@ -44,13 +49,13 @@ async function main() {
     },
   })
 
-  console.log(`Updated ${res.count} companies`)
+  __slog(`Updated ${res.count} companies`)
   await prisma.$disconnect()
 }
 
 if (require.main === module) {
   main().catch((err) => {
-    console.error('💥 Script failed:', err)
+    __serr('💥 Script failed:', err)
     process.exit(1)
   })
 }

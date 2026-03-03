@@ -2,7 +2,12 @@
 // 1. Fixes incorrect ATS slugs for existing companies
 // 2. Adds 200+ new remote companies with verified ATS URLs
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -338,10 +343,10 @@ function buildAtsUrl(provider: string, slug: string): string {
 // ============================================================================
 
 async function main() {
-  console.log('===========================================')
-  console.log('   FIX & ADD COMPANIES SCRIPT')
-  console.log('===========================================')
-  console.log('')
+  __slog('===========================================')
+  __slog('   FIX & ADD COMPANIES SCRIPT')
+  __slog('===========================================')
+  __slog('')
 
   let fixedCount = 0
   let addedCount = 0
@@ -350,7 +355,7 @@ async function main() {
   // ----------------------------------------
   // PHASE 1: Fix existing companies
   // ----------------------------------------
-  console.log('--- Phase 1: Fixing existing companies ---')
+  __slog('--- Phase 1: Fixing existing companies ---')
   
   for (const fix of COMPANY_FIXES) {
     try {
@@ -367,16 +372,16 @@ async function main() {
             atsUrl: fix.atsUrl,
           },
         })
-        console.log('✓ Fixed: ' + fix.slug + ' -> ' + (fix.atsProvider || 'removed'))
+        __slog('✓ Fixed: ' + fix.slug + ' -> ' + (fix.atsProvider || 'removed'))
         fixedCount++
       }
     } catch (err: any) {
-      console.error('✗ Error fixing ' + fix.slug + ':', err?.message)
+      __serr('✗ Error fixing ' + fix.slug + ':', err?.message)
     }
   }
 
-  console.log('')
-  console.log('--- Phase 2: Adding new companies ---')
+  __slog('')
+  __slog('--- Phase 2: Adding new companies ---')
 
   // ----------------------------------------
   // PHASE 2: Add new companies
@@ -401,7 +406,7 @@ async function main() {
               countryCode: company.countryCode || existing.countryCode,
             },
           })
-          console.log('✓ Updated: ' + company.name)
+          __slog('✓ Updated: ' + company.name)
           fixedCount++
         } else {
           skippedCount++
@@ -419,14 +424,14 @@ async function main() {
             countryCode: company.countryCode || null,
           },
         })
-        console.log('+ Added: ' + company.name + ' (' + company.atsProvider + ')')
+        __slog('+ Added: ' + company.name + ' (' + company.atsProvider + ')')
         addedCount++
       }
     } catch (err: any) {
       if (err?.code === 'P2002') {
         skippedCount++
       } else {
-        console.error('✗ Error with ' + company.name + ':', err?.message)
+        __serr('✗ Error with ' + company.name + ':', err?.message)
       }
     }
   }
@@ -443,22 +448,22 @@ async function main() {
     },
   })
 
-  console.log('')
-  console.log('===========================================')
-  console.log('   COMPLETE')
-  console.log('===========================================')
-  console.log('Fixed:   ' + fixedCount)
-  console.log('Added:   ' + addedCount)
-  console.log('Skipped: ' + skippedCount)
-  console.log('')
-  console.log('Total companies: ' + totalCompanies)
-  console.log('With ATS:        ' + withAts)
-  console.log('===========================================')
+  __slog('')
+  __slog('===========================================')
+  __slog('   COMPLETE')
+  __slog('===========================================')
+  __slog('Fixed:   ' + fixedCount)
+  __slog('Added:   ' + addedCount)
+  __slog('Skipped: ' + skippedCount)
+  __slog('')
+  __slog('Total companies: ' + totalCompanies)
+  __slog('With ATS:        ' + withAts)
+  __slog('===========================================')
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    __serr(e)
     process.exit(1)
   })
   .finally(async () => {

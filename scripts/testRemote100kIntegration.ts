@@ -3,36 +3,41 @@
 //
 // Run with: npx ts-node scripts/testRemote100kIntegration.ts
 
+import { format as __format } from 'node:util'
 import scrapeRemote100k from '../lib/scrapers/remote100k'
 
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
+
 async function test() {
-  console.log('Testing Remote100k scraper integration...')
-  console.log('')
+  __slog('Testing Remote100k scraper integration...')
+  __slog('')
   
   try {
     const stats = await scrapeRemote100k()
     
-    console.log('')
-    console.log('═══════════════════════════════════════════════')
-    console.log('  Results')
-    console.log('═══════════════════════════════════════════════')
-    console.log(`  Created: ${stats.created}`)
-    console.log(`  Updated: ${stats.updated}`)
-    console.log(`  Upgraded: ${stats.upgraded}`)
-    console.log(`  Skipped: ${stats.skipped}`)
-    console.log(`  Errors: ${stats.errors}`)
-    console.log('═══════════════════════════════════════════════')
+    __slog('')
+    __slog('═══════════════════════════════════════════════')
+    __slog('  Results')
+    __slog('═══════════════════════════════════════════════')
+    __slog(`  Created: ${stats.created}`)
+    __slog(`  Updated: ${stats.updated}`)
+    __slog(`  Upgraded: ${stats.upgraded}`)
+    __slog(`  Skipped: ${stats.skipped}`)
+    __slog(`  Errors: ${stats.errors}`)
+    __slog('═══════════════════════════════════════════════')
     
     if (stats.errors === 0) {
-      console.log('')
-      console.log('✅ Test passed!')
+      __slog('')
+      __slog('✅ Test passed!')
     } else {
-      console.log('')
-      console.log('⚠️  Some errors occurred - check logs above')
+      __slog('')
+      __slog('⚠️  Some errors occurred - check logs above')
     }
     
   } catch (err) {
-    console.error('❌ Test failed:', err)
+    __serr('❌ Test failed:', err)
     process.exit(1)
   }
 }

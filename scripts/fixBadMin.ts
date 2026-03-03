@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -7,7 +12,7 @@ async function main() {
     where: { minAnnual: { gt: 500000n } },
     data: { minAnnual: null, isHighSalary: false }
   })
-  console.log(`Cleared minAnnual for ${cleared.count} jobs`)
+  __slog(`Cleared minAnnual for ${cleared.count} jobs`)
 
   // Recount
   const bands = [100000n, 200000n, 300000n, 400000n]
@@ -15,7 +20,7 @@ async function main() {
     const count = await prisma.job.count({
       where: { isExpired: false, minAnnual: { gte: min } }
     })
-    console.log(`$${Number(min)/1000}k+ min: ${count}`)
+    __slog(`$${Number(min)/1000}k+ min: ${count}`)
   }
 
   await prisma.$disconnect()

@@ -5,6 +5,7 @@ import puppeteer, { Browser, Page } from 'puppeteer'
 import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
 import type { ScrapedJobInput, IngestStats } from '../ingest/types'
+import type { ScraperStats } from './scraperStats'
 
 // =============================================================================
 // Constants
@@ -14,10 +15,15 @@ const BOARD_NAME = 'remote100k'
 const BASE_URL = 'https://remote100k.com'
 
 // Rate limiting
-const MAX_PAGES_PER_RUN = 20
+const MAX_PAGES_PER_RUN = 2
 const DELAY_BETWEEN_PAGES_MS = 1000 // Increased delay slightly
 const PAGE_LOAD_TIMEOUT_MS = 45000 // Increased timeout
 const WAIT_FOR_CONTENT_MS = 3000
+
+// Description sanity limits (Remote100k should be small; full pages are huge)
+const MIN_DESC_CHARS = 500
+const MAX_DESC_CHARS = 50_000
+const OVERSIZE_HARD_CAP_CHARS = 120_000
 
 const CATEGORY_PAGES = [
   '/remote-jobs/engineering',
@@ -65,8 +71,8 @@ interface ParsedJob {
 // Scraper Functions
 // =============================================================================
 
-export default async function scrapeRemote100k(): Promise<IngestStats> {
-  console.log(`[${BOARD_NAME}] Starting scrape...`)
+export default async function scrapeRemote100k(): Promise<ScraperStats> {
+  console.log('[Remote100k] Starting scrape...')
   
   const stats: IngestStats = {
     created: 0,
@@ -89,6 +95,23 @@ export default async function scrapeRemote100k(): Promise<IngestStats> {
       ],
     })
 
+    // Test mode: validate a single detail page extraction before doing any full scrape.
+    if (process.env.TEST_REMOTE100K === 'true') {
+      const testUrl =
+        process.env.TEST_REMOTE100K_URL ||
+        `${BASE_URL}/remote-job/attentive-frontend-engineer-integrations-experiences`
+      console.log(`[${BOARD_NAME}] TEST_REMOTE100K enabled, scraping single job: ${testUrl}`)
+      const detail = await scrapeJobDetailPage(browser, testUrl)
+      const preview = (detail.descriptionHtml || '').slice(0, 220).replace(/\s+/g, ' ')
+      console.log(`[${BOARD_NAME}] Test result:`, {
+        url: testUrl,
+        descLength: detail.descriptionHtml?.length ?? 0,
+        applyUrl: detail.applyUrl,
+        preview,
+      })
+      return { created: 0, updated: 0, skipped: 0 }
+    }
+
     // Track seen jobs to avoid duplicates across category pages
     const seenJobUrls = new Set<string>()
 
@@ -110,7 +133,7 @@ export default async function scrapeRemote100k(): Promise<IngestStats> {
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         )
 
-        const jobs = await scrapeListingPage(page, url, seenJobUrls)
+        const jobs = await scrapeListingPage(browser, page, url, seenJobUrls)
         console.log(`[${BOARD_NAME}] Found ${jobs.length} new jobs on ${categoryPath}`)
         
         for (const job of jobs) {
@@ -150,11 +173,16 @@ export default async function scrapeRemote100k(): Promise<IngestStats> {
     }
   }
 
-  console.log(`[${BOARD_NAME}] Scrape complete:`, stats)
-  return stats
+  console.log(`[Remote100k] ✓ Scraped ${stats.created} jobs`)
+  return {
+    created: stats.created,
+    updated: stats.updated + stats.upgraded,
+    skipped: stats.skipped + stats.errors,
+  }
 }
 
 async function scrapeListingPage(
+  browser: Browser,
   page: Page, 
   url: string,
   seenJobUrls: Set<string>
@@ -188,7 +216,18 @@ async function scrapeListingPage(
       if (seenJobUrls.has(parsed.url)) {
         continue
       }
+
+      // Fetch description from detail page
+      const detailData = await scrapeJobDetailPage(browser, parsed.url)
+
       seenJobUrls.add(parsed.url)
+
+      if (!detailData.descriptionHtml) {
+        console.warn(
+          `[${BOARD_NAME}] Skipping job with missing/invalid description: ${parsed.url}`,
+        )
+        continue
+      }
 
       const salary = parseSalaryText(parsed.salaryText)
       
@@ -198,9 +237,10 @@ async function scrapeListingPage(
         source: makeBoardSource(BOARD_NAME),
         rawCompanyName: parsed.company,
         url: parsed.url,
-        applyUrl: parsed.url,
+        applyUrl: detailData.applyUrl || parsed.url,
         locationText: parsed.location,
         isRemote: true,
+        descriptionHtml: detailData.descriptionHtml,
         salaryMin: salary.min,
         salaryMax: salary.max,
         salaryCurrency: salary.currency,
@@ -221,6 +261,177 @@ async function scrapeListingPage(
   }
 
   return jobs
+}
+
+
+/**
+ * Scrape job description from detail page
+ */
+async function scrapeJobDetailPage(
+  browser: Browser,
+  jobUrl: string
+): Promise<{ descriptionHtml: string | null; applyUrl: string | null }> {
+  let page: Page | null = null
+  try {
+    page = await browser.newPage()
+    // Remote100k uses Framer; content often renders after initial load.
+    // Prefer `networkidle0`, but fall back to `domcontentloaded` if it times out.
+    try {
+      await page.goto(jobUrl, { waitUntil: 'networkidle0', timeout: 30000 })
+    } catch {
+      await page.goto(jobUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: PAGE_LOAD_TIMEOUT_MS,
+      })
+    }
+
+    // Wait for dynamic content to appear (Framer renders text nodes late).
+    await page.waitForSelector('p', { timeout: 10000 }).catch(() => {})
+    await delay(2000)
+
+    const extracted = (await page.evaluate(`(() => {
+      // Remote100k specific: Find the main content container
+      // It's usually the largest block of <p> and <li> tags
+      function extractContent() {
+        var paragraphs = Array.from(document.querySelectorAll('p'));
+        var lists = Array.from(document.querySelectorAll('ul, ol'));
+
+        var bestBlock = null;
+        var bestScore = 0;
+
+        var contentDivs = Array.from(document.querySelectorAll('div')).filter(function(div) {
+          var pCount = div.querySelectorAll('p').length;
+          var liCount = div.querySelectorAll('li').length;
+          var textLen = (div.textContent || '').trim().length;
+
+          if (textLen < 500) return false;
+          if (pCount + liCount < 3) return false;
+
+          var classes = div.className || '';
+          if (classes.indexOf('nav') !== -1) return false;
+          if (classes.indexOf('header') !== -1) return false;
+          if (classes.indexOf('footer') !== -1) return false;
+
+          return true;
+        });
+
+        for (var i = 0; i < contentDivs.length; i++) {
+          var div = contentDivs[i];
+          var pCount = div.querySelectorAll('p').length;
+          var liCount = div.querySelectorAll('li').length;
+          var textLen = (div.textContent || '').trim().length;
+          var linkCount = div.querySelectorAll('a').length;
+
+          var score = textLen + (pCount * 100) + (liCount * 50);
+          if (linkCount > 10) score = score * 0.3;
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestBlock = div;
+          }
+        }
+
+        if (bestBlock) {
+          return bestBlock.innerHTML;
+        }
+
+        var content = '';
+        for (var p = 0; p < paragraphs.length; p++) {
+          if (paragraphs[p].textContent && paragraphs[p].textContent.trim().length > 20) {
+            content += '<p>' + paragraphs[p].innerHTML + '</p>';
+          }
+        }
+
+        for (var l = 0; l < lists.length; l++) {
+          if (lists[l].textContent && lists[l].textContent.trim().length > 20) {
+            content += lists[l].outerHTML;
+          }
+        }
+
+        return content;
+      }
+
+      var html = extractContent() || '';
+      return { html: html, textLen: (html.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim()).length };
+    })()`)) as { html: string; textLen: number }
+
+    const rawHtml = extracted?.html ? String(extracted.html) : ''
+    const descriptionHtml = sanitizeRemote100kDescriptionHtml(rawHtml)
+    const plainText = stripHtmlToText(descriptionHtml)
+
+    const looksLikeFullPage =
+      plainText.includes('Meet JobCopilot') ||
+      plainText.includes('Stop applying') ||
+      plainText.includes('Remote jobs from companies like') ||
+      plainText.includes('Remote100K')
+
+    const len = descriptionHtml.length
+    const isInvalidLength =
+      len < MIN_DESC_CHARS || len > MAX_DESC_CHARS || len > OVERSIZE_HARD_CAP_CHARS
+
+    const finalDescription =
+      descriptionHtml && !looksLikeFullPage && !isInvalidLength ? descriptionHtml : null
+
+    // Extract actual apply URL
+    const applyUrl = await page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll('a[href]'))
+      for (const link of links) {
+        const href = (link as HTMLAnchorElement).href
+        const text = link.textContent?.toLowerCase() || ''
+        if (href.includes('remote100k.com')) continue
+        if (text.includes('apply') || href.includes('greenhouse.io') || href.includes('lever.co') || 
+            href.includes('ashbyhq.com') || href.includes('/jobs/') || href.includes('/careers/')) {
+          return href
+        }
+      }
+      return null
+    })
+
+    if (!finalDescription) {
+      console.warn(
+        `[${BOARD_NAME}] Invalid description extracted (len=${len}, navNoise=${looksLikeFullPage}) url=${jobUrl}`,
+      )
+    }
+
+    return { descriptionHtml: finalDescription, applyUrl }
+  } catch (err) {
+    console.error(`[${BOARD_NAME}] Error scraping detail page ${jobUrl}:`, err)
+    return { descriptionHtml: null, applyUrl: null }
+  } finally {
+    if (page) await page.close().catch(() => {})
+  }
+}
+
+function sanitizeRemote100kDescriptionHtml(html: string): string {
+  if (!html) return ''
+
+  let cleaned = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // Remove Framer-heavy noise (Remote100k uses Framer) and inline styles.
+  cleaned = cleaned
+    .replace(/\sclass="framer-[^"]*"/g, '')
+    .replace(/\sdata-framer-[^=]*="[^"]*"/g, '')
+    .replace(/\sstyle="[^"]*"/g, '')
+
+  return cleaned
+}
+
+function stripHtmlToText(html: string): string {
+  return (html || '')
+    .replace(/<\/?[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
@@ -278,7 +489,7 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
     
     if (!company || !isValidCompanyName(company)) continue
     
-    let locationParts: string[] = []
+    const locationParts: string[] = []
     let category = ''
     for (let j = remoteIdx + 1; j < salaryLineIdx; j++) {
       const l = lines[j]
@@ -292,7 +503,7 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
       }
     }
     
-    let location = cleanLocation(locationParts.join(', '))
+    const location = cleanLocation(locationParts.join(', '))
     const salaryText = lines[salaryLineIdx]
     
     let employmentType = 'Full-Time'
@@ -317,7 +528,7 @@ function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
       }
     }
     
-    let url = findMatchingUrl(company, title, urlMap)
+    const url = findMatchingUrl(company, title, urlMap)
     
     jobs.push({
       title,

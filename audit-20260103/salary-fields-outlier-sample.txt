@@ -1,0 +1,7 @@
+           id           |     source     |                         title                          | company  | has_salary_raw | salaryCurrency | salaryPeriod | salaryMin | salaryMax | minAnnual | maxAnnual | currency | salaryValidated | salaryConfidence | salarySource | salaryParseReason | salaryRejectedReason 
+------------------------+----------------+--------------------------------------------------------+----------+----------------+----------------+--------------+-----------+-----------+-----------+-----------+----------+-----------------+------------------+--------------+-------------------+----------------------
+ ats:greenhouse:6804253 | ats:greenhouse | TMS Compliance Analyst III                             | Coinbase | t              | AUD            | year         |   1488400 |   1488400 |   1488400 |   1488400 | AUD      | t               |               95 | ats          | ok                | 
+ ats:greenhouse:7302982 | ats:greenhouse | Customer Success Manager, Scaled Accounts [Fixed-term] | Asana    | t              | AUD            | month        |    111200 |    123200 |   1334400 |   1478400 | AUD      | t               |               95 | ats          | ok                | 
+ ats:greenhouse:7454771 | ats:greenhouse | Community Regional Lead, APAC                          | Airbnb   | t              | SEK            | year         |   5000000 |   5000000 |   5000000 |   5000000 | SEK      | t               |               95 | ats          | ok                | 
+(3 rows)
+

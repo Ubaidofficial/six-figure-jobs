@@ -1,0 +1,24 @@
+   locationRaw   | citySlug | countryCode | count 
+-----------------+----------+-------------+-------
+ Hybrid          |          |             |   364
+ Dublin          |          |             |   106
+ Berlin          |          |             |    70
+ Amsterdam       |          |             |    51
+ In-Office       |          |             |    47
+ London          |          |             |    44
+ Chicago         |          |             |    40
+ Bengaluru       |          |             |    35
+ Toronto         |          |             |    31
+ Distributed     |          |             |    30
+ Warsaw          |          |             |    29
+ UK - London     |          |             |    25
+ Sydney          |          |             |    22
+ Tokyo           |          |             |    22
+ CN - Shanghai   |          |             |    21
+ Remote (Canada) |          |             |    20
+ Gurugram        |          |             |    18
+ AU - Melbourne  |          |             |    17
+ AU - Sydney     |          |             |    17
+ Barcelona       |          |             |    17
+(20 rows)
+

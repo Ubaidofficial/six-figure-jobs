@@ -1,7 +1,11 @@
 // lib/scrapers/remotive.ts
 
 import axios from 'axios'
-import { upsertBoardJob } from './_boardHelpers'
+import { ingestBoardJob } from '../jobs/ingestBoardJob'
+import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
+import { extractApplyDestinationFromHtml } from './utils/extractApplyLink'
+import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD = 'remotive'
 
@@ -11,9 +15,9 @@ type ProcessedJob = {
   company: string
   companyLogo?: string
   location: string
-  salary: string
-  minSalary: number
-  maxSalary: number
+  salary?: string | null
+  minSalary?: number | null
+  maxSalary?: number | null
   type: string
   url: string
   applyUrl: string
@@ -26,15 +30,17 @@ type ProcessedJob = {
   skills: string[]
   remote: boolean
   verified: boolean
+  raw?: any
 }
 
 export default async function scrapeRemotive() {
-  try {
-    console.log('▶ Scraping Remotive API…')
+  console.log('[Remotive] Starting scrape...')
 
+  try {
     const jobs: ProcessedJob[] = []
 
     const searchTerms = [
+      // Keep existing ML/AI (8 terms)
       'machine learning',
       'artificial intelligence',
       'data scientist',
@@ -43,9 +49,45 @@ export default async function scrapeRemotive() {
       'deep learning',
       'nlp',
       'computer vision',
+
+      // High-paying tech roles (expanded)
+      'senior software engineer',
+      'staff engineer',
+      'principal engineer',
+      'senior backend engineer',
+      'senior frontend engineer',
+      'senior full stack',
+      'lead engineer',
+      'engineering manager',
+      'senior devops',
+      'senior platform engineer',
+      'site reliability engineer',
+      'senior security engineer',
+      'cloud architect',
+      'senior data engineer',
+      'tech lead',
+      'vp engineering',
+      'director of engineering',
+      'head of engineering',
+      'senior product manager',
+      'technical architect',
     ]
 
-    const categories = ['software-dev']
+    const categories = [
+      'software-dev',
+      'engineering',
+      'devops',
+      'backend',
+      'frontend',
+      'full-stack',
+      'data',
+      'product',
+      'management',
+      'security',
+    ]
+
+    console.log(`[Remotive] Search terms: ${searchTerms.length}`)
+    console.log(`[Remotive] Categories: ${categories.length}`)
 
     // ----- search-based -----
     const searchPromises = searchTerms.map((term) =>
@@ -79,43 +121,80 @@ export default async function scrapeRemotive() {
     )
 
     // Strict $100k+ filter
-    const highPayingJobs = uniqueJobs.filter((job) => job.minSalary >= 100)
-
-    console.log(
-      `  Remotive: Found ${highPayingJobs.length} ML/AI jobs with estimated $100k+`
+    const highPayingJobs = uniqueJobs.filter(
+      (job) => job.minSalary != null && job.minSalary >= 100,
     )
 
-    let stored = 0
+    const avgDescLength =
+      uniqueJobs.length > 0
+        ? Math.round(
+            uniqueJobs.reduce((sum, j) => sum + (j.description?.length || 0), 0) /
+              uniqueJobs.length
+          )
+        : 0
+
+    console.log(`[Remotive] Found ${uniqueJobs.length} total jobs`)
+    console.log(`[Remotive] High-paying ($100k+): ${highPayingJobs.length}`)
+    console.log(`[Remotive] Average description length: ${avgDescLength} chars`)
+
+    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
 
     for (const job of highPayingJobs) {
-      await upsertBoardJob({
-        board: BOARD,
+      let applyUrl = job.applyUrl
+      let discoveredApplyUrl: string | null = null
+
+      if (applyUrl && !isExternalToHost(applyUrl, 'remotive.com')) {
+        discoveredApplyUrl = await discoverRemotiveApplyUrl(job.url)
+        if (discoveredApplyUrl) applyUrl = discoveredApplyUrl
+      }
+
+      const atsType = detectATS(applyUrl)
+      const explicitAtsProvider = toAtsProvider(atsType)
+      const explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(applyUrl, atsType) : null
+
+      // Only store CompanyATS mappings when we have a recognizable ATS provider.
+      // Remotive frequently returns mailto links or generic company URLs, which aren't useful for ATS discovery.
+      if (job.company && explicitAtsProvider && isExternalToHost(applyUrl, 'remotive.com')) {
+        await saveCompanyATS(job.company, applyUrl, 'remotive')
+      }
+
+      const descriptionHtml =
+        job.raw?.fullDescription && typeof job.raw.fullDescription === 'string'
+          ? job.raw.fullDescription
+          : job.description
+
+      const descriptionText =
+        job.raw?._sixFigureJobs?.descriptionText && typeof job.raw._sixFigureJobs.descriptionText === 'string'
+          ? job.raw._sixFigureJobs.descriptionText
+          : stripHtml(descriptionHtml || '')
+
+      const result = await ingestBoardJob(BOARD, {
         externalId: job.id,
         title: job.title,
-        company: job.company || 'Unknown company',
-        applyUrl: job.applyUrl,
-        location: job.location,
-        salaryText: job.salary,
-        remote: job.remote,
+        url: job.url,
+        applyUrl,
+        rawCompanyName: job.company || 'Unknown company',
+        locationText: job.location,
+        isRemote: job.remote,
+        employmentType: job.type || null,
+        salaryMin: job.minSalary ? job.minSalary * 1000 : null,
+        salaryMax: job.maxSalary ? job.maxSalary * 1000 : null,
+        salaryCurrency: 'USD',
+        salaryInterval: 'year',
+        descriptionHtml: descriptionHtml || null,
+        descriptionText: descriptionText || null,
+        explicitAtsProvider,
+        explicitAtsUrl,
+        raw: job.raw ?? null,
       })
-      stored++
+      addBoardIngestResult(stats, result)
     }
 
-    console.log(`✅ Remotive: upserted ${stored} jobs`)
-
-    return {
-      board: BOARD,
-      found: highPayingJobs.length,
-      stored,
-    }
-  } catch (error: any) {
-    console.error('Remotive error:', error?.message ?? error)
-    return {
-      board: BOARD,
-      found: 0,
-      stored: 0,
-      error: String(error),
-    }
+    console.log(`[Remotive] ✓ Scraped ${stats.created} jobs`)
+    return stats
+  } catch (error) {
+    console.error('[Remotive] ❌ Scrape failed:', error)
+    return errorStats(error)
   }
 }
 
@@ -160,51 +239,16 @@ async function fetchJobsByCategory(category: string): Promise<ProcessedJob[]> {
   })
 
   const jobData: any[] = response.data.jobs || []
+  const relevantJobs = jobData // No filter, all are tech jobs
 
-  const mlKeywords = [
-    'machine learning',
-    'ml engineer',
-    'ml ',
-    'artificial intelligence',
-    'ai engineer',
-    'data scientist',
-    'deep learning',
-    'nlp',
-    'computer vision',
-    'neural network',
-    'pytorch',
-    'tensorflow',
-    'data science',
-    'ai researcher',
-    'ml researcher',
-    'mlops',
-    'ai/ml',
-    'ai ',
-    'data engineer',
-    'llm',
-    'generative ai',
-    'gen ai',
-    'transformers',
-    'diffusion',
-  ]
-
-  const mlJobs = jobData.filter((job: any) => {
-    const title = (job.title || '').toLowerCase()
-    const description = (job.description || '').toLowerCase()
-    const text = title + ' ' + description
-
-    return mlKeywords.some((keyword) => text.includes(keyword))
-  })
-
-  console.log(`    Found ${mlJobs.length} ML/AI jobs in ${category}`)
-
-  return mlJobs.map(processJob).filter((j): j is ProcessedJob => j !== null)
+  console.log(`    Found ${relevantJobs.length} jobs in ${category}`)
+  return relevantJobs.map(processJob).filter((j): j is ProcessedJob => j !== null)
 }
 
 function processJob(job: any): ProcessedJob | null {
   try {
     const title = (job.title || '').trim()
-    let company = (job.company_name || '').trim()
+    const company = (job.company_name || '').trim()
 
     if (!title || title.length < 5) return null
 
@@ -220,7 +264,10 @@ function processJob(job: any): ProcessedJob | null {
       return null
     }
 
-    const salaryInfo = extractSalary(job.salary, title, job.description)
+    const salaryInfo = extractSalary(job, title, job.description)
+    const salaryText = salaryInfo?.salaryText ?? null
+    const minSalary = salaryInfo?.minSalary ?? null
+    const maxSalary = salaryInfo?.maxSalary ?? null
 
     let jobType = 'Full-time'
     if (job.job_type) {
@@ -239,8 +286,8 @@ function processJob(job: any): ProcessedJob | null {
       location = 'Anywhere in the World'
     }
 
-    const tags: string[] = ['Remote', 'Verified']
-    if (salaryInfo.minSalary >= 100) tags.push('$100k+')
+    const tags: string[] = ['Remote']
+    if (minSalary != null && minSalary >= 100) tags.push('$100k+')
 
     if (titleLower.includes('senior')) tags.push('Senior')
     if (titleLower.includes('lead')) tags.push('Lead')
@@ -254,22 +301,16 @@ function processJob(job: any): ProcessedJob | null {
 
     const skills = extractSkills(title, job.description || '')
 
-    let description: string =
+    const fullDescription: string =
       job.description ||
       `${title} at ${company || 'this company'}. Remote ${jobType.toLowerCase()} position.`
 
-    description = description
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 500)
+    // Keep the full description for AI enrichment (do not truncate).
+    // The Remotive API description is typically HTML.
+    const description = fullDescription
 
     const requirements = generateRequirements(tags, titleLower, skills)
-    const benefits = generateBenefits(salaryInfo.salary, location)
+    const benefits = generateBenefits(salaryText ?? '', location)
 
     let postedDate = 'Recently'
     if (job.publication_date) {
@@ -290,9 +331,9 @@ function processJob(job: any): ProcessedJob | null {
           ? `https://logo.clearbit.com/${logoCompany}.com`
           : ''),
       location,
-      salary: salaryInfo.salary,
-      minSalary: salaryInfo.minSalary,
-      maxSalary: salaryInfo.maxSalary,
+      salary: salaryText,
+      minSalary,
+      maxSalary,
       type: jobType,
       url: job.url,
       postedDate,
@@ -305,6 +346,18 @@ function processJob(job: any): ProcessedJob | null {
       skills,
       remote: true,
       verified: true,
+      raw: {
+        ...job,
+        fullDescription: job.description,
+        descriptionLength: (job.description || '').length,
+        extractedSkills: skills,
+        extractedRequirements: requirements,
+        extractedBenefits: benefits,
+        _sixFigureJobs: {
+          descriptionText: stripHtml(fullDescription),
+        },
+        salaryText: salaryText ?? null,
+      },
     }
   } catch (err: any) {
     console.error('Error processing Remotive job:', err?.message ?? err)
@@ -312,11 +365,56 @@ function processJob(job: any): ProcessedJob | null {
   }
 }
 
+type SalaryInfo = {
+  salaryText: string
+  minSalary: number
+  maxSalary: number
+}
+
 function extractSalary(
-  salaryString: string | null,
+  job: any,
   title: string,
   description: string | null
-): { salary: string; minSalary: number; maxSalary: number } {
+): SalaryInfo | null {
+  // FIRST: Check if API provides salary directly
+  if (job && job.salary_min != null && job.salary_max != null) {
+    const minRaw = Number(job.salary_min)
+    const maxRaw = Number(job.salary_max)
+    if (
+      Number.isFinite(minRaw) &&
+      Number.isFinite(maxRaw) &&
+      minRaw > 0 &&
+      maxRaw > 0
+    ) {
+      // Some feeds use annual USD (e.g., 120000), some use "k" units (e.g., 120).
+      const min = minRaw >= 1000 ? Math.round(minRaw / 1000) : minRaw
+      const max = maxRaw >= 1000 ? Math.round(maxRaw / 1000) : maxRaw
+      return {
+        salaryText: `$${min}k - $${max}k`,
+        minSalary: min,
+        maxSalary: max,
+      }
+    }
+  }
+
+  if (job && typeof job.salary === 'number') {
+    const baseRaw = Number(job.salary)
+    const base =
+      Number.isFinite(baseRaw) && baseRaw >= 1000
+        ? Math.round(baseRaw / 1000)
+        : baseRaw
+    if (Number.isFinite(base) && base > 0) {
+      return {
+        salaryText: `$${base}k`,
+        minSalary: base,
+        maxSalary: base + 50,
+      }
+    }
+  }
+
+  const salaryString: string | null =
+    typeof job?.salary === 'string' ? job.salary : null
+
   if (salaryString && typeof salaryString === 'string') {
     const cleanSalary = salaryString.trim()
 
@@ -337,7 +435,7 @@ function extractSalary(
       }
 
       return {
-        salary: `$${min}k - $${max}k`,
+        salaryText: `$${min}k - $${max}k`,
         minSalary: min,
         maxSalary: max,
       }
@@ -347,7 +445,7 @@ function extractSalary(
     if (match) {
       const min = parseInt(match[1], 10)
       return {
-        salary: `$${min}k+`,
+        salaryText: `$${min}k+`,
         minSalary: min,
         maxSalary: min + 100,
       }
@@ -358,7 +456,7 @@ function extractSalary(
       const min = parseInt(match[1], 10) / 1000
       const max = parseInt(match[2], 10) / 1000
       return {
-        salary: `$${min}k - $${max}k`,
+        salaryText: `$${min}k - $${max}k`,
         minSalary: min,
         maxSalary: max,
       }
@@ -375,25 +473,81 @@ function extractSalary(
     const max =
       parseInt(descMatch[3] + (descMatch[4] || '000'), 10) / 1000
     return {
-      salary: `$${min}k - $${max}k`,
+      salaryText: `$${min}k - $${max}k`,
       minSalary: min,
       maxSalary: max,
     }
   }
 
-  const titleLower = title.toLowerCase()
+  return null
+}
 
-  if (titleLower.includes('staff') || titleLower.includes('principal')) {
-    return { salary: '$180k - $300k (est.)', minSalary: 180, maxSalary: 300 }
-  } else if (titleLower.includes('senior') || titleLower.includes('lead')) {
-    return { salary: '$130k - $220k (est.)', minSalary: 130, maxSalary: 220 }
-  } else if (titleLower.includes('director') || titleLower.includes('head')) {
-    return { salary: '$200k - $300k (est.)', minSalary: 200, maxSalary: 300 }
-  } else if (titleLower.includes('manager')) {
-    return { salary: '$140k - $200k (est.)', minSalary: 140, maxSalary: 200 }
+function stripHtml(html: string): string {
+  return (html || '')
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+async function discoverRemotiveApplyUrl(jobUrl: string): Promise<string | null> {
+  try {
+    const parsed = new URL(jobUrl)
+    const path = parsed.pathname.replace(/\/+$/, '')
+    const last = path.split('/').pop() || ''
+    const m = last.match(/-(\d+)$/)
+    const jobId = m?.[1] || null
+
+    if (jobId) {
+      const res = await axios.post(
+        `https://remotive.com/job/application/${encodeURIComponent(jobId)}`,
+        {
+          jsonrpc: '2.0',
+          method: 'call',
+          params: { source: 'job_detail_page' },
+          id: 128144762,
+        },
+        {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            Referer: jobUrl,
+          },
+          timeout: 15000,
+        },
+      )
+
+      const urlRaw = (res?.data as any)?.result?.url
+      const url = typeof urlRaw === 'string' ? urlRaw.trim() : ''
+      if (!url) return null
+
+      if (/^https?:\/\//i.test(url)) return url
+      if (url.includes('@') && !url.includes('://')) return `mailto:${url}`
+    }
+
+    const res = await axios.get(jobUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      timeout: 15000,
+    })
+
+    const html = typeof res.data === 'string' ? res.data : ''
+    if (!html) return null
+
+    return extractApplyDestinationFromHtml(html, jobUrl)
+  } catch {
+    return null
   }
-
-  return { salary: '$100k - $160k (est.)', minSalary: 100, maxSalary: 160 }
 }
 
 function extractSkills(title: string, description: string): string[] {

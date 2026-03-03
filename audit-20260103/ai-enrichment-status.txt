@@ -1,0 +1,5 @@
+ total_active | has_tech_stack | ai_enriched | has_snippet | tech_stack_pct | enriched_pct 
+--------------+----------------+-------------+-------------+----------------+--------------
+        10930 |            630 |        1179 |        1821 |            5.8 |         10.8
+(1 row)
+

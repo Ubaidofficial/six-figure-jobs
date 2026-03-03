@@ -1,6 +1,11 @@
 // scripts/extractGreenhouseSalaries.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -86,9 +91,9 @@ function parseSalaryFromHtml(html: string): {
 async function main() {
   const { limit } = parseCliArgs()
 
-  console.log('🔎 Extracting salaries from Greenhouse HTML…')
-  console.log(`   Limit: ${limit ?? 'none'}`)
-  console.log('')
+  __slog('🔎 Extracting salaries from Greenhouse HTML…')
+  __slog(`   Limit: ${limit ?? 'none'}`)
+  __slog('')
 
   // 👉 Only jobs that actually NEED salary fixes
   const jobs = await prisma.job.findMany({
@@ -113,7 +118,7 @@ async function main() {
     take: limit ?? undefined,
   })
 
-  console.log(`Processing ${jobs.length} Greenhouse jobs that need salary normalization...`)
+  __slog(`Processing ${jobs.length} Greenhouse jobs that need salary normalization...`)
 
   let processed = 0
   let updated = 0
@@ -154,30 +159,30 @@ async function main() {
 
     // Log first 5, then progress every 200 jobs
     if (updated <= 5) {
-      console.log(
+      __slog(
         `  ${job.company} - ${job.title}: ${salary.currency} ${salary.min.toLocaleString()}–${salary.max.toLocaleString()}`,
       )
     } else if (processed % 200 === 0) {
-      console.log(
+      __slog(
         `   …processed ${processed} / ${jobs.length} jobs, updated ${updated}`,
       )
     }
   }
 
-  console.log(
+  __slog(
     `\n✅ Updated ${updated} jobs (USD: ${usd}, EUR: ${eur}, GBP: ${gbp})`,
   )
 
   const highSalary = await prisma.job.count({
     where: { isExpired: false, isHighSalary: true },
   })
-  console.log(`📊 Total high-salary jobs: ${highSalary}`)
+  __slog(`📊 Total high-salary jobs: ${highSalary}`)
 
   await prisma.$disconnect()
 }
 
 main().catch((err) => {
-  console.error(err)
+  __serr(err)
   prisma
     .$disconnect()
     .finally(() => process.exit(1))

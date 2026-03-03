@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
+import { permanentRedirect } from 'next/navigation'
 
 export default function Redirect100k() {
-  redirect('/jobs/100k-plus')
+  permanentRedirect('/jobs/100k-plus')
 }

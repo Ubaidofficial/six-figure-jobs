@@ -1,5 +1,10 @@
 // scripts/checkSoftwareEngineerUS.ts
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -19,7 +24,7 @@ async function main() {
     },
   })
 
-  console.log('Matching jobs:', count)
+  __slog('Matching jobs:', count)
 }
 
 main().finally(() => prisma.$disconnect())

@@ -5,6 +5,7 @@ import { SKILL_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -27,27 +28,6 @@ function buildBreadcrumbJsonLd(skillSlug: string, skillLabel: string) {
   }
 }
 
-function buildItemListJsonLd(jobs: JobWithCompany[], skillLabel: string) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `$100k+ ${skillLabel} jobs`,
-    itemListElement: jobs.slice(0, PAGE_SIZE).map((job, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      item: {
-        '@type': 'JobPosting',
-        title: job.title,
-        hiringOrganization: {
-          '@type': 'Organization',
-          name: job.companyRef?.name || job.company,
-        },
-        url: `${SITE_URL}/job/${job.id}`,
-      },
-    })),
-  }
-}
-
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { skill } = await params
   const resolved = resolveSkill(skill)
@@ -55,7 +35,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
   const { total } = await queryJobs({
     skillSlugs: [resolved.slug],
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: 1,
   })
@@ -96,7 +76,7 @@ export default async function SkillPage({ params }: { params: Params }) {
 
   const { jobs, total, totalPages, page } = await queryJobs({
     skillSlugs: [resolved.slug],
-    minAnnual: 100_000,
+    isHundredKLocal: true,
     page: 1,
     pageSize: PAGE_SIZE,
   })
@@ -116,7 +96,12 @@ export default async function SkillPage({ params }: { params: Params }) {
       : Math.max(salaryMin, 200_000)
 
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(resolved.slug, resolved.label)
-  const itemListJsonLd = buildItemListJsonLd(jobs as JobWithCompany[], resolved.label)
+  const itemListJsonLd = buildSafeItemListJsonLd({
+    name: 'High-paying jobs on Six Figure Jobs',
+    jobs: (jobs as JobWithCompany[]).slice(0, PAGE_SIZE),
+    page: 1,
+    pageSize: PAGE_SIZE,
+  })
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
@@ -134,7 +119,7 @@ export default async function SkillPage({ params }: { params: Params }) {
         {resolved.label} $100k+ jobs ({total.toLocaleString()})
       </h1>
       <p className="mb-4 text-sm text-slate-300">
-        Browse <strong className="text-white">{total.toLocaleString()}</strong>{' '}
+        Explore <strong className="text-white">{total.toLocaleString()}</strong>{' '}
         {resolved.label} <strong className="text-green-500">$100k</strong> jobs
         with verified{' '}
         <strong className="text-green-500">six figure salaries</strong>. Find{' '}
@@ -148,7 +133,9 @@ export default async function SkillPage({ params }: { params: Params }) {
       </p>
 
       {jobs.length === 0 ? (
-        <p className="text-sm text-slate-400">No $100k+ {resolved.label} roles yet. New jobs are added daily.</p>
+        <p className="text-sm text-slate-400">
+          No jobs found. Try exploring all $100k+ opportunities.
+        </p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}

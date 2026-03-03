@@ -10,8 +10,7 @@ export type JobWithCompany = Job & { companyRef: Company | null }
 const SITE_URL = getSiteUrl()
 
 export function buildJobMetadata(job: JobWithCompany): Metadata {
-  const companyName =
-    job.companyRef?.name || job.company || 'Company'
+  const companyName = job.companyRef?.name || job.company || 'Company'
 
   const salary = buildSalary(job)
   const location =
@@ -24,38 +23,31 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
     : `${job.title} at ${companyName} | ${SITE_NAME}`
 
   const bits: string[] = []
-
   bits.push(`Apply for ${job.title} at ${companyName}.`)
 
   if (salary) {
     bits.push(`Compensation: ${salary}.`)
-  } else if (job.isHundredKLocal || job.isHighSalary) {
+  } else if ((job as any).isHundredKLocal || (job as any).isHighSalary) {
     bits.push('High-paying $100k+ local-compensation role.')
   } else {
     bits.push('High-paying tech role.')
   }
 
-  if (job.type) {
-    bits.push(`Type: ${job.type}.`)
-  }
+  if (job.type) bits.push(`Type: ${job.type}.`)
+  if (location) bits.push(`Location: ${location}.`)
+  if (job.remote === true || job.remoteMode === 'remote') bits.push('Remote-friendly opportunity.')
 
-  if (location) {
-    bits.push(`Location: ${location}.`)
-  }
+  // Prefer AI one-liner for SERP/meta (role-focused), fallback to aiSnippet, then descriptionHtml snippet.
+  const aiOneLiner = typeof (job as any)?.aiOneLiner === 'string' ? String((job as any).aiOneLiner).trim() : ''
+  const aiSnippet = typeof (job as any)?.aiSnippet === 'string' ? String((job as any).aiSnippet).trim() : ''
 
-  if (job.remote === true || job.remoteMode === 'remote') {
-    bits.push('Remote-friendly opportunity.')
-  }
-
-  // Optional snippet from description for richer SEO, trimmed
-  if (job.descriptionHtml) {
-    const snippet = truncateText(
-      stripTags(decodeHtmlEntities(job.descriptionHtml)),
-      140
-    )
-    if (snippet) {
-      bits.push(snippet)
-    }
+  if (aiOneLiner) {
+    bits.push(truncateText(stripTags(decodeHtmlEntities(aiOneLiner)), 160))
+  } else if (aiSnippet) {
+    bits.push(truncateText(stripTags(decodeHtmlEntities(aiSnippet)), 160))
+  } else if (job.descriptionHtml) {
+    const snippet = truncateText(stripTags(decodeHtmlEntities(job.descriptionHtml)), 140)
+    if (snippet) bits.push(snippet)
   }
 
   const description = bits.join(' ')
@@ -66,9 +58,7 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
   return {
     title,
     description,
-    alternates: {
-      canonical: url,
-    },
+    alternates: { canonical: url },
     robots: job.isExpired ? { index: false, follow: true } : undefined,
     openGraph: {
       title,
@@ -130,9 +120,7 @@ function buildSalary(job: any): string | null {
   if (min !== null && (!Number.isFinite(min) || min <= 0)) min = null
   if (max !== null && (!Number.isFinite(max) || max <= 0)) max = null
 
-  const tooLarge =
-    (min !== null && min > 2_000_000) ||
-    (max !== null && max > 2_000_000)
+  const tooLarge = (min !== null && min > 2_000_000) || (max !== null && max > 2_000_000)
   if (tooLarge) {
     min = null
     max = null
@@ -141,8 +129,7 @@ function buildSalary(job: any): string | null {
   const currencyCode = job.currency || job.salaryCurrency || 'USD'
   const sym = getCurrencySymbol(currencyCode)
 
-  const fmt = (v: number) =>
-    v >= 1000 ? `${Math.round(v / 1000)}k` : v.toString()
+  const fmt = (v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : v.toString())
 
   if (min !== null && max !== null) {
     if (min === max) return `${sym}${fmt(min)}/yr`
@@ -152,12 +139,8 @@ function buildSalary(job: any): string | null {
   if (min !== null) return `${sym}${fmt(min)}+/yr`
   if (max !== null) return `Up to ${sym}${fmt(max)}/yr`
 
-  // C) Fallback: short snippet from salaryRaw
   if (job.salaryRaw) {
-    const clean = truncateText(
-      stripTags(decodeHtmlEntities(String(job.salaryRaw))),
-      60
-    )
+    const clean = truncateText(stripTags(decodeHtmlEntities(String(job.salaryRaw))), 60)
     return clean || null
   }
 
@@ -171,23 +154,13 @@ function buildLocation(job: any): string | null {
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
   if (isRemote) {
-    if (job.countryCode) {
-      return `Remote (${String(job.countryCode).toUpperCase()})`
-    }
+    if (job.countryCode) return `Remote (${String(job.countryCode).toUpperCase()})`
     return 'Remote'
   }
 
-  if (job.city && job.countryCode) {
-    return `${job.city}, ${String(job.countryCode).toUpperCase()}`
-  }
-
-  if (job.countryCode) {
-    return String(job.countryCode).toUpperCase()
-  }
-
-  if (job.locationRaw) {
-    return String(job.locationRaw)
-  }
+  if (job.city && job.countryCode) return `${job.city}, ${String(job.countryCode).toUpperCase()}`
+  if (job.countryCode) return String(job.countryCode).toUpperCase()
+  if (job.locationRaw) return String(job.locationRaw)
 
   return null
 }
@@ -206,6 +179,7 @@ function stripTags(str: string): string {
 }
 
 function truncateText(str: string, maxChars: number): string {
+  if (!str) return ''
   if (str.length <= maxChars) return str
 
   const truncated = str.slice(0, maxChars)
@@ -213,11 +187,7 @@ function truncateText(str: string, maxChars: number): string {
   const lastSpace = truncated.lastIndexOf(' ')
 
   const cutoff =
-    lastDot !== -1 && lastDot > maxChars * 0.6
-      ? lastDot + 1
-      : lastSpace > 0
-      ? lastSpace
-      : maxChars
+    lastDot !== -1 && lastDot > maxChars * 0.6 ? lastDot + 1 : lastSpace > 0 ? lastSpace : maxChars
 
-  return truncated.slice(0, cutoff) + ' …'
+  return truncated.slice(0, cutoff).trim()
 }

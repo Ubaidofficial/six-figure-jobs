@@ -1,4 +1,9 @@
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 const prisma = new PrismaClient()
 
 // Simple description fetcher - tries to get meta description from company website
@@ -43,7 +48,7 @@ async function main() {
     take: 50 // Process 50 at a time
   })
   
-  console.log('Fetching descriptions for', companies.length, 'companies...\n')
+  __slog('Fetching descriptions for', companies.length, 'companies...\n')
   
   let updated = 0
   
@@ -59,14 +64,14 @@ async function main() {
         where: { id: company.id },
         data: { description: desc }
       })
-      console.log('OK (' + desc.length + ' chars)')
+      __slog('OK (' + desc.length + ' chars)')
       updated++
     } else {
-      console.log('skipped')
+      __slog('skipped')
     }
   }
   
-  console.log('\nUpdated', updated, 'companies with descriptions')
+  __slog('\nUpdated', updated, 'companies with descriptions')
   await prisma.$disconnect()
 }
 

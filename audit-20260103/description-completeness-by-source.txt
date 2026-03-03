@@ -1,0 +1,9 @@
+        source        | total | missing_desc | short_desc 
+----------------------+-------+--------------+------------
+ board:weworkremotely |    27 |           27 |          0
+ board:remotive       |    21 |            0 |          0
+ board:remoteok       |    16 |            0 |          0
+ ats:ashby            |   559 |            0 |          0
+ ats:greenhouse       | 10307 |            0 |          1
+(5 rows)
+

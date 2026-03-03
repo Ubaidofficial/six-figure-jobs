@@ -1,0 +1,5 @@
+ hs_validated | hs_validated_roleslug | hs_validated_roleslug_null | hs_validated_missing_description 
+--------------+-----------------------+----------------------------+----------------------------------
+         5928 |                  2520 |                       3408 |                               27
+(1 row)
+

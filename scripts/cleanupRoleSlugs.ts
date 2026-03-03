@@ -1,8 +1,13 @@
 // scripts/cleanupRoleSlugs.ts
 // Run with: npx tsx scripts/cleanupRoleSlugs.ts
 
+import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { isCanonicalSlug } from '../lib/roles/canonicalSlugs'
+
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+
 
 const prisma = new PrismaClient()
 
@@ -79,7 +84,7 @@ function inferRoleFromTitle(title: string): string | null {
 }
 
 async function cleanupRoleSlugs() {
-  console.log('🔧 Starting role slug cleanup...\n')
+  __slog('🔧 Starting role slug cleanup...\n')
 
   const jobs = await prisma.job.findMany({
     where: {
@@ -92,7 +97,7 @@ async function cleanupRoleSlugs() {
     },
   })
 
-  console.log(`Found ${jobs.length} jobs with role slugs\n`)
+  __slog(`Found ${jobs.length} jobs with role slugs\n`)
 
   let alreadyValid = 0
   let fixed = 0
@@ -126,25 +131,25 @@ async function cleanupRoleSlugs() {
     }
   }
 
-  console.log('\n════════════════════════════════════════')
-  console.log('           CLEANUP SUMMARY')
-  console.log('════════════════════════════════════════\n')
-  console.log(`✅ Already valid:  ${alreadyValid}`)
-  console.log(`🔧 Fixed:          ${fixed}`)
-  console.log(`⚠️  Set to null:    ${nulled}`)
-  console.log(`📊 Total processed: ${jobs.length}`)
+  __slog('\n════════════════════════════════════════')
+  __slog('           CLEANUP SUMMARY')
+  __slog('════════════════════════════════════════\n')
+  __slog(`✅ Already valid:  ${alreadyValid}`)
+  __slog(`🔧 Fixed:          ${fixed}`)
+  __slog(`⚠️  Set to null:    ${nulled}`)
+  __slog(`📊 Total processed: ${jobs.length}`)
 
   if (invalidSlugs.size > 0) {
-    console.log('\n📋 Top 20 invalid slugs found:')
+    __slog('\n📋 Top 20 invalid slugs found:')
     const sorted = [...invalidSlugs.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 20)
     for (const [slug, count] of sorted) {
-      console.log(`   ${count.toString().padStart(4)} × ${slug}`)
+      __slog(`   ${count.toString().padStart(4)} × ${slug}`)
     }
   }
 
-  console.log('\n✨ Cleanup complete!')
+  __slog('\n✨ Cleanup complete!')
 }
 
 cleanupRoleSlugs()
