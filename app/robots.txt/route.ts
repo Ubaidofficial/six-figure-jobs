@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getSiteUrl } from '../../lib/seo/site'
 import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
+import { hasCountrySitemapEntries } from '../../lib/seo/countrySitemap'
 import { hasRemoteRoleSitemapEntries } from '../../lib/seo/remoteSitemap'
 import { hasSliceSitemapEntries } from '../../lib/seo/slicesSitemap'
 
@@ -19,9 +20,10 @@ export async function GET() {
     })
   }
 
-  const [cityUrls, hasRemoteUrls, hasSliceUrls] = await Promise.all([
+  const [cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls] = await Promise.all([
     getCitySitemapUrls(),
     hasRemoteRoleSitemapEntries(),
+    hasCountrySitemapEntries(),
     hasSliceSitemapEntries(),
   ])
   const body = [
@@ -43,7 +45,7 @@ export async function GET() {
     ...(cityUrls.length > 0 ? [`Sitemap: ${SITE_URL}/sitemap-city.xml`] : []),
     `Sitemap: ${SITE_URL}/sitemap-salary.xml`,
     ...(hasRemoteUrls ? [`Sitemap: ${SITE_URL}/sitemap-remote.xml`] : []),
-    `Sitemap: ${SITE_URL}/sitemap-country.xml`,
+    ...(hasCountryUrls ? [`Sitemap: ${SITE_URL}/sitemap-country.xml`] : []),
     `Sitemap: ${SITE_URL}/sitemap-category.xml`,
     `Sitemap: ${SITE_URL}/sitemap-level.xml`,
     `Sitemap: ${SITE_URL}/sitemap-browse.xml`,

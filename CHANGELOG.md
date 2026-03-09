@@ -1,3 +1,13 @@
+# 2.8.27 (2026-03-09)
+
+
+### Bug Fixes
+
+* fix daily scraper SEO guard workflow command to use strict validator defaults instead of an invalid strict/sample combination
+* omit `sitemap-country.xml` from `sitemap.xml` and `robots.txt` when country pages are below indexable threshold
+* add shared country sitemap availability helper and regression coverage for country sitemap inclusion gates
+
+
 # 2.8.26 (2026-03-01)
 
 

@@ -191,7 +191,7 @@ jobs:
           for attempt in $(seq 1 "$ATTEMPTS"); do
             echo "SEO validation attempt ${attempt}/${ATTEMPTS}"
 
-            if SEO_BASE_URL=https://www.6figjobs.com SEO_SAMPLE_PER_SITEMAP=100 SEO_STRICT=1 SEO_TIMEOUT_MS=30000 SEO_CONCURRENCY=8 npm run seo:validate; then
+            if SEO_BASE_URL=https://www.6figjobs.com npm run seo:validate:strict; then
               echo "SEO noindex guard passed."
               exit 0
             fi
