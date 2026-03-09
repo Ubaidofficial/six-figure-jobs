@@ -2,6 +2,7 @@
 
 import { getSiteUrl } from '../../lib/seo/site'
 import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
+import { hasCountrySitemapEntries } from '../../lib/seo/countrySitemap'
 import { hasRemoteRoleSitemapEntries } from '../../lib/seo/remoteSitemap'
 import { hasSliceSitemapEntries } from '../../lib/seo/slicesSitemap'
 
@@ -21,9 +22,10 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
-  const [cityUrls, hasRemoteUrls, hasSliceUrls] = await Promise.all([
+  const [cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls] = await Promise.all([
     getCitySitemapUrls(),
     hasRemoteRoleSitemapEntries(),
+    hasCountrySitemapEntries(),
     hasSliceSitemapEntries(),
   ])
   const sitemaps = [
@@ -32,7 +34,7 @@ export async function GET() {
     ...(cityUrls.length > 0 ? ['sitemap-city.xml'] : []),
     ...(hasRemoteUrls ? ['sitemap-remote.xml'] : []),
     'sitemap-salary.xml',
-    'sitemap-country.xml',
+    ...(hasCountryUrls ? ['sitemap-country.xml'] : []),
     'sitemap-category.xml',
     'sitemap-level.xml',
     'sitemap-browse.xml',

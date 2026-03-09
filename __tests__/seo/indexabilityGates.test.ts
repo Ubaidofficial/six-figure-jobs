@@ -37,7 +37,9 @@ describe('indexability gates alignment', () => {
     expect(isCountryPageIndexable(3)).toBe(true)
 
     const countryRoute = readRepoFile('app/sitemap-country.xml/route.ts')
-    expect(countryRoute).toContain('MIN_COUNTRY_INDEXABLE_JOBS')
+    const countrySitemapHelper = readRepoFile('lib/seo/countrySitemap.ts')
+    expect(countryRoute).toContain('getCountrySitemapUrls')
+    expect(countrySitemapHelper).toContain('isCountryPageIndexable')
   })
 
   it('uses the same city robots threshold for sitemap inclusion', () => {
