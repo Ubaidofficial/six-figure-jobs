@@ -31,6 +31,9 @@ concurrency:
   group: daily-scrape
   cancel-in-progress: false
 
+env:
+  PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.6figjobs.com' }}
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
@@ -179,32 +182,6 @@ jobs:
           npx tsx scripts/seedJobSlices.ts | tee /tmp/daily-scrape-slices-seed.log
           npx tsx scripts/bootstrapCountrySalarySlices.ts | tee /tmp/daily-scrape-slices-country.log
 
-      - name: SEO noindex guard (production sample)
-        if: steps.prep.outputs.dry_run != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          ATTEMPTS=3
-          DELAY_SECONDS=90
-
-          for attempt in $(seq 1 "$ATTEMPTS"); do
-            echo "SEO validation attempt ${attempt}/${ATTEMPTS}"
-
-            if SEO_BASE_URL=https://www.6figjobs.com npm run seo:validate:strict; then
-              echo "SEO noindex guard passed."
-              exit 0
-            fi
-
-            if [ "$attempt" -eq "$ATTEMPTS" ]; then
-              echo "SEO noindex guard failed after retries."
-              exit 1
-            fi
-
-            echo "Retrying in ${DELAY_SECONDS}s..."
-            sleep "$DELAY_SECONDS"
-          done
-
       - name: Upload scrape logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -218,3 +195,49 @@ jobs:
         run: |
           echo "⚠️ Daily scrape workflow failed."
           echo "🔍 Inspect run logs + uploaded artifacts for the failing stage."
+
+  seo-production-proof:
+    name: Production SEO Proof
+    needs: scrape
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: needs.scrape.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: SEO noindex guard (production sample)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ATTEMPTS=3
+          DELAY_SECONDS=90
+
+          for attempt in $(seq 1 "$ATTEMPTS"); do
+            echo "SEO validation attempt ${attempt}/${ATTEMPTS}"
+            echo "Production base URL: ${PRODUCTION_SITE_URL}"
+
+            if SEO_BASE_URL="${PRODUCTION_SITE_URL}" npm run seo:validate:strict; then
+              echo "SEO noindex guard passed."
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$ATTEMPTS" ]; then
+              echo "SEO noindex guard failed after retries."
+              exit 1
+            fi
+
+            echo "Retrying in ${DELAY_SECONDS}s..."
+            sleep "$DELAY_SECONDS"
+          done

@@ -227,6 +227,28 @@ function buildFailure(
   return { reason, sitemap, sitemapSource, url, detail }
 }
 
+function summarizeHttpBody(body: string, max: number = 180): string {
+  const normalized = String(body || '').replace(/\s+/g, ' ').trim()
+  if (!normalized) return ''
+  return normalized.slice(0, max)
+}
+
+function formatHttpError(res: Response, body: string): string {
+  const details = [`status=${res.status}`]
+  const contentType = res.headers.get('content-type')
+  const bodySummary = summarizeHttpBody(body)
+
+  if (contentType) {
+    details.push(`content-type=${contentType}`)
+  }
+
+  if (bodySummary) {
+    details.push(`body=${JSON.stringify(bodySummary)}`)
+  }
+
+  return details.join(' ')
+}
+
 async function fetchText(url: string): Promise<string> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
@@ -240,12 +262,13 @@ async function fetchText(url: string): Promise<string> {
         accept: 'application/xml,text/xml,text/html;q=0.9,*/*;q=0.8',
       },
     })
+    const body = await readBodyTextWithTimeout(res)
 
     if (!res.ok) {
-      throw new Error(`status=${res.status}`)
+      throw new Error(formatHttpError(res, body))
     }
 
-    return await readBodyTextWithTimeout(res)
+    return body
   } finally {
     clearTimeout(timer)
   }

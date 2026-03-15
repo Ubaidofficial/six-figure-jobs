@@ -10,6 +10,9 @@ concurrency:
   group: sitemap-health
   cancel-in-progress: false
 
+env:
+  PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.6figjobs.com' }}
+
 jobs:
   health-pr:
     if: github.event_name == 'pull_request'
@@ -232,7 +235,7 @@ jobs:
 
       - name: Run sitemap health check
         env:
-          SITE_URL: "https://www.6figjobs.com"
+          SITE_URL: ${{ env.PRODUCTION_SITE_URL }}
           CHILD_SITEMAP_SAMPLE: "3"
           JOB_URL_SAMPLE: "20"
           GENERAL_URL_SAMPLE: "5"

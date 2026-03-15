@@ -39,6 +39,12 @@ function decodeXmlEntities(input) {
     .replace(/&apos;/g, "'")
 }
 
+function summarizeBody(input, max = 180) {
+  const normalized = String(input || '').replace(/\s+/g, ' ').trim()
+  if (!normalized) return ''
+  return normalized.slice(0, max)
+}
+
 function extractLocs(xml) {
   const locs = []
   const re = /<loc>\s*([^<]+)\s*<\/loc>/gi
@@ -82,19 +88,25 @@ async function fetchText(url, { expectXml } = {}) {
         Accept: 'application/xml,text/xml;q=0.9,*/*;q=0.8',
       },
     })
+    const body = await res.text()
 
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get('location') || ''
       throw new Error(`Redirect ${res.status} ${location}`)
     }
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`)
+      const bodySummary = summarizeBody(body)
+      throw new Error(
+        `HTTP ${res.status}${bodySummary ? ` body=${JSON.stringify(bodySummary)}` : ''}`,
+      )
     }
     const contentType = res.headers.get('content-type') || ''
     if (expectXml && !/xml|text\/plain/i.test(contentType)) {
-      throw new Error(`Unexpected content-type ${contentType}`)
+      const bodySummary = summarizeBody(body)
+      throw new Error(
+        `Unexpected content-type ${contentType}${bodySummary ? ` body=${JSON.stringify(bodySummary)}` : ''}`,
+      )
     }
-    const body = await res.text()
     return { body, contentType }
   } finally {
     clearTimeout(timeout)
@@ -237,7 +249,10 @@ async function main() {
   const sitemapUrls = extractSitemapsFromRobots(robotsTxt)
 
   if (sitemapUrls.length === 0) {
-    throw new Error(`No sitemaps found in robots.txt at ${ROBOTS_URL}`)
+    const bodySummary = summarizeBody(robotsTxt)
+    throw new Error(
+      `No sitemaps found in robots.txt at ${ROBOTS_URL}${bodySummary ? ` body=${JSON.stringify(bodySummary)}` : ''}`,
+    )
   }
 
   console.log(`Found ${sitemapUrls.length} sitemaps in robots.txt`)

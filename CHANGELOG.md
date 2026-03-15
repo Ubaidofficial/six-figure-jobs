@@ -1,3 +1,13 @@
+# 2.8.28 (2026-03-16)
+
+
+### Bug Fixes
+
+* split the daily scrape workflow from the production SEO proof so scrape failures are not conflated with public-site health failures
+* make production sitemap/SEO workflow targets configurable via `PRODUCTION_SITE_URL`
+* improve sitemap validator error output with HTTP status, content type, and response body snippets for faster production debugging
+
+
 # 2.8.27 (2026-03-09)
 
 
