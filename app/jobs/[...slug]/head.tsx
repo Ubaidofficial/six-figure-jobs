@@ -3,6 +3,8 @@
 
 import type { ReactElement } from 'react'
 import { loadSliceFromParams } from '../../../lib/slices/loadSlice'
+import { buildWhere } from '../../../lib/jobs/queryJobs'
+import { prisma } from '../../../lib/prisma'
 import { buildSliceCanonicalUrl } from '../../../lib/seo/canonical'
 import type { PageSearchParams } from '../_components/page'
 
@@ -33,7 +35,13 @@ export default async function Head({
   const sp = await resolveSearchParams(searchParams)
   const page = getPageFromSearchParams(sp)
 
-  const total = slice.jobCount ?? 0
+  const total = await prisma.job.count({
+    where: buildWhere({
+      ...slice.filters,
+      page: 1,
+      pageSize: 1,
+    }),
+  })
   const totalPages =
     total > 0 ? Math.max(1, Math.ceil(total / PAGE_SIZE)) : null
 

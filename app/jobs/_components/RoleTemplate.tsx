@@ -211,7 +211,12 @@ function roleCareerPath(roleSlug: string): Array<{ stage: string; slug: string |
   }))
 }
 
-export function buildRoleMetadata(roleSlug: string, total: number, avgUsd: number | null): Metadata {
+export function buildRoleMetadata(
+  roleSlug: string,
+  total: number,
+  avgUsd: number | null,
+  options?: { canonicalPath?: string },
+): Metadata {
   const roleOpt = SEARCH_ROLE_OPTIONS.find((r) => r.slug === roleSlug)
   const roleTitle = roleOpt?.label ?? toTitleCase(roleSlug)
 
@@ -221,7 +226,7 @@ export function buildRoleMetadata(roleSlug: string, total: number, avgUsd: numbe
       ? `Browse ${total.toLocaleString()} verified ${roleTitle} opportunities paying $100k+ (or local equivalent).${avgUsd ? ` ~$${Math.round(avgUsd / 1000)}k average (USD where available).` : ''}`
       : `Browse verified ${roleTitle} opportunities paying $100k+ (or local equivalent).`
 
-  const canonical = `${SITE_URL}/jobs/${roleSlug}`
+  const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${roleSlug}`
   return {
     title,
     description,

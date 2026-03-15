@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 
 import { prisma } from '@/lib/prisma'
 import { buildWhere } from '@/lib/jobs/queryJobs'
+import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '@/lib/seo/listingSearchParams'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 import { findBestMatchingRole } from '@/lib/roles/slugMatcher'
 
@@ -36,10 +37,13 @@ function asNumber(value: unknown): number | null {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ role: string }>
+  searchParams?: Promise<SearchParams>
 }): Promise<Metadata> {
   const { role: roleRaw } = await params
+  const sp = (await searchParams) || {}
   const role = roleRaw.toLowerCase()
 
   if (!isCanonicalSlug(role)) {
@@ -69,10 +73,15 @@ export async function generateMetadata({
   const avgMax = asNumber((avgAgg as any)?._avg?.maxAnnual)
   const avgMin = asNumber((avgAgg as any)?._avg?.minAnnual)
   const avgUsd = avgMax != null && avgMin != null ? (avgMax + avgMin) / 2 : (avgMax ?? avgMin)
+  const canonicalPath = buildNormalizedListingPath(`/jobs/${role}`, sp)
+  const noindexUtilityState = hasNonPaginationQueryParams(sp)
 
   return {
-    ...buildRoleMetadata(role, total, avgUsd),
-    robots: shouldIndex ? { index: true, follow: true } : { index: false, follow: true },
+    ...buildRoleMetadata(role, total, avgUsd, { canonicalPath }),
+    robots:
+      !noindexUtilityState && shouldIndex
+        ? { index: true, follow: true }
+        : { index: false, follow: true },
   }
 }
 
@@ -94,4 +103,3 @@ export default async function RolePage({
 
   return <RoleTemplate roleSlug={role} searchParams={searchParams} />
 }
-

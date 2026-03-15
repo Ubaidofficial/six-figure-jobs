@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { prisma } from '../../lib/prisma'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
+import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import {
   buildGlobalExclusionsWhere,
   buildHighSalaryEligibilityWhere,
@@ -13,7 +14,15 @@ const SITE_URL = getSiteUrl()
 
 export const dynamic = 'force-dynamic'
 
-export async function generateMetadata() {
+type SearchParams = Record<string, string | string[] | undefined>
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams?: Promise<SearchParams>
+}) {
+  const sp = (await searchParams) || {}
+  const activeRemoteRegion = normalizeRemoteRegion(sp.remoteRegion)
   const total = await prisma.job.count({
     where: {
       isExpired: false,
@@ -21,10 +30,14 @@ export async function generateMetadata() {
         buildHighSalaryEligibilityWhere(),
         buildGlobalExclusionsWhere(),
         { OR: [{ remote: true }, { remoteMode: 'remote' }] },
+        ...(activeRemoteRegion ? [{ remoteRegion: activeRemoteRegion }] : []),
       ],
     },
   })
 
+  const canonicalPath = buildNormalizedListingPath('/remote', sp)
+  const canonical = `${SITE_URL}${canonicalPath}`
+  const noindexUtilityState = hasNonPaginationQueryParams(sp)
   const title = `Remote Jobs (Minimum $100k+ USD) (${total.toLocaleString()}) | ${SITE_NAME}`
   const description = `Browse ${total.toLocaleString()} remote six-figure jobs across engineering, product, data, and more. $100k+ remote jobs, remote high paying jobs, six figure remote jobs.`
 
@@ -32,12 +45,16 @@ export async function generateMetadata() {
     title,
     description,
     alternates: {
-      canonical: `${SITE_URL}/remote`,
+      canonical,
     },
+    robots:
+      !noindexUtilityState && total > 0
+        ? { index: true, follow: true }
+        : { index: false, follow: true },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}/remote`,
+      url: canonical,
       siteName: SITE_NAME,
       type: 'website',
     },

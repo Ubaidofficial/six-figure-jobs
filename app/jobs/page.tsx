@@ -10,6 +10,7 @@ import {
   type JobWithCompany,
 } from '../../lib/jobs/queryJobs'
 import { prisma } from '../../lib/prisma'
+import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 import { formatRelativeTime } from '@/lib/utils/time'
 
@@ -22,29 +23,6 @@ export const dynamic = 'force-dynamic'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
-
-export const metadata: Metadata = {
-  title: `All $100k+ Jobs | ${SITE_NAME}`,
-  description:
-    'Browse verified $100k+ jobs from ATS-powered company job boards. Filter by location, work type, role, and seniority — no entry-level clutter.',
-  alternates: {
-    canonical: `${SITE_URL}/jobs`,
-  },
-  openGraph: {
-    title: `All $100k+ Jobs | ${SITE_NAME}`,
-    description:
-      'Browse verified $100k+ jobs. Filter by location, work type, role, and seniority — no entry-level clutter.',
-    url: `${SITE_URL}/jobs`,
-    siteName: SITE_NAME,
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `All $100k+ Jobs | ${SITE_NAME}`,
-    description:
-      'Browse verified $100k+ jobs from ATS-powered company job boards.',
-  },
-}
 
 type BandConfig = {
   id: '100k' | '200k' | '300k' | '400k'
@@ -92,6 +70,41 @@ const BANDS: BandConfig[] = [
 /* -------------------------------------------------------------------------- */
 
 type SearchParams = Record<string, string | string[] | undefined>
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams?: Promise<SearchParams>
+}): Promise<Metadata> {
+  const sp = (await searchParams) || {}
+  const canonicalPath = buildNormalizedListingPath('/jobs', sp)
+  const canonical = `${SITE_URL}${canonicalPath}`
+  const noindexUtilityState = hasNonPaginationQueryParams(sp)
+
+  return {
+    title: `All $100k+ Jobs | ${SITE_NAME}`,
+    description:
+      'Browse verified $100k+ jobs from ATS-powered company job boards. Filter by location, work type, role, and seniority — no entry-level clutter.',
+    alternates: {
+      canonical,
+    },
+    robots: noindexUtilityState ? { index: false, follow: true } : { index: true, follow: true },
+    openGraph: {
+      title: `All $100k+ Jobs | ${SITE_NAME}`,
+      description:
+        'Browse verified $100k+ jobs. Filter by location, work type, role, and seniority — no entry-level clutter.',
+      url: canonical,
+      siteName: SITE_NAME,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `All $100k+ Jobs | ${SITE_NAME}`,
+      description:
+        'Browse verified $100k+ jobs from ATS-powered company job boards.',
+    },
+  }
+}
 
 function firstParam(sp: SearchParams, key: string): string | undefined {
   const value = sp[key]

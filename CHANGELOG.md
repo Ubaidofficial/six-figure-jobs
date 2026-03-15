@@ -1,3 +1,14 @@
+# 2.8.29 (2026-03-16)
+
+
+### Bug Fixes
+
+* self-canonicalize query-parameter listing states and force filtered jobs/remote utility views to `noindex,follow` instead of pointing canonicals at the unfiltered hub
+* remove empty salary tiers from page robots and `sitemap-salary.xml`, and add regression coverage for salary-tier gating
+* use live query counts for slice pagination prev/next tags and for fallback slice synthesis guards so pSEO URLs stay aligned with real page eligibility
+* force remote-only filters on remote role and remote role-by-country pages so `/remote/*` routes do not leak non-remote jobs
+
+
 # 2.8.28 (2026-03-16)
 
 

@@ -10,6 +10,7 @@ import { findBestMatchingRole, slugToLabel } from '@/lib/roles/slugMatcher'
 import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import JobList from '../../components/JobList'
+import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { isRemoteRolePageIndexable } from '../../../lib/seo/indexabilityGates'
 
@@ -38,20 +39,6 @@ function parsePage(sp: SearchParams): number {
   const raw = (sp.page ?? '1') as string
   const n = Number(raw || '1') || 1
   return Math.max(1, n)
-}
-
-function buildCanonicalPath(roleSlug: string, page: number) {
-  const base = `/remote/${roleSlug}`
-  return page > 1 ? `${base}?page=${page}` : base
-}
-
-function buildRequestedPath(roleSlug: string, sp: SearchParams) {
-  const base = `/remote/${roleSlug}`
-  const params = new URLSearchParams()
-  const page = parsePage(sp)
-  if (page > 1) params.set('page', String(page))
-  const query = params.toString()
-  return query ? `${base}?${query}` : base
 }
 
 function normalizeStringParam(value?: string | string[]): string | undefined {
@@ -216,11 +203,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   const roleName = prettyRole(roleSlug)
   const page = parsePage(sp)
-  const requestedPath = buildRequestedPath(roleSlug, sp)
-  const canonicalPath = buildCanonicalPath(roleSlug, page)
-  if (requestedPath !== canonicalPath) {
-    permanentRedirect(canonicalPath)
-  }
+  const canonicalPath = buildNormalizedListingPath(`/remote/${roleSlug}`, sp)
+  const noindexUtilityState = hasNonPaginationQueryParams(sp)
 
   const selectedCountry = normalizeStringParam(sp.country)
   const selectedRegion = normalizeStringParam(sp.remoteRegion)
@@ -228,6 +212,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   const result = await queryJobs({
     roleSlugs: [roleSlug],
+    remoteOnly: true,
     countryCode: selectedCountry || undefined,
     remoteRegion: selectedRegion || undefined,
     minAnnual: minAnnualForQuery,
@@ -245,15 +230,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     title,
     description,
     alternates: {
-      canonical: `${SITE_URL}/remote/${roleSlug}`,
+      canonical: `${SITE_URL}${canonicalPath}`,
     },
     robots: shouldIndex
+      && !noindexUtilityState
       ? { index: true, follow: true }
       : { index: false, follow: true }, // Tier-2: noindex but follow links
     openGraph: {
       title: `Remote ${roleName} $100k+ Jobs`,
       description: `${jobCount.toLocaleString()} remote ${roleName} jobs with verified $100k+ salaries.`,
-      url: `${SITE_URL}/remote/${roleSlug}`,
+      url: `${SITE_URL}${canonicalPath}`,
       siteName: SITE_NAME,
       type: 'website',
     },
@@ -303,6 +289,7 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
 
   const data = await queryJobs({
     roleSlugs: [roleSlug],
+    remoteOnly: true,
     countryCode: selectedCountry || undefined,
     remoteRegion: selectedRegion || undefined,
     minAnnual: minAnnualForQuery,

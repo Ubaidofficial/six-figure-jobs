@@ -123,7 +123,11 @@ function svgPathFromPoints(points: Array<{ x: number; y: number }>): string {
   return `M ${first.x.toFixed(2)} ${first.y.toFixed(2)} ` + rest.map((p) => `L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ')
 }
 
-export function buildSalaryTierMetadata(tierId: SalaryTierId, total: number): Metadata {
+export function buildSalaryTierMetadata(
+  tierId: SalaryTierId,
+  total: number,
+  options?: { canonicalPath?: string },
+): Metadata {
   const tier = SALARY_TIERS[tierId]
   const title = `Top ${tier.rangeLabel} Jobs | ${SITE_NAME}`
   const description =
@@ -131,14 +135,15 @@ export function buildSalaryTierMetadata(tierId: SalaryTierId, total: number): Me
       ? `Browse ${total.toLocaleString()} verified ${tier.rangeLabel} opportunities. Filter by role, location, and work type — no entry-level clutter.`
       : `Browse verified ${tier.rangeLabel} opportunities with premium salary transparency.`
 
+  const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${tierId}`
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/jobs/${tierId}` },
+    alternates: { canonical },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}/jobs/${tierId}`,
+      url: canonical,
       siteName: SITE_NAME,
       type: 'website',
     },
