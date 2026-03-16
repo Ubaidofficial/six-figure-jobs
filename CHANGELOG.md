@@ -1,3 +1,11 @@
+# 2.8.32 (2026-03-16)
+
+
+### Bug Fixes
+
+* add explicit canonical tags to `/about`, `/privacy`, `/terms`, and `/salary` so fallback sitemap targets satisfy strict production SEO proof checks
+
+
 # 2.8.31 (2026-03-16)
 
 

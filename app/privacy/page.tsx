@@ -4,6 +4,9 @@ export const metadata: Metadata = {
   title: 'Privacy Policy',
   description:
     'Privacy Policy for Six Figure Jobs. Learn what data we collect, how we use it, and the choices you have.',
+  alternates: {
+    canonical: 'https://www.6figjobs.com/privacy',
+  },
 }
 
 export default function PrivacyPage() {

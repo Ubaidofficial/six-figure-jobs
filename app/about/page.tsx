@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: 'About Six Figure Jobs',
   description:
     'Six Figure Jobs is a curated job board for verified $100k+ roles across remote, hybrid, and on-site opportunities worldwide.',
+  alternates: {
+    canonical: 'https://www.6figjobs.com/about',
+  },
 }
 
 export default function AboutPage() {
