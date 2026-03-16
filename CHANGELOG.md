@@ -1,3 +1,12 @@
+# 2.8.31 (2026-03-16)
+
+
+### Bug Fixes
+
+* add runtime fallbacks for the homepage, jobs hub, remote hub, and companies hub so production keeps serving stable indexable pages when Prisma cannot reach Railway
+* harden DB-backed sitemap families (`jobs`, `company`, `salary`, `category`, `level`, `browse`) with explicit fallback XML responses instead of live 500s during database outages
+
+
 # 2.8.30 (2026-03-16)
 
 

@@ -3,6 +3,7 @@
 
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma'
+import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '../../lib/seo/indexabilityGates'
 
@@ -49,25 +50,29 @@ async function fetchEligibleCompanyCount(): Promise<number> {
 }
 
 export async function GET() {
-  const total = await fetchEligibleCompanyCount()
-  const totalPages = Math.ceil(total / PAGE_SIZE)
-  const lastmod = new Date().toISOString()
+  try {
+    const total = await fetchEligibleCompanyCount()
+    const totalPages = Math.ceil(total / PAGE_SIZE)
+    const lastmod = new Date().toISOString()
 
-  const entries = Array.from({ length: totalPages }).map((_, i) => {
-    const loc = escapeXml(`${SITE_URL}/sitemap-company/${i + 1}`)
-    return `  <sitemap>
+    const entries = Array.from({ length: totalPages }).map((_, i) => {
+      const loc = escapeXml(`${SITE_URL}/sitemap-company/${i + 1}`)
+      return `  <sitemap>
     <loc>${loc}</loc>
     <lastmod>${lastmod}</lastmod>
   </sitemap>`
-  })
+    })
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries.join('\n')}
 </sitemapindex>`
 
-  return new Response(xml, {
-    status: 200,
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
-  })
+    return new Response(xml, {
+      status: 200,
+      headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    })
+  } catch (error) {
+    return buildFallbackUrlsetResponse('sitemap-company', ['/companies'], error)
+  }
 }

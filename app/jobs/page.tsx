@@ -13,6 +13,7 @@ import { prisma } from '../../lib/prisma'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 import { formatRelativeTime } from '@/lib/utils/time'
+import { logRuntimeFallback } from '@/lib/runtime/fallback'
 
 import { JobsFiltersPanel, type JobsFacets } from './_components/JobsFilters'
 import { JobsToolbar } from './_components/JobsToolbar'
@@ -169,6 +170,37 @@ function prettyRoleAndCountryFromSlug(slug: string): string {
   return `${roleLabel} · ${countryCode}`
 }
 
+function JobsIndexFallback({ techFilter }: { techFilter?: string }) {
+  return (
+    <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+      <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-8 shadow-2xl shadow-slate-950/40">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+          Live job data temporarily unavailable
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold text-slate-50">All $100k+ Jobs</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+          The production database is reconnecting. Search metadata is still live, but the full job
+          feed is temporarily unavailable.
+          {techFilter ? ` Active filter: ${techFilter}.` : ''}
+        </p>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {BANDS.map((band) => (
+            <Link
+              key={band.id}
+              href={band.href}
+              className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-100 transition hover:border-slate-600"
+            >
+              <div className="font-semibold">{band.label}</div>
+              <p className="mt-2 text-xs text-slate-400">{band.blurb}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </main>
+  )
+}
+
 /* -------------------------------------------------------------------------- */
 /* Page                                                                       */
 /* -------------------------------------------------------------------------- */
@@ -221,8 +253,9 @@ export default async function JobsIndexPage({
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
   }
 
-  const data = await queryJobs(queryInput)
-  const jobs = data.jobs as JobWithCompany[]
+  try {
+    const data = await queryJobs(queryInput)
+    const jobs = data.jobs as JobWithCompany[]
 
   const baseFacetInput: JobQueryInput = {
     ...queryInput,
@@ -230,38 +263,38 @@ export default async function JobsIndexPage({
     pageSize: 1,
   }
 
-  const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] =
-    await Promise.all([
-      prisma.job.groupBy({
-        by: ['roleSlug'],
-        where: {
-          ...buildWhere({ ...baseFacetInput, roleSlugs: undefined }),
-          roleSlug: { not: null },
-        },
-        _count: { _all: true },
-        orderBy: { _count: { roleSlug: 'desc' } },
-        take: 20,
-      }),
-      prisma.job.groupBy({
-        by: ['countryCode'],
-        where: {
-          ...buildWhere({ ...baseFacetInput, countryCode: undefined }),
-          countryCode: { not: null },
-        },
-        _count: { _all: true },
-        orderBy: { _count: { countryCode: 'desc' } },
-        take: 40,
-      }),
-      prisma.job.count({
-        where: buildWhere({ ...baseFacetInput, remoteMode: 'remote' }),
-      }),
-      prisma.job.count({
-        where: buildWhere({ ...baseFacetInput, remoteMode: 'hybrid' }),
-      }),
-      prisma.job.count({
-        where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
-      }),
-    ])
+    const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] =
+      await Promise.all([
+        prisma.job.groupBy({
+          by: ['roleSlug'],
+          where: {
+            ...buildWhere({ ...baseFacetInput, roleSlugs: undefined }),
+            roleSlug: { not: null },
+          },
+          _count: { _all: true },
+          orderBy: { _count: { roleSlug: 'desc' } },
+          take: 20,
+        }),
+        prisma.job.groupBy({
+          by: ['countryCode'],
+          where: {
+            ...buildWhere({ ...baseFacetInput, countryCode: undefined }),
+            countryCode: { not: null },
+          },
+          _count: { _all: true },
+          orderBy: { _count: { countryCode: 'desc' } },
+          take: 40,
+        }),
+        prisma.job.count({
+          where: buildWhere({ ...baseFacetInput, remoteMode: 'remote' }),
+        }),
+        prisma.job.count({
+          where: buildWhere({ ...baseFacetInput, remoteMode: 'hybrid' }),
+        }),
+        prisma.job.count({
+          where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
+        }),
+      ])
 
   const facets: JobsFacets = {
     roles: roleRows
@@ -307,30 +340,30 @@ export default async function JobsIndexPage({
   const lastUpdatedLabel = mostRecentUpdateMs ? formatRelativeTime(mostRecentUpdateMs) : null
 
   // For each salary band, pull the most popular role+country JobSlices
-  const bandSlices = await Promise.all(
-    BANDS.map((band) =>
-      prisma.jobSlice.findMany({
-        where: {
-          slug: {
-            startsWith: `${band.slugPrefix}/`,
+    const bandSlices = await Promise.all(
+      BANDS.map((band) =>
+        prisma.jobSlice.findMany({
+          where: {
+            slug: {
+              startsWith: `${band.slugPrefix}/`,
+            },
+            jobCount: {
+              gt: 0,
+            },
           },
-          jobCount: {
-            gt: 0,
+          orderBy: {
+            jobCount: 'desc',
           },
-        },
-        orderBy: {
-          jobCount: 'desc',
-        },
-        take: 12,
-      })
+          take: 12,
+        })
+      )
     )
-  )
 
   const basePath = '/jobs'
   const totalPages = data.totalPages
 
-  return (
-    <main className={styles.page}>
+    return (
+      <main className={styles.page}>
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href="/">Home</Link>
         <span aria-hidden="true">/</span>
@@ -475,6 +508,10 @@ export default async function JobsIndexPage({
           )
         })}
       </section>
-    </main>
-  )
+      </main>
+    )
+  } catch (error) {
+    logRuntimeFallback('jobs.page', error)
+    return <JobsIndexFallback techFilter={techFilter} />
+  }
 }

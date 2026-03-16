@@ -34,6 +34,7 @@ import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { getThresholdLabelForCountry } from '@/lib/seo/salaryLabels'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
 import { WhySixFigureJobs } from '@/components/home/WhySixFigureJobs'
+import { logRuntimeFallback } from '@/lib/runtime/fallback'
 
 export const revalidate = 300 // 5min instead of 10min
 export const dynamic = 'force-dynamic'
@@ -197,135 +198,184 @@ function HomepageSchemas({
   )
 }
 
+function HomePageFallback() {
+  return (
+    <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+      <HomepageSchemas jobCount={0} companyCount={0} />
+
+      <section className="rounded-3xl border border-slate-800 bg-slate-950/80 p-8 shadow-2xl shadow-slate-950/40">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+          Live data temporarily unavailable
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold text-slate-50">
+          Six Figure Jobs
+        </h1>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+          The job feed is temporarily unavailable while the production database reconnects.
+          Static pages remain live, and the next scrape will continue updating data once connectivity
+          is restored.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3 text-sm">
+          <Link
+            href="/jobs"
+            className="rounded-full bg-emerald-400 px-5 py-2 font-semibold text-slate-950"
+          >
+            Browse jobs
+          </Link>
+          <Link
+            href="/remote"
+            className="rounded-full border border-slate-700 px-5 py-2 text-slate-100"
+          >
+            Remote jobs
+          </Link>
+          <Link
+            href="/salary"
+            className="rounded-full border border-slate-700 px-5 py-2 text-slate-100"
+          >
+            Salary guides
+          </Link>
+          <Link
+            href="/companies"
+            className="rounded-full border border-slate-700 px-5 py-2 text-slate-100"
+          >
+            Companies
+          </Link>
+        </div>
+      </section>
+    </main>
+  )
+}
+
 export default async function HomePage() {
-  const [
-    jobsData,
-    totalJobs,
-    totalCompanies,
-    featuredCompanyGroups,
-    salaryBandCounts,
-    locationCounts,
-    locationCityCounts,
-    premiumRoleRows,
-    schemaTotalJobs,
-    schemaTotalCompanies,
-    schemaNewThisWeek,
-    topRoles,
-  ] = await Promise.all([
-    queryJobs({
-      isHundredKLocal: true, // Use PPP-adjusted threshold
-      page: 1,
-      pageSize: PAGE_SIZE,
-      sortBy: 'date',
-      excludeInternships: true,
-    }),
-    prisma.job.count({
-      where: {
-        isExpired: false,
-        OR: [
-          { minAnnual: { gte: BigInt(100_000) } },
-          { maxAnnual: { gte: BigInt(100_000) } },
-          { isHundredKLocal: true },
-        ],
-      },
-    }),
-    prisma.company.count({
-      where: {
-        jobs: {
-          some: {
-            isExpired: false,
-            OR: [{ minAnnual: { gte: BigInt(100_000) } }, { isHundredKLocal: true }],
+  try {
+    const [
+      jobsData,
+      totalJobs,
+      totalCompanies,
+      featuredCompanyGroups,
+      salaryBandCounts,
+      locationCounts,
+      locationCityCounts,
+      premiumRoleRows,
+      schemaTotalJobs,
+      schemaTotalCompanies,
+      schemaNewThisWeek,
+      topRoles,
+    ] = await Promise.all([
+      queryJobs({
+        isHundredKLocal: true, // Use PPP-adjusted threshold
+        page: 1,
+        pageSize: PAGE_SIZE,
+        sortBy: 'date',
+        excludeInternships: true,
+      }),
+      prisma.job.count({
+        where: {
+          isExpired: false,
+          OR: [
+            { minAnnual: { gte: BigInt(100_000) } },
+            { maxAnnual: { gte: BigInt(100_000) } },
+            { isHundredKLocal: true },
+          ],
+        },
+      }),
+      prisma.company.count({
+        where: {
+          jobs: {
+            some: {
+              isExpired: false,
+              OR: [{ minAnnual: { gte: BigInt(100_000) } }, { isHundredKLocal: true }],
+            },
           },
         },
-      },
-    }),
-    prisma.job.groupBy({
-      by: ['companyId'],
-      where: {
-        companyId: { not: null },
-        isExpired: false,
-        AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
-      },
-      _count: { _all: true },
-      orderBy: { _count: { companyId: 'desc' } },
-      take: 20,
-    }),
-    Promise.all(
-      SALARY_BANDS.map(async (band) => {
-        const count = await prisma.job.count({
-          where: {
-            isExpired: false,
-            AND: [
-              buildHighSalaryEligibilityWhere(),
-              buildGlobalExclusionsWhere(),
-              {
-                OR: [
-                  { maxAnnual: { gte: BigInt(band.min) } },
-                  { minAnnual: { gte: BigInt(band.min) } },
-                ],
-              },
-            ],
-          },
+      }),
+      prisma.job.groupBy({
+        by: ['companyId'],
+        where: {
+          companyId: { not: null },
+          isExpired: false,
+          AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
+        },
+        _count: { _all: true },
+        orderBy: { _count: { companyId: 'desc' } },
+        take: 20,
+      }),
+      Promise.all(
+        SALARY_BANDS.map(async (band) => {
+          const count = await prisma.job.count({
+            where: {
+              isExpired: false,
+              AND: [
+                buildHighSalaryEligibilityWhere(),
+                buildGlobalExclusionsWhere(),
+                {
+                  OR: [
+                    { maxAnnual: { gte: BigInt(band.min) } },
+                    { minAnnual: { gte: BigInt(band.min) } },
+                  ],
+                },
+              ],
+            },
+          })
+
+          return { ...band, count }
         })
+      ),
+      prisma.job.groupBy({
+        by: ['countryCode'],
+        where: {
+          isExpired: false,
+          countryCode: { in: TOP_LOCATION_DEFS.map((c) => c.code) },
+          AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
+        },
+        _count: { _all: true },
+      }),
+      prisma.job.groupBy({
+        by: ['countryCode', 'city'],
+        where: {
+          isExpired: false,
+          countryCode: { in: TOP_LOCATION_DEFS.map((c) => c.code) },
+          city: { not: null },
+          AND: [
+            buildHighSalaryEligibilityWhere(),
+            buildGlobalExclusionsWhere(),
+            { city: { not: '' } },
+          ],
+        },
+        _count: { _all: true },
+        orderBy: { _count: { countryCode: 'desc' } },
+      }),
+      prisma.$queryRaw<
+        Array<{
+          slug: string
+          totalCount: bigint
+          avgUsd: bigint | null
+          last7: bigint
+          prev7: bigint
+        }>
+      >((() => {
+        const roleValues = PREMIUM_ROLE_DEFS.map((r) => Prisma.sql`(${r.slug})`)
 
-        return { ...band, count }
-      })
-    ),
-    prisma.job.groupBy({
-      by: ['countryCode'],
-      where: {
-        isExpired: false,
-        countryCode: { in: TOP_LOCATION_DEFS.map((c) => c.code) },
-        AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
-      },
-      _count: { _all: true },
-    }),
-    prisma.job.groupBy({
-      by: ['countryCode', 'city'],
-      where: {
-        isExpired: false,
-        countryCode: { in: TOP_LOCATION_DEFS.map((c) => c.code) },
-        city: { not: null },
-        AND: [
-          buildHighSalaryEligibilityWhere(),
-          buildGlobalExclusionsWhere(),
-          { city: { not: '' } },
-        ],
-      },
-      _count: { _all: true },
-      orderBy: { _count: { countryCode: 'desc' } },
-    }),
-    prisma.$queryRaw<
-      Array<{
-        slug: string
-        totalCount: bigint
-        avgUsd: bigint | null
-        last7: bigint
-        prev7: bigint
-      }>
-    >((() => {
-      const roleValues = PREMIUM_ROLE_DEFS.map((r) => Prisma.sql`(${r.slug})`)
+        const currencyClauses = Object.entries(HIGH_SALARY_THRESHOLDS).map(
+          ([currency, threshold]) =>
+            Prisma.sql`("currency" = ${currency} AND ("minAnnual" >= ${threshold} OR "maxAnnual" >= ${threshold}))`,
+        )
 
-      const currencyClauses = Object.entries(HIGH_SALARY_THRESHOLDS).map(
-        ([currency, threshold]) =>
-          Prisma.sql`("currency" = ${currency} AND ("minAnnual" >= ${threshold} OR "maxAnnual" >= ${threshold}))`,
-      )
+        const titleExclusions = [
+          Prisma.sql`"title" ILIKE '%intern%'`,
+          Prisma.sql`"title" ILIKE '%internship%'`,
+          Prisma.sql`"title" ILIKE '%junior%'`,
+          Prisma.sql`"title" ILIKE '% jr%'`,
+          Prisma.sql`"title" ILIKE '%jr.%'`,
+          Prisma.sql`"title" ILIKE '%entry%'`,
+          Prisma.sql`"title" ILIKE '%entry level%'`,
+          Prisma.sql`"title" ILIKE '%graduate%'`,
+          Prisma.sql`"title" ILIKE '%new grad%'`,
+          Prisma.sql`"title" ILIKE '%new graduate%'`,
+          Prisma.sql`"title" ILIKE '%phd graduate%'`,
+        ]
 
-      const titleExclusions = [
-        Prisma.sql`"title" ILIKE '%intern%'`,
-        Prisma.sql`"title" ILIKE '%internship%'`,
-        Prisma.sql`"title" ILIKE '%junior%'`,
-        Prisma.sql`"title" ILIKE '% jr%'`,
-        Prisma.sql`"title" ILIKE '%jr.%'`,
-        Prisma.sql`"title" ILIKE '%entry%'`,
-        Prisma.sql`"title" ILIKE '%entry level%'`,
-        Prisma.sql`"title" ILIKE '%graduate%'`,
-        Prisma.sql`"title" ILIKE '%new grad%'`,
-        Prisma.sql`"title" ILIKE '%new graduate%'`,
-        Prisma.sql`"title" ILIKE '%phd graduate%'`,
-      ]
-
-      return Prisma.sql`
+        return Prisma.sql`
         WITH roles("slug") AS (
           VALUES ${Prisma.join(roleValues)}
         ),
@@ -364,29 +414,29 @@ export default async function HomePage() {
         FROM matched
         GROUP BY "slug";
       `
-    })()),
-    prisma.job.count({
-      where: { isExpired: false, AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()] },
-    }),
-    prisma.company.count(),
-    prisma.job.count({
-      where: {
-        isExpired: false,
-        AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
-        postedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-      },
-    }),
-    prisma.job.groupBy({
-      by: ['roleSlug'],
-      where: {
-        isExpired: false,
-        ...buildHighSalaryEligibilityWhere(),
-      },
-      _count: { _all: true },
-      orderBy: { _count: { roleSlug: 'desc' } },
-      take: 12,
-    }),
-  ])
+      })()),
+      prisma.job.count({
+        where: { isExpired: false, AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()] },
+      }),
+      prisma.company.count(),
+      prisma.job.count({
+        where: {
+          isExpired: false,
+          AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
+          postedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        },
+      }),
+      prisma.job.groupBy({
+        by: ['roleSlug'],
+        where: {
+          isExpired: false,
+          ...buildHighSalaryEligibilityWhere(),
+        },
+        _count: { _all: true },
+        orderBy: { _count: { roleSlug: 'desc' } },
+        take: 12,
+      }),
+    ])
 
   const stats = {
     totalJobs: schemaTotalJobs,
@@ -402,16 +452,16 @@ export default async function HomePage() {
       count: r._count._all,
     }))
 
-  const featuredCompanyIds = featuredCompanyGroups
-    .map((g) => g.companyId)
-    .filter((id): id is string => typeof id === 'string')
+    const featuredCompanyIds = featuredCompanyGroups
+      .map((g) => g.companyId)
+      .filter((id): id is string => typeof id === 'string')
 
-  const featuredCompaniesRaw = featuredCompanyIds.length
-    ? await prisma.company.findMany({
-        where: { id: { in: featuredCompanyIds } },
-        select: { id: true, name: true, slug: true, logoUrl: true },
-      })
-    : []
+    const featuredCompaniesRaw = featuredCompanyIds.length
+      ? await prisma.company.findMany({
+          where: { id: { in: featuredCompanyIds } },
+          select: { id: true, name: true, slug: true, logoUrl: true },
+        })
+      : []
 
   const featuredCompaniesById = new Map(featuredCompaniesRaw.map((c) => [c.id, c]))
 
@@ -507,7 +557,7 @@ export default async function HomePage() {
     }
   })
 
-  return (
+    return (
     <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
       <HomepageSchemas
         jobCount={stats.totalJobs}
@@ -779,5 +829,9 @@ export default async function HomePage() {
         </div>
       </section>
     </main>
-  )
+    )
+  } catch (error) {
+    logRuntimeFallback('home.page', error)
+    return <HomePageFallback />
+  }
 }

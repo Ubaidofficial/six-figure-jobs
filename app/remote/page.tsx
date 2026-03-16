@@ -7,6 +7,7 @@ import {
   buildHighSalaryEligibilityWhere,
 } from '../../lib/jobs/queryJobs'
 import { RemoteHero } from '@/components/remote/RemoteHero'
+import { logRuntimeFallback } from '@/lib/runtime/fallback'
 
 import styles from './RemotePage.module.css'
 
@@ -23,17 +24,23 @@ export async function generateMetadata({
 }) {
   const sp = (await searchParams) || {}
   const activeRemoteRegion = normalizeRemoteRegion(sp.remoteRegion)
-  const total = await prisma.job.count({
-    where: {
-      isExpired: false,
-      AND: [
-        buildHighSalaryEligibilityWhere(),
-        buildGlobalExclusionsWhere(),
-        { OR: [{ remote: true }, { remoteMode: 'remote' }] },
-        ...(activeRemoteRegion ? [{ remoteRegion: activeRemoteRegion }] : []),
-      ],
-    },
-  })
+  let total = 0
+
+  try {
+    total = await prisma.job.count({
+      where: {
+        isExpired: false,
+        AND: [
+          buildHighSalaryEligibilityWhere(),
+          buildGlobalExclusionsWhere(),
+          { OR: [{ remote: true }, { remoteMode: 'remote' }] },
+          ...(activeRemoteRegion ? [{ remoteRegion: activeRemoteRegion }] : []),
+        ],
+      },
+    })
+  } catch (error) {
+    logRuntimeFallback('remote.metadata', error)
+  }
 
   const canonicalPath = buildNormalizedListingPath('/remote', sp)
   const canonical = `${SITE_URL}${canonicalPath}`
@@ -103,6 +110,60 @@ function asNumber(value: unknown): number | null {
   return null
 }
 
+function RemoteJobsFallback({ activeRemoteRegion }: { activeRemoteRegion: string | null }) {
+  const fallbackRoles = [
+    'software-engineer',
+    'product-manager',
+    'data-engineer',
+    'designer',
+    'devops-engineer',
+    'machine-learning-engineer',
+  ]
+
+  return (
+    <main className={styles.page}>
+      <RemoteHero
+        remoteJobCount={0}
+        companyCount={0}
+        countryCount={0}
+        avgSalaryUsd={100000}
+        activeRemoteRegion={activeRemoteRegion}
+      />
+
+      <section className={styles.section} aria-label="Remote roles fallback">
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>Remote roles are temporarily unavailable</h2>
+            <p className={styles.sectionSub}>
+              The production database is reconnecting. Hub pages remain online while live remote
+              counts recover.
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.roleGrid}>
+          {fallbackRoles.map((slug) => (
+            <Link key={slug} href={`/remote/${slug}`} className={styles.roleCard}>
+              <div className={styles.roleLeft}>
+                <div className={styles.roleName}>{toTitleCase(slug)}</div>
+                <div className={styles.roleMeta}>
+                  <span className={styles.pill}>Role hub</span>
+                  {activeRemoteRegion ? (
+                    <span className={styles.pill}>{activeRemoteRegion}</span>
+                  ) : null}
+                </div>
+              </div>
+              <div className={styles.arrow} aria-hidden="true">
+                →
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </main>
+  )
+}
+
 export default async function RemoteJobsPage({
   searchParams,
 }: {
@@ -111,129 +172,134 @@ export default async function RemoteJobsPage({
   const sp = (await searchParams) || {}
   const activeRemoteRegion = normalizeRemoteRegion(sp.remoteRegion)
 
-  const baseWhere: any = {
-    isExpired: false,
-    AND: [
-      buildHighSalaryEligibilityWhere(),
-      buildGlobalExclusionsWhere(),
-      { OR: [{ remote: true }, { remoteMode: 'remote' }] },
-      ...(activeRemoteRegion ? [{ remoteRegion: activeRemoteRegion }] : []),
-    ],
-  }
+  try {
+    const baseWhere: any = {
+      isExpired: false,
+      AND: [
+        buildHighSalaryEligibilityWhere(),
+        buildGlobalExclusionsWhere(),
+        { OR: [{ remote: true }, { remoteMode: 'remote' }] },
+        ...(activeRemoteRegion ? [{ remoteRegion: activeRemoteRegion }] : []),
+      ],
+    }
 
-  const [remoteJobCount, companyGroups, countryGroups, avg] = await Promise.all([
-    prisma.job.count({ where: baseWhere }),
-    prisma.job.groupBy({
-      by: ['companyId'],
-      where: { ...baseWhere, companyId: { not: null } },
-      _count: { _all: true },
-    }),
-    prisma.job.groupBy({
-      by: ['countryCode'],
-      where: { ...baseWhere, countryCode: { not: null } },
-      _count: { _all: true },
-    }),
-    prisma.job.aggregate({
-      where: {
-        ...baseWhere,
-        currency: 'USD',
-        OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
-      },
-      _avg: { maxAnnual: true, minAnnual: true },
-    }),
-  ])
+    const [remoteJobCount, companyGroups, countryGroups, avg] = await Promise.all([
+      prisma.job.count({ where: baseWhere }),
+      prisma.job.groupBy({
+        by: ['companyId'],
+        where: { ...baseWhere, companyId: { not: null } },
+        _count: { _all: true },
+      }),
+      prisma.job.groupBy({
+        by: ['countryCode'],
+        where: { ...baseWhere, countryCode: { not: null } },
+        _count: { _all: true },
+      }),
+      prisma.job.aggregate({
+        where: {
+          ...baseWhere,
+          currency: 'USD',
+          OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
+        },
+        _avg: { maxAnnual: true, minAnnual: true },
+      }),
+    ])
 
-  const companyCount = companyGroups.length
-  const countryCount = countryGroups.length
-  const avgSalaryUsd = Math.min(
-    500_000,
-    Math.max(
-      100_000,
-      asNumber((avg as any)?._avg?.minAnnual ?? (avg as any)?._avg?.maxAnnual) ?? 156_000
+    const companyCount = companyGroups.length
+    const countryCount = countryGroups.length
+    const avgSalaryUsd = Math.min(
+      500_000,
+      Math.max(
+        100_000,
+        asNumber((avg as any)?._avg?.minAnnual ?? (avg as any)?._avg?.maxAnnual) ?? 156_000
+      )
     )
-  )
 
-  const topRoles = await prisma.job.groupBy({
-    by: ['roleSlug'],
-    where: { ...baseWhere, roleSlug: { not: null } },
-    _count: { _all: true },
-    orderBy: { _count: { roleSlug: 'desc' } },
-    take: 20,
-  })
-
-  const roleList = topRoles
-    .filter((r) => Boolean((r as any).roleSlug))
-    .map((r) => {
-      const slug = String((r as any).roleSlug)
-      const count = Number((r as any)._count?._all ?? 0)
-      return { slug, count, title: toTitleCase(slug) }
+    const topRoles = await prisma.job.groupBy({
+      by: ['roleSlug'],
+      where: { ...baseWhere, roleSlug: { not: null } },
+      _count: { _all: true },
+      orderBy: { _count: { roleSlug: 'desc' } },
+      take: 20,
     })
 
-  return (
-    <main className={styles.page}>
-      <RemoteHero
-        remoteJobCount={remoteJobCount}
-        companyCount={companyCount}
-        countryCount={countryCount}
-        avgSalaryUsd={avgSalaryUsd}
-        activeRemoteRegion={activeRemoteRegion}
-      />
+    const roleList = topRoles
+      .filter((r) => Boolean((r as any).roleSlug))
+      .map((r) => {
+        const slug = String((r as any).roleSlug)
+        const count = Number((r as any)._count?._all ?? 0)
+        return { slug, count, title: toTitleCase(slug) }
+      })
 
-      <section className={styles.section} aria-label="Remote roles">
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2 className={styles.sectionTitle}>Explore remote roles</h2>
-            <p className={styles.sectionSub}>
-              High-paying remote opportunities by role, refreshed frequently from verified sources.
-            </p>
-          </div>
-        </div>
+    return (
+      <main className={styles.page}>
+        <RemoteHero
+          remoteJobCount={remoteJobCount}
+          companyCount={companyCount}
+          countryCount={countryCount}
+          avgSalaryUsd={avgSalaryUsd}
+          activeRemoteRegion={activeRemoteRegion}
+        />
 
-        {roleList.length === 0 ? (
-          <div className={styles.empty}>
-            No roles found. Try adjusting your filters or clear them to explore all remote opportunities.
+        <section className={styles.section} aria-label="Remote roles">
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2 className={styles.sectionTitle}>Explore remote roles</h2>
+              <p className={styles.sectionSub}>
+                High-paying remote opportunities by role, refreshed frequently from verified sources.
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className={styles.roleGrid}>
-            {roleList.map((role) => (
-              <Link key={role.slug} href={`/remote/${role.slug}`} className={styles.roleCard}>
-                <div className={styles.roleLeft}>
-                  <div className={styles.roleName}>{role.title}</div>
-                  <div className={styles.roleMeta}>
-                    <span className={styles.pill}>{role.count.toLocaleString()} jobs</span>
-                    {activeRemoteRegion ? (
-                      <span className={styles.pill}>{activeRemoteRegion}</span>
-                    ) : null}
+
+          {roleList.length === 0 ? (
+            <div className={styles.empty}>
+              No roles found. Try adjusting your filters or clear them to explore all remote opportunities.
+            </div>
+          ) : (
+            <div className={styles.roleGrid}>
+              {roleList.map((role) => (
+                <Link key={role.slug} href={`/remote/${role.slug}`} className={styles.roleCard}>
+                  <div className={styles.roleLeft}>
+                    <div className={styles.roleName}>{role.title}</div>
+                    <div className={styles.roleMeta}>
+                      <span className={styles.pill}>{role.count.toLocaleString()} jobs</span>
+                      {activeRemoteRegion ? (
+                        <span className={styles.pill}>{activeRemoteRegion}</span>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-                <div className={styles.arrow} aria-hidden="true">
-                  →
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+                  <div className={styles.arrow} aria-hidden="true">
+                    →
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
 
-        <div className={styles.why}>
-          <h3 className={styles.whyTitle}>Why Choose Remote $100k+ Jobs?</h3>
-          <div className={styles.whyList}>
-            {[
-              'Work from anywhere in the world',
-              'Verified six-figure salaries ($100k+ USD or equivalent)',
-              'Premium roles from top tech companies',
-              'No location restrictions or relocation required',
-              'Refreshed daily with new verified opportunities',
-            ].map((item) => (
-              <div key={item} className={styles.checkItem}>
-                <span className={styles.checkDot} aria-hidden="true">
-                  ✓
-                </span>
-                <span>{item}</span>
-              </div>
-            ))}
+          <div className={styles.why}>
+            <h3 className={styles.whyTitle}>Why Choose Remote $100k+ Jobs?</h3>
+            <div className={styles.whyList}>
+              {[
+                'Work from anywhere in the world',
+                'Verified six-figure salaries ($100k+ USD or equivalent)',
+                'Premium roles from top tech companies',
+                'No location restrictions or relocation required',
+                'Refreshed daily with new verified opportunities',
+              ].map((item) => (
+                <div key={item} className={styles.checkItem}>
+                  <span className={styles.checkDot} aria-hidden="true">
+                    ✓
+                  </span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-    </main>
-  )
+        </section>
+      </main>
+    )
+  } catch (error) {
+    logRuntimeFallback('remote.page', error)
+    return <RemoteJobsFallback activeRemoteRegion={activeRemoteRegion} />
+  }
 }
