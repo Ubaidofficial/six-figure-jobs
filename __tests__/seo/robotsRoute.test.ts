@@ -86,4 +86,20 @@ describe('robots route sitemap declarations', () => {
     expect(body).toMatch(/Sitemap: .*\/sitemap-remote\.xml/)
     expect(body).toMatch(/Sitemap: .*\/sitemap-slices\.xml/)
   })
+
+  it('falls back to core sitemap lines when an optional family query errors', async () => {
+    getCitySitemapUrlsMock.mockRejectedValue(new Error('city query failed'))
+    hasCountrySitemapEntriesMock.mockResolvedValue(false)
+    hasRemoteRoleSitemapEntriesMock.mockResolvedValue(false)
+    hasSliceSitemapEntriesMock.mockResolvedValue(false)
+
+    const response = await GET()
+    const body = await response.text()
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('x-robots-fallback')).toBe('1')
+    expect(body).toMatch(/Sitemap: .*\/sitemap\.xml/)
+    expect(body).not.toContain('sitemap-city.xml')
+    expect(body).toContain('# fallback_used=1 optional_families=city')
+  })
 })

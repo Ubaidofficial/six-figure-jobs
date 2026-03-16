@@ -1,3 +1,12 @@
+# 2.8.30 (2026-03-16)
+
+
+### Bug Fixes
+
+* harden `sitemap.xml` and `robots.txt` so optional city/remote/country/slices sitemap failures degrade to a 200 response instead of taking production SEO endpoints down
+* add explicit fallback markers plus regression coverage for optional sitemap family failures so production route degradation is observable without breaking sitemap discovery
+
+
 # 2.8.29 (2026-03-16)
 
 

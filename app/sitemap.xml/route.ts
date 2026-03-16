@@ -1,10 +1,7 @@
 // app/sitemap.xml/route.ts
 
 import { getSiteUrl } from '../../lib/seo/site'
-import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
-import { hasCountrySitemapEntries } from '../../lib/seo/countrySitemap'
-import { hasRemoteRoleSitemapEntries } from '../../lib/seo/remoteSitemap'
-import { hasSliceSitemapEntries } from '../../lib/seo/slicesSitemap'
+import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
 
 const SITE_URL = getSiteUrl()
 const BUILD_LASTMOD = new Date().toISOString()
@@ -22,12 +19,8 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
-  const [cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls] = await Promise.all([
-    getCitySitemapUrls(),
-    hasRemoteRoleSitemapEntries(),
-    hasCountrySitemapEntries(),
-    hasSliceSitemapEntries(),
-  ])
+  const { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies } =
+    await resolveOptionalSitemapFamilies('sitemap.xml')
   const sitemaps = [
     'sitemap-jobs.xml',
     'sitemap-company.xml',
@@ -40,6 +33,10 @@ export async function GET() {
     'sitemap-browse.xml',
     ...(hasSliceUrls ? ['sitemap-slices.xml'] : []),
   ]
+  const fallbackComment =
+    failedFamilies.length > 0
+      ? `\n  <!-- fallback_used=1 optional_families=${failedFamilies.join(',')} -->`
+      : ''
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -51,10 +48,17 @@ ${sitemaps
     <lastmod>${BUILD_LASTMOD}</lastmod>
   </sitemap>`
   })
-  .join('\n')}
+  .join('\n')}${fallbackComment}
 </sitemapindex>`
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/xml; charset=utf-8',
+  }
+  if (failedFamilies.length > 0) {
+    headers['X-Sitemap-Fallback'] = '1'
+  }
+
   return new Response(xml, {
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers,
   })
 }

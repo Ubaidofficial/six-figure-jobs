@@ -1,10 +1,7 @@
 // app/robots.txt/route.ts
 import { NextResponse } from 'next/server'
 import { getSiteUrl } from '../../lib/seo/site'
-import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
-import { hasCountrySitemapEntries } from '../../lib/seo/countrySitemap'
-import { hasRemoteRoleSitemapEntries } from '../../lib/seo/remoteSitemap'
-import { hasSliceSitemapEntries } from '../../lib/seo/slicesSitemap'
+import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
 
 const SITE_URL = getSiteUrl()
 
@@ -20,12 +17,8 @@ export async function GET() {
     })
   }
 
-  const [cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls] = await Promise.all([
-    getCitySitemapUrls(),
-    hasRemoteRoleSitemapEntries(),
-    hasCountrySitemapEntries(),
-    hasSliceSitemapEntries(),
-  ])
+  const { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies } =
+    await resolveOptionalSitemapFamilies('robots.txt')
   const body = [
     'User-agent: *',
     'Allow: /',
@@ -39,6 +32,9 @@ export async function GET() {
     'User-agent: ClaudeBot',
     'Disallow: /api/',
     '',
+    ...(failedFamilies.length > 0
+      ? [`# fallback_used=1 optional_families=${failedFamilies.join(',')}`, '']
+      : []),
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     `Sitemap: ${SITE_URL}/sitemap-jobs.xml`,
     `Sitemap: ${SITE_URL}/sitemap-company.xml`,
@@ -57,6 +53,7 @@ export async function GET() {
     status: 200,
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
+      ...(failedFamilies.length > 0 ? { 'X-Robots-Fallback': '1' } : {}),
     },
   })
 }

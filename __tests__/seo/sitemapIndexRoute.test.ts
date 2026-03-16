@@ -80,4 +80,21 @@ describe('sitemap.xml route conditional sitemap inclusion', () => {
     expect(xml).toContain('/sitemap-remote.xml')
     expect(xml).toContain('/sitemap-slices.xml')
   })
+
+  it('falls back to core sitemap families when an optional family query errors', async () => {
+    getCitySitemapUrlsMock.mockRejectedValue(new Error('city query failed'))
+    hasCountrySitemapEntriesMock.mockResolvedValue(false)
+    hasRemoteRoleSitemapEntriesMock.mockResolvedValue(false)
+    hasSliceSitemapEntriesMock.mockResolvedValue(false)
+
+    const response = await GET()
+    const xml = await response.text()
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('x-sitemap-fallback')).toBe('1')
+    expect(xml).toContain('/sitemap-jobs.xml')
+    expect(xml).toContain('/sitemap-company.xml')
+    expect(xml).not.toContain('/sitemap-city.xml')
+    expect(xml).toContain('fallback_used=1 optional_families=city')
+  })
 })
