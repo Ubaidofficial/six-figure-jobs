@@ -33,7 +33,6 @@ ${uniqueUrls
   .map(
     (u) => `  <url>
     <loc>${escapeXml(u)}</loc>
-    <changefreq>daily</changefreq>
   </url>`,
   )
   .join('\n')}
@@ -46,6 +45,6 @@ ${uniqueUrls
       },
     })
   } catch (error) {
-    return buildFallbackUrlsetResponse('sitemap-browse', ['/terms'], error)
+    return buildFallbackUrlsetResponse('sitemap-browse', [], error)
   }
 }

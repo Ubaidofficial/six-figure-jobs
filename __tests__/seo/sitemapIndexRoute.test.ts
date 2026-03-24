@@ -63,8 +63,6 @@ describe('sitemap.xml route conditional sitemap inclusion', () => {
       {
         loc: 'https://www.6figjobs.com/jobs/city/new-york',
         lastmod: '2026-03-01T00:00:00.000Z',
-        changefreq: 'daily',
-        priority: 0.8,
       },
     ])
     hasCountrySitemapEntriesMock.mockResolvedValue(true)

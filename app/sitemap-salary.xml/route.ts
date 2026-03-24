@@ -13,8 +13,6 @@ export const dynamic = 'force-dynamic'
 type SalarySitemapUrl = {
   url: string
   lastModified: string
-  changeFrequency: string
-  priority: number
 }
 
 export async function GET() {
@@ -48,8 +46,6 @@ export async function GET() {
           return {
             url: `${SITE_URL}${path}`,
             lastModified: (agg._max.updatedAt ?? new Date()).toISOString(),
-            changeFrequency: 'daily',
-            priority: 0.9,
           } satisfies SalarySitemapUrl
         }),
       )
@@ -60,8 +56,6 @@ export async function GET() {
 ${urls.map(u => `  <url>
     <loc>${u.url}</loc>
     <lastmod>${u.lastModified}</lastmod>
-    <changefreq>${u.changeFrequency}</changefreq>
-    <priority>${u.priority}</priority>
   </url>`).join('\n')}
 </urlset>`
 
@@ -69,6 +63,6 @@ ${urls.map(u => `  <url>
       headers: { 'Content-Type': 'application/xml' },
     })
   } catch (error) {
-    return buildFallbackUrlsetResponse('sitemap-salary', ['/salary'], error)
+    return buildFallbackUrlsetResponse('sitemap-salary', [], error)
   }
 }

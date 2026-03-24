@@ -10,8 +10,6 @@ export async function GET() {
 ${urls.map(u => `  <url>
     <loc>${u.url}</loc>
     <lastmod>${u.lastModified}</lastmod>
-    <changefreq>${u.changeFrequency}</changefreq>
-    <priority>${u.priority}</priority>
   </url>`).join('\n')}
 </urlset>`
 

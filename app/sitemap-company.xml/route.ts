@@ -53,13 +53,11 @@ export async function GET() {
   try {
     const total = await fetchEligibleCompanyCount()
     const totalPages = Math.ceil(total / PAGE_SIZE)
-    const lastmod = new Date().toISOString()
 
     const entries = Array.from({ length: totalPages }).map((_, i) => {
       const loc = escapeXml(`${SITE_URL}/sitemap-company/${i + 1}`)
       return `  <sitemap>
     <loc>${loc}</loc>
-    <lastmod>${lastmod}</lastmod>
   </sitemap>`
     })
 
@@ -73,6 +71,6 @@ ${entries.join('\n')}
       headers: { 'Content-Type': 'application/xml; charset=utf-8' },
     })
   } catch (error) {
-    return buildFallbackUrlsetResponse('sitemap-company', ['/companies'], error)
+    return buildFallbackUrlsetResponse('sitemap-company', [], error)
   }
 }

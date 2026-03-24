@@ -37,15 +37,11 @@ export async function GET() {
         return {
           url: `${SITE_URL}/jobs/level/${level}`,
           lastModified: lastmod,
-          changeFrequency: 'daily',
-          priority: 0.7,
         }
       })
       .filter(Boolean) as Array<{
         url: string
         lastModified: string
-        changeFrequency: string
-        priority: number
       }>
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -53,8 +49,6 @@ export async function GET() {
 ${urls.map(u => `  <url>
     <loc>${u.url}</loc>
     <lastmod>${u.lastModified}</lastmod>
-    <changefreq>${u.changeFrequency}</changefreq>
-    <priority>${u.priority}</priority>
   </url>`).join('\n')}
 </urlset>`
 
@@ -62,6 +56,6 @@ ${urls.map(u => `  <url>
       headers: { 'Content-Type': 'application/xml' },
     })
   } catch (error) {
-    return buildFallbackUrlsetResponse('sitemap-level', ['/privacy'], error)
+    return buildFallbackUrlsetResponse('sitemap-level', [], error)
   }
 }

@@ -4,7 +4,6 @@ import { getSiteUrl } from '../../lib/seo/site'
 import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
 
 const SITE_URL = getSiteUrl()
-const BUILD_LASTMOD = new Date().toISOString()
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200 // 24h
@@ -45,7 +44,6 @@ ${sitemaps
     const loc = escapeXml(`${SITE_URL}/${s}`)
     return `  <sitemap>
     <loc>${loc}</loc>
-    <lastmod>${BUILD_LASTMOD}</lastmod>
   </sitemap>`
   })
   .join('\n')}${fallbackComment}

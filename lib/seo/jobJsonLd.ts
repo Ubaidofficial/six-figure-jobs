@@ -26,13 +26,7 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 
   const datePosted = (job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date()).toISOString()
 
-  const validThrough = (() => {
-    const base = new Date(job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date())
-    base.setDate(base.getDate() + 30)
-    return base.toISOString()
-  })()
-
-  const description = buildPlainTextDescription(job, companyName)
+  const description = buildStructuredDescription(job, companyName)
   const baseSalary = buildBaseSalary(job)
 
   const jobLocationType = isRemote ? 'TELECOMMUTE' : undefined
@@ -40,7 +34,7 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 
   const applicantLocationRequirements = isRemote ? buildApplicantLocationRequirements(job) : undefined
 
-  const employmentType = job.type || job.employmentType || 'Full-time'
+  const employmentType = normalizeEmploymentType(job.type || job.employmentType) || 'FULL_TIME'
 
   const jsonLd: any = {
     '@context': 'https://schema.org',
@@ -51,7 +45,6 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     url,
 
     datePosted,
-    validThrough,
 
     hiringOrganization: {
       '@type': 'Organization',
@@ -79,19 +72,18 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 
 /* ---------------- helpers ---------------- */
 
-function buildPlainTextDescription(job: any, companyName: string): string {
-  const text = String(job.descriptionText || '').trim()
-  if (text) return cleanDescription(text)
-
+function buildStructuredDescription(job: any, companyName: string): string {
   const raw = String(job.descriptionHtml || '').trim()
+  if (raw) {
+    const sanitized = sanitizeDescriptionHtmlForJsonLd(raw)
+    if (sanitized) return sanitized
+  }
 
-  const decoded = raw ? decodeHtmlEntities(raw) : ''
-  const noTags = decoded ? stripTags(decoded) : ''
-  const noTags2 = noTags.includes('<') ? stripTags(noTags) : noTags
+  const text = String(job.descriptionText || '').trim()
+  if (text) return wrapPlainTextAsHtml(cleanDescription(text))
 
   const fallback = (job.salaryRaw ? String(job.salaryRaw) : '') || `${job.title} at ${companyName}`
-
-  return cleanDescription(noTags2 || fallback)
+  return wrapPlainTextAsHtml(cleanDescription(fallback))
 }
 
 function buildBaseSalary(job: any): any | undefined {
@@ -177,7 +169,13 @@ function buildJobLocation(job: any): any {
   const country = job.countryCode ? String(job.countryCode).toUpperCase() : undefined
   const locationRaw = job.locationRaw ? String(job.locationRaw).trim() : ''
 
-  if (!city && !region && !country && !locationRaw) {
+  if (!country && !locationRaw) {
+    return undefined
+  }
+
+  const addressCountry = country || inferCountryFromLocationRaw(locationRaw)
+
+  if (!addressCountry) {
     return undefined
   }
 
@@ -187,10 +185,132 @@ function buildJobLocation(job: any): any {
       '@type': 'PostalAddress',
       ...(city ? { addressLocality: city } : {}),
       ...(region ? { addressRegion: region } : {}),
-      ...(country ? { addressCountry: country } : {}),
+      ...(addressCountry ? { addressCountry } : {}),
       ...(!city && locationRaw ? { addressLocality: locationRaw } : {}),
     },
   }
+}
+
+function normalizeEmploymentType(value: unknown): string | undefined {
+  const raw = String(value || '').trim()
+  if (!raw) return undefined
+
+  const normalized = raw
+    .toLowerCase()
+    .replace(/[^a-z]+/g, ' ')
+    .trim()
+
+  if (!normalized) return undefined
+  if (normalized === 'full time') return 'FULL_TIME'
+  if (normalized === 'part time') return 'PART_TIME'
+  if (normalized === 'contract' || normalized === 'contractor' || normalized === 'freelance') {
+    return 'CONTRACTOR'
+  }
+  if (normalized === 'temporary' || normalized === 'temp' || normalized === 'seasonal') {
+    return 'TEMPORARY'
+  }
+  if (normalized === 'intern' || normalized === 'internship') return 'INTERN'
+  if (normalized === 'volunteer') return 'VOLUNTEER'
+  if (normalized === 'per diem') return 'PER_DIEM'
+
+  return raw
+}
+
+function sanitizeDescriptionHtmlForJsonLd(input: string): string {
+  const decoded = decodeHtmlEntities(input || '')
+  const withoutScripts = decoded.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+  const withoutStyles = withoutScripts.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+  const withoutComments = withoutStyles.replace(/<!--[\s\S]*?-->/g, '')
+
+  const allowedTags = new Set([
+    'p',
+    'ul',
+    'ol',
+    'li',
+    'strong',
+    'b',
+    'em',
+    'i',
+    'br',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+  ])
+
+  const filtered = withoutComments.replace(
+    /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi,
+    (match, tag) => {
+      const lower = String(tag).toLowerCase()
+      if (!allowedTags.has(lower)) return ''
+      if (lower === 'br') return '<br>'
+      return `<${match.startsWith('</') ? '/' : ''}${lower}>`
+    },
+  )
+
+  const compact = filtered
+    .replace(/\r\n|\r/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  return compact.length > 0 ? compact : ''
+}
+
+function wrapPlainTextAsHtml(input: string): string {
+  const escaped = escapeHtml(input)
+  if (!escaped) return '<p>See the full job description on the page.</p>'
+
+  const paragraphs = escaped
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => `<p>${part.replace(/\n/g, '<br>')}</p>`)
+
+  return paragraphs.length > 0 ? paragraphs.join('') : `<p>${escaped}</p>`
+}
+
+function inferCountryFromLocationRaw(locationRaw: string): string | null {
+  const raw = String(locationRaw || '').trim()
+  if (!raw) return null
+
+  const upper = raw.toUpperCase()
+  if (/^[A-Z]{2}$/.test(upper)) return upper
+
+  const tokens = raw
+    .split(/[,\-/|]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  for (const token of tokens) {
+    const code = token.toUpperCase()
+    if (/^[A-Z]{2}$/.test(code)) return code
+  }
+
+  const lower = raw.toLowerCase()
+  const regionNames = ['United States', 'United Kingdom', 'Canada', 'Germany', 'Australia', 'India']
+
+  for (const name of regionNames) {
+    if (lower.includes(name.toLowerCase())) {
+      const match = regionCodeFromName(name)
+      if (match) return match
+    }
+  }
+
+  return null
+}
+
+function regionCodeFromName(name: string): string | null {
+  try {
+    const regions = ['US', 'GB', 'CA', 'DE', 'AU', 'IN']
+    const dn = new Intl.DisplayNames(['en'], { type: 'region' })
+    for (const code of regions) {
+      if (dn.of(code)?.toLowerCase() === name.toLowerCase()) return code
+    }
+  } catch {
+    return null
+  }
+  return null
 }
 
 function toNumberSafe(v: any): number | null {
@@ -223,6 +343,15 @@ function cleanDescription(s: string): string {
   const trimmed = (s || '').replace(/\s+/g, ' ').trim()
   if (trimmed.length >= 30) return trimmed
   return `${trimmed} `.trim() || 'See job description on the page.'
+}
+
+function escapeHtml(value: string): string {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function decodeHtmlEntities(input: string): string {

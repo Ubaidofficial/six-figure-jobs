@@ -10,8 +10,6 @@ const COUNTRY_CODES = ['US', 'GB', 'CA', 'DE', 'AU', 'FR', 'NL', 'SE']
 export type CountrySitemapUrl = {
   url: string
   lastModified: string
-  changeFrequency: string
-  priority: number
 }
 
 export async function getCountrySitemapUrls(): Promise<CountrySitemapUrl[]> {
@@ -39,8 +37,6 @@ export async function getCountrySitemapUrls(): Promise<CountrySitemapUrl[]> {
         return {
           url: `${SITE_URL}/jobs/location/${slug}`,
           lastModified: lastmod,
-          changeFrequency: 'daily',
-          priority: 0.8,
         }
       }),
     )

@@ -46,7 +46,6 @@ function encodeCursor(cursor: Cursor): string {
 
 export async function GET() {
   try {
-    const BUILD_LASTMOD = new Date().toISOString()
     const baseWhere = buildHundredKWhereBase()
 
     const sitemapEntries: string[] = []
@@ -83,7 +82,6 @@ export async function GET() {
           const loc = escapeXml(`${SITE_URL}/sitemap-jobs/1`)
           sitemapEntries.push(`  <sitemap>
     <loc>${loc}</loc>
-    <lastmod>${BUILD_LASTMOD}</lastmod>
   </sitemap>`)
         }
         break
@@ -93,7 +91,6 @@ export async function GET() {
       const loc = escapeXml(`${SITE_URL}/sitemap-jobs/${token}`)
       sitemapEntries.push(`  <sitemap>
     <loc>${loc}</loc>
-    <lastmod>${BUILD_LASTMOD}</lastmod>
   </sitemap>`)
 
       if (rows.length <= PAGE_SIZE) break
@@ -110,6 +107,6 @@ ${sitemapEntries.join('\n')}
       headers: { 'Content-Type': 'application/xml; charset=utf-8' },
     })
   } catch (error) {
-    return buildFallbackUrlsetResponse('sitemap-jobs', ['/jobs'], error)
+    return buildFallbackUrlsetResponse('sitemap-jobs', [], error)
   }
 }

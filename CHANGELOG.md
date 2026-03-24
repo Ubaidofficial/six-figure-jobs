@@ -1,3 +1,12 @@
+# 2.8.35 (2026-03-25)
+
+
+### Bug Fixes
+
+* remove invented sitemap freshness hints and placeholder fallback URLs so sitemap families only emit accurate crawl signals during normal operation and outages
+* tighten `JobPosting` JSON-LD to stop fabricating `validThrough`, preserve cleaned HTML descriptions, and normalize employment type/location markup for Google job ingestion
+
+
 # 2.8.34 (2026-03-25)
 
 

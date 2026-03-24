@@ -5,7 +5,6 @@ import { getSiteUrl } from '../../lib/seo/site'
 import { buildSliceSitemapEntries, type SliceShard } from '../../lib/seo/slicesSitemap'
 
 const SITE_URL = getSiteUrl()
-const BUILD_LASTMOD = new Date().toISOString()
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200 // 24h
@@ -36,7 +35,6 @@ ${entries
   .map(
     (loc) => `  <sitemap>
     <loc>${SITE_URL}/${loc}</loc>
-    <lastmod>${BUILD_LASTMOD}</lastmod>
   </sitemap>`,
   )
   .join('\n')}

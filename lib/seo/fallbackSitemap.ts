@@ -14,7 +14,7 @@ function escapeXml(value: string) {
 
 export function buildFallbackUrlsetResponse(
   scope: string,
-  paths: string[],
+  paths: string[] = [],
   error: unknown,
 ): Response {
   logRuntimeFallback(scope, error)
@@ -26,7 +26,7 @@ export function buildFallbackUrlsetResponse(
         .filter(Boolean),
     ),
   )
-  const normalizedPaths = uniquePaths.length > 0 ? uniquePaths : ['/']
+  const normalizedPaths = uniquePaths
   const lastmod = new Date().toISOString()
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
