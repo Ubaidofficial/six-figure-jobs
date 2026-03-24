@@ -2,6 +2,9 @@
 
 import type { Metadata } from 'next'
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
+import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
+import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
+import { SITE_NAME } from '@/lib/seo/site'
 import { loadSliceFromParams } from '../../../lib/slices/loadSlice'
 import { queryJobs } from '../../../lib/jobs/queryJobs'
 import { SlicePage } from './SlicePage'
@@ -99,26 +102,38 @@ export async function generateMetadata({
 }: MetadataProps): Promise<Metadata> {
   const resolvedParams = await params
   checkSalaryPageRedirect(resolvedParams.slug)
-
-  const slice = await loadSliceFromParams(resolvedParams.slug)
   const sp = await resolveSearchParams(searchParams)
   const page = getPageFromSearchParams(sp)
+  const requestedPath = `/jobs/${(resolvedParams.slug || []).join('/')}`.replace(/\/+$/, '') || '/jobs'
 
-  const data = await queryJobs({
-    ...slice.filters,
-    page,
-    pageSize: PAGE_SIZE,
-  })
+  return withRuntimeFallback(
+    `jobs.slice.${(resolvedParams.slug || []).join('/') || 'root'}.metadata`,
+    async () => {
+      const slice = await loadSliceFromParams(resolvedParams.slug)
+      const data = await queryJobs({
+        ...slice.filters,
+        page,
+        pageSize: PAGE_SIZE,
+      })
 
-  if (data.total === 0) {
-    notFound()
-  }
+      if (data.total === 0) {
+        notFound()
+      }
 
-  return buildSliceMetadata(slice, {
-    page,
-    totalJobs: data.total,
-    pageSize: PAGE_SIZE,
-  })
+      return buildSliceMetadata(slice, {
+        page,
+        totalJobs: data.total,
+        pageSize: PAGE_SIZE,
+      })
+    },
+    () =>
+      buildRuntimeFallbackMetadata({
+        canonicalPath: requestedPath,
+        title: `High-paying jobs temporarily unavailable | ${SITE_NAME}`,
+        description:
+          'The live jobs feed for this page is temporarily unavailable while the production database reconnects.',
+      }),
+  )
 }
 
 export default async function JobsSlicePage({
@@ -127,116 +142,125 @@ export default async function JobsSlicePage({
 }: PageProps) {
   const resolvedParams = await params
   checkSalaryPageRedirect(resolvedParams.slug)
-  
-  const slice = await loadSliceFromParams(resolvedParams.slug)
   const sp = await resolveSearchParams(searchParams)
   const page = getPageFromSearchParams(sp)
+  const requestedPath = `/jobs/${(resolvedParams.slug || []).join('/')}`.replace(/\/+$/, '') || '/jobs'
 
-  const canonicalPath = resolveSliceCanonicalPath(
-    slice.filters,
-    slice.slug
-  )
-  const requestedPath = `/jobs/${(resolvedParams.slug || []).join('/')}`
-  if (requestedPath.replace(/\/+$/, '') !== canonicalPath.replace(/\/+$/, '')) {
-    const search = page > 1 ? `?page=${page}` : ''
-    permanentRedirect(`${canonicalPath}${search}`)
-  }
+  return withRuntimeFallback(
+    `jobs.slice.${(resolvedParams.slug || []).join('/') || 'root'}.page`,
+    async () => {
+      const slice = await loadSliceFromParams(resolvedParams.slug)
+      const canonicalPath = resolveSliceCanonicalPath(slice.filters, slice.slug)
+      if (requestedPath !== canonicalPath.replace(/\/+$/, '')) {
+        const search = page > 1 ? `?page=${page}` : ''
+        permanentRedirect(`${canonicalPath}${search}`)
+      }
 
-  const data = await queryJobs({
-    ...slice.filters,
-    page,
-    pageSize: PAGE_SIZE,
-  })
+      const data = await queryJobs({
+        ...slice.filters,
+        page,
+        pageSize: PAGE_SIZE,
+      })
 
-  const jobListJsonLd = buildJobListJsonLd(slice, data)
-  const breadcrumbJsonLd = buildBreadcrumbJsonLd(slice)
-  const webPageJsonLd = buildSliceWebPageJsonLd(slice, data)
-  const faqJsonLd = buildSliceFaqJsonLd(slice, data.total)
-  const speakableJsonLd = buildSliceSpeakableJsonLd()
-  const internalLinks = buildSliceInternalLinks(slice)
-  const roleName = humanizeRole(slice.filters.roleSlugs?.[0])
-  const band = bandLabel(slice.filters.minAnnual)
-  const countryName = countryNameFromCode(slice.filters.countryCode)
-  const remoteLabel = slice.filters.remoteOnly ? 'Remote-first' : null
+      const jobListJsonLd = buildJobListJsonLd(slice, data)
+      const breadcrumbJsonLd = buildBreadcrumbJsonLd(slice)
+      const webPageJsonLd = buildSliceWebPageJsonLd(slice, data)
+      const faqJsonLd = buildSliceFaqJsonLd(slice, data.total)
+      const speakableJsonLd = buildSliceSpeakableJsonLd()
+      const internalLinks = buildSliceInternalLinks(slice)
+      const roleName = humanizeRole(slice.filters.roleSlugs?.[0])
+      const band = bandLabel(slice.filters.minAnnual)
+      const countryName = countryNameFromCode(slice.filters.countryCode)
+      const remoteLabel = slice.filters.remoteOnly ? 'Remote-first' : null
 
-  return (
-    <>
-      <SlicePage slice={slice} data={data} />
+      return (
+        <>
+          <SlicePage slice={slice} data={data} />
 
-      <section className="mx-auto mt-10 max-w-5xl px-4">
-        <h2 className="text-sm font-semibold text-slate-50">
-          High-paying {roleName ? `${roleName} ` : ''}jobs {countryName ? `in ${countryName} ` : ''}{band}
-        </h2>
-        <p
-          className="mt-2 text-sm leading-relaxed text-slate-200"
-          data-speakable="summary"
-        >
-          {band} roles are curated from verified company ATS feeds with salary evidence and six-figure positioning. Listings highlight compensation upfront, note remote or hybrid eligibility{remoteLabel ? ` (${remoteLabel})` : ''}, and stay live only while hiring teams keep them open.
-        </p>
-        <ul className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            Salary focus: {band} tech and product roles with pay transparency.
-          </li>
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            Location clarity: {slice.filters.remoteOnly ? 'Remote-eligible first' : countryName ? `Open to ${countryName}` : 'Global-friendly where stated'}; hybrid/on-site tagged.
-          </li>
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            Freshness: refreshed frequently; expired postings are removed to avoid stale clicks.
-          </li>
-        </ul>
-      </section>
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jobListJsonLd),
-        }}
-      />
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbJsonLd),
-        }}
-      />
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(webPageJsonLd),
-        }}
-      />
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(faqJsonLd),
-        }}
-      />
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(speakableJsonLd),
-        }}
-      />
-
-      {internalLinks.length > 0 && (
-        <section className="mx-auto mt-10 max-w-5xl px-4 pb-12">
-          <h2 className="mb-3 text-sm font-semibold text-slate-50">
-            Explore related six-figure pages
-          </h2>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-blue-400">
-            {internalLinks.map((link) => (
-              <li key={link.href}>
-                <a href={link.href} className="hover:underline">
-                  {link.label}
-                </a>
+          <section className="mx-auto mt-10 max-w-5xl px-4">
+            <h2 className="text-sm font-semibold text-slate-50">
+              High-paying {roleName ? `${roleName} ` : ''}jobs {countryName ? `in ${countryName} ` : ''}{band}
+            </h2>
+            <p
+              className="mt-2 text-sm leading-relaxed text-slate-200"
+              data-speakable="summary"
+            >
+              {band} roles are curated from verified company ATS feeds with salary evidence and six-figure positioning. Listings highlight compensation upfront, note remote or hybrid eligibility{remoteLabel ? ` (${remoteLabel})` : ''}, and stay live only while hiring teams keep them open.
+            </p>
+            <ul className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+              <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+                Salary focus: {band} tech and product roles with pay transparency.
               </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </>
+              <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+                Location clarity: {slice.filters.remoteOnly ? 'Remote-eligible first' : countryName ? `Open to ${countryName}` : 'Global-friendly where stated'}; hybrid/on-site tagged.
+              </li>
+              <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+                Freshness: refreshed frequently; expired postings are removed to avoid stale clicks.
+              </li>
+            </ul>
+          </section>
+
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(jobListJsonLd),
+            }}
+          />
+
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(breadcrumbJsonLd),
+            }}
+          />
+
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(webPageJsonLd),
+            }}
+          />
+
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(faqJsonLd),
+            }}
+          />
+
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(speakableJsonLd),
+            }}
+          />
+
+          {internalLinks.length > 0 && (
+            <section className="mx-auto mt-10 max-w-5xl px-4 pb-12">
+              <h2 className="mb-3 text-sm font-semibold text-slate-50">
+                Explore related six-figure pages
+              </h2>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-blue-400">
+                {internalLinks.map((link) => (
+                  <li key={link.href}>
+                    <a href={link.href} className="hover:underline">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
+      )
+    },
+    () => (
+      <JobsUnavailablePage
+        title="This jobs page is temporarily unavailable"
+        description="The live feed for this jobs page is temporarily unavailable while the production database reconnects. Browse the main jobs index and salary hubs while data access recovers."
+        primaryHref="/jobs"
+        primaryLabel="Browse jobs"
+      />
+    ),
   )
 }

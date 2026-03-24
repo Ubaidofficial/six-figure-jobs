@@ -1,3 +1,13 @@
+# 2.8.33 (2026-03-25)
+
+
+### Bug Fixes
+
+* harden salary tier, role, remote role, search, company, and job routes so Prisma/query failures render controlled fallback pages and metadata instead of server-side digest crashes
+* split job listing queries into lighter default selects and add runtime fallback presets plus segment error boundaries for jobs and remote routes
+* require `prisma migrate deploy` in the production deploy path and add a production smoke check script for core jobs and remote pages
+
+
 # 2.8.32 (2026-03-16)
 
 

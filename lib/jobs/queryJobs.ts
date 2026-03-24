@@ -15,6 +15,7 @@ export type JobWithCompany = Job & {
 export type JobQueryInput = {
   page?: number
   pageSize?: number
+  selectMode?: 'listing' | 'full'
 
   roleSlugs?: string[]
   skillSlugs?: string[]
@@ -54,6 +55,78 @@ export type JobQueryResult = {
   totalPages: number
 }
 
+const jobListingSelect = {
+  id: true,
+  title: true,
+  company: true,
+  companyLogo: true,
+  companyId: true,
+  source: true,
+  roleSlug: true,
+  externalId: true,
+  url: true,
+  applyUrl: true,
+  postedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  isHighSalary: true,
+  isHundredKLocal: true,
+  isHighSalaryLocal: true,
+  salaryRaw: true,
+  salaryMin: true,
+  salaryMax: true,
+  salaryCurrency: true,
+  salaryPeriod: true,
+  minAnnual: true,
+  maxAnnual: true,
+  currency: true,
+  salaryValidated: true,
+  type: true,
+  employmentType: true,
+  experienceLevel: true,
+  industry: true,
+  workArrangement: true,
+  workArrangementNormalized: true,
+  remote: true,
+  remoteMode: true,
+  remoteRegion: true,
+  locationRaw: true,
+  city: true,
+  citySlug: true,
+  stateCode: true,
+  countryCode: true,
+  primaryLocation: true,
+  locationsJson: true,
+  benefitsJson: true,
+  aiBenefits: true,
+  aiSnippet: true,
+  aiOneLiner: true,
+  skillsJson: true,
+  techStack: true,
+  companyRef: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoUrl: true,
+      website: true,
+    },
+  },
+} satisfies Prisma.JobSelect
+
+const jobFullSelect = {
+  ...jobListingSelect,
+  salaryConfidence: true,
+  companyRef: {
+    select: {
+      ...jobListingSelect.companyRef.select,
+      sizeBucket: true,
+      industry: true,
+    },
+  },
+  roleInference: true,
+} satisfies Prisma.JobSelect
+
 export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   const debugTiming =
     process.env.DEBUG_DB_TIMING === '1' ||
@@ -65,12 +138,15 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   // Defaults applied here so buildWhere + ordering logic both see them
   const normalizedInput: JobQueryInput = {
     ...input,
+    selectMode: input.selectMode ?? 'listing',
     sortBy: input.sortBy ?? 'salary',
     excludeInternships: input.excludeInternships ?? true,
   }
 
   const where = buildWhere(normalizedInput)
   const sortBy = normalizedInput.sortBy ?? 'salary'
+  const select =
+    normalizedInput.selectMode === 'full' ? jobFullSelect : jobListingSelect
 
   let orderBy: Prisma.JobOrderByWithRelationInput[]
 
@@ -108,68 +184,7 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
     const s = debugTiming ? Date.now() : 0
     const out = await prisma.job.findMany({
       where,
-      select: {
-        id: true,
-        title: true,
-        company: true,
-        companyLogo: true,
-        companyId: true,
-        source: true,
-        roleSlug: true,
-        externalId: true,
-        url: true,
-        applyUrl: true,
-        postedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        isHighSalary: true,
-        isHundredKLocal: true,
-        isHighSalaryLocal: true,
-        salaryRaw: true,
-        salaryMin: true,
-        salaryMax: true,
-        salaryCurrency: true,
-        salaryPeriod: true,
-        minAnnual: true,
-        maxAnnual: true,
-        currency: true,
-        salaryValidated: true,
-        salaryConfidence: true,
-        type: true,
-        employmentType: true,
-        experienceLevel: true,
-        industry: true,
-        workArrangement: true,
-        workArrangementNormalized: true,
-        remote: true,
-        remoteMode: true,
-        remoteRegion: true,
-        locationRaw: true,
-        city: true,
-        citySlug: true,
-        stateCode: true,
-        countryCode: true,
-        primaryLocation: true,
-        locationsJson: true,
-        benefitsJson: true,
-        aiBenefits: true,
-        aiSnippet: true,
-        aiOneLiner: true,
-        skillsJson: true,
-        techStack: true,
-        companyRef: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            logoUrl: true,
-            website: true,
-            sizeBucket: true,
-            industry: true,
-          },
-        },
-        roleInference: true,
-      },
+      select,
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,

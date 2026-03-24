@@ -3,9 +3,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { CompanyUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '../../../lib/prisma'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../lib/jobs/salary'
+import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
@@ -54,58 +56,67 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const company = await getCompanyWithJobs(slug)
+  return withRuntimeFallback<Metadata>(
+    `company.${slug}.metadata`,
+    async () => {
+      const company = await getCompanyWithJobs(slug)
 
-  if (!company) return { title: `Company not found | ${SITE_NAME}` }
+      if (!company) return { title: `Company not found | ${SITE_NAME}` }
 
-  const jobCount = company.jobs.length
-  const highSalaryCount = company.jobs.filter((j: JobWithFlags) => j.isHighSalary)
-    .length
+      const jobCount = company.jobs.length
+      const highSalaryCount = company.jobs.filter((j: JobWithFlags) => j.isHighSalary)
+        .length
+      const allowIndex = isCompanyPageIndexable(jobCount)
 
-  // Keep your rule: index only when enough content
-  const allowIndex = isCompanyPageIndexable(jobCount)
+      const title = `${company.name} Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
+      const companyDesc = company.description
+        ? truncateText(toPlainText(company.description), 120)
+        : `Find your next role at ${company.name}.`
 
-  const title = `${company.name} Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
+      const description =
+        highSalaryCount > 0
+          ? `Browse ${jobCount} jobs at ${company.name}, including ${highSalaryCount} high-salary positions paying $100k+. ${companyDesc}`
+          : `Browse ${jobCount} open positions at ${company.name}. ${companyDesc}`
 
-  const companyDesc = company.description
-    ? truncateText(toPlainText(company.description), 120)
-    : `Find your next role at ${company.name}.`
+      const canonicalUrl = `${SITE_URL}/company/${slug}`
 
-  const description =
-    highSalaryCount > 0
-      ? `Browse ${jobCount} jobs at ${company.name}, including ${highSalaryCount} high-salary positions paying $100k+. ${companyDesc}`
-      : `Browse ${jobCount} open positions at ${company.name}. ${companyDesc}`
-
-  const canonicalUrl = `${SITE_URL}/company/${slug}`
-
-  return {
-    title,
-    description,
-    alternates: { canonical: canonicalUrl },
-    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
-      title,
-      description,
-      url: canonicalUrl,
-      siteName: SITE_NAME,
-      type: 'website',
-      images: company.logoUrl
-        ? [
-            {
-              url: company.logoUrl,
-              width: 200,
-              height: 200,
-              alt: company.name,
-            },
-          ]
-        : undefined,
+      return {
+        title,
+        description,
+        alternates: { canonical: canonicalUrl },
+        robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
+        openGraph: {
+          title,
+          description,
+          url: canonicalUrl,
+          siteName: SITE_NAME,
+          type: 'website',
+          images: company.logoUrl
+            ? [
+                {
+                  url: company.logoUrl,
+                  width: 200,
+                  height: 200,
+                  alt: company.name,
+                },
+              ]
+            : undefined,
+        },
+        twitter: {
+          card: 'summary',
+          title,
+          description,
+        },
+      }
     },
-    twitter: {
-      card: 'summary',
-      title,
-      description,
-    },
-  }
+    () =>
+      buildRuntimeFallbackMetadata({
+        canonicalPath: `/company/${slug}`,
+        title: `Company page temporarily unavailable | ${SITE_NAME}`,
+        description:
+          'The live company page is temporarily unavailable while the production database reconnects.',
+      }),
+  )
 }
 
 /* -------------------------------------------------------------------------- */
@@ -118,25 +129,28 @@ export default async function CompanyPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const company = await getCompanyWithJobs(slug)
+  return withRuntimeFallback(
+    `company.${slug}.page`,
+    async () => {
+      const company = await getCompanyWithJobs(slug)
 
-  if (!company) return notFound()
+      if (!company) return notFound()
 
-  const jobs = company.jobs
-  const highSalaryJobs: JobWithFlags[] = jobs.filter((j) => j.isHighSalary)
-  const otherJobs: JobWithFlags[] = jobs.filter((j) => !j.isHighSalary)
+      const jobs = company.jobs
+      const highSalaryJobs: JobWithFlags[] = jobs.filter((j) => j.isHighSalary)
+      const otherJobs: JobWithFlags[] = jobs.filter((j) => !j.isHighSalary)
 
-  const countrySlug =
-    company.countryCode ? countryCodeToSlug(company.countryCode) : null
+      const countrySlug =
+        company.countryCode ? countryCodeToSlug(company.countryCode) : null
 
-  const organizationJsonLd = buildOrganizationJsonLd(company)
-  const breadcrumbJsonLd = buildBreadcrumbJsonLd(company)
+      const organizationJsonLd = buildOrganizationJsonLd(company)
+      const breadcrumbJsonLd = buildBreadcrumbJsonLd(company)
 
-  const tags = parseTags(company.tagsJson)
-  const heroLogo = buildLogoUrl(company.logoUrl ?? null, company.website ?? null)
+      const tags = parseTags(company.tagsJson)
+      const heroLogo = buildLogoUrl(company.logoUrl ?? null, company.website ?? null)
 
-  return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      return (
+        <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       {/* Company Header */}
       <header className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/80 p-6">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
@@ -398,7 +412,17 @@ export default async function CompanyPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-    </main>
+        </main>
+      )
+    },
+    () => (
+      <CompanyUnavailablePage
+        title="This company page is temporarily unavailable"
+        description="The live company profile is temporarily unavailable while the production database reconnects. Browse the company directory or return to the jobs index while data access recovers."
+        primaryHref={`/company/${slug}`}
+        primaryLabel="Retry company page"
+      />
+    ),
   )
 }
 

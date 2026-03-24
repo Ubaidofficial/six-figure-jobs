@@ -3,12 +3,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { SearchUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '../../lib/prisma'
 import {
   buildGlobalExclusionsWhere,
   buildHighSalaryEligibilityWhere,
   type JobWithCompany,
 } from '../../lib/jobs/queryJobs'
+import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../components/JobList'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
@@ -289,37 +291,40 @@ export default async function SearchPage({ searchParams }: PageProps) {
       ? { isExpired: false, AND: andConditions }
       : { isExpired: false }
 
-  const [jobsRaw, total] = await Promise.all([
-    prisma.job.findMany({
-      where,
-      orderBy: [
-        { maxAnnual: 'desc' },
-        { createdAt: 'desc' },
-      ],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      include: { companyRef: true },
-    }),
-    prisma.job.count({ where }),
-  ])
+  return withRuntimeFallback(
+    'search.page',
+    async () => {
+      const [jobsRaw, total] = await Promise.all([
+        prisma.job.findMany({
+          where,
+          orderBy: [
+            { maxAnnual: 'desc' },
+            { createdAt: 'desc' },
+          ],
+          skip: (page - 1) * PAGE_SIZE,
+          take: PAGE_SIZE,
+          include: { companyRef: true },
+        }),
+        prisma.job.count({ where }),
+      ])
 
-  const jobs = jobsRaw as JobWithCompany[]
-  const hasNextPage = page * PAGE_SIZE < total
-  const hasPrevPage = page > 1
-  const paginationState: SearchParams = {
-    ...sp,
-    ...(resolvedLocation ? { location: resolvedLocation } : {}),
-    ...(resolvedRemoteMode ? { remoteMode: resolvedRemoteMode } : {}),
-    ...(resolvedRemoteRegion ? { remoteRegion: resolvedRemoteRegion } : {}),
-    ...(resolvedSeniority ? { seniority: resolvedSeniority } : {}),
-    ...(roleSlugs.length === 1 ? { role: roleSlugs[0] } : {}),
-    minSalary: String(minAnnual),
-  }
+      const jobs = jobsRaw as JobWithCompany[]
+      const hasNextPage = page * PAGE_SIZE < total
+      const hasPrevPage = page > 1
+      const paginationState: SearchParams = {
+        ...sp,
+        ...(resolvedLocation ? { location: resolvedLocation } : {}),
+        ...(resolvedRemoteMode ? { remoteMode: resolvedRemoteMode } : {}),
+        ...(resolvedRemoteRegion ? { remoteRegion: resolvedRemoteRegion } : {}),
+        ...(resolvedSeniority ? { seniority: resolvedSeniority } : {}),
+        ...(roleSlugs.length === 1 ? { role: roleSlugs[0] } : {}),
+        minSalary: String(minAnnual),
+      }
 
-  const title = buildTitle(sp)
+      const title = buildTitle(sp)
 
-  return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      return (
+        <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       {/* Search Form */}
       <div className="glass soft-shadow mb-10 rounded-2xl p-6 md:sticky md:top-24 md:z-30">
         <form action="/search" method="GET" className="space-y-4">
@@ -540,6 +545,20 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </div>
         </>
       )}
-    </main>
+        </main>
+      )
+    },
+    () => (
+      <SearchUnavailablePage
+        title="Search results are temporarily unavailable"
+        description={
+          q
+            ? `Search results for "${q}" are temporarily unavailable while the production database reconnects. Browse the main jobs and remote hubs while live search access recovers.`
+            : 'Search is temporarily unavailable while the production database reconnects. Browse the main jobs and remote hubs while live search access recovers.'
+        }
+        primaryHref={canonicalPath}
+        primaryLabel={q ? `Retry "${q}" search` : 'Retry search'}
+      />
+    ),
   )
 }

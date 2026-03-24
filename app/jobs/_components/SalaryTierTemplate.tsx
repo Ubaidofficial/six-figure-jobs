@@ -3,8 +3,10 @@ import Link from 'next/link'
 import { JobCard } from '@/components/jobs/JobCard'
 import type { CSSProperties } from 'react'
 
+import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SALARY_TIERS, type SalaryTierId } from '@/lib/jobs/salaryTiers'
@@ -197,6 +199,17 @@ export async function SalaryTierTemplate({
     ...buildTierQueryInput(tierId),
   }
 
+  const scopeLabels = [
+    country ? `country ${country}` : null,
+    remoteMode ? `${remoteMode} roles` : null,
+  ].filter(Boolean)
+  const scopedSuffix = scopeLabels.length ? ` for ${scopeLabels.join(' and ')}` : ''
+  const fallbackTitle = `${tier.rangeLabel} jobs are temporarily unavailable`
+  const fallbackDescription = `The live ${tier.rangeLabel} job feed${scopedSuffix} is temporarily unavailable while the production database reconnects. Browse the main job hubs and salary bands while data access recovers.`
+
+  return withRuntimeFallback(
+    `jobs.salary-tier.${tierId}.page`,
+    async () => {
   const data = await queryJobs(queryInput)
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
   const totalPages = data.totalPages
@@ -730,5 +743,15 @@ export async function SalaryTierTemplate({
         </div>
       </section>
     </main>
+  )
+    },
+    () => (
+      <JobsUnavailablePage
+        title={fallbackTitle}
+        description={fallbackDescription}
+        primaryHref={`/jobs/${tierId}`}
+        primaryLabel={`Retry ${tier.rangeLabel} jobs`}
+      />
+    ),
   )
 }

@@ -5,10 +5,12 @@ export const revalidate = 3600
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
+import { RemoteUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 import { findBestMatchingRole, slugToLabel } from '@/lib/roles/slugMatcher'
 import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
+import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../../components/JobList'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
@@ -210,45 +212,57 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const selectedRegion = normalizeStringParam(sp.remoteRegion)
   const { minAnnualForQuery } = parseRemoteMinAnnual(sp)
 
-  const result = await queryJobs({
-    roleSlugs: [roleSlug],
-    remoteOnly: true,
-    countryCode: selectedCountry || undefined,
-    remoteRegion: selectedRegion || undefined,
-    minAnnual: minAnnualForQuery,
-    page,
-    pageSize: 1,
-  })
+  return withRuntimeFallback<Metadata>(
+    `remote.role.${roleSlug}.metadata`,
+    async () => {
+      const result = await queryJobs({
+        roleSlugs: [roleSlug],
+        remoteOnly: true,
+        countryCode: selectedCountry || undefined,
+        remoteRegion: selectedRegion || undefined,
+        minAnnual: minAnnualForQuery,
+        page,
+        pageSize: 1,
+      })
 
-  const jobCount = result.total
-  const shouldIndex = isTier1Role(roleSlug) && isRemoteRolePageIndexable(jobCount)
+      const jobCount = result.total
+      const shouldIndex = isTier1Role(roleSlug) && isRemoteRolePageIndexable(jobCount)
 
-  const title = `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs | ${SITE_NAME}`
-  const description = `Find ${jobCount.toLocaleString()} remote ${roleName} jobs paying $100k+. Browse high paying remote ${roleName.toLowerCase()} positions with verified six figure salaries.`
+      const title = `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs | ${SITE_NAME}`
+      const description = `Find ${jobCount.toLocaleString()} remote ${roleName} jobs paying $100k+. Browse high paying remote ${roleName.toLowerCase()} positions with verified six figure salaries.`
 
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: `${SITE_URL}${canonicalPath}`,
+      return {
+        title,
+        description,
+        alternates: {
+          canonical: `${SITE_URL}${canonicalPath}`,
+        },
+        robots: shouldIndex
+          && !noindexUtilityState
+          ? { index: true, follow: true }
+          : { index: false, follow: true },
+        openGraph: {
+          title: `Remote ${roleName} $100k+ Jobs`,
+          description: `${jobCount.toLocaleString()} remote ${roleName} jobs with verified $100k+ salaries.`,
+          url: `${SITE_URL}${canonicalPath}`,
+          siteName: SITE_NAME,
+          type: 'website',
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title,
+          description,
+        },
+      }
     },
-    robots: shouldIndex
-      && !noindexUtilityState
-      ? { index: true, follow: true }
-      : { index: false, follow: true }, // Tier-2: noindex but follow links
-    openGraph: {
-      title: `Remote ${roleName} $100k+ Jobs`,
-      description: `${jobCount.toLocaleString()} remote ${roleName} jobs with verified $100k+ salaries.`,
-      url: `${SITE_URL}${canonicalPath}`,
-      siteName: SITE_NAME,
-      type: 'website',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-    },
-  }
+    () =>
+      buildRuntimeFallbackMetadata({
+        canonicalPath,
+        title: `Remote ${roleName} jobs temporarily unavailable | ${SITE_NAME}`,
+        description:
+          'The live remote role hub is temporarily unavailable while the production database reconnects.',
+      }),
+  )
 }
 
 /* -------------------------------------------------------------------------- */
@@ -287,62 +301,65 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
   const selectedRegion = normalizeStringParam(sp.remoteRegion)
   const { minAnnualForQuery, activeMinAnnual } = parseRemoteMinAnnual(sp)
 
-  const data = await queryJobs({
-    roleSlugs: [roleSlug],
-    remoteOnly: true,
-    countryCode: selectedCountry || undefined,
-    remoteRegion: selectedRegion || undefined,
-    minAnnual: minAnnualForQuery,
-    page,
-    pageSize: PAGE_SIZE,
-  })
+  return withRuntimeFallback(
+    `remote.role.${roleSlug}.page`,
+    async () => {
+      const data = await queryJobs({
+        roleSlugs: [roleSlug],
+        remoteOnly: true,
+        countryCode: selectedCountry || undefined,
+        remoteRegion: selectedRegion || undefined,
+        minAnnual: minAnnualForQuery,
+        page,
+        pageSize: PAGE_SIZE,
+      })
 
-  const jobs = data.jobs as JobWithCompany[]
-  const totalPages = data.total > 0 ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1
+      const jobs = data.jobs as JobWithCompany[]
+      const totalPages = data.total > 0 ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1
 
-  const jsonLd = buildJobListJsonLd(roleSlug, jobs, page)
-  const faqJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faqItems(roleName).map((item) => ({
-      '@type': 'Question',
-      name: item.q,
-      acceptedAnswer: { '@type': 'Answer', text: item.a },
-    })),
-  }
-
-  const speakableJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'SpeakableSpecification',
-    cssSelector: ['main h1', '[data-speakable="summary"]'],
-  }
-
-  const availableCountries = Array.from(
-    new Set(jobs.map((j) => j.countryCode).filter((c): c is string => Boolean(c)))
-  )
-
-  const salaryOptions = [100_000, 200_000, 300_000, 400_000]
-
-  const companyCounts = new Map<string, { name: string; count: number; slug?: string | null }>()
-  jobs.forEach((job: any) => {
-    const key = job.companyId || job.company || job.companyRef?.name
-    if (!key) return
-    const existing =
-      companyCounts.get(key) ?? {
-        name: job.companyRef?.name ?? job.company,
-        count: 0,
-        slug: job.companyRef?.slug ?? null,
+      const jsonLd = buildJobListJsonLd(roleSlug, jobs, page)
+      const faqJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqItems(roleName).map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
       }
-    existing.count += 1
-    companyCounts.set(key, existing)
-  })
-  const topCompanies = Array.from(companyCounts.values())
-    .filter((c) => !!c.name)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 6)
 
-  return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      const speakableJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'SpeakableSpecification',
+        cssSelector: ['main h1', '[data-speakable="summary"]'],
+      }
+
+      const availableCountries = Array.from(
+        new Set(jobs.map((j) => j.countryCode).filter((c): c is string => Boolean(c)))
+      )
+
+      const salaryOptions = [100_000, 200_000, 300_000, 400_000]
+
+      const companyCounts = new Map<string, { name: string; count: number; slug?: string | null }>()
+      jobs.forEach((job: any) => {
+        const key = job.companyId || job.company || job.companyRef?.name
+        if (!key) return
+        const existing =
+          companyCounts.get(key) ?? {
+            name: job.companyRef?.name ?? job.company,
+            count: 0,
+            slug: job.companyRef?.slug ?? null,
+          }
+        existing.count += 1
+        companyCounts.set(key, existing)
+      })
+      const topCompanies = Array.from(companyCounts.values())
+        .filter((c) => !!c.name)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6)
+
+      return (
+        <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       {/* -------------------------------- Breadcrumbs -------------------------------- */}
       <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
         <ol className="flex flex-wrap items-center gap-1">
@@ -594,7 +611,17 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(speakableJsonLd) }}
       />
-    </main>
+        </main>
+      )
+    },
+    () => (
+      <RemoteUnavailablePage
+        title={`Remote ${roleName} jobs are temporarily unavailable`}
+        description={`The live remote ${roleName.toLowerCase()} feed is temporarily unavailable while the production database reconnects. Browse the main remote hub or retry this role page once data access is restored.`}
+        primaryHref={`/remote/${roleSlug}`}
+        primaryLabel={`Retry remote ${roleName}`}
+      />
+    ),
   )
 }
 

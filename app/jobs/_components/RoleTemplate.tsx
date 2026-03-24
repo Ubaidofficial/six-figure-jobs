@@ -4,9 +4,11 @@ import type { CSSProperties } from 'react'
 import { notFound } from 'next/navigation'
 
 import { JobCard } from '@/components/jobs/JobCard'
+import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
 import { SEARCH_ROLE_OPTIONS } from '@/lib/roles/searchRoles'
@@ -291,6 +293,18 @@ export async function RoleTemplate({
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
   }
 
+  const scopeLabels = [
+    country ? `country ${country}` : null,
+    remoteMode ? `${remoteMode} roles` : null,
+    selectedSkills.length ? `${selectedSkills.length} skill filters` : null,
+  ].filter(Boolean)
+  const scopedSuffix = scopeLabels.length ? ` for ${scopeLabels.join(' and ')}` : ''
+  const fallbackTitle = `${toTitleCase(roleSlug)} jobs are temporarily unavailable`
+  const fallbackDescription = `The live ${toTitleCase(roleSlug)} job feed${scopedSuffix} is temporarily unavailable while the production database reconnects. Browse the broader jobs index or retry this role hub once data access is restored.`
+
+  return withRuntimeFallback(
+    `jobs.role.${roleSlug}.page`,
+    async () => {
   const data = await queryJobs(queryInput)
   if (data.total === 0) notFound()
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
@@ -836,5 +850,15 @@ export async function RoleTemplate({
         </div>
       </section>
     </main>
+  )
+    },
+    () => (
+      <JobsUnavailablePage
+        title={fallbackTitle}
+        description={fallbackDescription}
+        primaryHref={`/jobs/${roleSlug}`}
+        primaryLabel={`Retry ${toTitleCase(roleSlug)} jobs`}
+      />
+    ),
   )
 }

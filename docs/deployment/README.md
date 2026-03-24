@@ -13,6 +13,12 @@ cd /var/www/six-figure-jobs
 ./scripts/deployment/deploy-production.sh
 ```
 
+**Run smoke checks only:**
+```bash
+cd /var/www/six-figure-jobs
+BASE_URL=https://www.6figjobs.com ./scripts/deployment/smoke-production.sh
+```
+
 ## Files
 
 - `SERVER_SETUP.md` - Complete server setup and configuration documentation

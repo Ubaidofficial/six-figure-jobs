@@ -4,11 +4,13 @@ import type { Metadata } from 'next'
 import NextLink from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { cache } from 'react'
+import { JobUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '../../../lib/prisma'
 import { parseJobSlugParam, buildJobSlug } from '../../../lib/jobs/jobSlug'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
-import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { queryJobs, type JobQueryResult, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
@@ -137,21 +139,33 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const job = await getJobBySlug(slug)
-  if (!job) return { title: `Job not found | ${SITE_NAME}` }
+  return withRuntimeFallback<Metadata>(
+    `job.${slug}.metadata`,
+    async () => {
+      const job = await getJobBySlug(slug)
+      if (!job) return { title: `Job not found | ${SITE_NAME}` }
 
-  const canonicalSlug = buildJobSlug(job)
-  const canonicalUrl = `${SITE_URL}/job/${canonicalSlug}`
-  const base = buildJobMetadata(job)
-  const qualityGate = evaluateJobIndexability(job)
+      const canonicalSlug = buildJobSlug(job)
+      const canonicalUrl = `${SITE_URL}/job/${canonicalSlug}`
+      const base = buildJobMetadata(job)
+      const qualityGate = evaluateJobIndexability(job)
 
-  return {
-    ...base,
-    alternates: { ...(base.alternates ?? {}), canonical: canonicalUrl },
-    robots: qualityGate.indexable
-      ? (base.robots ?? { index: true, follow: true })
-      : { index: false, follow: false },
-  }
+      return {
+        ...base,
+        alternates: { ...(base.alternates ?? {}), canonical: canonicalUrl },
+        robots: qualityGate.indexable
+          ? (base.robots ?? { index: true, follow: true })
+          : { index: false, follow: false },
+      }
+    },
+    () =>
+      buildRuntimeFallbackMetadata({
+        canonicalPath: `/job/${slug}`,
+        title: `Job page temporarily unavailable | ${SITE_NAME}`,
+        description:
+          'The live job page is temporarily unavailable while the production database reconnects.',
+      }),
+  )
 }
 
 /* -------------------------------------------------------------------------- */
@@ -164,7 +178,25 @@ export default async function JobPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const typedJob = await getJobBySlug(slug)
+  const loadState = await withRuntimeFallback<
+    { status: 'ready'; job: JobWithCompany | null } | { status: 'fallback' }
+  >(
+    `job.${slug}.page.load`,
+    async () => ({ status: 'ready' as const, job: await getJobBySlug(slug) }),
+    () => ({ status: 'fallback' as const }),
+  )
+  if (loadState.status === 'fallback') {
+    return (
+      <JobUnavailablePage
+        title="This job page is temporarily unavailable"
+        description="The live job detail page is temporarily unavailable while the production database reconnects. Browse the main jobs index and retry this role once data access is restored."
+        primaryHref={`/job/${slug}`}
+        primaryLabel="Retry job page"
+      />
+    )
+  }
+
+  const typedJob = loadState.job
   if (!typedJob) return notFound()
   const canonicalSlug = buildJobSlug(typedJob)
 
@@ -268,13 +300,24 @@ export default async function JobPage({
 
   /* --------------------------- Similar jobs -------------------------------- */
 
-  const similarResult = await queryJobs({
-    roleSlugs: typedJob.roleSlug ? [typedJob.roleSlug] : undefined,
-    countryCode: typedJob.countryCode || undefined,
-    isHundredKLocal: true,
-    page: 1,
-    pageSize: 6,
-  })
+  const similarResult = await withRuntimeFallback<JobQueryResult>(
+    `job.${typedJob.id}.similar`,
+    async () =>
+      queryJobs({
+        roleSlugs: typedJob.roleSlug ? [typedJob.roleSlug] : undefined,
+        countryCode: typedJob.countryCode || undefined,
+        isHundredKLocal: true,
+        page: 1,
+        pageSize: 6,
+      }),
+    () => ({
+      jobs: [],
+      total: 0,
+      page: 1,
+      pageSize: 6,
+      totalPages: 1,
+    }),
+  )
 
   const similarJobs = similarResult.jobs.filter((j) => j.id !== typedJob.id).slice(0, 3)
 
