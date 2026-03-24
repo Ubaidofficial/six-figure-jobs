@@ -1,3 +1,12 @@
+# 2.8.34 (2026-03-25)
+
+
+### Bug Fixes
+
+* add Railway production diagnosis tooling for deploy state, Prisma connectivity, schema presence, and migration verification during live incidents
+* rewrite deployment docs to treat Railway as the authoritative production path and remove the misleading VPS-first quick start
+
+
 # 2.8.33 (2026-03-25)
 
 

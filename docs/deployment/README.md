@@ -1,34 +1,38 @@
 # Deployment Documentation
 
-## Quick Start
+## Current Production Path
 
-**SSH to server:**
+Production runs on Railway. Pushes to `develop` deploy to:
+
 ```bash
-ssh root@77.42.22.103
+https://www.6figjobs.com
 ```
 
-**Deploy production:**
-```bash
-cd /var/www/six-figure-jobs
-./scripts/deployment/deploy-production.sh
-```
+The authoritative runbook is:
 
-**Run smoke checks only:**
+- `RAILWAY_DEPLOYMENT.md`
+
+## Core Commands
+
+Smoke-check production:
+
 ```bash
-cd /var/www/six-figure-jobs
 BASE_URL=https://www.6figjobs.com ./scripts/deployment/smoke-production.sh
 ```
 
-## Files
+Diagnose production database / Prisma failures:
 
-- `SERVER_SETUP.md` - Complete server setup and configuration documentation
-- `../scripts/deployment/` - Deployment scripts
+```bash
+./scripts/deployment/railway-diagnose-production.sh --environment production
+```
 
-## Scripts Location on Server
+If the app service is not the linked default:
 
-The deployment scripts are also copied to `/root/` for convenience:
-- `/root/deploy-production.sh`
-- `/root/start-staging.sh`
-- `/root/stop-staging.sh`
+```bash
+./scripts/deployment/railway-diagnose-production.sh --service <service> --environment production
+```
 
-Use either location - they do the same thing.
+## Notes
+
+- `SERVER_SETUP.md` and the legacy VPS deployment script are historical references, not the authoritative production path.
+- Do not use SSH/VPS instructions for current production operations unless you are intentionally working on archived infrastructure.

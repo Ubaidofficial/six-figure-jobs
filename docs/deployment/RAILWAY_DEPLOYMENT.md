@@ -88,3 +88,53 @@ If errors indicate connection or pool pressure instead:
 1. Review `PRISMA_CONNECTION_LIMIT` and `PRISMA_POOL_TIMEOUT`.
 2. Reduce expensive listing-page fan-out where possible.
 3. Re-run the smoke script after the config or code change is live.
+
+---
+
+## 6) Production Diagnosis
+
+When the site is serving fallback UI instead of live job data, run the Railway diagnosis helper first:
+
+```bash
+./scripts/deployment/railway-diagnose-production.sh --environment production
+```
+
+If the app service is not the linked default, pass it explicitly:
+
+```bash
+./scripts/deployment/railway-diagnose-production.sh --service <service> --environment production
+```
+
+This helper collects:
+
+- Railway project and service status
+- recent deployments
+- filtered production env values relevant to Prisma
+- recent error logs filtered for Prisma, schema drift, and pool failures
+- `prisma migrate status` inside the Railway production environment
+- a Prisma schema/query probe that checks the exact schema objects used by listing routes:
+  - `Job.salaryConfidence`
+  - `Job.salaryValidated`
+  - `Job.needsReview`
+  - `Job.workArrangementNormalized`
+  - `Company.sizeBucket`
+  - `Company.industry`
+  - `SalaryAggregate`
+  - `CompanyATS`
+  - `RoleInference`
+
+Decision rule:
+
+- If the helper shows missing columns, missing tables, or `does not exist` errors, apply:
+
+```bash
+railway run --service <service> --environment production npx prisma migrate deploy --schema prisma/schema.prisma
+railway redeploy --service <service> -y
+BASE_URL=https://www.6figjobs.com ./scripts/deployment/smoke-production.sh
+```
+
+- If the helper shows `P1001`, `P1002`, or `P2024`, treat it as connectivity / pool pressure:
+  - verify database health in Railway
+  - review `DATABASE_URL` / `POSTGRES_PRISMA_URL`
+  - review `PRISMA_CONNECTION_LIMIT` / `PRISMA_POOL_TIMEOUT`
+  - re-run the diagnosis helper after the config change
