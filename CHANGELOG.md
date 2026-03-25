@@ -1,3 +1,12 @@
+# 2.8.36 (2026-03-26)
+
+
+### Bug Fixes
+
+* align `/remote` hub counts and role links with the same freshness and indexability rules used by `/remote/[role]` so the hub no longer promotes empty remote role pages
+* return `404` for empty optional sitemap families (`remote`, `country`, `slices`) instead of serving empty `200` XML documents that create persistent GSC sitemap errors
+
+
 # 2.8.35 (2026-03-25)
 
 

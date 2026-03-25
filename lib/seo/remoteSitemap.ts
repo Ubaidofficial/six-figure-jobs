@@ -10,49 +10,50 @@ export type RemoteRoleSitemapRow = {
   lastmod: string
 }
 
-export async function collectRemoteRoleRows(): Promise<RemoteRoleSitemapRow[]> {
-  const rows = await Promise.all(
-    getTier1Slugs().map(async (roleSlug) => {
-      // Keep sitemap inclusion aligned with /remote/[role] page query logic.
-      const where = buildWhere({
-        roleSlugs: [roleSlug],
-        remoteOnly: true,
-      })
+type RemoteRoleFilters = {
+  remoteRegion?: string | null
+}
 
-      const agg = await prisma.job.aggregate({
-        where,
-        _count: { _all: true },
-        _max: { updatedAt: true },
-      })
+function buildRemoteRoleWhere(filters?: RemoteRoleFilters) {
+  return buildWhere({
+    remoteOnly: true,
+    remoteRegion: filters?.remoteRegion || undefined,
+    excludeInternships: true,
+  })
+}
 
-      const total = Number(agg._count?._all ?? 0)
-      if (!isRemoteRolePageIndexable(total)) return null
+export async function collectRemoteRoleRows(
+  filters?: RemoteRoleFilters,
+): Promise<RemoteRoleSitemapRow[]> {
+  const canonicalSlugs = [...getTier1Slugs()]
+  if (canonicalSlugs.length === 0) return []
+
+  const rows = await prisma.job.groupBy({
+    by: ['roleSlug'],
+    where: {
+      ...buildRemoteRoleWhere(filters),
+      roleSlug: { in: canonicalSlugs },
+    },
+    _count: { _all: true },
+    _max: { updatedAt: true },
+    orderBy: { _count: { roleSlug: 'desc' } },
+  })
+
+  return rows
+    .map((row) => {
+      const roleSlug = String(row.roleSlug || '').trim()
+      const total = Number((row as any)._count?._all ?? 0)
+      if (!roleSlug || !isRemoteRolePageIndexable(total)) return null
 
       return {
         roleSlug,
         total,
-        lastmod: (agg._max.updatedAt ?? new Date()).toISOString(),
+        lastmod: (((row as any)._max?.updatedAt as Date | undefined) ?? new Date()).toISOString(),
       }
-    }),
-  )
-
-  return rows
-    .filter((row): row is RemoteRoleSitemapRow => Boolean(row))
-    .sort((a, b) => {
-      if (b.total !== a.total) return b.total - a.total
-      return b.lastmod.localeCompare(a.lastmod)
     })
+    .filter((row): row is RemoteRoleSitemapRow => Boolean(row))
 }
 
-export async function hasRemoteRoleSitemapEntries(): Promise<boolean> {
-  for (const roleSlug of getTier1Slugs()) {
-    const where = buildWhere({
-      roleSlugs: [roleSlug],
-      remoteOnly: true,
-    })
-    const total = await prisma.job.count({ where })
-    if (isRemoteRolePageIndexable(total)) return true
-  }
-
-  return false
+export async function hasRemoteRoleSitemapEntries(filters?: RemoteRoleFilters): Promise<boolean> {
+  return (await collectRemoteRoleRows(filters)).length > 0
 }

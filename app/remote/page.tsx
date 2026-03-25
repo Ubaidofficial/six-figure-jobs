@@ -1,11 +1,10 @@
 import Link from 'next/link'
+import { cache } from 'react'
 import { prisma } from '../../lib/prisma'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
-import {
-  buildGlobalExclusionsWhere,
-  buildHighSalaryEligibilityWhere,
-} from '../../lib/jobs/queryJobs'
+import { buildWhere } from '../../lib/jobs/queryJobs'
+import { collectRemoteRoleRows } from '../../lib/seo/remoteSitemap'
 import { RemoteHero } from '@/components/remote/RemoteHero'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
 
@@ -27,17 +26,7 @@ export async function generateMetadata({
   let total = 0
 
   try {
-    total = await prisma.job.count({
-      where: {
-        isExpired: false,
-        AND: [
-          buildHighSalaryEligibilityWhere(),
-          buildGlobalExclusionsWhere(),
-          { OR: [{ remote: true }, { remoteMode: 'remote' }] },
-          ...(activeRemoteRegion ? [{ remoteRegion: activeRemoteRegion }] : []),
-        ],
-      },
-    })
+    total = (await getRemoteHubSnapshot(activeRemoteRegion)).remoteJobCount
   } catch (error) {
     logRuntimeFallback('remote.metadata', error)
   }
@@ -110,6 +99,55 @@ function asNumber(value: unknown): number | null {
   return null
 }
 
+const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null) => {
+  const where = buildWhere({
+    remoteOnly: true,
+    remoteRegion: activeRemoteRegion || undefined,
+    excludeInternships: true,
+  })
+
+  const [remoteJobCount, companyGroups, countryGroups, avg, roleRows] = await Promise.all([
+    prisma.job.count({ where }),
+    prisma.job.groupBy({
+      by: ['companyId'],
+      where: { ...where, companyId: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.job.groupBy({
+      by: ['countryCode'],
+      where: { ...where, countryCode: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.job.aggregate({
+      where: {
+        ...where,
+        currency: 'USD',
+        OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
+      },
+      _avg: { maxAnnual: true, minAnnual: true },
+    }),
+    collectRemoteRoleRows({ remoteRegion: activeRemoteRegion }),
+  ])
+
+  return {
+    remoteJobCount,
+    companyCount: companyGroups.length,
+    countryCount: countryGroups.length,
+    avgSalaryUsd: Math.min(
+      500_000,
+      Math.max(
+        100_000,
+        asNumber((avg as any)?._avg?.minAnnual ?? (avg as any)?._avg?.maxAnnual) ?? 156_000,
+      ),
+    ),
+    roleList: roleRows.map((row) => ({
+      slug: row.roleSlug,
+      count: row.total,
+      title: toTitleCase(row.roleSlug),
+    })),
+  }
+})
+
 function RemoteJobsFallback({ activeRemoteRegion }: { activeRemoteRegion: string | null }) {
   const fallbackRoles = [
     'software-engineer',
@@ -173,63 +211,8 @@ export default async function RemoteJobsPage({
   const activeRemoteRegion = normalizeRemoteRegion(sp.remoteRegion)
 
   try {
-    const baseWhere: any = {
-      isExpired: false,
-      AND: [
-        buildHighSalaryEligibilityWhere(),
-        buildGlobalExclusionsWhere(),
-        { OR: [{ remote: true }, { remoteMode: 'remote' }] },
-        ...(activeRemoteRegion ? [{ remoteRegion: activeRemoteRegion }] : []),
-      ],
-    }
-
-    const [remoteJobCount, companyGroups, countryGroups, avg] = await Promise.all([
-      prisma.job.count({ where: baseWhere }),
-      prisma.job.groupBy({
-        by: ['companyId'],
-        where: { ...baseWhere, companyId: { not: null } },
-        _count: { _all: true },
-      }),
-      prisma.job.groupBy({
-        by: ['countryCode'],
-        where: { ...baseWhere, countryCode: { not: null } },
-        _count: { _all: true },
-      }),
-      prisma.job.aggregate({
-        where: {
-          ...baseWhere,
-          currency: 'USD',
-          OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
-        },
-        _avg: { maxAnnual: true, minAnnual: true },
-      }),
-    ])
-
-    const companyCount = companyGroups.length
-    const countryCount = countryGroups.length
-    const avgSalaryUsd = Math.min(
-      500_000,
-      Math.max(
-        100_000,
-        asNumber((avg as any)?._avg?.minAnnual ?? (avg as any)?._avg?.maxAnnual) ?? 156_000
-      )
-    )
-
-    const topRoles = await prisma.job.groupBy({
-      by: ['roleSlug'],
-      where: { ...baseWhere, roleSlug: { not: null } },
-      _count: { _all: true },
-      orderBy: { _count: { roleSlug: 'desc' } },
-      take: 20,
-    })
-
-    const roleList = topRoles
-      .filter((r) => Boolean((r as any).roleSlug))
-      .map((r) => {
-        const slug = String((r as any).roleSlug)
-        const count = Number((r as any)._count?._all ?? 0)
-        return { slug, count, title: toTitleCase(slug) }
-      })
+    const { remoteJobCount, companyCount, countryCount, avgSalaryUsd, roleList } =
+      await getRemoteHubSnapshot(activeRemoteRegion)
 
     return (
       <main className={styles.page}>

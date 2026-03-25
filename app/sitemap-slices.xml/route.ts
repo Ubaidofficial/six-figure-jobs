@@ -28,6 +28,9 @@ export async function GET() {
   )
 
   const entries = checks.filter(Boolean) as string[]
+  if (entries.length === 0) {
+    return new Response('Not found', { status: 404 })
+  }
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

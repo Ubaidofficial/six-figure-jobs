@@ -18,6 +18,9 @@ function escapeXml(s: string) {
 
 export async function GET() {
   const rows = await collectRemoteRoleRows()
+  if (rows.length === 0) {
+    return new Response('Not found', { status: 404 })
+  }
 
   const urls: string[] = []
 
