@@ -42,6 +42,52 @@ function getParam(sp: SearchParams, key: string): string | undefined {
   return value
 }
 
+function normalizeFreeText(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const normalized = value.trim().replace(/\s+/g, ' ').toLowerCase()
+  return normalized || undefined
+}
+
+function normalizeKeyword(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const normalized = value.trim().toLowerCase()
+  return normalized || undefined
+}
+
+function normalizeLocation(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  if (trimmed.length === 2) return trimmed.toUpperCase()
+  return trimmed.toLowerCase()
+}
+
+function normalizeSearchParams(sp: SearchParams): SearchParams {
+  const page = Math.max(1, Number(getParam(sp, 'page') || '1') || 1)
+  const minSalaryRaw = Number(getParam(sp, 'minSalary') || '100000')
+  const minSalary = Math.max(100000, isNaN(minSalaryRaw) ? 100000 : minSalaryRaw)
+
+  const normalized: SearchParams = {}
+
+  const q = normalizeFreeText(getParam(sp, 'q'))
+  const role = normalizeKeyword(getParam(sp, 'role'))
+  const location = normalizeLocation(getParam(sp, 'location'))
+  const remoteMode = normalizeKeyword(getParam(sp, 'remoteMode'))
+  const remoteRegion = normalizeKeyword(getParam(sp, 'remoteRegion'))
+  const seniority = normalizeKeyword(getParam(sp, 'seniority'))
+
+  if (q) normalized.q = q
+  if (role) normalized.role = role
+  if (location) normalized.location = location
+  if (remoteMode) normalized.remoteMode = remoteMode
+  if (remoteRegion) normalized.remoteRegion = remoteRegion
+  if (seniority) normalized.seniority = seniority
+  if (minSalary > 100000 || getParam(sp, 'minSalary')) normalized.minSalary = String(minSalary)
+  if (page > 1) normalized.page = String(page)
+
+  return normalized
+}
+
 function buildSearchHref(sp: SearchParams, page: number): string {
   const params = new URLSearchParams()
 
@@ -132,7 +178,7 @@ export async function generateMetadata({
 }: {
   searchParams?: Promise<SearchParams>
 }): Promise<Metadata> {
-  const sp = await resolveSearchParams(searchParams)
+  const sp = normalizeSearchParams(await resolveSearchParams(searchParams))
   const title = buildTitle(sp)
   const canonical = `${getSiteUrl()}${buildCanonicalPath(sp)}`
 
@@ -163,15 +209,16 @@ export async function generateMetadata({
 /* -------------------------------------------------------------------------- */
 
 export default async function SearchPage({ searchParams }: PageProps) {
-  const sp = await resolveSearchParams(searchParams)
+  const rawSp = await resolveSearchParams(searchParams)
+  const sp = normalizeSearchParams(rawSp)
   const canonicalPath = buildCanonicalPath(sp)
 
   const requestedParams = new URLSearchParams()
-  Object.entries(sp).forEach(([k, v]) => {
+  Object.entries(rawSp).forEach(([k, v]) => {
     if (Array.isArray(v)) v.forEach((val) => val != null && requestedParams.append(k, val))
     else if (v != null) requestedParams.set(k, v)
   })
-  const rawPage = getParam(sp, 'page')
+  const rawPage = getParam(rawSp, 'page')
   if (!rawPage || Number(rawPage) <= 1) requestedParams.delete('page')
   const requestedPath = (() => {
     const qs = requestedParams.toString()

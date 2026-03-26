@@ -1,3 +1,12 @@
+# 2.8.38 (2026-03-26)
+
+
+### Bug Fixes
+
+* normalize `/search` query parameters onto a single canonical lowercase URL variant so mixed-case searches stop splitting into inconsistent live responses
+* add explicit `no-store` cache headers for `/search` so dynamic search results are never served from stale edge cache
+
+
 # 2.8.37 (2026-03-26)
 
 

@@ -37,6 +37,13 @@ const pageCacheHeaders = [
   },
 ]
 
+const searchNoCacheHeaders = [
+  {
+    key: 'Cache-Control',
+    value: 'private, no-cache, no-store, max-age=0, must-revalidate',
+  },
+]
+
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -52,6 +59,7 @@ const nextConfig = {
     return [
       ...sitemapSources.map((source) => ({ source, headers: sitemapCacheHeaders })),
       { source: '/robots.txt', headers: sitemapCacheHeaders },
+      { source: '/search', headers: searchNoCacheHeaders },
       { source: '/job/:path*', headers: pageCacheHeaders },
       { source: '/remote/:path*', headers: pageCacheHeaders },
       { source: '/jobs/:path*', headers: pageCacheHeaders },
