@@ -13,6 +13,7 @@ import { buildLogoUrl } from '../../../lib/companies/logo'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
+import { buildWhere } from '../../../lib/jobs/queryJobs'
 
 export const revalidate = 3600
 
@@ -22,28 +23,39 @@ const SITE_URL = getSiteUrl()
 /* Types                                                                      */
 /* -------------------------------------------------------------------------- */
 
-type CompanyWithJobs = Awaited<ReturnType<typeof getCompanyWithJobs>>
-type JobWithFlags = NonNullable<CompanyWithJobs>['jobs'][number]
+type CompanyWithJobs = NonNullable<Awaited<ReturnType<typeof getCompanyWithJobs>>>
+type JobWithFlags = CompanyWithJobs['jobs'][number]
+
+function buildCompanyJobsWhere(slug: string) {
+  return buildWhere({ companySlug: slug })
+}
 
 /* -------------------------------------------------------------------------- */
 /* Data Fetching                                                              */
 /* -------------------------------------------------------------------------- */
 
 async function getCompanyWithJobs(slug: string) {
-  const company = await prisma.company.findUnique({
-    where: { slug },
-    include: {
-      jobs: {
-        where: { isExpired: false },
-        orderBy: [
-          { isHighSalary: 'desc' },
-          { maxAnnual: 'desc' },
-          { createdAt: 'desc' },
-        ],
+  const where = buildCompanyJobsWhere(slug)
+  const [company, jobs] = await Promise.all([
+    prisma.company.findUnique({
+      where: { slug },
+    }),
+    prisma.job.findMany({
+      where,
+      include: {
+        companyRef: true,
       },
-    },
-  })
-  return company
+      orderBy: [
+        { maxAnnual: 'desc' },
+        { minAnnual: 'desc' },
+        { createdAt: 'desc' },
+      ],
+    }),
+  ])
+
+  if (!company) return null
+
+  return { company, jobs }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -59,24 +71,20 @@ export async function generateMetadata({
   return withRuntimeFallback<Metadata>(
     `company.${slug}.metadata`,
     async () => {
-      const company = await getCompanyWithJobs(slug)
+      const data = await getCompanyWithJobs(slug)
 
-      if (!company) return { title: `Company not found | ${SITE_NAME}` }
+      if (!data) return { title: `Company not found | ${SITE_NAME}` }
 
-      const jobCount = company.jobs.length
-      const highSalaryCount = company.jobs.filter((j: JobWithFlags) => j.isHighSalary)
-        .length
+      const { company, jobs } = data
+      const jobCount = jobs.length
       const allowIndex = isCompanyPageIndexable(jobCount)
 
-      const title = `${company.name} Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
+      const title = `${company.name} $100k+ Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
       const companyDesc = company.description
         ? truncateText(toPlainText(company.description), 120)
         : `Find your next role at ${company.name}.`
 
-      const description =
-        highSalaryCount > 0
-          ? `Browse ${jobCount} jobs at ${company.name}, including ${highSalaryCount} high-salary positions paying $100k+. ${companyDesc}`
-          : `Browse ${jobCount} open positions at ${company.name}. ${companyDesc}`
+      const description = `Browse ${jobCount} verified $100k+ jobs at ${company.name}. ${companyDesc}`
 
       const canonicalUrl = `${SITE_URL}/company/${slug}`
 
@@ -132,13 +140,12 @@ export default async function CompanyPage({
   return withRuntimeFallback(
     `company.${slug}.page`,
     async () => {
-      const company = await getCompanyWithJobs(slug)
+      const data = await getCompanyWithJobs(slug)
 
-      if (!company) return notFound()
+      if (!data) return notFound()
 
-      const jobs = company.jobs
-      const highSalaryJobs: JobWithFlags[] = jobs.filter((j) => j.isHighSalary)
-      const otherJobs: JobWithFlags[] = jobs.filter((j) => !j.isHighSalary)
+      const { company, jobs } = data
+      const qualifiedJobs: JobWithFlags[] = jobs
 
       const countrySlug =
         company.countryCode ? countryCodeToSlug(company.countryCode) : null
@@ -205,7 +212,7 @@ export default async function CompanyPage({
               <p className="mt-4 text-sm leading-relaxed text-slate-300">
                 {company.name} is hiring $100k+ talent across{' '}
                 {company.industry ?? 'multiple teams'}. Explore roles in{' '}
-                {highSalaryJobs.length > 0 ? 'high-compensation' : 'their latest'}{' '}
+                {qualifiedJobs.length > 0 ? 'high-compensation' : 'their latest'}{' '}
                 postings and discover remote and on-site opportunities.
               </p>
             )}
@@ -252,14 +259,14 @@ export default async function CompanyPage({
           <div className="flex gap-4 sm:flex-col sm:items-end sm:gap-2">
             <div className="text-center sm:text-right">
               <div className="text-2xl font-bold text-slate-50">{jobs.length}</div>
-              <div className="text-xs text-slate-400">Open Jobs</div>
+              <div className="text-xs text-slate-400">$100k+ Jobs</div>
             </div>
-            {highSalaryJobs.length > 0 && (
+            {qualifiedJobs.length > 0 && (
               <div className="text-center sm:text-right">
                 <div className="text-2xl font-bold text-emerald-400">
-                  {highSalaryJobs.length}
+                  {qualifiedJobs.filter((job) => job.salarySource === 'ats').length}
                 </div>
-                <div className="text-xs text-slate-400">$100k+ Jobs</div>
+                <div className="text-xs text-slate-400">ATS salary-backed</div>
               </div>
             )}
           </div>
@@ -321,7 +328,7 @@ export default async function CompanyPage({
 
         {jobs.length === 0 ? (
           <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-8 text-center">
-            <p className="text-slate-400">No open positions at the moment.</p>
+            <p className="text-slate-400">No live $100k+ positions at the moment.</p>
             <p className="mt-2 text-sm text-slate-500">
               Check back later or visit their{' '}
               {company.atsUrl ? (
@@ -339,33 +346,16 @@ export default async function CompanyPage({
           </div>
         ) : (
           <div className="space-y-6">
-            {highSalaryJobs.length > 0 && (
-              <div>
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-emerald-400">
-                  <span>💰</span> High-Salary Positions ($100k+)
-                </h3>
-                <div className="space-y-3">
-                  {highSalaryJobs.map((job) => (
-                    <JobListItem key={job.id} job={job} />
-                  ))}
-                </div>
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-emerald-400">
+                <span>💰</span> Verified $100k+ Positions
+              </h3>
+              <div className="space-y-3">
+                {qualifiedJobs.map((job) => (
+                  <JobListItem key={job.id} job={job} />
+                ))}
               </div>
-            )}
-
-            {otherJobs.length > 0 && (
-              <div>
-                {highSalaryJobs.length > 0 && (
-                  <h3 className="mb-3 text-sm font-medium text-slate-400">
-                    Other Positions
-                  </h3>
-                )}
-                <div className="space-y-3">
-                  {otherJobs.map((job) => (
-                    <JobListItem key={job.id} job={job} />
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         )}
       </section>
@@ -559,7 +549,7 @@ function cleanUrl(url: string): string {
 /* JSON-LD Builders                                                           */
 /* -------------------------------------------------------------------------- */
 
-function buildOrganizationJsonLd(company: NonNullable<CompanyWithJobs>) {
+function buildOrganizationJsonLd(company: CompanyWithJobs['company']) {
   const jsonLd: any = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -590,7 +580,7 @@ function buildOrganizationJsonLd(company: NonNullable<CompanyWithJobs>) {
   return jsonLd
 }
 
-function buildBreadcrumbJsonLd(company: NonNullable<CompanyWithJobs>) {
+function buildBreadcrumbJsonLd(company: CompanyWithJobs['company']) {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',

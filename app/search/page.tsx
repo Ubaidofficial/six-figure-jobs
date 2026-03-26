@@ -229,16 +229,18 @@ export default async function SearchPage({ searchParams }: PageProps) {
   if (q) {
     andConditions.push({
       OR: [
-        { title: { contains: q } },
-        { company: { contains: q } },
-        { locationRaw: { contains: q } },
+        { title: { contains: q, mode: 'insensitive' } },
+        { company: { contains: q, mode: 'insensitive' } },
+        { locationRaw: { contains: q, mode: 'insensitive' } },
       ],
     })
   }
 
   if (roleSlugs.length) {
     andConditions.push({
-      OR: roleSlugs.map((slug) => ({ roleSlug: { contains: slug } })),
+      OR: roleSlugs.map((slug) => ({
+        roleSlug: { contains: slug, mode: 'insensitive' },
+      })),
     })
   }
 

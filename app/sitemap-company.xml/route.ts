@@ -1,11 +1,11 @@
 // app/sitemap-company.xml/route.ts
 // Sitemap index for /company/[slug] pages (sharded)
 
-import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '../../lib/seo/indexabilityGates'
+import { buildWhere } from '../../lib/jobs/queryJobs'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 45000
@@ -23,30 +23,27 @@ function escapeXml(s: string) {
     .replace(/'/g, '&apos;')
 }
 
-function toNumber(value: unknown): number {
-  if (typeof value === 'bigint') return Number(value)
-  if (typeof value === 'number') return value
-  if (typeof value === 'string') {
-    const n = Number(value)
-    return Number.isFinite(n) ? n : 0
-  }
-  return 0
-}
-
 async function fetchEligibleCompanyCount(): Promise<number> {
-  const rows = await prisma.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`
-    SELECT COUNT(*)::bigint AS count
-    FROM (
-      SELECT 1
-      FROM "Job"
-      WHERE "isExpired" = false AND "companyId" IS NOT NULL
-      GROUP BY "companyId"
-      HAVING COUNT(*) >= ${MIN_INDEXABLE_JOBS}
-    ) t
-  `)
+  const eligibleJobWhere = buildWhere({})
+  const rows = await prisma.company.findMany({
+    where: {
+      jobs: {
+        some: eligibleJobWhere,
+      },
+    },
+    select: {
+      id: true,
+      jobs: {
+        where: eligibleJobWhere,
+        select: {
+          id: true,
+        },
+        take: MIN_INDEXABLE_JOBS,
+      },
+    },
+  })
 
-  const raw = rows[0]?.count ?? 0
-  return toNumber(raw)
+  return rows.filter((row) => row.jobs.length >= MIN_INDEXABLE_JOBS).length
 }
 
 export async function GET() {

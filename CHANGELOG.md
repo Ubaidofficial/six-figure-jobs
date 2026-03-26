@@ -1,3 +1,13 @@
+# 2.8.37 (2026-03-26)
+
+
+### Bug Fixes
+
+* make internal job search case-insensitive so obvious role queries like `software engineer` stop returning false empty states
+* restrict `JobPosting` salary markup to ATS-backed salaries only and stop inventing applicant geography for unknown or global remote roles
+* re-scope company pages and company sitemap eligibility to the same qualifying live-job universe used by the board instead of all non-expired jobs
+
+
 # 2.8.36 (2026-03-26)
 
 

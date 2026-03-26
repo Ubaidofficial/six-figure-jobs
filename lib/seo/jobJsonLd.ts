@@ -88,6 +88,7 @@ function buildStructuredDescription(job: any, companyName: string): string {
 
 function buildBaseSalary(job: any): any | undefined {
   if (job?.salaryValidated !== true) return undefined
+  if (job?.salarySource !== 'ats') return undefined
 
   const rawMin = toNumberSafe(job.minAnnual)
   const rawMax = toNumberSafe(job.maxAnnual)
@@ -123,16 +124,37 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
 
   const s = raw.trim()
 
-  // Default to US if no country specified for remote jobs
   if (!s) {
-    return { '@type': 'Country', name: 'United States' }
+    return undefined
   }
 
   const upper = s.toUpperCase()
 
-  // Block non-geo placeholders
-  if (upper === 'GLOBAL' || upper === 'WORLDWIDE' || upper === 'ANYWHERE' || upper === 'REMOTE' || upper === 'INTERNATIONAL') {
+  if (
+    upper === 'GLOBAL' ||
+    upper === 'WORLDWIDE' ||
+    upper === 'ANYWHERE' ||
+    upper === 'REMOTE' ||
+    upper === 'INTERNATIONAL' ||
+    upper === 'EMEA' ||
+    upper === 'APAC'
+  ) {
+    return undefined
+  }
+
+  if (upper === 'US-ONLY') {
     return { '@type': 'Country', name: 'United States' }
+  }
+
+  if (upper === 'CANADA') {
+    return { '@type': 'Country', name: 'Canada' }
+  }
+
+  if (upper === 'UK-IRELAND') {
+    return [
+      { '@type': 'Country', name: 'United Kingdom' },
+      { '@type': 'Country', name: 'Ireland' },
+    ]
   }
 
   // ISO-3166-1 alpha-2 country code
@@ -151,7 +173,7 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
     return { '@type': 'Country', name: s }
   }
 
-  return { '@type': 'Country', name: 'United States' }
+  return undefined
 }
 
 function countryNameFromCode(code: string): string | null {
