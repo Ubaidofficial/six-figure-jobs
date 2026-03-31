@@ -6,6 +6,7 @@ import { getDateThreshold, MAX_DISPLAY_AGE_DAYS } from '../ingest/jobAgeFilter'
 import { HIGH_SALARY_THRESHOLDS } from '../currency/thresholds'
 import { inferCurrencyFromCountryCode } from '../normalizers/salary'
 import { getMinSalaryForCountry } from './salaryThresholds'
+import { buildFreshJobWhere } from './freshness'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -71,7 +72,6 @@ const jobListingSelect = {
   updatedAt: true,
   isHighSalary: true,
   isHundredKLocal: true,
-  isHighSalaryLocal: true,
   salaryRaw: true,
   salaryMin: true,
   salaryMax: true,
@@ -230,14 +230,8 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
 export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
     isExpired: false,
-    // Base freshness rule (keep this as OR to support postedAt null)
-    OR: [
-      { postedAt: { gte: getDateThreshold(MAX_DISPLAY_AGE_DAYS) } },
-      {
-        postedAt: null,
-        createdAt: { gte: getDateThreshold(MAX_DISPLAY_AGE_DAYS) },
-      },
-    ],
+    // Base freshness rule: prefer scrape freshness, then fall back to publish/create dates.
+    ...buildFreshJobWhere(MAX_DISPLAY_AGE_DAYS),
   }
 
   const addAnd = (clause: Prisma.JobWhereInput) => {

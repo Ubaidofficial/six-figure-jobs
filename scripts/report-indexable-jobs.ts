@@ -22,7 +22,9 @@ type JobRow = {
   maxAnnual: bigint | null
   currency: string | null
   isExpired: boolean
+  lastSeenAt: Date | null
   postedAt: Date | null
+  createdAt: Date
   updatedAt: Date
 }
 
@@ -66,7 +68,9 @@ async function main() {
         maxAnnual: true,
         currency: true,
         isExpired: true,
+        lastSeenAt: true,
         postedAt: true,
+        createdAt: true,
         updatedAt: true,
       },
     })) as JobRow[]
@@ -110,4 +114,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect()
   })
-

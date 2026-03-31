@@ -53,7 +53,6 @@ async function run() {
       aiSnippet: null,
       OR: [
         { isHighSalary: true },
-        { isHighSalaryLocal: true },
         { isHundredKLocal: true },
       ],
     },

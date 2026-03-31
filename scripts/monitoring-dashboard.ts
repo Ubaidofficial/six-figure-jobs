@@ -79,7 +79,7 @@ async function gatherMetrics(): Promise<DashboardMetrics> {
   const totalJobs = await prisma.job.count({
     where: {
       isExpired: false,
-      isHighSalaryLocal: true,
+      OR: [{ isHighSalary: true }, { isHundredKLocal: true }],
     },
   })
 
@@ -90,7 +90,7 @@ async function gatherMetrics(): Promise<DashboardMetrics> {
   const salaryStats = await prisma.job.aggregate({
     where: {
       isExpired: false,
-      isHighSalaryLocal: true,
+      OR: [{ isHighSalary: true }, { isHundredKLocal: true }],
       salaryMin: { gt: 0n },
     },
     _avg: {
@@ -103,7 +103,7 @@ async function gatherMetrics(): Promise<DashboardMetrics> {
     by: ['roleSlug'],
     where: {
       isExpired: false,
-      isHighSalaryLocal: true,
+      OR: [{ isHighSalary: true }, { isHundredKLocal: true }],
       roleSlug: { not: null },
     },
     _count: { _all: true },

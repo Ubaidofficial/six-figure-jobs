@@ -54,6 +54,8 @@ const baseJob = {
   maxAnnual: BigInt(180000),
   currency: 'USD',
   isExpired: false,
+  lastSeenAt: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
 }
 
 const QUALITY_GATE_FIXTURES: Array<{
@@ -73,6 +75,15 @@ const QUALITY_GATE_FIXTURES: Array<{
   { name: 'unsupported currency', job: { ...baseJob, currency: 'JPY', minAnnual: BigInt(20_000_000), maxAnnual: BigInt(24_000_000) }, expectIndexable: false, expectReason: 'unsupported_currency' },
   { name: 'thin html and ai content', job: { ...baseJob, descriptionHtml: '<p>short</p>', aiSnippet: 'tiny', aiOneLiner: 'small' }, expectIndexable: false, expectReason: 'thin_content' },
   { name: 'expired job', job: { ...baseJob, isExpired: true }, expectIndexable: false, expectReason: 'expired' },
+  {
+    name: 'stale job',
+    job: {
+      ...baseJob,
+      lastSeenAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    expectIndexable: false,
+    expectReason: 'stale_job',
+  },
   { name: 'ai snippet satisfies content gate', job: { ...baseJob, descriptionHtml: '<p>n/a</p>', aiSnippet: 'A'.repeat(120), aiOneLiner: 'ok', id: 'ats:test:ai-snippet' }, expectIndexable: true, expectReason: 'ok' },
 ]
 
@@ -111,6 +122,7 @@ describe('quality gate fixture suite', () => {
         ...baseJob,
         id: 'dup-newest',
         externalId: 'job-1',
+        lastSeenAt: new Date().toISOString(),
         postedAt: '2026-02-01T09:00:00.000Z',
         updatedAt: '2026-02-11T10:00:00.000Z',
       },
@@ -118,6 +130,7 @@ describe('quality gate fixture suite', () => {
         ...baseJob,
         id: 'dup-older',
         externalId: 'job-1b',
+        lastSeenAt: new Date().toISOString(),
         postedAt: '2026-02-01T08:00:00.000Z',
         updatedAt: '2026-02-10T10:00:00.000Z',
       },
@@ -125,6 +138,7 @@ describe('quality gate fixture suite', () => {
         ...baseJob,
         id: 'dup-oldest',
         externalId: 'job-1c',
+        lastSeenAt: new Date().toISOString(),
         postedAt: '2026-02-01T08:00:00.000Z',
         updatedAt: '2026-02-09T10:00:00.000Z',
       },
@@ -134,6 +148,7 @@ describe('quality gate fixture suite', () => {
         citySlug: 'toronto',
         countryCode: 'CA',
         locationRaw: 'Toronto, CA',
+        lastSeenAt: new Date().toISOString(),
         postedAt: '2026-02-01T08:00:00.000Z',
         updatedAt: '2026-02-10T11:00:00.000Z',
       },
@@ -142,6 +157,7 @@ describe('quality gate fixture suite', () => {
         id: 'unique-company',
         company: 'Globex',
         companyId: 'company_2',
+        lastSeenAt: new Date().toISOString(),
         postedAt: '2026-02-01T08:00:00.000Z',
         updatedAt: '2026-02-10T12:00:00.000Z',
       },
@@ -151,6 +167,7 @@ describe('quality gate fixture suite', () => {
         descriptionHtml: '<p>tiny</p>',
         aiSnippet: 'none',
         aiOneLiner: 'n/a',
+        lastSeenAt: new Date().toISOString(),
         postedAt: '2026-02-01T08:00:00.000Z',
         updatedAt: '2026-02-12T10:00:00.000Z',
       },

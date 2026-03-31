@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
+import { isJobFresh } from './freshness'
 
 export const QUALITY_MIN_DESCRIPTION_CHARS = 140
 export const QUALITY_MIN_AI_SNIPPET_CHARS = 80
@@ -27,7 +28,9 @@ export type JobIndexabilityInput = {
   maxAnnual?: number | bigint | string | null
   currency?: string | null
   isExpired?: boolean | null
+  lastSeenAt?: Date | string | null
   postedAt?: Date | string | null
+  createdAt?: Date | string | null
   updatedAt?: Date | string | null
 }
 
@@ -131,6 +134,7 @@ export function evaluateJobIndexability(job: JobIndexabilityInput): JobIndexabil
   if (!job) return fail('missing_job')
 
   if (job.isExpired === true) return fail('expired')
+  if (!isJobFresh(job)) return fail('stale_job')
   if (!job.id || !String(job.id).trim()) return fail('missing_id')
 
   const title = String(job.title || '').trim()

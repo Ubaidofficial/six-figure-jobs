@@ -162,6 +162,12 @@ jobs:
         if: steps.prep.outputs.dry_run != 'true' && steps.prep.outputs.mode_has_boards == 'true'
         run: npx tsx scripts/enrich-apply-urls.ts | tee /tmp/daily-scrape-enrich.log
 
+      - name: Freshness guard
+        if: steps.prep.outputs.dry_run != 'true'
+        env:
+          MAX_ACTIVE_LAST_SEEN_AGE_HOURS: "72"
+        run: npm run scrape:health | tee /tmp/daily-scrape-freshness.log
+
       - name: Optional AI enrichment
         if: steps.prep.outputs.dry_run != 'true' && env.AI_ENRICHMENT_PAUSED != 'true'
         run: npx tsx scripts/aiEnrichJobs.ts | tee /tmp/daily-scrape-ai.log

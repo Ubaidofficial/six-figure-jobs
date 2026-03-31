@@ -30,7 +30,6 @@ model Job {
   currency                  String?
   isHighSalary              Boolean        @default(false)
   isHundredKLocal           Boolean        @default(false)
-  isHighSalaryLocal         Boolean        @default(false)
   type                      String?
   source                    String
   applyUrl                  String?
@@ -91,7 +90,6 @@ model Job {
   @@index([countryCode])
   @@index([isHighSalary])
   @@index([isHundredKLocal])
-  @@index([isHighSalaryLocal])
   @@index([companyId])
   @@index([externalId])
   @@index([remoteMode])

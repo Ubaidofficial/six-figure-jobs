@@ -9,6 +9,7 @@ import {
   buildHighSalaryEligibilityWhere,
 } from '../../lib/jobs/queryJobs'
 import { buildIndexableJobStructureWhere } from '../../lib/jobs/qualityGate'
+import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../../lib/jobs/freshness'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
@@ -31,6 +32,7 @@ function buildHundredKWhereBase() {
     AND: [
       buildGlobalExclusionsWhere(),
       buildHighSalaryEligibilityWhere(),
+      buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS),
       buildIndexableJobStructureWhere(),
     ],
   }

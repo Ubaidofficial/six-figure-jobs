@@ -9,6 +9,7 @@ import {
   dedupeIndexableJobs,
   evaluateJobIndexability,
 } from '../lib/jobs/qualityGate'
+import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../lib/jobs/freshness'
 
 /**
  * SEO validator for sitemap integrity + indexability signals.
@@ -346,7 +347,9 @@ type SitemapJobRow = {
   maxAnnual: bigint | null
   currency: string | null
   isExpired: boolean
+  lastSeenAt: Date | null
   postedAt: Date | null
+  createdAt: Date
   updatedAt: Date
 }
 
@@ -358,6 +361,7 @@ async function getIndexableJobUrlSet(): Promise<Set<string>> {
         AND: [
           buildGlobalExclusionsWhere(),
           buildHighSalaryEligibilityWhere(),
+          buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS),
           buildIndexableJobStructureWhere(),
         ],
       }
@@ -385,7 +389,9 @@ async function getIndexableJobUrlSet(): Promise<Set<string>> {
           maxAnnual: true,
           currency: true,
           isExpired: true,
+          lastSeenAt: true,
           postedAt: true,
+          createdAt: true,
           updatedAt: true,
         },
         orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],

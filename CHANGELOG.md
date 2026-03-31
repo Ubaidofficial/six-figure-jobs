@@ -1,3 +1,12 @@
+# 2.8.39 (2026-03-31)
+
+
+### Bug Fixes
+
+* add shared job freshness gating plus a scrape health guard so stale ATS inventory stops flowing into listings, sitemaps, and indexable job pages
+* remove the stale `isHighSalaryLocal` Prisma field and switch salary-based scripts back to the live salary flags so production scrape jobs stop failing on schema drift
+
+
 # 2.8.38 (2026-03-26)
 
 
