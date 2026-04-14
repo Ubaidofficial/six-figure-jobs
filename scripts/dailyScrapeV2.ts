@@ -19,6 +19,13 @@
 
 import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+import {
+  buildWhere,
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+} from '../lib/jobs/queryJobs'
+import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../lib/jobs/freshness'
+import { buildIndexableJobStructureWhere } from '../lib/jobs/qualityGate'
 
 // Core board scrapers (default exports)
 import scrapeRemoteOK from '../lib/scrapers/remoteok'
@@ -379,28 +386,59 @@ async function runAtsScrapers(options: CliOptions): Promise<DailyScrapeStats> {
 }
 
 async function printJobSummary() {
-  const totalJobs = await prisma.job.count()
+  const browseEligibleWhere = buildWhere({})
+  const detailSitemapWhere = {
+    isExpired: false,
+    AND: [
+      buildGlobalExclusionsWhere(),
+      buildHighSalaryEligibilityWhere(),
+      buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS),
+      buildIndexableJobStructureWhere(),
+    ],
+  } as const
 
-  const jobs100k = await prisma.job.count({
-    where: { minAnnual: { gte: 100_000 } },
-  })
-  const jobs200k = await prisma.job.count({
-    where: { minAnnual: { gte: 200_000 } },
-  })
-  const jobs300k = await prisma.job.count({
-    where: { minAnnual: { gte: 300_000 } },
-  })
-  const jobs400k = await prisma.job.count({
-    where: { minAnnual: { gte: 400_000 } },
-  })
+  const [
+    totalJobs,
+    activeJobs,
+    rawJobs100k,
+    rawJobs200k,
+    rawJobs300k,
+    rawJobs400k,
+    browseEligibleJobs,
+    detailSitemapEligibleJobs,
+    newestActive,
+  ] = await Promise.all([
+    prisma.job.count(),
+    prisma.job.count({ where: { isExpired: false } }),
+    prisma.job.count({ where: { minAnnual: { gte: 100_000 } } }),
+    prisma.job.count({ where: { minAnnual: { gte: 200_000 } } }),
+    prisma.job.count({ where: { minAnnual: { gte: 300_000 } } }),
+    prisma.job.count({ where: { minAnnual: { gte: 400_000 } } }),
+    prisma.job.count({ where: browseEligibleWhere }),
+    prisma.job.count({ where: detailSitemapWhere }),
+    prisma.job.aggregate({
+      where: { isExpired: false },
+      _max: { lastSeenAt: true },
+    }),
+  ])
 
-  __slog('\n📊 Job Totals (for frontend parity)')
-  __slog('------------------------------------')
-  __slog(`Total jobs in DB          : ${totalJobs}`)
-  __slog(`Jobs ≥ $100k (minAnnual)  : ${jobs100k}`)
-  __slog(`Jobs ≥ $200k              : ${jobs200k}`)
-  __slog(`Jobs ≥ $300k              : ${jobs300k}`)
-  __slog(`Jobs ≥ $400k              : ${jobs400k}\n`)
+  __slog('\n📊 Job Totals (raw DB)')
+  __slog('----------------------')
+  __slog(`Total jobs in DB               : ${totalJobs}`)
+  __slog(`Active jobs                    : ${activeJobs}`)
+  __slog(`Jobs ≥ $100k (raw minAnnual)   : ${rawJobs100k}`)
+  __slog(`Jobs ≥ $200k (raw minAnnual)   : ${rawJobs200k}`)
+  __slog(`Jobs ≥ $300k (raw minAnnual)   : ${rawJobs300k}`)
+  __slog(`Jobs ≥ $400k (raw minAnnual)   : ${rawJobs400k}`)
+
+  __slog('\n🧭 pSEO Eligibility')
+  __slog('-------------------')
+  __slog(`Browse-eligible jobs           : ${browseEligibleJobs}`)
+  __slog(`Job-sitemap-eligible jobs      : ${detailSitemapEligibleJobs}`)
+  __slog(
+    `Newest active lastSeenAt       : ${newestActive._max.lastSeenAt?.toISOString() ?? 'none'}`,
+  )
+  __slog('')
 }
 
 async function main() {

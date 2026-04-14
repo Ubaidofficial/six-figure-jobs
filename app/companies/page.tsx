@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
+import { buildWhere } from '@/lib/jobs/queryJobs'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
+import { MIN_COMPANY_INDEXABLE_JOBS } from '@/lib/seo/indexabilityGates'
 
 export const revalidate = 600 // 10m
 export const dynamic = 'force-dynamic'
@@ -15,42 +17,43 @@ export const metadata: Metadata = {
 
 export default async function CompaniesPage() {
   try {
-    const companies = await prisma.company.findMany({
+    const eligibleJobWhere = buildWhere({})
+    const eligibleCompanyRows = await prisma.job.groupBy({
+      by: ['companyId'],
       where: {
-        jobs: {
-          some: {
-            isExpired: false,
-            OR: [
-              { minAnnual: { gte: BigInt(100_000) } },
-              { maxAnnual: { gte: BigInt(100_000) } },
-              { isHundredKLocal: true },
-            ],
-          },
-        },
+        ...eligibleJobWhere,
+        companyId: { not: null },
       },
-      orderBy: { name: 'asc' },
-      take: 500,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        logoUrl: true,
-        _count: {
-          select: {
-            jobs: {
-              where: {
-                isExpired: false,
-                OR: [
-                  { minAnnual: { gte: BigInt(100_000) } },
-                  { maxAnnual: { gte: BigInt(100_000) } },
-                  { isHundredKLocal: true },
-                ],
+      _count: { _all: true },
+    })
+
+    const eligibleCompanyIds = eligibleCompanyRows
+      .filter((row) => row.companyId && row._count._all >= MIN_COMPANY_INDEXABLE_JOBS)
+      .map((row) => row.companyId as string)
+
+    const companies =
+      eligibleCompanyIds.length === 0
+        ? []
+        : await prisma.company.findMany({
+            where: {
+              id: { in: eligibleCompanyIds },
+            },
+            orderBy: { name: 'asc' },
+            take: 500,
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              logoUrl: true,
+              _count: {
+                select: {
+                  jobs: {
+                    where: eligibleJobWhere,
+                  },
+                },
               },
             },
-          },
-        },
-      },
-    })
+          })
 
     return (
       <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">

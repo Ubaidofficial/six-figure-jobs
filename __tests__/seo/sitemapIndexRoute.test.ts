@@ -1,8 +1,13 @@
 import { GET } from '../../app/sitemap.xml/route'
+import { resolveCoreSitemapFamilies } from '../../lib/seo/coreSitemapFamilies'
 import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
 import { hasCountrySitemapEntries } from '../../lib/seo/countrySitemap'
 import { hasRemoteRoleSitemapEntries } from '../../lib/seo/remoteSitemap'
 import { hasSliceSitemapEntries } from '../../lib/seo/slicesSitemap'
+
+jest.mock('../../lib/seo/coreSitemapFamilies', () => ({
+  resolveCoreSitemapFamilies: jest.fn(),
+}))
 
 jest.mock('../../lib/seo/citySitemap', () => ({
   getCitySitemapUrls: jest.fn(),
@@ -23,6 +28,9 @@ jest.mock('../../lib/seo/slicesSitemap', () => ({
 const getCitySitemapUrlsMock = getCitySitemapUrls as jest.MockedFunction<
   typeof getCitySitemapUrls
 >
+const resolveCoreSitemapFamiliesMock = resolveCoreSitemapFamilies as jest.MockedFunction<
+  typeof resolveCoreSitemapFamilies
+>
 const hasCountrySitemapEntriesMock = hasCountrySitemapEntries as jest.MockedFunction<
   typeof hasCountrySitemapEntries
 >
@@ -35,13 +43,23 @@ const hasSliceSitemapEntriesMock = hasSliceSitemapEntries as jest.MockedFunction
 describe('sitemap.xml route conditional sitemap inclusion', () => {
   beforeEach(() => {
     getCitySitemapUrlsMock.mockReset()
+    resolveCoreSitemapFamiliesMock.mockReset()
     hasCountrySitemapEntriesMock.mockReset()
     hasRemoteRoleSitemapEntriesMock.mockReset()
     hasSliceSitemapEntriesMock.mockReset()
   })
 
-  it('omits empty city/country/remote/slices sitemap families', async () => {
+  it('omits empty optional and core sitemap families', async () => {
     getCitySitemapUrlsMock.mockResolvedValue([])
+    resolveCoreSitemapFamiliesMock.mockResolvedValue({
+      hasJobUrls: false,
+      hasCompanyUrls: false,
+      hasSalaryUrls: false,
+      hasCategoryUrls: false,
+      hasLevelUrls: false,
+      hasBrowseUrls: false,
+      failedFamilies: [],
+    })
     hasCountrySitemapEntriesMock.mockResolvedValue(false)
     hasRemoteRoleSitemapEntriesMock.mockResolvedValue(false)
     hasSliceSitemapEntriesMock.mockResolvedValue(false)
@@ -50,21 +68,34 @@ describe('sitemap.xml route conditional sitemap inclusion', () => {
     const xml = await response.text()
 
     expect(response.status).toBe(200)
-    expect(xml).toContain('/sitemap-jobs.xml')
-    expect(xml).toContain('/sitemap-company.xml')
+    expect(xml).not.toContain('/sitemap-jobs.xml')
+    expect(xml).not.toContain('/sitemap-company.xml')
+    expect(xml).not.toContain('/sitemap-salary.xml')
+    expect(xml).not.toContain('/sitemap-category.xml')
+    expect(xml).not.toContain('/sitemap-level.xml')
+    expect(xml).not.toContain('/sitemap-browse.xml')
     expect(xml).not.toContain('/sitemap-city.xml')
     expect(xml).not.toContain('/sitemap-country.xml')
     expect(xml).not.toContain('/sitemap-remote.xml')
     expect(xml).not.toContain('/sitemap-slices.xml')
   })
 
-  it('includes city/country/remote/slices sitemap families when data-backed', async () => {
+  it('includes optional and core sitemap families when data-backed', async () => {
     getCitySitemapUrlsMock.mockResolvedValue([
       {
         loc: 'https://www.6figjobs.com/jobs/city/new-york',
         lastmod: '2026-03-01T00:00:00.000Z',
       },
     ])
+    resolveCoreSitemapFamiliesMock.mockResolvedValue({
+      hasJobUrls: true,
+      hasCompanyUrls: true,
+      hasSalaryUrls: true,
+      hasCategoryUrls: true,
+      hasLevelUrls: true,
+      hasBrowseUrls: true,
+      failedFamilies: [],
+    })
     hasCountrySitemapEntriesMock.mockResolvedValue(true)
     hasRemoteRoleSitemapEntriesMock.mockResolvedValue(true)
     hasSliceSitemapEntriesMock.mockResolvedValue(true)
@@ -73,6 +104,12 @@ describe('sitemap.xml route conditional sitemap inclusion', () => {
     const xml = await response.text()
 
     expect(response.status).toBe(200)
+    expect(xml).toContain('/sitemap-jobs.xml')
+    expect(xml).toContain('/sitemap-company.xml')
+    expect(xml).toContain('/sitemap-salary.xml')
+    expect(xml).toContain('/sitemap-category.xml')
+    expect(xml).toContain('/sitemap-level.xml')
+    expect(xml).toContain('/sitemap-browse.xml')
     expect(xml).toContain('/sitemap-city.xml')
     expect(xml).toContain('/sitemap-country.xml')
     expect(xml).toContain('/sitemap-remote.xml')
@@ -81,6 +118,15 @@ describe('sitemap.xml route conditional sitemap inclusion', () => {
 
   it('falls back to core sitemap families when an optional family query errors', async () => {
     getCitySitemapUrlsMock.mockRejectedValue(new Error('city query failed'))
+    resolveCoreSitemapFamiliesMock.mockResolvedValue({
+      hasJobUrls: true,
+      hasCompanyUrls: true,
+      hasSalaryUrls: false,
+      hasCategoryUrls: false,
+      hasLevelUrls: false,
+      hasBrowseUrls: false,
+      failedFamilies: [],
+    })
     hasCountrySitemapEntriesMock.mockResolvedValue(false)
     hasRemoteRoleSitemapEntriesMock.mockResolvedValue(false)
     hasSliceSitemapEntriesMock.mockResolvedValue(false)

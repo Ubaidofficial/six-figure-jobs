@@ -53,6 +53,11 @@ type DuplicateConcept = {
   occurrences: DuplicateOccurrence[]
 }
 
+type SitemapCollection = {
+  buckets: SitemapBucket[]
+  structureFailures: Failure[]
+}
+
 const BASE_URL = (process.env.SEO_BASE_URL || 'https://www.6figjobs.com').replace(/\/+$/, '')
 const ROOT_SITEMAP_URL = (process.env.SEO_SITEMAP_URL || `${BASE_URL}/sitemap.xml`).trim()
 const SAMPLE_PER_SITEMAP = Math.max(1, Number(process.env.SEO_SAMPLE_PER_SITEMAP || '200'))
@@ -116,6 +121,10 @@ const REPORT_REASON_ORDER = [
   'robots_noindex',
   'canonical_missing',
   'canonical_mismatch',
+  'empty_sitemap',
+  'no_urls_discovered',
+  'no_url_sitemaps',
+  'invalid_sitemap_xml',
   'duplicate_loc',
 ]
 
@@ -597,9 +606,10 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
   return failures
 }
 
-async function collectSitemapBuckets(rootUrl: string): Promise<SitemapBucket[]> {
+async function collectSitemapBuckets(rootUrl: string): Promise<SitemapCollection> {
   const seen = new Set<string>()
   const buckets: SitemapBucket[] = []
+  const structureFailures: Failure[] = []
 
   async function walk(url: string): Promise<void> {
     if (seen.has(url)) return
@@ -608,8 +618,22 @@ async function collectSitemapBuckets(rootUrl: string): Promise<SitemapBucket[]> 
     const xml = await fetchText(url)
     const kind = detectSitemapType(xml)
     const locs = parseLocs(xml)
+    const sitemapSource = inferSitemapSource(url)
 
     if (kind === 'index') {
+      if (locs.length === 0) {
+        structureFailures.push(
+          buildFailure(
+            'empty_sitemap',
+            url,
+            sitemapSource,
+            url,
+            'sitemap index contains 0 <loc> entries',
+          ),
+        )
+        return
+      }
+
       for (const loc of locs) {
         await walk(loc)
       }
@@ -617,19 +641,39 @@ async function collectSitemapBuckets(rootUrl: string): Promise<SitemapBucket[]> 
     }
 
     if (kind === 'urlset') {
+      if (locs.length === 0) {
+        structureFailures.push(
+          buildFailure(
+            'empty_sitemap',
+            url,
+            sitemapSource,
+            url,
+            'urlset contains 0 <loc> entries',
+          ),
+        )
+      }
+
       buckets.push({
         sitemapUrl: url,
-        sitemapSource: inferSitemapSource(url),
+        sitemapSource,
         urls: locs,
       })
       return
     }
 
-    throw new Error(`Unknown sitemap XML format at ${url}`)
+    structureFailures.push(
+      buildFailure(
+        'invalid_sitemap_xml',
+        url,
+        sitemapSource,
+        url,
+        'unknown sitemap XML format',
+      ),
+    )
   }
 
   await walk(rootUrl)
-  return buckets
+  return { buckets, structureFailures }
 }
 
 async function runWithConcurrency<T>(
@@ -765,18 +809,46 @@ async function main() {
   console.log(`[seo:validate] concurrency: ${CONCURRENCY}`)
   console.log(`[seo:validate] db job proof mode: ${USE_DB_JOB_PROOF ? 'on' : 'off'}`)
 
-  const buckets = await collectSitemapBuckets(ROOT_SITEMAP_URL)
+  const { buckets, structureFailures } = await collectSitemapBuckets(ROOT_SITEMAP_URL)
+  const rootSitemapSource = inferSitemapSource(ROOT_SITEMAP_URL)
+  const failures: Failure[] = [...structureFailures]
+
   if (buckets.length === 0) {
-    throw new Error('No URL sitemaps discovered')
+    failures.push(
+      buildFailure(
+        'no_url_sitemaps',
+        ROOT_SITEMAP_URL,
+        rootSitemapSource,
+        ROOT_SITEMAP_URL,
+        'no URL sitemap buckets discovered',
+      ),
+    )
   }
 
   const totalUrls = buckets.reduce((acc, b) => acc + b.urls.length, 0)
   console.log(`[seo:validate] discovered sitemaps: ${buckets.length}`)
   console.log(`[seo:validate] discovered urls: ${totalUrls}`)
 
-  const failures: Failure[] = []
+  if (totalUrls === 0) {
+    failures.push(
+      buildFailure(
+        'no_urls_discovered',
+        ROOT_SITEMAP_URL,
+        rootSitemapSource,
+        ROOT_SITEMAP_URL,
+        `url_sitemaps=${buckets.length}`,
+      ),
+    )
+  }
+
   const duplicates = collectDuplicateConcepts(buckets)
   printDuplicateSummary(duplicates)
+
+  if (buckets.length === 0) {
+    printGroupedFailures(failures)
+    process.exitCode = 1
+    return
+  }
 
   for (const duplicate of duplicates) {
     const first = duplicate.occurrences[0]

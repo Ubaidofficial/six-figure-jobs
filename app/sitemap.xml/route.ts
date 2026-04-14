@@ -1,6 +1,7 @@
 // app/sitemap.xml/route.ts
 
 import { getSiteUrl } from '../../lib/seo/site'
+import { resolveCoreSitemapFamilies } from '../../lib/seo/coreSitemapFamilies'
 import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
 
 const SITE_URL = getSiteUrl()
@@ -18,23 +19,42 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
-  const { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies } =
-    await resolveOptionalSitemapFamilies('sitemap.xml')
+  const [
+    { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
+    {
+      hasJobUrls,
+      hasCompanyUrls,
+      hasSalaryUrls,
+      hasCategoryUrls,
+      hasLevelUrls,
+      hasBrowseUrls,
+      failedFamilies: failedCoreFamilies,
+    },
+  ] = await Promise.all([
+    resolveOptionalSitemapFamilies('sitemap.xml'),
+    resolveCoreSitemapFamilies('sitemap.xml'),
+  ])
   const sitemaps = [
-    'sitemap-jobs.xml',
-    'sitemap-company.xml',
+    ...(hasJobUrls ? ['sitemap-jobs.xml'] : []),
+    ...(hasCompanyUrls ? ['sitemap-company.xml'] : []),
     ...(cityUrls.length > 0 ? ['sitemap-city.xml'] : []),
     ...(hasRemoteUrls ? ['sitemap-remote.xml'] : []),
-    'sitemap-salary.xml',
+    ...(hasSalaryUrls ? ['sitemap-salary.xml'] : []),
     ...(hasCountryUrls ? ['sitemap-country.xml'] : []),
-    'sitemap-category.xml',
-    'sitemap-level.xml',
-    'sitemap-browse.xml',
+    ...(hasCategoryUrls ? ['sitemap-category.xml'] : []),
+    ...(hasLevelUrls ? ['sitemap-level.xml'] : []),
+    ...(hasBrowseUrls ? ['sitemap-browse.xml'] : []),
     ...(hasSliceUrls ? ['sitemap-slices.xml'] : []),
   ]
+  const fallbackParts = [
+    ...(failedFamilies.length > 0 ? [`optional_families=${failedFamilies.join(',')}`] : []),
+    ...(failedCoreFamilies.length > 0
+      ? [`core_families=${failedCoreFamilies.join(',')}`]
+      : []),
+  ]
   const fallbackComment =
-    failedFamilies.length > 0
-      ? `\n  <!-- fallback_used=1 optional_families=${failedFamilies.join(',')} -->`
+    fallbackParts.length > 0
+      ? `\n  <!-- fallback_used=1 ${fallbackParts.join(' ')} -->`
       : ''
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -52,7 +72,7 @@ ${sitemaps
   const headers: Record<string, string> = {
     'Content-Type': 'application/xml; charset=utf-8',
   }
-  if (failedFamilies.length > 0) {
+  if (fallbackParts.length > 0) {
     headers['X-Sitemap-Fallback'] = '1'
   }
 

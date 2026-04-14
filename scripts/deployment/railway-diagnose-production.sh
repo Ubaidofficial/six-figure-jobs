@@ -112,6 +112,11 @@ If logs or the schema probe show missing tables, columns, or relations:
 If the active service is not the linked default, include it explicitly:
   railway run --service <service> --environment production npx prisma migrate deploy --schema prisma/schema.prisma
 
+To lock the GitHub scraper to the same production database:
+  1. Copy dbTarget.summary.githubVariable.value from the schema probe output above.
+  2. Set GitHub repo variable PRODUCTION_DB_TARGET_FINGERPRINT to that value.
+  3. Re-run the Daily Job Scraper workflow and confirm the Database Target Guard passes.
+
 After migrations:
   railway redeploy --service <service> -y
   BASE_URL=https://www.6figjobs.com ./scripts/deployment/smoke-production.sh

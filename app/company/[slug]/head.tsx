@@ -4,6 +4,7 @@
 import type { ReactElement } from 'react'
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { prisma } from '../../../lib/prisma'
+import { buildWhere } from '../../../lib/jobs/queryJobs'
 import { getSiteUrl } from '../../../lib/seo/site'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 
@@ -20,16 +21,13 @@ export default async function Head({
     async () => {
       const company = await prisma.company.findUnique({
         where: { slug },
-        select: { id: true, slug: true },
+        select: { slug: true },
       })
 
       if (!company) return null
 
       const liveJobCount = await prisma.job.count({
-        where: {
-          isExpired: false,
-          companyId: company.id,
-        },
+        where: buildWhere({ companySlug: company.slug }),
       })
 
       const canonical = `${SITE_URL}/company/${company.slug}`

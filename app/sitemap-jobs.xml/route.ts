@@ -78,14 +78,7 @@ export async function GET() {
         take: PAGE_SIZE + 1,
       })
 
-      // Maintain previous behaviour: always emit at least 1 sitemap entry.
       if (rows.length === 0) {
-        if (page === 1) {
-          const loc = escapeXml(`${SITE_URL}/sitemap-jobs/1`)
-          sitemapEntries.push(`  <sitemap>
-    <loc>${loc}</loc>
-  </sitemap>`)
-        }
         break
       }
 

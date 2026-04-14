@@ -49,16 +49,24 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Database target guard
+        shell: bash
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          npm run scrape:db-target | tee /tmp/daily-scrape-db-target.log
 
       - name: Prepare scrape inputs
         id: prep
@@ -164,9 +172,15 @@ jobs:
 
       - name: Freshness guard
         if: steps.prep.outputs.dry_run != 'true'
+        shell: bash
         env:
           MAX_ACTIVE_LAST_SEEN_AGE_HOURS: "72"
-        run: npm run scrape:health | tee /tmp/daily-scrape-freshness.log
+          MIN_FRESH_INDEXABLE_JOBS: "1"
+          INDEXABILITY_DIAGNOSTIC_SAMPLE_SIZE: "250"
+          INDEXABILITY_DIAGNOSTIC_EXAMPLES_PER_REASON: "3"
+        run: |
+          set -euo pipefail
+          npm run scrape:health | tee /tmp/daily-scrape-freshness.log
 
       - name: Optional AI enrichment
         if: steps.prep.outputs.dry_run != 'true' && env.AI_ENRICHMENT_PAUSED != 'true'
@@ -188,6 +202,15 @@ jobs:
           npx tsx scripts/seedJobSlices.ts | tee /tmp/daily-scrape-slices-seed.log
           npx tsx scripts/bootstrapCountrySalarySlices.ts | tee /tmp/daily-scrape-slices-country.log
 
+      - name: pSEO output guard
+        if: steps.prep.outputs.dry_run != 'true'
+        shell: bash
+        env:
+          REQUIRED_PSEO_CORE_FAMILIES: "salary,category,level,browse"
+        run: |
+          set -euo pipefail
+          npm run scrape:pseo:health | tee /tmp/daily-scrape-pseo-health.log
+
       - name: Upload scrape logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -208,19 +231,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: needs.scrape.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Database target guard
+        shell: bash
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          npm run scrape:db-target | tee /tmp/seo-production-proof-db-target.log
+
+      - name: pSEO KPI report (DB)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run pseo:report | tee /tmp/seo-production-proof-pseo.log
 
       - name: SEO noindex guard (production sample)
         shell: bash

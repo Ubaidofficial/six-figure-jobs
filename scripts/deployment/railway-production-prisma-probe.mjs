@@ -1,3 +1,5 @@
+/* global URL, console, process */
+import { createHash } from 'node:crypto'
 import { PrismaClient } from '@prisma/client'
 
 function summarizeError(error) {
@@ -24,6 +26,49 @@ function printJson(label, value) {
   console.log(`${label}: ${JSON.stringify(value, null, 2)}`)
 }
 
+function redact(value) {
+  if (!value) return 'none'
+  if (value.length <= 4) return `${value[0] ?? ''}***`
+  return `${value.slice(0, 2)}***${value.slice(-2)}`
+}
+
+function defaultPortForProtocol(protocol) {
+  if (protocol === 'postgresql' || protocol === 'postgres') return '5432'
+  return null
+}
+
+function summarizeDbTarget(source, raw) {
+  if (!raw) return null
+
+  const url = new URL(raw)
+  const driver = url.protocol.replace(/:$/, '') || null
+  const host = url.hostname || null
+  const port = url.port || defaultPortForProtocol(driver)
+  const database = url.pathname.replace(/^\/+/, '') || null
+  const schema = url.searchParams.get('schema') || 'public'
+
+  const normalizedTarget = JSON.stringify({
+    driver,
+    host: host?.toLowerCase() ?? null,
+    port,
+    database: database?.toLowerCase() ?? null,
+    schema: schema.toLowerCase(),
+  })
+
+  const fingerprint = createHash('sha256').update(normalizedTarget).digest('hex').slice(0, 16)
+
+  return {
+    source,
+    fingerprint,
+    driver,
+    host,
+    port,
+    database,
+    schema,
+    targetHint: `${driver ?? 'unknown'}://${redact(host)}:${port ?? 'none'}/${redact(database)}?schema=${redact(schema)}`,
+  }
+}
+
 const prisma = new PrismaClient({ log: ['error'] })
 
 let hasFailure = false
@@ -42,6 +87,23 @@ async function runStep(label, fn) {
 
 async function main() {
   printSection('Environment')
+  const dbTargetErrors = []
+  const dbTargets = ['DATABASE_URL', 'POSTGRES_PRISMA_URL']
+    .map((source) => {
+      try {
+        return summarizeDbTarget(source, process.env[source])
+      } catch (error) {
+        dbTargetErrors.push({
+          source,
+          error: summarizeError(error),
+        })
+        return null
+      }
+    })
+    .filter(Boolean)
+  const uniqueFingerprints = Array.from(new Set(dbTargets.map((target) => target.fingerprint)))
+  const activeFingerprint = uniqueFingerprints.length === 1 ? uniqueFingerprints[0] : null
+
   printJson('env', {
     hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
     hasPostgresPrismaUrl: Boolean(process.env.POSTGRES_PRISMA_URL),
@@ -49,6 +111,43 @@ async function main() {
     prismaPoolTimeout: process.env.PRISMA_POOL_TIMEOUT ?? null,
     nodeEnv: process.env.NODE_ENV ?? null,
   })
+  printJson(
+    'dbTarget.detected',
+    dbTargets.map((target) => ({
+      source: target.source,
+      fingerprint: target.fingerprint,
+      targetHint: target.targetHint,
+    })),
+  )
+  printJson('dbTarget.summary', {
+    activeFingerprint,
+    targetCount: dbTargets.length,
+    consistent: uniqueFingerprints.length <= 1,
+    githubVariable: activeFingerprint
+      ? {
+          name: 'PRODUCTION_DB_TARGET_FINGERPRINT',
+          value: activeFingerprint,
+        }
+      : null,
+  })
+
+  if (dbTargetErrors.length > 0) {
+    hasFailure = true
+    printJson('dbTarget.parse_errors', dbTargetErrors)
+  }
+
+  if (dbTargets.length === 0) {
+    hasFailure = true
+    printJson('dbTarget.error', {
+      message: 'No DATABASE_URL or POSTGRES_PRISMA_URL found in the production environment.',
+    })
+  } else if (uniqueFingerprints.length > 1) {
+    hasFailure = true
+    printJson('dbTarget.mismatch', {
+      message: 'DATABASE_URL and POSTGRES_PRISMA_URL resolve to different database targets.',
+      fingerprints: uniqueFingerprints,
+    })
+  }
 
   printSection('Migration Table')
   await runStep('migrations.recent', async () =>
