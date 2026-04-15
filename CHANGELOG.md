@@ -1,3 +1,11 @@
+# 2.8.44 (2026-04-15)
+
+
+### Bug Fixes
+
+* refresh `baseline-browser-mapping` to the latest available release so local and CI builds use the newest shipped baseline dataset available from upstream
+
+
 # 2.8.43 (2026-04-15)
 
 
