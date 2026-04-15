@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
-import { getSiteUrl } from '../../../../lib/seo/site'
+import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
+import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600
@@ -16,6 +17,56 @@ const LEVELS: Record<string, { label: string; description: string }> = {
   senior: { label: 'Senior', description: 'Senior-level positions requiring significant experience' },
   lead: { label: 'Lead / Staff', description: 'Lead, staff, and principal positions' },
   executive: { label: 'Executive', description: 'Executive and C-level positions' },
+}
+
+function buildBreadcrumbJsonLd(level: string, label: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${SITE_URL}/jobs/100k-plus` },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: `${label} jobs`,
+        item: `${SITE_URL}/jobs/level/${level}`,
+      },
+    ],
+  }
+}
+
+function buildFaqJsonLd(label: string, description: string, total: number) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `How many ${label.toLowerCase()} $100k+ jobs are live right now?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${total.toLocaleString()} ${label.toLowerCase()} roles currently meet the $100k+ threshold on Six Figure Jobs.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What kinds of roles appear on the ${label.toLowerCase()} jobs page?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: description,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Are these ${label.toLowerCase()} jobs remote only?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'No. This page can include remote, hybrid, and on-site roles as long as they meet the salary and quality thresholds.',
+        },
+      },
+    ],
+  }
 }
 
 export async function generateMetadata({
@@ -39,8 +90,8 @@ export async function generateMetadata({
 
   const title =
     total > 0
-      ? `${info.label} $100k+ Jobs - ${total.toLocaleString()} Positions | Six Figure Jobs`
-      : `${info.label} $100k+ Jobs | Six Figure Jobs`
+      ? `${info.label} $100k+ Jobs - ${total.toLocaleString()} Positions | ${SITE_NAME}`
+      : `${info.label} $100k+ Jobs | ${SITE_NAME}`
 
   const description =
     total > 0
@@ -56,7 +107,7 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
-      siteName: 'Six Figure Jobs',
+      siteName: SITE_NAME,
       type: 'website',
       images: [
         {
@@ -90,6 +141,14 @@ export default async function LevelPage({
     isHundredKLocal: true,
     pageSize: 40,
   })
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd(level, info.label)
+  const itemListJsonLd = buildSafeItemListJsonLd({
+    name: `${info.label} $100k+ jobs`,
+    jobs: (jobs as JobWithCompany[]).slice(0, 40),
+    page: 1,
+    pageSize: 40,
+  })
+  const faqJsonLd = buildFaqJsonLd(info.label, info.description, total)
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
@@ -146,6 +205,19 @@ export default async function LevelPage({
             ))}
         </div>
       </section>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
     </main>
   )
 }

@@ -1,59 +1,178 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { cache } from 'react'
 import { prisma } from '@/lib/prisma'
 import { buildWhere } from '@/lib/jobs/queryJobs'
-import { logRuntimeFallback } from '@/lib/runtime/fallback'
+import { buildRuntimeFallbackMetadata, logRuntimeFallback } from '@/lib/runtime/fallback'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '@/lib/seo/indexabilityGates'
+import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
 
 export const revalidate = 600 // 10m
 export const dynamic = 'force-dynamic'
+const SITE_URL = getSiteUrl()
 
-export const metadata: Metadata = {
-  title: 'Companies hiring $100k+ roles | 6FigJobs',
-  description:
-    'Explore companies hiring for verified $100k+ roles. Apply directly on company sites.',
-  alternates: { canonical: 'https://www.6figjobs.com/companies' },
+type CompanyDirectoryEntry = {
+  id: string
+  name: string | null
+  slug: string | null
+  logoUrl: string | null
+  _count: { jobs: number }
+}
+
+const loadEligibleCompanies = cache(async () => {
+  const eligibleJobWhere = buildWhere({})
+  const eligibleCompanyRows = await prisma.job.groupBy({
+    by: ['companyId'],
+    where: {
+      ...eligibleJobWhere,
+      companyId: { not: null },
+    },
+    _count: { _all: true },
+  })
+
+  const eligibleCompanyIds = eligibleCompanyRows
+    .filter((row) => row.companyId && row._count._all >= MIN_COMPANY_INDEXABLE_JOBS)
+    .map((row) => row.companyId as string)
+
+  const companies: CompanyDirectoryEntry[] =
+    eligibleCompanyIds.length === 0
+      ? []
+      : await prisma.company.findMany({
+          where: {
+            id: { in: eligibleCompanyIds },
+          },
+          orderBy: { name: 'asc' },
+          take: 500,
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logoUrl: true,
+            _count: {
+              select: {
+                jobs: {
+                  where: eligibleJobWhere,
+                },
+              },
+            },
+          },
+        })
+
+  return {
+    companies,
+    totalCompanies: eligibleCompanyIds.length,
+    totalEligibleJobs: eligibleCompanyRows.reduce(
+      (sum, row) => sum + Number(row._count?._all ?? 0),
+      0,
+    ),
+  }
+})
+
+function buildCompaniesDescription(totalCompanies: number, totalEligibleJobs: number) {
+  if (totalCompanies > 0) {
+    return `Explore ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} verified $100k+ roles. Apply directly on company sites.`
+  }
+
+  return 'Explore companies hiring for verified $100k+ roles. Apply directly on company sites.'
+}
+
+function buildBreadcrumbJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: 'Companies', item: `${SITE_URL}/companies` },
+    ],
+  }
+}
+
+function buildCompaniesItemListJsonLd(companies: CompanyDirectoryEntry[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Companies hiring $100k+ roles',
+    numberOfItems: companies.length,
+    itemListElement: companies
+      .filter((company) => company.slug)
+      .map((company, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        item: {
+          '@type': 'Organization',
+          name: company.name || 'Company',
+          url: `${SITE_URL}/company/${company.slug}`,
+          ...(company.logoUrl ? { logo: company.logoUrl } : {}),
+        },
+      })),
+  }
+}
+
+function buildCompaniesCollectionPageJsonLd(totalCompanies: number, totalEligibleJobs: number) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Companies hiring $100k+ roles',
+    description: buildCompaniesDescription(totalCompanies, totalEligibleJobs),
+    url: `${SITE_URL}/companies`,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const { totalCompanies, totalEligibleJobs } = await loadEligibleCompanies()
+    const title =
+      totalCompanies > 0
+        ? `${totalCompanies.toLocaleString()} Companies Hiring $100k+ Roles | ${SITE_NAME}`
+        : `Companies hiring $100k+ roles | ${SITE_NAME}`
+    const description = buildCompaniesDescription(totalCompanies, totalEligibleJobs)
+    const robots =
+      totalCompanies > 0
+        ? { index: true, follow: true }
+        : { index: false, follow: true }
+
+    return {
+      title,
+      description,
+      alternates: { canonical: `${SITE_URL}/companies` },
+      robots,
+      openGraph: {
+        title,
+        description,
+        url: `${SITE_URL}/companies`,
+        siteName: SITE_NAME,
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+      },
+    }
+  } catch {
+    return buildRuntimeFallbackMetadata({
+      canonicalPath: '/companies',
+      title: `Companies temporarily unavailable | ${SITE_NAME}`,
+      description:
+        'The companies directory is temporarily unavailable while the production database reconnects.',
+    })
+  }
 }
 
 export default async function CompaniesPage() {
   try {
-    const eligibleJobWhere = buildWhere({})
-    const eligibleCompanyRows = await prisma.job.groupBy({
-      by: ['companyId'],
-      where: {
-        ...eligibleJobWhere,
-        companyId: { not: null },
-      },
-      _count: { _all: true },
-    })
-
-    const eligibleCompanyIds = eligibleCompanyRows
-      .filter((row) => row.companyId && row._count._all >= MIN_COMPANY_INDEXABLE_JOBS)
-      .map((row) => row.companyId as string)
-
-    const companies =
-      eligibleCompanyIds.length === 0
-        ? []
-        : await prisma.company.findMany({
-            where: {
-              id: { in: eligibleCompanyIds },
-            },
-            orderBy: { name: 'asc' },
-            take: 500,
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              logoUrl: true,
-              _count: {
-                select: {
-                  jobs: {
-                    where: eligibleJobWhere,
-                  },
-                },
-              },
-            },
-          })
+    const { companies, totalCompanies, totalEligibleJobs } = await loadEligibleCompanies()
+    const breadcrumbJsonLd = buildBreadcrumbJsonLd()
+    const itemListJsonLd = buildCompaniesItemListJsonLd(companies)
+    const collectionPageJsonLd = buildCompaniesCollectionPageJsonLd(
+      totalCompanies,
+      totalEligibleJobs,
+    )
 
     return (
       <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
@@ -62,8 +181,15 @@ export default async function CompaniesPage() {
             Companies hiring $100k+ roles
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-            Only companies with live high-paying roles. Apply directly on the company site.
+            {companies.length > 0
+              ? `Browse ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} live $100k+ roles. Apply directly on the company site.`
+              : 'Only companies with live high-paying roles. Apply directly on the company site.'}
           </p>
+          {totalCompanies > companies.length && (
+            <p className="mt-2 text-xs text-slate-500">
+              Showing the first {companies.length.toLocaleString()} companies alphabetically.
+            </p>
+          )}
         </header>
 
         {companies.length === 0 ? (
@@ -104,6 +230,19 @@ export default async function CompaniesPage() {
             ))}
           </div>
         )}
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+        />
       </main>
     )
   } catch (error) {

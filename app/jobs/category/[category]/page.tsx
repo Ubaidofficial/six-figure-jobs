@@ -4,14 +4,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { prisma } from '../../../../lib/prisma'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { formatRelativeTime } from '../../../../lib/utils/time'
 import { LOCATIONS } from '@/lib/constants/homepage'
-import { getSiteUrl } from '../../../../lib/seo/site'
+import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
+import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 
 const PAGE_SIZE = 40
+const SITE_URL = getSiteUrl()
 
 const CATEGORY_MAP: Record<
   string,
@@ -89,6 +90,40 @@ function faqItems(label: string) {
   ]
 }
 
+function buildBreadcrumbJsonLd(categorySlug: string, label: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${SITE_URL}/jobs/100k-plus` },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: `${label} jobs`,
+        item: `${SITE_URL}/jobs/category/${categorySlug}`,
+      },
+    ],
+  }
+}
+
+function buildFaqJsonLd(label: string) {
+  const items = faqItems(label)
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -111,18 +146,26 @@ export async function generateMetadata({
   })
 
   const allowIndex = total >= 3
-  const canonical = `${getSiteUrl()}/jobs/category/${category}`
+  const canonical = `${SITE_URL}/jobs/category/${category}`
+  const title =
+    total > 0
+      ? `${cfg.label} jobs paying $100k+ (${total.toLocaleString()} openings) | ${SITE_NAME}`
+      : `${cfg.label} jobs paying $100k+ | ${SITE_NAME}`
+  const description =
+    total > 0
+      ? `Browse ${total.toLocaleString()} curated ${cfg.label.toLowerCase()} roles paying $100k+ across top companies. Remote, hybrid, and on-site.`
+      : `Browse curated ${cfg.label.toLowerCase()} roles paying $100k+ across top companies. Remote, hybrid, and on-site.`
 
   return {
-    title: `${cfg.label} jobs paying $100k+ | Six Figure Jobs`,
-    description: `Browse curated ${cfg.label.toLowerCase()} roles paying $100k+ across top companies. Remote, hybrid, and on-site.`,
+    title,
+    description,
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
-      title: `${cfg.label} jobs paying $100k+ | Six Figure Jobs`,
-      description: `Curated ${cfg.label.toLowerCase()} roles paying $100k+ across top companies. Remote, hybrid, and on-site.`,
+      title,
+      description,
       url: canonical,
-      siteName: 'Six Figure Jobs',
+      siteName: SITE_NAME,
       type: 'website',
     },
   }
@@ -151,7 +194,15 @@ export default async function CategoryPage({
   })
 
   const totalPages = total === 0 ? 1 : Math.ceil(total / PAGE_SIZE)
-  const allowIndex = total >= 3
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd(category, cfg.label)
+  const itemListJsonLd = buildSafeItemListJsonLd({
+    name: `${cfg.label} jobs paying $100k+`,
+    jobs: (jobs as JobWithCompany[]).slice(0, PAGE_SIZE),
+    page,
+    pageSize: PAGE_SIZE,
+  })
+  const faqJsonLd = buildFaqJsonLd(cfg.label)
+  const faqs = faqItems(cfg.label)
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
@@ -258,7 +309,7 @@ export default async function CategoryPage({
           FAQs about high-paying {cfg.label.toLowerCase()} jobs
         </h2>
         <div className="space-y-3 text-sm text-slate-300">
-          {faqItems(cfg.label).map((item) => (
+          {faqs.map((item) => (
             <div key={item.q}>
               <p className="font-semibold text-slate-100">{item.q}</p>
               <p className="text-slate-300">{item.a}</p>
@@ -266,6 +317,19 @@ export default async function CategoryPage({
           ))}
         </div>
       </section>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
     </main>
   )
 }

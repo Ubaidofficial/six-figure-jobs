@@ -1,3 +1,11 @@
+# 2.8.45 (2026-04-15)
+
+
+### Bug Fixes
+
+* strengthen category, level, and companies pSEO templates with richer metadata, structured data, and safer companies-directory metadata fallback/noindex behavior
+
+
 # 2.8.44 (2026-04-15)
 
 
