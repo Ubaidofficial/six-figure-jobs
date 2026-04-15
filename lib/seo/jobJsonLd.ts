@@ -29,10 +29,15 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   const description = buildStructuredDescription(job, companyName)
   const baseSalary = buildBaseSalary(job)
 
-  const jobLocationType = isRemote ? 'TELECOMMUTE' : undefined
-  const jobLocation = isRemote ? undefined : buildJobLocation(job)
-
   const applicantLocationRequirements = isRemote ? buildApplicantLocationRequirements(job) : undefined
+  const jobLocation =
+    isRemote && !applicantLocationRequirements
+      ? buildRemoteJobLocationFallback(job)
+      : isRemote
+        ? undefined
+        : buildJobLocation(job)
+  const jobLocationType =
+    isRemote && (applicantLocationRequirements || jobLocation) ? 'TELECOMMUTE' : undefined
 
   const employmentType = normalizeEmploymentType(job.type || job.employmentType) || 'FULL_TIME'
 
@@ -120,15 +125,33 @@ function buildBaseSalary(job: any): any | undefined {
 }
 
 function buildApplicantLocationRequirements(job: any): any | undefined {
-  const raw = (job.countryCode ? String(job.countryCode) : '') || (job.remoteRegion ? String(job.remoteRegion) : '')
+  const rawCandidates = [
+    job.countryCode ? String(job.countryCode) : '',
+    job.remoteRegion ? String(job.remoteRegion) : '',
+    job.locationRaw ? String(job.locationRaw) : '',
+  ].filter(Boolean)
 
-  const s = raw.trim()
+  for (const candidate of rawCandidates) {
+    const requirement = parseApplicantLocationRequirement(candidate)
+    if (requirement) return requirement
+  }
+
+  return undefined
+}
+
+function parseApplicantLocationRequirement(raw: string): any | undefined {
+  const s = String(raw || '').trim()
 
   if (!s) {
     return undefined
   }
 
-  const upper = s.toUpperCase()
+  const normalized = s
+    .replace(/^remote\b[:\s-]*/i, '')
+    .replace(/^work\s+from\s+home\b[:\s-]*/i, '')
+    .replace(/^\(([^)]+)\)$/, '$1')
+    .trim()
+  const upper = normalized.toUpperCase()
 
   if (
     upper === 'GLOBAL' ||
@@ -157,6 +180,14 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
     ]
   }
 
+  if (upper === 'US' || upper === 'USA' || upper === 'UNITED STATES') {
+    return { '@type': 'Country', name: 'United States' }
+  }
+
+  if (upper === 'UK' || upper === 'UNITED KINGDOM' || upper === 'GREAT BRITAIN') {
+    return { '@type': 'Country', name: 'United Kingdom' }
+  }
+
   // ISO-3166-1 alpha-2 country code
   if (/^[A-Z]{2}$/.test(upper)) {
     const name = countryNameFromCode(upper) || upper
@@ -169,11 +200,25 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
   }
 
   // Fallback
-  if (s.length >= 3 && s.length <= 60) {
-    return { '@type': 'Country', name: s }
+  if (normalized.length >= 3 && normalized.length <= 60) {
+    return { '@type': 'Country', name: normalized }
   }
 
   return undefined
+}
+
+function buildRemoteJobLocationFallback(job: any): any | undefined {
+  const candidate = buildJobLocation(job)
+  const country =
+    candidate &&
+    typeof candidate === 'object' &&
+    candidate.address &&
+    typeof candidate.address === 'object'
+      ? candidate.address.addressCountry
+      : null
+
+  if (!country) return undefined
+  return candidate
 }
 
 function countryNameFromCode(code: string): string | null {

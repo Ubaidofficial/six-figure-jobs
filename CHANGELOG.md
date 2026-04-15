@@ -1,3 +1,11 @@
+# 2.8.46 (2026-04-15)
+
+
+### Bug Fixes
+
+* tighten job `JobPosting` schema for remote roles so `TELECOMMUTE` is only emitted when applicant geography can be supported, and infer applicant location requirements from normalized remote location text when available
+
+
 # 2.8.45 (2026-04-15)
 
 
