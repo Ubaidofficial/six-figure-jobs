@@ -4,19 +4,21 @@ import { prisma } from '../../lib/prisma'
 
 jest.mock('../../lib/prisma', () => ({
   prisma: {
-    $queryRaw: jest.fn(),
+    company: {
+      findMany: jest.fn(),
+    },
   },
 }))
 
-const queryRawMock = (prisma.$queryRaw as unknown) as jest.Mock
+const findManyMock = (prisma.company.findMany as unknown) as jest.Mock
 
 describe('company sitemap routes', () => {
   beforeEach(() => {
-    queryRawMock.mockReset()
+    findManyMock.mockReset()
   })
 
   it('does not emit /sitemap-company/1 when there are zero eligible companies', async () => {
-    queryRawMock.mockResolvedValueOnce([{ count: BigInt(0) }])
+    findManyMock.mockResolvedValueOnce([])
 
     const response = await getCompanySitemapIndex()
     const xml = await response.text()
@@ -26,7 +28,7 @@ describe('company sitemap routes', () => {
   })
 
   it('returns empty urlset with 200 for page 1 when there are no rows', async () => {
-    queryRawMock.mockResolvedValueOnce([])
+    findManyMock.mockResolvedValueOnce([])
 
     const response = await getCompanySitemapPage(new Request('http://localhost:3000/sitemap-company/1'), {
       params: Promise.resolve({ page: '1' }),
@@ -39,7 +41,7 @@ describe('company sitemap routes', () => {
   })
 
   it('returns 404 for page > 1 when there are no rows', async () => {
-    queryRawMock.mockResolvedValueOnce([])
+    findManyMock.mockResolvedValueOnce([])
 
     const response = await getCompanySitemapPage(new Request('http://localhost:3000/sitemap-company/2'), {
       params: Promise.resolve({ page: '2' }),

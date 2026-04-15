@@ -1,3 +1,12 @@
+# 2.8.40 (2026-04-15)
+
+
+### Bug Fixes
+
+* remove browse sitemap ownership of plain city hubs and remote role hubs so dedicated sitemap families stop publishing duplicate URLs in production SEO proofing
+* teach Jest the app `@/` alias and refresh the company sitemap route test mock so the SEO test suite matches the current route implementations again
+
+
 # 2.8.39 (2026-03-31)
 
 
