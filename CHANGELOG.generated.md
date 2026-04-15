@@ -1,4 +1,4 @@
-# 1.0.0 (2026-04-14)
+# 1.0.0 (2026-04-15)
 
 
 ### Bug Fixes
@@ -13,6 +13,7 @@
 * **changelog:** note PRD-2 SEO changes ([b9cea26](https://github.com/Ubaidofficial/six-figure-jobs/commit/b9cea26378da1ef936ee7ef9d1eb9c1030072133))
 * cheerio element type in WWR scraper ([90bf5ed](https://github.com/Ubaidofficial/six-figure-jobs/commit/90bf5eddeefcff2f10a524f9b0f8fd859c54341b))
 * **ci:** fetch two commits for changelog gate ([67ea348](https://github.com/Ubaidofficial/six-figure-jobs/commit/67ea348f83211ce496dde4f302ec4c516eeffede))
+* **ci:** harden pseo scrape and proofing ([e2b04e9](https://github.com/Ubaidofficial/six-figure-jobs/commit/e2b04e9c89a5257e334b26b354ed2f1b9e01c39f))
 * **ci:** split scrape and production sitemap proof ([65b6a87](https://github.com/Ubaidofficial/six-figure-jobs/commit/65b6a875c3db433b91ebe5fc3764696e54c3d393))
 * **ci:** stabilize seo gates and audit command ([652fd2e](https://github.com/Ubaidofficial/six-figure-jobs/commit/652fd2e625e07fab43dfdacc5bded83cd6af31c2))
 * **ci:** use prisma db push in seo gate ([f846394](https://github.com/Ubaidofficial/six-figure-jobs/commit/f846394df994a5626b50c1e774e47ac2ab71374a))

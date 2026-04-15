@@ -37,12 +37,10 @@ if ! railway whoami >/dev/null 2>&1; then
   exit 1
 fi
 
-service_args=()
+scope_args=(--environment "$ENVIRONMENT")
 if [[ -n "$SERVICE" ]]; then
-  service_args+=(--service "$SERVICE")
+  scope_args+=(--service "$SERVICE")
 fi
-
-env_args=(--environment "$ENVIRONMENT")
 
 echo "=========================================="
 echo "Railway Production Diagnosis"
@@ -60,15 +58,15 @@ railway status --json || railway status
 
 echo ""
 echo "== Service Status =="
-railway service status --all "${env_args[@]}" --json || railway service status --all "${env_args[@]}"
+railway service status --all "${scope_args[@]}" --json || railway service status --all "${scope_args[@]}"
 
 echo ""
 echo "== Recent Deployments =="
-railway deployment list "${service_args[@]}" "${env_args[@]}" --limit 5 --json || railway deployment list "${service_args[@]}" "${env_args[@]}" --limit 5
+railway deployment list "${scope_args[@]}" --limit 5 --json || railway deployment list "${scope_args[@]}" --limit 5
 
 echo ""
 echo "== Production Env (filtered) =="
-railway variables "${service_args[@]}" "${env_args[@]}" --json | node -e '
+railway variables "${scope_args[@]}" --json | node -e '
   const fs = require("fs");
   const raw = fs.readFileSync(0, "utf8");
   const data = JSON.parse(raw);
@@ -90,15 +88,15 @@ railway variables "${service_args[@]}" "${env_args[@]}" --json | node -e '
 
 echo ""
 echo "== Error Logs (Prisma / schema / pool filters) =="
-railway logs "${service_args[@]}" "${env_args[@]}" --lines "$LINES" --filter 'Prisma OR P1001 OR P1002 OR P2024 OR "_prisma_migrations" OR "does not exist" OR "column" OR "relation"'
+railway logs "${scope_args[@]}" --lines "$LINES" --filter 'Prisma OR P1001 OR P1002 OR P2024 OR "_prisma_migrations" OR "does not exist" OR "column" OR "relation"'
 
 echo ""
 echo "== Prisma Migration Status =="
-railway run "${service_args[@]}" "${env_args[@]}" npx prisma migrate status --schema prisma/schema.prisma
+railway run "${scope_args[@]}" npx prisma migrate status --schema prisma/schema.prisma
 
 echo ""
 echo "== Prisma Schema Probe =="
-railway run "${service_args[@]}" "${env_args[@]}" node scripts/deployment/railway-production-prisma-probe.mjs
+railway run "${scope_args[@]}" node scripts/deployment/railway-production-prisma-probe.mjs
 
 cat <<'EOF'
 
