@@ -1,3 +1,11 @@
+# 2.8.42 (2026-04-15)
+
+
+### Bug Fixes
+
+* cut duplicate live-page fetches from strict SEO validation, add transient per-URL retries, and shorten whole-run proof retries so production SEO proofing stops timing out on random body-read aborts
+
+
 # 2.8.41 (2026-04-15)
 
 

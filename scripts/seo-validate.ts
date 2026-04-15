@@ -26,6 +26,8 @@ import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../lib/jobs/fres
  *   SEO_STRICT=1
  *   SEO_TIMEOUT_MS=15000
  *   SEO_CONCURRENCY=12
+ *   SEO_URL_RETRY_ATTEMPTS=2
+ *   SEO_URL_RETRY_DELAY_MS=750
  */
 
 type Failure = {
@@ -65,6 +67,8 @@ const FULL = process.env.SEO_FULL === '1'
 const STRICT = process.env.SEO_STRICT === '1'
 const TIMEOUT_MS = Math.max(1000, Number(process.env.SEO_TIMEOUT_MS || '15000'))
 const CONCURRENCY = Math.max(1, Math.min(64, Number(process.env.SEO_CONCURRENCY || '12')))
+const URL_RETRY_ATTEMPTS = Math.max(0, Number(process.env.SEO_URL_RETRY_ATTEMPTS || '2'))
+const URL_RETRY_DELAY_MS = Math.max(0, Number(process.env.SEO_URL_RETRY_DELAY_MS || '750'))
 const MIN_STRICT_SAMPLE = 1000
 const JOB_SITEMAP_SOURCE = 'app/sitemap-jobs/[page]/route.ts:62'
 
@@ -257,6 +261,22 @@ function formatHttpError(res: Response, body: string): string {
   }
 
   return details.join(' ')
+}
+
+function sleep(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve()
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isRetryableValidationError(error: unknown): boolean {
+  const message = String((error as any)?.message || error || '').toLowerCase()
+  return (
+    message.includes('body_read_timeout') ||
+    message.includes('operation was aborted') ||
+    message.includes('this operation was aborted') ||
+    message.includes('terminated') ||
+    message.includes('fetch failed')
+  )
 }
 
 async function fetchText(url: string): Promise<string> {
@@ -473,48 +493,7 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
     return failures
   }
 
-  let res = await fetchManual(url, 'HEAD')
-  if (res.status === 405 || res.status === 501) {
-    res = await fetchManual(url, 'GET')
-  }
-
-  if (res.status >= 300 && res.status < 400) {
-    failures.push(
-      buildFailure(
-        'redirect',
-        sitemapUrl,
-        sitemapSource,
-        url,
-        `${res.status} -> ${res.headers.get('location') || 'unknown'}`,
-      ),
-    )
-    return failures
-  }
-
-  if (res.status !== 200) {
-    failures.push(
-      buildFailure('non_200', sitemapUrl, sitemapSource, url, String(res.status)),
-    )
-    return failures
-  }
-
-  if (hasNoindexDirective(res.headers.get('x-robots-tag'))) {
-    failures.push(
-      buildFailure(
-        'robots_noindex',
-        sitemapUrl,
-        sitemapSource,
-        url,
-        `x-robots-tag=${res.headers.get('x-robots-tag')}`,
-      ),
-    )
-  }
-
-  const contentType = (res.headers.get('content-type') || '').toLowerCase()
-  const isHtml = contentType.includes('text/html') || contentType.includes('application/xhtml+xml')
-  if (!isHtml) return failures
-
-  const htmlRes = await fetchFollow(url, 'text/html,*/*;q=0.8')
+  const htmlRes = await fetchFollow(url, 'text/html,application/xhtml+xml,*/*;q=0.8')
 
   if (!htmlRes.ok) {
     failures.push(
@@ -541,6 +520,7 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
         `GET followed to ${finalNorm}`,
       ),
     )
+    return failures
   }
 
   if (hasNoindexDirective(htmlRes.headers.get('x-robots-tag'))) {
@@ -554,6 +534,10 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
       ),
     )
   }
+
+  const contentType = (htmlRes.headers.get('content-type') || '').toLowerCase()
+  const isHtml = contentType.includes('text/html') || contentType.includes('application/xhtml+xml')
+  if (!isHtml) return failures
 
   const html = await readBodyTextWithTimeout(htmlRes)
   const directives = extractMetaRobotsDirectives(html)
@@ -604,6 +588,34 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
   }
 
   return failures
+}
+
+async function checkUrlWithRetry(
+  url: string,
+  sitemapUrl: string,
+  sitemapSource: string,
+): Promise<Failure[]> {
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= URL_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return await checkUrl(url, sitemapUrl, sitemapSource)
+    } catch (error) {
+      lastError = error
+      if (attempt >= URL_RETRY_ATTEMPTS || !isRetryableValidationError(error)) {
+        throw error
+      }
+
+      const retryNumber = attempt + 1
+      const detail = String((error as any)?.message || error || 'unknown_error')
+      console.warn(
+        `[seo:validate] transient check error; retrying ${retryNumber}/${URL_RETRY_ATTEMPTS} ${url} (${detail})`,
+      )
+      await sleep(URL_RETRY_DELAY_MS * retryNumber)
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError || 'unknown_error'))
 }
 
 async function collectSitemapBuckets(rootUrl: string): Promise<SitemapCollection> {
@@ -807,6 +819,7 @@ async function main() {
   console.log(`[seo:validate] full mode: ${FULL ? 'on' : 'off'}`)
   console.log(`[seo:validate] sample per sitemap: ${SAMPLE_PER_SITEMAP}`)
   console.log(`[seo:validate] concurrency: ${CONCURRENCY}`)
+  console.log(`[seo:validate] per-url retries: ${URL_RETRY_ATTEMPTS}`)
   console.log(`[seo:validate] db job proof mode: ${USE_DB_JOB_PROOF ? 'on' : 'off'}`)
 
   const { buckets, structureFailures } = await collectSitemapBuckets(ROOT_SITEMAP_URL)
@@ -871,7 +884,7 @@ async function main() {
 
     await runWithConcurrency(sample, async (url) => {
       try {
-        const result = await checkUrl(url, bucket.sitemapUrl, bucket.sitemapSource)
+        const result = await checkUrlWithRetry(url, bucket.sitemapUrl, bucket.sitemapSource)
         if (result.length > 0) failures.push(...result)
       } catch (error: any) {
         failures.push(

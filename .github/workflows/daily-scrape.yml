@@ -266,8 +266,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          ATTEMPTS=3
-          DELAY_SECONDS=90
+          ATTEMPTS=2
+          DELAY_SECONDS=30
 
           for attempt in $(seq 1 "$ATTEMPTS"); do
             echo "SEO validation attempt ${attempt}/${ATTEMPTS}"
