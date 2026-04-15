@@ -1,3 +1,11 @@
+# 2.8.41 (2026-04-15)
+
+
+### Bug Fixes
+
+* upgrade the daily scrape log upload step to `actions/upload-artifact@v6` so the workflow stops emitting the remaining Node 20 action deprecation warning
+
+
 # 2.8.40 (2026-04-15)
 
 
