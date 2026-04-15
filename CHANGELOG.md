@@ -1,3 +1,11 @@
+# 2.8.43 (2026-04-15)
+
+
+### Bug Fixes
+
+* align the daily scrape artifact upload step with the current official `actions/upload-artifact@v7` usage so the workflow tracks the supported GitHub-hosted runner major
+
+
 # 2.8.42 (2026-04-15)
 
 
