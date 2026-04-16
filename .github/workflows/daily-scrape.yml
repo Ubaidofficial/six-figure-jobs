@@ -273,7 +273,7 @@ jobs:
             echo "SEO validation attempt ${attempt}/${ATTEMPTS}"
             echo "Production base URL: ${PRODUCTION_SITE_URL}"
 
-            if SEO_BASE_URL="${PRODUCTION_SITE_URL}" npm run seo:validate:strict; then
+            if SEO_BASE_URL="${PRODUCTION_SITE_URL}" SEO_URL_RETRY_ATTEMPTS=4 SEO_URL_RETRY_DELAY_MS=1500 npm run seo:validate:strict; then
               echo "SEO noindex guard passed."
               exit 0
             fi

@@ -1,3 +1,12 @@
+# 2.8.47 (2026-04-16)
+
+
+### Bug Fixes
+
+* retry transient `5xx` proof failures and likely incomplete streamed HTML before failing canonical checks so scheduled production SEO proofing stops flaking on healthy pages
+* raise per-URL retry budget in the daily scrape production proof step and cover the new retry heuristics with Jest tests
+
+
 # 2.8.46 (2026-04-15)
 
 

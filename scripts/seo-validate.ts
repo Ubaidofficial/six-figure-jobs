@@ -10,6 +10,11 @@ import {
   evaluateJobIndexability,
 } from '../lib/jobs/qualityGate'
 import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../lib/jobs/freshness'
+import {
+  buildCanonicalMissingDetail,
+  isRetryableValidationFailure,
+  summarizeRetryableFailures,
+} from '../lib/seo/validatorRetry'
 
 /**
  * SEO validator for sitemap integrity + indexability signals.
@@ -547,7 +552,15 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
 
   const canonical = extractCanonical(html, finalUrl)
   if (!canonical) {
-    failures.push(buildFailure('canonical_missing', sitemapUrl, sitemapSource, url))
+    failures.push(
+      buildFailure(
+        'canonical_missing',
+        sitemapUrl,
+        sitemapSource,
+        url,
+        buildCanonicalMissingDetail(html),
+      ),
+    )
     return failures
   }
 
@@ -599,7 +612,23 @@ async function checkUrlWithRetry(
 
   for (let attempt = 0; attempt <= URL_RETRY_ATTEMPTS; attempt += 1) {
     try {
-      return await checkUrl(url, sitemapUrl, sitemapSource)
+      const result = await checkUrl(url, sitemapUrl, sitemapSource)
+      const retryableFailures = result.filter(isRetryableValidationFailure)
+
+      if (retryableFailures.length > 0 && retryableFailures.length === result.length) {
+        if (attempt >= URL_RETRY_ATTEMPTS) {
+          return result
+        }
+
+        const retryNumber = attempt + 1
+        console.warn(
+          `[seo:validate] transient validation failure; retrying ${retryNumber}/${URL_RETRY_ATTEMPTS} ${url} (${summarizeRetryableFailures(retryableFailures)})`,
+        )
+        await sleep(URL_RETRY_DELAY_MS * retryNumber)
+        continue
+      }
+
+      return result
     } catch (error) {
       lastError = error
       if (attempt >= URL_RETRY_ATTEMPTS || !isRetryableValidationError(error)) {
