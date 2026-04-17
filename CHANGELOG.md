@@ -1,3 +1,11 @@
+# 2.8.48 (2026-04-17)
+
+
+### Bug Fixes
+
+* retire stale canonical job-detail URLs as 404s, stop alias routes from redirecting stale jobs, and teach the GSC classifier to treat stale-job 404s as expected cleanup
+
+
 # 2.8.47 (2026-04-16)
 
 

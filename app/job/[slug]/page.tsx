@@ -11,6 +11,7 @@ import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
 import { queryJobs, type JobQueryResult, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
+import { isJobDetailAvailable } from '../../../lib/jobs/detailAvailability'
 import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
@@ -126,7 +127,9 @@ const getJobBySlug = cache(async (slug: string): Promise<JobWithCompany | null> 
     include: { companyRef: true },
   })
 
-  return (job as JobWithCompany) || null
+  if (!job || !isJobDetailAvailable(job)) return null
+
+  return job as JobWithCompany
 })
 
 /* -------------------------------------------------------------------------- */

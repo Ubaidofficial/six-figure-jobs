@@ -4,6 +4,7 @@
 import { promises as fs } from 'node:fs'
 
 import { prisma } from '../lib/prisma'
+import { getJobDetailAvailability, type JobDetailAvailability } from '../lib/jobs/detailAvailability'
 import { parseJobSlugParam } from '../lib/jobs/jobSlug'
 import { isCanonicalSlug, isTier1Role } from '../lib/roles/canonicalSlugs'
 
@@ -13,6 +14,9 @@ type JobLookup = {
   externalId: string | null
   title: string
   isExpired: boolean
+  lastSeenAt: Date | null
+  postedAt: Date | null
+  createdAt: Date | null
   updatedAt: Date
 }
 
@@ -35,6 +39,7 @@ type UrlRow = {
   shortId: string | null
   dbFound: boolean
   dbExpired: boolean | null
+  dbAvailability: JobDetailAvailability | null
   dbJobId: string | null
   dbTitle: string | null
   className: string
@@ -229,6 +234,9 @@ async function findJobBySlug(urlPath: string): Promise<{
       externalId: true,
       title: true,
       isExpired: true,
+      lastSeenAt: true,
+      postedAt: true,
+      createdAt: true,
       updatedAt: true,
     },
   })) as JobLookup | null
@@ -251,6 +259,7 @@ function classifyRow(
     path,
     dbFound,
     dbExpired,
+    dbAvailability,
     dbTitle,
     roleSlug,
     roleTier1,
@@ -291,6 +300,14 @@ function classifyRow(
           className: 'expected_404_expired_job',
           expected: !inSitemap,
           notes: 'Job exists but is expired',
+        }
+      }
+
+      if (dbFound && dbAvailability === 'stale') {
+        return {
+          className: 'expected_404_stale_job',
+          expected: !inSitemap,
+          notes: 'Job exists but is stale',
         }
       }
 
@@ -429,6 +446,7 @@ function toTsv(rows: UrlRow[]): string {
     'shortId',
     'dbFound',
     'dbExpired',
+    'dbAvailability',
     'dbJobId',
     'dbTitle',
     'className',
@@ -457,6 +475,7 @@ function toTsv(rows: UrlRow[]): string {
       row.shortId ?? '',
       row.dbFound,
       row.dbExpired == null ? '' : row.dbExpired,
+      row.dbAvailability ?? '',
       row.dbJobId ?? '',
       row.dbTitle ?? '',
       row.className,
@@ -539,6 +558,7 @@ async function classifySingle(
       shortId: null,
       dbFound: false,
       dbExpired: null,
+      dbAvailability: null,
       dbJobId: null,
       dbTitle: null,
       className: 'invalid_url',
@@ -567,6 +587,7 @@ async function classifySingle(
   let shortId: string | null = null
   let dbFound = false
   let dbExpired: boolean | null = null
+  let dbAvailability: JobDetailAvailability | null = null
   let dbJobId: string | null = null
   let dbTitle: string | null = null
 
@@ -589,6 +610,7 @@ async function classifySingle(
       if (lookup.job) {
         dbFound = true
         dbExpired = lookup.job.isExpired
+        dbAvailability = getJobDetailAvailability(lookup.job)
         dbJobId = lookup.job.id
         dbTitle = lookup.job.title
       }
@@ -645,6 +667,7 @@ async function classifySingle(
     shortId,
     dbFound,
     dbExpired,
+    dbAvailability,
     dbJobId,
     dbTitle,
     error,
