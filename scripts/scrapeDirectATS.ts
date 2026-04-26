@@ -10,7 +10,17 @@ const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n"
 
 function toAtsProvider(atsType: string): AtsProvider | null {
   const t = String(atsType || '').toLowerCase().trim()
-  if (t === 'greenhouse' || t === 'lever' || t === 'ashby' || t === 'workday') return t
+  if (
+    t === 'greenhouse' ||
+    t === 'lever' ||
+    t === 'ashby' ||
+    t === 'workday' ||
+    t === 'smartrecruiters' ||
+    t === 'recruitee' ||
+    t === 'workable'
+  ) {
+    return t
+  }
   return null
 }
 
@@ -57,12 +67,6 @@ async function scrapeDirectATS() {
 
     if (!provider) {
       __slog(`  ⏭️  Unsupported ATS: ${company.atsType}`)
-      stats.skipped++
-      continue
-    }
-
-    if (provider === 'workday') {
-      __slog(`  ⏭️  Workday (not implemented yet)`)
       stats.skipped++
       continue
     }

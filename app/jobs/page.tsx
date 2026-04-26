@@ -10,6 +10,7 @@ import {
   type JobWithCompany,
 } from '../../lib/jobs/queryJobs'
 import { prisma } from '../../lib/prisma'
+import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 import { formatRelativeTime } from '@/lib/utils/time'
@@ -168,6 +169,65 @@ function prettyRoleAndCountryFromSlug(slug: string): string {
   if (!roleLabel) return slug
   if (!countryCode) return roleLabel
   return `${roleLabel} · ${countryCode}`
+}
+
+function buildJobsBreadcrumbJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: 'Jobs', item: `${SITE_URL}/jobs` },
+    ],
+  }
+}
+
+function buildJobsCollectionPageJsonLd(totalJobs: number) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'All $100k+ jobs',
+    description: `Browse ${totalJobs.toLocaleString()} verified $100k+ jobs from company ATS feeds and trusted sources.`,
+    url: `${SITE_URL}/jobs`,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  }
+}
+
+function buildJobsFaqJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'Are these six-figure jobs verified?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. The jobs index prioritizes live roles from company ATS feeds and trusted sources, then filters to verified six-figure compensation.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Can I browse by salary band, country, and role?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. The jobs hub links into salary-band pages, role pages, country pages, and category pages so searchers can land on more specific six-figure job slices.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How often is the jobs feed refreshed?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Listings are refreshed frequently and stale jobs are removed so the main jobs index stays current and useful for applicants and search engines.',
+        },
+      },
+    ],
+  }
 }
 
 function JobsIndexFallback({ techFilter }: { techFilter?: string }) {
@@ -361,6 +421,15 @@ export default async function JobsIndexPage({
 
   const basePath = '/jobs'
   const totalPages = data.totalPages
+  const breadcrumbJsonLd = buildJobsBreadcrumbJsonLd()
+  const itemListJsonLd = buildItemListJsonLd({
+    name: 'All $100k+ jobs',
+    jobs: dedupedJobs.map((job) => ({ id: job.id, title: job.title })),
+    page,
+    pageSize: PAGE_SIZE,
+  })
+  const collectionPageJsonLd = buildJobsCollectionPageJsonLd(data.total)
+  const faqJsonLd = buildJobsFaqJsonLd()
 
     return (
       <main className={styles.page}>
@@ -437,6 +506,40 @@ export default async function JobsIndexPage({
           )}
         </section>
       </div>
+        <section className={styles.below} aria-label="Why use this jobs hub">
+        <div className={styles.belowHeader}>
+          <h2 className={styles.belowTitle}>Why this page ranks as the main jobs hub</h2>
+          <p className={styles.belowBlurb}>
+            This page keeps the broadest six-figure inventory in one crawlable index, then routes
+            visitors into tighter salary, role, and location pages when they need more specific
+            results.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
+            <h3 className="text-sm font-semibold text-slate-50">Verified pay floor</h3>
+            <p className="mt-2">
+              Jobs shown here meet the six-figure threshold in USD or local equivalent, which keeps
+              the main index aligned with search intent.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
+            <h3 className="text-sm font-semibold text-slate-50">Fresh live inventory</h3>
+            <p className="mt-2">
+              ATS-driven listings are refreshed frequently, and stale jobs are removed to reduce dead
+              clicks and keep the hub trustworthy.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
+            <h3 className="text-sm font-semibold text-slate-50">Clean internal routing</h3>
+            <p className="mt-2">
+              Salary-band pages, countries, categories, and role hubs sit one click away so Google can
+              discover narrower high-intent pages from the main jobs index.
+            </p>
+          </div>
+        </div>
+      </section>
         <section className={styles.below} aria-label="Browse salary bands">
         <div className={styles.belowHeader}>
           <h2 className={styles.belowTitle}>Browse by salary band</h2>
@@ -507,6 +610,22 @@ export default async function JobsIndexPage({
             </section>
           )
         })}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
       </section>
       </main>
     )

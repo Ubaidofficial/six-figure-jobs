@@ -35,6 +35,7 @@
     "pseo:generate:playbook-batch": "tsx scripts/generate-playbook-batch.ts",
     "dashboard:pseo": "tsx scripts/monitoring-dashboard.ts",
     "generate:sitemap": "tsx scripts/generate-sitemap.ts",
+    "google:indexing:jobs": "node --import tsx scripts/notify-google-indexing.ts",
     "seo:validate": "tsx scripts/seo-validate.ts",
     "seo:validate:strict": "SEO_STRICT=1 SEO_SAMPLE_PER_SITEMAP=1000 SEO_CONCURRENCY=4 SEO_TIMEOUT_MS=60000 tsx scripts/seo-validate.ts",
     "seo:sample": "tsx scripts/seo-template-sanity.ts",

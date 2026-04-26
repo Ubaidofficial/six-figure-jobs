@@ -1,3 +1,12 @@
+# 2.8.49 (2026-04-26)
+
+
+### Bug Fixes
+
+* upgrade the main jobs and remote pSEO hubs with richer server-rendered content, live public count alignment, shared category definitions, and stronger collection/list structured data
+* harden board and ATS ingestion by adding SmartRecruiters, Recruitee, Workable, and Workday support, switching Lever to the public postings API, and adding repair scripts for stale ATS and board-derived company mappings
+
+
 # 2.8.48 (2026-04-17)
 
 

@@ -72,7 +72,7 @@ async function checkAtsProviders() {
     const company = await prisma.company.findFirst({
       where: { atsProvider: provider, atsUrl: { not: null } },
       select: { name: true, atsUrl: true },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [{ jobCount: 'desc' }, { updatedAt: 'desc' }],
     })
 
     if (!company?.atsUrl) {

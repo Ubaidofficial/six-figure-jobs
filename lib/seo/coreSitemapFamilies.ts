@@ -12,6 +12,7 @@ import {
   isSalaryTierPageIndexable,
   MIN_COMPANY_INDEXABLE_JOBS,
 } from './indexabilityGates'
+import { JOB_CATEGORY_MAP } from './jobCategories'
 
 type CoreFamilyKey = 'jobs' | 'company' | 'salary' | 'category' | 'level' | 'browse'
 
@@ -28,31 +29,6 @@ type CoreFamilyState = {
 const CATEGORY_MIN_INDEXABLE_JOBS = 3
 const LEVEL_MIN_INDEXABLE_JOBS = 3
 const LEVELS = ['entry', 'mid', 'senior', 'lead', 'executive'] as const
-const CATEGORY_ROLE_MAP: Record<string, string[]> = {
-  engineering: [
-    'software-engineer',
-    'backend',
-    'frontend',
-    'full-stack',
-    'mobile',
-    'ios',
-    'android',
-    'platform',
-    'systems',
-    'application',
-    'devops',
-    'sre',
-    'infrastructure',
-    'web-developer',
-  ],
-  product: ['product-manager', 'product-owner', 'product'],
-  data: ['data-scientist', 'data-engineer', 'analytics', 'data-analyst'],
-  design: ['designer', 'design', 'ux', 'ui', 'product-designer'],
-  devops: ['devops', 'sre', 'site-reliability'],
-  mlai: ['machine-learning', 'ml', 'ai', 'artificial-intelligence'],
-  sales: ['sales', 'account-executive', 'sdr', 'bdr'],
-  marketing: ['marketing', 'growth', 'demand-generation', 'seo', 'performance'],
-}
 
 function resolveSettledValue<T>(
   routeTag: string,
@@ -137,8 +113,8 @@ export async function hasCategorySitemapEntries(): Promise<boolean> {
     }))
     .filter((row) => row.slug)
 
-  return Object.keys(CATEGORY_ROLE_MAP).some((category) => {
-    const slugs = (CATEGORY_ROLE_MAP[category] || []).map((value) => value.toLowerCase())
+  return Object.keys(JOB_CATEGORY_MAP).some((category) => {
+    const slugs = (JOB_CATEGORY_MAP[category]?.roleSlugs || []).map((value) => value.toLowerCase())
     let total = 0
 
     for (const row of roleStats) {

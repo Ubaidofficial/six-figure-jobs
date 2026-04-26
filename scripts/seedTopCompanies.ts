@@ -1,5 +1,5 @@
 // scripts/seedTopCompanies.ts
-// Seeds 150+ top tech companies with their ATS URLs
+// Seeds a curated set of ATS-backed companies and keeps ATS metadata aligned.
 
 import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
@@ -29,11 +29,8 @@ const GREENHOUSE_COMPANIES: CompanySeed[] = [
   { name: 'Scale AI', slug: 'scale-ai', atsProvider: 'greenhouse', atsSlug: 'scaleai', website: 'https://scale.com', countryCode: 'US' },
   { name: 'Hugging Face', slug: 'hugging-face', atsProvider: 'greenhouse', atsSlug: 'huggingface', website: 'https://huggingface.co', countryCode: 'US' },
   { name: 'Cohere', slug: 'cohere', atsProvider: 'greenhouse', atsSlug: 'cohere', website: 'https://cohere.com', countryCode: 'CA' },
-  { name: 'Perplexity', slug: 'perplexity', atsProvider: 'greenhouse', atsSlug: 'perplexityai', website: 'https://perplexity.ai', countryCode: 'US' },
-  { name: 'Mistral AI', slug: 'mistral-ai', atsProvider: 'greenhouse', atsSlug: 'mistral', website: 'https://mistral.ai', countryCode: 'FR' },
   { name: 'Runway', slug: 'runway', atsProvider: 'greenhouse', atsSlug: 'runwayml', website: 'https://runway.com', countryCode: 'US' },
   { name: 'Stability AI', slug: 'stability-ai', atsProvider: 'greenhouse', atsSlug: 'stabilityai', website: 'https://stability.ai', countryCode: 'GB' },
-  { name: 'Adept', slug: 'adept', atsProvider: 'greenhouse', atsSlug: 'adeptailabs', website: 'https://adept.ai', countryCode: 'US' },
   { name: 'Character AI', slug: 'character-ai', atsProvider: 'greenhouse', atsSlug: 'character', website: 'https://character.ai', countryCode: 'US' },
   { name: 'Inflection AI', slug: 'inflection-ai', atsProvider: 'greenhouse', atsSlug: 'inflectionai', website: 'https://inflection.ai', countryCode: 'US' },
   
@@ -47,7 +44,6 @@ const GREENHOUSE_COMPANIES: CompanySeed[] = [
   { name: 'Robinhood', slug: 'robinhood', atsProvider: 'greenhouse', atsSlug: 'robinhood', website: 'https://robinhood.com', countryCode: 'US' },
   { name: 'Chime', slug: 'chime', atsProvider: 'greenhouse', atsSlug: 'chime', website: 'https://chime.com', countryCode: 'US' },
   { name: 'Affirm', slug: 'affirm', atsProvider: 'greenhouse', atsSlug: 'affirm', website: 'https://affirm.com', countryCode: 'US' },
-  { name: 'Klarna', slug: 'klarna', atsProvider: 'greenhouse', atsSlug: 'klarna', website: 'https://klarna.com', countryCode: 'SE' },
   { name: 'Wise', slug: 'wise', atsProvider: 'greenhouse', atsSlug: 'wise', website: 'https://wise.com', countryCode: 'GB' },
   { name: 'Revolut', slug: 'revolut', atsProvider: 'greenhouse', atsSlug: 'revolut', website: 'https://revolut.com', countryCode: 'GB' },
   
@@ -66,10 +62,9 @@ const GREENHOUSE_COMPANIES: CompanySeed[] = [
   { name: 'HashiCorp', slug: 'hashicorp', atsProvider: 'greenhouse', atsSlug: 'hashicorp', website: 'https://hashicorp.com', countryCode: 'US' },
   { name: 'GitLab', slug: 'gitlab', atsProvider: 'greenhouse', atsSlug: 'gitlab', website: 'https://gitlab.com', countryCode: 'US' },
   { name: 'Retool', slug: 'retool', atsProvider: 'greenhouse', atsSlug: 'retool', website: 'https://retool.com', countryCode: 'US' },
-  { name: 'Linear', slug: 'linear', atsProvider: 'greenhouse', atsSlug: 'linear', website: 'https://linear.app', countryCode: 'US' },
   { name: 'Figma', slug: 'figma', atsProvider: 'greenhouse', atsSlug: 'figma', website: 'https://figma.com', countryCode: 'US' },
   { name: 'Webflow', slug: 'webflow', atsProvider: 'greenhouse', atsSlug: 'webflow', website: 'https://webflow.com', countryCode: 'US' },
-  { name: 'Dbt Labs', slug: 'dbt-labs', atsProvider: 'greenhouse', atsSlug: 'daboratoriesdbtlabs', website: 'https://getdbt.com', countryCode: 'US' },
+  { name: 'Dbt Labs', slug: 'dbt-labs', atsProvider: 'greenhouse', atsSlug: 'dbtlabsinc', website: 'https://getdbt.com', countryCode: 'US' },
   { name: 'Fivetran', slug: 'fivetran', atsProvider: 'greenhouse', atsSlug: 'fivetran', website: 'https://fivetran.com', countryCode: 'US' },
   { name: 'Hex', slug: 'hex', atsProvider: 'greenhouse', atsSlug: 'hex', website: 'https://hex.tech', countryCode: 'US' },
   { name: 'Sentry', slug: 'sentry', atsProvider: 'greenhouse', atsSlug: 'sentry', website: 'https://sentry.io', countryCode: 'US' },
@@ -100,9 +95,11 @@ const GREENHOUSE_COMPANIES: CompanySeed[] = [
   { name: 'HubSpot', slug: 'hubspot', atsProvider: 'greenhouse', atsSlug: 'hubspot', website: 'https://hubspot.com', countryCode: 'US' },
   
   // Security
-  { name: '1Password', slug: '1password', atsProvider: 'greenhouse', atsSlug: '1password', website: 'https://1password.com', countryCode: 'CA' },
+  { name: 'Samsara', slug: 'samsara', atsProvider: 'greenhouse', atsSlug: 'samsara', website: 'https://samsara.com', countryCode: 'US' },
+  { name: '1Password', slug: '1password', atsProvider: 'ashby', atsSlug: '1password', website: 'https://1password.com/jobs/', countryCode: 'CA' },
   { name: 'Verkada', slug: 'verkada', atsProvider: 'greenhouse', atsSlug: 'verkada', website: 'https://verkada.com', countryCode: 'US' },
   { name: 'CrowdStrike', slug: 'crowdstrike', atsProvider: 'greenhouse', atsSlug: 'crowdstrike', website: 'https://crowdstrike.com', countryCode: 'US' },
+  { name: 'Datadog', slug: 'datadog', atsProvider: 'greenhouse', atsSlug: 'datadog', website: 'https://datadoghq.com', countryCode: 'US' },
   { name: 'Snyk', slug: 'snyk', atsProvider: 'greenhouse', atsSlug: 'snyk', website: 'https://snyk.io', countryCode: 'US' },
   
   // Aerospace / Defense
@@ -112,39 +109,14 @@ const GREENHOUSE_COMPANIES: CompanySeed[] = [
   { name: 'Planet Labs', slug: 'planet-labs', atsProvider: 'greenhouse', atsSlug: 'planetlabs', website: 'https://planet.com', countryCode: 'US' },
   
   // Health / Biotech
-  { name: 'Tempus', slug: 'tempus', atsProvider: 'greenhouse', atsSlug: 'tempus', website: 'https://tempus.com', countryCode: 'US' },
-  { name: 'Color', slug: 'color', atsProvider: 'greenhouse', atsSlug: 'color', website: 'https://color.com', countryCode: 'US' },
   { name: 'Ro', slug: 'ro', atsProvider: 'greenhouse', atsSlug: 'ro', website: 'https://ro.co', countryCode: 'US' },
-  { name: 'Hims & Hers', slug: 'hims-hers', atsProvider: 'greenhouse', atsSlug: 'himshers', website: 'https://hims.com', countryCode: 'US' },
 ]
 
 // ============================================================================
-// LEVER COMPANIES (30+)
+// LEVER COMPANIES (validated current slugs only)
 // ============================================================================
 const LEVER_COMPANIES: CompanySeed[] = [
-  { name: 'Netflix', slug: 'netflix', atsProvider: 'lever', atsSlug: 'netflix', website: 'https://netflix.com', countryCode: 'US' },
-  { name: 'Shopify', slug: 'shopify', atsProvider: 'lever', atsSlug: 'shopify', website: 'https://shopify.com', countryCode: 'CA' },
-  { name: 'Twilio', slug: 'twilio', atsProvider: 'lever', atsSlug: 'twilio', website: 'https://twilio.com', countryCode: 'US' },
-  { name: 'Asana', slug: 'asana', atsProvider: 'lever', atsSlug: 'asana', website: 'https://asana.com', countryCode: 'US' },
-  { name: 'Postman', slug: 'postman', atsProvider: 'lever', atsSlug: 'postman', website: 'https://postman.com', countryCode: 'US' },
-  { name: 'Canva', slug: 'canva', atsProvider: 'lever', atsSlug: 'canva', website: 'https://canva.com', countryCode: 'AU' },
-  { name: 'Atlassian', slug: 'atlassian', atsProvider: 'lever', atsSlug: 'atlassian', website: 'https://atlassian.com', countryCode: 'AU' },
-  { name: 'Datadog', slug: 'datadog', atsProvider: 'lever', atsSlug: 'datadog', website: 'https://datadoghq.com', countryCode: 'US' },
-  { name: 'Grafana Labs', slug: 'grafana-labs', atsProvider: 'lever', atsSlug: 'grafanalabs', website: 'https://grafana.com', countryCode: 'US' },
-  { name: 'LaunchDarkly', slug: 'launchdarkly', atsProvider: 'lever', atsSlug: 'launchdarkly', website: 'https://launchdarkly.com', countryCode: 'US' },
-  { name: 'Auth0', slug: 'auth0', atsProvider: 'lever', atsSlug: 'auth0', website: 'https://auth0.com', countryCode: 'US' },
-  { name: 'Segment', slug: 'segment', atsProvider: 'lever', atsSlug: 'segment', website: 'https://segment.com', countryCode: 'US' },
-  { name: 'Miro', slug: 'miro', atsProvider: 'lever', atsSlug: 'miro', website: 'https://miro.com', countryCode: 'US' },
-  { name: 'Loom', slug: 'loom', atsProvider: 'lever', atsSlug: 'useloom', website: 'https://loom.com', countryCode: 'US' },
-  { name: 'Calendly', slug: 'calendly', atsProvider: 'lever', atsSlug: 'calendly', website: 'https://calendly.com', countryCode: 'US' },
-  { name: 'Dropbox', slug: 'dropbox', atsProvider: 'lever', atsSlug: 'dropbox', website: 'https://dropbox.com', countryCode: 'US' },
-  { name: 'Slack', slug: 'slack', atsProvider: 'lever', atsSlug: 'slack', website: 'https://slack.com', countryCode: 'US' },
-  { name: 'Box', slug: 'box', atsProvider: 'lever', atsSlug: 'box', website: 'https://box.com', countryCode: 'US' },
-  { name: 'DocuSign', slug: 'docusign', atsProvider: 'lever', atsSlug: 'docusign', website: 'https://docusign.com', countryCode: 'US' },
-  { name: 'Okta', slug: 'okta', atsProvider: 'lever', atsSlug: 'okta', website: 'https://okta.com', countryCode: 'US' },
   { name: 'Palantir', slug: 'palantir', atsProvider: 'lever', atsSlug: 'palantir', website: 'https://palantir.com', countryCode: 'US' },
-  { name: 'Flexport', slug: 'flexport', atsProvider: 'lever', atsSlug: 'flexport', website: 'https://flexport.com', countryCode: 'US' },
-  { name: 'Samsara', slug: 'samsara', atsProvider: 'lever', atsSlug: 'samsara', website: 'https://samsara.com', countryCode: 'US' },
 ]
 
 // ============================================================================
@@ -154,7 +126,7 @@ const ASHBY_COMPANIES: CompanySeed[] = [
   { name: 'Faire', slug: 'faire', atsProvider: 'ashby', atsSlug: 'faire', website: 'https://faire.com', countryCode: 'US' },
   { name: 'Coda', slug: 'coda', atsProvider: 'ashby', atsSlug: 'coda', website: 'https://coda.io', countryCode: 'US' },
   { name: 'Vanta', slug: 'vanta', atsProvider: 'ashby', atsSlug: 'vanta', website: 'https://vanta.com', countryCode: 'US' },
-  { name: 'Liveblocks', slug: 'liveblocks', atsProvider: 'ashby', atsSlug: 'liveblocks', website: 'https://liveblocks.io', countryCode: 'US' },
+  { name: 'Linear', slug: 'linear', atsProvider: 'ashby', atsSlug: 'linear', website: 'https://linear.app/careers', countryCode: 'US' },
   { name: 'Stytch', slug: 'stytch', atsProvider: 'ashby', atsSlug: 'stytch', website: 'https://stytch.com', countryCode: 'US' },
   { name: 'Sourcegraph', slug: 'sourcegraph', atsProvider: 'ashby', atsSlug: 'sourcegraph', website: 'https://sourcegraph.com', countryCode: 'US' },
   { name: 'Cockroach Labs', slug: 'cockroach-labs', atsProvider: 'ashby', atsSlug: 'cockroachlabs', website: 'https://cockroachlabs.com', countryCode: 'US' },
@@ -162,7 +134,6 @@ const ASHBY_COMPANIES: CompanySeed[] = [
   { name: 'Ashby', slug: 'ashby', atsProvider: 'ashby', atsSlug: 'ashby', website: 'https://ashbyhq.com', countryCode: 'US' },
   { name: 'Resend', slug: 'resend', atsProvider: 'ashby', atsSlug: 'resend', website: 'https://resend.com', countryCode: 'US' },
   { name: 'Raycast', slug: 'raycast', atsProvider: 'ashby', atsSlug: 'raycast', website: 'https://raycast.com', countryCode: 'DE' },
-  { name: 'Clay', slug: 'clay', atsProvider: 'ashby', atsSlug: 'clay', website: 'https://clay.com', countryCode: 'US' },
   { name: 'Cursor', slug: 'cursor', atsProvider: 'ashby', atsSlug: 'anysphere', website: 'https://cursor.sh', countryCode: 'US' },
 ]
 
@@ -181,6 +152,90 @@ function getAtsUrl(provider: string, slug: string): string {
     default:
       return ''
   }
+}
+
+function extractAtsSlug(provider: string | null | undefined, atsUrl: string | null | undefined): string | null {
+  if (!provider || !atsUrl) return null
+
+  try {
+    const url = new URL(atsUrl)
+    const parts = url.pathname.split('/').filter(Boolean)
+
+    switch (provider) {
+      case 'greenhouse': {
+        const forParam = url.searchParams.get('for')
+        if (forParam) return forParam
+        return parts[0] ?? null
+      }
+      case 'lever':
+      case 'ashby':
+      case 'smartrecruiters':
+        return parts[0] ?? null
+      case 'recruitee':
+        return url.hostname.replace(/\.recruitee\.com$/i, '')
+      default:
+        return null
+    }
+  } catch {
+    return null
+  }
+}
+
+function shouldReplaceWebsite(currentWebsite: string | null | undefined): boolean {
+  if (!currentWebsite) return true
+
+  try {
+    const hostname = new URL(currentWebsite).hostname.toLowerCase()
+    return (
+      hostname === 'boards.greenhouse.io' ||
+      hostname === 'job-boards.greenhouse.io' ||
+      hostname === 'jobs.lever.co' ||
+      hostname === 'jobs.smartrecruiters.com' ||
+      hostname === 'careers.smartrecruiters.com' ||
+      hostname === 'apply.workable.com' ||
+      hostname.endsWith('.recruitee.com') ||
+      hostname.endsWith('.bamboohr.com') ||
+      hostname.endsWith('.myworkdayjobs.com') ||
+      hostname.endsWith('.breezy.hr')
+    )
+  } catch {
+    return true
+  }
+}
+
+async function findExistingCompany(company: CompanySeed, atsUrl: string) {
+  const bySlug = await prisma.company.findUnique({
+    where: { slug: company.slug },
+  })
+  if (bySlug) return bySlug
+
+  const byName = await prisma.company.findFirst({
+    where: {
+      name: {
+        equals: company.name,
+        mode: 'insensitive',
+      },
+    },
+  })
+  if (byName) return byName
+
+  const byExactAtsUrl = await prisma.company.findFirst({
+    where: { atsUrl },
+  })
+  if (byExactAtsUrl) return byExactAtsUrl
+
+  const providerMatches = await prisma.company.findMany({
+    where: {
+      atsProvider: company.atsProvider,
+      atsUrl: { not: null },
+    },
+  })
+
+  return (
+    providerMatches.find(
+      (candidate) => extractAtsSlug(candidate.atsProvider, candidate.atsUrl) === company.atsSlug,
+    ) ?? null
+  )
 }
 
 // ============================================================================
@@ -205,22 +260,31 @@ async function main() {
     const atsUrl = getAtsUrl(company.atsProvider, company.atsSlug)
 
     try {
-      const existing = await prisma.company.findUnique({
-        where: { slug: company.slug },
-      })
+      const existing = await findExistingCompany(company, atsUrl)
 
       if (existing) {
-        // Update with ATS info if missing or different
-        if (!existing.atsUrl || existing.atsUrl !== atsUrl || !existing.atsSlug) {
+        const nextData: Record<string, string | null | undefined> = {}
+
+        if (existing.atsProvider !== company.atsProvider) {
+          nextData.atsProvider = company.atsProvider
+        }
+        if (existing.atsUrl !== atsUrl) {
+          nextData.atsUrl = atsUrl
+        }
+        if (existing.atsSlug !== company.atsSlug) {
+          nextData.atsSlug = company.atsSlug
+        }
+        if (company.website && shouldReplaceWebsite(existing.website)) {
+          nextData.website = company.website
+        }
+        if (company.countryCode && !existing.countryCode) {
+          nextData.countryCode = company.countryCode
+        }
+
+        if (Object.keys(nextData).length > 0) {
           await prisma.company.update({
-            where: { slug: company.slug },
-            data: {
-              atsProvider: company.atsProvider,
-              atsUrl: atsUrl,
-              atsSlug: company.atsSlug,
-              website: company.website || existing.website,
-              countryCode: company.countryCode || existing.countryCode,
-            },
+            where: { id: existing.id },
+            data: nextData,
           })
           __slog('✓ Updated: ' + company.name + ' (' + company.atsProvider + ')')
           updated++

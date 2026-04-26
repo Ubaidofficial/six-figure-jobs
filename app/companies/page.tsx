@@ -1,72 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { cache } from 'react'
-import { prisma } from '@/lib/prisma'
-import { buildWhere } from '@/lib/jobs/queryJobs'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback } from '@/lib/runtime/fallback'
-import { MIN_COMPANY_INDEXABLE_JOBS } from '@/lib/seo/indexabilityGates'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
+import {
+  loadEligibleCompaniesDirectory,
+  type PublicCompanyDirectoryEntry,
+} from '@/lib/jobs/publicStats'
 
 export const revalidate = 600 // 10m
 export const dynamic = 'force-dynamic'
 const SITE_URL = getSiteUrl()
-
-type CompanyDirectoryEntry = {
-  id: string
-  name: string | null
-  slug: string | null
-  logoUrl: string | null
-  _count: { jobs: number }
-}
-
-const loadEligibleCompanies = cache(async () => {
-  const eligibleJobWhere = buildWhere({})
-  const eligibleCompanyRows = await prisma.job.groupBy({
-    by: ['companyId'],
-    where: {
-      ...eligibleJobWhere,
-      companyId: { not: null },
-    },
-    _count: { _all: true },
-  })
-
-  const eligibleCompanyIds = eligibleCompanyRows
-    .filter((row) => row.companyId && row._count._all >= MIN_COMPANY_INDEXABLE_JOBS)
-    .map((row) => row.companyId as string)
-
-  const companies: CompanyDirectoryEntry[] =
-    eligibleCompanyIds.length === 0
-      ? []
-      : await prisma.company.findMany({
-          where: {
-            id: { in: eligibleCompanyIds },
-          },
-          orderBy: { name: 'asc' },
-          take: 500,
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            logoUrl: true,
-            _count: {
-              select: {
-                jobs: {
-                  where: eligibleJobWhere,
-                },
-              },
-            },
-          },
-        })
-
-  return {
-    companies,
-    totalCompanies: eligibleCompanyIds.length,
-    totalEligibleJobs: eligibleCompanyRows.reduce(
-      (sum, row) => sum + Number(row._count?._all ?? 0),
-      0,
-    ),
-  }
-})
 
 function buildCompaniesDescription(totalCompanies: number, totalEligibleJobs: number) {
   if (totalCompanies > 0) {
@@ -87,7 +30,7 @@ function buildBreadcrumbJsonLd() {
   }
 }
 
-function buildCompaniesItemListJsonLd(companies: CompanyDirectoryEntry[]) {
+function buildCompaniesItemListJsonLd(companies: PublicCompanyDirectoryEntry[]) {
   return {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -125,7 +68,7 @@ function buildCompaniesCollectionPageJsonLd(totalCompanies: number, totalEligibl
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
-    const { totalCompanies, totalEligibleJobs } = await loadEligibleCompanies()
+    const { totalCompanies, totalEligibleJobs } = await loadEligibleCompaniesDirectory()
     const title =
       totalCompanies > 0
         ? `${totalCompanies.toLocaleString()} Companies Hiring $100k+ Roles | ${SITE_NAME}`
@@ -166,7 +109,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function CompaniesPage() {
   try {
-    const { companies, totalCompanies, totalEligibleJobs } = await loadEligibleCompanies()
+    const { companies, totalCompanies, totalEligibleJobs } = await loadEligibleCompaniesDirectory()
     const breadcrumbJsonLd = buildBreadcrumbJsonLd()
     const itemListJsonLd = buildCompaniesItemListJsonLd(companies)
     const collectionPageJsonLd = buildCompaniesCollectionPageJsonLd(

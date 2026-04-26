@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { buildWhere } from '../../lib/jobs/queryJobs'
 import { getSiteUrl } from '../../lib/seo/site'
+import { JOB_CATEGORY_MAP, JOB_CATEGORY_SLUGS } from '../../lib/seo/jobCategories'
 
 const SITE_URL = getSiteUrl()
 
@@ -10,32 +11,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const MIN_INDEXABLE_JOBS = 3
-    const CATEGORY_ROLE_MAP: Record<string, string[]> = {
-      engineering: [
-        'software-engineer',
-        'backend',
-        'frontend',
-        'full-stack',
-        'mobile',
-        'ios',
-        'android',
-        'platform',
-        'systems',
-        'application',
-        'devops',
-        'sre',
-        'infrastructure',
-        'web-developer',
-      ],
-      product: ['product-manager', 'product-owner', 'product'],
-      data: ['data-scientist', 'data-engineer', 'analytics', 'data-analyst'],
-      design: ['designer', 'design', 'ux', 'ui', 'product-designer'],
-      devops: ['devops', 'sre', 'site-reliability'],
-      mlai: ['machine-learning', 'ml', 'ai', 'artificial-intelligence'],
-      sales: ['sales', 'account-executive', 'sdr', 'bdr'],
-      marketing: ['marketing', 'growth', 'demand-generation', 'seo', 'performance'],
-    }
-    const categories = Object.keys(CATEGORY_ROLE_MAP)
+    const categories = JOB_CATEGORY_SLUGS
 
     const baseWhere = buildWhere({})
     const roleRows = await prisma.job.groupBy({
@@ -55,7 +31,7 @@ export async function GET() {
 
     const urls = categories
       .map((cat) => {
-        const slugs = (CATEGORY_ROLE_MAP[cat] || []).map((s) => s.toLowerCase())
+        const slugs = (JOB_CATEGORY_MAP[cat]?.roleSlugs || []).map((s) => s.toLowerCase())
         let total = 0
         let lastmod: Date | null = null
         for (const row of roleStats) {

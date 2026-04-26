@@ -13,5 +13,14 @@ describe('scrapeCompanyAtsJobs result semantics', () => {
     const res = await scrapeCompanyAtsJobs('greenhouse' as any, '' as any)
     expect(res.success).toBe(false)
   })
-})
 
+  it('returns success=false for invalid workday urls', async () => {
+    const res = await scrapeCompanyAtsJobs('workday' as any, 'not-a-valid-url')
+    expect(res.success).toBe(false)
+  })
+
+  it('returns success=false for invalid workable urls', async () => {
+    const res = await scrapeCompanyAtsJobs('workable' as any, 'not-a-valid-url')
+    expect(res.success).toBe(false)
+  })
+})

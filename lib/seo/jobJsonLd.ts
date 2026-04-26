@@ -5,6 +5,7 @@ import { getSiteUrl } from './site'
 import { buildJobSlug } from '../jobs/jobSlug'
 import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
+import { MAX_INDEXABLE_JOB_AGE_DAYS, resolveJobFreshnessDate } from '../jobs/freshness'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
@@ -28,6 +29,8 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 
   const description = buildStructuredDescription(job, companyName)
   const baseSalary = buildBaseSalary(job)
+  const validThrough = buildValidThrough(job)
+  const directApply = buildDirectApply(job)
 
   const applicantLocationRequirements = isRemote ? buildApplicantLocationRequirements(job) : undefined
   const jobLocation =
@@ -60,6 +63,8 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 
     employmentType,
 
+    ...(validThrough ? { validThrough } : {}),
+    ...(directApply != null ? { directApply } : {}),
     ...(jobLocationType ? { jobLocationType } : {}),
     ...(jobLocation ? { jobLocation } : {}),
     ...(baseSalary ? { baseSalary } : {}),
@@ -122,6 +127,23 @@ function buildBaseSalary(job: any): any | undefined {
       unitText: 'YEAR',
     },
   }
+}
+
+function buildValidThrough(job: any): string | undefined {
+  const freshnessDate = resolveJobFreshnessDate(job)
+  if (!freshnessDate) return undefined
+
+  const expiry = new Date(freshnessDate)
+  expiry.setDate(expiry.getDate() + MAX_INDEXABLE_JOB_AGE_DAYS)
+
+  return expiry.toISOString()
+}
+
+function buildDirectApply(job: any): boolean | undefined {
+  const applyUrl = typeof job?.applyUrl === 'string' ? job.applyUrl.trim() : ''
+  if (!isValidHttpUrl(applyUrl)) return undefined
+
+  return isLikelyDirectApplyUrl(applyUrl, job)
 }
 
 function buildApplicantLocationRequirements(job: any): any | undefined {
@@ -436,4 +458,41 @@ function normalizeUrl(u: string): string {
   if (!s) return s
   if (s.startsWith('http://') || s.startsWith('https://')) return s
   return `https://${s}`
+}
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function isLikelyDirectApplyUrl(value: string, job: any): boolean {
+  const source = String(job?.source || '').toLowerCase()
+  if (source.includes('greenhouse') || source.includes('lever') || source.includes('ashby') || source.includes('workday')) {
+    return true
+  }
+
+  try {
+    const host = new URL(value).hostname.toLowerCase()
+    return [
+      'ashbyhq.com',
+      'bamboohr.com',
+      'greenhouse.io',
+      'greenhouse.com',
+      'icims.com',
+      'jobs.ashbyhq.com',
+      'jobs.lever.co',
+      'lever.co',
+      'myworkdayjobs.com',
+      'recruitee.com',
+      'smartrecruiters.com',
+      'workable.com',
+      'workday.com',
+    ].some((knownHost) => host === knownHost || host.endsWith(`.${knownHost}`))
+  } catch {
+    return false
+  }
 }
