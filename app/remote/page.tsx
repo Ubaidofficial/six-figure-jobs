@@ -643,7 +643,7 @@ export default async function RemoteJobsPage({
             <div className={styles.whyList}>
               {[
                 'Work from anywhere in the world',
-                'Verified six-figure salaries ($100k+ USD or equivalent)',
+                'Verified $100k+ salary ranges with compensation shown up front',
                 'Premium roles from top tech companies',
                 'No location restrictions or relocation required',
                 'Refreshed daily with new verified opportunities',

@@ -4,6 +4,7 @@
 ### Bug Fixes
 
 * prioritize live job cards on the homepage and refresh pSEO/GEO copy around verified salary ranges, direct apply links, and crawlable job hubs
+* strengthen pSEO guardrails for country, company, companies, and remote pages with richer structured data, FAQ content, and verified salary-range copy
 
 
 # 2.8.49 (2026-04-26)

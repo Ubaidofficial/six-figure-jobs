@@ -84,7 +84,7 @@ export async function generateMetadata({
         ? truncateText(toPlainText(company.description), 120)
         : `Find your next role at ${company.name}.`
 
-      const description = `Browse ${jobCount} verified $100k+ jobs at ${company.name}. ${companyDesc}`
+      const description = `Browse ${jobCount} verified $100k+ jobs at ${company.name} with published salary ranges where available, direct apply links, and fresh six figure roles. ${companyDesc}`
 
       const canonicalUrl = `${SITE_URL}/company/${slug}`
 
@@ -152,6 +152,9 @@ export default async function CompanyPage({
 
       const organizationJsonLd = buildOrganizationJsonLd(company)
       const breadcrumbJsonLd = buildBreadcrumbJsonLd(company)
+      const itemListJsonLd = buildCompanyJobsItemListJsonLd(company, qualifiedJobs)
+      const collectionPageJsonLd = buildCompanyCollectionPageJsonLd(company, qualifiedJobs)
+      const faqJsonLd = buildCompanyFaqJsonLd(company, qualifiedJobs)
 
       const tags = parseTags(company.tagsJson)
       const heroLogo = buildLogoUrl(company.logoUrl ?? null, company.website ?? null)
@@ -282,7 +285,8 @@ export default async function CompanyPage({
           {company.name} is actively hiring experienced talent for $100k+ roles across{' '}
           {tags.length ? tags.slice(0, 3).join(', ') : 'multiple teams'}. These
           positions include high-impact remote, hybrid, and on-site opportunities,
-          with compensation shown up front where available. Explore engineering,
+          with published salary ranges shown up front where available and direct
+          apply links for faster applications. Explore engineering,
           product, data, sales, and operations openings, or browse all open jobs to
           find a six-figure role that matches your skills and location. We refresh
           this page frequently as new jobs are added from the company’s ATS and
@@ -318,6 +322,20 @@ export default async function CompanyPage({
             </Link>
           </li>
         </ul>
+      </section>
+
+      <section className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
+        <h2 className="text-sm font-semibold text-slate-50">
+          {company.name} jobs FAQ
+        </h2>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          {buildCompanyFaqItems(company, qualifiedJobs).map((item) => (
+            <article key={item.q} className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <h3 className="text-sm font-semibold text-slate-100">{item.q}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-400">{item.a}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       {/* Job Listings */}
@@ -401,6 +419,18 @@ export default async function CompanyPage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
         </main>
       )
@@ -599,5 +629,98 @@ function buildBreadcrumbJsonLd(company: CompanyWithJobs['company']) {
         item: `${SITE_URL}/company/${company.slug}`,
       },
     ],
+  }
+}
+
+function buildCompanyJobsItemListJsonLd(
+  company: CompanyWithJobs['company'],
+  jobs: JobWithFlags[],
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${company.name} $100k+ jobs`,
+    itemListElement: jobs.slice(0, 50).map((job, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: `${SITE_URL}${buildJobSlugHref(job)}`,
+    })),
+  }
+}
+
+function buildCompanyCollectionPageJsonLd(
+  company: CompanyWithJobs['company'],
+  jobs: JobWithFlags[],
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${company.name} $100k+ jobs`,
+    description: `Browse verified $100k+ jobs at ${company.name} with published salary ranges where available, direct apply links, and fresh six figure roles.`,
+    url: `${SITE_URL}/company/${company.slug}`,
+    about: [
+      `${company.name} jobs`,
+      `${company.name} careers`,
+      'verified $100k+ jobs',
+      'six figure jobs',
+      'high paying jobs',
+      'published salary ranges',
+    ],
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: jobs.length,
+      itemListElement: jobs.slice(0, 24).map((job, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `${SITE_URL}${buildJobSlugHref(job)}`,
+      })),
+    },
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  }
+}
+
+function buildCompanyFaqItems(company: CompanyWithJobs['company'], jobs: JobWithFlags[]) {
+  const jobCount = jobs.length
+  const salaryBackedCount = jobs.filter((job) => job.salarySource === 'ats').length
+  const remoteCount = jobs.filter((job) => job.remote === true || job.remoteMode === 'remote').length
+
+  return [
+    {
+      q: `How many $100k+ jobs does ${company.name} have?`,
+      a: `${company.name} currently has ${jobCount.toLocaleString()} live $100k+ jobs on Six Figure Jobs. Listings are refreshed frequently as company ATS and careers feeds change.`,
+    },
+    {
+      q: `Are ${company.name} salaries verified?`,
+      a:
+        salaryBackedCount > 0
+          ? `${salaryBackedCount.toLocaleString()} ${company.name} roles include ATS salary-backed compensation signals. We prioritize published salary ranges, seniority, freshness, and direct apply links.`
+          : `We prioritize ${company.name} roles with high-salary signals, seniority fit, freshness, and direct apply links, with published salary ranges shown whenever available.`,
+    },
+    {
+      q: `Does ${company.name} hire remote six figure roles?`,
+      a:
+        remoteCount > 0
+          ? `Yes. ${company.name} has ${remoteCount.toLocaleString()} remote $100k+ roles in the current feed, alongside hybrid and on-site opportunities where available.`
+          : `${company.name} openings may include remote, hybrid, and on-site roles depending on the current hiring feed. Use the location details on each job card before applying.`,
+    },
+  ]
+}
+
+function buildCompanyFaqJsonLd(company: CompanyWithJobs['company'], jobs: JobWithFlags[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: buildCompanyFaqItems(company, jobs).map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
   }
 }

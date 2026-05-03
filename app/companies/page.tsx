@@ -13,10 +13,10 @@ const SITE_URL = getSiteUrl()
 
 function buildCompaniesDescription(totalCompanies: number, totalEligibleJobs: number) {
   if (totalCompanies > 0) {
-    return `Explore ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} verified $100k+ roles. Apply directly on company sites.`
+    return `Explore ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} verified $100k+ jobs, six figure roles, remote jobs, and high paying positions with direct apply links.`
   }
 
-  return 'Explore companies hiring for verified $100k+ roles. Apply directly on company sites.'
+  return 'Explore companies hiring for verified $100k+ jobs, six figure roles, remote jobs, and high paying positions with direct apply links.'
 }
 
 function buildBreadcrumbJsonLd() {
@@ -58,6 +58,13 @@ function buildCompaniesCollectionPageJsonLd(totalCompanies: number, totalEligibl
     name: 'Companies hiring $100k+ roles',
     description: buildCompaniesDescription(totalCompanies, totalEligibleJobs),
     url: `${SITE_URL}/companies`,
+    about: [
+      'companies hiring $100k+ jobs',
+      'six figure jobs by company',
+      'remote jobs by company',
+      'high paying jobs',
+      'verified salary ranges',
+    ],
     isPartOf: {
       '@type': 'WebSite',
       name: SITE_NAME,
@@ -125,8 +132,8 @@ export default async function CompaniesPage() {
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
             {companies.length > 0
-              ? `Browse ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} live $100k+ roles. Apply directly on the company site.`
-              : 'Only companies with live high-paying roles. Apply directly on the company site.'}
+              ? `Browse ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} live $100k+ jobs, six figure roles, remote jobs, and high paying positions with direct apply links.`
+              : 'Only companies with live high-paying roles, verified salary signals, and direct apply links.'}
           </p>
           {totalCompanies > companies.length && (
             <p className="mt-2 text-xs text-slate-500">
@@ -140,38 +147,53 @@ export default async function CompaniesPage() {
             <p className="text-slate-400">No companies found yet. Try again soon — listings update frequently.</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {companies.map((c) => (
-              <Link
-                key={c.id}
-                href={c.slug ? `/company/${c.slug}` : '/companies'}
-                className="group flex flex-col items-center rounded-2xl border border-slate-800 bg-slate-950/40 p-6 shadow-sm transition hover:border-slate-600 hover:bg-slate-950/60 hover:shadow-lg"
-              >
-                <div className="mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-lg font-bold text-slate-200">
-                  {c.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={c.logoUrl}
-                      alt=""
-                      className="h-full w-full object-contain"
-                      loading="lazy"
-                    />
-                  ) : (
-                    (c.name?.[0] || 'C').toUpperCase()
-                  )}
-                </div>
+          <>
+            <section className="mb-8 rounded-xl border border-slate-800 bg-slate-950/50 p-5">
+              <h2 className="text-sm font-semibold text-slate-50">
+                Find companies with verified six figure jobs
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
+                This company directory groups employers with live $100k+ job openings,
+                published salary ranges where available, and direct apply paths to company
+                career pages. Use it to compare companies hiring for remote, hybrid, and
+                on-site six figure jobs across engineering, product, data, sales, finance,
+                marketing, operations, and leadership roles.
+              </p>
+            </section>
 
-                <div className="w-full text-center">
-                  <div className="mb-1 line-clamp-2 text-sm font-semibold text-slate-100 group-hover:text-white">
-                    {c.name}
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {companies.map((c) => (
+                <Link
+                  key={c.id}
+                  href={c.slug ? `/company/${c.slug}` : '/companies'}
+                  className="group flex flex-col items-center rounded-2xl border border-slate-800 bg-slate-950/40 p-6 shadow-sm transition hover:border-slate-600 hover:bg-slate-950/60 hover:shadow-lg"
+                >
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-lg font-bold text-slate-200">
+                    {c.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={c.logoUrl}
+                        alt=""
+                        className="h-full w-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      (c.name?.[0] || 'C').toUpperCase()
+                    )}
                   </div>
-                  <div className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-1 text-xs font-medium text-green-400">
-                    💼 {c._count.jobs.toLocaleString()} jobs
+
+                  <div className="w-full text-center">
+                    <div className="mb-1 line-clamp-2 text-sm font-semibold text-slate-100 group-hover:text-white">
+                      {c.name}
+                    </div>
+                    <div className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-1 text-xs font-medium text-green-400">
+                      💼 {c._count.jobs.toLocaleString()} jobs
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
 
         <script

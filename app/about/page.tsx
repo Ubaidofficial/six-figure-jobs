@@ -19,9 +19,9 @@ export default function AboutPage() {
 
       <p className="mt-5 text-base leading-7 text-slate-300">
         Six Figure Jobs helps job seekers find high-paying roles faster.
-        We focus on positions that typically pay <strong>$100k+</strong> (or the
-        local-market equivalent), across <strong>remote</strong>,{' '}
-        <strong>hybrid</strong>, and <strong>on-site</strong> work.
+        We focus on verified <strong>$100k+</strong> roles with strong salary
+        signals across <strong>remote</strong>, <strong>hybrid</strong>, and{' '}
+        <strong>on-site</strong> work.
       </p>
 
       <h2 className="mt-10 text-xl font-semibold text-slate-50">
