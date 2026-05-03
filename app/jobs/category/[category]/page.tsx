@@ -23,7 +23,7 @@ function faqItems(label: string) {
   return [
     {
       q: `What qualifies as a high-paying ${lower} job?`,
-      a: 'We only list roles with published or inferred compensation of $100k+ (or the local equivalent) from ATS feeds and trusted boards.',
+      a: 'We only list roles with validated high-salary compensation signals from ATS feeds and trusted boards.',
     },
     {
       q: `Do you include remote and hybrid ${lower} jobs?`,

@@ -134,8 +134,8 @@ export function buildSalaryTierMetadata(
   const title = `Top ${tier.rangeLabel} Jobs | ${SITE_NAME}`
   const description =
     total > 0
-      ? `Browse ${total.toLocaleString()} verified ${tier.rangeLabel} opportunities. Filter by role, location, and work type — no entry-level clutter.`
-      : `Browse verified ${tier.rangeLabel} opportunities with premium salary transparency.`
+      ? `Browse ${total.toLocaleString()} verified ${tier.rangeLabel} jobs with published salary ranges, direct apply links, and fresh listings by role, location, and work type.`
+      : `Browse verified ${tier.rangeLabel} jobs with published salary ranges, direct apply links, and no entry-level clutter.`
 
   const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${tierId}`
   return {

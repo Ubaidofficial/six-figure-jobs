@@ -38,6 +38,10 @@ Rule: If a file here conflicts with docs/, follow 01_CANONICAL_DOCS_MAP.md.
 14) TASKS_TEMPLATE.md
 15) BUG_HUNT_TEMPLATE.md
 
+Active dated plans:
+- 2026-05-02: PRD-8_REMOTE100K_HOMEPAGE_STRUCTURE.md
+- 2026-05-02: TASKS_PRD-8_REMOTE100K_HOMEPAGE_STRUCTURE.md
+
 ### 7) Review + Release Discipline
 16) 05_CODE_REVIEW_GATE.md
 17) 06_RELEASE_AUDIT_UPDATE.md

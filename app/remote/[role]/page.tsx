@@ -151,7 +151,7 @@ function faqItems(roleName: string) {
   return [
     {
       q: `Are these remote ${lower} jobs really $100k+?`,
-      a: 'Yes. We only include roles with published or inferred compensation at $100k+ (or local equivalent) from ATS feeds and trusted boards.',
+      a: 'Yes. We only include roles with validated high-salary compensation signals from ATS feeds and trusted boards.',
     },
     {
       q: `How often do you refresh remote ${lower} jobs?`,

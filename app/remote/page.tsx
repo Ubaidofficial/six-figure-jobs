@@ -53,7 +53,7 @@ type RemoteHubSnapshot = {
 const REMOTE_FAQ = [
   {
     q: 'Are these remote jobs really six figures?',
-    a: 'Yes. The remote hub only includes jobs that meet the six-figure pay threshold in USD or local equivalent, based on validated salary signals.',
+    a: 'Yes. The remote hub only includes jobs with validated high-salary signals, published compensation, and seniority filters that remove entry-level noise.',
   },
   {
     q: 'Do these jobs come from company career pages?',

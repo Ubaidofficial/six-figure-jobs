@@ -1,11 +1,34 @@
 # Six Figure Jobs
-> $100k+ tech jobs platform
+> Verified $100k+ jobs and six-figure career search
 
 ## About
-Curated high-paying jobs ($100k+) in tech, engineering, product, data, and design.
+Six Figure Jobs is a salary-focused job search engine for verified $100k+ jobs,
+high paying roles, and six-figure opportunities across software engineering,
+product, data, design, security, sales, operations, and leadership.
+
+Jobs are sourced from company ATS feeds and trusted boards, then screened for
+published salary ranges, freshness, seniority, duplicate listings, and direct
+apply paths. Entry-level, internship, temporary, and low-salary listings are
+filtered out of the main public feeds.
 
 ## Pages
 - /jobs - Browse all $100k+ jobs
-- /jobs/[role] - Jobs by role
-- /salary/[role] - Salary guides
+- /jobs/[role] - Verified $100k+ jobs by role
+- /jobs/location/[country] - High paying jobs by country
+- /remote - Remote $100k+ jobs
+- /salary/[role] - Salary guides and role salary context
 - /company/[slug] - Company profiles
+
+## Structured Data
+- Job detail pages use JobPosting JSON-LD.
+- Listing pages use crawlable internal links and ItemList/CollectionPage context.
+- Canonical pages avoid uncontrolled filter URL indexation.
+
+## Best Query Matches
+- six figure jobs
+- 6 figure jobs
+- $100k jobs
+- high paying remote jobs
+- software engineer $100k jobs
+- product manager six figure jobs
+- data scientist high paying jobs

@@ -95,7 +95,7 @@ export default async function RoleSkillPage({ params }: { params: Params }) {
         name: `What is the average salary for ${roleName} jobs requiring ${skillInfo.label}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'All roles shown are filtered to $100k+ (or local equivalent); senior openings often exceed $200k depending on company and stack.',
+          text: 'All roles shown are filtered for validated high-salary compensation; senior openings often exceed $200k depending on company and stack.',
         },
       },
       {

@@ -89,7 +89,7 @@ export default async function SkillRemotePage({ params }: { params: Params }) {
         name: `What is the average salary for remote ${skillInfo.label} jobs?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Remote roles listed here are filtered to $100k+ (or local equivalent), with senior openings often exceeding $200k depending on stack and company.',
+          text: 'Remote roles listed here are filtered for validated high-salary compensation, with senior openings often exceeding $200k depending on stack and company.',
         },
       },
       {

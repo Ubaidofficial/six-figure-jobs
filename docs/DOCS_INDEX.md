@@ -14,6 +14,7 @@
 If docs conflict → follow order.
 
 ## Recent Updates
+- 2026-05-02: Added Remote100K-inspired homepage/job-card implementation direction to DESIGN_UX_SPEC and PRD-8 task docs.
 - 2025-12-20: Added SCRAPER_SPEC.md
 - 2025-12-20: Updated .chatgpt-rules to v2.7
 - 2026-03-01: Added PSEO_PUBLISHING_GSC_GUIDE.md

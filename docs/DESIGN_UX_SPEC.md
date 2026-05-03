@@ -92,6 +92,56 @@ Minimum:
 
 ---
 
+## 10) Homepage Jobs-First Direction (Added 2026-05-02)
+
+### Recommendation Checked
+Use Remote100K as a structural reference, not a visual copy. The observed useful pattern is:
+- Simple value proposition focused on "$100k+" jobs.
+- Company trust strip near the top.
+- Role/category shortcuts before the main feed.
+- A visible jobs count/sort context.
+- Jobs shown directly on the homepage.
+- Footer/category links kept useful, but not blindly copied because 6figjobs has stricter SEO and footer constraints.
+
+### Current Repo Evidence
+- `app/page.tsx` already queries high-salary jobs with `queryJobs(...)` and `PAGE_SIZE = 40`.
+- `app/page.tsx` already renders homepage jobs through `LatestOpportunities`, but the section appears after several discovery modules.
+- `components/home/LatestOpportunities.tsx` renders a bespoke compact card, while `components/jobs/JobCard.tsx` is the richer listing card with salary, location, work type, seniority, snippet, skills, and verified salary UI.
+
+### Decision
+Implement a jobs-first homepage pattern:
+- Keep the 6figjobs brand, color system, salary integrity rules, and canonical URL rules.
+- Move the live jobs feed higher, immediately after hero/company trust signals.
+- Render homepage jobs with the shared listing-card structure, using a homepage density variant if needed.
+- Keep role, salary, country, and remote shortcuts as canonical links or controlled search/filter actions.
+- Do not add new indexable filtered URL patterns without SEO_SPEC approval.
+- Do not expand the footer into uncontrolled competitor-style taxonomy blocks.
+
+### Target Homepage Order
+1. Hero with concise $100k+ value proposition and search.
+2. Trusted company/logo strip.
+3. Role/category shortcuts.
+4. Latest verified jobs feed using shared job-card structure.
+5. Salary/location/premium-role discovery modules.
+6. FAQ and compact canonical internal links.
+
+### Job Card Direction
+Homepage cards should match the listing-card information hierarchy:
+- Company logo and company name.
+- Job title linked to canonical job detail URL.
+- Salary displayed only when valid via shared salary formatting.
+- Location and work arrangement.
+- Posted/updated relative time.
+- Optional snippet and top skills when available.
+- Primary affordance to view details/apply path.
+
+### Implementation Reference
+Detailed implementation planning lives in:
+- `ai-dev-tasks/6figjobs/PRD-8_REMOTE100K_HOMEPAGE_STRUCTURE.md`
+- `ai-dev-tasks/6figjobs/TASKS_PRD-8_REMOTE100K_HOMEPAGE_STRUCTURE.md`
+
+---
+
 ## Recent UX Improvements (December 2025)
 
 ### Navigation Enhancement

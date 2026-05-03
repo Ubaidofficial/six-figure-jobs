@@ -441,12 +441,13 @@ export async function CountryLocationTemplate({
         </div>
       </header>
 
-      <section className={styles.ppp} aria-label="PPP context">
-        <div className={styles.pppTitle}>Understanding {countryCurrency} salaries</div>
+      <section className={styles.ppp} aria-label="Salary context">
+        <div className={styles.pppTitle}>Understanding verified {countryCurrency} salary ranges</div>
         <p className={styles.pppBody}>
-          In {loc.label}, a “six-figure” job is best understood in local purchasing power. We use a currency-specific
-          high-salary cutoff (roughly equivalent to $100k USD) — approximately{' '}
-          <strong className={styles.pillValue}>{thresholdLabel}</strong> — to keep listings comparable across regions.
+          In {loc.label}, this page focuses on roles with published compensation and a
+          currency-specific high-salary floor of approximately{' '}
+          <strong className={styles.pillValue}>{thresholdLabel}</strong>. Listings are screened
+          for salary quality, seniority, freshness, and direct apply paths.
         </p>
       </section>
 

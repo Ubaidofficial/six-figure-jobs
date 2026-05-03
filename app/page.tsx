@@ -41,10 +41,10 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const stats = await loadPublicSiteStats()
-    const description = `Find ${stats.totalJobs.toLocaleString()}+ verified jobs paying $100k+ USD (or local equivalent). Premium roles from ${stats.totalCompanies.toLocaleString()} verified companies. Updated daily.`
+    const description = `Find ${stats.totalJobs.toLocaleString()}+ verified $100k+ jobs with published salary ranges. Premium roles from ${stats.totalCompanies.toLocaleString()} verified companies. Updated daily.`
     const ogDescription =
-      `Find six-figure jobs and high-paying positions with verified $100k+ salaries. ` +
-      `Explore ${stats.totalJobs.toLocaleString()}+ premium opportunities from ${stats.totalCompanies.toLocaleString()} verified companies.`
+      `Find six-figure jobs and high-paying positions with verified salary ranges. ` +
+      `Explore ${stats.totalJobs.toLocaleString()}+ $100k+ opportunities from ${stats.totalCompanies.toLocaleString()} verified companies.`
 
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
@@ -91,7 +91,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
       description:
-        'Find verified jobs paying $100k+ USD (or local equivalent). Premium roles from verified companies. Updated daily.',
+        'Find verified $100k+ jobs with published salary ranges. Premium roles from verified companies. Updated daily.',
       alternates: {
         canonical: 'https://www.6figjobs.com',
       },
@@ -281,7 +281,7 @@ export default async function HomePage() {
       topRoles,
     ] = await Promise.all([
       queryJobs({
-        isHundredKLocal: true, // Use PPP-adjusted threshold
+        isHundredKLocal: true,
         page: 1,
         pageSize: PAGE_SIZE,
         sortBy: 'date',
@@ -689,6 +689,8 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <LatestOpportunities jobs={jobs} totalJobs={stats.totalJobs} />
+
       <TopLocations locations={topLocations} />
 
       <section className="mb-10">
@@ -698,8 +700,6 @@ export default async function HomePage() {
       <ExplorePremiumRoles roles={premiumRoles} />
 
       <WhySixFigureJobs />
-
-      <LatestOpportunities jobs={jobs} totalJobs={stats.totalJobs} />
 
       <BrowseByRole roles={roleCards} />
 

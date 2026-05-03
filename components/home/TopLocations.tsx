@@ -19,7 +19,7 @@ export function TopLocations({ locations }: { locations: TopLocationCard[] }) {
     <section className={styles.section} aria-label="Top locations for high-paying jobs">
       <header className={styles.header}>
         <h2 className={styles.title}>Top Locations for Six Figure Jobs</h2>
-        <p className={styles.subtitle}>Global opportunities with PPP-adjusted thresholds</p>
+        <p className={styles.subtitle}>Global opportunities with verified salary ranges</p>
       </header>
 
       <div className={styles.grid}>

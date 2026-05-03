@@ -33,6 +33,7 @@ export type JobCardProps = {
   }
   onClick?: () => void
   className?: string
+  variant?: 'listing' | 'homepage'
 }
 
 function countryFlag(code?: string | null): string {
@@ -252,8 +253,9 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
   return null
 }
 
-export function JobCard({ job, onClick, className }: JobCardProps) {
+export function JobCard({ job, onClick, className, variant = 'listing' }: JobCardProps) {
   const router = useRouter()
+  const isHomepage = variant === 'homepage'
   const companyName = String(job.companyRef?.name ?? (job as any)?.company ?? 'Company')
   const companyLogo = buildLogoUrl(
     job.companyRef?.logoUrl ?? (job as any)?.companyLogo ?? null,
@@ -292,7 +294,7 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
     ...parseJsonArray((job as any)?.skillsJson),
   ])
 
-  const shownSkills = skills.slice(0, 10)
+  const shownSkills = skills.slice(0, isHomepage ? 5 : 10)
   const extraSkills = Math.max(0, skills.length - shownSkills.length)
 
   if (
@@ -320,7 +322,7 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
 
   return (
     <article
-      className={cn(styles.card, className)}
+      className={cn(styles.card, isHomepage && styles.homepageCard, className)}
       onClick={(e) => {
         const el = e.target as HTMLElement | null
         if (el?.closest('a')) return
@@ -379,21 +381,30 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
             </Link>
           </h3>
 
-          <div className={styles.salaryStack}>
-            <div className={styles.salaryPill} aria-label={hasSalary ? `Salary ${salary}` : 'High salary role'}>
-              <span className={styles.salaryIcon} aria-hidden="true">
-                💰
-              </span>
-              <span className={styles.salaryValue}>{salary ?? 'High salary role'}</span>
-            </div>
+          {hasSalary ? (
+            <div className={styles.salaryStack}>
+              <div className={styles.salaryPill} aria-label={`Salary ${salary}`}>
+                <span className={styles.salaryIcon} aria-hidden="true">
+                  💰
+                </span>
+                <span className={styles.salaryValue}>{salary}</span>
+              </div>
 
-            {hasSalary ? (
               <span className={styles.verified} aria-label="Salary verified">
                 <BadgeCheck className={styles.verifiedIcon} aria-hidden="true" />
                 Verified salary
               </span>
-            ) : null}
-          </div>
+            </div>
+          ) : isHomepage ? null : (
+            <div className={styles.salaryStack}>
+              <div className={styles.salaryPill} aria-label="High salary role">
+                <span className={styles.salaryIcon} aria-hidden="true">
+                  💰
+                </span>
+                <span className={styles.salaryValue}>High salary role</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className={styles.metaRow} aria-label="Job metadata">

@@ -1,3 +1,11 @@
+# 2.8.50 (2026-05-03)
+
+
+### Bug Fixes
+
+* prioritize live job cards on the homepage and refresh pSEO/GEO copy around verified salary ranges, direct apply links, and crawlable job hubs
+
+
 # 2.8.49 (2026-04-26)
 
 

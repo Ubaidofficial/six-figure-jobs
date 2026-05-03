@@ -86,7 +86,7 @@ export async function generateMetadata({
   return {
     title: `All $100k+ Jobs | ${SITE_NAME}`,
     description:
-      'Browse verified $100k+ jobs from ATS-powered company job boards. Filter by location, work type, role, and seniority — no entry-level clutter.',
+      'Browse verified $100k+ jobs with published salary ranges, direct apply links, and fresh ATS listings. Filter by role, location, remote work, seniority, and company size.',
     alternates: {
       canonical,
     },
@@ -94,7 +94,7 @@ export async function generateMetadata({
     openGraph: {
       title: `All $100k+ Jobs | ${SITE_NAME}`,
       description:
-        'Browse verified $100k+ jobs. Filter by location, work type, role, and seniority — no entry-level clutter.',
+        'Browse verified $100k+ jobs with salary ranges, direct apply links, and fresh listings by role, location, and work type.',
       url: canonical,
       siteName: SITE_NAME,
       type: 'website',
@@ -103,7 +103,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `All $100k+ Jobs | ${SITE_NAME}`,
       description:
-        'Browse verified $100k+ jobs from ATS-powered company job boards.',
+        'Browse verified $100k+ jobs with published salaries, direct apply links, and fresh ATS listings.',
     },
   }
 }
@@ -189,6 +189,13 @@ function buildJobsCollectionPageJsonLd(totalJobs: number) {
     name: 'All $100k+ jobs',
     description: `Browse ${totalJobs.toLocaleString()} verified $100k+ jobs from company ATS feeds and trusted sources.`,
     url: `${SITE_URL}/jobs`,
+    about: [
+      'verified $100k+ jobs',
+      'six figure jobs',
+      'high paying jobs',
+      'remote jobs',
+      'published salary ranges',
+    ],
     isPartOf: {
       '@type': 'WebSite',
       name: SITE_NAME,
@@ -508,11 +515,10 @@ export default async function JobsIndexPage({
       </div>
         <section className={styles.below} aria-label="Why use this jobs hub">
         <div className={styles.belowHeader}>
-          <h2 className={styles.belowTitle}>Why this page ranks as the main jobs hub</h2>
+          <h2 className={styles.belowTitle}>Why this page is the main $100k+ jobs hub</h2>
           <p className={styles.belowBlurb}>
-            This page keeps the broadest six-figure inventory in one crawlable index, then routes
-            visitors into tighter salary, role, and location pages when they need more specific
-            results.
+            This crawlable jobs index combines verified salary ranges, fresh ATS listings, and
+            canonical links into role, salary, remote, and location pages for high-intent searches.
           </p>
         </div>
 
@@ -520,8 +526,8 @@ export default async function JobsIndexPage({
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
             <h3 className="text-sm font-semibold text-slate-50">Verified pay floor</h3>
             <p className="mt-2">
-              Jobs shown here meet the six-figure threshold in USD or local equivalent, which keeps
-              the main index aligned with search intent.
+              Jobs shown here pass validated salary checks and highlight published compensation
+              ranges, keeping the main index aligned with $100k+ job search intent.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">

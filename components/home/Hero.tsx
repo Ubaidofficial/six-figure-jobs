@@ -46,10 +46,10 @@ export function Hero({
           </h1>
 
           <p className={styles.subheadline} style={delay(240)}>
-            Discover 6 figure jobs, six figure salary jobs, and high paying jobs from{' '}
-            <strong>{companyCount.toLocaleString()}</strong> verified companies. Browse easy 6
-            figure jobs, 6 figure remote jobs, and six-figure positions—even 6 figure jobs without
-            degree. No entry-level clutter. Just premium six-figure opportunities.
+            Discover verified $100k+ jobs, six figure salary jobs, and high paying roles from{' '}
+            <strong>{companyCount.toLocaleString()}</strong> companies. Browse remote, hybrid,
+            and on-site opportunities with published salary ranges, fresh listings, and no
+            entry-level clutter.
           </p>
 
           <form
