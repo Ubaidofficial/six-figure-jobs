@@ -1,6 +1,7 @@
 // app/company/[slug]/page.tsx
 
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CompanyUnavailablePage } from '@/components/runtime/FallbackPresets'
@@ -83,8 +84,15 @@ export async function generateMetadata({
       const companyDesc = company.description
         ? truncateText(toPlainText(company.description), 120)
         : `Find your next role at ${company.name}.`
+      const stats = buildCompanySeoStats(jobs)
+      const rolePhrase = stats.topRoles.length
+        ? ` Top hiring areas include ${formatList(stats.topRoles.slice(0, 3).map((role) => role.label))}.`
+        : ''
+      const salaryPhrase = stats.highestSalaryLabel
+        ? ` Highest visible compensation reaches ${stats.highestSalaryLabel}.`
+        : ''
 
-      const description = `Browse ${jobCount} verified $100k+ jobs at ${company.name} with published salary ranges where available, direct apply links, and fresh six figure roles. ${companyDesc}`
+      const description = `Browse ${jobCount} verified $100k+ jobs at ${company.name} with published salary ranges where available, direct apply links, and fresh six figure roles.${rolePhrase}${salaryPhrase} ${companyDesc}`
 
       const canonicalUrl = `${SITE_URL}/company/${slug}`
 
@@ -150,10 +158,11 @@ export default async function CompanyPage({
       const countrySlug =
         company.countryCode ? countryCodeToSlug(company.countryCode) : null
 
+      const stats = buildCompanySeoStats(qualifiedJobs)
       const organizationJsonLd = buildOrganizationJsonLd(company)
       const breadcrumbJsonLd = buildBreadcrumbJsonLd(company)
       const itemListJsonLd = buildCompanyJobsItemListJsonLd(company, qualifiedJobs)
-      const collectionPageJsonLd = buildCompanyCollectionPageJsonLd(company, qualifiedJobs)
+      const collectionPageJsonLd = buildCompanyCollectionPageJsonLd(company, qualifiedJobs, stats)
       const faqJsonLd = buildCompanyFaqJsonLd(company, qualifiedJobs)
 
       const tags = parseTags(company.tagsJson)
@@ -283,15 +292,96 @@ export default async function CompanyPage({
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
           {company.name} is actively hiring experienced talent for $100k+ roles across{' '}
-          {tags.length ? tags.slice(0, 3).join(', ') : 'multiple teams'}. These
+          {stats.topRoles.length
+            ? formatList(stats.topRoles.slice(0, 3).map((role) => role.label))
+            : tags.length
+              ? tags.slice(0, 3).join(', ')
+              : 'multiple teams'}. These
           positions include high-impact remote, hybrid, and on-site opportunities,
           with published salary ranges shown up front where available and direct
-          apply links for faster applications. Explore engineering,
-          product, data, sales, and operations openings, or browse all open jobs to
-          find a six-figure role that matches your skills and location. We refresh
-          this page frequently as new jobs are added from the company’s ATS and
-          careers feeds.
+          apply links for faster applications.
+          {stats.highestSalaryLabel
+            ? ` The highest visible salary in the current ${company.name} feed reaches ${stats.highestSalaryLabel}.`
+            : ''}{' '}
+          {stats.topLocations.length
+            ? `Popular hiring locations include ${formatList(stats.topLocations.slice(0, 3).map((location) => location.label))}.`
+            : 'Browse remote, hybrid, and on-site openings as new locations are normalized.'}{' '}
+          We refresh this page frequently as new jobs are added from the company’s ATS
+          and careers feeds.
         </p>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="mb-4 text-sm font-semibold text-slate-50">
+          {company.name} hiring snapshot
+        </h2>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <CompanySignalPanel title="Top roles">
+            {stats.topRoles.length > 0 ? (
+              <ul className="space-y-2 text-sm text-slate-300">
+                {stats.topRoles.slice(0, 5).map((role) => (
+                  <li key={role.key} className="flex items-center justify-between gap-3">
+                    <Link href={`/jobs/${role.key}/100k-plus`} className="text-blue-300 hover:underline">
+                      {role.label}
+                    </Link>
+                    <span className="font-mono text-xs text-slate-500">{role.count}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-400">Role mix is still being normalized for this company.</p>
+            )}
+          </CompanySignalPanel>
+
+          <CompanySignalPanel title="Salary bands">
+            {stats.salaryBands.some((band) => band.count > 0) ? (
+              <ul className="space-y-2 text-sm text-slate-300">
+                {stats.salaryBands.filter((band) => band.count > 0).map((band) => (
+                  <li key={band.href} className="flex items-center justify-between gap-3">
+                    <Link href={band.href} className="text-blue-300 hover:underline">
+                      {band.label}
+                    </Link>
+                    <span className="font-mono text-xs text-slate-500">{band.count}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-400">Published salary bands are limited in the current feed.</p>
+            )}
+          </CompanySignalPanel>
+
+          <CompanySignalPanel title="Work setup">
+            <ul className="space-y-2 text-sm text-slate-300">
+              {stats.workModes.map((mode) => (
+                <li key={mode.key} className="flex items-center justify-between gap-3">
+                  <span>{mode.label}</span>
+                  <span className="font-mono text-xs text-slate-500">{mode.count}</span>
+                </li>
+              ))}
+            </ul>
+          </CompanySignalPanel>
+
+          <CompanySignalPanel title="Top locations">
+            {stats.topLocations.length > 0 ? (
+              <ul className="space-y-2 text-sm text-slate-300">
+                {stats.topLocations.slice(0, 5).map((location) => (
+                  <li key={location.key} className="flex items-center justify-between gap-3">
+                    {location.href ? (
+                      <Link href={location.href} className="text-blue-300 hover:underline">
+                        {location.label}
+                      </Link>
+                    ) : (
+                      <span>{location.label}</span>
+                    )}
+                    <span className="font-mono text-xs text-slate-500">{location.count}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-400">Location signals are still being normalized for this feed.</p>
+            )}
+          </CompanySignalPanel>
+        </div>
       </section>
 
       <section className="mb-8 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
@@ -301,7 +391,7 @@ export default async function CompanyPage({
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
           {countrySlug && (
             <li>
-              <Link href={`/jobs/${countrySlug}/100k-plus`} className="hover:underline">
+              <Link href={`/jobs/location/${countrySlug}`} className="hover:underline">
                 $100k+ jobs in {company.countryCode}
               </Link>
             </li>
@@ -312,7 +402,7 @@ export default async function CompanyPage({
             </Link>
           </li>
           <li>
-            <Link href="/jobs/remote/100k-plus" className="hover:underline">
+            <Link href="/remote" className="hover:underline">
               Remote $100k+ roles →
             </Link>
           </li>
@@ -513,6 +603,21 @@ function JobListItem({ job }: { job: JobWithFlags }) {
   )
 }
 
+function CompanySignalPanel({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <article className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+      <h3 className="mb-3 text-sm font-semibold text-slate-100">{title}</h3>
+      {children}
+    </article>
+  )
+}
+
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -573,6 +678,166 @@ function cleanUrl(url: string): string {
   if (!s) return '#'
   if (s.startsWith('http://') || s.startsWith('https://')) return s
   return `https://${s}`
+}
+
+function toTitleCaseSlug(slug: string): string {
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function formatList(items: string[]): string {
+  const clean = items.map((item) => item.trim()).filter(Boolean)
+  if (clean.length === 0) return ''
+  if (clean.length === 1) return clean[0]
+  if (clean.length === 2) return `${clean[0]} and ${clean[1]}`
+  return `${clean.slice(0, -1).join(', ')}, and ${clean[clean.length - 1]}`
+}
+
+function asAnnualNumber(value: unknown): number | null {
+  if (value == null) return null
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'bigint') return Number(value)
+  if (typeof value === 'string') {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : null
+  }
+  if (typeof value === 'object') {
+    const v: any = value
+    if (typeof v.toNumber === 'function') {
+      const n = v.toNumber()
+      return Number.isFinite(n) ? n : null
+    }
+    if (typeof v.toString === 'function') {
+      const n = Number(v.toString())
+      return Number.isFinite(n) ? n : null
+    }
+  }
+  return null
+}
+
+function salaryValue(job: JobWithFlags): number | null {
+  return asAnnualNumber(job.maxAnnual) ?? asAnnualNumber(job.minAnnual)
+}
+
+function incrementMap(map: Map<string, number>, key: string) {
+  map.set(key, (map.get(key) ?? 0) + 1)
+}
+
+function sortedCounts(map: Map<string, number>) {
+  return Array.from(map.entries())
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+}
+
+function buildCompanySeoStats(jobs: JobWithFlags[]) {
+  const roleCounts = new Map<string, number>()
+  const locationCounts = new Map<string, number>()
+  const locationMeta = new Map<string, { label: string; href: string | null }>()
+  const workModeCounts = {
+    remote: 0,
+    hybrid: 0,
+    onsite: 0,
+    unspecified: 0,
+  }
+  const bandCounts = {
+    '100k-plus': 0,
+    '200k-plus': 0,
+    '300k-plus': 0,
+    '400k-plus': 0,
+  }
+
+  let highestJob: JobWithFlags | null = null
+  let highestValue = 0
+
+  for (const job of jobs) {
+    if (job.roleSlug) incrementMap(roleCounts, job.roleSlug)
+
+    const mode = job.remote === true || job.remoteMode === 'remote'
+      ? 'remote'
+      : job.remoteMode === 'hybrid'
+        ? 'hybrid'
+        : job.remoteMode === 'onsite'
+          ? 'onsite'
+          : 'unspecified'
+    workModeCounts[mode] += 1
+
+    const countrySlug = job.countryCode ? countryCodeToSlug(job.countryCode) : null
+    const locationKey = mode === 'remote'
+      ? 'remote'
+      : job.citySlug
+        ? `city:${job.citySlug}`
+        : countrySlug
+          ? `country:${countrySlug}`
+          : null
+
+    if (locationKey) {
+      incrementMap(locationCounts, locationKey)
+      if (!locationMeta.has(locationKey)) {
+        locationMeta.set(locationKey, {
+          label: mode === 'remote'
+            ? 'Remote'
+            : job.city
+              ? `${job.city}${job.countryCode ? `, ${job.countryCode}` : ''}`
+              : job.countryCode || 'Location available',
+          href: mode === 'remote'
+            ? '/remote'
+            : job.citySlug
+              ? `/jobs/city/${job.citySlug}`
+              : countrySlug
+                ? `/jobs/location/${countrySlug}`
+                : null,
+        })
+      }
+    }
+
+    const annual = salaryValue(job)
+    if (annual != null) {
+      if (annual >= 400_000) bandCounts['400k-plus'] += 1
+      else if (annual >= 300_000) bandCounts['300k-plus'] += 1
+      else if (annual >= 200_000) bandCounts['200k-plus'] += 1
+      else if (annual >= 100_000) bandCounts['100k-plus'] += 1
+
+      if (annual > highestValue) {
+        highestValue = annual
+        highestJob = job
+      }
+    }
+  }
+
+  const topRoles = sortedCounts(roleCounts).map((role) => ({
+    ...role,
+    label: toTitleCaseSlug(role.key),
+  }))
+
+  const topLocations = sortedCounts(locationCounts).map((location) => {
+    const meta = locationMeta.get(location.key)
+    return {
+      ...location,
+      label: meta?.label ?? location.key,
+      href: meta?.href ?? null,
+    }
+  })
+
+  return {
+    topRoles,
+    topLocations,
+    salaryBands: [
+      { label: '$400k+ jobs', count: bandCounts['400k-plus'], href: '/jobs/400k-plus' },
+      { label: '$300k-$399k jobs', count: bandCounts['300k-plus'], href: '/jobs/300k-plus' },
+      { label: '$200k-$299k jobs', count: bandCounts['200k-plus'], href: '/jobs/200k-plus' },
+      { label: '$100k-$199k jobs', count: bandCounts['100k-plus'], href: '/jobs/100k-plus' },
+    ],
+    workModes: [
+      { key: 'remote', label: 'Remote', count: workModeCounts.remote },
+      { key: 'hybrid', label: 'Hybrid', count: workModeCounts.hybrid },
+      { key: 'onsite', label: 'On-site', count: workModeCounts.onsite },
+      { key: 'unspecified', label: 'Location varies', count: workModeCounts.unspecified },
+    ].filter((mode) => mode.count > 0),
+    highestSalaryLabel: highestJob ? buildSalaryText(highestJob) : null,
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -651,6 +916,7 @@ function buildCompanyJobsItemListJsonLd(
 function buildCompanyCollectionPageJsonLd(
   company: CompanyWithJobs['company'],
   jobs: JobWithFlags[],
+  stats: ReturnType<typeof buildCompanySeoStats>,
 ) {
   return {
     '@context': 'https://schema.org',
@@ -661,10 +927,19 @@ function buildCompanyCollectionPageJsonLd(
     about: [
       `${company.name} jobs`,
       `${company.name} careers`,
+      ...stats.topRoles.slice(0, 5).map((role) => `${company.name} ${role.label} jobs`),
+      ...stats.topLocations.slice(0, 3).map((location) => `${company.name} jobs in ${location.label}`),
       'verified $100k+ jobs',
       'six figure jobs',
       'high paying jobs',
       'published salary ranges',
+    ],
+    keywords: [
+      `${company.name} jobs`,
+      `${company.name} careers`,
+      `${company.name} $100k+ jobs`,
+      `${company.name} six figure jobs`,
+      ...stats.topRoles.slice(0, 5).map((role) => `${company.name} ${role.label} jobs`),
     ],
     mainEntity: {
       '@type': 'ItemList',
