@@ -74,7 +74,6 @@ export function Footer() {
             <div className={styles.colTitle}>Resources</div>
             <div className={styles.list}>
               <Link className={styles.link} href="/jobs">For Job Seekers</Link>
-              <Link className={styles.link} href="/post-a-job">For Employers</Link>
               <Link className={styles.link} href="/salary">Salary Guide</Link>
             </div>
           </div>
@@ -86,7 +85,6 @@ export function Footer() {
               <Link className={styles.link} href="/about#contact">Contact</Link>
               <Link className={styles.link} href="/privacy">Privacy Policy</Link>
               <Link className={styles.link} href="/terms">Terms of Service</Link>
-              <Link className={styles.link} href="/pricing">Advertise</Link>
             </div>
           </div>
         </div>
@@ -156,7 +154,6 @@ export function Footer() {
             <div className={styles.accordionBody}>
               <div className={styles.list}>
                 <Link className={styles.link} href="/jobs">For Job Seekers</Link>
-                <Link className={styles.link} href="/post-a-job">For Employers</Link>
                 <Link className={styles.link} href="/salary">Salary Guide</Link>
               </div>
             </div>
@@ -172,7 +169,6 @@ export function Footer() {
                 <Link className={styles.link} href="/about#contact">Contact</Link>
                 <Link className={styles.link} href="/privacy">Privacy Policy</Link>
                 <Link className={styles.link} href="/terms">Terms of Service</Link>
-                <Link className={styles.link} href="/pricing">Advertise</Link>
               </div>
             </div>
           </details>

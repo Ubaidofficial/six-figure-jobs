@@ -1,5 +1,0 @@
-        source        | missing_description 
-----------------------+---------------------
- board:weworkremotely |                  27
-(1 row)
-

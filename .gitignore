@@ -1,5 +1,7 @@
 node_modules
 .next
+.tmp
+.tmp_audit
 .env
 .env.local
 .env.staging
@@ -12,6 +14,7 @@ pnpm-debug.log*
 dist
 coverage
 .DS_Store
+tsconfig.tsbuildinfo
 
 
 # Prisma local databases
@@ -21,3 +24,10 @@ prisma/dev.backup.db
 scrape.log
 scripts/checkCounts.ts
 CHANGELOG.generated.md
+
+# Local/generated audit artifacts
+audit-20*/
+audit_*.counts.txt
+audit_prod_*.txt
+audit_seo.counts.txt
+audit_todos.counts.txt

@@ -167,10 +167,6 @@ export function SiteHeader() {
             <Link href="/companies" className={styles.navLink}>
               Companies
             </Link>
-
-            <Link href="/post-a-job" className={styles.navLink}>
-              For Employers
-            </Link>
           </nav>
         </div>
 
@@ -183,14 +179,6 @@ export function SiteHeader() {
           >
             <Search className={styles.searchIcon} aria-hidden="true" />
           </button>
-
-          <Link href="/post-a-job" className={styles.signIn}>
-            Sign In
-          </Link>
-
-          <Link href="/post-a-job" className={styles.cta}>
-            Post a Job
-          </Link>
 
           <span className={styles.mobileOnly}>
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -255,9 +243,6 @@ export function SiteHeader() {
                     <Link className={styles.mobileItem} href="/companies" onClick={() => setMobileOpen(false)}>
                       Companies <span className={styles.mobileMeta}>/companies</span>
                     </Link>
-                    <Link className={styles.mobileItem} href="/post-a-job" onClick={() => setMobileOpen(false)}>
-                      For Employers <span className={styles.mobileMeta}>/post-a-job</span>
-                    </Link>
                     <button
                       type="button"
                       className={styles.mobileItem}
@@ -268,15 +253,6 @@ export function SiteHeader() {
                     >
                       Find jobs <span className={styles.mobileMeta}>/search</span>
                     </button>
-                  </div>
-
-                  <div className={styles.mobileActions}>
-                    <Link href="/post-a-job" className={styles.mobileSignIn} onClick={() => setMobileOpen(false)}>
-                      Sign In
-                    </Link>
-                    <Link href="/post-a-job" className={styles.mobileCta} onClick={() => setMobileOpen(false)}>
-                      Post a Job
-                    </Link>
                   </div>
                 </div>
               </SheetContent>

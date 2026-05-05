@@ -1,5 +1,0 @@
- hs_validated | hs_with_city_or_country 
---------------+-------------------------
-         5928 |                    5285
-(1 row)
-

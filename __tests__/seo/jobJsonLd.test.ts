@@ -1,7 +1,14 @@
 import { buildJobJsonLd } from '../../lib/seo/jobJsonLd'
+import { MAX_INDEXABLE_JOB_AGE_DAYS } from '../../lib/jobs/freshness'
 
 describe('buildJobJsonLd', () => {
-  it('does not invent validThrough and preserves cleaned HTML descriptions', () => {
+  it('sets validThrough from freshness and preserves cleaned HTML descriptions', () => {
+    const lastSeenAt = new Date('2026-03-20T00:00:00.000Z')
+    const expectedValidThrough = new Date(lastSeenAt)
+    expectedValidThrough.setDate(
+      expectedValidThrough.getDate() + MAX_INDEXABLE_JOB_AGE_DAYS,
+    )
+
     const jsonLd = buildJobJsonLd({
       id: 'ats:test:1',
       title: 'Senior Software Engineer',
@@ -37,7 +44,7 @@ describe('buildJobJsonLd', () => {
       benefitsJson: null,
       externalId: '1',
       isExpired: false,
-      lastSeenAt: new Date('2026-03-20T00:00:00.000Z'),
+      lastSeenAt,
       postedAt: new Date('2026-03-15T00:00:00.000Z'),
       createdAt: new Date('2026-03-15T00:00:00.000Z'),
       updatedAt: new Date('2026-03-20T00:00:00.000Z'),
@@ -108,7 +115,7 @@ describe('buildJobJsonLd', () => {
     } as any)
 
     expect(jsonLd['@type']).toBe('JobPosting')
-    expect(jsonLd.validThrough).toBeUndefined()
+    expect(jsonLd.validThrough).toBe(expectedValidThrough.toISOString())
     expect(jsonLd.description).toContain('<p>Build platform systems.</p>')
     expect(jsonLd.description).toContain('<li>Own backend services.</li>')
     expect(jsonLd.description).not.toContain('<script>')

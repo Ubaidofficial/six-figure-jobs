@@ -148,6 +148,18 @@ export interface ScrapedJobInput {
   /** Detected ATS careers URL */
   explicitAtsUrl?: string | null
 
+  /**
+   * Pre-resolved company for trusted ingest paths such as ATS batch runs.
+   * This lets high-volume scrapers avoid resolving the same company for every job.
+   */
+  resolvedCompany?: ResolvedCompany | null
+
+  /**
+   * Optional active-job lookup cache for trusted batch ingest paths.
+   * ATS company runs can load this once and avoid repeated per-job database reads.
+   */
+  existingJobCache?: IngestExistingJobCache | null
+
   // === Raw data for debugging ===
   
   /** Original scraped data blob */
@@ -165,6 +177,27 @@ export interface ResolvedCompany {
   atsProvider?: string | null
   atsUrl?: string | null
   lastScrapedAt?: Date | null
+}
+
+export interface IngestExistingJob {
+  id: string
+  title?: string | null
+  company?: string | null
+  companyId?: string | null
+  companyLogo?: string | null
+  source: string
+  url?: string | null
+  applyUrl?: string | null
+  sourcePriority?: number | null
+  dedupeKey?: string | null
+  isExpired?: boolean | null
+  [key: string]: unknown
+}
+
+export interface IngestExistingJobCache {
+  byId: Map<string, IngestExistingJob>
+  byDedupeKey: Map<string, IngestExistingJob>
+  byTitleCompanySource: Map<string, IngestExistingJob[]>
 }
 
 // =============================================================================
@@ -231,6 +264,8 @@ export function createScrapedJob(
     department: partial.department ?? null,
     explicitAtsProvider: partial.explicitAtsProvider ?? null,
     explicitAtsUrl: partial.explicitAtsUrl ?? null,
+    resolvedCompany: partial.resolvedCompany ?? null,
+    existingJobCache: partial.existingJobCache ?? null,
     salaryRaw: partial.salaryRaw ?? null,
     raw: partial.raw ?? null,
   }

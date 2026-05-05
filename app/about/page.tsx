@@ -54,17 +54,6 @@ export default function AboutPage() {
         or explore <Link className="text-emerald-300 underline" href="/remote">remote roles</Link>.
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold text-slate-50">
-        For employers
-      </h2>
-      <p className="mt-4 text-slate-300">
-        Hiring for a high-paying role? Post directly here:{' '}
-        <Link className="text-emerald-300 underline" href="/post-a-job">
-          Post a job
-        </Link>
-        .
-      </p>
-
       <h2 className="mt-10 text-xl font-semibold text-slate-50">Contact</h2>
       <p className="mt-4 text-slate-300">
         For support or feedback, reach us at{' '}

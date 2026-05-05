@@ -10,7 +10,9 @@
 
 import { ingestJob } from '../ingest'
 import { makeAtsSource } from '../ingest/sourcePriority'
-import type { ScrapedJobInput } from '../ingest/types'
+import type { IngestExistingJob, IngestExistingJobCache, ResolvedCompany, ScrapedJobInput } from '../ingest/types'
+import { normalizeRole } from '../normalizers/role'
+import { prisma } from '../prisma'
 
 // =============================================================================
 // Types
@@ -36,6 +38,9 @@ export type UpsertAtsResult = {
  */
 function inferRoleSlugFromTitle(title: string | null | undefined): string | null {
   if (!title) return null
+
+  const canonicalRoleSlug = normalizeRole(title).roleSlug
+  if (canonicalRoleSlug) return canonicalRoleSlug
 
   const t = ` ${title.toLowerCase()} `
 
@@ -535,6 +540,108 @@ function inferRoleSlugFromTitle(title: string | null | undefined): string | null
   return cleaned || null
 }
 
+function existingJobSelect() {
+  return {
+    id: true,
+    title: true,
+    company: true,
+    companyId: true,
+    companyLogo: true,
+    source: true,
+    url: true,
+    applyUrl: true,
+    sourcePriority: true,
+    dedupeKey: true,
+    isExpired: true,
+    employmentType: true,
+    type: true,
+    descriptionHtml: true,
+    salaryRaw: true,
+    salaryMin: true,
+    salaryMax: true,
+    salaryCurrency: true,
+    salaryPeriod: true,
+    minAnnual: true,
+    maxAnnual: true,
+    currency: true,
+    isHighSalary: true,
+    salaryValidated: true,
+    salaryConfidence: true,
+    salarySource: true,
+    salaryParseReason: true,
+    salaryNormalizedAt: true,
+    salaryRejectedAt: true,
+    salaryRejectedReason: true,
+    needsReview: true,
+    locationRaw: true,
+    city: true,
+    citySlug: true,
+    countryCode: true,
+    remote: true,
+    remoteRegion: true,
+    remoteMode: true,
+    postedAt: true,
+  } as const
+}
+
+function titleCompanySourceKey(
+  companyName: string | null | undefined,
+  source: string | null | undefined,
+  title: string | null | undefined,
+): string {
+  return [
+    String(companyName ?? '').trim().toLowerCase(),
+    String(source ?? '').trim().toLowerCase(),
+    String(title ?? '').trim().toLowerCase(),
+  ].join('::')
+}
+
+function rememberExistingJob(cache: IngestExistingJobCache, job: IngestExistingJob) {
+  cache.byId.set(job.id, job)
+  if (job.isExpired) return
+
+  if (job.dedupeKey) {
+    cache.byDedupeKey.set(job.dedupeKey, job)
+  }
+
+  if (job.source && job.title) {
+    const key = titleCompanySourceKey(job.company, job.source, job.title)
+    const jobs = cache.byTitleCompanySource.get(key) ?? []
+    jobs.push(job)
+    cache.byTitleCompanySource.set(key, jobs)
+
+    const sameCompanyKey = titleCompanySourceKey(null, job.source, job.title)
+    if (sameCompanyKey !== key) {
+      const sameCompanyJobs = cache.byTitleCompanySource.get(sameCompanyKey) ?? []
+      sameCompanyJobs.push(job)
+      cache.byTitleCompanySource.set(sameCompanyKey, sameCompanyJobs)
+    }
+  }
+}
+
+async function loadExistingJobCacheForCompany(
+  companyId: string,
+): Promise<IngestExistingJobCache> {
+  const cache: IngestExistingJobCache = {
+    byId: new Map(),
+    byDedupeKey: new Map(),
+    byTitleCompanySource: new Map(),
+  }
+
+  const jobs = await prisma.job.findMany({
+    where: {
+      companyId,
+    },
+    select: existingJobSelect(),
+  })
+
+  for (const job of jobs) {
+    rememberExistingJob(cache, job)
+  }
+
+  return cache
+}
+
 // =============================================================================
 // Main Function
 // =============================================================================
@@ -560,6 +667,15 @@ export async function upsertJobsForCompanyFromAts(
   const companyName: string = company.name ?? 'Unknown company'
   const companyLogo: string | null = company.logoUrl ?? null
   const atsProvider: string = company.atsProvider ?? 'unknown'
+  const resolvedCompany: ResolvedCompany = {
+    id: companyId,
+    name: companyName,
+    slug: companySlug ?? companyId,
+    atsProvider,
+    atsUrl: company.atsUrl ?? null,
+    lastScrapedAt: company.lastScrapedAt ?? null,
+  }
+  const existingJobCache = await loadExistingJobCacheForCompany(companyId)
 
   let created = 0
   let updated = 0
@@ -626,6 +742,8 @@ export async function upsertJobsForCompanyFromAts(
         department: raw.department ?? null,
         descriptionHtml,
         descriptionText: null,
+        resolvedCompany,
+        existingJobCache,
 
         postedAt,
         updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : null,

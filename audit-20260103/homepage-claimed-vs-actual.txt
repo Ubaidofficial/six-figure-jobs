@@ -1,5 +1,0 @@
- total_jobs | verified_jobs | unique_companies 
-------------+---------------+------------------
-      10930 |          5928 |              181
-(1 row)
-
