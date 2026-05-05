@@ -30,6 +30,7 @@ import {
 } from '@/components/home/ExplorePremiumRoles'
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { getThresholdLabelForCountry } from '@/lib/seo/salaryLabels'
+import { getSiteUrl } from '@/lib/seo/site'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
 import { WhySixFigureJobs } from '@/components/home/WhySixFigureJobs'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
@@ -157,12 +158,15 @@ function HomepageSchemas({
   jobCount: number
   companyCount: number
 }) {
+  const siteUrl = getSiteUrl()
+
   const websiteSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
+    '@id': `${siteUrl}/#website`,
     name: 'Six Figure Jobs',
     alternateName: ['6FigJobs', '6 Figure Jobs', 'SixFigJobs'],
-    url: 'https://www.6figjobs.com',
+    url: siteUrl,
     description:
       'The exclusive job board for six figure jobs and high paying $100k+ positions. ' +
       'Find lucrative careers with verified salaries.',
@@ -170,7 +174,7 @@ function HomepageSchemas({
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://www.6figjobs.com/search?q={search_term_string}',
+        urlTemplate: `${siteUrl}/browse?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -179,11 +183,12 @@ function HomepageSchemas({
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': `${siteUrl}/#organization`,
     name: 'Six Figure Jobs',
     legalName: 'Six Figure Jobs LLC',
     alternateName: ['6FigJobs', '6 Figure Jobs'],
-    url: 'https://www.6figjobs.com',
-    logo: 'https://www.6figjobs.com/logo.png',
+    url: siteUrl,
+    logo: `${siteUrl}/logo.png`,
     description: `Premium job board featuring ${jobCount.toLocaleString()}+ six figure jobs and high paying $100k+ positions from ${companyCount.toLocaleString()}+ top companies. The #1 destination for lucrative careers.`,
     foundingDate: '2025-12-05',
     sameAs: [

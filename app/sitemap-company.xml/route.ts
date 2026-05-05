@@ -51,10 +51,12 @@ export async function GET() {
     const total = await fetchEligibleCompanyCount()
     const totalPages = Math.ceil(total / PAGE_SIZE)
 
+    const lastmod = new Date().toISOString()
     const entries = Array.from({ length: totalPages }).map((_, i) => {
       const loc = escapeXml(`${SITE_URL}/sitemap-company/${i + 1}`)
       return `  <sitemap>
     <loc>${loc}</loc>
+    <lastmod>${lastmod}</lastmod>
   </sitemap>`
     })
 

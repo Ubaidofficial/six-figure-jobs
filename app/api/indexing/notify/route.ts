@@ -67,7 +67,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     return NextResponse.json(
       {
         error: 'Google Indexing API credentials not configured',
-        hint: 'Set GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON or GOOGLE_INDEXING_CLIENT_EMAIL + GOOGLE_INDEXING_PRIVATE_KEY',
+        hint: 'Set GOOGLE_OAUTH_CLIENT_ID + GOOGLE_OAUTH_CLIENT_SECRET + GOOGLE_OAUTH_REFRESH_TOKEN (preferred), or GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON',
       },
       { status: 503 },
     )

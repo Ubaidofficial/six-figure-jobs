@@ -26,6 +26,8 @@ import {
 } from '../lib/jobs/queryJobs'
 import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../lib/jobs/freshness'
 import { buildIndexableJobStructureWhere } from '../lib/jobs/qualityGate'
+import { buildJobSlug } from '../lib/jobs/jobSlug'
+import { notifyUrls, hasIndexingCredentials } from '../lib/indexing/googleIndexingClient'
 
 // Core board scrapers (default exports)
 import scrapeRemoteOK from '../lib/scrapers/remoteok'
@@ -627,8 +629,53 @@ async function printJobSummary() {
   __slog('')
 }
 
+async function notifyGoogleOfNewJobs(since: Date, dryRun: boolean) {
+  if (dryRun) return
+  if (!hasIndexingCredentials()) {
+    __slog('ℹ️  Skipping Google Indexing API — no credentials configured.')
+    return
+  }
+
+  const siteUrl = (process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.6figjobs.com').replace(/\/+$/, '')
+
+  try {
+    const newJobs = await prisma.job.findMany({
+      where: {
+        createdAt: { gte: since },
+        isExpired: false,
+      },
+      select: { id: true, title: true },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    })
+
+    if (newJobs.length === 0) {
+      __slog('ℹ️  No new jobs to notify Google about.')
+      return
+    }
+
+    const urls = newJobs.map((j) => `${siteUrl}/job/${buildJobSlug({ id: j.id, title: j.title })}`)
+    __slog(`\n📡 Notifying Google Indexing API for ${urls.length} new job(s)…`)
+
+    const results = await notifyUrls(urls, { concurrency: 4 })
+    const succeeded = results.filter((r) => r.success).length
+    const failed = results.filter((r) => !r.success).length
+
+    __slog(`   ✅ Google Indexing API: submitted=${succeeded} failed=${failed}`)
+    if (failed > 0) {
+      results.filter((r) => !r.success).slice(0, 5).forEach((r) =>
+        __serr(`   ❌ ${r.url}: ${r.error}`)
+      )
+    }
+  } catch (err) {
+    __serr('⚠️  Google Indexing API notification failed (non-fatal):', getErrorMessage(err))
+  }
+}
+
 async function main() {
   const options = parseCliArgs()
+  const scrapeStartedAt = new Date()
+
   if (options.dryRun) {
     process.env.SCRAPE_DRY_RUN = '1'
     process.env.DRY_RUN = '1'
@@ -671,6 +718,7 @@ async function main() {
   }
 
   await printJobSummary()
+  await notifyGoogleOfNewJobs(scrapeStartedAt, options.dryRun)
 
   __slog('✅ Finished daily scrape run.')
   const slowSources = [...stats.sourceMetrics]

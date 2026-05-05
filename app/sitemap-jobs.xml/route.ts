@@ -84,8 +84,10 @@ export async function GET() {
 
       const token = cursor ? encodeCursor(cursor) : '1'
       const loc = escapeXml(`${SITE_URL}/sitemap-jobs/${token}`)
+      const lastmod = rows[0]?.updatedAt?.toISOString() ?? new Date().toISOString()
       sitemapEntries.push(`  <sitemap>
     <loc>${loc}</loc>
+    <lastmod>${lastmod}</lastmod>
   </sitemap>`)
 
       if (rows.length <= PAGE_SIZE) break

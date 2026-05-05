@@ -1,3 +1,15 @@
+# 2.8.52 (2026-05-05)
+
+
+### Bug Fixes
+
+* fix homepage JSON-LD schemas to use getSiteUrl() instead of hardcoded domain, add @id fields to Organization and WebSite schemas, fix SearchAction target to /browse
+* add lastmod to all sitemapindex shard entries (jobs, company, slices)
+* wire daily scraper to auto-notify Google Indexing API for new jobs after each run
+* update .env.example with OAuth2 and INDEXING_API_INTERNAL_KEY vars
+* fix API error message hint to include OAuth2 credential names
+
+
 # 2.8.51 (2026-05-05)
 
 
