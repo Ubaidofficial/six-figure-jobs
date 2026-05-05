@@ -39,8 +39,9 @@ export function buildJobJsonLd(job: JobWithCompany): any {
       : isRemote
         ? undefined
         : buildJobLocation(job)
-  const jobLocationType =
-    isRemote && (applicantLocationRequirements || jobLocation) ? 'TELECOMMUTE' : undefined
+  // All remote jobs get TELECOMMUTE regardless of whether location parses —
+  // global-remote jobs (countryCode: null) must still be classified as remote in Google Jobs.
+  const jobLocationType = isRemote ? 'TELECOMMUTE' : undefined
 
   const employmentType = normalizeEmploymentType(job.type || job.employmentType) || 'FULL_TIME'
 
@@ -87,18 +88,24 @@ function buildStructuredDescription(job: any, companyName: string): string {
   if (raw) {
     const sanitized = sanitizeDescriptionHtmlForJsonLd(raw)
     if (sanitized) return sanitized
+    // Strip HTML tags and use plain text if sanitizer returned empty (e.g. div-only markup)
+    const stripped = stripTags(raw).replace(/\s+/g, ' ').trim()
+    if (stripped.length >= 30) return wrapPlainTextAsHtml(cleanDescription(stripped))
   }
 
-  const text = String(job.descriptionText || '').trim()
-  if (text) return wrapPlainTextAsHtml(cleanDescription(text))
+  // descriptionText does not exist in the schema — removed dead field reference.
+  // Fall back to aiSnippet or aiOneLiner if available (AI-enriched fields).
+  const aiText = String(job.aiSnippet || job.aiOneLiner || '').trim()
+  if (aiText.length >= 30) return wrapPlainTextAsHtml(cleanDescription(aiText))
 
   const fallback = (job.salaryRaw ? String(job.salaryRaw) : '') || `${job.title} at ${companyName}`
   return wrapPlainTextAsHtml(cleanDescription(fallback))
 }
 
 function buildBaseSalary(job: any): any | undefined {
+  // Emit baseSalary for any validated salary, not only ATS-sourced ones.
+  // This puts the salary pill in Google Search results for far more listings.
   if (job?.salaryValidated !== true) return undefined
-  if (job?.salarySource !== 'ats') return undefined
 
   const rawMin = toNumberSafe(job.minAnnual)
   const rawMax = toNumberSafe(job.maxAnnual)

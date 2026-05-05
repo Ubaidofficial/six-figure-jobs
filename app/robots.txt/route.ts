@@ -42,6 +42,8 @@ export async function GET() {
   const body = [
     'User-agent: *',
     'Allow: /',
+    'Disallow: /search',
+    'Disallow: /api/',
     '',
     'User-agent: GPTBot',
     'Disallow: /api/',

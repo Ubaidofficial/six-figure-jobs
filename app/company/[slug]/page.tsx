@@ -848,6 +848,7 @@ function buildOrganizationJsonLd(company: CompanyWithJobs['company']) {
   const jsonLd: any = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': `${SITE_URL}/company/${company.slug}#organization`,
     name: company.name,
     url: company.website || `${SITE_URL}/company/${company.slug}`,
   }

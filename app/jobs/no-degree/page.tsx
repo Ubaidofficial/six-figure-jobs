@@ -69,7 +69,7 @@ export async function generateMetadata({
 
   let total = 0
   try {
-    const result = await queryJobs({ page: 1, pageSize: 1 })
+    const result = await queryJobs({ page: 1, pageSize: 1, roleSlugs: NO_DEGREE_ROLES.map((r) => r.slug) })
     total = result.total
   } catch {}
 
@@ -94,9 +94,10 @@ export default async function NoDegreeJobsPage({
   const sp = (await searchParams) || {}
   const page = parsePage(sp)
 
-  // Show all $100k+ jobs — the page is primarily a content/SEO page
-  // targeting "no degree" keywords, showing the full jobs feed with relevant content
-  const result = await queryJobs({ page, pageSize: PAGE_SIZE, sortBy: 'date' })
+  // Filter to roles well-known for skills-first hiring (the same list shown in the cards above).
+  // This prevents a topical mismatch where Google sees "no degree" content but an unfiltered feed.
+  const noDegreeRoleSlugs = NO_DEGREE_ROLES.map((r) => r.slug)
+  const result = await queryJobs({ page, pageSize: PAGE_SIZE, sortBy: 'date', roleSlugs: noDegreeRoleSlugs })
 
   const jobs = result.jobs as JobWithCompany[]
   const total = result.total

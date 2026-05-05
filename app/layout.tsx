@@ -19,15 +19,8 @@ export const metadata: Metadata = {
   robots: process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')
     ? { index: false, follow: false }
     : undefined,
-  // Global hreflang: content is in English for an international audience.
-  // Page-level generateMetadata overrides canonical; these act as site-wide defaults.
-  alternates: {
-    canonical: SITE_URL,
-    languages: {
-      'en': SITE_URL,
-      'x-default': SITE_URL,
-    },
-  },
+  // NOTE: No global canonical here — each page sets its own via generateMetadata.
+  // A global canonical pointing to the homepage would create canonical conflicts at scale.
   // Default OG image for pages that don't have a dynamic opengraph-image.tsx
   openGraph: {
     siteName: 'Six Figure Jobs',

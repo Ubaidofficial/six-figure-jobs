@@ -61,6 +61,7 @@
 * Remove unsupported fields from YC scraper ([fb34a95](https://github.com/Ubaidofficial/six-figure-jobs/commit/fb34a9519003bfb4f9d13043e7a8770d8fe0c5c4))
 * Repair syntax errors in generic.ts scraper ([41ba3a3](https://github.com/Ubaidofficial/six-figure-jobs/commit/41ba3a3c6ecc8c7990845c4e82ad8b1a7dfb33e4))
 * resolve double flag display in job location labels (🇺🇸 USA instead of 🇺🇸 🇺🇸 USA) ([9c55e4b](https://github.com/Ubaidofficial/six-figure-jobs/commit/9c55e4beedea0675c7c9db19acb2cf6f78842ef6))
+* resolve Next.js 16 build failures — revalidateTag signature + image config ([d5e745c](https://github.com/Ubaidofficial/six-figure-jobs/commit/d5e745c2bb95e4f7dcdacaeff628304f950ee521))
 * resolve race condition in job ingestion ([bd7ea9b](https://github.com/Ubaidofficial/six-figure-jobs/commit/bd7ea9b4d8cc8a500a02a10a909375f43ae250b2))
 * revenue-critical scraper fixes — expiry cycle, ATS salary passthrough, BambooHR scraper ([a8d290a](https://github.com/Ubaidofficial/six-figure-jobs/commit/a8d290a2db7d7e654fb0bcfffb7d3bd364a6b3f2))
 * **routes:** use numeric revalidate literals for Next route handlers ([cbe4cfa](https://github.com/Ubaidofficial/six-figure-jobs/commit/cbe4cfab6e6555372106943399a8a7b83aa73a15))

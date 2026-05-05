@@ -105,6 +105,9 @@ export function Footer() {
             <div className={styles.list}>
               <Link className={styles.link} href="/jobs">For Job Seekers</Link>
               <Link className={styles.link} href="/salary">Salary Guide</Link>
+              <Link className={styles.link} href="/jobs/visa-sponsorship">Visa Sponsorship Jobs</Link>
+              <Link className={styles.link} href="/jobs/no-degree">No-Degree Tech Jobs</Link>
+              <Link className={styles.link} href="/companies">Top Companies</Link>
             </div>
           </div>
 
@@ -223,6 +226,9 @@ export function Footer() {
               <div className={styles.list}>
                 <Link className={styles.link} href="/jobs">For Job Seekers</Link>
                 <Link className={styles.link} href="/salary">Salary Guide</Link>
+                <Link className={styles.link} href="/jobs/visa-sponsorship">Visa Sponsorship Jobs</Link>
+                <Link className={styles.link} href="/jobs/no-degree">No-Degree Tech Jobs</Link>
+                <Link className={styles.link} href="/companies">Top Companies</Link>
               </div>
             </div>
           </details>
@@ -245,7 +251,7 @@ export function Footer() {
 
       <div className={styles.bottomBar}>
         <div className={styles.bottomInner}>
-          <div>© 2024 Six Figure Jobs</div>
+          <div>© {new Date().getFullYear()} Six Figure Jobs</div>
           <div className={styles.bottomLinks}>
             <Link className={styles.link} href="/privacy">Privacy</Link>
             <span className={styles.dot} aria-hidden="true">•</span>
