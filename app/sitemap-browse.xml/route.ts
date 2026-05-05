@@ -6,6 +6,8 @@ import { NextResponse } from 'next/server'
 import { buildBrowseSitemapReport } from '@/lib/seo/browseSitemap'
 import { buildFallbackUrlsetResponse } from '@/lib/seo/fallbackSitemap'
 import { getSiteUrl } from '@/lib/seo/site'
+import { prisma } from '@/lib/prisma'
+import { buildWhere } from '@/lib/jobs/queryJobs'
 
 const SITE_URL = getSiteUrl()
 
@@ -21,9 +23,24 @@ function escapeXml(s: string) {
     .replace(/'/g, '&apos;')
 }
 
+async function getGlobalLastmod(): Promise<string> {
+  try {
+    const agg = await prisma.job.aggregate({
+      where: buildWhere({}),
+      _max: { updatedAt: true },
+    })
+    return (agg._max.updatedAt ?? new Date()).toISOString()
+  } catch {
+    return new Date().toISOString()
+  }
+}
+
 export async function GET() {
   try {
-    const report = await buildBrowseSitemapReport(3)
+    const [report, lastmod] = await Promise.all([
+      buildBrowseSitemapReport(3),
+      getGlobalLastmod(),
+    ])
     const urls = report.included.map((row) => `${SITE_URL}${row.path}`)
     const uniqueUrls = Array.from(new Set(urls))
 
@@ -33,6 +50,7 @@ ${uniqueUrls
   .map(
     (u) => `  <url>
     <loc>${escapeXml(u)}</loc>
+    <lastmod>${lastmod}</lastmod>
   </url>`,
   )
   .join('\n')}

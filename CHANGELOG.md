@@ -1,3 +1,11 @@
+# 2.8.51 (2026-05-05)
+
+
+### Features
+
+* add Google Indexing API OAuth2 client with refresh token auth, POST /api/indexing/notify endpoint for fast job indexing after scraping, one-time OAuth2 setup script, and lastmod timestamps on sitemap-browse.xml
+
+
 # 2.8.50 (2026-05-03)
 
 
