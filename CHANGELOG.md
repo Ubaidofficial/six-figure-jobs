@@ -144,6 +144,7 @@
 * **scrape:** run scheduled ingestion in github with dry-run guards ([038e577](https://github.com/Ubaidofficial/six-figure-jobs/commit/038e5773edb20d6e6dbbeaf62ca2e194a09d9621))
 * **seo:** add pSEO playbook batch generator CLI ([5e2d3a8](https://github.com/Ubaidofficial/six-figure-jobs/commit/5e2d3a819a142f8331ea1b78447ce660e0d4bc86))
 * **seo:** canonical role slugs + remove 150k tier ([f9203ef](https://github.com/Ubaidofficial/six-figure-jobs/commit/f9203efc996748fc0fcbe83487920b17e2ec9078))
+* **seo:** fix all Severity 3 pSEO issues — blog, occupationalCategory, noDegreeMention, sitemap lastmod ([4f3bc48](https://github.com/Ubaidofficial/six-figure-jobs/commit/4f3bc48de8c31bbb8a37d7f20076717b4e0154b9))
 * **seo:** implement v1.5 rules - 90% compliance ([5c7a9cf](https://github.com/Ubaidofficial/six-figure-jobs/commit/5c7a9cf81baae556738c9b59e2c3b9323741bab2))
 * **seo:** strengthen secondary pSEO templates ([26c74df](https://github.com/Ubaidofficial/six-figure-jobs/commit/26c74df7b10469bae3948812d391aa722c993dc5))
 * strengthen pseo guardrails ([53b3664](https://github.com/Ubaidofficial/six-figure-jobs/commit/53b3664f6139141c799105cc0086fdc323847850))
