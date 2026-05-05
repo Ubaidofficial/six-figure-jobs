@@ -28,6 +28,7 @@ const sitemapSources = [
   '/sitemap-category/:path*',
   '/sitemap-level/:path*',
   '/sitemap-browse/:path*',
+  '/sitemap-blog.xml',
 ]
 
 const pageCacheHeaders = [

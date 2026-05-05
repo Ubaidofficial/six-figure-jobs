@@ -68,6 +68,7 @@ export async function GET() {
     ...(hasLevelUrls ? [`Sitemap: ${SITE_URL}/sitemap-level.xml`] : []),
     ...(hasBrowseUrls ? [`Sitemap: ${SITE_URL}/sitemap-browse.xml`] : []),
     ...(hasSliceUrls ? [`Sitemap: ${SITE_URL}/sitemap-slices.xml`] : []),
+    `Sitemap: ${SITE_URL}/sitemap-blog.xml`,
     '',
   ].join('\n')
 

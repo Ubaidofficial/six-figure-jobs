@@ -81,6 +81,7 @@
 * **seo:** align slice seed/canonical country slugs [PRD-2 Task 4] ([8c06759](https://github.com/Ubaidofficial/six-figure-jobs/commit/8c067595b915187f4cccbed5136ca85f766d986e))
 * **seo:** avoid empty company sitemap shard 404s ([5570254](https://github.com/Ubaidofficial/six-figure-jobs/commit/5570254045465776a8c7192e1a7914c95240e8cd))
 * **seo:** enforce tier robots on /jobs/[role] [PRD-2 Task 3] ([65b9185](https://github.com/Ubaidofficial/six-figure-jobs/commit/65b918577473d9c7e8bd355e05ce0a1ba9e8154f))
+* **seo:** fix all Severity 1 + 2 pSEO audit issues ([ce166c3](https://github.com/Ubaidofficial/six-figure-jobs/commit/ce166c3c3e49d77b131bb700a2279eedaa02a3b2))
 * **seo:** harden production proof retries ([f8e0856](https://github.com/Ubaidofficial/six-figure-jobs/commit/f8e0856f461185abcc4fb1ac61e11780eb18cfc5))
 * **seo:** harden sitemap integrity and indexability gates ([87c6820](https://github.com/Ubaidofficial/six-figure-jobs/commit/87c68205ae6d4a7ea1bec24cb9776f901279a169))
 * **seo:** location invalid slugs 404 [PRD-2 Task 2] ([fc748bf](https://github.com/Ubaidofficial/six-figure-jobs/commit/fc748bfc31d6fb2147a2704474df3e7d4763cc43))

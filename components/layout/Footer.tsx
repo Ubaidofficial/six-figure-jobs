@@ -105,6 +105,7 @@ export function Footer() {
             <div className={styles.list}>
               <Link className={styles.link} href="/jobs">For Job Seekers</Link>
               <Link className={styles.link} href="/salary">Salary Guide</Link>
+              <Link className={styles.link} href="/blog">Career Blog</Link>
               <Link className={styles.link} href="/jobs/visa-sponsorship">Visa Sponsorship Jobs</Link>
               <Link className={styles.link} href="/jobs/no-degree">No-Degree Tech Jobs</Link>
               <Link className={styles.link} href="/companies">Top Companies</Link>
@@ -226,6 +227,7 @@ export function Footer() {
               <div className={styles.list}>
                 <Link className={styles.link} href="/jobs">For Job Seekers</Link>
                 <Link className={styles.link} href="/salary">Salary Guide</Link>
+                <Link className={styles.link} href="/blog">Career Blog</Link>
                 <Link className={styles.link} href="/jobs/visa-sponsorship">Visa Sponsorship Jobs</Link>
                 <Link className={styles.link} href="/jobs/no-degree">No-Degree Tech Jobs</Link>
                 <Link className={styles.link} href="/companies">Top Companies</Link>

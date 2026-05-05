@@ -53,6 +53,7 @@ model Job {
   employmentType            String?        @default("full-time")
   workArrangement           String?
   visaSponsorship           Boolean        @default(false)
+  noDegreeMention           Boolean        @default(false)
   techStack                 String?
   industry                  String?
   stateCode                 String?

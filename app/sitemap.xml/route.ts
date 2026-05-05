@@ -3,6 +3,7 @@
 import { getSiteUrl } from '../../lib/seo/site'
 import { resolveCoreSitemapFamilies } from '../../lib/seo/coreSitemapFamilies'
 import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
+import { prisma } from '../../lib/prisma'
 
 const SITE_URL = getSiteUrl()
 
@@ -18,6 +19,15 @@ function escapeXml(s: string) {
     .replace(/'/g, '&apos;')
 }
 
+async function getLastmod(): Promise<string> {
+  try {
+    const agg = await prisma.job.aggregate({ _max: { updatedAt: true } })
+    return (agg._max.updatedAt ?? new Date()).toISOString()
+  } catch {
+    return new Date().toISOString()
+  }
+}
+
 export async function GET() {
   const [
     { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
@@ -30,9 +40,11 @@ export async function GET() {
       hasBrowseUrls,
       failedFamilies: failedCoreFamilies,
     },
+    lastmod,
   ] = await Promise.all([
     resolveOptionalSitemapFamilies('sitemap.xml'),
     resolveCoreSitemapFamilies('sitemap.xml'),
+    getLastmod(),
   ])
   const sitemaps = [
     ...(hasJobUrls ? ['sitemap-jobs.xml'] : []),
@@ -45,6 +57,7 @@ export async function GET() {
     ...(hasLevelUrls ? ['sitemap-level.xml'] : []),
     ...(hasBrowseUrls ? ['sitemap-browse.xml'] : []),
     ...(hasSliceUrls ? ['sitemap-slices.xml'] : []),
+    'sitemap-blog.xml',
   ]
   const fallbackParts = [
     ...(failedFamilies.length > 0 ? [`optional_families=${failedFamilies.join(',')}`] : []),
@@ -64,6 +77,7 @@ ${sitemaps
     const loc = escapeXml(`${SITE_URL}/${s}`)
     return `  <sitemap>
     <loc>${loc}</loc>
+    <lastmod>${lastmod}</lastmod>
   </sitemap>`
   })
   .join('\n')}${fallbackComment}
