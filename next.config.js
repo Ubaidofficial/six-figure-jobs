@@ -52,8 +52,13 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.amazonaws.com' },
       { protocol: 'https', hostname: 'cdn.builtin.com' },
     ],
-    // Reduce Railway CPU/egress by skipping on-the-fly image optimization.
-    unoptimized: true,
+    // Enable optimisation for Core Web Vitals (WebP/AVIF conversion, responsive sizes).
+    // Railway handles Node.js image processing fine; the previous unoptimized=true was
+    // a conservative default that hurt LCP scores.
+    unoptimized: false,
+    formats: ['image/avif', 'image/webp'],
+    // Aggressive caching: Railway serves optimised images from the build cache.
+    minimumCacheTTL: 86400,
   },
   async headers() {
     return [

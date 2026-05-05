@@ -1,3 +1,16 @@
+# 2.8.55 (2026-05-05)
+
+
+### Features
+
+* add dynamic Open Graph images (1200×630) for job detail, company profile, and role hub pages using next/og ImageResponse; each image shows live data — job title/salary/location, company stats, role job count and avg salary
+* add hreflang tags (en + x-default) and default OG/Twitter image metadata to root layout; pages without a custom opengraph-image.tsx now fall back to the static og-image.png correctly
+
+### Bug Fixes
+
+* enable Next.js image optimization (images.unoptimized: false) with AVIF/WebP formats and 24h cache TTL — previously disabled, causing all images to serve as unoptimized originals and hurting Core Web Vitals LCP scores
+
+
 # 2.8.54 (2026-05-05)
 
 

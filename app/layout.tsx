@@ -6,8 +6,10 @@ import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { getSiteUrl } from '../lib/seo/site'
 
+const SITE_URL = getSiteUrl()
+
 export const metadata: Metadata = {
-  metadataBase: new URL(getSiteUrl()),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: '$100k+ Jobs | High-Paying Six Figure Positions',
     template: '%s',
@@ -17,6 +19,34 @@ export const metadata: Metadata = {
   robots: process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')
     ? { index: false, follow: false }
     : undefined,
+  // Global hreflang: content is in English for an international audience.
+  // Page-level generateMetadata overrides canonical; these act as site-wide defaults.
+  alternates: {
+    canonical: SITE_URL,
+    languages: {
+      'en': SITE_URL,
+      'x-default': SITE_URL,
+    },
+  },
+  // Default OG image for pages that don't have a dynamic opengraph-image.tsx
+  openGraph: {
+    siteName: 'Six Figure Jobs',
+    type: 'website',
+    locale: 'en_US',
+    images: [
+      {
+        url: `${SITE_URL}/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: 'Six Figure Jobs — $100k+ verified roles',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@6figjobs',
+    images: [`${SITE_URL}/og-image.png`],
+  },
 }
 
 export const viewport: Viewport = {
