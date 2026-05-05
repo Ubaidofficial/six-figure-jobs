@@ -46,6 +46,9 @@ export type JobQueryInput = {
   // Control ordering and internship leakage
   sortBy?: 'salary' | 'date'
   excludeInternships?: boolean
+
+  // Specialty filters
+  visaSponsorship?: boolean
 }
 
 export type JobQueryResult = {
@@ -432,6 +435,10 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 
   if (filters.workArrangement) {
     where.workArrangement = filters.workArrangement
+  }
+
+  if (filters.visaSponsorship === true) {
+    where.visaSponsorship = true
   }
 
   return where

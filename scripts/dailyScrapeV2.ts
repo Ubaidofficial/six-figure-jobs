@@ -61,6 +61,7 @@ import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
 import type { AtsProvider } from '../lib/scrapers/ats/types'
 import { upsertJobsForCompanyFromAts } from '../lib/jobs/ingestFromAts'
 import { runExpiryCycle } from '../lib/jobs/expiry'
+import { runCompanyDiscovery } from './discoverCompanies'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -727,6 +728,19 @@ async function main() {
     __slog(`🗑  Expiry cycle: ${expiryResult.expired} jobs marked expired`)
   } catch (err) {
     __serr('⚠️  Expiry cycle failed:', err)
+  }
+
+  // Weekly company discovery: run on Sundays (or when FORCE_DISCOVER=1)
+  const isSunday = new Date().getDay() === 0
+  const forceDiscover = process.env.FORCE_DISCOVER === '1'
+  if ((isSunday || forceDiscover) && options.mode !== 'boards') {
+    __slog('🔍 Running weekly company discovery (YC + ATS)...')
+    try {
+      await runCompanyDiscovery()
+      __slog('✅ Company discovery complete')
+    } catch (err) {
+      __serr('⚠️  Company discovery failed:', err)
+    }
   }
 
   __slog('✅ Finished daily scrape run.')

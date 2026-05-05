@@ -41,7 +41,16 @@ export async function GET() {
       buildBrowseSitemapReport(3),
       getGlobalLastmod(),
     ])
-    const urls = report.included.map((row) => `${SITE_URL}${row.path}`)
+    // Static specialty pages — always included, high-value pSEO targets
+    const SPECIALTY_PATHS = [
+      '/jobs/visa-sponsorship',
+      '/jobs/no-degree',
+    ]
+
+    const urls = [
+      ...SPECIALTY_PATHS.map((p) => `${SITE_URL}${p}`),
+      ...report.included.map((row) => `${SITE_URL}${row.path}`),
+    ]
     const uniqueUrls = Array.from(new Set(urls))
 
     const body = `<?xml version="1.0" encoding="UTF-8"?>

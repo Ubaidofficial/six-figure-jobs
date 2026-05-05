@@ -1,3 +1,15 @@
+# 2.8.56 (2026-05-05)
+
+
+### Features
+
+* add /jobs/visa-sponsorship pSEO landing page — queries visaSponsorship=true jobs, FAQPage + BreadcrumbList + ItemList JSON-LD, role chips, related links; targets "H1B visa sponsorship jobs", "tech jobs visa sponsorship" search segments
+* add /jobs/no-degree pSEO landing page — targets "6 figure jobs no degree", "high paying jobs without degree"; includes role grid, 4 career paths section, FAQ JSON-LD, full job feed
+* wire weekly company discovery (YC Algolia API) into dailyScrapeV2.ts — runs automatically every Sunday (or FORCE_DISCOVER=1), discovers new YC companies with ATS URLs and imports them to DB
+* add visaSponsorship boolean filter to JobQueryInput + buildWhere in queryJobs.ts
+* include /jobs/visa-sponsorship and /jobs/no-degree in sitemap-browse.xml as static specialty page entries
+
+
 # 2.8.55 (2026-05-05)
 
 
