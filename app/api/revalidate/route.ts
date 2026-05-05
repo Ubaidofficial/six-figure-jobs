@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     revalidatedPaths.push(path)
   }
   if (tag) {
-    revalidateTag(tag)
+    revalidateTag(tag, 'default')
     revalidatedTags.push(tag)
   }
 
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     revalidatedPaths.push(p)
   }
   for (const t of tags.slice(0, MAX)) {
-    revalidateTag(t)
+    revalidateTag(t, 'default')
     revalidatedTags.push(t)
   }
 
