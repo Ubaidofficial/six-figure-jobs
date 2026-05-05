@@ -1,3 +1,13 @@
+# 2.8.53 (2026-05-05)
+
+
+### Features
+
+* add FAQPage + BreadcrumbList JSON-LD to all /jobs/[role] pages with role-specific salary, skills, and remote FAQ answers
+* create on-demand ISR revalidation endpoint at /api/revalidate supporting path and tag purging via Bearer token (GET + POST)
+* add Popular Roles and Salary Guides columns to site footer (desktop + mobile accordion) for pSEO internal linking to top 10 role hubs and 8 salary guides
+
+
 # 2.8.52 (2026-05-05)
 
 

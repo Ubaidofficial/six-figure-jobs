@@ -565,12 +565,66 @@ export async function RoleTemplate({
 
   const career = roleCareerPath(roleSlug)
 
+  const avgUsdLabel = avgUsd ? `~$${Math.round(avgUsd / 1000)}k USD` : 'competitive salaries'
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `How much does a ${roleTitle} make?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${roleTitle} roles on ${SITE_NAME} average ${avgUsdLabel}. Salaries range from $100k to $300k+ depending on seniority, location, and company size. All listings show verified salary ranges upfront.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Are there remote ${roleTitle} jobs available?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Yes. ${SITE_NAME} lists ${data.total.toLocaleString()} ${roleTitle} jobs including fully remote, hybrid, and on-site positions. Use the Remote filter to narrow results to distributed-friendly roles.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What skills are required for ${roleTitle} jobs?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: skills.length
+            ? `Top skills for ${roleTitle} jobs include ${skills.slice(0, 8).map((s) => s.name).join(', ')}. Skill demand is derived from active $100k+ job postings on ${SITE_NAME}.`
+            : `${roleTitle} roles typically require a mix of technical and domain expertise. Browse current listings on ${SITE_NAME} for specific skill requirements.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How do I find $100k+ ${roleTitle} jobs?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Every listing on ${SITE_NAME} is filtered to $100k+ with a published salary range. Browse ${data.total.toLocaleString()} ${roleTitle} jobs, filter by seniority, location, or remote preference, and apply directly via each listing's link — no recruiter middleman.`,
+        },
+      },
+    ],
+  }
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Jobs', item: `${SITE_URL}/jobs` },
+      { '@type': 'ListItem', position: 3, name: `${roleTitle} Jobs`, item: `${SITE_URL}/jobs/${roleSlug}` },
+    ],
+  }
+
   return (
     <main
       className={styles.page}
       style={cssVarStyle({ '--role-a': accent.a, '--role-b': accent.b })}
     >
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href="/">Home</Link>
