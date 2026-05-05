@@ -1,3 +1,17 @@
+# 2.8.54 (2026-05-05)
+
+
+### Bug Fixes
+
+* wire runExpiryCycle() into dailyScrapeV2.ts so stale jobs (not updated in 7+ days) are automatically marked expired after every scrape run
+* fix ATS salary passthrough: ingestFromAts.ts was hardcoding salaryMin/Max/Currency to null for all ATS providers; now forwards structured salary values from Lever/Ashby scrapers to the central ingest pipeline
+* fix Greenhouse structured salary: promote nested ATS raw job fields (including metadata) to the top level of the raw object so parseGreenhouseSalary can access salary metadata without deep nesting
+
+### Features
+
+* add BambooHR ATS scraper — fetches job listings via public careers API (v1.1/open-positions), enriches with per-job detail endpoint for salary range and description, wired into scrapeCompanyAtsJobs() switch; 8th ATS platform supported
+
+
 # 2.8.53 (2026-05-05)
 
 

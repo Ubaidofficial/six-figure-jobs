@@ -8,6 +8,7 @@ import { scrapeSmartRecruitersResult } from './smartrecruiters'
 import { scrapeRecruiteeResult } from './recruitee'
 import { scrapeWorkdayResult } from './workday'
 import { scrapeWorkableResult } from './workable'
+import { scrapeBambooHRResult } from './bamboohr'
 
 export type { ATSResult } from './types'
 
@@ -57,6 +58,9 @@ export async function scrapeCompanyAtsJobs(
 
       case 'workable':
         return await scrapeWorkableResult(atsUrl)
+
+      case 'bamboohr':
+        return await scrapeBambooHRResult(atsUrl)
 
       default:
         return {

@@ -730,13 +730,15 @@ export async function upsertJobsForCompanyFromAts(
         locationText,
         isRemote,
 
-        // v2.9: do not force currency/thresholds in this wrapper.
-        // The central ingest pipeline owns parsing + validation.
+        // Pass structured salary fields from the ATS scraper when available.
+        // Greenhouse leaves these null (salary is in raw.metadata / description HTML);
+        // Lever + Ashby parse salary at the scraper level and store it here.
+        // The central ingest pipeline (processSalary) validates and normalises all values.
         salaryRaw,
-        salaryMin: null,
-        salaryMax: null,
-        salaryCurrency: null,
-        salaryInterval: 'year',
+        salaryMin: (raw as any).salaryMin ?? null,
+        salaryMax: (raw as any).salaryMax ?? null,
+        salaryCurrency: (raw as any).salaryCurrency ?? null,
+        salaryInterval: (raw as any).salaryInterval ?? 'year',
 
         employmentType: raw.type ?? raw.employmentType ?? null,
         department: raw.department ?? null,
@@ -749,6 +751,10 @@ export async function upsertJobsForCompanyFromAts(
         updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : null,
 
         raw: {
+          // Promote nested ATS API fields (e.g. Greenhouse job.metadata, job.content)
+          // to the top level so processSalary / parseGreenhouseSalary can read them
+          // via (input.raw as any)?.metadata without deep nesting.
+          ...((raw as any).raw ?? {}),
           ...raw,
           _inferredRoleSlug: inferredRoleSlug,
         },

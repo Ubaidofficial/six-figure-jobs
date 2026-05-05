@@ -60,6 +60,7 @@ import scrapeOtta from '../lib/scrapers/otta'
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
 import type { AtsProvider } from '../lib/scrapers/ats/types'
 import { upsertJobsForCompanyFromAts } from '../lib/jobs/ingestFromAts'
+import { runExpiryCycle } from '../lib/jobs/expiry'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -719,6 +720,14 @@ async function main() {
 
   await printJobSummary()
   await notifyGoogleOfNewJobs(scrapeStartedAt, options.dryRun)
+
+  // Expire stale jobs (not seen/updated in 7+ days)
+  try {
+    const expiryResult = await runExpiryCycle()
+    __slog(`🗑  Expiry cycle: ${expiryResult.expired} jobs marked expired`)
+  } catch (err) {
+    __serr('⚠️  Expiry cycle failed:', err)
+  }
 
   __slog('✅ Finished daily scrape run.')
   const slowSources = [...stats.sourceMetrics]
