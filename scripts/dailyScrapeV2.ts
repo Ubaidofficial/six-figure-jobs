@@ -48,6 +48,8 @@ import { scrapeJustJoin } from '../lib/scrapers/justjoin'
 import { scrapeRemoteOtter } from '../lib/scrapers/remoteotter'
 import { scrapeTrawle } from '../lib/scrapers/trawle'
 import { scrapeFourDayWeek } from '../lib/scrapers/fourdayweek'
+import { scrapeH1bVisaJobs, scrapeMyVisaJobs } from '../lib/scrapers/h1bVisaScraper'
+import { markVisaSponsorshipBatch } from '../lib/jobs/markVisaSponsorship'
 
 // “API style” board scrapers / extra sources
 import scrapeRemotive from '../lib/scrapers/remotive'
@@ -277,6 +279,8 @@ async function runBoardScrapers(options: CliOptions): Promise<DailyScrapeStats> 
     { key: 'ycombinator', name: 'YCombinator', run: scrapeYCombinator },
     { key: 'remoteyeah', name: 'RemoteYeah', run: scrapeRemoteYeah, dryRunSafe: false },
     { key: 'remoteai', name: 'RemoteAI (companies only)', run: scrapeRemoteAI, dryRunSafe: false },
+    { key: 'h1bvisajobs', name: 'H1BVisaJobs', run: scrapeH1bVisaJobs },
+    { key: 'myvisajobs', name: 'MyVisaJobs', run: scrapeMyVisaJobs },
   ]
 
   const fastKeys = new Set([
@@ -728,6 +732,14 @@ async function main() {
     __slog(`🗑  Expiry cycle: ${expiryResult.expired} jobs marked expired`)
   } catch (err) {
     __serr('⚠️  Expiry cycle failed:', err)
+  }
+
+  // Mark visa sponsorship on jobs whose descriptions contain H1B keywords
+  try {
+    const visaResult = await markVisaSponsorshipBatch({ batchSize: 500, dryRun: options.dryRun })
+    __slog(`🛂  Visa sponsorship: marked ${visaResult.marked} jobs (checked ${visaResult.checked})`)
+  } catch (err) {
+    __serr('⚠️  Visa sponsorship marking failed:', err)
   }
 
   // Weekly company discovery: run on Sundays (or when FORCE_DISCOVER=1)
