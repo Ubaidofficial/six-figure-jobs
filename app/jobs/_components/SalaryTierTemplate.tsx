@@ -518,15 +518,55 @@ export async function SalaryTierTemplate({
     },
   }
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Jobs', item: `${SITE_URL}/jobs` },
+      { '@type': 'ListItem', position: 3, name: `${tier.rangeLabel} Jobs`, item: `${SITE_URL}/jobs/${tierId}` },
+    ],
+  }
+
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `What kinds of jobs are in the ${tier.rangeLabel} salary tier?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `The ${tier.rangeLabel} salary tier on ${SITE_NAME} includes ${data.total.toLocaleString()} verified roles across engineering, product, data, design, and sales — all with published salary ranges. Top roles in this tier include software engineers, engineering managers, data scientists, and senior product managers.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How often are ${tier.rangeLabel} job listings updated?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Listings in the ${tier.rangeLabel} tier are refreshed continuously from company ATS feeds and verified job boards. Each listing shows a direct apply link and salary data sourced from the employer — no estimated or scraped ranges.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Are there remote ${tier.rangeLabel} jobs available?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Yes. Many ${tier.rangeLabel} roles on ${SITE_NAME} offer fully remote or hybrid arrangements. Use the work type filter to narrow results to distributed-friendly positions. Remote ${tier.rangeLabel} roles span engineering, product, and data teams at companies of all sizes.`,
+        },
+      },
+    ],
+  }
+
   const basePath = `/jobs/${tierId}`
 
   return (
     <main className={styles.page}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(salaryPageJsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(salaryPageJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href="/">Home</Link>

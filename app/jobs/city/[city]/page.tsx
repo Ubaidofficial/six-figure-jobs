@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `${salaryLabel} jobs ${resolved.label}, ${resolved.label} ${salaryLabel} jobs, high paying jobs ${resolved.label}, six figure ${resolved.label} jobs. ${total.toLocaleString()} roles with salary transparency.`
+  const description = `Browse ${total.toLocaleString()} verified ${salaryLabel} jobs in ${resolved.label} with published salary ranges, direct apply links, and no entry-level clutter. Updated daily from company ATS feeds.`
   const canonical = `${SITE_URL}/jobs/city/${resolved.slug}`
 
   return {

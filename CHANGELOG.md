@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* feat(seo): add FAQPage + BreadcrumbList JSON-LD to salary tier pages and skills pages; fix keyword-stuffed city page meta description
 * feat(seo): apex→www 301 redirect in middleware, expanded robots.txt, og:image 1200×630, SearchAction URL fix, cookie canonical, city targets expanded to ~70 cities
 * fix(admin): remove temporary debug endpoint now that login is confirmed working
 * fix(admin): middleware now only checks cookie existence (Edge-safe); HMAC verification stays in Node.js layout
