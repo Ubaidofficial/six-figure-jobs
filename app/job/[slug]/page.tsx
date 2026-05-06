@@ -311,18 +311,18 @@ export default async function JobPage({
         countryCode: typedJob.countryCode || undefined,
         isHundredKLocal: true,
         page: 1,
-        pageSize: 6,
+        pageSize: 7,
       }),
     () => ({
       jobs: [],
       total: 0,
       page: 1,
-      pageSize: 6,
+      pageSize: 7,
       totalPages: 1,
     }),
   )
 
-  const similarJobs = similarResult.jobs.filter((j) => j.id !== typedJob.id).slice(0, 3)
+  const similarJobs = similarResult.jobs.filter((j) => j.id !== typedJob.id).slice(0, 6)
 
   const companyCountry = company?.countryCode || typedJob.countryCode || 'Global'
   const isSalaryVerified =
@@ -807,6 +807,14 @@ export default async function JobPage({
                 <div className={styles.similarTitle}>Similar Six Figure Opportunities</div>
                 <div className={styles.similarSub}>Based on role, country and salary band</div>
               </div>
+              {typedJob.roleSlug ? (
+                <NextLink
+                  href={`/jobs/${typedJob.roleSlug}/100k-plus`}
+                  className={styles.browseAllLink}
+                >
+                  Browse all {prettyRole(typedJob.roleSlug)} jobs →
+                </NextLink>
+              ) : null}
             </div>
             <div className={styles.similarCards}>
               {similarJobs.map((sj) => (

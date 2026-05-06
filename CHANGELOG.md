@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* feat(jobs): show 6 similar jobs on job detail page (was 3) + "Browse all [role] jobs →" CTA link for better CTR
 * feat(seo): expand TIER_1 roles — AI/ML focus (ai-engineer, llm-engineer, mlops-engineer, etc.) + long-tail engineering roles with ≥3 DB jobs; remove TIER_2 duplicates
 * feat(seo): add FAQPage + BreadcrumbList JSON-LD to salary tier pages and skills pages; fix keyword-stuffed city page meta description
 * feat(seo): apex→www 301 redirect in middleware, expanded robots.txt, og:image 1200×630, SearchAction URL fix, cookie canonical, city targets expanded to ~70 cities

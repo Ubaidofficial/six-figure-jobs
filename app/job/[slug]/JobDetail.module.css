@@ -518,6 +518,19 @@
   color: var(--color-text-1);
 }
 
+.browseAllLink {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-green-400, #4ade80);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.browseAllLink:hover {
+  text-decoration: underline;
+}
+
 .similarCards {
   display: grid;
   gap: var(--space-24);
