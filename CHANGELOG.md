@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* fix(admin): add missing session.ts to git — Railway build failed with "Can't resolve './session'"
 * fix(admin): fix login — move token functions to Edge-safe session.ts so middleware no longer crashes in Edge Runtime
 * fix(admin): remove ADMIN_JWT_SECRET requirement — derives secret from DATABASE_URL; add ErrorLog model and error tracking
 * fix(admin): fix redirect loop on login page by moving dashboard pages into (dashboard) route group
