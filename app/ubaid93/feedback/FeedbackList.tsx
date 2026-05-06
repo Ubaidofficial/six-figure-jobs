@@ -41,7 +41,7 @@ export default function FeedbackList({
   const [items, setItems] = useState(initial)
 
   async function setStatus(id: string, status: string) {
-    const res = await fetch('/api/admin/feedback', {
+    const res = await fetch('/api/ubaid93/feedback', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status }),

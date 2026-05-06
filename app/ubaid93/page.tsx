@@ -41,10 +41,10 @@ export default async function AdminDashboard() {
           <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Quick Actions</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { href: '/admin/feedback?status=new', label: `View ${newFeedback} unread feedback`, icon: '💬' },
-              { href: '/admin/jobs?expired=0', label: 'Manage active jobs', icon: '💼' },
-              { href: '/admin/jobs?expired=1', label: 'Review expired jobs', icon: '🗂' },
-              { href: '/admin/config', label: 'Edit site copy', icon: '✏️' },
+              { href: '/ubaid93/feedback?status=new', label: `View ${newFeedback} unread feedback`, icon: '💬' },
+              { href: '/ubaid93/jobs?expired=0', label: 'Manage active jobs', icon: '💼' },
+              { href: '/ubaid93/jobs?expired=1', label: 'Review expired jobs', icon: '🗂' },
+              { href: '/ubaid93/config', label: 'Edit site copy', icon: '✏️' },
             ].map((l) => (
               <Link key={l.href} href={l.href} style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',

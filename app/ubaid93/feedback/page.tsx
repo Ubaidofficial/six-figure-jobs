@@ -36,7 +36,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams?: Pr
         ].map((tab) => (
           <a
             key={tab.value}
-            href={tab.value ? `/admin/feedback?status=${tab.value}` : '/admin/feedback'}
+            href={tab.value ? `/ubaid93/feedback?status=${tab.value}` : '/ubaid93/feedback'}
             style={{
               padding: '6px 16px', borderRadius: 100, fontSize: 13, textDecoration: 'none',
               background: status === tab.value ? '#84cc16' : '#1a1a1a',

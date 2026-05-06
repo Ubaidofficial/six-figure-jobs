@@ -10,7 +10,7 @@ export default function ConfigEditor({ configs: initial }: { configs: ConfigItem
 
   async function save(key: string, value: string, label: string) {
     setSaving(key)
-    const res = await fetch('/api/admin/config', {
+    const res = await fetch('/api/ubaid93/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, value, label }),

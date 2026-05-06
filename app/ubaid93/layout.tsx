@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const isLoggedIn = await getAdminSession()
-  if (!isLoggedIn) redirect('/admin/login')
+  if (!isLoggedIn) redirect('/ubaid93/login')
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex' }}>

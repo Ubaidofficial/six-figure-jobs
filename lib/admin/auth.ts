@@ -1,5 +1,6 @@
-import { createHmac, timingSafeEqual } from 'crypto'
+import { createHmac, timingSafeEqual, scryptSync, randomBytes } from 'crypto'
 import { cookies } from 'next/headers'
+import { prisma } from '../prisma'
 
 const COOKIE_NAME = 'admin_session'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
@@ -33,14 +34,36 @@ export function verifySessionToken(token: string): boolean {
   }
 }
 
-export function checkAdminPassword(password: string): boolean {
-  const adminPassword = process.env.ADMIN_PASSWORD
-  if (!adminPassword) return false
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString('hex')
+  const hash = scryptSync(password, salt, 64).toString('hex')
+  return `${salt}:${hash}`
+}
+
+export function verifyPassword(password: string, stored: string): boolean {
   try {
-    return timingSafeEqual(Buffer.from(password), Buffer.from(adminPassword))
+    const [salt, hash] = stored.split(':')
+    const candidate = scryptSync(password, salt, 64).toString('hex')
+    return timingSafeEqual(Buffer.from(candidate), Buffer.from(hash))
   } catch {
     return false
   }
+}
+
+export async function checkAdminCredentials(username: string, password: string): Promise<boolean> {
+  const user = await prisma.adminUser.findUnique({ where: { username } })
+  if (!user) return false
+  return verifyPassword(password, user.passwordHash)
+}
+
+export async function adminUserExists(): Promise<boolean> {
+  const count = await prisma.adminUser.count()
+  return count > 0
+}
+
+export async function createAdminUser(username: string, password: string): Promise<void> {
+  const passwordHash = hashPassword(password)
+  await prisma.adminUser.create({ data: { username, passwordHash } })
 }
 
 export async function getAdminSession(): Promise<boolean> {

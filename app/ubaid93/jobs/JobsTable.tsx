@@ -56,7 +56,7 @@ export default function JobsTable({
       if (editData.salaryMin) body.salaryMin = Number(editData.salaryMin)
       if (editData.salaryMax) body.salaryMax = Number(editData.salaryMax)
 
-      const res = await fetch('/api/admin/jobs', {
+      const res = await fetch('/api/ubaid93/jobs', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -82,7 +82,7 @@ export default function JobsTable({
   }
 
   async function toggleExpired(id: string, current: boolean) {
-    const res = await fetch('/api/admin/jobs', {
+    const res = await fetch('/api/ubaid93/jobs', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, isExpired: !current }),
@@ -102,7 +102,7 @@ export default function JobsTable({
     if (q) params.set('q', q)
     if (source) params.set('source', source)
     if (expired) params.set('expired', expired)
-    router.push(`/admin/jobs?${params.toString()}`)
+    router.push(`/ubaid93/jobs?${params.toString()}`)
   }
 
   const totalPages = Math.ceil(total / pageSize)

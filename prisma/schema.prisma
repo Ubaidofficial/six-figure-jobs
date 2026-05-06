@@ -318,3 +318,10 @@ model SiteConfig {
   label     String?
   updatedAt DateTime @updatedAt
 }
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}

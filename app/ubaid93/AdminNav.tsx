@@ -3,10 +3,10 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 
 const links = [
-  { href: '/admin', label: 'Dashboard', icon: '◉' },
-  { href: '/admin/feedback', label: 'Feedback', icon: '💬' },
-  { href: '/admin/jobs', label: 'Jobs', icon: '💼' },
-  { href: '/admin/config', label: 'Site Config', icon: '⚙️' },
+  { href: '/ubaid93', label: 'Dashboard', icon: '◉' },
+  { href: '/ubaid93/feedback', label: 'Feedback', icon: '💬' },
+  { href: '/ubaid93/jobs', label: 'Jobs', icon: '💼' },
+  { href: '/ubaid93/config', label: 'Site Config', icon: '⚙️' },
 ]
 
 export default function AdminNav() {
@@ -14,8 +14,8 @@ export default function AdminNav() {
   const router = useRouter()
 
   async function logout() {
-    await fetch('/api/admin/logout', { method: 'POST' })
-    router.push('/admin/login')
+    await fetch('/api/ubaid93/logout', { method: 'POST' })
+    router.push('/ubaid93/login')
     router.refresh()
   }
 
@@ -30,7 +30,7 @@ export default function AdminNav() {
       </div>
       <div style={{ flex: 1, padding: '16px 0' }}>
         {links.map((l) => {
-          const active = l.href === '/admin' ? pathname === '/admin' : pathname.startsWith(l.href)
+          const active = l.href === '/ubaid93' ? pathname === '/ubaid93' : pathname.startsWith(l.href)
           return (
             <Link
               key={l.href}
