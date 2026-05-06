@@ -289,10 +289,10 @@ export default async function JobPage({
     }
 
     return {
-      bullets: pickArray('bullets', 4),
-      description: pickArray('description', 4),
-      requirements: pickArray('requirements', 6),
-      benefits: pickArray('benefits', 4),
+      bullets: pickArray('bullets', 5),
+      description: pickArray('description', 6),
+      requirements: pickArray('requirements', 8),
+      benefits: pickArray('benefits', 5),
     }
   })()
 
