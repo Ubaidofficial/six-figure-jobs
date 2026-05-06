@@ -35,10 +35,10 @@ export function verifySessionToken(token: string): boolean {
   }
 }
 
-export function sessionCookieOptions(token: string) {
+// Cookie attribute object (no name/value) — use with the 3-arg ResponseCookies.set()
+// e.g. res.cookies.set(COOKIE_NAME, token, cookieAttrs())
+export function cookieAttrs() {
   return {
-    name: COOKIE_NAME,
-    value: token,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
@@ -47,14 +47,12 @@ export function sessionCookieOptions(token: string) {
   }
 }
 
+/** @deprecated use res.cookies.set(COOKIE_NAME, token, cookieAttrs()) */
+export function sessionCookieOptions(token: string) {
+  return { name: COOKIE_NAME, value: token, ...cookieAttrs() }
+}
+
+/** @deprecated use res.cookies.set(COOKIE_NAME, '', { ...cookieAttrs(), maxAge: 0 }) */
 export function clearCookieOptions() {
-  return {
-    name: COOKIE_NAME,
-    value: '',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    maxAge: 0,
-    path: '/',
-  }
+  return { name: COOKIE_NAME, value: '', ...cookieAttrs(), maxAge: 0 }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { checkAdminCredentials, adminUserExists, createSessionToken, sessionCookieOptions } from '../../../../lib/admin/auth'
+import { checkAdminCredentials, adminUserExists, createSessionToken } from '../../../../lib/admin/auth'
+import { COOKIE_NAME, cookieAttrs } from '../../../../lib/admin/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
 
     const token = createSessionToken()
     const res = NextResponse.json({ ok: true })
-    res.cookies.set(sessionCookieOptions(token))
+    res.cookies.set(COOKIE_NAME, token, cookieAttrs())
     return res
   } catch (err) {
     console.error('[admin login] error:', err)
