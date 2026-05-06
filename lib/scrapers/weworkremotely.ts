@@ -65,7 +65,7 @@ function extractSalaryFromListing($el: cheerio.Cheerio<AnyNode>): string | null 
   return salaryText
 }
 
-async function fetchJobDescription(jobUrl: string): Promise<string | null> {
+async function fetchJobPage(jobUrl: string): Promise<{ descriptionHtml: string | null; applyUrl: string | null }> {
   try {
     const res = await fetch(jobUrl, {
       headers: {
@@ -75,10 +75,18 @@ async function fetchJobDescription(jobUrl: string): Promise<string | null> {
       },
       cache: 'no-store',
     })
-    if (!res.ok) return null
-    
+    if (!res.ok) return { descriptionHtml: null, applyUrl: null }
+
     const html = await res.text()
     const $ = cheerio.load(html)
+
+    // Extract external apply URL from the job page
+    const applyHref =
+      $('a.apply_button[href], a[class*="apply"][href], .listing-apply a[href], a[href*="/remote_jobs/new"], a[data-testid="apply"]')
+        .toArray()
+        .map((el) => $(el).attr('href') ?? '')
+        .find((h) => h.startsWith('http') && !h.includes('weworkremotely.com')) ?? null
+    const applyUrl = applyHref || null
     
     const pageTitle = $('title').text().trim().toLowerCase()
     if (
@@ -86,7 +94,7 @@ async function fetchJobDescription(jobUrl: string): Promise<string | null> {
       pageTitle.includes('attention required') ||
       html.toLowerCase().includes('cf-browser-verification')
     ) {
-      return null
+      return { descriptionHtml: null, applyUrl: null }
     }
 
     const selectors = [
@@ -115,12 +123,11 @@ async function fetchJobDescription(jobUrl: string): Promise<string | null> {
     }
 
     // Guardrails: avoid saving entire page chrome if a selector matched too broadly
-    if (bestHtml && bestLen >= 200 && bestLen <= 80_000) return bestHtml
-
-    return null
+    const descriptionHtml = bestHtml && bestLen >= 200 && bestLen <= 80_000 ? bestHtml : null
+    return { descriptionHtml, applyUrl }
   } catch (err) {
-    console.warn(`[WWR] Failed to fetch description from ${jobUrl}:`, err)
-    return null
+    console.warn(`[WWR] Failed to fetch job page from ${jobUrl}:`, err)
+    return { descriptionHtml: null, applyUrl: null }
   }
 }
 
@@ -170,13 +177,14 @@ export async function fetchWeWorkRemotelyJobs(): Promise<ScrapedJobInput[]> {
   
   // Fetch descriptions in parallel (with rate limiting)
   for (const listing of listings) {
-    const descriptionHtml = await fetchJobDescription(listing.url)
+    const { descriptionHtml, applyUrl: discoveredApplyUrl } = await fetchJobPage(listing.url)
+    const applyUrl = discoveredApplyUrl ?? listing.url
     const salaryText = listing.salaryText
     const salaryMin = parseSalary(salaryText, false)
     const salaryMax = parseSalary(salaryText, true)
     const salaryCurrency = salaryText ? detectCurrencyFromText(salaryText) ?? 'USD' : null
     const salaryInterval = salaryText ? detectIntervalFromText(salaryText) ?? 'year' : null
-    
+
     jobs.push({
       source: makeBoardSource(BOARD_NAME),
       externalId: listing.externalId,
@@ -184,6 +192,7 @@ export async function fetchWeWorkRemotelyJobs(): Promise<ScrapedJobInput[]> {
       rawCompanyName: listing.company || 'Unknown',
       locationText: listing.location || 'Remote',
       url: listing.url,
+      applyUrl,
       isRemote: true,
       descriptionHtml,
       salaryRaw: salaryText,
