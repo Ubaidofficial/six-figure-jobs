@@ -3,7 +3,7 @@
 
 ### Bug Fixes
 
-* fix(ai): increase maxOutputTokens 220→600 so JSON is never truncated; send 4000 chars of job description to AI (was 800) so requirements/benefits are always in scope; improve prompt to extract bullets not paragraphs
+* fix(ai): switch enrichment model to deepseek-v3-flash (was deepseek-chat); increase maxOutputTokens 220→600; send 4000 chars of job description (was 800); improve prompt to extract bullets not paragraphs
 * feat(jobs): increase job detail to 350-400 words (6 desc / 8 req / 5 benefits); raw posting collapsed behind toggle
 * feat(jobs): show 6 similar jobs on job detail page (was 3) + "Browse all [role] jobs →" CTA link for better CTR
 * feat(seo): expand TIER_1 roles — AI/ML focus (ai-engineer, llm-engineer, mlops-engineer, etc.) + long-tail engineering roles with ≥3 DB jobs; remove TIER_2 duplicates

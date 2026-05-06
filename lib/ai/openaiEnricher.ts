@@ -16,7 +16,7 @@ export async function enrichJobWithAI(input: {
   locationHint?: string
   maxOutputTokens: number
 }): Promise<{ out: AiEnrichOutput; tokensIn: number; tokensOut: number }> {
-  const model = process.env.AI_ENRICH_MODEL || 'deepseek-chat'
+  const model = process.env.AI_ENRICH_MODEL || 'deepseek-v3-flash'
   const prompt = buildAiEnrichPrompt(input)
   const attempts = 4
   let lastErr: unknown
