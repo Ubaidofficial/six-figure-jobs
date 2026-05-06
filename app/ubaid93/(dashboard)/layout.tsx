@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getAdminSession } from '../../lib/admin/auth'
+import { getAdminSession } from '../../../lib/admin/auth'
 import AdminNav from './AdminNav'
 
 export const dynamic = 'force-dynamic'

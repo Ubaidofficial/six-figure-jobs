@@ -1,4 +1,4 @@
-import { prisma } from '../../../lib/prisma'
+import { prisma } from '../../../../lib/prisma'
 import FeedbackList from './FeedbackList'
 
 type SearchParams = Record<string, string | undefined>

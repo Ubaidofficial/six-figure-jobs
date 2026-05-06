@@ -1,4 +1,4 @@
-import { prisma } from '../../../lib/prisma'
+import { prisma } from '../../../../lib/prisma'
 import ConfigEditor from './ConfigEditor'
 
 const DEFAULT_CONFIGS = [
