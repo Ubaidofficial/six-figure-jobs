@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     prisma.job.findMany({
       where,
       select: {
-        id: true, title: true, company: true, source: true,
+        id: true, title: true, company: true, companyLogo: true, source: true,
         locationRaw: true, remoteMode: true, employmentType: true,
         salaryMin: true, salaryMax: true, salaryCurrency: true, salaryPeriod: true,
         isExpired: true, remote: true, postedAt: true, expiresAt: true, createdAt: true,
@@ -45,7 +45,7 @@ export async function PATCH(req: Request) {
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
   const allowed = [
-    'title', 'company', 'locationRaw', 'remoteMode', 'employmentType',
+    'title', 'company', 'companyLogo', 'locationRaw', 'remoteMode', 'employmentType',
     'salaryMin', 'salaryMax', 'salaryCurrency', 'salaryPeriod',
     'isExpired', 'remote', 'applyUrl', 'descriptionHtml',
     'visaSponsorship', 'postedAt', 'expiresAt',

@@ -7,6 +7,7 @@ export type JobRow = {
   id: string
   title: string
   company: string | null
+  companyLogo: string | null
   source: string
   locationRaw: string | null
   remoteMode: string | null
@@ -44,7 +45,7 @@ export default async function AdminJobsPage({ searchParams }: { searchParams?: P
     prisma.job.findMany({
       where,
       select: {
-        id: true, title: true, company: true, source: true,
+        id: true, title: true, company: true, companyLogo: true, source: true,
         locationRaw: true, remoteMode: true, employmentType: true,
         salaryMin: true, salaryMax: true, salaryCurrency: true, salaryPeriod: true,
         isExpired: true, remote: true, postedAt: true, expiresAt: true, createdAt: true,

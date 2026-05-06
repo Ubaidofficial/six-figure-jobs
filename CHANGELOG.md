@@ -4,6 +4,7 @@
 ### Bug Fixes
 
 * fix(admin): middleware now only checks cookie existence (Edge-safe); HMAC verification stays in Node.js layout
+* feat(admin): job edit modal — add company logo field with preview, description HTML/Preview tabs, View live link
 * feat(admin): full job edit modal — all fields including description, location, remote mode, employment type, salary, visa sponsorship, posted/expiry dates
 * feat(scraper): add cursor.directory/jobs scraper
 * feat(schema): add expiresAt field to Job model
