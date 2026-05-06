@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* fix(admin): upsert admin credentials via migration so login always works regardless of DB state
 * fix(admin): fix login form — read inputs from DOM (handles Chrome autofill), hard redirect on success, add try-catch for network errors
 * fix(admin): add missing session.ts to git — Railway build failed with "Can't resolve './session'"
 * fix(admin): fix login — move token functions to Edge-safe session.ts so middleware no longer crashes in Edge Runtime
