@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* fix(scrapers): add description+apply URL extraction to himalayas, remoteotter, trawle, realworkfromanywhere; add fetchJobPageDetails utility
 * **feat(admin):** add admin panel — feedback inbox, job manager, site config editor, and HMAC-based auth
 * **scraper:** fix WeWorkRemotely apply URL extraction — use fetchJobPage to surface external apply links
 * add explicit board salary capture ([fbec60a](https://github.com/Ubaidofficial/six-figure-jobs/commit/fbec60a2423265a0fc4de01ffc863630f4dca862))

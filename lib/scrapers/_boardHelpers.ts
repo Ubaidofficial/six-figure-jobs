@@ -12,6 +12,7 @@ export type BoardJobInput = {
   applyUrl: string
   location?: string | null
   salaryText?: string | null
+  descriptionHtml?: string | null
   remote?: boolean
   companyWebsiteUrl?: string | null
   companyLinkedInUrl?: string | null
@@ -29,6 +30,7 @@ export async function upsertBoardJob(input: BoardJobInput) {
     applyUrl,
     location,
     salaryText,
+    descriptionHtml,
     remote,
     companyWebsiteUrl,
     companyLinkedInUrl,
@@ -47,6 +49,7 @@ export async function upsertBoardJob(input: BoardJobInput) {
     locationText: location ?? null,
     isRemote: remote ?? null,
     applyUrl,
+    descriptionHtml: descriptionHtml ?? null,
     descriptionText: null,
     explicitAtsProvider: explicitAtsProvider ?? null,
     explicitAtsUrl: explicitAtsUrl ?? null,
