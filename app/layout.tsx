@@ -40,6 +40,14 @@ export const metadata: Metadata = {
     site: '@6figjobs',
     images: [`${SITE_URL}/og-image.png`],
   },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/logo.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: { url: '/logo.png', sizes: '512x512' },
+    shortcut: '/logo.png',
+  },
 }
 
 export const viewport: Viewport = {

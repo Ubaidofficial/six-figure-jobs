@@ -33,6 +33,7 @@ import { getThresholdLabelForCountry } from '@/lib/seo/salaryLabels'
 import { getSiteUrl } from '@/lib/seo/site'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
 import { WhySixFigureJobs } from '@/components/home/WhySixFigureJobs'
+import { Testimonials } from '@/components/home/Testimonials'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
 import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
 
@@ -672,8 +673,9 @@ export default async function HomePage() {
               <Link
                 key={role.href}
                 href={role.href}
-                className="group inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-slate-600 hover:bg-slate-900"
+                className="group inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-emerald-700/60 hover:bg-slate-900"
               >
+                {role.emoji ? <span aria-hidden="true">{role.emoji}</span> : null}
                 <span className="text-slate-200 group-hover:text-white">
                   {role.name}
                 </span>
@@ -705,6 +707,8 @@ export default async function HomePage() {
       <ExplorePremiumRoles roles={premiumRoles} />
 
       <WhySixFigureJobs />
+
+      <Testimonials />
 
       <BrowseByRole roles={roleCards} />
 

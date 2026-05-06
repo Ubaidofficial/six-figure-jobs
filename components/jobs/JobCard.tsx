@@ -315,6 +315,12 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
   const postedLabel = formatRelativeTime(job.postedAt ?? job.updatedAt ?? job.createdAt ?? null)
   const jobHref = buildJobSlugHref(job as any)
 
+  // "NEW" badge: show for jobs posted within the last 3 days
+  const postedDate = job.postedAt ?? job.createdAt ?? null
+  const isNew = postedDate
+    ? Date.now() - new Date(postedDate).getTime() < 3 * 24 * 60 * 60 * 1000
+    : false
+
   const navigateToJob = () => {
     onClick?.()
     router.push(jobHref)
@@ -338,6 +344,12 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
       tabIndex={0}
       aria-label={`View job: ${job.title} at ${companyName}`}
     >
+      {isNew ? (
+        <div className={styles.newBadge} aria-label="New posting">
+          NEW
+        </div>
+      ) : null}
+
       <header className={styles.header}>
         <div className={styles.logoWrap} aria-hidden="true">
           {companyLogo ? (

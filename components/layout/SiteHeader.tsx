@@ -167,6 +167,14 @@ export function SiteHeader() {
             <Link href="/companies" className={styles.navLink}>
               Companies
             </Link>
+
+            <Link href="/salary" className={styles.navLink}>
+              Salaries
+            </Link>
+
+            <Link href="/blog" className={styles.navLink}>
+              Blog
+            </Link>
           </nav>
         </div>
 
@@ -243,6 +251,12 @@ export function SiteHeader() {
                     <Link className={styles.mobileItem} href="/companies" onClick={() => setMobileOpen(false)}>
                       Companies <span className={styles.mobileMeta}>/companies</span>
                     </Link>
+                    <Link className={styles.mobileItem} href="/salary" onClick={() => setMobileOpen(false)}>
+                      Salary Guides <span className={styles.mobileMeta}>/salary</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/blog" onClick={() => setMobileOpen(false)}>
+                      Career Blog <span className={styles.mobileMeta}>/blog</span>
+                    </Link>
                     <button
                       type="button"
                       className={styles.mobileItem}
@@ -288,16 +302,16 @@ export function SiteHeader() {
             </div>
             <div className={styles.searchHint}>
               Try:{' '}
-              <button type="button" onClick={() => submitSearch('Software Engineer')} className={styles.hintBtn}>
-                Software Engineer
+              <button type="button" onClick={() => submitSearch('remote $200k engineer')} className={styles.hintBtn}>
+                remote $200k engineer
               </button>
               ,{' '}
-              <button type="button" onClick={() => submitSearch('Product Manager')} className={styles.hintBtn}>
-                Product Manager
+              <button type="button" onClick={() => submitSearch('staff engineer no degree')} className={styles.hintBtn}>
+                staff engineer no degree
               </button>
               ,{' '}
-              <button type="button" onClick={() => submitSearch('Data Scientist')} className={styles.hintBtn}>
-                Data Scientist
+              <button type="button" onClick={() => submitSearch('product manager visa sponsorship')} className={styles.hintBtn}>
+                visa sponsorship PM
               </button>
             </div>
           </form>
