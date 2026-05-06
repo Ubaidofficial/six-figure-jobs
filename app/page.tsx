@@ -568,14 +568,14 @@ export default async function HomePage() {
 
           <div>
             <label
-              htmlFor="location"
+              htmlFor="country"
               className="mb-1.5 block text-[11px] font-medium text-slate-400"
             >
               Location
             </label>
             <select
-              id="location"
-              name="location"
+              id="country"
+              name="country"
               className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">All locations</option>
@@ -648,17 +648,22 @@ export default async function HomePage() {
         </div>
 
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Link
-            href="/jobs/100k-plus"
-            className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-6 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/5 sm:w-auto"
+          <button
+            type="submit"
+            className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-emerald-700/60 bg-emerald-600/20 px-6 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-600/30 sm:w-auto"
           >
-            Explore six-figure opportunities
+            Apply filters →
+          </button>
+          <Link
+            href="/jobs"
+            className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-6 py-3 text-sm font-semibold text-slate-300 transition hover:bg-white/5 sm:w-auto"
+          >
+            Browse all $100k+ jobs
           </Link>
         </div>
 
         <div className="mt-2 text-xs text-slate-400">
-          AI search tips: Try “remote $100k engineer”, “$200k staff roles”, or “no-degree $100k
-          jobs” to see curated results.
+          Filter by role, location, and work type — all listings show verified salary ranges.
         </div>
       </Hero>
 

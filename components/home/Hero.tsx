@@ -53,7 +53,7 @@ export function Hero({
             className={styles.searchForm}
             style={delay(360)}
             method="GET"
-            action="/search"
+            action="/jobs"
           >
             <div className={styles.searchWrapper}>
               <div className={styles.searchBar}>
@@ -65,11 +65,10 @@ export function Hero({
                   id="hero-q"
                   name="q"
                   type="text"
-                  placeholder="Try: 6 figure jobs, software engineer, remote..."
+                  placeholder="Try: software engineer, remote, $200k..."
                   className={styles.searchInput}
                   autoComplete="off"
                   spellCheck={false}
-                  required
                 />
                 <Button variant="primary" size="lg" type="submit" className={styles.cta}>
                   Find six-figure jobs <span aria-hidden="true">→</span>

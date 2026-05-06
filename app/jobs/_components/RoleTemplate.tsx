@@ -188,7 +188,7 @@ function dedupeJobs(jobs: JobWithCompany[]): JobWithCompany[] {
   })
 }
 
-function roleCareerPath(roleSlug: string): Array<{ stage: string; slug: string | null; label: string }> {
+function roleCareerPath(roleSlug: string): Array<{ stage: string; slug: string | null; label: string; seniority: string | null }> {
   const slug = roleSlug.toLowerCase()
   const base = slug
     .replace(/^junior-/, '')
@@ -199,18 +199,22 @@ function roleCareerPath(roleSlug: string): Array<{ stage: string; slug: string |
     .replace(/^lead-/, '')
 
   const candidates = [
-    { stage: 'Junior', slug: `junior-${base}` },
-    { stage: 'Mid', slug: base },
-    { stage: 'Senior', slug: `senior-${base}` },
-    { stage: 'Staff', slug: `staff-${base}` },
-    { stage: 'Principal', slug: `principal-${base}` },
+    { stage: 'Junior', slug: `junior-${base}`, seniority: 'junior' },
+    { stage: 'Mid', slug: base, seniority: null },
+    { stage: 'Senior', slug: `senior-${base}`, seniority: 'senior' },
+    { stage: 'Staff', slug: `staff-${base}`, seniority: 'staff' },
+    { stage: 'Principal', slug: `principal-${base}`, seniority: 'principal' },
   ]
 
   return candidates.map((c) => ({
     stage: c.stage,
+    // Keep the slug for is-active detection, but we'll link via seniority param
     slug: CANONICAL_ROLE_SET.has(c.slug) ? c.slug : c.stage === 'Mid' && CANONICAL_ROLE_SET.has(base) ? base : null,
     label: c.stage === 'Mid' ? toTitleCase(base) : toTitleCase(c.slug),
-  }))
+    seniority: c.seniority,
+    // Use base slug for linking (avoids 404 when seniority slug has 0 jobs in DB)
+    baseSlug: CANONICAL_ROLE_SET.has(base) ? base : null,
+  })) as Array<{ stage: string; slug: string | null; label: string; seniority: string | null; baseSlug: string | null }>
 }
 
 export function buildRoleMetadata(
@@ -789,17 +793,26 @@ export async function RoleTemplate({
           <div className={styles.path}>
             <div className={styles.pathRow}>
               {career.map((step) => {
-                const href = step.slug ? `/jobs/${step.slug}` : '#'
+                const s = step as typeof step & { baseSlug?: string | null }
+                // For Mid (no seniority prefix), link to base role page directly.
+                // For Junior/Senior/Staff/Principal, link to base role page with ?seniority= param
+                // so the page filters by level without 404ing when seniority slug has 0 jobs.
+                const linkSlug = s.baseSlug ?? step.slug
+                const href = linkSlug
+                  ? s.seniority
+                    ? `/jobs/${linkSlug}?seniority=${s.seniority}`
+                    : `/jobs/${linkSlug}`
+                  : '#'
                 const isActive = step.slug === roleSlug
                 return (
                   <Link
                     key={step.stage}
                     href={href}
-                    className={`${styles.pathStep} ${!step.slug ? styles.pathStepDisabled : ''}`}
+                    className={`${styles.pathStep} ${!linkSlug ? styles.pathStepDisabled : ''}`}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <div className={styles.pathLabel}>{step.stage}</div>
-                    <div className={styles.pathValue}>{step.slug ? step.label : '—'}</div>
+                    <div className={styles.pathValue}>{linkSlug ? step.label : '—'}</div>
                   </Link>
                 )
               })}
@@ -876,7 +889,11 @@ export async function RoleTemplate({
             ) : (
               <div className={view === 'list' ? styles.list : styles.grid}>
                 {jobs.map((job) => (
-                  <JobCard key={job.id} job={job as JobWithCompany} />
+                  <JobCard
+                    key={job.id}
+                    job={job as JobWithCompany}
+                    variant={view === 'grid' ? 'grid' : 'listing'}
+                  />
                 ))}
               </div>
             )}

@@ -87,7 +87,7 @@ export function InfiniteJobsList({
     <>
       <div className={view === 'list' ? styles.list : styles.grid}>
         {jobs.map((job) => (
-          <JobCard key={job.id} job={job} />
+          <JobCard key={job.id} job={job} variant={view === 'grid' ? 'grid' : 'listing'} />
         ))}
       </div>
 

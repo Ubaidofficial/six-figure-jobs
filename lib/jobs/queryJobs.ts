@@ -49,6 +49,9 @@ export type JobQueryInput = {
 
   // Specialty filters
   visaSponsorship?: boolean
+
+  // Keyword search (title / company name contains)
+  keyword?: string
 }
 
 export type JobQueryResult = {
@@ -439,6 +442,18 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 
   if (filters.visaSponsorship === true) {
     where.visaSponsorship = true
+  }
+
+  if (filters.keyword) {
+    const kw = filters.keyword.trim()
+    if (kw) {
+      addAnd({
+        OR: [
+          { title: { contains: kw, mode: 'insensitive' } },
+          { company: { contains: kw, mode: 'insensitive' } },
+        ],
+      })
+    }
   }
 
   return where

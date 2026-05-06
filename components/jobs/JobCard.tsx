@@ -33,7 +33,7 @@ export type JobCardProps = {
   }
   onClick?: () => void
   className?: string
-  variant?: 'listing' | 'homepage'
+  variant?: 'listing' | 'homepage' | 'grid'
 }
 
 function countryFlag(code?: string | null): string {
@@ -256,6 +256,7 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
 export function JobCard({ job, onClick, className, variant = 'listing' }: JobCardProps) {
   const router = useRouter()
   const isHomepage = variant === 'homepage'
+  const isGrid = variant === 'grid'
   const companyName = String(job.companyRef?.name ?? (job as any)?.company ?? 'Company')
   const companyLogo = buildLogoUrl(
     job.companyRef?.logoUrl ?? (job as any)?.companyLogo ?? null,
@@ -294,7 +295,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
     ...parseJsonArray((job as any)?.skillsJson),
   ])
 
-  const shownSkills = skills.slice(0, isHomepage ? 5 : 10)
+  const shownSkills = skills.slice(0, isHomepage ? 5 : isGrid ? 4 : 10)
   const extraSkills = Math.max(0, skills.length - shownSkills.length)
 
   if (
@@ -328,7 +329,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
 
   return (
     <article
-      className={cn(styles.card, isHomepage && styles.homepageCard, className)}
+      className={cn(styles.card, isHomepage && styles.homepageCard, isGrid && styles.gridCard, className)}
       onClick={(e) => {
         const el = e.target as HTMLElement | null
         if (el?.closest('a')) return

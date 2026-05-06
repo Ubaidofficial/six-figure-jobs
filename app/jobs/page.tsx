@@ -280,6 +280,7 @@ export default async function JobsIndexPage({
   const sp = (await searchParams) || {}
   const page = parsePage(sp)
   const techFilter = (firstParam(sp, 'tech') || '').trim() || undefined
+  const keyword = (firstParam(sp, 'q') || '').trim() || undefined
 
   const rawCountry = (firstParam(sp, 'country') || '').trim().toUpperCase()
   const country = rawCountry.length === 2 ? rawCountry : undefined
@@ -317,6 +318,7 @@ export default async function JobsIndexPage({
     seniorityLevels: seniority.length ? seniority : undefined,
     companySizeBuckets: companySizes.length ? companySizes : undefined,
     tech: techFilter,
+    keyword,
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
   }
 
