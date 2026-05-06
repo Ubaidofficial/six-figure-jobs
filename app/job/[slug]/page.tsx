@@ -289,10 +289,10 @@ export default async function JobPage({
     }
 
     return {
-      bullets: pickArray('bullets', 6),
-      description: pickArray('description', 12),
-      requirements: pickArray('requirements', 12),
-      benefits: pickArray('benefits', 10),
+      bullets: pickArray('bullets', 4),
+      description: pickArray('description', 4),
+      requirements: pickArray('requirements', 6),
+      benefits: pickArray('benefits', 4),
     }
   })()
 
@@ -686,77 +686,79 @@ export default async function JobPage({
               </>
             )}
 
-            {/* Original Job Posting (keep showing as fallback / reference) */}
-            <section className={styles.card}>
-              <div className={styles.cardTitle}>
-                <span>📄 Original Job Posting</span>
-              </div>
-
-              {isOversizedDescription ? (
-                <p className={styles.cardSubtitle}>
-                  Job description is too large to display safely. Please use the “Apply Now” link to view the posting on the company site.
-                </p>
-              ) : hasDescription ? (
-                <div
-                  className={`prose prose-invert max-w-none ${styles.richText}`}
-                  dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
-                />
-              ) : (
-                <p className={styles.cardSubtitle}>
-                  This role is sourced directly from the employer&apos;s careers site. The full job description is available on their ATS.
-                </p>
-              )}
-            </section>
-
-            {responsibilities.length > 0 ? (
-              <section className={styles.card}>
-                <div className={styles.cardTitle}>Responsibilities</div>
-                <div className={styles.checkList}>
-                  {responsibilities.slice(0, 10).map((r, i) => (
-                    <div key={i} className={styles.checkItem}>
-                      <span className={styles.checkCircle} aria-hidden="true">
-                        <Check />
-                      </span>
-                      <span>{r}</span>
+            {/* Fallback sections — only shown when AI structured content is absent */}
+            {!hasStructuredSections && (
+              <>
+                {responsibilities.length > 0 ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>Responsibilities</div>
+                    <div className={styles.checkList}>
+                      {responsibilities.slice(0, 5).map((r, i) => (
+                        <div key={i} className={styles.checkItem}>
+                          <span className={styles.checkCircle} aria-hidden="true">
+                            <Check />
+                          </span>
+                          <span>{r}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
+                  </section>
+                ) : null}
 
-            {/* Requirements */}
-            {resolvedRequirements.length > 0 ? (
-              <section className={styles.card}>
-                <div className={styles.cardTitle}>Requirements</div>
-                <div className={styles.checkList}>
-                  {resolvedRequirements.slice(0, 12).map((r, i) => (
-                    <div key={i} className={styles.checkItem}>
-                      <span className={styles.checkCircle} aria-hidden="true">
-                        <Check />
-                      </span>
-                      <span>{r}</span>
+                {resolvedRequirements.length > 0 ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>Requirements</div>
+                    <div className={styles.checkList}>
+                      {resolvedRequirements.slice(0, 6).map((r, i) => (
+                        <div key={i} className={styles.checkItem}>
+                          <span className={styles.checkCircle} aria-hidden="true">
+                            <Check />
+                          </span>
+                          <span>{r}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
+                  </section>
+                ) : null}
 
-            {/* Benefits */}
-            {benefitItems.length > 0 ? (
-              <section className={styles.card}>
-                <div className={styles.cardTitle}>Benefits</div>
-                <div className={styles.benefitsGrid}>
-                  {benefitItems.slice(0, 12).map((b, i) => (
-                    <div key={i} className={styles.benefitCard}>
-                      <div className={styles.benefitIcon} aria-hidden="true">
-                        <ShieldCheck />
-                      </div>
-                      <div className={styles.benefitText}>{formatBenefitPill(b)}</div>
+                {benefitItems.length > 0 ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>Benefits</div>
+                    <div className={styles.benefitsGrid}>
+                      {benefitItems.slice(0, 4).map((b, i) => (
+                        <div key={i} className={styles.benefitCard}>
+                          <div className={styles.benefitIcon} aria-hidden="true">
+                            <ShieldCheck />
+                          </div>
+                          <div className={styles.benefitText}>{formatBenefitPill(b)}</div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </section>
+                ) : null}
+              </>
+            )}
+
+            {/* Full posting — collapsed by default; always available as reference */}
+            {(hasDescription || isOversizedDescription) && (
+              <details className={styles.fullPostingDetails}>
+                <summary className={styles.fullPostingSummary}>
+                  📄 View full job posting
+                </summary>
+                <div className={styles.card} style={{ marginTop: '0.75rem' }}>
+                  {isOversizedDescription ? (
+                    <p className={styles.cardSubtitle}>
+                      Job description is too large to display safely. View the posting on the company site using the Apply Now button.
+                    </p>
+                  ) : (
+                    <div
+                      className={`prose prose-invert max-w-none ${styles.richText}`}
+                      dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
+                    />
+                  )}
                 </div>
-              </section>
-            ) : null}
+              </details>
+            )}
 
             {showApply ? (
               <section className={styles.card}>

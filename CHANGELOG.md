@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* feat(jobs): shorten job description to ~250-300 words — cap AI sections (4 desc / 6 req / 4 benefits), collapse full raw posting behind "View full job posting" toggle
 * feat(jobs): show 6 similar jobs on job detail page (was 3) + "Browse all [role] jobs →" CTA link for better CTR
 * feat(seo): expand TIER_1 roles — AI/ML focus (ai-engineer, llm-engineer, mlops-engineer, etc.) + long-tail engineering roles with ≥3 DB jobs; remove TIER_2 duplicates
 * feat(seo): add FAQPage + BreadcrumbList JSON-LD to salary tier pages and skills pages; fix keyword-stuffed city page meta description

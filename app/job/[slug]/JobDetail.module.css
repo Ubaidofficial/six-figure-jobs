@@ -494,6 +494,41 @@
   flex-wrap: wrap;
 }
 
+.fullPostingDetails {
+  margin-bottom: var(--space-24);
+}
+
+.fullPostingSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-1);
+  padding: 6px 0;
+  list-style: none;
+  user-select: none;
+}
+
+.fullPostingSummary::-webkit-details-marker {
+  display: none;
+}
+
+.fullPostingSummary::before {
+  content: '▸';
+  font-size: 0.75em;
+  transition: transform 0.15s ease;
+}
+
+details[open] .fullPostingSummary::before {
+  content: '▾';
+}
+
+.fullPostingSummary:hover {
+  color: var(--color-text-0);
+}
+
 .similarGrid {
   margin-top: var(--space-64);
 }
