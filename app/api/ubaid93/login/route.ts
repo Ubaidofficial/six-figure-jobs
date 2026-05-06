@@ -4,19 +4,24 @@ import { checkAdminCredentials, adminUserExists, createSessionToken, sessionCook
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
-  const { username, password } = await req.json().catch(() => ({}))
+  try {
+    const { username, password } = await req.json().catch(() => ({}))
 
-  const exists = await adminUserExists()
-  if (!exists) {
-    return NextResponse.json({ error: 'No admin account', setup: true }, { status: 401 })
+    const exists = await adminUserExists()
+    if (!exists) {
+      return NextResponse.json({ error: 'No admin account', setup: true }, { status: 401 })
+    }
+
+    if (!username || !password || !(await checkAdminCredentials(username, password))) {
+      return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 })
+    }
+
+    const token = createSessionToken()
+    const res = NextResponse.json({ ok: true })
+    res.cookies.set(sessionCookieOptions(token))
+    return res
+  } catch (err) {
+    console.error('[admin login] error:', err)
+    return NextResponse.json({ error: 'Server error — check deploy logs' }, { status: 500 })
   }
-
-  if (!username || !password || !(await checkAdminCredentials(username, password))) {
-    return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 })
-  }
-
-  const token = createSessionToken()
-  const res = NextResponse.json({ ok: true })
-  res.cookies.set(sessionCookieOptions(token))
-  return res
 }

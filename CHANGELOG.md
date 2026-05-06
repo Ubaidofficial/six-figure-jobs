@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* fix(admin): add try-catch to login route so server errors show as "Server error" not silent failure; add temporary debug endpoint
 * fix(admin): upsert admin credentials via migration so login always works regardless of DB state
 * fix(admin): fix login form — read inputs from DOM (handles Chrome autofill), hard redirect on success, add try-catch for network errors
 * fix(admin): add missing session.ts to git — Railway build failed with "Can't resolve './session'"
