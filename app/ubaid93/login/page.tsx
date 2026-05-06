@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 const inputStyle: React.CSSProperties = {
@@ -13,33 +12,40 @@ const btnStyle: React.CSSProperties = {
 }
 
 export default function AdminLoginPage() {
-  const router = useRouter()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const res = await fetch('/api/ubaid93/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    })
-    setLoading(false)
-    if (res.ok) {
-      router.push('/ubaid93')
-      router.refresh()
-    } else {
+
+    // Read directly from DOM to handle Chrome autofill (which bypasses React onChange)
+    const form = e.currentTarget
+    const username = (form.elements.namedItem('username') as HTMLInputElement)?.value ?? ''
+    const password = (form.elements.namedItem('password') as HTMLInputElement)?.value ?? ''
+
+    try {
+      const res = await fetch('/api/ubaid93/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      if (res.ok) {
+        // Hard redirect — ensures the browser sends the new httpOnly cookie on the next request
+        window.location.href = '/ubaid93'
+        return
+      }
       const data = await res.json().catch(() => ({}))
       if (data?.setup) {
-        router.push('/ubaid93/setup')
-      } else {
-        setError('Invalid username or password')
+        window.location.href = '/ubaid93/setup'
+        return
       }
+      setError(data?.error || 'Invalid username or password')
+    } catch {
+      setError('Network error — please try again')
     }
+    setLoading(false)
   }
 
   return (
@@ -49,12 +55,12 @@ export default function AdminLoginPage() {
         <p style={{ color: '#555', fontSize: 13, marginBottom: 28 }}>Six Figure Jobs</p>
 
         <label style={{ display: 'block', fontSize: 13, color: '#a3a3a3', marginBottom: 6 }}>Username</label>
-        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
-          autoFocus required autoComplete="username" style={{ ...inputStyle, marginBottom: 14 }} />
+        <input name="username" type="text" autoFocus required autoComplete="username"
+          style={{ ...inputStyle, marginBottom: 14 }} />
 
         <label style={{ display: 'block', fontSize: 13, color: '#a3a3a3', marginBottom: 6 }}>Password</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-          required autoComplete="current-password" style={{ ...inputStyle, marginBottom: 16 }} />
+        <input name="password" type="password" required autoComplete="current-password"
+          style={{ ...inputStyle, marginBottom: 16 }} />
 
         {error && <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{error}</p>}
         <button type="submit" disabled={loading} style={btnStyle}>
