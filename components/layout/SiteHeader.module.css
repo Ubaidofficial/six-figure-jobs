@@ -142,27 +142,52 @@
 }
 
 .dropdown {
-  min-width: 320px;
-  padding: 8px;
-  border-radius: 14px;
+  min-width: 560px;
+  padding: 0;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.10);
-  background: #1f1f1f;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.6);
+  background: #1a1a1a;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  overflow: hidden;
+}
+
+/* 2-column layout inside dropdown */
+.dropdownGrid {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 0;
+}
+
+.dropdownCol {
+  padding: 12px 8px;
+}
+
+.dropdownDivider {
+  background: rgba(255, 255, 255, 0.07);
+  margin: 12px 0;
 }
 
 .dropdownLabel {
-  padding: 10px 10px 6px;
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  padding: 10px 10px 4px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-text-2);
+  color: var(--color-text-3);
+  font-weight: 600;
+}
+
+.dropdownLabelSpaced {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .dropdownItem {
-  border-radius: 10px;
-  padding: 10px 10px;
+  border-radius: 8px;
+  padding: 8px 10px;
   color: var(--color-text-0);
   cursor: pointer;
+  transition: background 150ms ease;
 }
 
 .dropdownItemMuted {
@@ -171,11 +196,11 @@
 }
 
 .dropdownItem:hover {
-  background: rgba(132, 204, 22, 0.10);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .dropdownItem:hover .dropdownItemTitle {
-  color: rgba(132, 204, 22, 0.95);
+  color: var(--color-text-0);
 }
 
 .dropdownItemTitle {

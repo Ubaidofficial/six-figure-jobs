@@ -244,9 +244,9 @@ export default async function CompanyPage({
 
             {/* Links */}
             <div className="mt-4 flex flex-wrap gap-3">
-              {company.website && (
+              {isValidCompanyWebsite(company.website) && (
                 <a
-                  href={cleanUrl(company.website)}
+                  href={cleanUrl(company.website!)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-100 hover:border-slate-500"
@@ -671,6 +671,33 @@ function truncateText(str: string, maxChars: number): string {
   const truncated = s.slice(0, maxChars)
   const lastSpace = truncated.lastIndexOf(' ')
   return truncated.slice(0, lastSpace > 0 ? lastSpace : maxChars) + '…'
+}
+
+// Domains that are ATS/social platforms, not company homepages
+const INVALID_WEBSITE_DOMAINS = [
+  'linkedin.com',
+  'greenhouse.io',
+  'lever.co',
+  'ashbyhq.com',
+  'workday.com',
+  'smartrecruiters.com',
+  'bamboohr.com',
+  'recruitee.com',
+  'workable.com',
+  'jobs.lever.co',
+  'twitter.com',
+  'x.com',
+  'facebook.com',
+]
+
+function isValidCompanyWebsite(url: string | null | undefined): boolean {
+  if (!url) return false
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
+    return !INVALID_WEBSITE_DOMAINS.some((d) => parsed.hostname.includes(d))
+  } catch {
+    return false
+  }
 }
 
 function cleanUrl(url: string): string {

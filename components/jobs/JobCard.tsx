@@ -360,11 +360,22 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
               height={48}
               className={styles.logoImg}
               loading="lazy"
-              unoptimized={companyLogo.includes('clearbit.com')}
+              unoptimized
+              onError={(e) => {
+                const el = e.currentTarget as HTMLImageElement
+                el.style.display = 'none'
+                const fallback = el.parentElement?.querySelector('[data-fallback]') as HTMLElement | null
+                if (fallback) fallback.style.display = 'flex'
+              }}
             />
-          ) : (
-            <span className={styles.logoFallback}>{initials || 'C'}</span>
-          )}
+          ) : null}
+          <span
+            className={styles.logoFallback}
+            data-fallback=""
+            style={companyLogo ? { display: 'none' } : undefined}
+          >
+            {initials || 'C'}
+          </span>
         </div>
 
         <div className={styles.company}>

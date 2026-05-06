@@ -9,6 +9,7 @@ export type PublicCompanyDirectoryEntry = {
   name: string | null
   slug: string | null
   logoUrl: string | null
+  website: string | null
   _count: { jobs: number }
 }
 
@@ -82,6 +83,7 @@ export const loadEligibleCompaniesDirectory = cache(async () => {
             name: true,
             slug: true,
             logoUrl: true,
+            website: true,
             _count: {
               select: {
                 jobs: {

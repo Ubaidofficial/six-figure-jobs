@@ -4,6 +4,7 @@ import type { Viewport } from 'next'
 
 import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
+import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
 import { getSiteUrl } from '../lib/seo/site'
 
 const SITE_URL = getSiteUrl()
@@ -72,6 +73,7 @@ export default function RootLayout({
 
           <Footer />
         </div>
+        <FeedbackWidget />
       </body>
     </html>
   )

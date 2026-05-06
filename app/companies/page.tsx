@@ -6,6 +6,7 @@ import {
   loadEligibleCompaniesDirectory,
   type PublicCompanyDirectoryEntry,
 } from '@/lib/jobs/publicStats'
+import { CompanySearch } from '@/components/companies/CompanySearch'
 
 export const revalidate = 600 // 10m
 export const dynamic = 'force-dynamic'
@@ -161,38 +162,7 @@ export default async function CompaniesPage() {
               </p>
             </section>
 
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {companies.map((c) => (
-                <Link
-                  key={c.id}
-                  href={c.slug ? `/company/${c.slug}` : '/companies'}
-                  className="group flex flex-col items-center rounded-2xl border border-slate-800 bg-slate-950/40 p-6 shadow-sm transition hover:border-slate-600 hover:bg-slate-950/60 hover:shadow-lg"
-                >
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-lg font-bold text-slate-200">
-                    {c.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={c.logoUrl}
-                        alt=""
-                        className="h-full w-full object-contain"
-                        loading="lazy"
-                      />
-                    ) : (
-                      (c.name?.[0] || 'C').toUpperCase()
-                    )}
-                  </div>
-
-                  <div className="w-full text-center">
-                    <div className="mb-1 line-clamp-2 text-sm font-semibold text-slate-100 group-hover:text-white">
-                      {c.name}
-                    </div>
-                    <div className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-1 text-xs font-medium text-green-400">
-                      💼 {c._count.jobs.toLocaleString()} jobs
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <CompanySearch companies={companies} />
           </>
         )}
 
