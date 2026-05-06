@@ -297,3 +297,24 @@ model AiRunLedger {
   lastRunAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
 }
+
+model Feedback {
+  id            String   @id @default(cuid())
+  type          String
+  message       String
+  url           String?
+  hasScreenshot Boolean  @default(false)
+  userAgent     String?
+  status        String   @default("new")
+  createdAt     DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SiteConfig {
+  key       String   @id
+  value     String
+  label     String?
+  updatedAt DateTime @updatedAt
+}

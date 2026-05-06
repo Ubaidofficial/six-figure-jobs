@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* **feat(admin):** add admin panel — feedback inbox, job manager, site config editor, and HMAC-based auth
 * **scraper:** fix WeWorkRemotely apply URL extraction — use fetchJobPage to surface external apply links
 * add explicit board salary capture ([fbec60a](https://github.com/Ubaidofficial/six-figure-jobs/commit/fbec60a2423265a0fc4de01ffc863630f4dca862))
 * allow scraper workflow to succeed without jobId ([d4d89ce](https://github.com/Ubaidofficial/six-figure-jobs/commit/d4d89cea1e35a0e05bd5a355757e8b3cdb3aa1b1))
