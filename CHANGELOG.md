@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* fix(admin): fix verifySessionToken in Edge Runtime — replace timingSafeEqual (not available in Edge) with pure-JS constant-time comparison
 * fix(admin): fix cookie.set() crash — Next.js 16 requires 3-arg form (name, value, attrs) not single object
 * fix(admin): make debug endpoint temporarily public to diagnose AdminUser table state
 * fix(admin): add try-catch to login route so server errors show as "Server error" not silent failure; add temporary debug endpoint

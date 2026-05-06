@@ -1,6 +1,15 @@
 // Edge-safe session token helpers — no Prisma, no next/headers
 // Used by middleware.ts (Edge Runtime) and lib/admin/auth.ts
-import { createHmac, createHash, timingSafeEqual } from 'crypto'
+import { createHmac, createHash } from 'crypto'
+
+// Pure-JS constant-time string comparison — works in both Edge Runtime and Node.js
+// (timingSafeEqual from node:crypto is NOT available in Edge Runtime)
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let result = 0
+  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return result === 0
+}
 
 export const COOKIE_NAME = 'admin_session'
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
@@ -29,7 +38,7 @@ export function verifySessionToken(token: string): boolean {
     const payload = decoded.slice(0, lastColon)
     const sig = decoded.slice(lastColon + 1)
     const expected = sign(payload)
-    return timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+    return safeEqual(sig, expected)
   } catch {
     return false
   }
