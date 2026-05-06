@@ -10,7 +10,20 @@ import type { NextRequest } from 'next/server'
 const ADMIN_ROOT = '/ubaid93'
 const PUBLIC_PATHS = [`${ADMIN_ROOT}/login`, `${ADMIN_ROOT}/setup`]
 
+// Canonical host — ensure apex redirects to www for consistent PageRank consolidation
+const WWW_HOST = 'www.6figjobs.com'
+const APEX_HOST = '6figjobs.com'
+
 export function middleware(request: NextRequest) {
+  const host = request.headers.get('host') ?? ''
+
+  // 301 apex → www (SEO: consolidate PageRank on canonical www host)
+  if (host === APEX_HOST) {
+    const url = request.nextUrl.clone()
+    url.host = WWW_HOST
+    return NextResponse.redirect(url, { status: 301 })
+  }
+
   const { pathname } = request.nextUrl
 
   if (!pathname.startsWith(ADMIN_ROOT)) return NextResponse.next()
@@ -25,5 +38,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/ubaid93/:path*'],
+  matcher: [
+    // Match all paths except static files and Next.js internals
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json)).*)',
+  ],
 }

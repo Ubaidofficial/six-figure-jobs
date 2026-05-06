@@ -52,8 +52,10 @@ const nextConfig = {
       { protocol: 'https', hostname: 'img.logo.dev' },
       { protocol: 'https', hostname: '**.amazonaws.com' },
       { protocol: 'https', hostname: 'cdn.builtin.com' },
+      { protocol: 'https', hostname: '**.googleusercontent.com' },
+      { protocol: 'https', hostname: '**.githubusercontent.com' },
     ],
-    unoptimized: true,
+    // unoptimized removed — Next.js image optimization now active (WebP/AVIF, resizing, CDN)
   },
   async headers() {
     return [

@@ -107,19 +107,10 @@ export async function generateMetadata({
           url: canonicalUrl,
           siteName: SITE_NAME,
           type: 'website',
-          images: company.logoUrl
-            ? [
-                {
-                  url: company.logoUrl,
-                  width: 200,
-                  height: 200,
-                  alt: company.name,
-                },
-              ]
-            : undefined,
+          // No images override — let opengraph-image.tsx generate the 1200×630 social card
         },
         twitter: {
-          card: 'summary',
+          card: 'summary_large_image',
           title,
           description,
         },

@@ -3,6 +3,8 @@
 
 ### Bug Fixes
 
+* feat(seo): apex→www 301 redirect in middleware, expanded robots.txt, og:image 1200×630, SearchAction URL fix, cookie canonical, city targets expanded to ~70 cities
+* fix(admin): remove temporary debug endpoint now that login is confirmed working
 * fix(admin): middleware now only checks cookie existence (Edge-safe); HMAC verification stays in Node.js layout
 * feat(admin): job edit modal — add company logo field with preview, description HTML/Preview tabs, View live link
 * feat(admin): full job edit modal — all fields including description, location, remote mode, employment type, salary, visa sponsorship, posted/expiry dates

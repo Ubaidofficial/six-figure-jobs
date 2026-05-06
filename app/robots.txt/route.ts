@@ -44,6 +44,7 @@ export async function GET() {
     'Allow: /',
     'Disallow: /search',
     'Disallow: /api/',
+    'Disallow: /ubaid93/',
     '',
     'User-agent: GPTBot',
     'Disallow: /api/',
