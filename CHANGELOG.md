@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* fix(admin): remove ADMIN_JWT_SECRET requirement — derives secret from DATABASE_URL; add ErrorLog model and error tracking
 * fix(admin): fix redirect loop on login page by moving dashboard pages into (dashboard) route group
 * feat(admin): move admin panel to /ubaid93, add DB-based account creation with scrypt password hashing; remove ADMIN_PASSWORD env var
 * fix(scrapers): add description+apply URL extraction to himalayas, remoteotter, trawle, realworkfromanywhere; add fetchJobPageDetails utility

@@ -1,14 +1,17 @@
-import { createHmac, timingSafeEqual, scryptSync, randomBytes } from 'crypto'
+import { createHmac, createHash, timingSafeEqual, scryptSync, randomBytes } from 'crypto'
 import { cookies } from 'next/headers'
 import { prisma } from '../prisma'
 
 const COOKIE_NAME = 'admin_session'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 
+// Derives a stable secret without requiring ADMIN_JWT_SECRET to be set.
+// Priority: env var → hash of DATABASE_URL (always available on Railway)
 function getSecret(): string {
-  const s = process.env.ADMIN_JWT_SECRET
-  if (!s) throw new Error('ADMIN_JWT_SECRET env var is not set')
-  return s
+  const explicit = process.env.ADMIN_JWT_SECRET
+  if (explicit && explicit.length > 0) return explicit
+  const dbUrl = process.env.DATABASE_URL ?? 'sixfigurejobs-fallback-dev'
+  return createHash('sha256').update('admin-session:' + dbUrl).digest('hex')
 }
 
 function sign(payload: string): string {

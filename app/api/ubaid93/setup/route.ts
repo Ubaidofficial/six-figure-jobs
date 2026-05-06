@@ -4,10 +4,9 @@ import { adminUserExists, createAdminUser, createSessionToken, sessionCookieOpti
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
-  // Only allow setup if no admin exists yet
   const exists = await adminUserExists()
   if (exists) {
-    return NextResponse.json({ error: 'Admin account already exists' }, { status: 403 })
+    return NextResponse.json({ error: 'Admin account already exists', loginInstead: true }, { status: 403 })
   }
 
   const { username, password } = await req.json().catch(() => ({}))
@@ -20,7 +19,6 @@ export async function POST(req: Request) {
 
   await createAdminUser(username.trim().toLowerCase(), password)
 
-  // Auto-login after account creation
   const token = createSessionToken()
   const res = NextResponse.json({ ok: true })
   res.cookies.set(sessionCookieOptions(token))

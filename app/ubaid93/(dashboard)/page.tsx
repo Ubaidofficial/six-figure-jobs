@@ -2,7 +2,7 @@ import { prisma } from '../../../lib/prisma'
 import Link from 'next/link'
 
 export default async function AdminDashboard() {
-  const [totalJobs, activeJobs, expiredJobs, totalCompanies, newFeedback, totalFeedback, recentScrapes] =
+  const [totalJobs, activeJobs, expiredJobs, totalCompanies, newFeedback, totalFeedback, newErrors, recentScrapes] =
     await Promise.all([
       prisma.job.count(),
       prisma.job.count({ where: { isExpired: false } }),
@@ -10,14 +10,15 @@ export default async function AdminDashboard() {
       prisma.company.count(),
       prisma.feedback.count({ where: { status: 'new' } }),
       prisma.feedback.count(),
+      prisma.errorLog.count({ where: { status: 'new' } }),
       prisma.scrapeRun.findMany({ orderBy: { startedAt: 'desc' }, take: 5, select: { id: true, startedAt: true, jobsNew: true, status: true } }),
     ])
 
   const stats = [
     { label: 'Active Jobs', value: activeJobs.toLocaleString(), sub: `${totalJobs.toLocaleString()} total`, color: '#84cc16' },
-    { label: 'Expired Jobs', value: expiredJobs.toLocaleString(), sub: 'removed from listings', color: '#f87171' },
     { label: 'Companies', value: totalCompanies.toLocaleString(), sub: 'indexed', color: '#60a5fa' },
     { label: 'New Feedback', value: newFeedback.toLocaleString(), sub: `${totalFeedback.toLocaleString()} total`, color: '#fbbf24' },
+    { label: 'New Errors', value: newErrors.toLocaleString(), sub: 'unresolved JS errors', color: '#f87171' },
   ]
 
   return (
@@ -41,9 +42,9 @@ export default async function AdminDashboard() {
           <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Quick Actions</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { href: '/ubaid93/feedback?status=new', label: `View ${newFeedback} unread feedback`, icon: '💬' },
+              { href: '/ubaid93/feedback?status=new', label: `${newFeedback} unread feedback`, icon: '💬' },
+              { href: '/ubaid93/errors?status=new', label: `${newErrors} new JS errors`, icon: '🔴' },
               { href: '/ubaid93/jobs?expired=0', label: 'Manage active jobs', icon: '💼' },
-              { href: '/ubaid93/jobs?expired=1', label: 'Review expired jobs', icon: '🗂' },
               { href: '/ubaid93/config', label: 'Edit site copy', icon: '✏️' },
             ].map((l) => (
               <Link key={l.href} href={l.href} style={{

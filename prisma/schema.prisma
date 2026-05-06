@@ -325,3 +325,19 @@ model AdminUser {
   passwordHash String
   createdAt    DateTime @default(now())
 }
+
+model ErrorLog {
+  id         String   @id @default(cuid())
+  message    String
+  stack      String?
+  url        String?
+  userAgent  String?
+  context    String?
+  severity   String   @default("error")
+  status     String   @default("new")
+  createdAt  DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([severity])
+}

@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 14px', background: '#1a1a1a', border: '1px solid #2a2a2a',
@@ -27,11 +28,13 @@ export default function SetupForm() {
       body: JSON.stringify({ username, password }),
     })
     setLoading(false)
+    const data = await res.json().catch(() => ({}))
     if (res.ok) {
       router.push('/ubaid93')
       router.refresh()
+    } else if (data?.loginInstead) {
+      router.push('/ubaid93/login')
     } else {
-      const data = await res.json().catch(() => ({}))
       setError(data?.error ?? 'Setup failed')
     }
   }
@@ -61,6 +64,10 @@ export default function SetupForm() {
       }}>
         {loading ? 'Creating account...' : 'Create account'}
       </button>
+      <p style={{ textAlign: 'center', marginTop: 14, fontSize: 12, color: '#555' }}>
+        Account already created?{' '}
+        <Link href="/ubaid93/login" style={{ color: '#84cc16' }}>Sign in →</Link>
+      </p>
     </form>
   )
 }
