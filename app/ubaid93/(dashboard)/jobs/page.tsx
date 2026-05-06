@@ -6,17 +6,24 @@ type SearchParams = Record<string, string | undefined>
 export type JobRow = {
   id: string
   title: string
-  company: string
+  company: string | null
   source: string
+  locationRaw: string | null
+  remoteMode: string | null
+  employmentType: string | null
   salaryMin: bigint | null
   salaryMax: bigint | null
   salaryCurrency: string | null
+  salaryPeriod: string | null
   isExpired: boolean
   remote: boolean | null
   postedAt: Date | null
+  expiresAt: Date | null
   createdAt: Date
   applyUrl: string | null
   url: string | null
+  visaSponsorship: boolean
+  descriptionHtml: string | null
 }
 
 export default async function AdminJobsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
@@ -38,8 +45,10 @@ export default async function AdminJobsPage({ searchParams }: { searchParams?: P
       where,
       select: {
         id: true, title: true, company: true, source: true,
-        salaryMin: true, salaryMax: true, salaryCurrency: true,
-        isExpired: true, remote: true, postedAt: true, createdAt: true, applyUrl: true, url: true,
+        locationRaw: true, remoteMode: true, employmentType: true,
+        salaryMin: true, salaryMax: true, salaryCurrency: true, salaryPeriod: true,
+        isExpired: true, remote: true, postedAt: true, expiresAt: true, createdAt: true,
+        applyUrl: true, url: true, visaSponsorship: true, descriptionHtml: true,
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,

@@ -24,8 +24,10 @@ export async function GET(req: Request) {
       where,
       select: {
         id: true, title: true, company: true, source: true,
-        salaryMin: true, salaryMax: true, salaryCurrency: true,
-        isExpired: true, remote: true, postedAt: true, createdAt: true, applyUrl: true, url: true,
+        locationRaw: true, remoteMode: true, employmentType: true,
+        salaryMin: true, salaryMax: true, salaryCurrency: true, salaryPeriod: true,
+        isExpired: true, remote: true, postedAt: true, expiresAt: true, createdAt: true,
+        applyUrl: true, url: true, visaSponsorship: true, descriptionHtml: true,
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
@@ -42,8 +44,12 @@ export async function PATCH(req: Request) {
   const { id, ...data } = await req.json()
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
-  const allowed = ['title', 'company', 'salaryMin', 'salaryMax', 'salaryCurrency',
-    'isExpired', 'remote', 'applyUrl', 'descriptionHtml']
+  const allowed = [
+    'title', 'company', 'locationRaw', 'remoteMode', 'employmentType',
+    'salaryMin', 'salaryMax', 'salaryCurrency', 'salaryPeriod',
+    'isExpired', 'remote', 'applyUrl', 'descriptionHtml',
+    'visaSponsorship', 'postedAt', 'expiresAt',
+  ]
   const update: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in data) update[key] = data[key]

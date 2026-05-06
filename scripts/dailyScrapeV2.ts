@@ -52,6 +52,7 @@ import { scrapeH1bVisaJobs, scrapeMyVisaJobs } from '../lib/scrapers/h1bVisaScra
 import { markVisaSponsorshipBatch } from '../lib/jobs/markVisaSponsorship'
 
 // “API style” board scrapers / extra sources
+import scrapeCursorDirectory from '../lib/scrapers/cursordirectory'
 import scrapeRemotive from '../lib/scrapers/remotive'
 import scrapeYCombinator from '../lib/scrapers/ycombinator'
 import scrapeDice from '../lib/scrapers/dice'
@@ -272,6 +273,7 @@ async function runBoardScrapers(options: CliOptions): Promise<DailyScrapeStats> 
     { key: 'remoteotter', name: 'RemoteOtter', run: scrapeRemoteOtter },
     { key: 'trawle', name: 'Trawle', run: scrapeTrawle },
     { key: 'fourdayweek', name: 'FourDayWeek', run: scrapeFourDayWeek },
+    { key: 'cursordirectory', name: 'CursorDirectory', run: scrapeCursorDirectory },
     { key: 'remotive', name: 'Remotive', run: scrapeRemotive },
     { key: 'dice', name: 'Dice', run: scrapeDice },
     { key: 'wellfound', name: 'Wellfound', run: scrapeWellfound },

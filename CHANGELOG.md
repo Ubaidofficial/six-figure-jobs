@@ -4,6 +4,9 @@
 ### Bug Fixes
 
 * fix(admin): middleware now only checks cookie existence (Edge-safe); HMAC verification stays in Node.js layout
+* feat(admin): full job edit modal — all fields including description, location, remote mode, employment type, salary, visa sponsorship, posted/expiry dates
+* feat(scraper): add cursor.directory/jobs scraper
+* feat(schema): add expiresAt field to Job model
 * fix(admin): fix verifySessionToken in Edge Runtime — replace timingSafeEqual (not available in Edge) with pure-JS constant-time comparison
 * fix(admin): fix cookie.set() crash — Next.js 16 requires 3-arg form (name, value, attrs) not single object
 * fix(admin): make debug endpoint temporarily public to diagnose AdminUser table state
