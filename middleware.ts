@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifySessionToken } from './lib/admin/auth'
+import { verifySessionToken } from './lib/admin/session'
 
 const ADMIN_ROOT = '/ubaid93'
 const PUBLIC_PATHS = [`${ADMIN_ROOT}/login`, `${ADMIN_ROOT}/setup`]

@@ -1,41 +1,18 @@
-import { createHmac, createHash, timingSafeEqual, scryptSync, randomBytes } from 'crypto'
+// Node.js-only auth helpers — NOT Edge-safe (uses Prisma + next/headers)
+// For Edge-safe token functions, see ./session.ts
+import { scryptSync, randomBytes, timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
 import { prisma } from '../prisma'
+import {
+  COOKIE_NAME,
+  createSessionToken,
+  verifySessionToken,
+  sessionCookieOptions,
+  clearCookieOptions,
+} from './session'
 
-const COOKIE_NAME = 'admin_session'
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
-
-// Derives a stable secret without requiring ADMIN_JWT_SECRET to be set.
-// Priority: env var → hash of DATABASE_URL (always available on Railway)
-function getSecret(): string {
-  const explicit = process.env.ADMIN_JWT_SECRET
-  if (explicit && explicit.length > 0) return explicit
-  const dbUrl = process.env.DATABASE_URL ?? 'sixfigurejobs-fallback-dev'
-  return createHash('sha256').update('admin-session:' + dbUrl).digest('hex')
-}
-
-function sign(payload: string): string {
-  return createHmac('sha256', getSecret()).update(payload).digest('hex')
-}
-
-export function createSessionToken(): string {
-  const payload = `admin:${Date.now()}`
-  const sig = sign(payload)
-  return Buffer.from(`${payload}:${sig}`).toString('base64url')
-}
-
-export function verifySessionToken(token: string): boolean {
-  try {
-    const decoded = Buffer.from(token, 'base64url').toString('utf8')
-    const lastColon = decoded.lastIndexOf(':')
-    const payload = decoded.slice(0, lastColon)
-    const sig = decoded.slice(lastColon + 1)
-    const expected = sign(payload)
-    return timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
-  } catch {
-    return false
-  }
-}
+// Re-export session token helpers so callers can import from one place
+export { createSessionToken, verifySessionToken, sessionCookieOptions, clearCookieOptions }
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex')
@@ -74,28 +51,4 @@ export async function getAdminSession(): Promise<boolean> {
   const token = cookieStore.get(COOKIE_NAME)?.value
   if (!token) return false
   return verifySessionToken(token)
-}
-
-export function sessionCookieOptions(token: string) {
-  return {
-    name: COOKIE_NAME,
-    value: token,
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    maxAge: COOKIE_MAX_AGE,
-    path: '/',
-  }
-}
-
-export function clearCookieOptions() {
-  return {
-    name: COOKIE_NAME,
-    value: '',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    maxAge: 0,
-    path: '/',
-  }
 }
