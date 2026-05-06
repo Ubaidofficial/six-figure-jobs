@@ -89,20 +89,26 @@ export default async function VisaSponsorshipPage({
   const sp = (await searchParams) || {}
   const page = parsePage(sp)
 
-  const [result, topCompanies] = await Promise.all([
-    queryJobs({ page, pageSize: PAGE_SIZE, visaSponsorship: true, sortBy: 'date' }),
-    prisma.company.findMany({
-      where: {
-        jobs: {
-          some: {
-            ...buildWhere({ visaSponsorship: true }),
-          },
-        },
+  // Primary: jobs explicitly flagged as visa sponsorship
+  let result = await queryJobs({ page, pageSize: PAGE_SIZE, visaSponsorship: true, sortBy: 'date' })
+
+  // Fallback: if no flagged jobs yet, use keyword search in descriptions
+  // This ensures the page is never empty while the batch marking catches up
+  if (result.total === 0) {
+    result = await queryJobs({ page, pageSize: PAGE_SIZE, keyword: 'visa sponsorship', sortBy: 'date' })
+  }
+
+  const topCompanies = await prisma.company.findMany({
+    where: {
+      jobs: {
+        some: result.total > 0
+          ? { visaSponsorship: true }
+          : { descriptionHtml: { contains: 'visa', mode: 'insensitive' } },
       },
-      select: { name: true, slug: true },
-      take: 12,
-    }),
-  ])
+    },
+    select: { name: true, slug: true },
+    take: 12,
+  })
 
   const jobs = result.jobs as JobWithCompany[]
   const total = result.total
