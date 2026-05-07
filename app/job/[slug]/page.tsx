@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next'
 import NextLink from 'next/link'
+import NextImage from 'next/image'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { cache } from 'react'
 import { JobUnavailablePage } from '@/components/runtime/FallbackPresets'
@@ -377,12 +378,13 @@ export default async function JobPage({
           <div className={styles.headerMain}>
             <div className={styles.logoWrap}>
               {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <NextImage
                   src={logoUrl}
                   alt={`${companyName} logo`}
+                  width={96}
+                  height={96}
                   className={styles.logoImg}
-                  loading="lazy"
+                  unoptimized={logoUrl.includes('clearbit.com') || logoUrl.includes('logo.dev')}
                 />
               ) : (
                 <div className={styles.logoFallback} aria-hidden="true">

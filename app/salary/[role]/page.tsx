@@ -197,7 +197,10 @@ export async function generateMetadata({
 
   const allowIndex = raw.length >= 3
   const title = `${salaryBand} ${roleName} salary guide | Six Figure Jobs`
-  const canonical = `${SITE_URL}/salary/${roleSlug}${bandSlug ? `?band=${bandSlug}` : ''}`
+  // Canonical always points to the base salary page — band filter is a view
+  // variant, not a separate indexable page. Query params in canonicals confuse
+  // Google and fragment the PageRank across variants.
+  const canonical = `${SITE_URL}/salary/${roleSlug}`
 
   return {
     title,

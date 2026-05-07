@@ -29,6 +29,7 @@ const sitemapSources = [
   '/sitemap-level/:path*',
   '/sitemap-browse/:path*',
   '/sitemap-blog.xml',
+  '/sitemap-skills.xml',
 ]
 
 const pageCacheHeaders = [
@@ -61,7 +62,13 @@ const nextConfig = {
     return [
       ...sitemapSources.map((source) => ({ source, headers: sitemapCacheHeaders })),
       { source: '/robots.txt', headers: sitemapCacheHeaders },
-      { source: '/search', headers: searchNoCacheHeaders },
+      {
+        source: '/search',
+        headers: [
+          ...searchNoCacheHeaders,
+          { key: 'X-Robots-Tag', value: 'noindex, follow' },
+        ],
+      },
       { source: '/job/:path*', headers: pageCacheHeaders },
       { source: '/remote/:path*', headers: pageCacheHeaders },
       { source: '/jobs/:path*', headers: pageCacheHeaders },

@@ -3,6 +3,7 @@
 
 ### Bug Fixes
 
+* fix(seo): 7 technical SEO fixes — skills sitemap, X-Robots-Tag on /search, OG images on listings+blog, salary canonical strips ?band=, job detail logo uses next/image, sitemap-skills added to robots.txt + next.config.js
 * fix(ai): switch enrichment model to deepseek-v4-flash (was deepseek-chat); increase maxOutputTokens 220→600; send 4000 chars of job description (was 800); improve prompt to extract bullets not paragraphs
 * feat(jobs): increase job detail to 350-400 words (6 desc / 8 req / 5 benefits); raw posting collapsed behind toggle
 * feat(jobs): show 6 similar jobs on job detail page (was 3) + "Browse all [role] jobs →" CTA link for better CTR
