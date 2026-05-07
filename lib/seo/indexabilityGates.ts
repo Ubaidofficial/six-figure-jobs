@@ -6,6 +6,7 @@ export const MIN_CITY_INDEXABLE_JOBS = 3
 export const MIN_COUNTRY_INDEXABLE_JOBS = 3
 export const MIN_REMOTE_ROLE_INDEXABLE_JOBS = 3
 export const MIN_ROLE_FILTER_INDEXABLE_JOBS = 5
+export const MIN_SALARY_TIER_INDEXABLE_JOBS = 1
 
 function toSafeCount(value: number | null | undefined): number {
   const n = Number(value ?? 0)
@@ -30,4 +31,8 @@ export function isRemoteRolePageIndexable(liveJobCount: number | null | undefine
 
 export function isRoleFilterPageIndexable(liveJobCount: number | null | undefined): boolean {
   return toSafeCount(liveJobCount) >= MIN_ROLE_FILTER_INDEXABLE_JOBS
+}
+
+export function isSalaryTierPageIndexable(liveJobCount: number | null | undefined): boolean {
+  return toSafeCount(liveJobCount) >= MIN_SALARY_TIER_INDEXABLE_JOBS
 }

@@ -3,6 +3,9 @@ import { notFound, permanentRedirect } from 'next/navigation'
 
 import { prisma } from '@/lib/prisma'
 import { buildWhere } from '@/lib/jobs/queryJobs'
+import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
+import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '@/lib/seo/listingSearchParams'
+import { SITE_NAME } from '@/lib/seo/site'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 import { findBestMatchingRole } from '@/lib/roles/slugMatcher'
 
@@ -36,10 +39,13 @@ function asNumber(value: unknown): number | null {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ role: string }>
+  searchParams?: Promise<SearchParams>
 }): Promise<Metadata> {
   const { role: roleRaw } = await params
+  const sp = (await searchParams) || {}
   const role = roleRaw.toLowerCase()
 
   if (!isCanonicalSlug(role)) {
@@ -48,32 +54,49 @@ export async function generateMetadata({
     return { title: 'Not Found', robots: { index: false, follow: false } }
   }
 
-  const where = buildWhere({ roleSlugs: [role], page: 1, pageSize: 1 })
-  const [total, avgAgg] = await Promise.all([
-    prisma.job.count({ where }),
-    prisma.job.aggregate({
-      where: {
-        ...where,
-        currency: 'USD',
-        OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
-      },
-      _avg: { maxAnnual: true, minAnnual: true },
-    }),
-  ])
+  const canonicalPath = buildNormalizedListingPath(`/jobs/${role}`, sp)
+  return withRuntimeFallback<Metadata>(
+    `jobs.role.${role}.metadata`,
+    async () => {
+      const where = buildWhere({ roleSlugs: [role], page: 1, pageSize: 1 })
+      const [total, avgAgg] = await Promise.all([
+        prisma.job.count({ where }),
+        prisma.job.aggregate({
+          where: {
+            ...where,
+            currency: 'USD',
+            OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
+          },
+          _avg: { maxAnnual: true, minAnnual: true },
+        }),
+      ])
 
-  if (total === 0) {
-    return { title: 'Not Found', robots: { index: false, follow: false } }
-  }
+      if (total === 0) {
+        return { title: 'Not Found', robots: { index: false, follow: false } }
+      }
 
-  const shouldIndex = isTier1Role(role) && total >= 3
-  const avgMax = asNumber((avgAgg as any)?._avg?.maxAnnual)
-  const avgMin = asNumber((avgAgg as any)?._avg?.minAnnual)
-  const avgUsd = avgMax != null && avgMin != null ? (avgMax + avgMin) / 2 : (avgMax ?? avgMin)
+      const shouldIndex = isTier1Role(role) && total >= 3
+      const avgMax = asNumber((avgAgg as any)?._avg?.maxAnnual)
+      const avgMin = asNumber((avgAgg as any)?._avg?.minAnnual)
+      const avgUsd = avgMax != null && avgMin != null ? (avgMax + avgMin) / 2 : (avgMax ?? avgMin)
+      const noindexUtilityState = hasNonPaginationQueryParams(sp)
 
-  return {
-    ...buildRoleMetadata(role, total, avgUsd),
-    robots: shouldIndex ? { index: true, follow: true } : { index: false, follow: true },
-  }
+      return {
+        ...buildRoleMetadata(role, total, avgUsd, { canonicalPath }),
+        robots:
+          !noindexUtilityState && shouldIndex
+            ? { index: true, follow: true }
+            : { index: false, follow: true },
+      }
+    },
+    () =>
+      buildRuntimeFallbackMetadata({
+        canonicalPath,
+        title: `${role.replace(/-/g, ' ')} jobs temporarily unavailable | ${SITE_NAME}`,
+        description:
+          'The live role hub is temporarily unavailable while the production database reconnects.',
+      }),
+  )
 }
 
 export default async function RolePage({
@@ -94,4 +117,3 @@ export default async function RolePage({
 
   return <RoleTemplate roleSlug={role} searchParams={searchParams} />
 }
-

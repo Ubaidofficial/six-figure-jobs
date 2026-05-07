@@ -175,6 +175,7 @@ export async function generateMetadata({
 
   const result = await queryJobs({
     roleSlugs: [roleSlug],
+    remoteOnly: true,
     countryCode,
     minAnnual,
     page,
@@ -257,6 +258,7 @@ export default async function RemoteRoleCountryPage({
 
   const data = await queryJobs({
     roleSlugs: [roleSlug],
+    remoteOnly: true,
     countryCode,
     minAnnual,
     page,

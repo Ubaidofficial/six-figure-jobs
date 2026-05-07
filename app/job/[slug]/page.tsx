@@ -2,13 +2,17 @@
 
 import type { Metadata } from 'next'
 import NextLink from 'next/link'
+import NextImage from 'next/image'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { cache } from 'react'
+import { JobUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '../../../lib/prisma'
 import { parseJobSlugParam, buildJobSlug } from '../../../lib/jobs/jobSlug'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
-import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { queryJobs, type JobQueryResult, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
+import { isJobDetailAvailable } from '../../../lib/jobs/detailAvailability'
 import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
@@ -124,7 +128,9 @@ const getJobBySlug = cache(async (slug: string): Promise<JobWithCompany | null> 
     include: { companyRef: true },
   })
 
-  return (job as JobWithCompany) || null
+  if (!job || !isJobDetailAvailable(job)) return null
+
+  return job as JobWithCompany
 })
 
 /* -------------------------------------------------------------------------- */
@@ -137,21 +143,33 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const job = await getJobBySlug(slug)
-  if (!job) return { title: `Job not found | ${SITE_NAME}` }
+  return withRuntimeFallback<Metadata>(
+    `job.${slug}.metadata`,
+    async () => {
+      const job = await getJobBySlug(slug)
+      if (!job) return { title: `Job not found | ${SITE_NAME}` }
 
-  const canonicalSlug = buildJobSlug(job)
-  const canonicalUrl = `${SITE_URL}/job/${canonicalSlug}`
-  const base = buildJobMetadata(job)
-  const qualityGate = evaluateJobIndexability(job)
+      const canonicalSlug = buildJobSlug(job)
+      const canonicalUrl = `${SITE_URL}/job/${canonicalSlug}`
+      const base = buildJobMetadata(job)
+      const qualityGate = evaluateJobIndexability(job)
 
-  return {
-    ...base,
-    alternates: { ...(base.alternates ?? {}), canonical: canonicalUrl },
-    robots: qualityGate.indexable
-      ? (base.robots ?? { index: true, follow: true })
-      : { index: false, follow: false },
-  }
+      return {
+        ...base,
+        alternates: { ...(base.alternates ?? {}), canonical: canonicalUrl },
+        robots: qualityGate.indexable
+          ? (base.robots ?? { index: true, follow: true })
+          : { index: false, follow: false },
+      }
+    },
+    () =>
+      buildRuntimeFallbackMetadata({
+        canonicalPath: `/job/${slug}`,
+        title: `Job page temporarily unavailable | ${SITE_NAME}`,
+        description:
+          'The live job page is temporarily unavailable while the production database reconnects.',
+      }),
+  )
 }
 
 /* -------------------------------------------------------------------------- */
@@ -164,7 +182,25 @@ export default async function JobPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const typedJob = await getJobBySlug(slug)
+  const loadState = await withRuntimeFallback<
+    { status: 'ready'; job: JobWithCompany | null } | { status: 'fallback' }
+  >(
+    `job.${slug}.page.load`,
+    async () => ({ status: 'ready' as const, job: await getJobBySlug(slug) }),
+    () => ({ status: 'fallback' as const }),
+  )
+  if (loadState.status === 'fallback') {
+    return (
+      <JobUnavailablePage
+        title="This job page is temporarily unavailable"
+        description="The live job detail page is temporarily unavailable while the production database reconnects. Browse the main jobs index and retry this role once data access is restored."
+        primaryHref={`/job/${slug}`}
+        primaryLabel="Retry job page"
+      />
+    )
+  }
+
+  const typedJob = loadState.job
   if (!typedJob) return notFound()
   const canonicalSlug = buildJobSlug(typedJob)
 
@@ -254,10 +290,10 @@ export default async function JobPage({
     }
 
     return {
-      bullets: pickArray('bullets', 6),
-      description: pickArray('description', 12),
-      requirements: pickArray('requirements', 12),
-      benefits: pickArray('benefits', 10),
+      bullets: pickArray('bullets', 5),
+      description: pickArray('description', 6),
+      requirements: pickArray('requirements', 8),
+      benefits: pickArray('benefits', 5),
     }
   })()
 
@@ -268,15 +304,26 @@ export default async function JobPage({
 
   /* --------------------------- Similar jobs -------------------------------- */
 
-  const similarResult = await queryJobs({
-    roleSlugs: typedJob.roleSlug ? [typedJob.roleSlug] : undefined,
-    countryCode: typedJob.countryCode || undefined,
-    isHundredKLocal: true,
-    page: 1,
-    pageSize: 6,
-  })
+  const similarResult = await withRuntimeFallback<JobQueryResult>(
+    `job.${typedJob.id}.similar`,
+    async () =>
+      queryJobs({
+        roleSlugs: typedJob.roleSlug ? [typedJob.roleSlug] : undefined,
+        countryCode: typedJob.countryCode || undefined,
+        isHundredKLocal: true,
+        page: 1,
+        pageSize: 7,
+      }),
+    () => ({
+      jobs: [],
+      total: 0,
+      page: 1,
+      pageSize: 7,
+      totalPages: 1,
+    }),
+  )
 
-  const similarJobs = similarResult.jobs.filter((j) => j.id !== typedJob.id).slice(0, 3)
+  const similarJobs = similarResult.jobs.filter((j) => j.id !== typedJob.id).slice(0, 6)
 
   const companyCountry = company?.countryCode || typedJob.countryCode || 'Global'
   const isSalaryVerified =
@@ -331,12 +378,13 @@ export default async function JobPage({
           <div className={styles.headerMain}>
             <div className={styles.logoWrap}>
               {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <NextImage
                   src={logoUrl}
                   alt={`${companyName} logo`}
+                  width={96}
+                  height={96}
                   className={styles.logoImg}
-                  loading="lazy"
+                  unoptimized={logoUrl.includes('clearbit.com') || logoUrl.includes('logo.dev')}
                 />
               ) : (
                 <div className={styles.logoFallback} aria-hidden="true">
@@ -589,14 +637,9 @@ export default async function JobPage({
                     <div className={styles.cardTitle}>
                       <span>📋 About the Role</span>
                     </div>
-                    <div className={styles.checkList}>
+                    <div className={styles.descriptionProse}>
                       {aiStructured.description.map((line, idx) => (
-                        <div key={idx} className={styles.checkItem}>
-                          <span className={styles.checkCircle} aria-hidden="true">
-                            <Check />
-                          </span>
-                          <span>{line}</span>
-                        </div>
+                        <p key={idx} className={styles.descriptionParagraph}>{line}</p>
                       ))}
                     </div>
                   </section>
@@ -640,77 +683,79 @@ export default async function JobPage({
               </>
             )}
 
-            {/* Original Job Posting (keep showing as fallback / reference) */}
-            <section className={styles.card}>
-              <div className={styles.cardTitle}>
-                <span>📄 Original Job Posting</span>
-              </div>
-
-              {isOversizedDescription ? (
-                <p className={styles.cardSubtitle}>
-                  Job description is too large to display safely. Please use the “Apply Now” link to view the posting on the company site.
-                </p>
-              ) : hasDescription ? (
-                <div
-                  className={`prose prose-invert max-w-none ${styles.richText}`}
-                  dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
-                />
-              ) : (
-                <p className={styles.cardSubtitle}>
-                  This role is sourced directly from the employer&apos;s careers site. The full job description is available on their ATS.
-                </p>
-              )}
-            </section>
-
-            {responsibilities.length > 0 ? (
-              <section className={styles.card}>
-                <div className={styles.cardTitle}>Responsibilities</div>
-                <div className={styles.checkList}>
-                  {responsibilities.slice(0, 10).map((r, i) => (
-                    <div key={i} className={styles.checkItem}>
-                      <span className={styles.checkCircle} aria-hidden="true">
-                        <Check />
-                      </span>
-                      <span>{r}</span>
+            {/* Fallback sections — only shown when AI structured content is absent */}
+            {!hasStructuredSections && (
+              <>
+                {responsibilities.length > 0 ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>Responsibilities</div>
+                    <div className={styles.checkList}>
+                      {responsibilities.slice(0, 5).map((r, i) => (
+                        <div key={i} className={styles.checkItem}>
+                          <span className={styles.checkCircle} aria-hidden="true">
+                            <Check />
+                          </span>
+                          <span>{r}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
+                  </section>
+                ) : null}
 
-            {/* Requirements */}
-            {resolvedRequirements.length > 0 ? (
-              <section className={styles.card}>
-                <div className={styles.cardTitle}>Requirements</div>
-                <div className={styles.checkList}>
-                  {resolvedRequirements.slice(0, 12).map((r, i) => (
-                    <div key={i} className={styles.checkItem}>
-                      <span className={styles.checkCircle} aria-hidden="true">
-                        <Check />
-                      </span>
-                      <span>{r}</span>
+                {resolvedRequirements.length > 0 ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>Requirements</div>
+                    <div className={styles.checkList}>
+                      {resolvedRequirements.slice(0, 6).map((r, i) => (
+                        <div key={i} className={styles.checkItem}>
+                          <span className={styles.checkCircle} aria-hidden="true">
+                            <Check />
+                          </span>
+                          <span>{r}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
+                  </section>
+                ) : null}
 
-            {/* Benefits */}
-            {benefitItems.length > 0 ? (
-              <section className={styles.card}>
-                <div className={styles.cardTitle}>Benefits</div>
-                <div className={styles.benefitsGrid}>
-                  {benefitItems.slice(0, 12).map((b, i) => (
-                    <div key={i} className={styles.benefitCard}>
-                      <div className={styles.benefitIcon} aria-hidden="true">
-                        <ShieldCheck />
-                      </div>
-                      <div className={styles.benefitText}>{formatBenefitPill(b)}</div>
+                {benefitItems.length > 0 ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitle}>Benefits</div>
+                    <div className={styles.benefitsGrid}>
+                      {benefitItems.slice(0, 4).map((b, i) => (
+                        <div key={i} className={styles.benefitCard}>
+                          <div className={styles.benefitIcon} aria-hidden="true">
+                            <ShieldCheck />
+                          </div>
+                          <div className={styles.benefitText}>{formatBenefitPill(b)}</div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </section>
+                ) : null}
+              </>
+            )}
+
+            {/* Full posting — open by default */}
+            {(hasDescription || isOversizedDescription) && (
+              <details className={styles.fullPostingDetails} open>
+                <summary className={styles.fullPostingSummary}>
+                  📄 Full job posting
+                </summary>
+                <div className={styles.card} style={{ marginTop: '0.75rem' }}>
+                  {isOversizedDescription ? (
+                    <p className={styles.cardSubtitle}>
+                      Job description is too large to display safely. View the posting on the company site using the Apply Now button.
+                    </p>
+                  ) : (
+                    <div
+                      className={`prose prose-invert max-w-none ${styles.richText}`}
+                      dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
+                    />
+                  )}
                 </div>
-              </section>
-            ) : null}
+              </details>
+            )}
 
             {showApply ? (
               <section className={styles.card}>
@@ -761,6 +806,14 @@ export default async function JobPage({
                 <div className={styles.similarTitle}>Similar Six Figure Opportunities</div>
                 <div className={styles.similarSub}>Based on role, country and salary band</div>
               </div>
+              {typedJob.roleSlug ? (
+                <NextLink
+                  href={`/jobs/${typedJob.roleSlug}/100k-plus`}
+                  className={styles.browseAllLink}
+                >
+                  Browse all {prettyRole(typedJob.roleSlug)} jobs →
+                </NextLink>
+              ) : null}
             </div>
             <div className={styles.similarCards}>
               {similarJobs.map((sj) => (

@@ -31,8 +31,6 @@ export async function getCitySitemapUrls() {
       return {
         loc: `${SITE_URL}/jobs/city/${city.slug}`,
         lastmod: (agg._max.updatedAt ?? new Date()).toISOString(),
-        changefreq: 'daily',
-        priority: 0.8,
       }
     }),
   )
@@ -40,7 +38,5 @@ export async function getCitySitemapUrls() {
   return rows.filter(Boolean) as Array<{
     loc: string
     lastmod: string
-    changefreq: string
-    priority: number
   }>
 }

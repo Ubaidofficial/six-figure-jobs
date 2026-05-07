@@ -4,7 +4,10 @@
 import { NextResponse } from 'next/server'
 
 import { buildBrowseSitemapReport } from '@/lib/seo/browseSitemap'
+import { buildFallbackUrlsetResponse } from '@/lib/seo/fallbackSitemap'
 import { getSiteUrl } from '@/lib/seo/site'
+import { prisma } from '@/lib/prisma'
+import { buildWhere } from '@/lib/jobs/queryJobs'
 
 const SITE_URL = getSiteUrl()
 
@@ -20,27 +23,55 @@ function escapeXml(s: string) {
     .replace(/'/g, '&apos;')
 }
 
-export async function GET() {
-  const report = await buildBrowseSitemapReport(3)
-  const urls = report.included.map((row) => `${SITE_URL}${row.path}`)
-  const uniqueUrls = Array.from(new Set(urls))
+async function getGlobalLastmod(): Promise<string> {
+  try {
+    const agg = await prisma.job.aggregate({
+      where: buildWhere({}),
+      _max: { updatedAt: true },
+    })
+    return (agg._max.updatedAt ?? new Date()).toISOString()
+  } catch {
+    return new Date().toISOString()
+  }
+}
 
-  const body = `<?xml version="1.0" encoding="UTF-8"?>
+export async function GET() {
+  try {
+    const [report, lastmod] = await Promise.all([
+      buildBrowseSitemapReport(3),
+      getGlobalLastmod(),
+    ])
+    // Static specialty pages — always included, high-value pSEO targets
+    const SPECIALTY_PATHS = [
+      '/jobs/visa-sponsorship',
+      '/jobs/no-degree',
+    ]
+
+    const urls = [
+      ...SPECIALTY_PATHS.map((p) => `${SITE_URL}${p}`),
+      ...report.included.map((row) => `${SITE_URL}${row.path}`),
+    ]
+    const uniqueUrls = Array.from(new Set(urls))
+
+    const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${uniqueUrls
   .map(
     (u) => `  <url>
     <loc>${escapeXml(u)}</loc>
-    <changefreq>daily</changefreq>
+    <lastmod>${lastmod}</lastmod>
   </url>`,
   )
   .join('\n')}
 </urlset>`
 
-  return new NextResponse(body, {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-    },
-  })
+    return new NextResponse(body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+      },
+    })
+  } catch (error) {
+    return buildFallbackUrlsetResponse('sitemap-browse', [], error)
+  }
 }

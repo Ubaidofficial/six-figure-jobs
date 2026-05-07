@@ -10,8 +10,11 @@ import {
   type JobWithCompany,
 } from '../../lib/jobs/queryJobs'
 import { prisma } from '../../lib/prisma'
+import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
+import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 import { formatRelativeTime } from '@/lib/utils/time'
+import { logRuntimeFallback } from '@/lib/runtime/fallback'
 
 import { JobsFiltersPanel, type JobsFacets } from './_components/JobsFilters'
 import { JobsToolbar } from './_components/JobsToolbar'
@@ -22,29 +25,6 @@ export const dynamic = 'force-dynamic'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
-
-export const metadata: Metadata = {
-  title: `All $100k+ Jobs | ${SITE_NAME}`,
-  description:
-    'Browse verified $100k+ jobs from ATS-powered company job boards. Filter by location, work type, role, and seniority — no entry-level clutter.',
-  alternates: {
-    canonical: `${SITE_URL}/jobs`,
-  },
-  openGraph: {
-    title: `All $100k+ Jobs | ${SITE_NAME}`,
-    description:
-      'Browse verified $100k+ jobs. Filter by location, work type, role, and seniority — no entry-level clutter.',
-    url: `${SITE_URL}/jobs`,
-    siteName: SITE_NAME,
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `All $100k+ Jobs | ${SITE_NAME}`,
-    description:
-      'Browse verified $100k+ jobs from ATS-powered company job boards.',
-  },
-}
 
 type BandConfig = {
   id: '100k' | '200k' | '300k' | '400k'
@@ -92,6 +72,41 @@ const BANDS: BandConfig[] = [
 /* -------------------------------------------------------------------------- */
 
 type SearchParams = Record<string, string | string[] | undefined>
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams?: Promise<SearchParams>
+}): Promise<Metadata> {
+  const sp = (await searchParams) || {}
+  const canonicalPath = buildNormalizedListingPath('/jobs', sp)
+  const canonical = `${SITE_URL}${canonicalPath}`
+  const noindexUtilityState = hasNonPaginationQueryParams(sp)
+
+  return {
+    title: `All $100k+ Jobs | ${SITE_NAME}`,
+    description:
+      'Browse verified $100k+ jobs with published salary ranges, direct apply links, and fresh ATS listings. Filter by role, location, remote work, seniority, and company size.',
+    alternates: {
+      canonical,
+    },
+    robots: noindexUtilityState ? { index: false, follow: true } : { index: true, follow: true },
+    openGraph: {
+      title: `All $100k+ Jobs | ${SITE_NAME}`,
+      description:
+        'Browse verified $100k+ jobs with salary ranges, direct apply links, and fresh listings by role, location, and work type.',
+      url: canonical,
+      siteName: SITE_NAME,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `All $100k+ Jobs | ${SITE_NAME}`,
+      description:
+        'Browse verified $100k+ jobs with published salaries, direct apply links, and fresh ATS listings.',
+    },
+  }
+}
 
 function firstParam(sp: SearchParams, key: string): string | undefined {
   const value = sp[key]
@@ -156,6 +171,103 @@ function prettyRoleAndCountryFromSlug(slug: string): string {
   return `${roleLabel} · ${countryCode}`
 }
 
+function buildJobsBreadcrumbJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: 'Jobs', item: `${SITE_URL}/jobs` },
+    ],
+  }
+}
+
+function buildJobsCollectionPageJsonLd(totalJobs: number) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'All $100k+ jobs',
+    description: `Browse ${totalJobs.toLocaleString()} verified $100k+ jobs from company ATS feeds and trusted sources.`,
+    url: `${SITE_URL}/jobs`,
+    about: [
+      'verified $100k+ jobs',
+      'six figure jobs',
+      'high paying jobs',
+      'remote jobs',
+      'published salary ranges',
+    ],
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  }
+}
+
+function buildJobsFaqJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'Are these six-figure jobs verified?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. The jobs index prioritizes live roles from company ATS feeds and trusted sources, then filters to verified six-figure compensation.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Can I browse by salary band, country, and role?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. The jobs hub links into salary-band pages, role pages, country pages, and category pages so searchers can land on more specific six-figure job slices.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How often is the jobs feed refreshed?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Listings are refreshed frequently and stale jobs are removed so the main jobs index stays current and useful for applicants and search engines.',
+        },
+      },
+    ],
+  }
+}
+
+function JobsIndexFallback({ techFilter }: { techFilter?: string }) {
+  return (
+    <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+      <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-8 shadow-2xl shadow-slate-950/40">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+          Live job data temporarily unavailable
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold text-slate-50">All $100k+ Jobs</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+          The production database is reconnecting. Search metadata is still live, but the full job
+          feed is temporarily unavailable.
+          {techFilter ? ` Active filter: ${techFilter}.` : ''}
+        </p>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {BANDS.map((band) => (
+            <Link
+              key={band.id}
+              href={band.href}
+              className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-100 transition hover:border-slate-600"
+            >
+              <div className="font-semibold">{band.label}</div>
+              <p className="mt-2 text-xs text-slate-400">{band.blurb}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </main>
+  )
+}
+
 /* -------------------------------------------------------------------------- */
 /* Page                                                                       */
 /* -------------------------------------------------------------------------- */
@@ -168,6 +280,7 @@ export default async function JobsIndexPage({
   const sp = (await searchParams) || {}
   const page = parsePage(sp)
   const techFilter = (firstParam(sp, 'tech') || '').trim() || undefined
+  const keyword = (firstParam(sp, 'q') || '').trim() || undefined
 
   const rawCountry = (firstParam(sp, 'country') || '').trim().toUpperCase()
   const country = rawCountry.length === 2 ? rawCountry : undefined
@@ -205,11 +318,13 @@ export default async function JobsIndexPage({
     seniorityLevels: seniority.length ? seniority : undefined,
     companySizeBuckets: companySizes.length ? companySizes : undefined,
     tech: techFilter,
+    keyword,
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
   }
 
-  const data = await queryJobs(queryInput)
-  const jobs = data.jobs as JobWithCompany[]
+  try {
+    const data = await queryJobs(queryInput)
+    const jobs = data.jobs as JobWithCompany[]
 
   const baseFacetInput: JobQueryInput = {
     ...queryInput,
@@ -217,38 +332,38 @@ export default async function JobsIndexPage({
     pageSize: 1,
   }
 
-  const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] =
-    await Promise.all([
-      prisma.job.groupBy({
-        by: ['roleSlug'],
-        where: {
-          ...buildWhere({ ...baseFacetInput, roleSlugs: undefined }),
-          roleSlug: { not: null },
-        },
-        _count: { _all: true },
-        orderBy: { _count: { roleSlug: 'desc' } },
-        take: 20,
-      }),
-      prisma.job.groupBy({
-        by: ['countryCode'],
-        where: {
-          ...buildWhere({ ...baseFacetInput, countryCode: undefined }),
-          countryCode: { not: null },
-        },
-        _count: { _all: true },
-        orderBy: { _count: { countryCode: 'desc' } },
-        take: 40,
-      }),
-      prisma.job.count({
-        where: buildWhere({ ...baseFacetInput, remoteMode: 'remote' }),
-      }),
-      prisma.job.count({
-        where: buildWhere({ ...baseFacetInput, remoteMode: 'hybrid' }),
-      }),
-      prisma.job.count({
-        where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
-      }),
-    ])
+    const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] =
+      await Promise.all([
+        prisma.job.groupBy({
+          by: ['roleSlug'],
+          where: {
+            ...buildWhere({ ...baseFacetInput, roleSlugs: undefined }),
+            roleSlug: { not: null },
+          },
+          _count: { _all: true },
+          orderBy: { _count: { roleSlug: 'desc' } },
+          take: 20,
+        }),
+        prisma.job.groupBy({
+          by: ['countryCode'],
+          where: {
+            ...buildWhere({ ...baseFacetInput, countryCode: undefined }),
+            countryCode: { not: null },
+          },
+          _count: { _all: true },
+          orderBy: { _count: { countryCode: 'desc' } },
+          take: 40,
+        }),
+        prisma.job.count({
+          where: buildWhere({ ...baseFacetInput, remoteMode: 'remote' }),
+        }),
+        prisma.job.count({
+          where: buildWhere({ ...baseFacetInput, remoteMode: 'hybrid' }),
+        }),
+        prisma.job.count({
+          where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
+        }),
+      ])
 
   const facets: JobsFacets = {
     roles: roleRows
@@ -294,30 +409,39 @@ export default async function JobsIndexPage({
   const lastUpdatedLabel = mostRecentUpdateMs ? formatRelativeTime(mostRecentUpdateMs) : null
 
   // For each salary band, pull the most popular role+country JobSlices
-  const bandSlices = await Promise.all(
-    BANDS.map((band) =>
-      prisma.jobSlice.findMany({
-        where: {
-          slug: {
-            startsWith: `${band.slugPrefix}/`,
+    const bandSlices = await Promise.all(
+      BANDS.map((band) =>
+        prisma.jobSlice.findMany({
+          where: {
+            slug: {
+              startsWith: `${band.slugPrefix}/`,
+            },
+            jobCount: {
+              gt: 0,
+            },
           },
-          jobCount: {
-            gt: 0,
+          orderBy: {
+            jobCount: 'desc',
           },
-        },
-        orderBy: {
-          jobCount: 'desc',
-        },
-        take: 12,
-      })
+          take: 12,
+        })
+      )
     )
-  )
 
   const basePath = '/jobs'
   const totalPages = data.totalPages
+  const breadcrumbJsonLd = buildJobsBreadcrumbJsonLd()
+  const itemListJsonLd = buildItemListJsonLd({
+    name: 'All $100k+ jobs',
+    jobs: dedupedJobs.map((job) => ({ id: job.id, title: job.title })),
+    page,
+    pageSize: PAGE_SIZE,
+  })
+  const collectionPageJsonLd = buildJobsCollectionPageJsonLd(data.total)
+  const faqJsonLd = buildJobsFaqJsonLd()
 
-  return (
-    <main className={styles.page}>
+    return (
+      <main className={styles.page}>
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href="/">Home</Link>
         <span aria-hidden="true">/</span>
@@ -391,6 +515,39 @@ export default async function JobsIndexPage({
           )}
         </section>
       </div>
+        <section className={styles.below} aria-label="Why use this jobs hub">
+        <div className={styles.belowHeader}>
+          <h2 className={styles.belowTitle}>Why this page is the main $100k+ jobs hub</h2>
+          <p className={styles.belowBlurb}>
+            This crawlable jobs index combines verified salary ranges, fresh ATS listings, and
+            canonical links into role, salary, remote, and location pages for high-intent searches.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
+            <h3 className="text-sm font-semibold text-slate-50">Verified pay floor</h3>
+            <p className="mt-2">
+              Jobs shown here pass validated salary checks and highlight published compensation
+              ranges, keeping the main index aligned with $100k+ job search intent.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
+            <h3 className="text-sm font-semibold text-slate-50">Fresh live inventory</h3>
+            <p className="mt-2">
+              ATS-driven listings are refreshed frequently, and stale jobs are removed to reduce dead
+              clicks and keep the hub trustworthy.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
+            <h3 className="text-sm font-semibold text-slate-50">Clean internal routing</h3>
+            <p className="mt-2">
+              Salary-band pages, countries, categories, and role hubs sit one click away so Google can
+              discover narrower high-intent pages from the main jobs index.
+            </p>
+          </div>
+        </div>
+      </section>
         <section className={styles.below} aria-label="Browse salary bands">
         <div className={styles.belowHeader}>
           <h2 className={styles.belowTitle}>Browse by salary band</h2>
@@ -461,7 +618,27 @@ export default async function JobsIndexPage({
             </section>
           )
         })}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
       </section>
-    </main>
-  )
+      </main>
+    )
+  } catch (error) {
+    logRuntimeFallback('jobs.page', error)
+    return <JobsIndexFallback techFilter={techFilter} />
+  }
 }

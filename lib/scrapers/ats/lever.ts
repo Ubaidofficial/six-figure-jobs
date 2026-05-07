@@ -209,41 +209,9 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
     throw new Error(`[Lever] Could not extract company slug from atsUrl=${atsUrl}`)
   }
 
-  const limit = 100
-  const maxJobs = 500
-
-  const allJobs: any[] = []
-  const seenExternalIds = new Set<string>()
-
-  let offset = 0
-  while (offset < maxJobs) {
-    const page = Math.floor(offset / limit) + 1
-    const apiUrl = `https://jobs.lever.co/${companySlug}?mode=json&skip=${offset}&limit=${limit}`
-
-    const data = await fetchLeverWithRetry<any>(apiUrl, 3, TIMEOUT_MS)
-
-    const pageJobs = Array.isArray(data) ? data : []
-    console.log(`[Lever] Company: ${companySlug}, Page: ${page}, Jobs: ${pageJobs.length}`)
-
-    if (!Array.isArray(data) || data.length === 0) break
-
-    let addedThisPage = 0
-    for (const item of pageJobs) {
-      const id = String(item?.id ?? item?.slug ?? item?.text ?? '')
-      if (!id) continue
-      if (seenExternalIds.has(id)) continue
-      seenExternalIds.add(id)
-      allJobs.push(item)
-      addedThisPage++
-      if (allJobs.length >= maxJobs) break
-    }
-
-    // If Lever ignores pagination and returns the same set, stop to avoid loops.
-    if (addedThisPage === 0) break
-    if (pageJobs.length < limit) break
-
-    offset += limit
-  }
+  const apiUrl = `https://api.lever.co/v0/postings/${encodeURIComponent(companySlug)}?mode=json`
+  const data = await fetchLeverWithRetry<any>(apiUrl, 3, TIMEOUT_MS)
+  const allJobs = Array.isArray(data) ? data : []
 
   console.log(`[Lever] Total jobs fetched for ${companySlug}: ${allJobs.length}`)
 

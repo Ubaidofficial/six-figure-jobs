@@ -1,6 +1,7 @@
 // lib/slices/loadSlice.ts
 import { notFound } from 'next/navigation'
 import { prisma } from '../prisma'
+import { buildWhere } from '../jobs/queryJobs'
 import { JobSlice, parseSliceFilters } from './types'
 import type { JobSlice as JobSliceRow } from '@prisma/client'
 import { parseJobsSlug } from '../jobs/searchSlug'
@@ -172,17 +173,14 @@ async function buildFallbackSlice(segments: string[]): Promise<JobSliceRow | nul
 
     // Guardrail: do not synthesize arbitrary 200 pages with zero backing jobs.
     const count = await prisma.job.count({
-      where: {
-        isExpired: false,
-        roleSlug,
+      where: buildWhere({
+        roleSlugs: [roleSlug],
         countryCode,
-        salaryValidated: true,
-        salaryConfidence: { gte: 80 },
-        OR: [
-          { minAnnual: { gte: BigInt(minAnnual) } },
-          { maxAnnual: { gte: BigInt(minAnnual) } },
-        ],
-      },
+        minAnnual,
+        isHundredKLocal: true,
+        page: 1,
+        pageSize: 1,
+      }),
     })
 
     if (count <= 0) return null

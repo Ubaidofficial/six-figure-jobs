@@ -5,7 +5,6 @@ import { getSiteUrl } from '../../lib/seo/site'
 import { buildSliceSitemapEntries, type SliceShard } from '../../lib/seo/slicesSitemap'
 
 const SITE_URL = getSiteUrl()
-const BUILD_LASTMOD = new Date().toISOString()
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200 // 24h
@@ -29,14 +28,18 @@ export async function GET() {
   )
 
   const entries = checks.filter(Boolean) as string[]
+  if (entries.length === 0) {
+    return new Response('Not found', { status: 404 })
+  }
 
+  const lastmod = new Date().toISOString()
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries
   .map(
     (loc) => `  <sitemap>
     <loc>${SITE_URL}/${loc}</loc>
-    <lastmod>${BUILD_LASTMOD}</lastmod>
+    <lastmod>${lastmod}</lastmod>
   </sitemap>`,
   )
   .join('\n')}

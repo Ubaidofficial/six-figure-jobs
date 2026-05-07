@@ -1,16 +1,16 @@
 // scripts/backfill-high-salary-local.ts
 /**
- * Backfill isHighSalaryLocal field for existing jobs
+ * Backfill isHundredKLocal for existing jobs
  * 
  * This script:
  * 1. Fetches all jobs with minAnnual and countryCode
  * 2. Checks if they meet PPP-adjusted thresholds
- * 3. Updates isHighSalaryLocal and isHundredKLocal accordingly
+ * 3. Updates isHundredKLocal accordingly
  */
 
 import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
-import { getMinSalaryForCountry, isVeryHighSalary } from '../lib/jobs/salaryThresholds'
+import { getMinSalaryForCountry } from '../lib/jobs/salaryThresholds'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -19,7 +19,7 @@ const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n"
 const prisma = new PrismaClient()
 
 async function backfillHighSalaryLocal() {
-  __slog('🚀 Starting backfill for isHighSalaryLocal...')
+  __slog('🚀 Starting backfill for isHundredKLocal...')
   __slog('')
 
   try {
@@ -33,7 +33,6 @@ async function backfillHighSalaryLocal() {
         id: true,
         minAnnual: true,
         countryCode: true,
-        isHighSalaryLocal: true,
         isHundredKLocal: true,
       },
     })
@@ -66,13 +65,8 @@ async function backfillHighSalaryLocal() {
 
           // Calculate new values
           const newIsHundredKLocal = minAnnual >= threshold
-          const newIsHighSalaryLocal = isVeryHighSalary(minAnnual, countryCode)
-
           // Check if update needed
-          if (
-            job.isHundredKLocal === newIsHundredKLocal &&
-            job.isHighSalaryLocal === newIsHighSalaryLocal
-          ) {
+          if (job.isHundredKLocal === newIsHundredKLocal) {
             alreadyCorrect++
             return null
           }
@@ -80,10 +74,9 @@ async function backfillHighSalaryLocal() {
           return {
             id: job.id,
             isHundredKLocal: newIsHundredKLocal,
-            isHighSalaryLocal: newIsHighSalaryLocal,
           }
         })
-        .filter((update): update is { id: string; isHundredKLocal: boolean; isHighSalaryLocal: boolean } => update !== null)
+        .filter((update): update is { id: string; isHundredKLocal: boolean } => update !== null)
 
       // Batch update
       if (updates.length > 0) {
@@ -93,7 +86,6 @@ async function backfillHighSalaryLocal() {
               where: { id: update.id },
               data: {
                 isHundredKLocal: update.isHundredKLocal,
-                isHighSalaryLocal: update.isHighSalaryLocal,
               },
             })
           )

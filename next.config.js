@@ -28,12 +28,21 @@ const sitemapSources = [
   '/sitemap-category/:path*',
   '/sitemap-level/:path*',
   '/sitemap-browse/:path*',
+  '/sitemap-blog.xml',
+  '/sitemap-skills.xml',
 ]
 
 const pageCacheHeaders = [
   {
     key: 'Cache-Control',
     value: 'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400',
+  },
+]
+
+const searchNoCacheHeaders = [
+  {
+    key: 'Cache-Control',
+    value: 'private, no-cache, no-store, max-age=0, must-revalidate',
   },
 ]
 
@@ -44,14 +53,22 @@ const nextConfig = {
       { protocol: 'https', hostname: 'img.logo.dev' },
       { protocol: 'https', hostname: '**.amazonaws.com' },
       { protocol: 'https', hostname: 'cdn.builtin.com' },
+      { protocol: 'https', hostname: '**.googleusercontent.com' },
+      { protocol: 'https', hostname: '**.githubusercontent.com' },
     ],
-    // Reduce Railway CPU/egress by skipping on-the-fly image optimization.
-    unoptimized: true,
+    // unoptimized removed — Next.js image optimization now active (WebP/AVIF, resizing, CDN)
   },
   async headers() {
     return [
       ...sitemapSources.map((source) => ({ source, headers: sitemapCacheHeaders })),
       { source: '/robots.txt', headers: sitemapCacheHeaders },
+      {
+        source: '/search',
+        headers: [
+          ...searchNoCacheHeaders,
+          { key: 'X-Robots-Tag', value: 'noindex, follow' },
+        ],
+      },
       { source: '/job/:path*', headers: pageCacheHeaders },
       { source: '/remote/:path*', headers: pageCacheHeaders },
       { source: '/jobs/:path*', headers: pageCacheHeaders },

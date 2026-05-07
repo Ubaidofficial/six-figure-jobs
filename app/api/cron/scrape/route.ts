@@ -33,6 +33,9 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
   console.log("🚀 Starting full scrape and enrichment pipeline...");
 
   const stats = { jobsAdded: 0, failures: 0, failedSources: [] as string[] };
+  const boardConcurrency = process.env.SCRAPE_BOARD_CONCURRENCY || "5";
+  const atsConcurrency = process.env.SCRAPE_ATS_CONCURRENCY || "6";
+  const atsTimeoutMs = process.env.ATS_SCRAPE_TIMEOUT_MS || "90000";
 
   const tailLines = (input: string, maxLines: number): string => {
     const lines = String(input || "")
@@ -75,7 +78,14 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
   // Step 1: Run scraping
   const scrape = spawnLogged(
     "npx",
-    ["tsx", "scripts/dailyScrapeV2.ts", `--mode=${mode}`, "--concurrency=5"],
+    [
+      "tsx",
+      "scripts/dailyScrapeV2.ts",
+      `--mode=${mode}`,
+      `--concurrency=${boardConcurrency}`,
+      `--ats-concurrency=${atsConcurrency}`,
+      `--ats-timeout-ms=${atsTimeoutMs}`,
+    ],
     process.env,
   );
 

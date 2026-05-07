@@ -44,18 +44,9 @@ export function MobileNav() {
             </Link>
           ))}
         </nav>
-
-        <div className="mt-6">
-          <Link
-            href="/post-a-job"
-            className="focus-ring inline-flex w-full items-center justify-center rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] hover:bg-emerald-300"
-          >
-            Hire six-figure talent
-          </Link>
-          <p className="mt-2 text-xs text-slate-500">
-            Source-linked listings. Apply directly on the company site.
-          </p>
-        </div>
+        <p className="mt-6 text-xs text-slate-500">
+          Source-linked listings. Apply directly on the company site.
+        </p>
       </SheetContent>
     </Sheet>
   )

@@ -1,10 +1,10 @@
 // app/sitemap-company/[page]/route.ts
 // Sharded company sitemap pages
 
-import { Prisma } from '@prisma/client'
 import { prisma } from '../../../lib/prisma'
 import { getSiteUrl } from '../../../lib/seo/site'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '../../../lib/seo/indexabilityGates'
+import { buildWhere } from '../../../lib/jobs/queryJobs'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 45000
@@ -32,31 +32,49 @@ function toMs(value: unknown): number {
 }
 
 type CompanyRow = {
-  companyId: string
   slug: string
   companyUpdatedAt: Date
-  maxUpdatedAt: Date
+  latestJobUpdatedAt: Date | null
 }
 
 async function fetchCompanyPage(page: number): Promise<CompanyRow[]> {
   const offset = (page - 1) * PAGE_SIZE
-  return prisma.$queryRaw<CompanyRow[]>(Prisma.sql`
-    SELECT
-      c.id AS "companyId",
-      c.slug AS "slug",
-      c."updatedAt" AS "companyUpdatedAt",
-      j."maxUpdatedAt" AS "maxUpdatedAt"
-    FROM (
-      SELECT "companyId", MAX("updatedAt") AS "maxUpdatedAt", COUNT(*) AS "jobCount"
-      FROM "Job"
-      WHERE "isExpired" = false AND "companyId" IS NOT NULL
-      GROUP BY "companyId"
-      HAVING COUNT(*) >= ${MIN_INDEXABLE_JOBS}
-    ) j
-    JOIN "Company" c ON c.id = j."companyId"
-    ORDER BY j."maxUpdatedAt" DESC, c.id DESC
-    LIMIT ${PAGE_SIZE} OFFSET ${offset}
-  `)
+  const eligibleJobWhere = buildWhere({})
+
+  return prisma.company.findMany({
+    where: {
+      jobs: {
+        some: eligibleJobWhere,
+      },
+    },
+    select: {
+      slug: true,
+      updatedAt: true,
+      jobs: {
+        where: eligibleJobWhere,
+        select: {
+          updatedAt: true,
+        },
+        orderBy: {
+          updatedAt: 'desc',
+        },
+        take: MIN_INDEXABLE_JOBS,
+      },
+    },
+    orderBy: {
+      updatedAt: 'desc',
+    },
+    skip: offset,
+    take: PAGE_SIZE,
+  }).then((rows) =>
+    rows
+      .filter((row) => row.jobs.length >= MIN_INDEXABLE_JOBS)
+      .map((row) => ({
+        slug: row.slug,
+        companyUpdatedAt: row.updatedAt,
+        latestJobUpdatedAt: row.jobs[0]?.updatedAt ?? null,
+      })),
+  )
 }
 
 export async function GET(
@@ -90,7 +108,7 @@ export async function GET(
   const urls = rows.map((row) => {
     const loc = escapeXml(`${SITE_URL}/company/${row.slug}`)
     const lastmod = new Date(
-      Math.max(toMs(row.maxUpdatedAt), toMs(row.companyUpdatedAt)),
+      Math.max(toMs(row.latestJobUpdatedAt), toMs(row.companyUpdatedAt)),
     ).toISOString()
 
     return `  <url>

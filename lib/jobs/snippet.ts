@@ -96,6 +96,8 @@ export function buildSnippetFromJob(input: {
   const html = input.descriptionHtml || ''
   const txt = input.descriptionText || ''
   const base = (html && cleanText(html)) || txt || ''
-  const s = firstSentences(base, 800) || ''
-  return decodeEntities(s).trim()
+  // Send up to 4000 chars so requirements + benefits sections (usually mid/bottom)
+  // are included in what the AI sees — not just the intro paragraph.
+  const trimmed = base.slice(0, 4000).trim()
+  return decodeEntities(trimmed)
 }

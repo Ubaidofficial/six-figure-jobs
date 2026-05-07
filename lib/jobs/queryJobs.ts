@@ -6,6 +6,7 @@ import { getDateThreshold, MAX_DISPLAY_AGE_DAYS } from '../ingest/jobAgeFilter'
 import { HIGH_SALARY_THRESHOLDS } from '../currency/thresholds'
 import { inferCurrencyFromCountryCode } from '../normalizers/salary'
 import { getMinSalaryForCountry } from './salaryThresholds'
+import { buildFreshJobWhere } from './freshness'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -15,6 +16,7 @@ export type JobWithCompany = Job & {
 export type JobQueryInput = {
   page?: number
   pageSize?: number
+  selectMode?: 'listing' | 'full'
 
   roleSlugs?: string[]
   skillSlugs?: string[]
@@ -44,6 +46,12 @@ export type JobQueryInput = {
   // Control ordering and internship leakage
   sortBy?: 'salary' | 'date'
   excludeInternships?: boolean
+
+  // Specialty filters
+  visaSponsorship?: boolean
+
+  // Keyword search (title / company name contains)
+  keyword?: string
 }
 
 export type JobQueryResult = {
@@ -53,6 +61,77 @@ export type JobQueryResult = {
   pageSize: number
   totalPages: number
 }
+
+const jobListingSelect = {
+  id: true,
+  title: true,
+  company: true,
+  companyLogo: true,
+  companyId: true,
+  source: true,
+  roleSlug: true,
+  externalId: true,
+  url: true,
+  applyUrl: true,
+  postedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  isHighSalary: true,
+  isHundredKLocal: true,
+  salaryRaw: true,
+  salaryMin: true,
+  salaryMax: true,
+  salaryCurrency: true,
+  salaryPeriod: true,
+  minAnnual: true,
+  maxAnnual: true,
+  currency: true,
+  salaryValidated: true,
+  type: true,
+  employmentType: true,
+  experienceLevel: true,
+  industry: true,
+  workArrangement: true,
+  workArrangementNormalized: true,
+  remote: true,
+  remoteMode: true,
+  remoteRegion: true,
+  locationRaw: true,
+  city: true,
+  citySlug: true,
+  stateCode: true,
+  countryCode: true,
+  primaryLocation: true,
+  locationsJson: true,
+  benefitsJson: true,
+  aiBenefits: true,
+  aiSnippet: true,
+  aiOneLiner: true,
+  skillsJson: true,
+  techStack: true,
+  companyRef: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoUrl: true,
+      website: true,
+    },
+  },
+} satisfies Prisma.JobSelect
+
+const jobFullSelect = {
+  ...jobListingSelect,
+  salaryConfidence: true,
+  companyRef: {
+    select: {
+      ...jobListingSelect.companyRef.select,
+      sizeBucket: true,
+      industry: true,
+    },
+  },
+  roleInference: true,
+} satisfies Prisma.JobSelect
 
 export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   const debugTiming =
@@ -65,12 +144,15 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   // Defaults applied here so buildWhere + ordering logic both see them
   const normalizedInput: JobQueryInput = {
     ...input,
+    selectMode: input.selectMode ?? 'listing',
     sortBy: input.sortBy ?? 'salary',
     excludeInternships: input.excludeInternships ?? true,
   }
 
   const where = buildWhere(normalizedInput)
   const sortBy = normalizedInput.sortBy ?? 'salary'
+  const select =
+    normalizedInput.selectMode === 'full' ? jobFullSelect : jobListingSelect
 
   let orderBy: Prisma.JobOrderByWithRelationInput[]
 
@@ -108,68 +190,7 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
     const s = debugTiming ? Date.now() : 0
     const out = await prisma.job.findMany({
       where,
-      select: {
-        id: true,
-        title: true,
-        company: true,
-        companyLogo: true,
-        companyId: true,
-        source: true,
-        roleSlug: true,
-        externalId: true,
-        url: true,
-        applyUrl: true,
-        postedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        isHighSalary: true,
-        isHundredKLocal: true,
-        isHighSalaryLocal: true,
-        salaryRaw: true,
-        salaryMin: true,
-        salaryMax: true,
-        salaryCurrency: true,
-        salaryPeriod: true,
-        minAnnual: true,
-        maxAnnual: true,
-        currency: true,
-        salaryValidated: true,
-        salaryConfidence: true,
-        type: true,
-        employmentType: true,
-        experienceLevel: true,
-        industry: true,
-        workArrangement: true,
-        workArrangementNormalized: true,
-        remote: true,
-        remoteMode: true,
-        remoteRegion: true,
-        locationRaw: true,
-        city: true,
-        citySlug: true,
-        stateCode: true,
-        countryCode: true,
-        primaryLocation: true,
-        locationsJson: true,
-        benefitsJson: true,
-        aiBenefits: true,
-        aiSnippet: true,
-        aiOneLiner: true,
-        skillsJson: true,
-        techStack: true,
-        companyRef: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            logoUrl: true,
-            website: true,
-            sizeBucket: true,
-            industry: true,
-          },
-        },
-        roleInference: true,
-      },
+      select,
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -215,14 +236,8 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
 export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
     isExpired: false,
-    // Base freshness rule (keep this as OR to support postedAt null)
-    OR: [
-      { postedAt: { gte: getDateThreshold(MAX_DISPLAY_AGE_DAYS) } },
-      {
-        postedAt: null,
-        createdAt: { gte: getDateThreshold(MAX_DISPLAY_AGE_DAYS) },
-      },
-    ],
+    // Base freshness rule: prefer scrape freshness, then fall back to publish/create dates.
+    ...buildFreshJobWhere(MAX_DISPLAY_AGE_DAYS),
   }
 
   const addAnd = (clause: Prisma.JobWhereInput) => {
@@ -423,6 +438,22 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 
   if (filters.workArrangement) {
     where.workArrangement = filters.workArrangement
+  }
+
+  if (filters.visaSponsorship === true) {
+    where.visaSponsorship = true
+  }
+
+  if (filters.keyword) {
+    const kw = filters.keyword.trim()
+    if (kw) {
+      addAnd({
+        OR: [
+          { title: { contains: kw, mode: 'insensitive' } },
+          { company: { contains: kw, mode: 'insensitive' } },
+        ],
+      })
+    }
   }
 
   return where

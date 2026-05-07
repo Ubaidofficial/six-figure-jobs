@@ -4,10 +4,10 @@
 // ONLY these slugs are valid for /remote/[role] and /jobs/[role] routes
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TIER-1 ROLES: Always indexed (~25 roles with highest search volume)
+// TIER-1 ROLES: Indexed when ≥3 jobs exist in DB
 // ═══════════════════════════════════════════════════════════════════════════
 export const TIER_1_ROLES = [
-  // Engineering (10)
+  // ─── Core Engineering ─────────────────────────────────────────────────────
   'software-engineer',
   'frontend-engineer',
   'backend-engineer',
@@ -18,44 +18,72 @@ export const TIER_1_ROLES = [
   'ios-engineer',
   'android-engineer',
   'security-engineer',
-  
-  // Data (3)
+
+  // ─── Engineering — Long-tail (promoted: ≥3 jobs, lower competition) ──────
+  'senior-software-engineer',
+  'senior-backend-engineer',
+  'senior-frontend-engineer',
+  'senior-data-engineer',
+  'site-reliability-engineer',
+  'senior-site-reliability-engineer',
+  'solutions-architect',
+  'senior-solutions-architect',
+  'solutions-engineer',
+  'senior-solutions-engineer',
+  'enterprise-account-executive',
+  'technical-account-manager',
+  'developer-advocate',
+  'technical-writer',
+
+  // ─── AI / ML — Primary focus (low competition, high growth) ──────────────
+  'ai-engineer',
+  'senior-ai-engineer',
+  'staff-ai-engineer',
+  'ai-researcher',
+  'research-scientist',
+  'senior-research-scientist',
+  'applied-scientist',
+  'senior-applied-scientist',
+  'mlops-engineer',
+  'senior-mlops-engineer',
+  'senior-machine-learning-engineer',
+  'staff-machine-learning-engineer',
+  'llm-engineer',
+  'generative-ai-engineer',
+  'ai-product-manager',
+  'nlp-engineer',
+  'senior-nlp-engineer',
+  'computer-vision-engineer',
+  'deep-learning-engineer',
+
+  // ─── Data ─────────────────────────────────────────────────────────────────
   'data-scientist',
   'data-analyst',
   'analytics-engineer',
-  
-  // Product & Design (4)
+  'senior-data-scientist',
+  'senior-data-analyst',
+
+  // ─── Product & Design ─────────────────────────────────────────────────────
   'product-manager',
   'product-designer',
   'ux-designer',
   'ux-researcher',
-  
-  // Management (3)
+
+  // ─── Management ───────────────────────────────────────────────────────────
   'engineering-manager',
   'technical-program-manager',
   'technical-lead',
-  
-  // Business (3)
+
+  // ─── Business ─────────────────────────────────────────────────────────────
   'account-executive',
   'customer-success-manager',
   'sales-engineer',
-  
-  // Executive (2)
+
+  // ─── Executive ────────────────────────────────────────────────────────────
   'vp-engineering',
   'cto',
-
-  // Additional Executive & Management
   'ceo',
-  'president',
-  'managing-director',
-  'general-manager',
   'ciso',
-  'vp-operations',
-  'project-manager',
-  'senior-project-manager',
-  'scrum-master',
-  'agile-coach',
-  'consultant',
 
 ] as const
 
@@ -66,13 +94,10 @@ export const TIER_2_ROLES = [
   // ─────────────────────────────────────────────────────────────────────────
   // SENIOR/STAFF/PRINCIPAL VARIANTS (Engineering)
   // ─────────────────────────────────────────────────────────────────────────
-  'senior-software-engineer',
   'staff-software-engineer',
   'principal-software-engineer',
-  'senior-frontend-engineer',
   'staff-frontend-engineer',
   'principal-frontend-engineer',
-  'senior-backend-engineer',
   'staff-backend-engineer',
   'principal-backend-engineer',
   'senior-full-stack-engineer',
@@ -81,23 +106,18 @@ export const TIER_2_ROLES = [
   'senior-devops-engineer',
   'staff-devops-engineer',
   'principal-devops-engineer',
-  'senior-data-engineer',
   'staff-data-engineer',
   'principal-data-engineer',
-  'senior-machine-learning-engineer',
-  'staff-machine-learning-engineer',
   'principal-machine-learning-engineer',
   'senior-security-engineer',
   'staff-security-engineer',
   'principal-security-engineer',
   'senior-ios-engineer',
   'senior-android-engineer',
-  
+
   // ─────────────────────────────────────────────────────────────────────────
   // CORE ENGINEERING DISCIPLINES
   // ─────────────────────────────────────────────────────────────────────────
-  'site-reliability-engineer',
-  'senior-site-reliability-engineer',
   'staff-site-reliability-engineer',
   'platform-engineer',
   'senior-platform-engineer',
@@ -124,8 +144,6 @@ export const TIER_2_ROLES = [
   'senior-network-engineer',
   'database-engineer',
   'senior-database-engineer',
-  'solutions-engineer',
-  'senior-solutions-engineer',
   'support-engineer',
   'senior-support-engineer',
   'release-engineer',
@@ -176,25 +194,16 @@ export const TIER_2_ROLES = [
   'senior-integration-specialist',
   
   // ─────────────────────────────────────────────────────────────────────────
-  // AI/ML & DATA SCIENCE
+  // AI/ML & DATA SCIENCE (variants not already in TIER_1)
   // ─────────────────────────────────────────────────────────────────────────
   'ml-engineer',
   'senior-ml-engineer',
   'staff-ml-engineer',
-  'ai-engineer',
-  'senior-ai-engineer',
-  'staff-ai-engineer',
-  'research-scientist',
-  'senior-research-scientist',
   'staff-research-scientist',
   'research-engineer',
   'senior-research-engineer',
-  'applied-scientist',
-  'senior-applied-scientist',
-  'senior-data-scientist',
   'staff-data-scientist',
   'principal-data-scientist',
-  'senior-data-analyst',
   'staff-data-analyst',
   'data-architect',
   'senior-data-architect',
@@ -204,16 +213,15 @@ export const TIER_2_ROLES = [
   'senior-bi-analyst',
   'business-intelligence-analyst',
   'senior-business-intelligence-analyst',
-  'mlops-engineer',
-  'senior-mlops-engineer',
-  'nlp-engineer',
-  'senior-nlp-engineer',
-  'computer-vision-engineer',
   'senior-computer-vision-engineer',
-  'deep-learning-engineer',
   'senior-deep-learning-engineer',
-  'ai-researcher',
   'senior-ai-researcher',
+  'ai-safety-researcher',
+  'ml-platform-engineer',
+  'senior-ml-platform-engineer',
+  'multimodal-engineer',
+  'rlhf-engineer',
+  'prompt-engineer',
   
   // ─────────────────────────────────────────────────────────────────────────
   // PRODUCT & DESIGN
@@ -270,8 +278,6 @@ export const TIER_2_ROLES = [
   'software-architect',
   'senior-software-architect',
   'principal-software-architect',
-  'solutions-architect',
-  'senior-solutions-architect',
   'principal-solutions-architect',
   'enterprise-architect',
   'senior-enterprise-architect',
@@ -303,7 +309,6 @@ export const TIER_2_ROLES = [
   // SALES & BUSINESS DEVELOPMENT (100+ roles)
   // ─────────────────────────────────────────────────────────────────────────
   'senior-account-executive',
-  'enterprise-account-executive',
   'senior-enterprise-account-executive',
   'strategic-account-executive',
   'senior-strategic-account-executive',
@@ -636,7 +641,6 @@ export const TIER_2_ROLES = [
   // ─────────────────────────────────────────────────────────────────────────
   // DEVELOPER RELATIONS & ADVOCACY (30+ roles)
   // ─────────────────────────────────────────────────────────────────────────
-  'developer-advocate',
   'senior-developer-advocate',
   'staff-developer-advocate',
   'principal-developer-advocate',
@@ -646,7 +650,6 @@ export const TIER_2_ROLES = [
   'senior-technical-evangelist',
   'developer-community-manager',
   'senior-developer-community-manager',
-  'technical-writer',
   'senior-technical-writer',
   'staff-technical-writer',
   'documentation-engineer',

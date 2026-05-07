@@ -6,6 +6,7 @@ import type { ScrapedJobInput } from '../ingest/types'
 import { addIngestStatus, errorStats, type ScraperStats } from './scraperStats'
 import { discoverApplyUrlFromPage } from './utils/discoverApplyUrl'
 import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { resolveCompanyApplyFallback } from './utils/resolveCompanyApplyFallback'
 import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD_NAME = 'builtin'
@@ -520,6 +521,19 @@ export default async function scrapeBuiltIn(): Promise<ScraperStats> {
           if (applyUrl && applyUrl.toLowerCase().includes('builtin.com')) {
             const discoveredApplyUrl = await discoverApplyUrlFromPage(applyUrl)
             if (discoveredApplyUrl) applyUrl = discoveredApplyUrl
+          }
+
+          if (applyUrl && applyUrl.toLowerCase().includes('/auth/login?destination=')) {
+            applyUrl = job.url ?? applyUrl
+          }
+
+          if (!applyUrl || !isExternalToHost(applyUrl, 'builtin.com')) {
+            const fallbackApplyUrl = await resolveCompanyApplyFallback({
+              rawCompanyName: job.company || null,
+              boardHost: 'builtin.com',
+              currentApplyUrl: applyUrl,
+            })
+            if (fallbackApplyUrl) applyUrl = fallbackApplyUrl
           }
 
           const atsType = detectATS(applyUrl || '')

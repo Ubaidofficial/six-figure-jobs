@@ -499,15 +499,21 @@
 }
 
 .grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-24);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-16);
 }
 
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-24);
+  gap: var(--space-16);
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pagination {
@@ -586,6 +592,18 @@
   }
 }
 
+/* Tablet: narrow the sidebar so the job grid gets more room */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: var(--space-20);
+  }
+
+  .page {
+    padding: var(--space-24) var(--space-16) var(--space-48);
+  }
+}
+
 @media (max-width: 767px) {
   .layout {
     grid-template-columns: 1fr;
@@ -593,5 +611,9 @@
 
   .sidebar {
     display: none;
+  }
+
+  .page {
+    padding: var(--space-16) var(--space-12) var(--space-48);
   }
 }

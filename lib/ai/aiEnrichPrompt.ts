@@ -4,7 +4,7 @@ export function buildAiEnrichPrompt(input: {
   locationHint?: string
   maxOutputTokens: number
 }): string {
-  return `Extract and rewrite this job posting into a premium, role-focused summary in RemoteRocketship style.
+  return `Extract and rewrite this job posting into a concise, role-focused summary. Each section should be SHORT bullet points — not paragraphs.
 
 Job Title: ${input.title}
 ${input.locationHint ? `Location: ${input.locationHint}` : ''}
@@ -15,37 +15,35 @@ ${input.roleSnippet}
 Return ONLY valid JSON (no markdown, no extra text) with this exact structure:
 
 {
-  "oneLiner": "A single engaging sentence (max 180 chars) describing the core role",
-  "snippet": "A 2-3 sentence role summary (max 300 chars). No company bio/mission.",
+  "oneLiner": "One engaging sentence (max 160 chars) describing what makes this role unique",
+  "snippet": "2-3 sentence role summary (max 280 chars). Focus on what you will do, not company history.",
   "bullets": [
-    "3-5 short, punchy highlights about the role (role-focused, not company marketing)"
+    "3-5 punchy one-liners about the role scope or impact (e.g. 'Lead API architecture for 10M+ users')"
   ],
   "description": [
-    "2 short paragraphs rewritten professionally (clear, structured, role-focused)"
+    "5-6 concise bullets covering day-to-day responsibilities — what will you actually do? (10-20 words each)"
   ],
   "requirements": [
-    "5-8 bullets: technical skills, experience, education/certs if stated"
+    "6-8 bullets: specific technical skills, years of experience, must-have qualifications (10-20 words each)"
   ],
   "benefits": [
-    "3-6 bullets: compensation, equity, PTO, remote setup, perks (ONLY if mentioned)"
+    "4-5 bullets: compensation, equity, PTO, remote/hybrid, health, perks — ONLY extract what is explicitly stated"
   ],
   "techStack": [
-    "3-10 technologies explicitly mentioned (canonical names like React, Node.js, PostgreSQL)"
+    "3-10 technologies explicitly named (canonical: React, Node.js, PostgreSQL, AWS, etc.)"
   ],
   "skills": [
-    "6-12 skill tags grounded in the text (mix tech + responsibilities like API design)"
+    "6-12 skill tags grounded in the text (mix: tech + soft skills + domain like 'API design', 'cross-functional')"
   ]
 }
 
-CRITICAL RULES:
-- Return ONLY valid JSON, no markdown code blocks, no extra text
-- Do NOT invent details (salary, benefits, sponsorship, remote policy, tech)
-- Keep bullets concise (1-2 lines max)
-- Keep paragraphs short (2-3 sentences each)
-- If a section has no information, use empty array: []
-- Maintain technical accuracy
-- Use active voice and present tense
-- No emojis or special characters in the output`
+RULES:
+- Return ONLY valid JSON. No markdown, no code blocks, no extra text.
+- Every bullet must be a complete phrase (not a fragment). Active voice, present tense.
+- Do NOT invent anything not stated: no fake salary, benefits, remote policy, or tech stack.
+- description and requirements MUST always have content if the job posting has responsibilities or qualifications.
+- Scan the FULL job content including the bottom — requirements and benefits are often listed after the intro.
+- No emojis or special characters.`
 }
 
 export type AiEnrichOutput = {

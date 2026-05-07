@@ -17,8 +17,8 @@ export function isJobTooOld(postedAt: Date | string | null | undefined, maxDays:
   return ageDays > maxDays
 }
 
-export function getDateThreshold(days: number): Date {
-  const date = new Date()
+export function getDateThreshold(days: number, baseDate: Date = new Date()): Date {
+  const date = new Date(baseDate)
   date.setDate(date.getDate() - days)
   return date
 }

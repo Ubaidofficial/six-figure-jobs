@@ -3,12 +3,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { SearchUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '../../lib/prisma'
 import {
   buildGlobalExclusionsWhere,
   buildHighSalaryEligibilityWhere,
   type JobWithCompany,
 } from '../../lib/jobs/queryJobs'
+import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../components/JobList'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
@@ -38,6 +40,52 @@ function getParam(sp: SearchParams, key: string): string | undefined {
   const value = sp[key]
   if (Array.isArray(value)) return value[0]
   return value
+}
+
+function normalizeFreeText(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const normalized = value.trim().replace(/\s+/g, ' ').toLowerCase()
+  return normalized || undefined
+}
+
+function normalizeKeyword(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const normalized = value.trim().toLowerCase()
+  return normalized || undefined
+}
+
+function normalizeLocation(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  if (trimmed.length === 2) return trimmed.toUpperCase()
+  return trimmed.toLowerCase()
+}
+
+function normalizeSearchParams(sp: SearchParams): SearchParams {
+  const page = Math.max(1, Number(getParam(sp, 'page') || '1') || 1)
+  const minSalaryRaw = Number(getParam(sp, 'minSalary') || '100000')
+  const minSalary = Math.max(100000, isNaN(minSalaryRaw) ? 100000 : minSalaryRaw)
+
+  const normalized: SearchParams = {}
+
+  const q = normalizeFreeText(getParam(sp, 'q'))
+  const role = normalizeKeyword(getParam(sp, 'role'))
+  const location = normalizeLocation(getParam(sp, 'location'))
+  const remoteMode = normalizeKeyword(getParam(sp, 'remoteMode'))
+  const remoteRegion = normalizeKeyword(getParam(sp, 'remoteRegion'))
+  const seniority = normalizeKeyword(getParam(sp, 'seniority'))
+
+  if (q) normalized.q = q
+  if (role) normalized.role = role
+  if (location) normalized.location = location
+  if (remoteMode) normalized.remoteMode = remoteMode
+  if (remoteRegion) normalized.remoteRegion = remoteRegion
+  if (seniority) normalized.seniority = seniority
+  if (minSalary > 100000 || getParam(sp, 'minSalary')) normalized.minSalary = String(minSalary)
+  if (page > 1) normalized.page = String(page)
+
+  return normalized
 }
 
 function buildSearchHref(sp: SearchParams, page: number): string {
@@ -130,7 +178,7 @@ export async function generateMetadata({
 }: {
   searchParams?: Promise<SearchParams>
 }): Promise<Metadata> {
-  const sp = await resolveSearchParams(searchParams)
+  const sp = normalizeSearchParams(await resolveSearchParams(searchParams))
   const title = buildTitle(sp)
   const canonical = `${getSiteUrl()}${buildCanonicalPath(sp)}`
 
@@ -161,15 +209,16 @@ export async function generateMetadata({
 /* -------------------------------------------------------------------------- */
 
 export default async function SearchPage({ searchParams }: PageProps) {
-  const sp = await resolveSearchParams(searchParams)
+  const rawSp = await resolveSearchParams(searchParams)
+  const sp = normalizeSearchParams(rawSp)
   const canonicalPath = buildCanonicalPath(sp)
 
   const requestedParams = new URLSearchParams()
-  Object.entries(sp).forEach(([k, v]) => {
+  Object.entries(rawSp).forEach(([k, v]) => {
     if (Array.isArray(v)) v.forEach((val) => val != null && requestedParams.append(k, val))
     else if (v != null) requestedParams.set(k, v)
   })
-  const rawPage = getParam(sp, 'page')
+  const rawPage = getParam(rawSp, 'page')
   if (!rawPage || Number(rawPage) <= 1) requestedParams.delete('page')
   const requestedPath = (() => {
     const qs = requestedParams.toString()
@@ -227,16 +276,18 @@ export default async function SearchPage({ searchParams }: PageProps) {
   if (q) {
     andConditions.push({
       OR: [
-        { title: { contains: q } },
-        { company: { contains: q } },
-        { locationRaw: { contains: q } },
+        { title: { contains: q, mode: 'insensitive' } },
+        { company: { contains: q, mode: 'insensitive' } },
+        { locationRaw: { contains: q, mode: 'insensitive' } },
       ],
     })
   }
 
   if (roleSlugs.length) {
     andConditions.push({
-      OR: roleSlugs.map((slug) => ({ roleSlug: { contains: slug } })),
+      OR: roleSlugs.map((slug) => ({
+        roleSlug: { contains: slug, mode: 'insensitive' },
+      })),
     })
   }
 
@@ -289,37 +340,40 @@ export default async function SearchPage({ searchParams }: PageProps) {
       ? { isExpired: false, AND: andConditions }
       : { isExpired: false }
 
-  const [jobsRaw, total] = await Promise.all([
-    prisma.job.findMany({
-      where,
-      orderBy: [
-        { maxAnnual: 'desc' },
-        { createdAt: 'desc' },
-      ],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      include: { companyRef: true },
-    }),
-    prisma.job.count({ where }),
-  ])
+  return withRuntimeFallback(
+    'search.page',
+    async () => {
+      const [jobsRaw, total] = await Promise.all([
+        prisma.job.findMany({
+          where,
+          orderBy: [
+            { maxAnnual: 'desc' },
+            { createdAt: 'desc' },
+          ],
+          skip: (page - 1) * PAGE_SIZE,
+          take: PAGE_SIZE,
+          include: { companyRef: true },
+        }),
+        prisma.job.count({ where }),
+      ])
 
-  const jobs = jobsRaw as JobWithCompany[]
-  const hasNextPage = page * PAGE_SIZE < total
-  const hasPrevPage = page > 1
-  const paginationState: SearchParams = {
-    ...sp,
-    ...(resolvedLocation ? { location: resolvedLocation } : {}),
-    ...(resolvedRemoteMode ? { remoteMode: resolvedRemoteMode } : {}),
-    ...(resolvedRemoteRegion ? { remoteRegion: resolvedRemoteRegion } : {}),
-    ...(resolvedSeniority ? { seniority: resolvedSeniority } : {}),
-    ...(roleSlugs.length === 1 ? { role: roleSlugs[0] } : {}),
-    minSalary: String(minAnnual),
-  }
+      const jobs = jobsRaw as JobWithCompany[]
+      const hasNextPage = page * PAGE_SIZE < total
+      const hasPrevPage = page > 1
+      const paginationState: SearchParams = {
+        ...sp,
+        ...(resolvedLocation ? { location: resolvedLocation } : {}),
+        ...(resolvedRemoteMode ? { remoteMode: resolvedRemoteMode } : {}),
+        ...(resolvedRemoteRegion ? { remoteRegion: resolvedRemoteRegion } : {}),
+        ...(resolvedSeniority ? { seniority: resolvedSeniority } : {}),
+        ...(roleSlugs.length === 1 ? { role: roleSlugs[0] } : {}),
+        minSalary: String(minAnnual),
+      }
 
-  const title = buildTitle(sp)
+      const title = buildTitle(sp)
 
-  return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+      return (
+        <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       {/* Search Form */}
       <div className="glass soft-shadow mb-10 rounded-2xl p-6 md:sticky md:top-24 md:z-30">
         <form action="/search" method="GET" className="space-y-4">
@@ -540,6 +594,20 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </div>
         </>
       )}
-    </main>
+        </main>
+      )
+    },
+    () => (
+      <SearchUnavailablePage
+        title="Search results are temporarily unavailable"
+        description={
+          q
+            ? `Search results for "${q}" are temporarily unavailable while the production database reconnects. Browse the main jobs and remote hubs while live search access recovers.`
+            : 'Search is temporarily unavailable while the production database reconnects. Browse the main jobs and remote hubs while live search access recovers.'
+        }
+        primaryHref={canonicalPath}
+        primaryLabel={q ? `Retry "${q}" search` : 'Retry search'}
+      />
+    ),
   )
 }

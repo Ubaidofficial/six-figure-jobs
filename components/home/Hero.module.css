@@ -123,6 +123,26 @@
    Badge / headline / copy
    -------------------------------------------------------------------------- */
 
+/* Live indicator dot */
+.liveOrb {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liveOrb { animation: none; }
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -400,7 +420,8 @@
 
 @media (max-width: 767px) {
   .hero {
-    padding: var(--space-48) var(--space-16);
+    padding: var(--space-40) var(--space-16) var(--space-32);
+    min-height: auto;
   }
 
   .headline {
@@ -409,15 +430,26 @@
 
   .searchBar {
     grid-template-columns: 44px 1fr;
-    gap: var(--space-12);
+    padding: 8px;
+    gap: 0;
+    row-gap: var(--space-8);
   }
 
   .cta {
     width: 100%;
     grid-column: 1 / -1;
+    border-radius: var(--radius-xl);
   }
 
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .subheadline {
+    font-size: 1rem;
+  }
+
+  .popular {
+    font-size: 13px;
   }
 }

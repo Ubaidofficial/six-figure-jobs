@@ -136,31 +136,52 @@ export function SiteHeader() {
                 onMouseEnter={() => setJobsOpen(true)}
                 onMouseLeave={() => setJobsOpen(false)}
               >
-                <DropdownMenuLabel className={styles.dropdownLabel}>Explore</DropdownMenuLabel>
-                <MenuItem
-                  href="/jobs"
-                  title="All jobs"
-                  description="Explore every six-figure listing"
-                  onClick={() => setJobsOpen(false)}
-                />
-                <MenuItem
-                  href="/remote"
-                  title="Remote"
-                  description="Work from anywhere roles"
-                  onClick={() => setJobsOpen(false)}
-                />
+                <div className={styles.dropdownGrid}>
+                  {/* Left column */}
+                  <div className={styles.dropdownCol}>
+                    <div className={styles.dropdownLabel}>Explore</div>
+                    <MenuItem
+                      href="/jobs"
+                      title="🗂 All Jobs"
+                      description="Every six-figure listing"
+                      onClick={() => setJobsOpen(false)}
+                    />
+                    <MenuItem
+                      href="/remote"
+                      title="🌍 Remote Jobs"
+                      description="Work from anywhere"
+                      onClick={() => setJobsOpen(false)}
+                    />
+                    <MenuItem
+                      href="/companies"
+                      title="🏢 Companies"
+                      description="Top employers hiring now"
+                      onClick={() => setJobsOpen(false)}
+                    />
+                    <MenuItem
+                      href="/salary"
+                      title="📊 Salary Guides"
+                      description="Role-based pay benchmarks"
+                      onClick={() => setJobsOpen(false)}
+                    />
 
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className={styles.dropdownLabel}>By Salary</DropdownMenuLabel>
-                {SALARY_LINKS.map((l) => (
-                  <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
-                ))}
+                    <div className={`${styles.dropdownLabel} ${styles.dropdownLabelSpaced}`}>By Salary</div>
+                    {SALARY_LINKS.filter(l => !l.href.includes('/salary')).map((l) => (
+                      <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
+                    ))}
+                  </div>
 
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className={styles.dropdownLabel}>By Location</DropdownMenuLabel>
-                {LOCATION_LINKS.map((l) => (
-                  <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
-                ))}
+                  {/* Divider */}
+                  <div className={styles.dropdownDivider} />
+
+                  {/* Right column */}
+                  <div className={styles.dropdownCol}>
+                    <div className={styles.dropdownLabel}>By Location</div>
+                    {LOCATION_LINKS.map((l) => (
+                      <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
+                    ))}
+                  </div>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -168,8 +189,12 @@ export function SiteHeader() {
               Companies
             </Link>
 
-            <Link href="/post-a-job" className={styles.navLink}>
-              For Employers
+            <Link href="/salary" className={styles.navLink}>
+              Salaries
+            </Link>
+
+            <Link href="/blog" className={styles.navLink}>
+              Blog
             </Link>
           </nav>
         </div>
@@ -183,14 +208,6 @@ export function SiteHeader() {
           >
             <Search className={styles.searchIcon} aria-hidden="true" />
           </button>
-
-          <Link href="/post-a-job" className={styles.signIn}>
-            Sign In
-          </Link>
-
-          <Link href="/post-a-job" className={styles.cta}>
-            Post a Job
-          </Link>
 
           <span className={styles.mobileOnly}>
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -255,8 +272,11 @@ export function SiteHeader() {
                     <Link className={styles.mobileItem} href="/companies" onClick={() => setMobileOpen(false)}>
                       Companies <span className={styles.mobileMeta}>/companies</span>
                     </Link>
-                    <Link className={styles.mobileItem} href="/post-a-job" onClick={() => setMobileOpen(false)}>
-                      For Employers <span className={styles.mobileMeta}>/post-a-job</span>
+                    <Link className={styles.mobileItem} href="/salary" onClick={() => setMobileOpen(false)}>
+                      Salary Guides <span className={styles.mobileMeta}>/salary</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/blog" onClick={() => setMobileOpen(false)}>
+                      Career Blog <span className={styles.mobileMeta}>/blog</span>
                     </Link>
                     <button
                       type="button"
@@ -268,15 +288,6 @@ export function SiteHeader() {
                     >
                       Find jobs <span className={styles.mobileMeta}>/search</span>
                     </button>
-                  </div>
-
-                  <div className={styles.mobileActions}>
-                    <Link href="/post-a-job" className={styles.mobileSignIn} onClick={() => setMobileOpen(false)}>
-                      Sign In
-                    </Link>
-                    <Link href="/post-a-job" className={styles.mobileCta} onClick={() => setMobileOpen(false)}>
-                      Post a Job
-                    </Link>
                   </div>
                 </div>
               </SheetContent>
@@ -312,16 +323,16 @@ export function SiteHeader() {
             </div>
             <div className={styles.searchHint}>
               Try:{' '}
-              <button type="button" onClick={() => submitSearch('Software Engineer')} className={styles.hintBtn}>
-                Software Engineer
+              <button type="button" onClick={() => submitSearch('remote $200k engineer')} className={styles.hintBtn}>
+                remote $200k engineer
               </button>
               ,{' '}
-              <button type="button" onClick={() => submitSearch('Product Manager')} className={styles.hintBtn}>
-                Product Manager
+              <button type="button" onClick={() => submitSearch('staff engineer no degree')} className={styles.hintBtn}>
+                staff engineer no degree
               </button>
               ,{' '}
-              <button type="button" onClick={() => submitSearch('Data Scientist')} className={styles.hintBtn}>
-                Data Scientist
+              <button type="button" onClick={() => submitSearch('product manager visa sponsorship')} className={styles.hintBtn}>
+                visa sponsorship PM
               </button>
             </div>
           </form>

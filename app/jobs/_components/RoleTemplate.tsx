@@ -4,9 +4,11 @@ import type { CSSProperties } from 'react'
 import { notFound } from 'next/navigation'
 
 import { JobCard } from '@/components/jobs/JobCard'
+import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
 import { SEARCH_ROLE_OPTIONS } from '@/lib/roles/searchRoles'
@@ -186,7 +188,7 @@ function dedupeJobs(jobs: JobWithCompany[]): JobWithCompany[] {
   })
 }
 
-function roleCareerPath(roleSlug: string): Array<{ stage: string; slug: string | null; label: string }> {
+function roleCareerPath(roleSlug: string): Array<{ stage: string; slug: string | null; label: string; seniority: string | null }> {
   const slug = roleSlug.toLowerCase()
   const base = slug
     .replace(/^junior-/, '')
@@ -197,31 +199,40 @@ function roleCareerPath(roleSlug: string): Array<{ stage: string; slug: string |
     .replace(/^lead-/, '')
 
   const candidates = [
-    { stage: 'Junior', slug: `junior-${base}` },
-    { stage: 'Mid', slug: base },
-    { stage: 'Senior', slug: `senior-${base}` },
-    { stage: 'Staff', slug: `staff-${base}` },
-    { stage: 'Principal', slug: `principal-${base}` },
+    { stage: 'Junior', slug: `junior-${base}`, seniority: 'junior' },
+    { stage: 'Mid', slug: base, seniority: null },
+    { stage: 'Senior', slug: `senior-${base}`, seniority: 'senior' },
+    { stage: 'Staff', slug: `staff-${base}`, seniority: 'staff' },
+    { stage: 'Principal', slug: `principal-${base}`, seniority: 'principal' },
   ]
 
   return candidates.map((c) => ({
     stage: c.stage,
+    // Keep the slug for is-active detection, but we'll link via seniority param
     slug: CANONICAL_ROLE_SET.has(c.slug) ? c.slug : c.stage === 'Mid' && CANONICAL_ROLE_SET.has(base) ? base : null,
     label: c.stage === 'Mid' ? toTitleCase(base) : toTitleCase(c.slug),
-  }))
+    seniority: c.seniority,
+    // Use base slug for linking (avoids 404 when seniority slug has 0 jobs in DB)
+    baseSlug: CANONICAL_ROLE_SET.has(base) ? base : null,
+  })) as Array<{ stage: string; slug: string | null; label: string; seniority: string | null; baseSlug: string | null }>
 }
 
-export function buildRoleMetadata(roleSlug: string, total: number, avgUsd: number | null): Metadata {
+export function buildRoleMetadata(
+  roleSlug: string,
+  total: number,
+  avgUsd: number | null,
+  options?: { canonicalPath?: string },
+): Metadata {
   const roleOpt = SEARCH_ROLE_OPTIONS.find((r) => r.slug === roleSlug)
   const roleTitle = roleOpt?.label ?? toTitleCase(roleSlug)
 
   const title = `${roleTitle} Jobs - $100k+ | ${SITE_NAME}`
   const description =
     total > 0
-      ? `Browse ${total.toLocaleString()} verified ${roleTitle} opportunities paying $100k+ (or local equivalent).${avgUsd ? ` ~$${Math.round(avgUsd / 1000)}k average (USD where available).` : ''}`
-      : `Browse verified ${roleTitle} opportunities paying $100k+ (or local equivalent).`
+      ? `Browse ${total.toLocaleString()} verified ${roleTitle} jobs with published salary ranges, direct apply links, and no entry-level clutter.${avgUsd ? ` ~$${Math.round(avgUsd / 1000)}k average USD salary where available.` : ''}`
+      : `Browse verified ${roleTitle} jobs with published salary ranges, direct apply links, and no entry-level clutter.`
 
-  const canonical = `${SITE_URL}/jobs/${roleSlug}`
+  const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${roleSlug}`
   return {
     title,
     description,
@@ -286,6 +297,18 @@ export async function RoleTemplate({
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
   }
 
+  const scopeLabels = [
+    country ? `country ${country}` : null,
+    remoteMode ? `${remoteMode} roles` : null,
+    selectedSkills.length ? `${selectedSkills.length} skill filters` : null,
+  ].filter(Boolean)
+  const scopedSuffix = scopeLabels.length ? ` for ${scopeLabels.join(' and ')}` : ''
+  const fallbackTitle = `${toTitleCase(roleSlug)} jobs are temporarily unavailable`
+  const fallbackDescription = `The live ${toTitleCase(roleSlug)} job feed${scopedSuffix} is temporarily unavailable while the production database reconnects. Browse the broader jobs index or retry this role hub once data access is restored.`
+
+  return withRuntimeFallback(
+    `jobs.role.${roleSlug}.page`,
+    async () => {
   const data = await queryJobs(queryInput)
   if (data.total === 0) notFound()
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
@@ -546,12 +569,66 @@ export async function RoleTemplate({
 
   const career = roleCareerPath(roleSlug)
 
+  const avgUsdLabel = avgUsd ? `~$${Math.round(avgUsd / 1000)}k USD` : 'competitive salaries'
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `How much does a ${roleTitle} make?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${roleTitle} roles on ${SITE_NAME} average ${avgUsdLabel}. Salaries range from $100k to $300k+ depending on seniority, location, and company size. All listings show verified salary ranges upfront.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Are there remote ${roleTitle} jobs available?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Yes. ${SITE_NAME} lists ${data.total.toLocaleString()} ${roleTitle} jobs including fully remote, hybrid, and on-site positions. Use the Remote filter to narrow results to distributed-friendly roles.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What skills are required for ${roleTitle} jobs?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: skills.length
+            ? `Top skills for ${roleTitle} jobs include ${skills.slice(0, 8).map((s) => s.name).join(', ')}. Skill demand is derived from active $100k+ job postings on ${SITE_NAME}.`
+            : `${roleTitle} roles typically require a mix of technical and domain expertise. Browse current listings on ${SITE_NAME} for specific skill requirements.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How do I find $100k+ ${roleTitle} jobs?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Every listing on ${SITE_NAME} is filtered to $100k+ with a published salary range. Browse ${data.total.toLocaleString()} ${roleTitle} jobs, filter by seniority, location, or remote preference, and apply directly via each listing's link — no recruiter middleman.`,
+        },
+      },
+    ],
+  }
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Jobs', item: `${SITE_URL}/jobs` },
+      { '@type': 'ListItem', position: 3, name: `${roleTitle} Jobs`, item: `${SITE_URL}/jobs/${roleSlug}` },
+    ],
+  }
+
   return (
     <main
       className={styles.page}
       style={cssVarStyle({ '--role-a': accent.a, '--role-b': accent.b })}
     >
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href="/">Home</Link>
@@ -716,17 +793,26 @@ export async function RoleTemplate({
           <div className={styles.path}>
             <div className={styles.pathRow}>
               {career.map((step) => {
-                const href = step.slug ? `/jobs/${step.slug}` : '#'
+                const s = step as typeof step & { baseSlug?: string | null }
+                // For Mid (no seniority prefix), link to base role page directly.
+                // For Junior/Senior/Staff/Principal, link to base role page with ?seniority= param
+                // so the page filters by level without 404ing when seniority slug has 0 jobs.
+                const linkSlug = s.baseSlug ?? step.slug
+                const href = linkSlug
+                  ? s.seniority
+                    ? `/jobs/${linkSlug}?seniority=${s.seniority}`
+                    : `/jobs/${linkSlug}`
+                  : '#'
                 const isActive = step.slug === roleSlug
                 return (
                   <Link
                     key={step.stage}
                     href={href}
-                    className={`${styles.pathStep} ${!step.slug ? styles.pathStepDisabled : ''}`}
+                    className={`${styles.pathStep} ${!linkSlug ? styles.pathStepDisabled : ''}`}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <div className={styles.pathLabel}>{step.stage}</div>
-                    <div className={styles.pathValue}>{step.slug ? step.label : '—'}</div>
+                    <div className={styles.pathValue}>{linkSlug ? step.label : '—'}</div>
                   </Link>
                 )
               })}
@@ -803,7 +889,11 @@ export async function RoleTemplate({
             ) : (
               <div className={view === 'list' ? styles.list : styles.grid}>
                 {jobs.map((job) => (
-                  <JobCard key={job.id} job={job as JobWithCompany} />
+                  <JobCard
+                    key={job.id}
+                    job={job as JobWithCompany}
+                    variant={view === 'grid' ? 'grid' : 'listing'}
+                  />
                 ))}
               </div>
             )}
@@ -831,5 +921,15 @@ export async function RoleTemplate({
         </div>
       </section>
     </main>
+  )
+    },
+    () => (
+      <JobsUnavailablePage
+        title={fallbackTitle}
+        description={fallbackDescription}
+        primaryHref={`/jobs/${roleSlug}`}
+        primaryLabel={`Retry ${toTitleCase(roleSlug)} jobs`}
+      />
+    ),
   )
 }

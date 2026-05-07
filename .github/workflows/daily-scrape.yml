@@ -31,6 +31,9 @@ concurrency:
   group: daily-scrape
   cancel-in-progress: false
 
+env:
+  PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.6figjobs.com' }}
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
@@ -46,16 +49,24 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Database target guard
+        shell: bash
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          npm run scrape:db-target | tee /tmp/daily-scrape-db-target.log
 
       - name: Prepare scrape inputs
         id: prep
@@ -159,6 +170,18 @@ jobs:
         if: steps.prep.outputs.dry_run != 'true' && steps.prep.outputs.mode_has_boards == 'true'
         run: npx tsx scripts/enrich-apply-urls.ts | tee /tmp/daily-scrape-enrich.log
 
+      - name: Freshness guard
+        if: steps.prep.outputs.dry_run != 'true'
+        shell: bash
+        env:
+          MAX_ACTIVE_LAST_SEEN_AGE_HOURS: "72"
+          MIN_FRESH_INDEXABLE_JOBS: "1"
+          INDEXABILITY_DIAGNOSTIC_SAMPLE_SIZE: "250"
+          INDEXABILITY_DIAGNOSTIC_EXAMPLES_PER_REASON: "3"
+        run: |
+          set -euo pipefail
+          npm run scrape:health | tee /tmp/daily-scrape-freshness.log
+
       - name: Optional AI enrichment
         if: steps.prep.outputs.dry_run != 'true' && env.AI_ENRICHMENT_PAUSED != 'true'
         run: npx tsx scripts/aiEnrichJobs.ts | tee /tmp/daily-scrape-ai.log
@@ -179,19 +202,78 @@ jobs:
           npx tsx scripts/seedJobSlices.ts | tee /tmp/daily-scrape-slices-seed.log
           npx tsx scripts/bootstrapCountrySalarySlices.ts | tee /tmp/daily-scrape-slices-country.log
 
-      - name: SEO noindex guard (production sample)
+      - name: pSEO output guard
         if: steps.prep.outputs.dry_run != 'true'
+        shell: bash
+        env:
+          REQUIRED_PSEO_CORE_FAMILIES: "salary,category,level,browse"
+        run: |
+          set -euo pipefail
+          npm run scrape:pseo:health | tee /tmp/daily-scrape-pseo-health.log
+
+      - name: Upload scrape logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: daily-scrape-logs-${{ github.run_id }}
+          path: /tmp/daily-scrape*.log
+          if-no-files-found: ignore
+
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "⚠️ Daily scrape workflow failed."
+          echo "🔍 Inspect run logs + uploaded artifacts for the failing stage."
+
+  seo-production-proof:
+    name: Production SEO Proof
+    needs: scrape
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: needs.scrape.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Database target guard
+        shell: bash
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          npm run scrape:db-target | tee /tmp/seo-production-proof-db-target.log
+
+      - name: pSEO KPI report (DB)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run pseo:report | tee /tmp/seo-production-proof-pseo.log
+
+      - name: SEO noindex guard (production sample)
         shell: bash
         run: |
           set -euo pipefail
 
-          ATTEMPTS=3
-          DELAY_SECONDS=90
+          ATTEMPTS=2
+          DELAY_SECONDS=30
 
           for attempt in $(seq 1 "$ATTEMPTS"); do
             echo "SEO validation attempt ${attempt}/${ATTEMPTS}"
+            echo "Production base URL: ${PRODUCTION_SITE_URL}"
 
-            if SEO_BASE_URL=https://www.6figjobs.com npm run seo:validate:strict; then
+            if SEO_BASE_URL="${PRODUCTION_SITE_URL}" SEO_URL_RETRY_ATTEMPTS=4 SEO_URL_RETRY_DELAY_MS=1500 npm run seo:validate:strict; then
               echo "SEO noindex guard passed."
               exit 0
             fi
@@ -204,17 +286,3 @@ jobs:
             echo "Retrying in ${DELAY_SECONDS}s..."
             sleep "$DELAY_SECONDS"
           done
-
-      - name: Upload scrape logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: daily-scrape-logs-${{ github.run_id }}
-          path: /tmp/daily-scrape*.log
-          if-no-files-found: ignore
-
-      - name: Report Failure
-        if: failure()
-        run: |
-          echo "⚠️ Daily scrape workflow failed."
-          echo "🔍 Inspect run logs + uploaded artifacts for the failing stage."

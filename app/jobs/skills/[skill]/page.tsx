@@ -102,6 +102,36 @@ export default async function SkillPage({ params }: { params: Params }) {
     page: 1,
     pageSize: PAGE_SIZE,
   })
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `How much do ${resolved.label} jobs pay?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${resolved.label} jobs on Six Figure Jobs all meet the $100k+ salary floor. Verified roles in this skill range from $${Math.round(salaryMin / 1000)}k to $${Math.round(salaryMax / 1000)}k based on current listings — seniority, team size, and remote eligibility all affect the final number.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Are there remote $100k+ ${resolved.label} jobs?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Yes. Many ${resolved.label} roles on Six Figure Jobs offer fully remote or hybrid arrangements. Each listing shows the work type and a direct apply link so you can quickly filter to distributed-friendly positions.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What other skills pair well with ${resolved.label}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `High-paying ${resolved.label} roles frequently appear alongside complementary technologies in cloud infrastructure, distributed systems, and data pipelines. Browse the full $100k+ ${resolved.label} job feed to see which skills co-occur most in current postings.`,
+        },
+      },
+    ],
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
@@ -147,6 +177,10 @@ export default async function SkillPage({ params }: { params: Params }) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
     </main>
   )

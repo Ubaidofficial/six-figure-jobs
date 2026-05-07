@@ -11,6 +11,7 @@ import { parseSalaryFromText } from '../normalizers/salary'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 import { extractApplyDestinationFromHtml } from './utils/extractApplyLink'
 import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
+import { resolveCompanyApplyFallback } from './utils/resolveCompanyApplyFallback'
 import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD_NAME = 'remoterocketship'
@@ -211,6 +212,15 @@ export default async function scrapeRemoteRocketship() {
                 await saveCompanyATS(j.company, discoveredApplyUrl, BOARD_NAME)
               }
             }
+          }
+
+          if (!isExternalToHost(applyUrl, 'remoterocketship.com')) {
+            const fallbackApplyUrl = await resolveCompanyApplyFallback({
+              rawCompanyName: j.company,
+              boardHost: 'remoterocketship.com',
+              currentApplyUrl: applyUrl,
+            })
+            if (fallbackApplyUrl) applyUrl = fallbackApplyUrl
           }
 
           // Parse salary from the listing chip if present.

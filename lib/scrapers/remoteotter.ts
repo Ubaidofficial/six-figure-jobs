@@ -3,7 +3,7 @@ import * as cheerio from 'cheerio'
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
-import { discoverApplyUrlFromPage } from './utils/discoverApplyUrl'
+import { fetchJobPageDetails } from './utils/fetchJobPageDetails'
 import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD = 'remoteotter'
@@ -112,10 +112,8 @@ export async function scrapeRemoteOtter(): Promise<ScraperStats> {
       const url = absolute(normalizedHref)
       let applyUrl = url
 
-      const discoveredApplyUrl = await discoverApplyUrlFromPage(url)
-      if (discoveredApplyUrl && isExternalToHost(discoveredApplyUrl, 'remoteotter.com')) {
-        applyUrl = discoveredApplyUrl
-      }
+      const { applyUrl: discoveredApplyUrl, descriptionHtml } = await fetchJobPageDetails(url, 'remoteotter.com')
+      if (discoveredApplyUrl) applyUrl = discoveredApplyUrl
 
       const atsType = detectATS(applyUrl)
       const explicitAtsProvider = toAtsProvider(atsType)
@@ -134,6 +132,7 @@ export async function scrapeRemoteOtter(): Promise<ScraperStats> {
         applyUrl,
         location,
         salaryText,
+        descriptionHtml: descriptionHtml ?? null,
         remote: /remote/i.test(location || ''),
         explicitAtsProvider,
         explicitAtsUrl,

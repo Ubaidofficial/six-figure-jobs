@@ -171,7 +171,7 @@ async function selectJobsToEnrich(params: {
 
 async function main() {
   const maxJobsPerRun = envInt('AI_ENRICH_MAX_JOBS_PER_RUN', 200)
-  const maxOutputTokens = envInt('AI_ENRICH_MAX_OUTPUT_TOKENS', 220)
+  const maxOutputTokens = envInt('AI_ENRICH_MAX_OUTPUT_TOKENS', 600)
   const maxDailyTokensTotal = envInt('AI_ENRICH_MAX_DAILY_TOKENS_TOTAL', 500000)
   const maxDailyJobs = envInt('AI_ENRICH_MAX_DAILY_JOBS', 500)
   const recentDays = envInt('AI_ENRICH_RECENT_DAYS', 30)

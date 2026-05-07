@@ -21,6 +21,8 @@ const baseJob = {
   maxAnnual: BigInt(180000),
   currency: 'USD',
   isExpired: false,
+  lastSeenAt: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
 }
 
 describe('evaluateJobIndexability', () => {
@@ -76,5 +78,15 @@ describe('evaluateJobIndexability', () => {
 
     expect(result.indexable).toBe(false)
     expect(result.reason).toBe('unsupported_currency')
+  })
+
+  it('rejects stale jobs even when the rest of the page is high quality', () => {
+    const result = evaluateJobIndexability({
+      ...baseJob,
+      lastSeenAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+
+    expect(result.indexable).toBe(false)
+    expect(result.reason).toBe('stale_job')
   })
 })

@@ -1,10 +1,8 @@
 // app/robots.txt/route.ts
 import { NextResponse } from 'next/server'
 import { getSiteUrl } from '../../lib/seo/site'
-import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
-import { hasCountrySitemapEntries } from '../../lib/seo/countrySitemap'
-import { hasRemoteRoleSitemapEntries } from '../../lib/seo/remoteSitemap'
-import { hasSliceSitemapEntries } from '../../lib/seo/slicesSitemap'
+import { resolveCoreSitemapFamilies } from '../../lib/seo/coreSitemapFamilies'
+import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
 
 const SITE_URL = getSiteUrl()
 
@@ -20,15 +18,33 @@ export async function GET() {
     })
   }
 
-  const [cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls] = await Promise.all([
-    getCitySitemapUrls(),
-    hasRemoteRoleSitemapEntries(),
-    hasCountrySitemapEntries(),
-    hasSliceSitemapEntries(),
+  const [
+    { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
+    {
+      hasJobUrls,
+      hasCompanyUrls,
+      hasSalaryUrls,
+      hasCategoryUrls,
+      hasLevelUrls,
+      hasBrowseUrls,
+      failedFamilies: failedCoreFamilies,
+    },
+  ] = await Promise.all([
+    resolveOptionalSitemapFamilies('robots.txt'),
+    resolveCoreSitemapFamilies('robots.txt'),
   ])
+  const fallbackParts = [
+    ...(failedFamilies.length > 0 ? [`optional_families=${failedFamilies.join(',')}`] : []),
+    ...(failedCoreFamilies.length > 0
+      ? [`core_families=${failedCoreFamilies.join(',')}`]
+      : []),
+  ]
   const body = [
     'User-agent: *',
     'Allow: /',
+    'Disallow: /search',
+    'Disallow: /api/',
+    'Disallow: /ubaid93/',
     '',
     'User-agent: GPTBot',
     'Disallow: /api/',
@@ -39,17 +55,22 @@ export async function GET() {
     'User-agent: ClaudeBot',
     'Disallow: /api/',
     '',
+    ...(fallbackParts.length > 0
+      ? [`# fallback_used=1 ${fallbackParts.join(' ')}`, '']
+      : []),
     `Sitemap: ${SITE_URL}/sitemap.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-jobs.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-company.xml`,
+    ...(hasJobUrls ? [`Sitemap: ${SITE_URL}/sitemap-jobs.xml`] : []),
+    ...(hasCompanyUrls ? [`Sitemap: ${SITE_URL}/sitemap-company.xml`] : []),
     ...(cityUrls.length > 0 ? [`Sitemap: ${SITE_URL}/sitemap-city.xml`] : []),
-    `Sitemap: ${SITE_URL}/sitemap-salary.xml`,
+    ...(hasSalaryUrls ? [`Sitemap: ${SITE_URL}/sitemap-salary.xml`] : []),
     ...(hasRemoteUrls ? [`Sitemap: ${SITE_URL}/sitemap-remote.xml`] : []),
     ...(hasCountryUrls ? [`Sitemap: ${SITE_URL}/sitemap-country.xml`] : []),
-    `Sitemap: ${SITE_URL}/sitemap-category.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-level.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-browse.xml`,
+    ...(hasCategoryUrls ? [`Sitemap: ${SITE_URL}/sitemap-category.xml`] : []),
+    ...(hasLevelUrls ? [`Sitemap: ${SITE_URL}/sitemap-level.xml`] : []),
+    ...(hasBrowseUrls ? [`Sitemap: ${SITE_URL}/sitemap-browse.xml`] : []),
     ...(hasSliceUrls ? [`Sitemap: ${SITE_URL}/sitemap-slices.xml`] : []),
+    `Sitemap: ${SITE_URL}/sitemap-blog.xml`,
+    `Sitemap: ${SITE_URL}/sitemap-skills.xml`,
     '',
   ].join('\n')
 
@@ -57,6 +78,7 @@ export async function GET() {
     status: 200,
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
+      ...(fallbackParts.length > 0 ? { 'X-Robots-Fallback': '1' } : {}),
     },
   })
 }

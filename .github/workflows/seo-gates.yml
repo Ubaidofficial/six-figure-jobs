@@ -10,6 +10,9 @@ concurrency:
   group: seo-gates-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.6figjobs.com' }}
+
 jobs:
   seo-local-gates:
     name: SEO Local Gates
@@ -37,10 +40,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -95,10 +98,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -114,7 +117,7 @@ jobs:
           for attempt in $(seq 1 "$ATTEMPTS"); do
             echo "Production SEO proof attempt ${attempt}/${ATTEMPTS}"
 
-            if SEO_BASE_URL=https://www.6figjobs.com SEO_SAMPLE_PER_SITEMAP=1000 SEO_STRICT=1 npm run seo:validate:strict; then
+            if SEO_BASE_URL="${PRODUCTION_SITE_URL}" SEO_SAMPLE_PER_SITEMAP=1000 SEO_STRICT=1 npm run seo:validate:strict; then
               echo "Production SEO proof passed."
               exit 0
             fi

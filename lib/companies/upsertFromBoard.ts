@@ -4,6 +4,7 @@ import { prisma } from '../prisma'
 import { cleanCompanyName } from '../normalizers/company'
 import { detectAtsFromUrl } from '../normalizers/ats'
 import type { AtsProvider } from '../scrapers/ats/types'
+import { isKnownBoardHost } from '../scrapers/utils/boardHosts'
 
 const companyClient = (prisma as any).company
 
@@ -284,6 +285,8 @@ function inferWebsiteFromUrl(applyUrl: string): string | null {
     const u = new URL(applyUrl)
     const host = u.hostname.replace(/^www\./i, '')
     if (!host) return null
+    if (isKnownBoardHost(host)) return null
+    if (detectAtsFromUrl(applyUrl)) return null
     return `https://${host}`
   } catch {
     return null

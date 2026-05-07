@@ -89,11 +89,6 @@ function extractRoleSlugFromJobsHref(href: string): string | null {
   return m?.[1] ?? null
 }
 
-function extractCitySlugFromHref(href: string): string | null {
-  const m = href.match(/^\/jobs\/city\/([^/?#]+)$/)
-  return m?.[1] ?? null
-}
-
 function extractSalaryTierIdFromHref(href: string): SalaryTierId | null {
   const m = href.match(/^\/jobs\/(100k-plus|200k-plus|300k-plus|400k-plus)$/)
   return (m?.[1] as SalaryTierId) ?? null
@@ -287,23 +282,11 @@ export async function buildBrowseSitemapReport(
   }
 
   for (const cat of CATEGORY_LINKS.locations) {
-    const citySlug = extractCitySlugFromHref(cat.href)
     if (cat.href === '/remote') {
       candidates.push({
         path: '/remote',
         total: remoteTotal,
         indexable: remoteTotal >= minJobs,
-      })
-      continue
-    }
-    if (citySlug) {
-      const city = CITY_TARGETS.find((c) => c.slug === citySlug)
-      const key = `${citySlug}::${city?.countryCode?.toUpperCase() ?? ''}`
-      const total = cityCounts.get(key) ?? 0
-      candidates.push({
-        path: cat.href,
-        total,
-        indexable: total >= minJobs,
       })
     }
   }
@@ -362,27 +345,8 @@ export async function buildBrowseSitemapReport(
     })
   }
 
-  // Cities
-  for (const city of CITY_TARGETS) {
-    const key = `${city.slug}::${city.countryCode?.toUpperCase() ?? ''}`
-    const total = cityCounts.get(key) ?? 0
-    candidates.push({
-      path: `/jobs/city/${city.slug}`,
-      total,
-      indexable: total >= minJobs,
-    })
-  }
-
-  // Combo routes: role + remote
+  // Combo routes: role + city
   for (const roleSlug of TOP_ROLE_SLUGS) {
-    const total = remoteRoleCounts.get(roleSlug) ?? 0
-    candidates.push({
-      path: `/remote/${roleSlug}`,
-      total,
-      indexable: isTier1Role(roleSlug) && total >= minJobs,
-      reason: !isTier1Role(roleSlug) ? 'tier2_role' : undefined,
-    })
-
     for (const city of TOP_CITIES) {
       const totalCity = roleCityCounts.get(`${roleSlug}::${city.slug}`) ?? 0
       candidates.push({

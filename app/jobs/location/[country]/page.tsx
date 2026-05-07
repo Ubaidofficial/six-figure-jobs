@@ -77,8 +77,8 @@ export async function generateMetadata({
     : `${salaryLabel} jobs in ${loc.label} (${total.toLocaleString()}) | ${SITE_NAME}`
 
   const description = loc.remoteOnly
-    ? `Browse ${total.toLocaleString()} remote ${salaryLabel} jobs, remote high paying roles, six figure remote jobs across engineering, product, and data.`
-    : `Browse ${total.toLocaleString()} ${salaryLabel} jobs in ${loc.label}. ${loc.label} ${salaryLabel} jobs, high paying jobs ${loc.label}, six figure ${loc.label} roles with verified pay.`
+    ? `Browse ${total.toLocaleString()} remote ${salaryLabel} jobs with published salary ranges, direct apply links, and fresh listings across engineering, product, and data.`
+    : `Browse ${total.toLocaleString()} ${salaryLabel} jobs in ${loc.label}. Find high paying ${loc.label} roles, six figure jobs, direct apply links, and verified salary ranges.`
 
   const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
   const allowIndex = total >= 3

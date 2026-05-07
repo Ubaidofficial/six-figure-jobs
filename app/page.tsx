@@ -7,8 +7,6 @@ import { prisma } from '../lib/prisma'
 import {
   queryJobs,
   type JobWithCompany,
-  buildGlobalExclusionsWhere,
-  buildHighSalaryEligibilityWhere,
   HIGH_SALARY_MIN_CONFIDENCE,
 } from '../lib/jobs/queryJobs'
 import { SEARCH_ROLE_OPTIONS } from '../lib/roles/searchRoles'
@@ -32,56 +30,75 @@ import {
 } from '@/components/home/ExplorePremiumRoles'
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { getThresholdLabelForCountry } from '@/lib/seo/salaryLabels'
+import { getSiteUrl } from '@/lib/seo/site'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
 import { WhySixFigureJobs } from '@/components/home/WhySixFigureJobs'
+import { Testimonials } from '@/components/home/Testimonials'
+import { logRuntimeFallback } from '@/lib/runtime/fallback'
+import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
 
 export const revalidate = 300 // 5min instead of 10min
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
-  description:
-    'Find 5,945+ verified jobs paying $100k+ USD (or local equivalent). Premium roles from 333 verified companies. Updated daily.',
-  keywords:
-    '6 figure jobs, six figure jobs, 6 figure salary jobs, six-figure jobs, high paying jobs, easy 6 figure jobs, 6 figure remote jobs, 6 figure jobs no degree, 6 figure jobs without college degree, six-figure salary jobs, best 6 figure jobs',
-  alternates: {
-    canonical: 'https://www.6figjobs.com',
-  },
-  openGraph: {
-    title: 'Six Figure Jobs & High Paying $100k+ Positions',
-    description:
-      'Find six-figure jobs and high-paying positions with verified $100k+ salaries. ' +
-      'Explore 5,945+ premium opportunities from 333 verified companies.',
-    url: 'https://www.6figjobs.com',
-    siteName: '6FigJobs - Six Figure Jobs',
-    type: 'website',
-    images: [
-      {
-        url: 'https://www.6figjobs.com/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Six Figure Jobs - Find High Paying $100k+ Positions',
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const stats = await loadPublicSiteStats()
+    const description = `Find ${stats.totalJobs.toLocaleString()}+ verified $100k+ jobs with published salary ranges. Premium roles from ${stats.totalCompanies.toLocaleString()} verified companies. Updated daily.`
+    const ogDescription =
+      `Find six-figure jobs and high-paying positions with verified salary ranges. ` +
+      `Explore ${stats.totalJobs.toLocaleString()}+ $100k+ opportunities from ${stats.totalCompanies.toLocaleString()} verified companies.`
+
+    return {
+      title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
+      description,
+      keywords:
+        '6 figure jobs, six figure jobs, 6 figure salary jobs, six-figure jobs, high paying jobs, easy 6 figure jobs, 6 figure remote jobs, 6 figure jobs no degree, 6 figure jobs without college degree, six-figure salary jobs, best 6 figure jobs',
+      alternates: {
+        canonical: 'https://www.6figjobs.com',
       },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Six Figure Jobs | High Paying $100k+ Positions',
-    description:
-      'Find six-figure jobs with verified salaries. Explore 5,945+ high-paying opportunities.',
-    images: ['https://www.6figjobs.com/og-image.png'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
+      openGraph: {
+        title: 'Six Figure Jobs & High Paying $100k+ Positions',
+        description: ogDescription,
+        url: 'https://www.6figjobs.com',
+        siteName: '6FigJobs - Six Figure Jobs',
+        type: 'website',
+        images: [
+          {
+            url: 'https://www.6figjobs.com/og-image.png',
+            width: 1200,
+            height: 630,
+            alt: 'Six Figure Jobs - Find High Paying $100k+ Positions',
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: 'Six Figure Jobs | High Paying $100k+ Positions',
+        description: `Find six-figure jobs with verified salaries. Explore ${stats.totalJobs.toLocaleString()}+ high-paying opportunities.`,
+        images: ['https://www.6figjobs.com/og-image.png'],
+      },
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
+      },
+    }
+  } catch {
+    return {
+      title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
+      description:
+        'Find verified $100k+ jobs with published salary ranges. Premium roles from verified companies. Updated daily.',
+      alternates: {
+        canonical: 'https://www.6figjobs.com',
+      },
+    }
+  }
 }
 
 const PAGE_SIZE = 40
@@ -142,12 +159,15 @@ function HomepageSchemas({
   jobCount: number
   companyCount: number
 }) {
+  const siteUrl = getSiteUrl()
+
   const websiteSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
+    '@id': `${siteUrl}/#website`,
     name: 'Six Figure Jobs',
     alternateName: ['6FigJobs', '6 Figure Jobs', 'SixFigJobs'],
-    url: 'https://www.6figjobs.com',
+    url: siteUrl,
     description:
       'The exclusive job board for six figure jobs and high paying $100k+ positions. ' +
       'Find lucrative careers with verified salaries.',
@@ -155,7 +175,7 @@ function HomepageSchemas({
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://www.6figjobs.com/search?q={search_term_string}',
+        urlTemplate: `${siteUrl}/jobs?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -164,11 +184,12 @@ function HomepageSchemas({
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': `${siteUrl}/#organization`,
     name: 'Six Figure Jobs',
     legalName: 'Six Figure Jobs LLC',
     alternateName: ['6FigJobs', '6 Figure Jobs'],
-    url: 'https://www.6figjobs.com',
-    logo: 'https://www.6figjobs.com/logo.png',
+    url: siteUrl,
+    logo: `${siteUrl}/logo.png`,
     description: `Premium job board featuring ${jobCount.toLocaleString()}+ six figure jobs and high paying $100k+ positions from ${companyCount.toLocaleString()}+ top companies. The #1 destination for lucrative careers.`,
     foundingDate: '2025-12-05',
     sameAs: [
@@ -197,135 +218,155 @@ function HomepageSchemas({
   )
 }
 
+function HomePageFallback() {
+  return (
+    <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+      <HomepageSchemas jobCount={0} companyCount={0} />
+
+      <section className="rounded-3xl border border-slate-800 bg-slate-950/80 p-8 shadow-2xl shadow-slate-950/40">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+          Live data temporarily unavailable
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold text-slate-50">
+          Six Figure Jobs
+        </h1>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+          The job feed is temporarily unavailable while the production database reconnects.
+          Static pages remain live, and the next scrape will continue updating data once connectivity
+          is restored.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3 text-sm">
+          <Link
+            href="/jobs"
+            className="rounded-full bg-emerald-400 px-5 py-2 font-semibold text-slate-950"
+          >
+            Browse jobs
+          </Link>
+          <Link
+            href="/remote"
+            className="rounded-full border border-slate-700 px-5 py-2 text-slate-100"
+          >
+            Remote jobs
+          </Link>
+          <Link
+            href="/salary"
+            className="rounded-full border border-slate-700 px-5 py-2 text-slate-100"
+          >
+            Salary guides
+          </Link>
+          <Link
+            href="/companies"
+            className="rounded-full border border-slate-700 px-5 py-2 text-slate-100"
+          >
+            Companies
+          </Link>
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function addAndClause(where: any, clause: any): any {
+  return {
+    ...where,
+    AND: [...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []), clause],
+  }
+}
+
 export default async function HomePage() {
-  const [
-    jobsData,
-    totalJobs,
-    totalCompanies,
-    featuredCompanyGroups,
-    salaryBandCounts,
-    locationCounts,
-    locationCityCounts,
-    premiumRoleRows,
-    schemaTotalJobs,
-    schemaTotalCompanies,
-    schemaNewThisWeek,
-    topRoles,
-  ] = await Promise.all([
-    queryJobs({
-      isHundredKLocal: true, // Use PPP-adjusted threshold
-      page: 1,
-      pageSize: PAGE_SIZE,
-      sortBy: 'date',
-      excludeInternships: true,
-    }),
-    prisma.job.count({
-      where: {
-        isExpired: false,
-        OR: [
-          { minAnnual: { gte: BigInt(100_000) } },
-          { maxAnnual: { gte: BigInt(100_000) } },
-          { isHundredKLocal: true },
-        ],
-      },
-    }),
-    prisma.company.count({
-      where: {
-        jobs: {
-          some: {
-            isExpired: false,
-            OR: [{ minAnnual: { gte: BigInt(100_000) } }, { isHundredKLocal: true }],
-          },
+  try {
+    const stats = await loadPublicSiteStats()
+    const publicJobWhere = stats.publicJobWhere
+    const [
+      jobsData,
+      featuredCompanyGroups,
+      salaryBandCounts,
+      locationCounts,
+      locationCityCounts,
+      premiumRoleRows,
+      topRoles,
+    ] = await Promise.all([
+      queryJobs({
+        isHundredKLocal: true,
+        page: 1,
+        pageSize: PAGE_SIZE,
+        sortBy: 'date',
+        excludeInternships: true,
+      }),
+      prisma.job.groupBy({
+        by: ['companyId'],
+        where: {
+          ...publicJobWhere,
+          companyId: { not: null },
         },
-      },
-    }),
-    prisma.job.groupBy({
-      by: ['companyId'],
-      where: {
-        companyId: { not: null },
-        isExpired: false,
-        AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
-      },
-      _count: { _all: true },
-      orderBy: { _count: { companyId: 'desc' } },
-      take: 20,
-    }),
-    Promise.all(
-      SALARY_BANDS.map(async (band) => {
-        const count = await prisma.job.count({
-          where: {
-            isExpired: false,
-            AND: [
-              buildHighSalaryEligibilityWhere(),
-              buildGlobalExclusionsWhere(),
-              {
-                OR: [
-                  { maxAnnual: { gte: BigInt(band.min) } },
-                  { minAnnual: { gte: BigInt(band.min) } },
-                ],
-              },
-            ],
-          },
+        _count: { _all: true },
+        orderBy: { _count: { companyId: 'desc' } },
+        take: 20,
+      }),
+      Promise.all(
+        SALARY_BANDS.map(async (band) => {
+          const count = await prisma.job.count({
+            where: addAndClause(publicJobWhere, {
+              OR: [
+                { maxAnnual: { gte: BigInt(band.min) } },
+                { minAnnual: { gte: BigInt(band.min) } },
+              ],
+            }),
+          })
+
+          return { ...band, count }
         })
+      ),
+      prisma.job.groupBy({
+        by: ['countryCode'],
+        where: {
+          ...publicJobWhere,
+          countryCode: { in: TOP_LOCATION_DEFS.map((c) => c.code) },
+        },
+        _count: { _all: true },
+      }),
+      prisma.job.groupBy({
+        by: ['countryCode', 'city'],
+        where: {
+          ...publicJobWhere,
+          countryCode: { in: TOP_LOCATION_DEFS.map((c) => c.code) },
+          city: { not: null },
+          AND: [...(Array.isArray(publicJobWhere.AND) ? publicJobWhere.AND : publicJobWhere.AND ? [publicJobWhere.AND] : []), { city: { not: '' } }],
+        },
+        _count: { _all: true },
+        orderBy: { _count: { countryCode: 'desc' } },
+      }),
+      prisma.$queryRaw<
+        Array<{
+          slug: string
+          totalCount: bigint
+          avgUsd: bigint | null
+          last7: bigint
+          prev7: bigint
+        }>
+      >((() => {
+        const roleValues = PREMIUM_ROLE_DEFS.map((r) => Prisma.sql`(${r.slug})`)
 
-        return { ...band, count }
-      })
-    ),
-    prisma.job.groupBy({
-      by: ['countryCode'],
-      where: {
-        isExpired: false,
-        countryCode: { in: TOP_LOCATION_DEFS.map((c) => c.code) },
-        AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
-      },
-      _count: { _all: true },
-    }),
-    prisma.job.groupBy({
-      by: ['countryCode', 'city'],
-      where: {
-        isExpired: false,
-        countryCode: { in: TOP_LOCATION_DEFS.map((c) => c.code) },
-        city: { not: null },
-        AND: [
-          buildHighSalaryEligibilityWhere(),
-          buildGlobalExclusionsWhere(),
-          { city: { not: '' } },
-        ],
-      },
-      _count: { _all: true },
-      orderBy: { _count: { countryCode: 'desc' } },
-    }),
-    prisma.$queryRaw<
-      Array<{
-        slug: string
-        totalCount: bigint
-        avgUsd: bigint | null
-        last7: bigint
-        prev7: bigint
-      }>
-    >((() => {
-      const roleValues = PREMIUM_ROLE_DEFS.map((r) => Prisma.sql`(${r.slug})`)
+        const currencyClauses = Object.entries(HIGH_SALARY_THRESHOLDS).map(
+          ([currency, threshold]) =>
+            Prisma.sql`("currency" = ${currency} AND ("minAnnual" >= ${threshold} OR "maxAnnual" >= ${threshold}))`,
+        )
 
-      const currencyClauses = Object.entries(HIGH_SALARY_THRESHOLDS).map(
-        ([currency, threshold]) =>
-          Prisma.sql`("currency" = ${currency} AND ("minAnnual" >= ${threshold} OR "maxAnnual" >= ${threshold}))`,
-      )
+        const titleExclusions = [
+          Prisma.sql`"title" ILIKE '%intern%'`,
+          Prisma.sql`"title" ILIKE '%internship%'`,
+          Prisma.sql`"title" ILIKE '%junior%'`,
+          Prisma.sql`"title" ILIKE '% jr%'`,
+          Prisma.sql`"title" ILIKE '%jr.%'`,
+          Prisma.sql`"title" ILIKE '%entry%'`,
+          Prisma.sql`"title" ILIKE '%entry level%'`,
+          Prisma.sql`"title" ILIKE '%graduate%'`,
+          Prisma.sql`"title" ILIKE '%new grad%'`,
+          Prisma.sql`"title" ILIKE '%new graduate%'`,
+          Prisma.sql`"title" ILIKE '%phd graduate%'`,
+        ]
 
-      const titleExclusions = [
-        Prisma.sql`"title" ILIKE '%intern%'`,
-        Prisma.sql`"title" ILIKE '%internship%'`,
-        Prisma.sql`"title" ILIKE '%junior%'`,
-        Prisma.sql`"title" ILIKE '% jr%'`,
-        Prisma.sql`"title" ILIKE '%jr.%'`,
-        Prisma.sql`"title" ILIKE '%entry%'`,
-        Prisma.sql`"title" ILIKE '%entry level%'`,
-        Prisma.sql`"title" ILIKE '%graduate%'`,
-        Prisma.sql`"title" ILIKE '%new grad%'`,
-        Prisma.sql`"title" ILIKE '%new graduate%'`,
-        Prisma.sql`"title" ILIKE '%phd graduate%'`,
-      ]
-
-      return Prisma.sql`
+        return Prisma.sql`
         WITH roles("slug") AS (
           VALUES ${Prisma.join(roleValues)}
         ),
@@ -364,35 +405,18 @@ export default async function HomePage() {
         FROM matched
         GROUP BY "slug";
       `
-    })()),
-    prisma.job.count({
-      where: { isExpired: false, AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()] },
-    }),
-    prisma.company.count(),
-    prisma.job.count({
-      where: {
-        isExpired: false,
-        AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
-        postedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-      },
-    }),
-    prisma.job.groupBy({
-      by: ['roleSlug'],
-      where: {
-        isExpired: false,
-        ...buildHighSalaryEligibilityWhere(),
-      },
-      _count: { _all: true },
-      orderBy: { _count: { roleSlug: 'desc' } },
-      take: 12,
-    }),
-  ])
-
-  const stats = {
-    totalJobs: schemaTotalJobs,
-    totalCompanies: schemaTotalCompanies,
-    newThisWeek: schemaNewThisWeek,
-  }
+      })()),
+      prisma.job.groupBy({
+        by: ['roleSlug'],
+        where: {
+          ...publicJobWhere,
+          roleSlug: { not: null },
+        },
+        _count: { _all: true },
+        orderBy: { _count: { roleSlug: 'desc' } },
+        take: 12,
+      }),
+    ])
 
   const roleCards = topRoles
     .filter((r) => r.roleSlug)
@@ -402,16 +426,16 @@ export default async function HomePage() {
       count: r._count._all,
     }))
 
-  const featuredCompanyIds = featuredCompanyGroups
-    .map((g) => g.companyId)
-    .filter((id): id is string => typeof id === 'string')
+    const featuredCompanyIds = featuredCompanyGroups
+      .map((g) => g.companyId)
+      .filter((id): id is string => typeof id === 'string')
 
-  const featuredCompaniesRaw = featuredCompanyIds.length
-    ? await prisma.company.findMany({
-        where: { id: { in: featuredCompanyIds } },
-        select: { id: true, name: true, slug: true, logoUrl: true },
-      })
-    : []
+    const featuredCompaniesRaw = featuredCompanyIds.length
+      ? await prisma.company.findMany({
+          where: { id: { in: featuredCompanyIds } },
+          select: { id: true, name: true, slug: true, logoUrl: true },
+        })
+      : []
 
   const featuredCompaniesById = new Map(featuredCompaniesRaw.map((c) => [c.id, c]))
 
@@ -507,15 +531,15 @@ export default async function HomePage() {
     }
   })
 
-  return (
+    return (
     <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
       <HomepageSchemas
         jobCount={stats.totalJobs}
         companyCount={stats.totalCompanies}
       />
       <Hero
-        jobCount={totalJobs}
-        companyCount={totalCompanies}
+        jobCount={stats.totalJobs}
+        companyCount={stats.totalCompanies}
         countryCount={TARGET_COUNTRIES.length}
         newThisWeek={stats.newThisWeek}
       >
@@ -544,14 +568,14 @@ export default async function HomePage() {
 
           <div>
             <label
-              htmlFor="location"
+              htmlFor="country"
               className="mb-1.5 block text-[11px] font-medium text-slate-400"
             >
               Location
             </label>
             <select
-              id="location"
-              name="location"
+              id="country"
+              name="country"
               className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
             >
               <option value="">All locations</option>
@@ -624,17 +648,22 @@ export default async function HomePage() {
         </div>
 
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Link
-            href="/jobs/100k-plus"
-            className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-6 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/5 sm:w-auto"
+          <button
+            type="submit"
+            className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-emerald-700/60 bg-emerald-600/20 px-6 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-600/30 sm:w-auto"
           >
-            Explore six-figure opportunities
+            Apply filters →
+          </button>
+          <Link
+            href="/jobs"
+            className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-6 py-3 text-sm font-semibold text-slate-300 transition hover:bg-white/5 sm:w-auto"
+          >
+            Browse all $100k+ jobs
           </Link>
         </div>
 
         <div className="mt-2 text-xs text-slate-400">
-          AI search tips: Try “remote $100k engineer”, “$200k staff roles”, or “no-degree $100k
-          jobs” to see curated results.
+          Filter by role, location, and work type — all listings show verified salary ranges.
         </div>
       </Hero>
 
@@ -649,8 +678,9 @@ export default async function HomePage() {
               <Link
                 key={role.href}
                 href={role.href}
-                className="group inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-slate-600 hover:bg-slate-900"
+                className="group inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-emerald-700/60 hover:bg-slate-900"
               >
+                {role.emoji ? <span aria-hidden="true">{role.emoji}</span> : null}
                 <span className="text-slate-200 group-hover:text-white">
                   {role.name}
                 </span>
@@ -671,6 +701,8 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <LatestOpportunities jobs={jobs} totalJobs={stats.totalJobs} />
+
       <TopLocations locations={topLocations} />
 
       <section className="mb-10">
@@ -681,7 +713,7 @@ export default async function HomePage() {
 
       <WhySixFigureJobs />
 
-      <LatestOpportunities jobs={jobs} totalJobs={totalJobs} />
+      <Testimonials />
 
       <BrowseByRole roles={roleCards} />
 
@@ -779,5 +811,9 @@ export default async function HomePage() {
         </div>
       </section>
     </main>
-  )
+    )
+  } catch (error) {
+    logRuntimeFallback('home.page', error)
+    return <HomePageFallback />
+  }
 }

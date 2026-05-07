@@ -4,7 +4,7 @@ import { JobCard } from '@/components/jobs/JobCard'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
-import { SITE_NAME } from '@/lib/seo/site'
+import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
 import { highSalaryThresholdForCountry, TARGET_COUNTRIES } from '@/lib/seo/regions'
 import { formatRelativeTime } from '@/lib/utils/time'
 
@@ -13,6 +13,7 @@ import { JobsToolbar } from '../../_components/JobsToolbar'
 import styles from './CountryLocationTemplate.module.css'
 
 const PAGE_SIZE = 24
+const SITE_URL = getSiteUrl()
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -133,6 +134,103 @@ function dedupeJobs(jobs: JobWithCompany[]): JobWithCompany[] {
     seen.add(key)
     return true
   })
+}
+
+function buildCountryBreadcrumbJsonLd(loc: CountryLocation) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: 'Jobs', item: `${SITE_URL}/jobs` },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: `${loc.label} jobs`,
+        item: `${SITE_URL}/jobs/location/${loc.slug}`,
+      },
+    ],
+  }
+}
+
+function buildCountryCollectionPageJsonLd(input: {
+  loc: CountryLocation
+  total: number
+  companyCount: number
+  thresholdLabel: string
+  countryCurrency: string
+}) {
+  const url = `${SITE_URL}/jobs/location/${input.loc.slug}`
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `$100k+ jobs in ${input.loc.label}`,
+    description: `Browse ${input.total.toLocaleString()} verified high paying jobs in ${input.loc.label} with ${input.countryCurrency} salary context, published salary ranges where available, direct apply links, and fresh six figure roles.`,
+    url,
+    about: [
+      `$100k+ jobs in ${input.loc.label}`,
+      `six figure jobs in ${input.loc.label}`,
+      `high paying jobs in ${input.loc.label}`,
+      `remote jobs in ${input.loc.label}`,
+      'published salary ranges',
+      'direct apply links',
+    ],
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+    mainEntity: {
+      '@type': 'ItemList',
+      name: `${input.loc.label} verified salary job feed`,
+      numberOfItems: input.total,
+    },
+  }
+}
+
+function buildCountryFaqItems(input: {
+  loc: CountryLocation
+  total: number
+  companyCount: number
+  thresholdLabel: string
+  countryCurrency: string
+}) {
+  return [
+    {
+      q: `Are these ${input.loc.label} jobs verified?`,
+      a: `Yes. This page focuses on ${input.total.toLocaleString()} live high paying jobs in ${input.loc.label} from ${input.companyCount.toLocaleString()} companies, with salary quality, seniority, freshness, and direct apply paths screened before listings appear.`,
+    },
+    {
+      q: `What salary threshold is used for ${input.loc.label}?`,
+      a: `The ${input.loc.label} page uses a country-aware high-salary floor of approximately ${input.thresholdLabel} and shows ${input.countryCurrency} salary context where available.`,
+    },
+    {
+      q: `Can I find remote jobs in ${input.loc.label}?`,
+      a: `Yes. Use the work type filter to compare remote, hybrid, and on-site six figure jobs in ${input.loc.label}, then apply through the direct company or ATS link on each listing.`,
+    },
+  ]
+}
+
+function buildCountryFaqJsonLd(input: {
+  loc: CountryLocation
+  total: number
+  companyCount: number
+  thresholdLabel: string
+  countryCurrency: string
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: buildCountryFaqItems(input).map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
+  }
 }
 
 export async function CountryLocationTemplate({
@@ -345,10 +443,24 @@ export async function CountryLocationTemplate({
 
   const basePath = `/jobs/location/${loc.slug}`
   const flag = flagEmojiFromCountryCode(countryCode)
+  const countrySeoInput = {
+    loc,
+    total: data.total,
+    companyCount,
+    thresholdLabel,
+    countryCurrency,
+  }
+  const breadcrumbJsonLd = buildCountryBreadcrumbJsonLd(loc)
+  const collectionPageJsonLd = buildCountryCollectionPageJsonLd(countrySeoInput)
+  const faqJsonLd = buildCountryFaqJsonLd(countrySeoInput)
+  const faqItems = buildCountryFaqItems(countrySeoInput)
 
   return (
     <main className={styles.page}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href="/">Home</Link>
@@ -441,13 +553,33 @@ export async function CountryLocationTemplate({
         </div>
       </header>
 
-      <section className={styles.ppp} aria-label="PPP context">
-        <div className={styles.pppTitle}>Understanding {countryCurrency} salaries</div>
+      <section className={styles.ppp} aria-label="Salary context">
+        <div className={styles.pppTitle}>Understanding verified {countryCurrency} salary ranges</div>
         <p className={styles.pppBody}>
-          In {loc.label}, a “six-figure” job is best understood in local purchasing power. We use a currency-specific
-          high-salary cutoff (roughly equivalent to $100k USD) — approximately{' '}
-          <strong className={styles.pillValue}>{thresholdLabel}</strong> — to keep listings comparable across regions.
+          In {loc.label}, this page focuses on roles with published compensation and a
+          currency-specific high-salary floor of approximately{' '}
+          <strong className={styles.pillValue}>{thresholdLabel}</strong>. Listings are screened
+          for salary quality, seniority, freshness, and direct apply paths.
         </p>
+      </section>
+
+      <section className={styles.faq} aria-label={`${loc.label} jobs FAQ`}>
+        <header className={styles.sectionHeader}>
+          <div>
+            <div className={styles.sectionTitle}>{loc.label} jobs FAQ</div>
+            <div className={styles.sectionSub}>
+              Quick answers for salary, freshness, and remote-work search intent.
+            </div>
+          </div>
+        </header>
+        <div className={styles.faqGrid}>
+          {faqItems.map((item) => (
+            <article key={item.q} className={styles.faqCard}>
+              <h2 className={styles.faqQuestion}>{item.q}</h2>
+              <p className={styles.faqAnswer}>{item.a}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className={styles.citiesSection} aria-label="Top cities">

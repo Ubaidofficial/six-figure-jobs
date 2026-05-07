@@ -33,6 +33,7 @@ export type JobCardProps = {
   }
   onClick?: () => void
   className?: string
+  variant?: 'listing' | 'homepage' | 'grid'
 }
 
 function countryFlag(code?: string | null): string {
@@ -252,8 +253,10 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
   return null
 }
 
-export function JobCard({ job, onClick, className }: JobCardProps) {
+export function JobCard({ job, onClick, className, variant = 'listing' }: JobCardProps) {
   const router = useRouter()
+  const isHomepage = variant === 'homepage'
+  const isGrid = variant === 'grid'
   const companyName = String(job.companyRef?.name ?? (job as any)?.company ?? 'Company')
   const companyLogo = buildLogoUrl(
     job.companyRef?.logoUrl ?? (job as any)?.companyLogo ?? null,
@@ -292,7 +295,7 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
     ...parseJsonArray((job as any)?.skillsJson),
   ])
 
-  const shownSkills = skills.slice(0, 10)
+  const shownSkills = skills.slice(0, isHomepage ? 5 : isGrid ? 4 : 10)
   const extraSkills = Math.max(0, skills.length - shownSkills.length)
 
   if (
@@ -313,6 +316,12 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
   const postedLabel = formatRelativeTime(job.postedAt ?? job.updatedAt ?? job.createdAt ?? null)
   const jobHref = buildJobSlugHref(job as any)
 
+  // "NEW" badge: show for jobs posted within the last 3 days
+  const postedDate = job.postedAt ?? job.createdAt ?? null
+  const isNew = postedDate
+    ? Date.now() - new Date(postedDate).getTime() < 3 * 24 * 60 * 60 * 1000
+    : false
+
   const navigateToJob = () => {
     onClick?.()
     router.push(jobHref)
@@ -320,7 +329,7 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
 
   return (
     <article
-      className={cn(styles.card, className)}
+      className={cn(styles.card, isHomepage && styles.homepageCard, isGrid && styles.gridCard, className)}
       onClick={(e) => {
         const el = e.target as HTMLElement | null
         if (el?.closest('a')) return
@@ -336,6 +345,12 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
       tabIndex={0}
       aria-label={`View job: ${job.title} at ${companyName}`}
     >
+      {isNew ? (
+        <div className={styles.newBadge} aria-label="New posting">
+          NEW
+        </div>
+      ) : null}
+
       <header className={styles.header}>
         <div className={styles.logoWrap} aria-hidden="true">
           {companyLogo ? (
@@ -346,11 +361,22 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
               height={48}
               className={styles.logoImg}
               loading="lazy"
-              unoptimized={companyLogo.includes('clearbit.com')}
+              unoptimized
+              onError={(e) => {
+                const el = e.currentTarget as HTMLImageElement
+                el.style.display = 'none'
+                const fallback = el.parentElement?.querySelector('[data-fallback]') as HTMLElement | null
+                if (fallback) fallback.style.display = 'flex'
+              }}
             />
-          ) : (
-            <span className={styles.logoFallback}>{initials || 'C'}</span>
-          )}
+          ) : null}
+          <span
+            className={styles.logoFallback}
+            data-fallback=""
+            style={companyLogo ? { display: 'none' } : undefined}
+          >
+            {initials || 'C'}
+          </span>
         </div>
 
         <div className={styles.company}>
@@ -379,21 +405,21 @@ export function JobCard({ job, onClick, className }: JobCardProps) {
             </Link>
           </h3>
 
-          <div className={styles.salaryStack}>
-            <div className={styles.salaryPill} aria-label={hasSalary ? `Salary ${salary}` : 'High salary role'}>
-              <span className={styles.salaryIcon} aria-hidden="true">
-                💰
-              </span>
-              <span className={styles.salaryValue}>{salary ?? 'High salary role'}</span>
-            </div>
+          {hasSalary ? (
+            <div className={styles.salaryStack}>
+              <div className={styles.salaryPill} aria-label={`Salary ${salary}`}>
+                <span className={styles.salaryIcon} aria-hidden="true">
+                  💰
+                </span>
+                <span className={styles.salaryValue}>{salary}</span>
+              </div>
 
-            {hasSalary ? (
               <span className={styles.verified} aria-label="Salary verified">
                 <BadgeCheck className={styles.verifiedIcon} aria-hidden="true" />
                 Verified salary
               </span>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
 
         <div className={styles.metaRow} aria-label="Job metadata">

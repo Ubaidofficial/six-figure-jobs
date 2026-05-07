@@ -31,6 +31,9 @@ Publish high-intent, indexable pages at scale while preventing:
 5. Daily scrape post-run production validator
 - [`/.github/workflows/daily-scrape.yml`](../.github/workflows/daily-scrape.yml) now runs a production `seo:validate` step with retries to catch sitemap/robots mismatches early.
 
+6. Stale job detail retirement
+- Canonical `/job/*` URLs now 404 once a record falls outside the freshness window instead of lingering as `200 noindex`.
+
 ## Publishing Workflow (Required)
 
 1. Generate candidate pages in bounded batches

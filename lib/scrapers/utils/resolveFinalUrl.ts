@@ -121,7 +121,17 @@ export async function resolveFinalUrl(
     if (startHost === 'remoteok.com') {
       const decoded = decodeRemoteOkRedirectHtml(html)
       if (decoded) {
-        return looksLikeAbsoluteHttpUrl(decoded) ? decoded : new URL(decoded, current).toString()
+        const decodedUrl = looksLikeAbsoluteHttpUrl(decoded)
+          ? decoded
+          : new URL(decoded, current).toString()
+        const decodedHost = normalizeHost(new URL(decodedUrl).hostname)
+
+        if (decodedHost === startHost && decodedUrl !== current) {
+          current = decodedUrl
+          continue
+        }
+
+        return decodedUrl
       }
     }
 

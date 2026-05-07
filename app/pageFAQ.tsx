@@ -5,7 +5,7 @@ export function HomeFAQ() {
   const items = [
     {
       q: 'How do you ensure roles are $100k+?',
-      a: 'We ingest ATS feeds and vetted boards, parse salary data, and apply local currency thresholds ($100k USD or equivalent) before publishing.',
+      a: 'We ingest ATS feeds and vetted boards, parse salary data, and prioritize roles with validated high-salary signals, published compensation, seniority fit, and direct apply links before publishing.',
     },
     {
       q: 'Do you include remote and hybrid jobs?',
@@ -21,7 +21,7 @@ export function HomeFAQ() {
     },
     {
       q: 'How do I find $100k jobs near me?',
-      a: 'Browse by country or city pages, or search by location on the homepage. We also show local-currency equivalents (CHF, GBP, EUR, CAD, AUD) to compare offers in your market.',
+      a: 'Browse by country or city pages, or search by location on the homepage. Country pages include currency-specific salary context, verified salary ranges where available, and fresh direct-apply roles.',
     },
   ]
 

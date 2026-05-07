@@ -4,7 +4,11 @@ import type { ATSResult, AtsProvider } from './types'
 import { scrapeGreenhouseResult } from './greenhouse'
 import { scrapeLeverResult } from './lever'
 import { scrapeAshbyResult } from './ashby'
-import { scrapeWorkday } from './workday'
+import { scrapeSmartRecruitersResult } from './smartrecruiters'
+import { scrapeRecruiteeResult } from './recruitee'
+import { scrapeWorkdayResult } from './workday'
+import { scrapeWorkableResult } from './workable'
+import { scrapeBambooHRResult } from './bamboohr'
 
 export type { ATSResult } from './types'
 
@@ -43,14 +47,20 @@ export async function scrapeCompanyAtsJobs(
         // HTML-based scraper (no more careers.json)
         return await scrapeAshbyResult(atsUrl)
 
+      case 'smartrecruiters':
+        return await scrapeSmartRecruitersResult(atsUrl)
+
+      case 'recruitee':
+        return await scrapeRecruiteeResult(atsUrl)
+
       case 'workday':
-        // Currently a stub / safe implementation
-        return {
-          success: true,
-          source: 'workday',
-          atsUrl,
-          jobs: await scrapeWorkday(atsUrl),
-        }
+        return await scrapeWorkdayResult(atsUrl)
+
+      case 'workable':
+        return await scrapeWorkableResult(atsUrl)
+
+      case 'bamboohr':
+        return await scrapeBambooHRResult(atsUrl)
 
       default:
         return {

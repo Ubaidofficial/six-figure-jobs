@@ -149,7 +149,7 @@ export function SlicePage({ slice, data }: Props) {
         name: `Are these ${salaryBand} ${roleLabel || 'tech'} jobs verified?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Yes. We ingest directly from company ATS feeds and trusted boards, then filter to ${baseBandLabel} (or local equivalent) and dedupe.`,
+          text: `Yes. We ingest directly from company ATS feeds and trusted boards, then filter for validated ${baseBandLabel} salary signals and dedupe.`,
         },
       },
       {
@@ -498,7 +498,7 @@ function buildFaqs(
   return [
     {
       q: `Are these ${roleText} jobs${regionText} really ${salaryBand}?`,
-      a: `Yes. We include roles with published or inferred compensation of ${salaryBand} (or local equivalent) from ATS feeds and vetted boards, and demote lowball ranges.`,
+      a: `Yes. We include roles with validated ${salaryBand} compensation signals from ATS feeds and vetted boards, and demote lowball ranges.`,
     },
     {
       q: `Do you include remote or hybrid ${roleText} roles${regionText}?`,

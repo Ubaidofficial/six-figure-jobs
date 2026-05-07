@@ -7,11 +7,13 @@ import {
   MIN_COUNTRY_INDEXABLE_JOBS,
   MIN_REMOTE_ROLE_INDEXABLE_JOBS,
   MIN_ROLE_FILTER_INDEXABLE_JOBS,
+  MIN_SALARY_TIER_INDEXABLE_JOBS,
   isCityPageIndexable,
   isCompanyPageIndexable,
   isCountryPageIndexable,
   isRemoteRolePageIndexable,
   isRoleFilterPageIndexable,
+  isSalaryTierPageIndexable,
 } from '../../lib/seo/indexabilityGates'
 
 function readRepoFile(relativePath: string): string {
@@ -69,5 +71,17 @@ describe('indexability gates alignment', () => {
 
     const roleFilterPage = readRepoFile('app/jobs/[role]/[filter]/page.tsx')
     expect(roleFilterPage).toContain('isRoleFilterPageIndexable')
+  })
+
+  it('shares salary tier gating between page robots and salary sitemap output', () => {
+    expect(MIN_SALARY_TIER_INDEXABLE_JOBS).toBe(1)
+    expect(isSalaryTierPageIndexable(0)).toBe(false)
+    expect(isSalaryTierPageIndexable(1)).toBe(true)
+
+    const salaryTierPage = readRepoFile('app/jobs/100k-plus/page.tsx')
+    const salarySitemapRoute = readRepoFile('app/sitemap-salary.xml/route.ts')
+
+    expect(salaryTierPage).toContain('isSalaryTierPageIndexable')
+    expect(salarySitemapRoute).toContain('isSalaryTierPageIndexable')
   })
 })

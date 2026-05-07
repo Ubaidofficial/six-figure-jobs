@@ -199,6 +199,37 @@
   max-width: 90ch;
 }
 
+.faq {
+  margin-top: var(--space-32);
+}
+
+.faqGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-16);
+}
+
+.faqCard {
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 20, 0.92);
+  padding: var(--space-20);
+  box-shadow: var(--shadow-sm);
+}
+
+.faqQuestion {
+  color: var(--color-text-0);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.faqAnswer {
+  margin-top: 8px;
+  color: var(--color-text-1);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-relaxed);
+}
+
 .citiesSection {
   margin-top: var(--space-32);
 }
@@ -411,6 +442,10 @@
 @media (max-width: 1023px) {
   .heroStats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .faqGrid {
+    grid-template-columns: 1fr;
   }
 }
 

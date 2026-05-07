@@ -11,6 +11,7 @@ import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperSt
 import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
 import { extractApplyDestinationFromHtml } from './utils/extractApplyLink'
 import { resolveFinalUrl } from './utils/resolveFinalUrl'
+import { resolveCompanyApplyFallback } from './utils/resolveCompanyApplyFallback'
 import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD_NAME = 'remoteok'
@@ -81,6 +82,15 @@ export default async function scrapeRemoteOK() {
 	        if (applyUrl && applyUrl.toLowerCase().includes('remoteok.com')) {
 	          discoveredApplyUrl = await discoverRemoteOKApplyUrl(boardUrl, String(id))
 	          if (discoveredApplyUrl) applyUrl = discoveredApplyUrl
+	        }
+
+	        if (!applyUrl || !isExternalToHost(applyUrl, 'remoteok.com')) {
+	          const fallbackApplyUrl = await resolveCompanyApplyFallback({
+	            rawCompanyName,
+	            boardHost: 'remoteok.com',
+	            currentApplyUrl: applyUrl,
+	          })
+	          if (fallbackApplyUrl) applyUrl = fallbackApplyUrl
 	        }
 
 	        const atsType = detectATS(applyUrl)

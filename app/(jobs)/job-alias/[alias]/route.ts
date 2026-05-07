@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
+import { getJobDetailAvailability } from '@/lib/jobs/detailAvailability'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildJobSlug, parseJobSlugParam } from '@/lib/jobs/jobSlug'
 import { getSiteUrl } from '@/lib/seo/site'
@@ -41,7 +42,10 @@ export async function GET(request: Request, ctx: { params: Promise<{ alias: stri
 
   const job = await findJobByIncomingSlug(alias)
   if (!job) return new NextResponse('Not found', { status: 404 })
-  if (job.isExpired) return new NextResponse('Gone', { status: 410 })
+
+  const availability = getJobDetailAvailability(job)
+  if (availability === 'expired') return new NextResponse('Gone', { status: 410 })
+  if (availability === 'stale') return new NextResponse('Not found', { status: 404 })
 
   const canonicalSlug = buildJobSlug(job)
   return buildRedirectResponse(request, canonicalSlug)

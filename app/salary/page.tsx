@@ -1,4 +1,5 @@
 // app/salary/page.tsx
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
 const GUIDES: Array<{ slug: string; label: string }> = [
@@ -24,10 +25,13 @@ const COUNTRIES: Array<{ code: string; label: string }> = [
   { code: 'sg', label: 'Singapore' },
 ]
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Salary guides for $100k+ tech roles | Six Figure Jobs',
   description:
     'Browse salary guides for top tech roles using live $100k+ job data. Filter by country to see local ranges for engineering, product, data, design, and more.',
+  alternates: {
+    canonical: 'https://www.6figjobs.com/salary',
+  },
 }
 
 export default function SalaryIndexPage() {

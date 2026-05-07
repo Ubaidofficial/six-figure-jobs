@@ -29,7 +29,14 @@ import { getShortStableIdForJobId } from '../jobs/jobSlug'
 
 import { getSourcePriority, isAtsSource, isBoardSource } from './sourcePriority'
 import { makeJobDedupeKey, normalizeUrl } from './dedupeHelpers'
-import type { ScrapedJobInput, IngestResult, IngestStats, ResolvedCompany } from './types'
+import type {
+  ScrapedJobInput,
+  IngestResult,
+  IngestStats,
+  ResolvedCompany,
+  IngestExistingJob,
+  IngestExistingJobCache,
+} from './types'
 import { isValidScrapedJob, getValidationErrors } from './types'
 
 function safeUrlsMatch(urlA: string | null | undefined, urlB: string | null | undefined): boolean {
@@ -140,89 +147,30 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
     const dedupeKey = makeJobDedupeKey(company.id, input.title, input.locationText)
     const incomingPriority = getSourcePriority(input.source)
 
-    // 4. Look for existing job by dedupe key (active jobs only)
-    const existingByKey = await prisma.job.findFirst({
-      where: {
-        companyId: company.id,
-        dedupeKey: dedupeKey,
-        isExpired: false,
-      },
-    })
-
-    // 5. Also look for existing job by URL (fallback matching).
-    // IMPORTANT: we normalize URLs to avoid duplicates caused by trailing slashes / query params / minor formatting differences.
-    const existingByUrl =
-      input.url || input.applyUrl
-        ? (
-            await prisma.job.findMany({
-              where: {
-                companyId: company.id,
-                source: input.source,
-                title: { equals: input.title, mode: 'insensitive' },
-                isExpired: false,
-              },
-              select: {
-                id: true,
-                source: true,
-                url: true,
-                applyUrl: true,
-                sourcePriority: true,
-                dedupeKey: true,
-              },
-            })
-          ).find(
-            (j) =>
-              safeUrlsMatch(j.url, input.url) ||
-              safeUrlsMatch(j.applyUrl, input.applyUrl) ||
-              safeUrlsMatch(j.url, input.applyUrl) ||
-              safeUrlsMatch(j.applyUrl, input.url),
-          ) ?? null
-        : null
-
-    // 5b. Guardrail: if companyId-based matching fails, fall back to title + company + source.
-    // This prevents duplicates when company resolution or URL formatting differs across runs.
-    const existingByTitleCompanySource =
-      !existingByKey && !existingByUrl
-        ? (
-            await prisma.job.findMany({
-              where: {
-                company: { equals: company.name, mode: 'insensitive' },
-                source: input.source,
-                title: { equals: input.title, mode: 'insensitive' },
-                isExpired: false,
-              },
-              select: {
-                id: true,
-                source: true,
-                url: true,
-                applyUrl: true,
-                sourcePriority: true,
-                dedupeKey: true,
-              },
-            })
-          ).find(
-            (j) =>
-              safeUrlsMatch(j.url, input.url) ||
-              safeUrlsMatch(j.applyUrl, input.applyUrl) ||
-              safeUrlsMatch(j.url, input.applyUrl) ||
-              safeUrlsMatch(j.applyUrl, input.url),
-          ) ?? null
-        : null
-
-    // 5c. Stable-id fallback: if we still can't match, use the deterministic job id (source + externalId).
-    // This prevents "missed match -> create -> P2002" churn when titles or company resolution changes slightly.
     const stableJobId = buildJobId(input.source, input.externalId)
-    const existingById = await prisma.job.findUnique({
-      where: { id: stableJobId },
-    })
-
-    // Use whichever match we found (prefer dedupe key match)
-    const existing = existingByKey || existingByUrl || existingByTitleCompanySource || existingById
+    const existing = await findExistingJob(input, company, dedupeKey, stableJobId)
+    rememberExistingJob(input.existingJobCache, existing)
 
     // 6. Decision logic
     if (!existing) {
       // No existing job - create new one
-      return await createNewJob(company, input, dedupeKey, incomingPriority)
+      const result = await createNewJob(company, input, dedupeKey, incomingPriority)
+      if (result.status === 'created' && result.jobId) {
+        rememberExistingJob(input.existingJobCache, {
+          id: result.jobId,
+          title: input.title,
+          company: company.name,
+          companyId: company.id,
+          companyLogo: input.companyLogoUrl ?? null,
+          source: input.source,
+          url: input.url ?? null,
+          applyUrl: input.applyUrl ?? input.url ?? null,
+          sourcePriority: incomingPriority,
+          dedupeKey,
+          isExpired: false,
+        })
+      }
+      return result
     }
 
     const existingPriority = existing.sourcePriority ?? 20
@@ -266,6 +214,10 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
 // =============================================================================
 
 async function resolveCompany(input: ScrapedJobInput): Promise<ResolvedCompany | null> {
+  if (input.resolvedCompany) {
+    return input.resolvedCompany
+  }
+
   const company = await upsertCompanyFromBoard({
     rawName: input.rawCompanyName,
     source: input.source,
@@ -635,6 +587,194 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
 // =============================================================================
 // Helper Functions
 // =============================================================================
+
+function existingJobSelect() {
+  return {
+    id: true,
+    title: true,
+    company: true,
+    companyId: true,
+    companyLogo: true,
+    source: true,
+    url: true,
+    applyUrl: true,
+    sourcePriority: true,
+    dedupeKey: true,
+    isExpired: true,
+    employmentType: true,
+    type: true,
+    descriptionHtml: true,
+    salaryRaw: true,
+    salaryMin: true,
+    salaryMax: true,
+    salaryCurrency: true,
+    salaryPeriod: true,
+    minAnnual: true,
+    maxAnnual: true,
+    currency: true,
+    isHighSalary: true,
+    salaryValidated: true,
+    salaryConfidence: true,
+    salarySource: true,
+    salaryParseReason: true,
+    salaryNormalizedAt: true,
+    salaryRejectedAt: true,
+    salaryRejectedReason: true,
+    needsReview: true,
+    locationRaw: true,
+    city: true,
+    citySlug: true,
+    countryCode: true,
+    remote: true,
+    remoteRegion: true,
+    remoteMode: true,
+    postedAt: true,
+  } as const
+}
+
+async function findExistingJob(
+  input: ScrapedJobInput,
+  company: ResolvedCompany,
+  dedupeKey: string,
+  stableJobId: string,
+): Promise<IngestExistingJob | null> {
+  const cache = input.existingJobCache
+  if (cache) {
+    const existingByKey = cache.byDedupeKey.get(dedupeKey)
+    if (existingByKey) return existingByKey
+
+    const titleSourceCandidates = [
+      ...(cache.byTitleCompanySource.get(
+        titleCompanySourceKey(company.name, input.source, input.title),
+      ) ?? []),
+      ...(cache.byTitleCompanySource.get(titleCompanySourceKey(null, input.source, input.title)) ??
+        []),
+    ]
+    const existingByUrl = findUrlMatch(titleSourceCandidates, input)
+    if (existingByUrl) return existingByUrl
+
+    return cache.byId.get(stableJobId) ?? null
+  }
+
+  // Look for existing job by dedupe key (active jobs only).
+  const existingByKey = await prisma.job.findFirst({
+    where: {
+      companyId: company.id,
+      dedupeKey,
+      isExpired: false,
+    },
+    select: existingJobSelect(),
+  })
+
+  // URL fallback guards against duplicate rows caused by title/location/key drift.
+  const existingByUrl =
+    input.url || input.applyUrl
+      ? findUrlMatch(
+          await prisma.job.findMany({
+            where: {
+              companyId: company.id,
+              source: input.source,
+              title: { equals: input.title, mode: 'insensitive' },
+              isExpired: false,
+            },
+            select: existingJobSelect(),
+          }),
+          input,
+        )
+      : null
+
+  // Company-name fallback covers older rows where company resolution changed across runs.
+  const existingByTitleCompanySource =
+    !existingByKey && !existingByUrl && (input.url || input.applyUrl)
+      ? findUrlMatch(
+          await prisma.job.findMany({
+            where: {
+              company: { equals: company.name, mode: 'insensitive' },
+              source: input.source,
+              title: { equals: input.title, mode: 'insensitive' },
+              isExpired: false,
+            },
+            select: existingJobSelect(),
+          }),
+          input,
+        )
+      : null
+
+  // Stable-id fallback prevents create/upsert churn when metadata changes slightly.
+  const existingById = await prisma.job.findUnique({
+    where: { id: stableJobId },
+    select: existingJobSelect(),
+  })
+
+  return existingByKey || existingByUrl || existingByTitleCompanySource || existingById
+}
+
+function titleCompanySourceKey(
+  companyName: string | null | undefined,
+  source: string | null | undefined,
+  title: string | null | undefined,
+): string {
+  return [
+    String(companyName ?? '').trim().toLowerCase(),
+    String(source ?? '').trim().toLowerCase(),
+    String(title ?? '').trim().toLowerCase(),
+  ].join('::')
+}
+
+function findUrlMatch(
+  jobs: readonly IngestExistingJob[],
+  input: ScrapedJobInput,
+): IngestExistingJob | null {
+  if (!input.url && !input.applyUrl) return null
+
+  return (
+    jobs.find(
+      (job) =>
+        safeUrlsMatch(job.url, input.url) ||
+        safeUrlsMatch(job.applyUrl, input.applyUrl) ||
+        safeUrlsMatch(job.url, input.applyUrl) ||
+        safeUrlsMatch(job.applyUrl, input.url),
+    ) ?? null
+  )
+}
+
+function rememberExistingJob(
+  cache: IngestExistingJobCache | null | undefined,
+  job: IngestExistingJob | null | undefined,
+) {
+  if (!cache || !job) return
+
+  cache.byId.set(job.id, job)
+  if (job.isExpired) return
+
+  if (job.dedupeKey) {
+    cache.byDedupeKey.set(job.dedupeKey, job)
+  }
+
+  if (job.source && job.title) {
+    const titleKey = titleCompanySourceKey(job.company, job.source, job.title)
+    const jobs = cache.byTitleCompanySource.get(titleKey) ?? []
+    const existingIndex = jobs.findIndex((candidate) => candidate.id === job.id)
+    if (existingIndex >= 0) {
+      jobs[existingIndex] = job
+    } else {
+      jobs.push(job)
+    }
+    cache.byTitleCompanySource.set(titleKey, jobs)
+
+    const sameCompanyTitleKey = titleCompanySourceKey(null, job.source, job.title)
+    if (sameCompanyTitleKey !== titleKey) {
+      const sameCompanyJobs = cache.byTitleCompanySource.get(sameCompanyTitleKey) ?? []
+      const sameCompanyIndex = sameCompanyJobs.findIndex((candidate) => candidate.id === job.id)
+      if (sameCompanyIndex >= 0) {
+        sameCompanyJobs[sameCompanyIndex] = job
+      } else {
+        sameCompanyJobs.push(job)
+      }
+      cache.byTitleCompanySource.set(sameCompanyTitleKey, sameCompanyJobs)
+    }
+  }
+}
 
 function buildJobId(source: string, externalId: string): string {
   const safeExternalId = externalId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 200)

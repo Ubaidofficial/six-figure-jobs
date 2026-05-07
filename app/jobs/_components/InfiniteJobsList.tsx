@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import JobCard from '../../components/JobCard'
+import { JobCard } from '@/components/jobs/JobCard'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import styles from '../JobsPage.module.css'
 
@@ -87,7 +87,7 @@ export function InfiniteJobsList({
     <>
       <div className={view === 'list' ? styles.list : styles.grid}>
         {jobs.map((job) => (
-          <JobCard key={job.id} job={job} />
+          <JobCard key={job.id} job={job} variant={view === 'grid' ? 'grid' : 'listing'} />
         ))}
       </div>
 
@@ -115,33 +115,27 @@ export function InfiniteJobsList({
 
 function SkeletonJobCard() {
   return (
-    <article className={`${styles.card} skeleton-shimmer`}>
-      <div className={styles.cardInner}>
-        <div className={styles.logoContainer}>
-          <div className={`${styles.logoBox} bg-slate-800/50`} />
-        </div>
+    <article className="rounded-xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm">
+      <div className="flex gap-4">
+        <div className="h-12 w-12 shrink-0 rounded-xl bg-slate-800/70" />
 
-        <div className={styles.content}>
-          <div className={styles.titleRow}>
-            <div className="h-5 w-3/4 rounded bg-slate-800/50" />
-            <div className="mt-2 h-4 w-1/2 rounded bg-slate-800/50" />
+        <div className="min-w-0 flex-1">
+          <div className="h-5 w-3/4 rounded bg-slate-800/70" />
+          <div className="mt-3 h-4 w-1/2 rounded bg-slate-800/60" />
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <div className="h-6 w-20 rounded-full bg-slate-800/60" />
+            <div className="h-6 w-24 rounded-full bg-slate-800/60" />
+            <div className="h-6 w-28 rounded-full bg-slate-800/60" />
           </div>
 
-          <div className={styles.metadata}>
-            <div className="h-6 w-16 rounded-full bg-slate-800/50" />
-            <div className="h-6 w-20 rounded-full bg-slate-800/50" />
-            <div className="h-6 w-24 rounded-full bg-slate-800/50" />
-          </div>
-
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 space-y-2">
             <div className="h-3 w-full rounded bg-slate-800/50" />
             <div className="h-3 w-5/6 rounded bg-slate-800/50" />
           </div>
         </div>
 
-        <div className={styles.actions}>
-          <div className="h-16 w-full rounded-lg bg-slate-800/50" />
-        </div>
+        <div className="hidden w-36 shrink-0 rounded-lg bg-slate-800/50 md:block" />
       </div>
     </article>
   )

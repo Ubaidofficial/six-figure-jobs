@@ -1,55 +1,68 @@
 import { prisma } from '../../lib/prisma'
 import { buildWhere } from '../../lib/jobs/queryJobs'
 import { buildSliceCanonicalPath } from '../../lib/seo/canonical'
+import { SALARY_TIERS, type SalaryTierId } from '../../lib/jobs/salaryTiers'
+import { isSalaryTierPageIndexable } from '../../lib/seo/indexabilityGates'
+import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
 
 const SITE_URL = getSiteUrl()
 
 export const dynamic = 'force-dynamic'
 
+type SalarySitemapUrl = {
+  url: string
+  lastModified: string
+}
+
 export async function GET() {
-  const tiers: Array<{ slug: string; min: number; max?: number | null }> = [
-    { slug: '100k-plus', min: 100_000, max: 199_999 },
-    { slug: '200k-plus', min: 200_000, max: 299_999 },
-    { slug: '300k-plus', min: 300_000, max: 399_999 },
-    { slug: '400k-plus', min: 400_000, max: null },
-  ]
+  try {
+    const urls = (
+      await Promise.all(
+        (Object.keys(SALARY_TIERS) as SalaryTierId[]).map(async (tierId) => {
+          const tier = SALARY_TIERS[tierId]
+          const path = buildSliceCanonicalPath({
+            minAnnual: tier.minAnnualUsd,
+          } as any)
 
-  const urls = await Promise.all(tiers.map(async (tier) => {
-    const path = buildSliceCanonicalPath({
-      minAnnual: tier.min,
-    } as any)
+          const where = buildWhere({
+            currency: 'USD',
+            minAnnual: tier.minAnnualUsd,
+            ...(tier.maxAnnualUsd ? { maxAnnual: tier.maxAnnualUsd } : {}),
+          } as any)
 
-    const where = buildWhere({
-      currency: 'USD',
-      minAnnual: tier.min,
-      ...(tier.max ? { maxAnnual: tier.max } : {}),
-    } as any)
+          const [total, agg] = await Promise.all([
+            prisma.job.count({ where }),
+            prisma.job.aggregate({
+              where,
+              _max: { updatedAt: true },
+            }),
+          ])
 
-    const agg = await prisma.job.aggregate({
-      where,
-      _max: { updatedAt: true },
-    })
+          if (!isSalaryTierPageIndexable(total)) {
+            return null
+          }
 
-    return {
-      url: `${SITE_URL}${path}`,
-      lastModified: (agg._max.updatedAt ?? new Date()).toISOString(),
-      changeFrequency: 'daily',
-      priority: 0.9,
-    }
-  }))
+          return {
+            url: `${SITE_URL}${path}`,
+            lastModified: (agg._max.updatedAt ?? new Date()).toISOString(),
+          } satisfies SalarySitemapUrl
+        }),
+      )
+    ).filter((entry): entry is SalarySitemapUrl => entry != null)
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(u => `  <url>
     <loc>${u.url}</loc>
     <lastmod>${u.lastModified}</lastmod>
-    <changefreq>${u.changeFrequency}</changefreq>
-    <priority>${u.priority}</priority>
   </url>`).join('\n')}
 </urlset>`
 
-  return new Response(xml, {
-    headers: { 'Content-Type': 'application/xml' },
-  })
+    return new Response(xml, {
+      headers: { 'Content-Type': 'application/xml' },
+    })
+  } catch (error) {
+    return buildFallbackUrlsetResponse('sitemap-salary', [], error)
+  }
 }

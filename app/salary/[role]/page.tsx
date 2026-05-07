@@ -32,6 +32,36 @@ const BAND_MAP: Record<string, number> = {
   '400k-plus': 400_000,
 }
 
+// BLS O*NET Standard Occupational Classification codes.
+// Used in the Occupation JSON-LD schema to connect salary data to Google's
+// knowledge base and improve eligibility for salary rich results.
+const ONET_CODES: Record<string, string> = {
+  'software-engineer':        '15-1252.00',
+  'backend-engineer':         '15-1252.00',
+  'frontend-engineer':        '15-1254.00',
+  'full-stack-engineer':      '15-1254.00',
+  'mobile-engineer':          '15-1252.00',
+  'ios-engineer':             '15-1252.00',
+  'android-engineer':         '15-1252.00',
+  'data-engineer':            '15-2041.00',
+  'data-scientist':           '15-2051.00',
+  'machine-learning-engineer':'15-2051.00',
+  'ai-engineer':              '15-2051.00',
+  'devops-engineer':          '15-1244.00',
+  'site-reliability-engineer':'15-1244.00',
+  'platform-engineer':        '15-1244.00',
+  'security-engineer':        '15-1212.00',
+  'engineering-manager':      '11-3021.00',
+  'product-manager':          '11-3021.00',
+  'product-designer':         '27-1021.00',
+  'ux-designer':              '27-1021.00',
+  'data-analyst':             '15-2041.00',
+  'account-executive':        '41-3011.00',
+  'sales-development-representative': '41-3011.00',
+  'customer-success':         '13-1161.00',
+  'solutions-engineer':       '15-1299.08',
+}
+
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -167,7 +197,10 @@ export async function generateMetadata({
 
   const allowIndex = raw.length >= 3
   const title = `${salaryBand} ${roleName} salary guide | Six Figure Jobs`
-  const canonical = `${SITE_URL}/salary/${roleSlug}${bandSlug ? `?band=${bandSlug}` : ''}`
+  // Canonical always points to the base salary page — band filter is a view
+  // variant, not a separate indexable page. Query params in canonicals confuse
+  // Google and fragment the PageRank across variants.
+  const canonical = `${SITE_URL}/salary/${roleSlug}`
 
   return {
     title,
@@ -359,11 +392,13 @@ export default async function SalaryRolePage(props: PageProps) {
     ],
   }
 
+  const onetCode = ONET_CODES[roleSlug]
   const occupationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Occupation',
-    name: `${roleName} salary`,
+    name: roleName,
     description: `${bandLabel} ${roleName} salary data from live $100k+ roles.`,
+    ...(onetCode ? { occupationalCategory: onetCode } : {}),
     estimatedSalary: {
       '@type': 'MonetaryAmountDistribution',
       currency: 'USD',

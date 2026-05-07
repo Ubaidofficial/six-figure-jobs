@@ -1,14 +1,14 @@
 // lib/constants/category-links.ts
 export const CATEGORY_LINKS = {
   roles: [
-    { name: 'Software Engineer', href: '/jobs/software-engineer', count: 0 },
-    { name: 'Product Manager', href: '/jobs/product-manager', count: 0 },
-    { name: 'Data Scientist', href: '/jobs/data-scientist', count: 0 },
-    { name: 'DevOps Engineer', href: '/jobs/devops-engineer', count: 0 },
-    { name: 'Machine Learning Engineer', href: '/jobs/machine-learning-engineer', count: 0 },
-    { name: 'Frontend Engineer', href: '/jobs/frontend-engineer', count: 0 },
-    { name: 'Backend Engineer', href: '/jobs/backend-engineer', count: 0 },
-    { name: 'Full Stack Engineer', href: '/jobs/full-stack-engineer', count: 0 },
+    { name: 'Software Engineer', href: '/jobs/software-engineer', count: 0, emoji: '💻' },
+    { name: 'Product Manager', href: '/jobs/product-manager', count: 0, emoji: '🧭' },
+    { name: 'Data Scientist', href: '/jobs/data-scientist', count: 0, emoji: '📊' },
+    { name: 'DevOps Engineer', href: '/jobs/devops-engineer', count: 0, emoji: '⚙️' },
+    { name: 'Machine Learning Engineer', href: '/jobs/machine-learning-engineer', count: 0, emoji: '🤖' },
+    { name: 'Frontend Engineer', href: '/jobs/frontend-engineer', count: 0, emoji: '🎨' },
+    { name: 'Backend Engineer', href: '/jobs/backend-engineer', count: 0, emoji: '🖥️' },
+    { name: 'Full Stack Engineer', href: '/jobs/full-stack-engineer', count: 0, emoji: '🔧' },
   ],
   locations: [
     { name: 'Remote', href: '/remote', count: 0 },

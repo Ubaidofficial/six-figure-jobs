@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: 'About Six Figure Jobs',
   description:
     'Six Figure Jobs is a curated job board for verified $100k+ roles across remote, hybrid, and on-site opportunities worldwide.',
+  alternates: {
+    canonical: 'https://www.6figjobs.com/about',
+  },
 }
 
 export default function AboutPage() {
@@ -16,9 +19,9 @@ export default function AboutPage() {
 
       <p className="mt-5 text-base leading-7 text-slate-300">
         Six Figure Jobs helps job seekers find high-paying roles faster.
-        We focus on positions that typically pay <strong>$100k+</strong> (or the
-        local-market equivalent), across <strong>remote</strong>,{' '}
-        <strong>hybrid</strong>, and <strong>on-site</strong> work.
+        We focus on verified <strong>$100k+</strong> roles with strong salary
+        signals across <strong>remote</strong>, <strong>hybrid</strong>, and{' '}
+        <strong>on-site</strong> work.
       </p>
 
       <h2 className="mt-10 text-xl font-semibold text-slate-50">
@@ -49,17 +52,6 @@ export default function AboutPage() {
       <p className="mt-4 text-slate-300">
         Start here: <Link className="text-emerald-300 underline" href="/jobs">browse $100k+ jobs</Link>{' '}
         or explore <Link className="text-emerald-300 underline" href="/remote">remote roles</Link>.
-      </p>
-
-      <h2 className="mt-10 text-xl font-semibold text-slate-50">
-        For employers
-      </h2>
-      <p className="mt-4 text-slate-300">
-        Hiring for a high-paying role? Post directly here:{' '}
-        <Link className="text-emerald-300 underline" href="/post-a-job">
-          Post a job
-        </Link>
-        .
       </p>
 
       <h2 className="mt-10 text-xl font-semibold text-slate-50">Contact</h2>

@@ -26,8 +26,6 @@ describe('sitemap-city route', () => {
       {
         loc: 'https://www.6figjobs.com/jobs/city/new-york',
         lastmod: '2026-02-14T00:00:00.000Z',
-        changefreq: 'daily',
-        priority: 0.8,
       },
     ])
 
@@ -52,4 +50,3 @@ describe('sitemap-city route', () => {
     expect(xml).toContain('fallback_used=1')
   })
 })
-

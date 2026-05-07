@@ -28,9 +28,9 @@ const FEATURES = [
     ),
   },
   {
-    title: 'PPP-Adjusted Worldwide',
+    title: 'Global Salary Screening',
     description:
-      'Fair thresholds for every country. £80k in UK, €90k in Germany, $150k in Australia.',
+      'Country-aware salary screens for premium roles across the US, UK, Europe, Canada, Australia, and more.',
     Icon: Globe,
     visual: (
       <div className={styles.currency} aria-hidden="true">
@@ -84,4 +84,3 @@ export function WhySixFigureJobs() {
     </section>
   )
 }
-

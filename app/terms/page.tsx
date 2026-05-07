@@ -4,6 +4,9 @@ export const metadata: Metadata = {
   title: 'Terms of Service',
   description:
     'Terms of Service for Six Figure Jobs. Rules for using the site, disclaimers, and limitations of liability.',
+  alternates: {
+    canonical: 'https://www.6figjobs.com/terms',
+  },
 }
 
 export default function TermsPage() {

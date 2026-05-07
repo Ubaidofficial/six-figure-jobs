@@ -380,7 +380,7 @@ export default async function RemoteRoleCityPage({
         name: `Are these ${prettyRole(roleSlug)} jobs really $100k+?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. We only include remote roles with published or inferred $100k+ compensation (or local equivalent) from ATS feeds and trusted boards.',
+          text: 'Yes. We only include remote roles with validated high-salary compensation signals from ATS feeds and trusted boards.',
         },
       },
       {

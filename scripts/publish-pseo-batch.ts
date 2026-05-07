@@ -349,7 +349,7 @@ async function getCandidatePages(config: PhaseConfig): Promise<PageCandidate[]> 
         where: {
           roleSlug: role,
           isExpired: false,
-          isHighSalaryLocal: true,
+          OR: [{ isHighSalary: true }, { isHundredKLocal: true }],
         },
       })
 

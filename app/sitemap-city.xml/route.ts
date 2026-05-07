@@ -24,8 +24,6 @@ ${urls
     (u) => `  <url>
     <loc>${escapeXml(u.loc)}</loc>
     <lastmod>${escapeXml(u.lastmod)}</lastmod>
-    <changefreq>${escapeXml(u.changefreq)}</changefreq>
-    <priority>${escapeXml(String(u.priority))}</priority>
   </url>`,
   )
   .join('\n')}

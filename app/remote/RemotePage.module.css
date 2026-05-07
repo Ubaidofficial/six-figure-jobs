@@ -3,6 +3,26 @@
   color: var(--color-text-0);
 }
 
+.breadcrumb {
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: var(--space-20) var(--space-16) 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-2);
+}
+
+.breadcrumb a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  color: var(--color-text-0);
+}
+
 .section {
   margin: 0 auto;
   max-width: 1100px;
@@ -37,6 +57,110 @@
   display: grid;
   gap: var(--space-16);
   grid-template-columns: 1fr;
+}
+
+.signalGrid {
+  margin-top: var(--space-24);
+  display: grid;
+  gap: var(--space-16);
+  grid-template-columns: 1fr;
+}
+
+.signalCard {
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(132, 204, 22, 0.08), rgba(20, 20, 20, 0.92)),
+    rgba(20, 20, 20, 0.92);
+  padding: var(--space-20);
+  box-shadow: var(--shadow-sm);
+}
+
+.signalValue {
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-0);
+  letter-spacing: -0.02em;
+}
+
+.signalLabel {
+  margin-top: 8px;
+  font-size: var(--text-sm);
+  color: var(--color-text-1);
+  line-height: var(--line-height-relaxed);
+}
+
+.jobGrid {
+  margin-top: var(--space-24);
+  display: grid;
+  gap: var(--space-16);
+  grid-template-columns: 1fr;
+}
+
+.jobCard {
+  display: block;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 20, 0.92);
+  padding: var(--space-20);
+  color: var(--color-text-0);
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.jobCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(25, 25, 25, 0.96);
+  box-shadow: var(--shadow-md-glow);
+}
+
+.jobTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.jobCompany {
+  color: var(--color-text-1);
+  font-weight: var(--font-weight-semibold);
+}
+
+.jobAge {
+  color: var(--color-text-2);
+  white-space: nowrap;
+}
+
+.jobTitle {
+  margin-top: 10px;
+  font-size: var(--text-lg);
+  line-height: 1.3;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-0);
+}
+
+.jobMeta {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.jobMeta span {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  color: var(--color-text-1);
 }
 
 .roleCard {
@@ -105,6 +229,73 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.twoColumnGrid {
+  margin-top: var(--space-24);
+  display: grid;
+  gap: var(--space-16);
+  grid-template-columns: 1fr;
+}
+
+.panel {
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 20, 0.88);
+  padding: var(--space-24);
+  box-shadow: var(--shadow-sm);
+}
+
+.panelTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-0);
+}
+
+.companyGrid,
+.countryList {
+  margin-top: var(--space-16);
+  display: grid;
+  gap: 12px;
+}
+
+.companyCard,
+.countryCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 12, 12, 0.5);
+  padding: 14px 16px;
+  color: var(--color-text-0);
+  text-decoration: none;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.companyCard:hover,
+.countryCard:hover {
+  border-color: rgba(132, 204, 22, 0.35);
+  background: rgba(18, 18, 18, 0.72);
+  transform: translateY(-1px);
+}
+
+.companyName,
+.countryName {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-0);
+}
+
+.companyCount,
+.countryCount {
+  font-size: 12px;
+  color: var(--color-text-2);
+  white-space: nowrap;
+}
+
 .why {
   margin-top: var(--space-48);
   border-radius: var(--radius-xl);
@@ -159,15 +350,84 @@
   font-size: var(--text-sm);
 }
 
+.faqGrid {
+  margin-top: var(--space-24);
+  display: grid;
+  gap: var(--space-16);
+  grid-template-columns: 1fr;
+}
+
+.faqCard {
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 20, 0.85);
+  padding: var(--space-20);
+}
+
+.faqQuestion {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-0);
+}
+
+.faqAnswer {
+  margin-top: 10px;
+  font-size: var(--text-sm);
+  color: var(--color-text-1);
+  line-height: var(--line-height-relaxed);
+}
+
+.linkHub {
+  margin-top: var(--space-16);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.linkPill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 12, 12, 0.54);
+  padding: 10px 14px;
+  color: var(--color-text-0);
+  text-decoration: none;
+  font-size: 13px;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.linkPill:hover {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(18, 18, 18, 0.82);
+  transform: translateY(-1px);
+}
+
 @media (min-width: 640px) {
+  .signalGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .jobGrid,
   .roleGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .faqGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
+  .jobGrid,
   .roleGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-}
 
+  .twoColumnGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

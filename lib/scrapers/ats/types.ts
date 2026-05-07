@@ -10,7 +10,6 @@ export type AtsProvider =
   | 'recruitee'
   | 'teamtailor'
   | 'workable'
-  | 'workable'
   | 'breezy'
 
 export interface AtsJob {

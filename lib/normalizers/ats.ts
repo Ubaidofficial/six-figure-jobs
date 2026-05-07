@@ -19,9 +19,13 @@ export interface DetectedAts {
  * ✔ Greenhouse
  * ✔ Lever
  * ✔ Ashby
- * ✔ Workday (safe origin-based detection only)
+ * ✔ Workday
+ * ✔ SmartRecruiters
+ * ✔ Recruitee
+ * ✔ Workable
  *
- * All other providers will be reintroduced in Phase 3 AFTER controlled testing.
+ * BambooHR / Breezy / Teamtailor stay excluded until their
+ * public scraping path is stable.
  */
 export function detectAtsFromUrl(rawUrl: string | null | undefined): DetectedAts | null {
   if (!rawUrl) return null
@@ -70,16 +74,41 @@ export function detectAtsFromUrl(rawUrl: string | null | undefined): DetectedAts
   }
 
   // ---------------- Workday ----------------
-  // Safe rule:
-  // Detect only when host contains myworkdayjobs.com or workdayjobs.com
-  // Keep atsUrl = origin only. Do NOT guess tenant paths.
-  //
-  // Example:
-  // https://figma.wd1.myworkdayjobs.com/en-US/FigmaCareerSite/job/...
-  //
   if (host.includes('myworkdayjobs.com') || host.includes('workdayjobs.com')) {
-    const atsUrl = url.origin
+    url.search = ''
+    url.hash = ''
+    const atsUrl = url.toString().replace(/\/$/, '')
     return { provider: 'workday', atsUrl }
+  }
+
+  // ---------------- SmartRecruiters ----------------
+  // e.g. https://jobs.smartrecruiters.com/Figma/744...
+  // e.g. https://careers.smartrecruiters.com/Figma
+  if (host === 'jobs.smartrecruiters.com' || host === 'careers.smartrecruiters.com') {
+    const parts = path.split('/').filter(Boolean)
+    const companySlug = parts[0]
+    if (!companySlug) return null
+
+    const atsUrl = `https://jobs.smartrecruiters.com/${companySlug}`
+    return { provider: 'smartrecruiters', atsUrl }
+  }
+
+  // ---------------- Recruitee ----------------
+  // e.g. https://figma.recruitee.com/o/senior-designer
+  if (host.endsWith('.recruitee.com')) {
+    const atsUrl = `https://${host}`
+    return { provider: 'recruitee', atsUrl }
+  }
+
+  // ---------------- Workable ----------------
+  // e.g. https://apply.workable.com/huggingface/j/0CE9E806CC
+  if (host === 'apply.workable.com') {
+    const parts = path.split('/').filter(Boolean)
+    const accountSlug = parts[0]
+    if (!accountSlug) return null
+
+    const atsUrl = `https://apply.workable.com/${accountSlug}`
+    return { provider: 'workable', atsUrl }
   }
 
   // Not detected

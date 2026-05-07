@@ -71,11 +71,44 @@ export function Footer() {
           </div>
 
           <div>
+            <div className={styles.colTitle}>Popular Roles</div>
+            <div className={styles.list}>
+              <Link className={styles.link} href="/jobs/software-engineer">Software Engineer</Link>
+              <Link className={styles.link} href="/jobs/backend-engineer">Backend Engineer</Link>
+              <Link className={styles.link} href="/jobs/frontend-engineer">Frontend Engineer</Link>
+              <Link className={styles.link} href="/jobs/full-stack-engineer">Full-Stack Engineer</Link>
+              <Link className={styles.link} href="/jobs/data-engineer">Data Engineer</Link>
+              <Link className={styles.link} href="/jobs/data-scientist">Data Scientist</Link>
+              <Link className={styles.link} href="/jobs/product-manager">Product Manager</Link>
+              <Link className={styles.link} href="/jobs/devops-engineer">DevOps Engineer</Link>
+              <Link className={styles.link} href="/jobs/engineering-manager">Engineering Manager</Link>
+              <Link className={styles.link} href="/jobs/product-designer">Product Designer</Link>
+            </div>
+          </div>
+
+          <div>
+            <div className={styles.colTitle}>Salary Guides</div>
+            <div className={styles.list}>
+              <Link className={styles.link} href="/salary/software-engineer">Software Engineer Salary</Link>
+              <Link className={styles.link} href="/salary/backend-engineer">Backend Engineer Salary</Link>
+              <Link className={styles.link} href="/salary/frontend-engineer">Frontend Engineer Salary</Link>
+              <Link className={styles.link} href="/salary/data-scientist">Data Scientist Salary</Link>
+              <Link className={styles.link} href="/salary/data-engineer">Data Engineer Salary</Link>
+              <Link className={styles.link} href="/salary/product-manager">Product Manager Salary</Link>
+              <Link className={styles.link} href="/salary/devops-engineer">DevOps Engineer Salary</Link>
+              <Link className={styles.link} href="/salary/engineering-manager">Engineering Manager Salary</Link>
+            </div>
+          </div>
+
+          <div>
             <div className={styles.colTitle}>Resources</div>
             <div className={styles.list}>
               <Link className={styles.link} href="/jobs">For Job Seekers</Link>
-              <Link className={styles.link} href="/post-a-job">For Employers</Link>
               <Link className={styles.link} href="/salary">Salary Guide</Link>
+              <Link className={styles.link} href="/blog">Career Blog</Link>
+              <Link className={styles.link} href="/jobs/visa-sponsorship">Visa Sponsorship Jobs</Link>
+              <Link className={styles.link} href="/jobs/no-degree">No-Degree Tech Jobs</Link>
+              <Link className={styles.link} href="/companies">Top Companies</Link>
             </div>
           </div>
 
@@ -86,7 +119,6 @@ export function Footer() {
               <Link className={styles.link} href="/about#contact">Contact</Link>
               <Link className={styles.link} href="/privacy">Privacy Policy</Link>
               <Link className={styles.link} href="/terms">Terms of Service</Link>
-              <Link className={styles.link} href="/pricing">Advertise</Link>
             </div>
           </div>
         </div>
@@ -151,13 +183,54 @@ export function Footer() {
 
           <details className={styles.accordion}>
             <summary className={styles.summary}>
+              Popular Roles <span className={styles.chev}>⌄</span>
+            </summary>
+            <div className={styles.accordionBody}>
+              <div className={styles.list}>
+                <Link className={styles.link} href="/jobs/software-engineer">Software Engineer</Link>
+                <Link className={styles.link} href="/jobs/backend-engineer">Backend Engineer</Link>
+                <Link className={styles.link} href="/jobs/frontend-engineer">Frontend Engineer</Link>
+                <Link className={styles.link} href="/jobs/full-stack-engineer">Full-Stack Engineer</Link>
+                <Link className={styles.link} href="/jobs/data-engineer">Data Engineer</Link>
+                <Link className={styles.link} href="/jobs/data-scientist">Data Scientist</Link>
+                <Link className={styles.link} href="/jobs/product-manager">Product Manager</Link>
+                <Link className={styles.link} href="/jobs/devops-engineer">DevOps Engineer</Link>
+                <Link className={styles.link} href="/jobs/engineering-manager">Engineering Manager</Link>
+                <Link className={styles.link} href="/jobs/product-designer">Product Designer</Link>
+              </div>
+            </div>
+          </details>
+
+          <details className={styles.accordion}>
+            <summary className={styles.summary}>
+              Salary Guides <span className={styles.chev}>⌄</span>
+            </summary>
+            <div className={styles.accordionBody}>
+              <div className={styles.list}>
+                <Link className={styles.link} href="/salary/software-engineer">Software Engineer Salary</Link>
+                <Link className={styles.link} href="/salary/backend-engineer">Backend Engineer Salary</Link>
+                <Link className={styles.link} href="/salary/frontend-engineer">Frontend Engineer Salary</Link>
+                <Link className={styles.link} href="/salary/data-scientist">Data Scientist Salary</Link>
+                <Link className={styles.link} href="/salary/data-engineer">Data Engineer Salary</Link>
+                <Link className={styles.link} href="/salary/product-manager">Product Manager Salary</Link>
+                <Link className={styles.link} href="/salary/devops-engineer">DevOps Engineer Salary</Link>
+                <Link className={styles.link} href="/salary/engineering-manager">Engineering Manager Salary</Link>
+              </div>
+            </div>
+          </details>
+
+          <details className={styles.accordion}>
+            <summary className={styles.summary}>
               Resources <span className={styles.chev}>⌄</span>
             </summary>
             <div className={styles.accordionBody}>
               <div className={styles.list}>
                 <Link className={styles.link} href="/jobs">For Job Seekers</Link>
-                <Link className={styles.link} href="/post-a-job">For Employers</Link>
                 <Link className={styles.link} href="/salary">Salary Guide</Link>
+                <Link className={styles.link} href="/blog">Career Blog</Link>
+                <Link className={styles.link} href="/jobs/visa-sponsorship">Visa Sponsorship Jobs</Link>
+                <Link className={styles.link} href="/jobs/no-degree">No-Degree Tech Jobs</Link>
+                <Link className={styles.link} href="/companies">Top Companies</Link>
               </div>
             </div>
           </details>
@@ -172,7 +245,6 @@ export function Footer() {
                 <Link className={styles.link} href="/about#contact">Contact</Link>
                 <Link className={styles.link} href="/privacy">Privacy Policy</Link>
                 <Link className={styles.link} href="/terms">Terms of Service</Link>
-                <Link className={styles.link} href="/pricing">Advertise</Link>
               </div>
             </div>
           </details>
@@ -181,7 +253,7 @@ export function Footer() {
 
       <div className={styles.bottomBar}>
         <div className={styles.bottomInner}>
-          <div>© 2024 Six Figure Jobs</div>
+          <div>© {new Date().getFullYear()} Six Figure Jobs</div>
           <div className={styles.bottomLinks}>
             <Link className={styles.link} href="/privacy">Privacy</Link>
             <span className={styles.dot} aria-hidden="true">•</span>

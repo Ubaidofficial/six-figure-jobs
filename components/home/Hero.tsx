@@ -30,33 +30,30 @@ export function Hero({
       <div className={styles.inner}>
         <div className={styles.content}>
           <div className={styles.badge} style={delay(0)}>
-            <span aria-hidden="true">🚀</span>{' '}
+            <span className={styles.liveOrb} aria-hidden="true" />
             <span>
-              {jobCount.toLocaleString()} Premium Jobs • $100k+ USD
+              {jobCount.toLocaleString()} verified $100k+ jobs • Updated daily
             </span>
           </div>
 
           <h1 className={styles.headline} style={delay(120)}>
-            <span>Find Your Next </span>
-            <span className={styles.gradientText}>6 Figure Jobs</span>
-            <span> & </span>
-            <span>Six-Figure</span>
+            <span>The Premium Job Board for </span>
+            <span className={styles.gradientText}>Six Figure Jobs</span>
             <br />
-            <span>Opportunities</span>
+            <span>— Verified Salaries, Zero Noise</span>
           </h1>
 
           <p className={styles.subheadline} style={delay(240)}>
-            Discover 6 figure jobs, six figure salary jobs, and high paying jobs from{' '}
-            <strong>{companyCount.toLocaleString()}</strong> verified companies. Browse easy 6
-            figure jobs, 6 figure remote jobs, and six-figure positions—even 6 figure jobs without
-            degree. No entry-level clutter. Just premium six-figure opportunities.
+            Browse <strong>{jobCount.toLocaleString()}+</strong> verified $100k+ roles from{' '}
+            <strong>{companyCount.toLocaleString()}</strong> companies. Every listing shows a
+            real salary — no vague ranges, no entry-level clutter, no "competitive compensation."
           </p>
 
           <form
             className={styles.searchForm}
             style={delay(360)}
             method="GET"
-            action="/search"
+            action="/jobs"
           >
             <div className={styles.searchWrapper}>
               <div className={styles.searchBar}>
@@ -68,11 +65,10 @@ export function Hero({
                   id="hero-q"
                   name="q"
                   type="text"
-                  placeholder="Try: 6 figure jobs, software engineer, remote..."
+                  placeholder="Try: software engineer, remote, $200k..."
                   className={styles.searchInput}
                   autoComplete="off"
                   spellCheck={false}
-                  required
                 />
                 <Button variant="primary" size="lg" type="submit" className={styles.cta}>
                   Find six-figure jobs <span aria-hidden="true">→</span>
@@ -89,21 +85,21 @@ export function Hero({
           </form>
 
           <p className={styles.popular} style={delay(480)}>
-            <span className={styles.popularLabel}>Popular:</span>{' '}
-            <Link className={styles.popularLink} href="/search?q=6%20Figure%20Jobs">
-              6 Figure Jobs
+            <span className={styles.popularLabel}>Quick filters:</span>{' '}
+            <Link className={styles.popularLink} href="/remote">
+              Remote $100k+
             </Link>
             ,{' '}
-            <Link className={styles.popularLink} href="/search?q=Six%20Figure%20Remote%20Jobs">
-              Six Figure Remote Jobs
+            <Link className={styles.popularLink} href="/jobs/200k-plus">
+              $200k+ jobs
             </Link>
             ,{' '}
-            <Link className={styles.popularLink} href="/search?q=Easy%206%20Figure%20Jobs">
-              Easy 6 Figure Jobs
+            <Link className={styles.popularLink} href="/jobs/no-degree">
+              No-degree roles
             </Link>
             ,{' '}
-            <Link className={styles.popularLink} href="/search?q=High%20Paying%20Jobs%20No%20Degree">
-              High Paying Jobs No Degree
+            <Link className={styles.popularLink} href="/jobs/visa-sponsorship">
+              Visa sponsorship
             </Link>
           </p>
 

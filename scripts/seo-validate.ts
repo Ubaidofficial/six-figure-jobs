@@ -9,6 +9,12 @@ import {
   dedupeIndexableJobs,
   evaluateJobIndexability,
 } from '../lib/jobs/qualityGate'
+import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../lib/jobs/freshness'
+import {
+  buildCanonicalMissingDetail,
+  isRetryableValidationFailure,
+  summarizeRetryableFailures,
+} from '../lib/seo/validatorRetry'
 
 /**
  * SEO validator for sitemap integrity + indexability signals.
@@ -25,6 +31,8 @@ import {
  *   SEO_STRICT=1
  *   SEO_TIMEOUT_MS=15000
  *   SEO_CONCURRENCY=12
+ *   SEO_URL_RETRY_ATTEMPTS=2
+ *   SEO_URL_RETRY_DELAY_MS=750
  */
 
 type Failure = {
@@ -52,6 +60,11 @@ type DuplicateConcept = {
   occurrences: DuplicateOccurrence[]
 }
 
+type SitemapCollection = {
+  buckets: SitemapBucket[]
+  structureFailures: Failure[]
+}
+
 const BASE_URL = (process.env.SEO_BASE_URL || 'https://www.6figjobs.com').replace(/\/+$/, '')
 const ROOT_SITEMAP_URL = (process.env.SEO_SITEMAP_URL || `${BASE_URL}/sitemap.xml`).trim()
 const SAMPLE_PER_SITEMAP = Math.max(1, Number(process.env.SEO_SAMPLE_PER_SITEMAP || '200'))
@@ -59,6 +72,8 @@ const FULL = process.env.SEO_FULL === '1'
 const STRICT = process.env.SEO_STRICT === '1'
 const TIMEOUT_MS = Math.max(1000, Number(process.env.SEO_TIMEOUT_MS || '15000'))
 const CONCURRENCY = Math.max(1, Math.min(64, Number(process.env.SEO_CONCURRENCY || '12')))
+const URL_RETRY_ATTEMPTS = Math.max(0, Number(process.env.SEO_URL_RETRY_ATTEMPTS || '2'))
+const URL_RETRY_DELAY_MS = Math.max(0, Number(process.env.SEO_URL_RETRY_DELAY_MS || '750'))
 const MIN_STRICT_SAMPLE = 1000
 const JOB_SITEMAP_SOURCE = 'app/sitemap-jobs/[page]/route.ts:62'
 
@@ -115,6 +130,10 @@ const REPORT_REASON_ORDER = [
   'robots_noindex',
   'canonical_missing',
   'canonical_mismatch',
+  'empty_sitemap',
+  'no_urls_discovered',
+  'no_url_sitemaps',
+  'invalid_sitemap_xml',
   'duplicate_loc',
 ]
 
@@ -227,6 +246,44 @@ function buildFailure(
   return { reason, sitemap, sitemapSource, url, detail }
 }
 
+function summarizeHttpBody(body: string, max: number = 180): string {
+  const normalized = String(body || '').replace(/\s+/g, ' ').trim()
+  if (!normalized) return ''
+  return normalized.slice(0, max)
+}
+
+function formatHttpError(res: Response, body: string): string {
+  const details = [`status=${res.status}`]
+  const contentType = res.headers.get('content-type')
+  const bodySummary = summarizeHttpBody(body)
+
+  if (contentType) {
+    details.push(`content-type=${contentType}`)
+  }
+
+  if (bodySummary) {
+    details.push(`body=${JSON.stringify(bodySummary)}`)
+  }
+
+  return details.join(' ')
+}
+
+function sleep(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve()
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isRetryableValidationError(error: unknown): boolean {
+  const message = String((error as any)?.message || error || '').toLowerCase()
+  return (
+    message.includes('body_read_timeout') ||
+    message.includes('operation was aborted') ||
+    message.includes('this operation was aborted') ||
+    message.includes('terminated') ||
+    message.includes('fetch failed')
+  )
+}
+
 async function fetchText(url: string): Promise<string> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
@@ -240,12 +297,13 @@ async function fetchText(url: string): Promise<string> {
         accept: 'application/xml,text/xml,text/html;q=0.9,*/*;q=0.8',
       },
     })
+    const body = await readBodyTextWithTimeout(res)
 
     if (!res.ok) {
-      throw new Error(`status=${res.status}`)
+      throw new Error(formatHttpError(res, body))
     }
 
-    return await readBodyTextWithTimeout(res)
+    return body
   } finally {
     clearTimeout(timer)
   }
@@ -323,7 +381,9 @@ type SitemapJobRow = {
   maxAnnual: bigint | null
   currency: string | null
   isExpired: boolean
+  lastSeenAt: Date | null
   postedAt: Date | null
+  createdAt: Date
   updatedAt: Date
 }
 
@@ -335,6 +395,7 @@ async function getIndexableJobUrlSet(): Promise<Set<string>> {
         AND: [
           buildGlobalExclusionsWhere(),
           buildHighSalaryEligibilityWhere(),
+          buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS),
           buildIndexableJobStructureWhere(),
         ],
       }
@@ -362,7 +423,9 @@ async function getIndexableJobUrlSet(): Promise<Set<string>> {
           maxAnnual: true,
           currency: true,
           isExpired: true,
+          lastSeenAt: true,
           postedAt: true,
+          createdAt: true,
           updatedAt: true,
         },
         orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
@@ -435,48 +498,7 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
     return failures
   }
 
-  let res = await fetchManual(url, 'HEAD')
-  if (res.status === 405 || res.status === 501) {
-    res = await fetchManual(url, 'GET')
-  }
-
-  if (res.status >= 300 && res.status < 400) {
-    failures.push(
-      buildFailure(
-        'redirect',
-        sitemapUrl,
-        sitemapSource,
-        url,
-        `${res.status} -> ${res.headers.get('location') || 'unknown'}`,
-      ),
-    )
-    return failures
-  }
-
-  if (res.status !== 200) {
-    failures.push(
-      buildFailure('non_200', sitemapUrl, sitemapSource, url, String(res.status)),
-    )
-    return failures
-  }
-
-  if (hasNoindexDirective(res.headers.get('x-robots-tag'))) {
-    failures.push(
-      buildFailure(
-        'robots_noindex',
-        sitemapUrl,
-        sitemapSource,
-        url,
-        `x-robots-tag=${res.headers.get('x-robots-tag')}`,
-      ),
-    )
-  }
-
-  const contentType = (res.headers.get('content-type') || '').toLowerCase()
-  const isHtml = contentType.includes('text/html') || contentType.includes('application/xhtml+xml')
-  if (!isHtml) return failures
-
-  const htmlRes = await fetchFollow(url, 'text/html,*/*;q=0.8')
+  const htmlRes = await fetchFollow(url, 'text/html,application/xhtml+xml,*/*;q=0.8')
 
   if (!htmlRes.ok) {
     failures.push(
@@ -503,6 +525,7 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
         `GET followed to ${finalNorm}`,
       ),
     )
+    return failures
   }
 
   if (hasNoindexDirective(htmlRes.headers.get('x-robots-tag'))) {
@@ -517,6 +540,10 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
     )
   }
 
+  const contentType = (htmlRes.headers.get('content-type') || '').toLowerCase()
+  const isHtml = contentType.includes('text/html') || contentType.includes('application/xhtml+xml')
+  if (!isHtml) return failures
+
   const html = await readBodyTextWithTimeout(htmlRes)
   const directives = extractMetaRobotsDirectives(html)
   if (directives.includes('noindex')) {
@@ -525,7 +552,15 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
 
   const canonical = extractCanonical(html, finalUrl)
   if (!canonical) {
-    failures.push(buildFailure('canonical_missing', sitemapUrl, sitemapSource, url))
+    failures.push(
+      buildFailure(
+        'canonical_missing',
+        sitemapUrl,
+        sitemapSource,
+        url,
+        buildCanonicalMissingDetail(html),
+      ),
+    )
     return failures
   }
 
@@ -568,9 +603,54 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
   return failures
 }
 
-async function collectSitemapBuckets(rootUrl: string): Promise<SitemapBucket[]> {
+async function checkUrlWithRetry(
+  url: string,
+  sitemapUrl: string,
+  sitemapSource: string,
+): Promise<Failure[]> {
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= URL_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      const result = await checkUrl(url, sitemapUrl, sitemapSource)
+      const retryableFailures = result.filter(isRetryableValidationFailure)
+
+      if (retryableFailures.length > 0 && retryableFailures.length === result.length) {
+        if (attempt >= URL_RETRY_ATTEMPTS) {
+          return result
+        }
+
+        const retryNumber = attempt + 1
+        console.warn(
+          `[seo:validate] transient validation failure; retrying ${retryNumber}/${URL_RETRY_ATTEMPTS} ${url} (${summarizeRetryableFailures(retryableFailures)})`,
+        )
+        await sleep(URL_RETRY_DELAY_MS * retryNumber)
+        continue
+      }
+
+      return result
+    } catch (error) {
+      lastError = error
+      if (attempt >= URL_RETRY_ATTEMPTS || !isRetryableValidationError(error)) {
+        throw error
+      }
+
+      const retryNumber = attempt + 1
+      const detail = String((error as any)?.message || error || 'unknown_error')
+      console.warn(
+        `[seo:validate] transient check error; retrying ${retryNumber}/${URL_RETRY_ATTEMPTS} ${url} (${detail})`,
+      )
+      await sleep(URL_RETRY_DELAY_MS * retryNumber)
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError || 'unknown_error'))
+}
+
+async function collectSitemapBuckets(rootUrl: string): Promise<SitemapCollection> {
   const seen = new Set<string>()
   const buckets: SitemapBucket[] = []
+  const structureFailures: Failure[] = []
 
   async function walk(url: string): Promise<void> {
     if (seen.has(url)) return
@@ -579,8 +659,22 @@ async function collectSitemapBuckets(rootUrl: string): Promise<SitemapBucket[]> 
     const xml = await fetchText(url)
     const kind = detectSitemapType(xml)
     const locs = parseLocs(xml)
+    const sitemapSource = inferSitemapSource(url)
 
     if (kind === 'index') {
+      if (locs.length === 0) {
+        structureFailures.push(
+          buildFailure(
+            'empty_sitemap',
+            url,
+            sitemapSource,
+            url,
+            'sitemap index contains 0 <loc> entries',
+          ),
+        )
+        return
+      }
+
       for (const loc of locs) {
         await walk(loc)
       }
@@ -588,19 +682,39 @@ async function collectSitemapBuckets(rootUrl: string): Promise<SitemapBucket[]> 
     }
 
     if (kind === 'urlset') {
+      if (locs.length === 0) {
+        structureFailures.push(
+          buildFailure(
+            'empty_sitemap',
+            url,
+            sitemapSource,
+            url,
+            'urlset contains 0 <loc> entries',
+          ),
+        )
+      }
+
       buckets.push({
         sitemapUrl: url,
-        sitemapSource: inferSitemapSource(url),
+        sitemapSource,
         urls: locs,
       })
       return
     }
 
-    throw new Error(`Unknown sitemap XML format at ${url}`)
+    structureFailures.push(
+      buildFailure(
+        'invalid_sitemap_xml',
+        url,
+        sitemapSource,
+        url,
+        'unknown sitemap XML format',
+      ),
+    )
   }
 
   await walk(rootUrl)
-  return buckets
+  return { buckets, structureFailures }
 }
 
 async function runWithConcurrency<T>(
@@ -734,20 +848,49 @@ async function main() {
   console.log(`[seo:validate] full mode: ${FULL ? 'on' : 'off'}`)
   console.log(`[seo:validate] sample per sitemap: ${SAMPLE_PER_SITEMAP}`)
   console.log(`[seo:validate] concurrency: ${CONCURRENCY}`)
+  console.log(`[seo:validate] per-url retries: ${URL_RETRY_ATTEMPTS}`)
   console.log(`[seo:validate] db job proof mode: ${USE_DB_JOB_PROOF ? 'on' : 'off'}`)
 
-  const buckets = await collectSitemapBuckets(ROOT_SITEMAP_URL)
+  const { buckets, structureFailures } = await collectSitemapBuckets(ROOT_SITEMAP_URL)
+  const rootSitemapSource = inferSitemapSource(ROOT_SITEMAP_URL)
+  const failures: Failure[] = [...structureFailures]
+
   if (buckets.length === 0) {
-    throw new Error('No URL sitemaps discovered')
+    failures.push(
+      buildFailure(
+        'no_url_sitemaps',
+        ROOT_SITEMAP_URL,
+        rootSitemapSource,
+        ROOT_SITEMAP_URL,
+        'no URL sitemap buckets discovered',
+      ),
+    )
   }
 
   const totalUrls = buckets.reduce((acc, b) => acc + b.urls.length, 0)
   console.log(`[seo:validate] discovered sitemaps: ${buckets.length}`)
   console.log(`[seo:validate] discovered urls: ${totalUrls}`)
 
-  const failures: Failure[] = []
+  if (totalUrls === 0) {
+    failures.push(
+      buildFailure(
+        'no_urls_discovered',
+        ROOT_SITEMAP_URL,
+        rootSitemapSource,
+        ROOT_SITEMAP_URL,
+        `url_sitemaps=${buckets.length}`,
+      ),
+    )
+  }
+
   const duplicates = collectDuplicateConcepts(buckets)
   printDuplicateSummary(duplicates)
+
+  if (buckets.length === 0) {
+    printGroupedFailures(failures)
+    process.exitCode = 1
+    return
+  }
 
   for (const duplicate of duplicates) {
     const first = duplicate.occurrences[0]
@@ -770,7 +913,7 @@ async function main() {
 
     await runWithConcurrency(sample, async (url) => {
       try {
-        const result = await checkUrl(url, bucket.sitemapUrl, bucket.sitemapSource)
+        const result = await checkUrlWithRetry(url, bucket.sitemapUrl, bucket.sitemapSource)
         if (result.length > 0) failures.push(...result)
       } catch (error: any) {
         failures.push(

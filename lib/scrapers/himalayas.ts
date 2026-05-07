@@ -6,7 +6,7 @@ import * as cheerio from 'cheerio'
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
-import { discoverApplyUrlFromPage } from './utils/discoverApplyUrl'
+import { fetchJobPageDetails } from './utils/fetchJobPageDetails'
 import { saveCompanyATS } from './utils/saveCompanyATS'
 
 const BOARD = 'himalayas'
@@ -68,11 +68,8 @@ export default async function scrapeHimalayas(): Promise<ScraperStats> {
           $el.closest('article, li, div').find('.location, [data-location]').first().text().trim() ||
           null
 
-        let applyUrl = url
-        const discoveredApplyUrl = await discoverApplyUrlFromPage(url)
-        if (discoveredApplyUrl && isExternalToHost(discoveredApplyUrl, 'himalayas.app')) {
-          applyUrl = discoveredApplyUrl
-        }
+        const { applyUrl: discoveredApply, descriptionHtml } = await fetchJobPageDetails(url, 'himalayas.app')
+        const applyUrl = discoveredApply ?? url
 
         const atsType = detectATS(applyUrl)
         const explicitAtsProvider = toAtsProvider(atsType)
@@ -90,6 +87,7 @@ export default async function scrapeHimalayas(): Promise<ScraperStats> {
           url,
           applyUrl,
           location,
+          descriptionHtml,
           remote: true,
           explicitAtsProvider,
           explicitAtsUrl,
