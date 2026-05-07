@@ -63,8 +63,9 @@
   width: 120px;
   height: 120px;
   border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 10, 10, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -82,7 +83,7 @@
   font-family: var(--font-display);
   font-weight: var(--font-weight-bold);
   font-size: 42px;
-  color: var(--color-text-0);
+  color: #333;
 }
 
 .title {
@@ -445,6 +446,21 @@
   line-height: var(--line-height-relaxed);
 }
 
+/* Prose description (About the Role) — flowing paragraphs, not bullets */
+.descriptionProse {
+  margin-top: var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-14);
+}
+
+.descriptionParagraph {
+  font-size: var(--text-sm);
+  color: var(--color-text-1);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
 .benefitsGrid {
   margin-top: var(--space-16);
   display: grid;
@@ -603,9 +619,52 @@ details[open] .fullPostingSummary::before {
   }
 }
 
+/* Tablet: narrow sidebar so content column gets enough breathing room */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: var(--space-20);
+  }
+
+  .salaryBox {
+    min-width: 0;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .actionBar {
+    flex-wrap: wrap;
+    gap: var(--space-12);
+  }
+}
+
 @media (max-width: 767px) {
   .container {
+    padding-top: var(--space-16);
+    padding-left: var(--space-12);
+    padding-right: var(--space-12);
     padding-bottom: calc(var(--space-64) + 98px);
+  }
+
+  .headerMain {
+    grid-template-columns: 60px minmax(0, 1fr);
+    gap: var(--space-12);
+  }
+
+  .logoWrap {
+    width: 60px;
+    height: 60px;
+  }
+
+  .title {
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+
+  .oneLiner {
+    font-size: 15px;
   }
 
   .layout {
@@ -670,5 +729,14 @@ details[open] .fullPostingSummary::before {
   .benefitText {
     font-size: var(--text-base);
     line-height: 1.6;
+  }
+
+  .descriptionParagraph {
+    font-size: var(--text-base);
+    line-height: 1.65;
+  }
+
+  .card {
+    padding: var(--space-16);
   }
 }

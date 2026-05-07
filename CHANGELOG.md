@@ -1,3 +1,9 @@
+# 1.0.0 (2026-05-07)
+
+### Features
+
+* feat(ui): white logo containers on job cards and detail page; full job posting open by default; remove "High salary role" fallback pill; homepage 2-column job grid; tablet breakpoints for sidebar layouts; mobile font/spacing improvements
+
 # 1.0.0 (2026-05-06)
 
 

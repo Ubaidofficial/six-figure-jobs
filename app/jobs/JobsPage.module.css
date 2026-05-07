@@ -216,6 +216,14 @@
   }
 }
 
+/* Tablet: narrow the filter sidebar for more job card space */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .layout {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: var(--space-20);
+  }
+}
+
 @media (max-width: 1023px) {
   .top {
     flex-direction: column;

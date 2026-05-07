@@ -516,3 +516,22 @@
     display: none;
   }
 }
+
+@media (max-width: 480px) {
+  .header {
+    height: 64px;
+  }
+
+  .logo {
+    font-size: 17px;
+  }
+
+  .mobileSheet {
+    padding: var(--space-16);
+  }
+
+  .mobileItem {
+    padding: 14px 12px;
+    min-height: 48px;
+  }
+}

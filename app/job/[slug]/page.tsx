@@ -637,14 +637,9 @@ export default async function JobPage({
                     <div className={styles.cardTitle}>
                       <span>📋 About the Role</span>
                     </div>
-                    <div className={styles.checkList}>
+                    <div className={styles.descriptionProse}>
                       {aiStructured.description.map((line, idx) => (
-                        <div key={idx} className={styles.checkItem}>
-                          <span className={styles.checkCircle} aria-hidden="true">
-                            <Check />
-                          </span>
-                          <span>{line}</span>
-                        </div>
+                        <p key={idx} className={styles.descriptionParagraph}>{line}</p>
                       ))}
                     </div>
                   </section>
@@ -741,11 +736,11 @@ export default async function JobPage({
               </>
             )}
 
-            {/* Full posting — collapsed by default; always available as reference */}
+            {/* Full posting — open by default */}
             {(hasDescription || isOversizedDescription) && (
-              <details className={styles.fullPostingDetails}>
+              <details className={styles.fullPostingDetails} open>
                 <summary className={styles.fullPostingSummary}>
-                  📄 View full job posting
+                  📄 Full job posting
                 </summary>
                 <div className={styles.card} style={{ marginTop: '0.75rem' }}>
                   {isOversizedDescription ? (

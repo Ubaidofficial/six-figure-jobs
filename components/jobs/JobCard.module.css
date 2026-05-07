@@ -24,9 +24,9 @@
 .card {
   position: relative;
   display: block;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 28%),
-    var(--color-bg-1); /* #141414 */
-  border: 1px solid transparent;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%),
+    rgba(22, 22, 22, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: var(--radius-xl); /* 16px */
   padding: var(--space-24); /* 24px */
   text-decoration: none;
@@ -34,7 +34,7 @@
   overflow: hidden;
   cursor: pointer;
 
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, var(--shadow-sm);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset, var(--shadow-sm);
 
   transition:
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -87,6 +87,8 @@
 .homepageCard .logoWrap {
   width: 56px;
   height: 56px;
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .homepageCard .body {
@@ -119,6 +121,8 @@
 .gridCard .logoWrap {
   width: 44px;
   height: 44px;
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .gridCard .body {
@@ -197,11 +201,12 @@
   width: 64px;
   height: 64px;
   border-radius: var(--radius-xl);
-  background: rgba(31, 31, 31, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   display: grid;
   place-items: center;
   overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 .logoImg {
@@ -214,7 +219,7 @@
 .logoFallback {
   font-family: var(--font-mono);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-0);
+  color: #333;
   font-size: var(--text-sm);
 }
 
@@ -376,9 +381,9 @@
   gap: 8px;
   padding: 8px 10px;
   border-radius: 999px;
-  background: rgba(31, 31, 31, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--color-text-1);
+  background: rgba(40, 40, 40, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: var(--color-text-0);
   font-size: 12px;
   max-width: 100%;
 }
@@ -478,26 +483,45 @@
 
 @media (max-width: 767px) {
   .card {
-    padding: var(--space-24);
+    padding: var(--space-16);
   }
 
   .header {
-    grid-template-columns: 48px 1fr;
+    grid-template-columns: 44px 1fr;
+    gap: var(--space-12);
   }
 
   .logoWrap {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .companyName {
+    font-size: 14px;
   }
 
   .hero {
     flex-direction: column;
     align-items: stretch;
-    gap: var(--space-12);
+    gap: var(--space-10);
+  }
+
+  .title {
+    font-size: var(--text-xl);
   }
 
   .salaryStack {
     align-items: flex-start;
+  }
+
+  .metaRow {
+    gap: 8px;
+  }
+
+  .snippet {
+    font-size: 13px;
   }
 }
 

@@ -419,16 +419,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
                 Verified salary
               </span>
             </div>
-          ) : isHomepage ? null : (
-            <div className={styles.salaryStack}>
-              <div className={styles.salaryPill} aria-label="High salary role">
-                <span className={styles.salaryIcon} aria-hidden="true">
-                  💰
-                </span>
-                <span className={styles.salaryValue}>High salary role</span>
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
 
         <div className={styles.metaRow} aria-label="Job metadata">
