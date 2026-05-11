@@ -111,7 +111,7 @@
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-text-2);
+  color: var(--color-text-1);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -194,7 +194,7 @@
   justify-content: space-between;
   gap: var(--space-16);
   flex-wrap: wrap;
-  color: var(--color-text-2);
+  color: var(--color-text-1);
   font-size: 12px;
 }
 
@@ -209,7 +209,7 @@
 }
 
 .made {
-  color: var(--color-text-2);
+  color: var(--color-text-1);
 }
 
 @media (max-width: 1023px) {

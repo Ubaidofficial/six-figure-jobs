@@ -43,6 +43,7 @@ model Job {
   lastSeenAt                DateTime?
   postedAt                  DateTime?
   expiresAt                 DateTime?
+  validThrough              DateTime?      @db.Timestamptz(6)
   createdAt                 DateTime       @default(now())
   updatedAt                 DateTime       @updatedAt
   companyId                 String?
@@ -109,6 +110,7 @@ model Job {
   @@index([needsReview])
   @@index([aiQualityScore])
   @@index([lastAiEnrichedAt])
+  @@index([validThrough])
 
   // Composite indexes for common listing/filter pages (scale to 50k+ jobs)
   @@index([isExpired, createdAt], map: "Job_active_createdAt_idx")

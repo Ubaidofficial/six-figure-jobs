@@ -1,3 +1,9 @@
+# 1.0.0 (2026-05-11)
+
+### Bug Fixes
+
+* fix(seo): strengthen job indexing quality with validThrough support, description cleanup, stricter salary/currency gates, richer blog/about schema, Google indexing hooks, and full audit commands
+
 # 1.0.0 (2026-05-07)
 
 ### Features
@@ -1169,6 +1175,5 @@
 ### Performance Improvements
 
 * cache headers and disable image optimization ([a4f3337](https://github.com/Ubaidofficial/six-figure-jobs/commit/a4f33374fb64d7a373ead0f36911fcd7595efb0a))
-
 
 

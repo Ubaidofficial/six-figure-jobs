@@ -10,7 +10,9 @@ import { prisma } from '../../../lib/prisma'
 import { parseJobSlugParam, buildJobSlug } from '../../../lib/jobs/jobSlug'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
+import { buildJobBreadcrumbJsonLd } from '../../../lib/seo/jobBreadcrumbJsonLd'
 import { queryJobs, type JobQueryResult, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { filterSimilarJobs } from '../../../lib/jobs/similarJobs'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { isJobDetailAvailable } from '../../../lib/jobs/detailAvailability'
 import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
@@ -18,7 +20,7 @@ import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
-import { buildSliceCanonicalPath } from '../../../lib/seo/canonical'
+import { cleanJobDescriptionHtml } from '../../../lib/jobs/descriptionCleaning'
 import {
   countryCodeToSlug,
   countryCodeToName,
@@ -157,6 +159,14 @@ export async function generateMetadata({
       return {
         ...base,
         alternates: { ...(base.alternates ?? {}), canonical: canonicalUrl },
+        other: {
+          'og:updated_time': (
+            job.postedAt ??
+            job.createdAt ??
+            job.updatedAt ??
+            new Date()
+          ).toISOString(),
+        },
         robots: qualityGate.indexable
           ? (base.robots ?? { index: true, follow: true })
           : { index: false, follow: false },
@@ -217,9 +227,8 @@ export default async function JobPage({
 
   const company = typedJob.companyRef
 
-  // Clean company name - take only the first part before description
   const rawCompanyName = company?.name || typedJob.company || 'Company'
-  const companyName = cleanCompanyName(rawCompanyName)
+  const companyName = fullCompanyName(rawCompanyName)
 
   const logoUrl = buildLogoUrl(
     company?.logoUrl ?? typedJob.companyLogo ?? null,
@@ -254,7 +263,7 @@ export default async function JobPage({
   const isOversizedDescription = rawDescriptionString.length > 100_000
   const safeDescriptionHtml =
     rawDescriptionString && !isOversizedDescription
-      ? sanitizeDescriptionHtml(rawDescriptionString)
+      ? sanitizeDescriptionHtml(cleanJobDescriptionHtml(rawDescriptionString))
       : null
 
   const hasDescription = !!safeDescriptionHtml && safeDescriptionHtml.trim().length > 0
@@ -323,7 +332,7 @@ export default async function JobPage({
     }),
   )
 
-  const similarJobs = similarResult.jobs.filter((j) => j.id !== typedJob.id).slice(0, 6)
+  const similarJobs = filterSimilarJobs(typedJob, similarResult.jobs, 6)
 
   const companyCountry = company?.countryCode || typedJob.countryCode || 'Global'
   const isSalaryVerified =
@@ -839,34 +848,11 @@ export default async function JobPage({
 /* -------------------------------------------------------------------------- */
 
 /**
- * Clean company name - extract just the company name, not description
- * Handles cases like "InstacartA grocery technology platform..."
+ * Use the full persisted company name for SEO-visible text. Do not truncate
+ * display names here; upstream company cleanup should happen before storage.
  */
-function cleanCompanyName(name: string): string {
-  if (!name) return 'Company'
-
-  const patterns = [
-    /^([A-Z][a-z]+(?:[A-Z][a-z]+)*)[A-Z][a-z]/,
-    /^([^.]+?)\s*[.]/,
-    /^(.+?)\s+(?:is|are|was|provides|offers|builds|creates|develops)/i,
-  ]
-
-  for (const pattern of patterns) {
-    const match = name.match(pattern)
-    if (match && match[1] && match[1].length >= 2 && match[1].length <= 50) {
-      return match[1].trim()
-    }
-  }
-
-  if (name.length > 50) {
-    const spaceIdx = name.indexOf(' ', 20)
-    if (spaceIdx > 0 && spaceIdx < 50) {
-      return name.slice(0, spaceIdx)
-    }
-    return name.slice(0, 50)
-  }
-
-  return name
+function fullCompanyName(name: string | null | undefined): string {
+  return String(name || '').trim() || 'Company'
 }
 
 function parseArray(raw?: string | null): string[] {
@@ -1025,7 +1011,7 @@ function prettyRole(slug: string): string {
 
 function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   const links: InternalLink[] = []
-  const companyName = cleanCompanyName(job.companyRef?.name || job.company || '')
+  const companyName = fullCompanyName(job.companyRef?.name || job.company || '')
   const countryCode = job.countryCode?.toUpperCase() ?? null
   const countryName = countryCode ? countryCodeToName(countryCode) : null
   const hasCountryInfo = Boolean(countryCode && countryName)
@@ -1083,43 +1069,6 @@ function isValidUrl(url?: string | null): boolean {
     return ['http:', 'https:'].includes(parsed.protocol)
   } catch {
     return false
-  }
-}
-
-function buildJobBreadcrumbJsonLd(job: JobWithCompany, slug: string): any {
-  const items: any[] = [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
-    { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${SITE_URL}/jobs/100k-plus` },
-  ]
-
-  if (job.roleSlug && job.countryCode) {
-    const roleLabel = prettyRole(job.roleSlug)
-    const cc = job.countryCode.toUpperCase()
-    const path = buildSliceCanonicalPath({
-      isHundredKLocal: true,
-      roleSlugs: [job.roleSlug],
-      countryCode: job.countryCode,
-    })
-
-    items.push({
-      '@type': 'ListItem',
-      position: 3,
-      name: `${roleLabel} jobs in ${cc}`,
-      item: `${SITE_URL}${path}`,
-    })
-  }
-
-  items.push({
-    '@type': 'ListItem',
-    position: items.length + 1,
-    name: job.title,
-    item: `${SITE_URL}/job/${slug}`,
-  })
-
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: items,
   }
 }
 

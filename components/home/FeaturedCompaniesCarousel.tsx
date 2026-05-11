@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
+import { buildLogoUrl } from '@/lib/companies/logo'
 import styles from './FeaturedCompaniesCarousel.module.css'
 
 export type FeaturedCompany = {
@@ -11,8 +12,10 @@ export type FeaturedCompany = {
   activeHighPayingJobs: number
 }
 
-function CompanyLogo({ company }: { company: FeaturedCompany }) {
-  if (!company.logoUrl) {
+function CompanyLogo({ company, index }: { company: FeaturedCompany; index: number }) {
+  const logoUrl = buildLogoUrl(company.logoUrl, null)
+
+  if (!logoUrl) {
     return (
       <div className={styles.fallback} aria-hidden="true">
         {(company.name?.[0] || 'C').toUpperCase()}
@@ -22,11 +25,11 @@ function CompanyLogo({ company }: { company: FeaturedCompany }) {
 
   return (
     <Image
-      src={company.logoUrl}
+      src={logoUrl}
       alt={`${company.name} logo`}
       width={64}
       height={64}
-      loading="eager"
+      loading={index < 4 ? 'eager' : 'lazy'}
       placeholder="blur"
       blurDataURL="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%23334155'/%3E%3C/svg%3E"
       unoptimized
@@ -35,7 +38,7 @@ function CompanyLogo({ company }: { company: FeaturedCompany }) {
   )
 }
 
-function LogoItem({ company }: { company: FeaturedCompany }) {
+function LogoItem({ company, index }: { company: FeaturedCompany; index: number }) {
   const href = `/company/${company.slug}`
   const tooltip = `${company.name} • ${company.activeHighPayingJobs.toLocaleString()} active $100k+ jobs`
 
@@ -43,7 +46,7 @@ function LogoItem({ company }: { company: FeaturedCompany }) {
     <li className={styles.item}>
       <Link href={href} className={styles.logoLink} aria-label={tooltip} title={tooltip}>
         <div className={styles.logoBox}>
-          <CompanyLogo company={company} />
+          <CompanyLogo company={company} index={index} />
         </div>
         <span className={styles.tooltip} role="tooltip">
           {company.name}
@@ -66,7 +69,7 @@ function MarqueeRow({
     <div className={styles.marquee} data-reverse={reverse ? 'true' : 'false'}>
       <ul className={styles.track} aria-label="Featured companies">
         {repeated.map((company, idx) => (
-          <LogoItem key={`${company.id}-${idx}`} company={company} />
+          <LogoItem key={`${company.id}-${idx}`} company={company} index={idx} />
         ))}
       </ul>
     </div>

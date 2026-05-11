@@ -40,6 +40,8 @@ type DiagnosticRow = {
   aiOneLiner: string | null
   salaryValidated: boolean | null
   salaryConfidence: number | null
+  salaryCurrency: string | null
+  salaryPeriod: string | null
   minAnnual: bigint | null
   maxAnnual: bigint | null
   currency: string | null
@@ -116,6 +118,8 @@ async function collectIndexabilityDiagnostics(
           aiOneLiner: true,
           salaryValidated: true,
           salaryConfidence: true,
+          salaryCurrency: true,
+          salaryPeriod: true,
           minAnnual: true,
           maxAnnual: true,
           currency: true,

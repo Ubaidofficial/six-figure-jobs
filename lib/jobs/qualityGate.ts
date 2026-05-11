@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
+import { inferCurrencyFromCountryCode } from '../normalizers/salary'
 import { isJobFresh } from './freshness'
 
 export const QUALITY_MIN_DESCRIPTION_CHARS = 140
@@ -24,6 +25,8 @@ export type JobIndexabilityInput = {
   aiOneLiner?: string | null
   salaryValidated?: boolean | null
   salaryConfidence?: number | bigint | string | null
+  salaryCurrency?: string | null
+  salaryPeriod?: string | null
   minAnnual?: number | bigint | string | null
   maxAnnual?: number | bigint | string | null
   currency?: string | null
@@ -172,6 +175,27 @@ export function evaluateJobIndexability(job: JobIndexabilityInput): JobIndexabil
   const annual = Math.max(minAnnual ?? 0, maxAnnual ?? 0)
   if (!Number.isFinite(annual) || annual < threshold) {
     return fail('below_threshold')
+  }
+
+  const expectedCurrency = inferCurrencyFromCountryCode(job.countryCode)
+  const isRemote = job.remote === true || job.remoteMode === 'remote'
+  if (!isRemote && expectedCurrency && currency !== expectedCurrency) {
+    return fail('currency_country_mismatch')
+  }
+
+  const salaryPeriod = String(job.salaryPeriod || '').trim().toLowerCase()
+  const rawCurrency = String(job.salaryCurrency || '').trim().toUpperCase()
+  if (rawCurrency && rawCurrency !== currency) {
+    return fail('salary_currency_mismatch')
+  }
+
+  if (
+    salaryPeriod &&
+    salaryPeriod !== 'year' &&
+    salaryPeriod !== 'annual' &&
+    annual > 500_000
+  ) {
+    return fail('salary_period_outlier')
   }
 
   const descriptionLen = toPlainText(job.descriptionHtml).length

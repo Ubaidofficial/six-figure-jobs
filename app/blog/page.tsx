@@ -11,18 +11,29 @@ export const revalidate = 86400
 
 const SITE_URL = getSiteUrl()
 
-export const metadata: Metadata = {
-  title: `Career Guides & Salary Insights | ${SITE_NAME}`,
-  description:
-    'Expert guides on six-figure salaries, tech career paths, visa sponsorship, remote work, and salary negotiation. Real data from live $100k+ job listings.',
-  alternates: { canonical: `${SITE_URL}/blog` },
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const posts = getAllPosts()
+  return {
     title: `Career Guides & Salary Insights | ${SITE_NAME}`,
-    description: 'Expert guides on six-figure salaries, tech career paths, and salary negotiation.',
-    url: `${SITE_URL}/blog`,
-    siteName: SITE_NAME,
-    type: 'website',
-  },
+    description:
+      'Expert guides on six-figure salaries, tech career paths, visa sponsorship, remote work, and salary negotiation. Real data from live $100k+ job listings.',
+    alternates: { canonical: `${SITE_URL}/blog` },
+    robots: posts.length > 0 ? { index: true, follow: true } : { index: false, follow: true },
+    openGraph: {
+      title: `Career Guides & Salary Insights | ${SITE_NAME}`,
+      description: 'Expert guides on six-figure salaries, tech career paths, and salary negotiation.',
+      url: `${SITE_URL}/blog`,
+      siteName: SITE_NAME,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Career Guides & Salary Insights | ${SITE_NAME}`,
+      description:
+        'Expert guides on six-figure salaries, tech career paths, visa sponsorship, remote work, and salary negotiation.',
+      images: [`${SITE_URL}/og-image.png`],
+    },
+  }
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -34,6 +45,39 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function BlogIndexPage() {
   const posts = getAllPosts()
+  const itemListJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: posts.map((post, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: `${SITE_URL}/blog/${post.slug}`,
+      name: post.title,
+    })),
+  }
+  const collectionPageJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Career Guides & Salary Insights',
+    description:
+      'Editorial hub covering six-figure salaries, tech career paths, visa sponsorship, remote work, and salary negotiation.',
+    url: `${SITE_URL}/blog`,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: posts.length,
+      itemListElement: posts.map((post, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `${SITE_URL}/blog/${post.slug}`,
+        name: post.title,
+      })),
+    },
+  }
 
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
@@ -49,6 +93,14 @@ export default function BlogIndexPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
       />
 
       {/* Breadcrumb */}

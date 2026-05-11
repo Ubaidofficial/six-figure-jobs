@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import type { Job, Company } from '@prisma/client'
 import { buildJobSlugHref } from '../jobs/jobSlug'
 import { getSiteUrl, SITE_NAME } from './site'
+import { cleanJobDescriptionText } from '../jobs/descriptionCleaning'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
@@ -42,11 +43,14 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
   const aiSnippet = typeof (job as any)?.aiSnippet === 'string' ? String((job as any).aiSnippet).trim() : ''
 
   if (aiOneLiner) {
-    bits.push(truncateText(stripTags(decodeHtmlEntities(aiOneLiner)), 160))
+    bits.push(truncateText(cleanJobDescriptionText(stripTags(decodeHtmlEntities(aiOneLiner))), 160))
   } else if (aiSnippet) {
-    bits.push(truncateText(stripTags(decodeHtmlEntities(aiSnippet)), 160))
+    bits.push(truncateText(cleanJobDescriptionText(stripTags(decodeHtmlEntities(aiSnippet))), 160))
   } else if (job.descriptionHtml) {
-    const snippet = truncateText(stripTags(decodeHtmlEntities(job.descriptionHtml)), 140)
+    const snippet = truncateText(
+      cleanJobDescriptionText(stripTags(decodeHtmlEntities(job.descriptionHtml))),
+      140,
+    )
     if (snippet) bits.push(snippet)
   }
 

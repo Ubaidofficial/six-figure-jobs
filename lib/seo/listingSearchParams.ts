@@ -46,3 +46,35 @@ export function buildNormalizedListingPath(
   const query = params.toString()
   return query ? `${basePath}?${query}` : basePath
 }
+
+function firstValue(searchParams: ListingSearchParams, key: string): string | null {
+  const values = asTrimmedValues(searchParams[key])
+  return values[0] ?? null
+}
+
+function normalizeSlug(value: string | null): string | null {
+  if (!value) return null
+  const slug = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  return slug || null
+}
+
+export function buildCleanJobsCanonicalPath(searchParams: ListingSearchParams): string {
+  const hasFilters = hasNonPaginationQueryParams(searchParams)
+  if (!hasFilters) return '/jobs'
+
+  const role = normalizeSlug(firstValue(searchParams, 'role') ?? firstValue(searchParams, 'roleSlug'))
+  const country = normalizeSlug(firstValue(searchParams, 'country') ?? firstValue(searchParams, 'countryCode'))
+  const remoteMode = normalizeSlug(firstValue(searchParams, 'remoteMode'))
+
+  if (role && remoteMode === 'remote') return `/jobs/${role}/remote`
+  if (role && country) return `/jobs/${role}/${country}`
+  if (role) return `/jobs/${role}`
+  if (country) return `/jobs/${country}`
+
+  return '/jobs'
+}

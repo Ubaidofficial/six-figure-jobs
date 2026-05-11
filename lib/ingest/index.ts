@@ -26,6 +26,12 @@ import { normalizeRole } from '../normalizers/role'
 import slugify from 'slugify'
 import { parseGreenhouseSalary } from './greenhouseSalaryParser'
 import { getShortStableIdForJobId } from '../jobs/jobSlug'
+import { buildJobValidThroughDate } from '../jobs/validThrough'
+import {
+  getMinimumSalaryRejection,
+  warnMinimumSalaryRejected,
+} from '../jobs/salaryPublicationGate'
+import { notifyJobInsertedForIndexing } from '../jobs/indexingNotifications'
 
 import { getSourcePriority, isAtsSource, isBoardSource } from './sourcePriority'
 import { makeJobDedupeKey, normalizeUrl } from './dedupeHelpers'
@@ -78,6 +84,32 @@ const ingestLog = (...args: Parameters<typeof console.log>) => {
 
 function isIngestDryRun(): boolean {
   return process.env.SCRAPE_DRY_RUN === '1' || process.env.DRY_RUN === '1'
+}
+
+function buildPublishValidThroughDate(postedAt: Date | null | undefined): Date {
+  return buildJobValidThroughDate(postedAt ?? new Date())
+}
+
+function getSalaryGateRejection(
+  salaryData: ReturnType<typeof processSalary>,
+  input: ScrapedJobInput,
+): string | null {
+  const reason = getMinimumSalaryRejection({
+    salaryMin: salaryData.salaryMin,
+    title: input.title,
+    source: input.source,
+  })
+  if (reason) {
+    warnMinimumSalaryRejected(
+      {
+        salaryMin: salaryData.salaryMin,
+        title: input.title,
+        source: input.source,
+      },
+      reason,
+    )
+  }
+  return reason
 }
 
 function sleep(ms: number) {
@@ -265,6 +297,10 @@ async function createNewJob(
 
   // Process salary
   const salaryData = processSalary(input)
+  const salaryGateRejection = getSalaryGateRejection(salaryData, input)
+  if (salaryGateRejection) {
+    return { status: 'skipped', reason: salaryGateRejection, dedupeKey }
+  }
   if (salaryData.salaryValidated !== true) {
     return { status: 'skipped', reason: 'salary-not-eligible', dedupeKey }
   }
@@ -340,6 +376,7 @@ async function createNewJob(
     isExpired: false,
     lastSeenAt: new Date(),
     postedAt: input.postedAt ?? null,
+    validThrough: buildPublishValidThroughDate(input.postedAt),
     createdAt: new Date(),
     updatedAt: new Date(),
   }
@@ -359,9 +396,17 @@ async function createNewJob(
         update: {
           lastSeenAt: new Date(),
           updatedAt: new Date(),
+          validThrough: buildPublishValidThroughDate(input.postedAt),
         },
       }),
     )
+
+    await notifyJobInsertedForIndexing({
+      id: jobId,
+      title: input.title,
+      externalId: input.externalId,
+      source: input.source,
+    })
 
     return { status: 'created', jobId, dedupeKey }
   } catch (error: any) {
@@ -409,6 +454,10 @@ async function upgradeJob(
 
   // Process salary
   const salaryData = processSalary(input)
+  const salaryGateRejection = getSalaryGateRejection(salaryData, input)
+  if (salaryGateRejection) {
+    return { status: 'skipped', reason: salaryGateRejection, jobId: existing.id, dedupeKey }
+  }
   if (salaryData.salaryValidated !== true) {
     return { status: 'skipped', reason: 'salary-not-eligible', jobId: existing.id, dedupeKey }
   }
@@ -481,6 +530,7 @@ async function upgradeJob(
     isExpired: false,
     lastSeenAt: new Date(),
     postedAt: input.postedAt ?? existing.postedAt,
+    validThrough: buildPublishValidThroughDate(input.postedAt ?? existing.postedAt),
     updatedAt: new Date(),
 
     // v2.9: deterministic experience level from title
@@ -522,6 +572,10 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
   // Fill in missing salary
   if (!existing.salaryMin && !existing.salaryMax && (input.salaryMin || input.salaryMax)) {
     const salaryData = processSalary(input)
+    const salaryGateRejection = getSalaryGateRejection(salaryData, input)
+    if (salaryGateRejection) {
+      return { status: 'skipped', reason: salaryGateRejection, jobId: existing.id, dedupeKey: existing.dedupeKey }
+    }
     if (salaryData.salaryValidated === true) {
       updateData.salaryMin = salaryData.salaryMin
       updateData.salaryMax = salaryData.salaryMax
@@ -578,7 +632,10 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
 
   await prisma.job.update({
     where: { id: existing.id },
-    data: updateData,
+    data: {
+      ...updateData,
+      validThrough: buildPublishValidThroughDate(existing.postedAt as Date | null | undefined),
+    },
   })
 
   return { status: 'updated', jobId: existing.id, dedupeKey: existing.dedupeKey }

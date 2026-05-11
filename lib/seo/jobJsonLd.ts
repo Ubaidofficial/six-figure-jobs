@@ -3,9 +3,12 @@
 import type { Job, Company } from '@prisma/client'
 import { getSiteUrl } from './site'
 import { buildJobSlug } from '../jobs/jobSlug'
-import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
-import { MAX_INDEXABLE_JOB_AGE_DAYS, resolveJobFreshnessDate } from '../jobs/freshness'
+import { buildJobValidThroughDate } from '../jobs/validThrough'
+import {
+  cleanJobDescriptionHtml,
+  cleanJobDescriptionText,
+} from '../jobs/descriptionCleaning'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
 
@@ -23,25 +26,20 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 
   const url = `${SITE_URL}/job/${buildJobSlug(job as any)}`
 
-  const isRemote = job.remote === true || job.remoteMode === 'remote'
-
-  const datePosted = (job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date()).toISOString()
+  const postedAt = job.postedAt ?? job.createdAt ?? job.updatedAt ?? new Date()
+  const datePosted = postedAt.toISOString()
 
   const description = buildStructuredDescription(job, companyName)
   const baseSalary = buildBaseSalary(job)
   const validThrough = buildValidThrough(job)
-  const directApply = buildDirectApply(job)
+  const directApply = false
 
+  const physicalJobLocation = buildJobLocation(job)
+  const isRemote = isRemoteJob(job)
+  const isHybrid = job.remoteMode === 'hybrid' || (isRemote && hasPhysicalWorkplace(job))
   const applicantLocationRequirements = isRemote ? buildApplicantLocationRequirements(job) : undefined
-  const jobLocation =
-    isRemote && !applicantLocationRequirements
-      ? buildRemoteJobLocationFallback(job)
-      : isRemote
-        ? undefined
-        : buildJobLocation(job)
-  // All remote jobs get TELECOMMUTE regardless of whether location parses —
-  // global-remote jobs (countryCode: null) must still be classified as remote in Google Jobs.
-  const jobLocationType = isRemote ? 'TELECOMMUTE' : undefined
+  const jobLocation = isRemote && !isHybrid ? undefined : physicalJobLocation
+  const jobLocationType = isRemote || isHybrid ? 'TELECOMMUTE' : undefined
 
   const employmentType = normalizeEmploymentType(job.type || job.employmentType) || 'FULL_TIME'
 
@@ -65,7 +63,7 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     employmentType,
 
     ...(validThrough ? { validThrough } : {}),
-    ...(directApply != null ? { directApply } : {}),
+    directApply,
     ...(jobLocationType ? { jobLocationType } : {}),
     ...(jobLocation ? { jobLocation } : {}),
     ...(baseSalary ? { baseSalary } : {}),
@@ -86,29 +84,26 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 function buildStructuredDescription(job: any, companyName: string): string {
   const raw = String(job.descriptionHtml || '').trim()
   if (raw) {
-    const sanitized = sanitizeDescriptionHtmlForJsonLd(raw)
+    const cleanedRaw = cleanJobDescriptionHtml(raw)
+    const sanitized = sanitizeDescriptionHtmlForJsonLd(cleanedRaw)
     if (sanitized) return sanitized
     // Strip HTML tags and use plain text if sanitizer returned empty (e.g. div-only markup)
-    const stripped = stripTags(raw).replace(/\s+/g, ' ').trim()
+    const stripped = cleanJobDescriptionText(stripTags(cleanedRaw)).replace(/\s+/g, ' ').trim()
     if (stripped.length >= 30) return wrapPlainTextAsHtml(cleanDescription(stripped))
   }
 
   // descriptionText does not exist in the schema — removed dead field reference.
   // Fall back to aiSnippet or aiOneLiner if available (AI-enriched fields).
   const aiText = String(job.aiSnippet || job.aiOneLiner || '').trim()
-  if (aiText.length >= 30) return wrapPlainTextAsHtml(cleanDescription(aiText))
+  if (aiText.length >= 30) return wrapPlainTextAsHtml(cleanDescription(cleanJobDescriptionText(aiText)))
 
   const fallback = (job.salaryRaw ? String(job.salaryRaw) : '') || `${job.title} at ${companyName}`
   return wrapPlainTextAsHtml(cleanDescription(fallback))
 }
 
 function buildBaseSalary(job: any): any | undefined {
-  // Emit baseSalary for any validated salary, not only ATS-sourced ones.
-  // This puts the salary pill in Google Search results for far more listings.
-  if (job?.salaryValidated !== true) return undefined
-
-  const rawMin = toNumberSafe(job.minAnnual)
-  const rawMax = toNumberSafe(job.maxAnnual)
+  const rawMin = toNumberSafe(job.salaryMin ?? job.minAnnual)
+  const rawMax = toNumberSafe(job.salaryMax ?? job.maxAnnual)
 
   if (!rawMin && !rawMax) return undefined
 
@@ -117,10 +112,10 @@ function buildBaseSalary(job: any): any | undefined {
 
   const currency = (job.salaryCurrency as string | null | undefined) || (job.currency as string | null | undefined)
 
-  const threshold = getHighSalaryThresholdAnnual(currency)
-  if (!currency || threshold == null) return undefined
+  if (!currency) return undefined
 
   if ((min && min <= 0) || (max && max <= 0)) return undefined
+  if (min && min < 100_000) return undefined
   const cap = getAnnualSalaryCapForCurrency(currency)
   if ((min && min > cap) || (max && max > cap)) return undefined
 
@@ -137,32 +132,34 @@ function buildBaseSalary(job: any): any | undefined {
 }
 
 function buildValidThrough(job: any): string | undefined {
-  const freshnessDate = resolveJobFreshnessDate(job)
-  if (!freshnessDate) return undefined
-
-  const expiry = new Date(freshnessDate)
-  expiry.setDate(expiry.getDate() + MAX_INDEXABLE_JOB_AGE_DAYS)
-
-  return expiry.toISOString()
-}
-
-function buildDirectApply(job: any): boolean | undefined {
-  const applyUrl = typeof job?.applyUrl === 'string' ? job.applyUrl.trim() : ''
-  if (!isValidHttpUrl(applyUrl)) return undefined
-
-  return isLikelyDirectApplyUrl(applyUrl, job)
+  const explicit = readDateField(job, 'validThrough') ?? readDateField(job, 'expiresAt')
+  const posted = readDateField(job, 'postedAt') ?? readDateField(job, 'createdAt') ?? readDateField(job, 'updatedAt')
+  if (explicit && explicit.getTime() > Date.now()) return explicit.toISOString()
+  return buildJobValidThroughDate(posted ?? new Date()).toISOString()
 }
 
 function buildApplicantLocationRequirements(job: any): any | undefined {
+  const remoteRegion = typeof job.remoteRegion === 'string' ? job.remoteRegion.trim() : ''
+  if (remoteRegion) {
+    return { '@type': 'Country', name: remoteRegion }
+  }
+
   const rawCandidates = [
     job.countryCode ? String(job.countryCode) : '',
-    job.remoteRegion ? String(job.remoteRegion) : '',
     job.locationRaw ? String(job.locationRaw) : '',
   ].filter(Boolean)
 
   for (const candidate of rawCandidates) {
     const requirement = parseApplicantLocationRequirement(candidate)
     if (requirement) return requirement
+  }
+
+  const fallbackCountry = inferCountryFromJob(job)
+  if (fallbackCountry) {
+    return {
+      '@type': 'Country',
+      name: countryNameFromCode(fallbackCountry) || fallbackCountry,
+    }
   }
 
   return undefined
@@ -236,20 +233,6 @@ function parseApplicantLocationRequirement(raw: string): any | undefined {
   return undefined
 }
 
-function buildRemoteJobLocationFallback(job: any): any | undefined {
-  const candidate = buildJobLocation(job)
-  const country =
-    candidate &&
-    typeof candidate === 'object' &&
-    candidate.address &&
-    typeof candidate.address === 'object'
-      ? candidate.address.addressCountry
-      : null
-
-  if (!country) return undefined
-  return candidate
-}
-
 function countryNameFromCode(code: string): string | null {
   try {
     const dn = new Intl.DisplayNames(['en'], { type: 'region' })
@@ -265,11 +248,11 @@ function buildJobLocation(job: any): any {
   const country = job.countryCode ? String(job.countryCode).toUpperCase() : undefined
   const locationRaw = job.locationRaw ? String(job.locationRaw).trim() : ''
 
-  if (!country && !locationRaw) {
+  if (!country && !locationRaw && !city) {
     return undefined
   }
 
-  const addressCountry = country || inferCountryFromLocationRaw(locationRaw)
+  const addressCountry = country || inferCountryFromLocationRaw(locationRaw) || inferCountryFromJob(job)
 
   if (!addressCountry) {
     return undefined
@@ -285,6 +268,42 @@ function buildJobLocation(job: any): any {
       ...(!city && locationRaw ? { addressLocality: locationRaw } : {}),
     },
   }
+}
+
+function hasPhysicalWorkplace(job: any): boolean {
+  if (job.remoteMode === 'hybrid' || job.remoteMode === 'onsite') return true
+  if (typeof job.city === 'string' && job.city.trim()) return true
+
+  const locationRaw = typeof job.locationRaw === 'string' ? job.locationRaw.trim().toLowerCase() : ''
+  if (!locationRaw) return false
+
+  return !/^(remote|work from home|worldwide|global|anywhere)(\b|$)/i.test(locationRaw)
+}
+
+function isRemoteJob(job: any): boolean {
+  if (job.remote === true || job.remoteMode === 'remote') return true
+
+  const text = [
+    job.title,
+    job.locationRaw,
+    job.remoteRegion,
+    job.workArrangement,
+    job.workArrangementNormalized,
+    job.descriptionHtml,
+  ]
+    .filter(Boolean)
+    .map(String)
+    .join(' ')
+    .toLowerCase()
+
+  if (!text) return false
+
+  return (
+    /\bremote\b/.test(text) ||
+    /\btelecommute\b/.test(text) ||
+    /\bwork\s+from\s+home\b/.test(text) ||
+    /\bwork\s+remotely\b/.test(text)
+  )
 }
 
 function normalizeEmploymentType(value: unknown): string | undefined {
@@ -396,6 +415,45 @@ function inferCountryFromLocationRaw(locationRaw: string): string | null {
   return null
 }
 
+function inferCountryFromJob(job: any): string | null {
+  const explicitCountry = typeof job.countryCode === 'string' ? job.countryCode.trim().toUpperCase() : ''
+  if (/^[A-Z]{2}$/.test(explicitCountry)) return explicitCountry
+
+  const companyCountry =
+    job.companyRef && typeof job.companyRef.countryCode === 'string'
+      ? job.companyRef.countryCode.trim().toUpperCase()
+      : ''
+  if (/^[A-Z]{2}$/.test(companyCountry)) return companyCountry
+
+  const rawLocation = typeof job.locationRaw === 'string' ? job.locationRaw : ''
+  const locationCountry = inferCountryFromLocationRaw(rawLocation)
+  if (locationCountry) return locationCountry
+
+  const city = String(job.city || job.citySlug || '').toLowerCase()
+  if (
+    city.includes('san francisco') ||
+    city.includes('san-francisco') ||
+    city.includes('new york') ||
+    city.includes('new-york') ||
+    city.includes('minneapolis') ||
+    city.includes('washington') ||
+    city.includes('hawthorne')
+  ) {
+    return 'US'
+  }
+
+  const currency = String(job.salaryCurrency || job.currency || '').toUpperCase()
+  const currencyCountryMap: Record<string, string> = {
+    USD: 'US',
+    CAD: 'CA',
+    GBP: 'GB',
+    AUD: 'AU',
+    EUR: 'DE',
+  }
+
+  return currencyCountryMap[currency] ?? null
+}
+
 function regionCodeFromName(name: string): string | null {
   try {
     const regions = ['US', 'GB', 'CA', 'DE', 'AU', 'IN']
@@ -423,6 +481,17 @@ function toNumberSafe(v: any): number | null {
   } catch {
     return null
   }
+}
+
+function readDateField(source: unknown, key: string): Date | null {
+  if (!source || typeof source !== 'object') return null
+  const value = (source as Record<string, unknown>)[key]
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value : null
+  if (typeof value === 'string') {
+    const date = new Date(value)
+    return Number.isFinite(date.getTime()) ? date : null
+  }
+  return null
 }
 
 function normalizeAnnualAmount(n: number): number {
@@ -465,41 +534,4 @@ function normalizeUrl(u: string): string {
   if (!s) return s
   if (s.startsWith('http://') || s.startsWith('https://')) return s
   return `https://${s}`
-}
-
-function isValidHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' || url.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
-function isLikelyDirectApplyUrl(value: string, job: any): boolean {
-  const source = String(job?.source || '').toLowerCase()
-  if (source.includes('greenhouse') || source.includes('lever') || source.includes('ashby') || source.includes('workday')) {
-    return true
-  }
-
-  try {
-    const host = new URL(value).hostname.toLowerCase()
-    return [
-      'ashbyhq.com',
-      'bamboohr.com',
-      'greenhouse.io',
-      'greenhouse.com',
-      'icims.com',
-      'jobs.ashbyhq.com',
-      'jobs.lever.co',
-      'lever.co',
-      'myworkdayjobs.com',
-      'recruitee.com',
-      'smartrecruiters.com',
-      'workable.com',
-      'workday.com',
-    ].some((knownHost) => host === knownHost || host.endsWith(`.${knownHost}`))
-  } catch {
-    return false
-  }
 }

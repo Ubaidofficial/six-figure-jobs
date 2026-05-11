@@ -175,7 +175,7 @@ function HomepageSchemas({
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${siteUrl}/jobs?q={search_term_string}`,
+        urlTemplate: `${siteUrl}/search?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -720,91 +720,91 @@ export default async function HomePage() {
       <HomeFAQ />
 
       <section className="mt-16 border-t border-slate-800 pt-8">
-        <h2 className="mb-4 text-sm font-semibold text-slate-400">
+        <h2 className="mb-4 text-sm font-semibold text-slate-300">
           Popular Six Figure Job Searches
         </h2>
-        <div className="grid gap-x-8 gap-y-2 text-xs text-slate-500 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid gap-x-8 gap-y-2 text-xs text-slate-300 sm:grid-cols-2 md:grid-cols-4">
 	          <div className="space-y-2">
-	            <p className="font-medium text-slate-400">By Role</p>
+	            <p className="font-medium text-slate-200">By Role</p>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['software-engineer'] })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Software Engineer Jobs ($100k+)
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['senior-software-engineer'] })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Senior Engineer Jobs ($100k+)
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['product-manager'] })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Product Manager Jobs ($100k+)
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['data-engineer'] })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Data Engineer Jobs ($100k+)
 	            </Link>
 	          </div>
 	          <div className="space-y-2">
-	            <p className="font-medium text-slate-400">By Location</p>
+	            <p className="font-medium text-slate-200">By Location</p>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'US' })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              $100k+ Jobs in USA
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'GB' })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              £75k+/£100k+ Jobs in UK
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'CA' })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              $100k+/CA$ Jobs in Canada
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, remoteOnly: true })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Remote $100k+ Jobs
 	            </Link>
 	          </div>
           <div className="space-y-2">
-            <p className="font-medium text-slate-400">By Salary Band</p>
-            <Link href="/jobs/100k-plus" className="block hover:text-slate-300">
+            <p className="font-medium text-slate-200">By Salary Band</p>
+            <Link href="/jobs/100k-plus" className="block hover:text-white">
               $100k+ Jobs
             </Link>
-            <Link href="/jobs/200k-plus" className="block hover:text-slate-300">
+            <Link href="/jobs/200k-plus" className="block hover:text-white">
               $200k+ Jobs
             </Link>
-            <Link href="/jobs/300k-plus" className="block hover:text-slate-300">
+            <Link href="/jobs/300k-plus" className="block hover:text-white">
               $300k+ Jobs
             </Link>
-            <Link href="/jobs/400k-plus" className="block hover:text-slate-300">
+            <Link href="/jobs/400k-plus" className="block hover:text-white">
               $400k+ Jobs
             </Link>
           </div>
           <div className="space-y-2">
-            <p className="font-medium text-slate-400">Top Companies</p>
-            <Link href="/company/stripe" className="block hover:text-slate-300">
+            <p className="font-medium text-slate-200">Top Companies</p>
+            <Link href="/company/stripe" className="block hover:text-white">
               Stripe Jobs
             </Link>
-            <Link href="/company/anthropic" className="block hover:text-slate-300">
+            <Link href="/company/anthropic" className="block hover:text-white">
               Anthropic Jobs
             </Link>
-            <Link href="/company/airbnb" className="block hover:text-slate-300">
+            <Link href="/company/airbnb" className="block hover:text-white">
               Airbnb Jobs
             </Link>
-            <Link href="/company/mongodb" className="block hover:text-slate-300">
+            <Link href="/company/mongodb" className="block hover:text-white">
               MongoDB Jobs
             </Link>
           </div>

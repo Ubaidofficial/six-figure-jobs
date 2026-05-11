@@ -1,18 +1,82 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
+
+const SITE_URL = getSiteUrl()
 
 export const metadata: Metadata = {
-  title: 'About Six Figure Jobs',
+  title: `About ${SITE_NAME}`,
   description:
     'Six Figure Jobs is a curated job board for verified $100k+ roles across remote, hybrid, and on-site opportunities worldwide.',
   alternates: {
-    canonical: 'https://www.6figjobs.com/about',
+    canonical: `${SITE_URL}/about`,
+  },
+  openGraph: {
+    title: `About ${SITE_NAME}`,
+    description:
+      'Learn how Six Figure Jobs curates verified $100k+ roles, salary-first discovery pages, and direct-apply job listings.',
+    url: `${SITE_URL}/about`,
+    siteName: SITE_NAME,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `About ${SITE_NAME}`,
+    description:
+      'Learn how Six Figure Jobs curates verified $100k+ roles, salary-first discovery pages, and direct-apply job listings.',
+    images: [`${SITE_URL}/og-image.png`],
   },
 }
 
 export default function AboutPage() {
+  const aboutPageJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: `About ${SITE_NAME}`,
+    description:
+      'Learn how Six Figure Jobs curates verified $100k+ roles, salary-first discovery pages, and direct-apply job listings.',
+    url: `${SITE_URL}/about`,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  }
+  const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.png`,
+    email: 'support@6figjobs.com',
+    sameAs: [
+      'https://linkedin.com/company/sixfigjobs',
+      'https://twitter.com/6figjobs',
+    ],
+  }
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'About', item: `${SITE_URL}/about` },
+    ],
+  }
+
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutPageJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <h1 className="text-3xl font-semibold tracking-tight text-slate-50">
         About Six Figure Jobs
       </h1>

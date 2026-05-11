@@ -26,7 +26,7 @@ const TESTIMONIALS = [
 
 function Stars() {
   return (
-    <div className={styles.stars} aria-label="5 stars">
+    <div className={styles.stars} role="img" aria-label="5 stars">
       {Array.from({ length: 5 }).map((_, i) => (
         <svg key={i} className={styles.star} viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
           <path d="M8 1l1.9 3.9L14 5.6l-3 2.9.7 4.1L8 10.5l-3.7 2.1.7-4.1L2 5.6l4.1-.7z" />
