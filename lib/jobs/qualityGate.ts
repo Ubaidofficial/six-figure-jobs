@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client'
 import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
 import { inferCurrencyFromCountryCode } from '../normalizers/salary'
 import { isJobFresh } from './freshness'
+import { hasJobDescriptionNoise } from './descriptionCleaning'
 
 export const QUALITY_MIN_DESCRIPTION_CHARS = 140
 export const QUALITY_MIN_AI_SNIPPET_CHARS = 80
@@ -199,6 +200,10 @@ export function evaluateJobIndexability(job: JobIndexabilityInput): JobIndexabil
   }
 
   const descriptionLen = toPlainText(job.descriptionHtml).length
+  if (descriptionLen > 0 && hasJobDescriptionNoise(String(job.descriptionHtml || ''))) {
+    return fail('polluted_description')
+  }
+
   const aiSnippetLen = String(job.aiSnippet || '').trim().length
   const aiOneLinerLen = String(job.aiOneLiner || '').trim().length
 

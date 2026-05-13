@@ -5,6 +5,29 @@ const LEADING_PRIVACY_PATTERNS = [
   /privacy notice/i,
 ]
 
+const DESCRIPTION_NOISE_RULES = [
+  { id: 'similar_jobs', pattern: /\bsimilar jobs\b/i },
+  { id: 'showing_jobs_count', pattern: /\bshowing\s+\d+\s+jobs\b/i },
+  { id: 'explore_related_pages', pattern: /\bexplore related pages\b/i },
+  { id: 'apply_on_company_site', pattern: /\bapply on the company site\b/i },
+  { id: 'jobcopilot_marketing', pattern: /\bmeet jobcopilot\b/i },
+  { id: 'stop_applying_marketing', pattern: /\bstop applying\b/i },
+  { id: 'remote_jobs_from_companies_like', pattern: /\bremote jobs from companies like\b/i },
+  {
+    id: 'premium_roles_marketing',
+    pattern: /\bpremium roles, verified salaries, no noise\b/i,
+  },
+] as const
+
+export type JobDescriptionNoiseId = (typeof DESCRIPTION_NOISE_RULES)[number]['id']
+
+export type SanitizedJobDescription = {
+  descriptionHtml: string | null
+  descriptionText: string | null
+  polluted: boolean
+  noiseMatches: JobDescriptionNoiseId[]
+}
+
 export function decodeJobHtmlEntities(input: string): string {
   return (input || '')
     .replace(/&nbsp;/gi, ' ')
@@ -42,7 +65,8 @@ export function cleanJobDescriptionText(input: string): string {
     lines.shift()
   }
 
-  return lines.join(' ').replace(/\s+/g, ' ').trim()
+  const cleaned = lines.join(' ').replace(/\s+/g, ' ').trim()
+  return hasJobDescriptionNoise(cleaned) ? '' : cleaned
 }
 
 export function cleanJobDescriptionHtml(input: string): string {
@@ -63,7 +87,54 @@ export function cleanJobDescriptionHtml(input: string): string {
     changed = html !== before
   }
 
+  if (hasJobDescriptionNoise(stripJobHtmlTags(html))) {
+    return ''
+  }
+
   return html
+}
+
+export function findJobDescriptionNoiseMatches(input: string): JobDescriptionNoiseId[] {
+  const normalized = stripJobHtmlTags(decodeJobHtmlEntities(input || ''))
+    .replace(/[^a-z0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!normalized) return []
+
+  return DESCRIPTION_NOISE_RULES.filter((rule) => rule.pattern.test(normalized)).map(
+    (rule) => rule.id,
+  )
+}
+
+export function hasJobDescriptionNoise(input: string): boolean {
+  return findJobDescriptionNoiseMatches(input).length > 0
+}
+
+export function sanitizeJobDescriptionFields(
+  descriptionHtml: string | null | undefined,
+  descriptionText: string | null | undefined,
+): SanitizedJobDescription {
+  const rawHtml = String(descriptionHtml || '').trim()
+  const rawText = String(descriptionText || '').trim()
+
+  const htmlMatches = rawHtml ? findJobDescriptionNoiseMatches(rawHtml) : []
+  const textMatches = rawText ? findJobDescriptionNoiseMatches(rawText) : []
+
+  const cleanedHtml = rawHtml ? cleanJobDescriptionHtml(rawHtml) : ''
+  const cleanedText = rawText ? cleanJobDescriptionText(rawText) : ''
+
+  const noiseMatches = Array.from(new Set([...htmlMatches, ...textMatches]))
+  const polluted =
+    noiseMatches.length > 0 &&
+    ((!cleanedHtml && htmlMatches.length > 0) || (!cleanedText && textMatches.length > 0))
+
+  return {
+    descriptionHtml: cleanedHtml || null,
+    descriptionText: cleanedText || (cleanedHtml ? stripJobHtmlTags(cleanedHtml) : null),
+    polluted,
+    noiseMatches,
+  }
 }
 
 function isLeadingPrivacyLine(line: string): boolean {

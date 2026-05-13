@@ -32,6 +32,10 @@ import {
   warnMinimumSalaryRejected,
 } from '../jobs/salaryPublicationGate'
 import { notifyJobInsertedForIndexing } from '../jobs/indexingNotifications'
+import {
+  hasJobDescriptionNoise,
+  sanitizeJobDescriptionFields,
+} from '../jobs/descriptionCleaning'
 
 import { getSourcePriority, isAtsSource, isBoardSource } from './sourcePriority'
 import { makeJobDedupeKey, normalizeUrl } from './dedupeHelpers'
@@ -166,6 +170,23 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
       (input as any).title ?? 'unknown',
     )
     return { status: 'skipped', reason: `validation-failed: ${errors.join(', ')}` }
+  }
+
+  const sanitizedDescription = sanitizeJobDescriptionFields(
+    input.descriptionHtml,
+    input.descriptionText,
+  )
+  input.descriptionHtml = sanitizedDescription.descriptionHtml
+  input.descriptionText = sanitizedDescription.descriptionText
+
+  if (sanitizedDescription.polluted) {
+    ingestLog(
+      `[ingest] skipping polluted description source=${input.source} title="${input.title}" noise=${sanitizedDescription.noiseMatches.join(',')}`,
+    )
+    return {
+      status: 'skipped',
+      reason: `polluted-description:${sanitizedDescription.noiseMatches.join(',') || 'unknown'}`,
+    }
   }
 
   try {
@@ -565,7 +586,10 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
   }
 
   // Fill in missing description
-  if (!existing.descriptionHtml && input.descriptionHtml) {
+  if (
+    input.descriptionHtml &&
+    (!existing.descriptionHtml || hasJobDescriptionNoise(String(existing.descriptionHtml || '')))
+  ) {
     updateData.descriptionHtml = input.descriptionHtml
   }
 

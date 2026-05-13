@@ -1,6 +1,7 @@
 // Fetches a board job page once and returns both the external apply URL and description HTML.
 import * as cheerio from 'cheerio'
 import { extractApplyDestinationFromHtml } from './extractApplyLink'
+import { cleanJobDescriptionHtml } from '../../jobs/descriptionCleaning'
 
 const DESCRIPTION_SELECTORS = [
   '.job-description', '.job-content', '.description', '#job-description',
@@ -41,7 +42,12 @@ export async function fetchJobPageDetails(
       }
     }
 
-    return { applyUrl: filteredApply, descriptionHtml }
+    const cleanedDescriptionHtml = descriptionHtml ? cleanJobDescriptionHtml(descriptionHtml) : ''
+
+    return {
+      applyUrl: filteredApply,
+      descriptionHtml: cleanedDescriptionHtml || null,
+    }
   } catch {
     return { applyUrl: null, descriptionHtml: null }
   }

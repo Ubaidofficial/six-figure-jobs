@@ -39,7 +39,6 @@ import scrapeRemoteAI from '../lib/scrapers/remoteai'
 import scrapeRemoteYeah from '../lib/scrapers/remoteyeah'
 import scrapeHimalayas from '../lib/scrapers/himalayas'
 import scrapeRemoteLeaf from '../lib/scrapers/remoteleaf'
-import scrapeRemote100k from '../lib/scrapers/remote100k'
 import { discoverRemote100kCompanies } from '../lib/scrapers/remote100k-companies'
 
 // New board scrapers (named exports)
@@ -263,7 +262,6 @@ async function runBoardScrapers(options: CliOptions): Promise<DailyScrapeStats> 
     { key: 'weworkremotely', name: 'WeWorkRemotely', run: scrapeWeWorkRemotely },
     { key: 'nodesk', name: 'NoDesk', run: scrapeNodesk },
     { key: 'builtin', name: 'BuiltIn', run: scrapeBuiltIn },
-    { key: 'remote100k', name: 'Remote100k', run: scrapeRemote100k },
     { key: 'remote100k-companies', name: 'Remote100k-Companies', run: discoverRemote100kCompanies },
     { key: 'remoterocketship', name: 'RemoteRocketship', run: scrapeRemoteRocketship },
     { key: 'himalayas', name: 'Himalayas', run: scrapeHimalayas },

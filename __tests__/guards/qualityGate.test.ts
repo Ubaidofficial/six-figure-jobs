@@ -89,4 +89,15 @@ describe('evaluateJobIndexability', () => {
     expect(result.indexable).toBe(false)
     expect(result.reason).toBe('stale_job')
   })
+
+  it('rejects jobs with polluted board/sidebar description content', () => {
+    const result = evaluateJobIndexability({
+      ...baseJob,
+      descriptionHtml:
+        '<div>Similar Jobs</div><p>Showing</p><p>7</p><p>jobs</p><p>Analytics</p><p>$148,500 - $204,000</p>',
+    })
+
+    expect(result.indexable).toBe(false)
+    expect(result.reason).toBe('polluted_description')
+  })
 })

@@ -16,6 +16,8 @@
     "jobs:audit:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=audit --dry-run",
     "jobs:repair:currency": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/repairCurrencyAndSalary.ts --mode=repair",
     "jobs:annotate:ai": "tsx scripts/aiAnnotateJobs.ts",
+    "jobs:audit:pollution": "node --import tsx scripts/cleanupPollutedJobs.ts",
+    "jobs:cleanup:pollution": "node --import tsx scripts/cleanupPollutedJobs.ts --write",
     "jobs:backfill:salary": "tsx scripts/backfill-high-salary-local.ts",
     "jobs:backfill:salary-quality:v2.9": "tsx scripts/backfill-salary-quality-v2.9.ts",
     "backfill:role-slugs": "tsx scripts/backfill-role-slugs.ts",
