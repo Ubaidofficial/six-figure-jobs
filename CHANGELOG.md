@@ -2,6 +2,7 @@
 
 ### Bug Fixes
 
+* fix(scrapers): unify board registry and ATS support boundaries, block unsupported ATS drift, add production scraper maintenance workflow, and add unsupported ATS cleanup tooling
 * fix(audit): harden DB-backed health checks against transient Railway proxy failures, exclude local worktrees from lint, and clean up final audit warnings
 * fix(scrape): restore freshness by cleaning polluted job ingests, adding validThrough backfill/cleanup tooling, removing remote100k from the default run, and consolidating Google indexing notifications
 

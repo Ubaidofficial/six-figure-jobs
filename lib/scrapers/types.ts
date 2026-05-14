@@ -8,7 +8,7 @@ export type AtsProvider =
   | 'bamboohr'
   | 'smartrecruiters'
   | 'recruitee'
-  | 'teamtailor';
+  | 'workable';
 
 export interface CompanySourceConfig {
   id: string;          // Prisma Company.id

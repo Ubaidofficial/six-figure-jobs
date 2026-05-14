@@ -28,39 +28,12 @@ import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../lib/jobs/fres
 import { buildIndexableJobStructureWhere } from '../lib/jobs/qualityGate'
 import { buildJobSlug } from '../lib/jobs/jobSlug'
 import { notifyUrls, hasIndexingCredentials } from '../lib/indexing/googleIndexingClient'
-
-// Core board scrapers (default exports)
-import scrapeRemoteOK from '../lib/scrapers/remoteok'
-import scrapeWeWorkRemotely from '../lib/scrapers/weworkremotely'
-import scrapeNodesk from '../lib/scrapers/nodesk'
-import scrapeBuiltIn from '../lib/scrapers/builtin'
-import scrapeRemoteRocketship from '../lib/scrapers/remoterocketship'
-import scrapeRemoteAI from '../lib/scrapers/remoteai'
-import scrapeRemoteYeah from '../lib/scrapers/remoteyeah'
-import scrapeHimalayas from '../lib/scrapers/himalayas'
-import scrapeRemoteLeaf from '../lib/scrapers/remoteleaf'
-import { discoverRemote100kCompanies } from '../lib/scrapers/remote100k-companies'
-
-// New board scrapers (named exports)
-import { scrapeRealWorkFromAnywhere } from '../lib/scrapers/realworkfromanywhere'
-import { scrapeJustJoin } from '../lib/scrapers/justjoin'
-import { scrapeRemoteOtter } from '../lib/scrapers/remoteotter'
-import { scrapeTrawle } from '../lib/scrapers/trawle'
-import { scrapeFourDayWeek } from '../lib/scrapers/fourdayweek'
-import { scrapeH1bVisaJobs, scrapeMyVisaJobs } from '../lib/scrapers/h1bVisaScraper'
 import { markVisaSponsorshipBatch } from '../lib/jobs/markVisaSponsorship'
-
-// “API style” board scrapers / extra sources
-import scrapeCursorDirectory from '../lib/scrapers/cursordirectory'
-import scrapeRemotive from '../lib/scrapers/remotive'
-import scrapeYCombinator from '../lib/scrapers/ycombinator'
-import scrapeDice from '../lib/scrapers/dice'
-import scrapeWellfound from '../lib/scrapers/wellfound'
-import scrapeOtta from '../lib/scrapers/otta'
+import { BOARD_SCRAPERS, FAST_BOARD_SCRAPER_KEYS, type BoardScraperTask } from '../lib/scrapers/boardRegistry'
 
 // ATS scrapers
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
-import type { AtsProvider } from '../lib/scrapers/ats/types'
+import { SUPPORTED_ATS_PROVIDERS, type AtsProvider } from '../lib/scrapers/ats/types'
 import { upsertJobsForCompanyFromAts } from '../lib/jobs/ingestFromAts'
 import { runExpiryCycle } from '../lib/jobs/expiry'
 import { runCompanyDiscovery } from './discoverCompanies'
@@ -90,13 +63,6 @@ type SourceRunMetric = {
   skipped?: number
   jobs?: number
   error?: string
-}
-
-type BoardScraperTask = {
-  key: string
-  name: string
-  run: () => Promise<unknown>
-  dryRunSafe?: boolean
 }
 
 interface CliOptions {
@@ -257,47 +223,7 @@ async function runBoardScrapers(options: CliOptions): Promise<DailyScrapeStats> 
   const sourceMetrics: SourceRunMetric[] = []
 
   // Ordered so we hit “core” boards first
-  const allScrapers: BoardScraperTask[] = [
-    { key: 'remoteok', name: 'RemoteOK', run: scrapeRemoteOK },
-    { key: 'weworkremotely', name: 'WeWorkRemotely', run: scrapeWeWorkRemotely },
-    { key: 'nodesk', name: 'NoDesk', run: scrapeNodesk },
-    { key: 'builtin', name: 'BuiltIn', run: scrapeBuiltIn },
-    { key: 'remote100k-companies', name: 'Remote100k-Companies', run: discoverRemote100kCompanies },
-    { key: 'remoterocketship', name: 'RemoteRocketship', run: scrapeRemoteRocketship },
-    { key: 'himalayas', name: 'Himalayas', run: scrapeHimalayas },
-    { key: 'remoteleaf', name: 'RemoteLeaf', run: scrapeRemoteLeaf },
-    { key: 'realworkfromanywhere', name: 'RealWorkFromAnywhere', run: scrapeRealWorkFromAnywhere },
-    { key: 'justjoin', name: 'JustJoin', run: scrapeJustJoin },
-    { key: 'remoteotter', name: 'RemoteOtter', run: scrapeRemoteOtter },
-    { key: 'trawle', name: 'Trawle', run: scrapeTrawle },
-    { key: 'fourdayweek', name: 'FourDayWeek', run: scrapeFourDayWeek },
-    { key: 'cursordirectory', name: 'CursorDirectory', run: scrapeCursorDirectory },
-    { key: 'remotive', name: 'Remotive', run: scrapeRemotive },
-    { key: 'dice', name: 'Dice', run: scrapeDice },
-    { key: 'wellfound', name: 'Wellfound', run: scrapeWellfound },
-    { key: 'otta', name: 'Otta', run: scrapeOtta },
-    { key: 'ycombinator', name: 'YCombinator', run: scrapeYCombinator },
-    { key: 'remoteyeah', name: 'RemoteYeah', run: scrapeRemoteYeah, dryRunSafe: false },
-    { key: 'remoteai', name: 'RemoteAI (companies only)', run: scrapeRemoteAI, dryRunSafe: false },
-    { key: 'h1bvisajobs', name: 'H1BVisaJobs', run: scrapeH1bVisaJobs },
-    { key: 'myvisajobs', name: 'MyVisaJobs', run: scrapeMyVisaJobs },
-  ]
-
-  const fastKeys = new Set([
-    'remoteok',
-    'weworkremotely',
-    'remote100k-companies',
-    'remoterocketship',
-    'himalayas',
-    'remoteleaf',
-    'realworkfromanywhere',
-    'justjoin',
-    'fourdayweek',
-    'remoteyeah',
-    'remoteai',
-  ])
-
-  let scrapers = fast ? allScrapers.filter((s) => fastKeys.has(s.key)) : allScrapers
+  let scrapers = fast ? BOARD_SCRAPERS.filter((s) => FAST_BOARD_SCRAPER_KEYS.has(s.key)) : BOARD_SCRAPERS
 
   if (sourceFilter?.length) {
     const allowed = new Set(sourceFilter)
@@ -400,7 +326,7 @@ async function loadAtsCompanies(options: CliOptions) {
 
     const page = await prisma.company.findMany({
       where: {
-        atsProvider: { not: null },
+        atsProvider: { in: [...SUPPORTED_ATS_PROVIDERS] },
         atsUrl: { not: null },
       },
       orderBy: [
@@ -429,8 +355,41 @@ async function loadAtsCompanies(options: CliOptions) {
   return companies
 }
 
+async function loadUnsupportedAtsCompanySummary() {
+  const rows = await prisma.company.groupBy({
+    by: ['atsProvider'],
+    where: {
+      atsProvider: {
+        not: null,
+        notIn: [...SUPPORTED_ATS_PROVIDERS],
+      },
+      atsUrl: { not: null },
+    },
+    _count: {
+      _all: true,
+    },
+    orderBy: {
+      atsProvider: 'asc',
+    },
+  })
+
+  return rows
+    .filter((row): row is typeof row & { atsProvider: string } => typeof row.atsProvider === 'string')
+    .map((row) => ({ provider: row.atsProvider, count: row._count._all }))
+}
+
 async function runAtsScrapers(options: CliOptions): Promise<DailyScrapeStats> {
   __slog('🏢 Running ATS scrapers…\n')
+
+  const unsupportedSummary = await loadUnsupportedAtsCompanySummary()
+  if (unsupportedSummary.length) {
+    __slog(
+      `   ⚠️ Skipping unsupported ATS providers in Company table: ${unsupportedSummary
+        .map((row) => `${row.provider}=${row.count}`)
+        .join(', ')}`,
+    )
+    __slog('')
+  }
 
   const companies = await loadAtsCompanies(options)
 

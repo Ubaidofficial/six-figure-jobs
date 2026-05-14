@@ -70,9 +70,7 @@ export function toAtsProvider(atsType: ATSType): AtsProvider | null {
     case 'bamboohr':
     case 'smartrecruiters':
     case 'recruitee':
-    case 'teamtailor':
     case 'workable':
-    case 'breezy':
       return atsType
     default:
       return null
@@ -106,4 +104,3 @@ export function isExternalToHost(targetUrl: string, baseHost: string): boolean {
     return false
   }
 }
-
