@@ -2,6 +2,7 @@
 
 ### Bug Fixes
 
+* fix(audit): harden DB-backed health checks against transient Railway proxy failures, exclude local worktrees from lint, and clean up final audit warnings
 * fix(scrape): restore freshness by cleaning polluted job ingests, adding validThrough backfill/cleanup tooling, removing remote100k from the default run, and consolidating Google indexing notifications
 
 # 1.0.0 (2026-05-11)
@@ -1181,4 +1182,3 @@
 ### Performance Improvements
 
 * cache headers and disable image optimization ([a4f3337](https://github.com/Ubaidofficial/six-figure-jobs/commit/a4f33374fb64d7a373ead0f36911fcd7595efb0a))
-

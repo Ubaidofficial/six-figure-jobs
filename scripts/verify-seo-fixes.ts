@@ -24,12 +24,46 @@ const root = process.cwd()
 const siteUrl = 'https://www.6figjobs.com'
 process.env.SITE_URL = siteUrl
 
+const DB_RETRY_ATTEMPTS = Math.max(1, Number(process.env.DB_RETRY_ATTEMPTS || '3'))
+const DB_RETRY_DELAY_MS = Math.max(0, Number(process.env.DB_RETRY_DELAY_MS || '750'))
+
 function pass(id: string, label: string, detail = 'OK'): Check {
   return { id, label, pass: true, detail }
 }
 
 function fail(id: string, label: string, detail: string): Check {
   return { id, label, pass: false, detail }
+}
+
+function isRetryableDbError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return (
+    message.includes("Can't reach database server") ||
+    message.includes('Connection terminated unexpectedly') ||
+    message.includes('Timed out fetching a new connection from the connection pool')
+  )
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function withDbRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 1; attempt <= DB_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+      if (!isRetryableDbError(error) || attempt === DB_RETRY_ATTEMPTS) throw error
+      console.warn(
+        `[verify-seo-fixes] retrying ${label} after transient DB error (attempt ${attempt + 1}/${DB_RETRY_ATTEMPTS})`,
+      )
+      await sleep(DB_RETRY_DELAY_MS * attempt)
+    }
+  }
+
+  throw lastError
 }
 
 function lineNumber(source: string, needle: string): number {
@@ -320,12 +354,14 @@ async function runChecks(): Promise<Check[]> {
   )
 
   try {
-    const sampledJobs = await prisma.job.findMany({
-      where: { isExpired: false },
-      select: { id: true, validThrough: true },
-      take: 10,
-      orderBy: { updatedAt: 'desc' },
-    })
+    const sampledJobs = await withDbRetry('validThroughSample', () =>
+      prisma.job.findMany({
+        where: { isExpired: false },
+        select: { id: true, validThrough: true },
+        take: 10,
+        orderBy: { updatedAt: 'desc' },
+      }),
+    )
     const now = Date.now()
     const invalid = sampledJobs.filter((sample) => !sample.validThrough || sample.validThrough.getTime() <= now)
     checks.push(

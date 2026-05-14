@@ -3,7 +3,16 @@ const tseslint = require('typescript-eslint')
 const next = require('@next/eslint-plugin-next')
 
 module.exports = [
-  { ignores: ['.next/**', 'node_modules/**', 'dist/**', 'coverage/**'] },
+  {
+    ignores: [
+      '.next/**',
+      'node_modules/**',
+      'dist/**',
+      'coverage/**',
+      '.claude/**',
+      '.claire/**',
+    ],
+  },
 
   js.configs.recommended,
 

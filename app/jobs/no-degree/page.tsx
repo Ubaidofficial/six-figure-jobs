@@ -71,7 +71,9 @@ export async function generateMetadata({
   try {
     const result = await queryJobs({ page: 1, pageSize: 1, roleSlugs: NO_DEGREE_ROLES.map((r) => r.slug) })
     total = result.total
-  } catch {}
+  } catch (error) {
+    void error
+  }
 
   const title = `$100k+ Jobs Without a Degree | Six Figure Jobs`
   const description = `${total > 0 ? `${total.toLocaleString()} ` : ''}high-paying tech jobs that don't require a college degree. Software engineer, DevOps, sales, and data roles paying $100k–$300k+. Skills-first hiring. Apply directly.`

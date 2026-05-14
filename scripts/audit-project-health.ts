@@ -20,6 +20,14 @@ type StepResult = {
 
 const STRICT = process.argv.includes('--strict') || process.env.SEO_AUDIT_STRICT === '1'
 
+function isTransientDbUnavailable(output: string): boolean {
+  return (
+    output.includes("Can't reach database server") ||
+    output.includes('Connection terminated unexpectedly') ||
+    output.includes('Timed out fetching a new connection from the connection pool')
+  )
+}
+
 const steps: Step[] = [
   {
     id: 'A1',
@@ -76,6 +84,13 @@ const steps: Step[] = [
           status: 'warn',
           detail:
             'local database schema is behind prisma/schema.prisma; apply the validThrough migration before trusting DB-backed audit checks',
+        }
+      }
+      if (isTransientDbUnavailable(output)) {
+        return {
+          status: 'warn',
+          detail:
+            'DB-backed verification hit a transient Railway proxy outage; rerun when the database connection is stable before treating this as an app issue',
         }
       }
       return { status: 'fail', detail: 'verification script failed' }
