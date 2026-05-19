@@ -11,7 +11,6 @@ import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 600
 
 const SITE_URL = getSiteUrl()

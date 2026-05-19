@@ -21,7 +21,6 @@ import { JobsToolbar } from './_components/JobsToolbar'
 import styles from './JobsPage.module.css'
 
 export const revalidate = 600
-export const dynamic = 'force-dynamic'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24

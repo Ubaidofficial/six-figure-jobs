@@ -1,11 +1,11 @@
 // Shared indexability thresholds for pages that can become noindex when thin.
 // Sitemaps must use the same thresholds so noindex pages are never submitted.
 
-export const MIN_COMPANY_INDEXABLE_JOBS = 3
-export const MIN_CITY_INDEXABLE_JOBS = 3
-export const MIN_COUNTRY_INDEXABLE_JOBS = 3
-export const MIN_REMOTE_ROLE_INDEXABLE_JOBS = 3
-export const MIN_ROLE_FILTER_INDEXABLE_JOBS = 5
+export const MIN_COMPANY_INDEXABLE_JOBS = 1
+export const MIN_CITY_INDEXABLE_JOBS = 1
+export const MIN_COUNTRY_INDEXABLE_JOBS = 1
+export const MIN_REMOTE_ROLE_INDEXABLE_JOBS = 1
+export const MIN_ROLE_FILTER_INDEXABLE_JOBS = 3
 export const MIN_SALARY_TIER_INDEXABLE_JOBS = 1
 
 function toSafeCount(value: number | null | undefined): number {

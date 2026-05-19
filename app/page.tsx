@@ -37,16 +37,15 @@ import { Testimonials } from '@/components/home/Testimonials'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
 import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
 
-export const revalidate = 300 // 5min instead of 10min
-export const dynamic = 'force-dynamic'
+export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dynamic
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const stats = await loadPublicSiteStats()
-    const description = `Find ${stats.totalJobs.toLocaleString()}+ verified $100k+ jobs with published salary ranges. Premium roles from ${stats.totalCompanies.toLocaleString()} verified companies. Updated daily.`
+    const description = `${stats.totalJobs.toLocaleString()}+ verified $100k+ jobs — salary shown upfront, apply direct. No recruiters, no entry-level noise. Six-figure remote and on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies, updated daily.`
     const ogDescription =
-      `Find six-figure jobs and high-paying positions with verified salary ranges. ` +
-      `Explore ${stats.totalJobs.toLocaleString()}+ $100k+ opportunities from ${stats.totalCompanies.toLocaleString()} verified companies.`
+      `${stats.totalJobs.toLocaleString()}+ verified six-figure jobs with salary shown upfront. ` +
+      `Apply direct — no recruiters, no guesswork. $100k+ remote & on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
 
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
@@ -55,6 +54,14 @@ export async function generateMetadata(): Promise<Metadata> {
         '6 figure jobs, six figure jobs, 6 figure salary jobs, six-figure jobs, high paying jobs, easy 6 figure jobs, 6 figure remote jobs, 6 figure jobs no degree, 6 figure jobs without college degree, six-figure salary jobs, best 6 figure jobs',
       alternates: {
         canonical: 'https://www.6figjobs.com',
+        languages: {
+          'en': 'https://www.6figjobs.com',
+          'en-US': 'https://www.6figjobs.com',
+          'en-GB': 'https://www.6figjobs.com/jobs/country/uk',
+          'en-CA': 'https://www.6figjobs.com/jobs/country/canada',
+          'en-DE': 'https://www.6figjobs.com/jobs/country/germany',
+          'x-default': 'https://www.6figjobs.com',
+        },
       },
       openGraph: {
         title: 'Six Figure Jobs & High Paying $100k+ Positions',

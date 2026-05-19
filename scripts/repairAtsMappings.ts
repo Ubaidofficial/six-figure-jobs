@@ -16,6 +16,8 @@ const SUPPORTED_FALLBACKS = new Set([
   'recruitee',
   'workable',
   'workday',
+  'teamtailor',
+  'breezy',
 ])
 
 const PRIORITY: Record<string, number> = {
@@ -25,6 +27,8 @@ const PRIORITY: Record<string, number> = {
   recruitee: 4,
   workable: 5,
   workday: 6,
+  teamtailor: 7,
+  breezy: 8,
 }
 
 async function workdayPageLooksReachable(url: string): Promise<boolean> {

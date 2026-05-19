@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+
+export const revalidate = 600
+
 import { CITY_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
@@ -51,7 +54,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `Browse ${total.toLocaleString()} verified ${salaryLabel} jobs in ${resolved.label} with published salary ranges, direct apply links, and no entry-level clutter. Updated daily from company ATS feeds.`
+  const description = `${total.toLocaleString()} verified ${salaryLabel} jobs in ${resolved.label} — salary shown upfront, apply direct. No entry-level noise, no recruiter fees. Remote, hybrid, and on-site roles refreshed daily from company ATS feeds.`
   const canonical = `${SITE_URL}/jobs/city/${resolved.slug}`
 
   return {

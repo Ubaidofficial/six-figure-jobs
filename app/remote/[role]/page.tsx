@@ -1,5 +1,4 @@
 // app/remote/[role]/page.tsx
-export const dynamic = 'force-dynamic'
 export const revalidate = 3600
 
 import type { Metadata } from 'next'

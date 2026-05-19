@@ -1,6 +1,7 @@
 // lib/companies/logo.ts
 // Build a logo URL. Prefer stored logo.dev URLs and avoid Clearbit fallbacks
 // because failed Clearbit requests are reported as console errors by Lighthouse.
+import { normalizePublicCompanyWebsite } from './website'
 
 function extractDomain(url?: string | null): string | null {
   if (!url) return null
@@ -41,7 +42,8 @@ export function buildLogoUrl(
     return appendLogoDevOptimization(logoUrl)
   }
 
-  const domain = extractDomain(website ?? null)
+  const publicWebsite = normalizePublicCompanyWebsite(website ?? null)
+  const domain = extractDomain(publicWebsite)
   if (!domain) return null
 
   // Prefer logo.dev when configured. Otherwise use the initials fallback.

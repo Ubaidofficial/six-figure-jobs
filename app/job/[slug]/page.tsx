@@ -18,6 +18,7 @@ import { isJobDetailAvailable } from '../../../lib/jobs/detailAvailability'
 import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
+import { normalizePublicCompanyWebsite } from '../../../lib/companies/website'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { cleanJobDescriptionHtml } from '../../../lib/jobs/descriptionCleaning'
@@ -39,8 +40,12 @@ import {
   Users,
 } from 'lucide-react'
 
+import { SKILL_TARGETS } from '../../../lib/seo/pseoTargets'
 import { JobActions } from './JobActions'
 import styles from './JobDetail.module.css'
+
+const SKILL_SLUG_SET = new Set(SKILL_TARGETS.map((s) => s.slug))
+const SKILL_LABEL_MAP = new Map(SKILL_TARGETS.map((s) => [s.slug, s.label]))
 
 export const revalidate = 3600
 
@@ -393,6 +398,7 @@ export default async function JobPage({
                   width={96}
                   height={96}
                   className={styles.logoImg}
+                  priority
                   unoptimized={logoUrl.includes('clearbit.com') || logoUrl.includes('logo.dev')}
                 />
               ) : (
@@ -564,8 +570,12 @@ export default async function JobPage({
                 </div>
                 <div className={styles.metaRow}>
                   <span className={styles.metaKey}>Website</span>
-                  {isValidUrl(company?.website) ? (
-                    <a href={cleanUrl(company!.website!)} target="_blank" rel="nofollow noreferrer">
+                  {normalizePublicCompanyWebsite(company?.website) ? (
+                    <a
+                      href={normalizePublicCompanyWebsite(company!.website!)!}
+                      target="_blank"
+                      rel="nofollow noreferrer"
+                    >
                       Visit <ExternalLink aria-hidden="true" style={{ width: 14, height: 14 }} />
                     </a>
                   ) : (
@@ -1051,6 +1061,28 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
 
   if (job.companyRef?.slug) {
     links.push({ href: `/company/${job.companyRef.slug}`, label: `More jobs at ${companyName}` })
+  }
+
+  // Skill pages — link to the first 3 matched canonical skills
+  const rawSkills = parseSkillsFromJob(job)
+  const matchedSkillLinks = rawSkills
+    .map((s) => {
+      const slug = s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      if (SKILL_SLUG_SET.has(slug)) {
+        return { href: `/jobs/skills/${slug}`, label: `$100k+ ${SKILL_LABEL_MAP.get(slug) ?? s} jobs` }
+      }
+      return null
+    })
+    .filter((l): l is InternalLink => l !== null)
+    .slice(0, 3)
+  links.push(...matchedSkillLinks)
+
+  // City page link
+  if (job.citySlug && job.countryCode) {
+    links.push({
+      href: `/jobs/city/${job.citySlug}`,
+      label: `$100k+ jobs in ${job.city ?? job.citySlug}`,
+    })
   }
 
   return links

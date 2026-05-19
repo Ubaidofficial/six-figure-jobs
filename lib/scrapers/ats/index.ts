@@ -9,6 +9,8 @@ import { scrapeRecruiteeResult } from './recruitee'
 import { scrapeWorkdayResult } from './workday'
 import { scrapeWorkableResult } from './workable'
 import { scrapeBambooHRResult } from './bamboohr'
+import { scrapeTeamtailorResult } from './teamtailor'
+import { scrapeBreezyResult } from './breezy'
 
 export type { ATSResult } from './types'
 
@@ -61,6 +63,12 @@ export async function scrapeCompanyAtsJobs(
 
       case 'bamboohr':
         return await scrapeBambooHRResult(atsUrl)
+
+      case 'teamtailor':
+        return await scrapeTeamtailorResult(atsUrl)
+
+      case 'breezy':
+        return await scrapeBreezyResult(atsUrl)
 
       default:
         return {

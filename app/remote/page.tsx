@@ -18,7 +18,6 @@ import styles from './RemotePage.module.css'
 
 const SITE_URL = getSiteUrl()
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 600
 
 type SearchParams = Record<string, string | string[] | undefined>

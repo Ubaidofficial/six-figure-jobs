@@ -26,8 +26,8 @@ type CoreFamilyState = {
   failedFamilies: CoreFamilyKey[]
 }
 
-const CATEGORY_MIN_INDEXABLE_JOBS = 3
-const LEVEL_MIN_INDEXABLE_JOBS = 3
+const CATEGORY_MIN_INDEXABLE_JOBS = 1
+const LEVEL_MIN_INDEXABLE_JOBS = 1
 const LEVELS = ['entry', 'mid', 'senior', 'lead', 'executive'] as const
 
 function resolveSettledValue<T>(

@@ -170,8 +170,8 @@ export async function generateMetadata({
   })
 
   let description =
-    `Explore ${roleName} salary data from ${salaryBand} tech jobs. ` +
-    `See current ranges based on live ATS-powered job listings.`
+    `${roleName} salary data from verified ${salaryBand} tech jobs — real pay ranges from company ATS feeds, no surveys. ` +
+    `See what ${roleName} roles actually pay in 2026.`
 
   if (raw.length > 0) {
     const values: number[] = []
@@ -185,17 +185,13 @@ export async function generateMetadata({
       const max = values[values.length - 1]
       const mid = values[Math.floor(values.length / 2)]
       description =
-        `${roleName} salary guide using live ${salaryBand} jobs. ` +
-        `Typical base ranges from about ${formatMoney(
-          min,
-        )} to ${formatMoney(max)} / year, ` +
-        `with a median around ${formatMoney(mid)} (based on ${
-          raw.length
-        } listings).`
+        `${roleName} salary guide — verified ${salaryBand} pay ranges from live job listings. ` +
+        `Base salary from ${formatMoney(min)} to ${formatMoney(max)} / year, ` +
+        `median ${formatMoney(mid)} (${raw.length} real postings, updated daily).`
     }
   }
 
-  const allowIndex = raw.length >= 3
+  const allowIndex = raw.length >= 1
   const title = `${salaryBand} ${roleName} salary guide | Six Figure Jobs`
   // Canonical always points to the base salary page — band filter is a view
   // variant, not a separate indexable page. Query params in canonicals confuse
@@ -334,7 +330,7 @@ export default async function SalaryRolePage(props: PageProps) {
     : null
 
   const totalListings = raw.length
-  const allowIndex = totalListings >= 3
+  const allowIndex = totalListings >= 1
 
   // Jobs list for this role (live $100k+)
   const data = await queryJobs({

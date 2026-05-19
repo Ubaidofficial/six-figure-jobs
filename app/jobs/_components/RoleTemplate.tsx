@@ -859,6 +859,19 @@ export async function RoleTemplate({
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-4 py-10">
+        <p className="mb-4 text-slate-300 leading-relaxed">
+          {data.total.toLocaleString()} verified <strong>{roleTitle}</strong> jobs paying $100k+ are live on Six Figure Jobs.
+          {avgUsd ? ` The average salary is ${formatUsdK(avgUsd)} USD.` : ''}{' '}
+          All listings show the salary range upfront — no hidden compensation. Use the filters to narrow by seniority, location, tech stack, or work type.
+        </p>
+        {skills.length > 0 && (
+          <p className="text-slate-400 text-sm leading-relaxed">
+            Top skills for {roleTitle} roles: {skills.slice(0, 8).map((s) => s.name).join(', ')}.
+          </p>
+        )}
+      </section>
+
       <section className={styles.listSection} aria-label="Job listings">
         <div className={styles.layout}>
           <aside className={styles.sidebar} aria-label="Filters">
@@ -919,6 +932,18 @@ export async function RoleTemplate({
             )}
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-16" aria-label="Frequently asked questions">
+        <h2 className="mb-6 text-xl font-semibold text-slate-50">Frequently Asked Questions</h2>
+        <dl className="space-y-6">
+          {faqJsonLd.mainEntity.map((item: { name: string; acceptedAnswer: { text: string } }, i: number) => (
+            <div key={i} className="border-t border-slate-700 pt-5">
+              <dt className="mb-2 font-medium text-slate-100">{item.name}</dt>
+              <dd className="text-slate-400 leading-relaxed">{item.acceptedAnswer.text}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
     </main>
   )

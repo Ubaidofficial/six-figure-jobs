@@ -10,6 +10,19 @@ const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n"
 
 const prisma = new PrismaClient()
 const UA = 'SixFigureJobsBot/1.0 (+https://www.6figjobs.com)'
+const EXPECT_OUTBOUND_NETWORK = process.env.CI === 'true' || process.env.SMOKE_EXPECT_NETWORK === '1'
+
+function classifyFetchFailure(status: number, error: string | null): 'FAIL' | 'SKIP' {
+  if (!error) return 'FAIL'
+  if (EXPECT_OUTBOUND_NETWORK) return 'FAIL'
+  if (
+    status === 500 &&
+    /fetch failed|network|econn|enotfound|eai_again|socket|tls|certificate/i.test(error)
+  ) {
+    return 'SKIP'
+  }
+  return 'FAIL'
+}
 
 async function fetchWithTimeout(url: string, timeoutMs = 8000) {
   const controller = new AbortController()
@@ -37,9 +50,14 @@ async function checkBoardEndpoints() {
   __slog('🌐 Board endpoint smoke check')
   for (const scraper of BOARD_SCRAPERS) {
     const { name, probeUrl: url } = scraper
+    if (!url) {
+      __slog(`  ${name.padEnd(22)} SKIP (dynamic source set)`)
+      continue
+    }
     const { ok, status, error } = await fetchWithTimeout(url)
+    const verdict = ok ? 'OK' : classifyFetchFailure(status, error)
     __slog(
-      `  ${name.padEnd(22)} ${ok ? 'OK' : 'FAIL'} (status ${status}${error ? `, error=${error}` : ''})`,
+      `  ${name.padEnd(22)} ${verdict} (status ${status}${error ? `, error=${error}` : ''})`,
     )
   }
   __slog('')

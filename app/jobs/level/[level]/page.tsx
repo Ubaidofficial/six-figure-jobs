@@ -6,7 +6,6 @@ import JobList from '../../../components/JobList'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 3600
 
 const SITE_URL = getSiteUrl()
@@ -85,7 +84,7 @@ export async function generateMetadata({
     pageSize: 1,
   })
 
-  const allowIndex = total >= 3
+  const allowIndex = total >= 1
   const canonical = `${SITE_URL}/jobs/level/${level}`
 
   const title =

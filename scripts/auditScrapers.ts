@@ -4,6 +4,7 @@ import path from 'node:path'
 import { PrismaClient } from '@prisma/client'
 import { BOARD_SCRAPERS } from '../lib/scrapers/boardRegistry'
 import { SUPPORTED_ATS_PROVIDERS } from '../lib/scrapers/ats/types'
+import { classifyGenericCareerSource } from '../lib/scrapers/utils/companyCareersDiscovery'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + '\n')
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + '\n')
@@ -78,12 +79,24 @@ async function auditBoardRegistry(checks: Check[]) {
   const names = BOARD_SCRAPERS.map((scraper) => scraper.name)
   const duplicateKeys = keys.filter((key, index) => keys.indexOf(key) !== index)
   const duplicateNames = names.filter((name, index) => names.indexOf(name) !== index)
-  const missingProbeUrls = BOARD_SCRAPERS.filter((scraper) => !scraper.probeUrl)
+  const missingProbeUrls = BOARD_SCRAPERS.filter(
+    (scraper) => !scraper.probeUrl && scraper.probeMode !== 'dynamic',
+  )
+  const dynamicProbeSets = BOARD_SCRAPERS.filter((scraper) => scraper.probeMode === 'dynamic')
   const invalidRuns = BOARD_SCRAPERS.filter((scraper) => typeof scraper.run !== 'function')
 
   add(checks, 'board-registry.keys', duplicateKeys.length === 0, duplicateKeys.length ? `duplicate keys: ${duplicateKeys.join(', ')}` : `${keys.length} unique keys`)
   add(checks, 'board-registry.names', duplicateNames.length === 0, duplicateNames.length ? `duplicate names: ${duplicateNames.join(', ')}` : `${names.length} unique names`)
-  add(checks, 'board-registry.probe-urls', missingProbeUrls.length === 0, missingProbeUrls.length ? `missing probe urls: ${missingProbeUrls.map((scraper) => scraper.key).join(', ')}` : 'all board scrapers declare a probe url')
+  add(
+    checks,
+    'board-registry.probe-urls',
+    missingProbeUrls.length === 0,
+    missingProbeUrls.length
+      ? `missing probe urls: ${missingProbeUrls.map((scraper) => scraper.key).join(', ')}`
+      : dynamicProbeSets.length
+        ? `static probe urls valid; dynamic probe sets: ${dynamicProbeSets.map((scraper) => scraper.key).join(', ')}`
+        : 'all board scrapers declare a probe url',
+  )
   add(checks, 'board-registry.runnables', invalidRuns.length === 0, invalidRuns.length ? `non-function run handlers: ${invalidRuns.map((scraper) => scraper.key).join(', ')}` : 'all board scrapers expose callable run handlers')
 }
 
@@ -150,6 +163,48 @@ async function auditAtsRegistry(checks: Check[]) {
   }
 }
 
+async function auditGenericSources(checks: Check[]) {
+  try {
+    const sources = await prisma.companySource.findMany({
+      where: {
+        sourceType: 'generic_careers_page',
+        isActive: true,
+      },
+      select: {
+        url: true,
+        company: {
+          select: {
+            website: true,
+          },
+        },
+      },
+      take: 5000,
+    })
+
+    const invalid = sources.filter(
+      (source) => !classifyGenericCareerSource(source.url, source.company.website).valid,
+    )
+
+    add(
+      checks,
+      'generic-sources.inventory',
+      invalid.length === 0,
+      invalid.length
+        ? `invalid active generic sources: ${invalid.length}/${sources.length}`
+        : `active generic sources validated: ${sources.length}`,
+      invalid.length > 0,
+    )
+  } catch (error) {
+    add(
+      checks,
+      'generic-sources.database',
+      false,
+      `generic source audit unavailable: ${error instanceof Error ? error.message : String(error)}`,
+      true,
+    )
+  }
+}
+
 function auditFilesystemHygiene(checks: Check[]) {
   const duplicateArtifacts = findDuplicateScraperArtifacts()
   const debugWriteFiles = findAtsDebugWrites()
@@ -178,6 +233,7 @@ async function main() {
 
   await auditBoardRegistry(checks)
   await auditAtsRegistry(checks)
+  await auditGenericSources(checks)
   auditFilesystemHygiene(checks)
 
   const output = formatChecks(checks)

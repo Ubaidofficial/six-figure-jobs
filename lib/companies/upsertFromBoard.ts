@@ -3,6 +3,7 @@
 import { prisma } from '../prisma'
 import { cleanCompanyName } from '../normalizers/company'
 import { detectAtsFromUrl } from '../normalizers/ats'
+import { normalizePublicCompanyWebsite } from './website'
 import type { AtsProvider } from '../scrapers/ats/types'
 import { isKnownBoardHost } from '../scrapers/utils/boardHosts'
 
@@ -163,8 +164,9 @@ export async function upsertCompanyFromBoard(
   input: BoardCompanyInput,
 ): Promise<any | null> {
   const dryRun = isScrapeDryRun()
+  const websiteAts = input.websiteUrl ? detectAtsFromUrl(input.websiteUrl) : null
   const inferredWebsite =
-    input.websiteUrl ??
+    normalizePublicCompanyWebsite(input.websiteUrl) ??
     (input.applyUrl ? inferWebsiteFromUrl(input.applyUrl) : null)
 
   const cleanedFromNormalizer = cleanCompanyName(input.rawName ?? null)
@@ -183,6 +185,10 @@ export async function upsertCompanyFromBoard(
 
   if (input.explicitAtsUrl) {
     detected = detectAtsFromUrl(input.explicitAtsUrl)
+  }
+
+  if (!detected && websiteAts) {
+    detected = websiteAts
   }
 
   if (!detected && input.applyUrl) {

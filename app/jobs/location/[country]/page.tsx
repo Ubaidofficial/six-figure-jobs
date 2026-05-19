@@ -10,9 +10,20 @@ import { queryJobs } from '../../../../lib/jobs/queryJobs'
 import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 
 import { CountryLocationTemplate } from '../_components/CountryLocationTemplate'
+import { isCountryPageIndexable } from '../../../../lib/seo/indexabilityGates'
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 600
+
+const COUNTRY_LOCALE_MAP: Record<string, string> = {
+  GB: 'en-GB',
+  CA: 'en-CA',
+  DE: 'en-DE',
+  US: 'en-US',
+  ES: 'en-ES',
+  IE: 'en-IE',
+  AU: 'en-AU',
+  NL: 'en-NL',
+}
 
 const LOCATION_MAP: Record<
   string,
@@ -81,12 +92,19 @@ export async function generateMetadata({
     : `Browse ${total.toLocaleString()} ${salaryLabel} jobs in ${loc.label}. Find high paying ${loc.label} roles, six figure jobs, direct apply links, and verified salary ranges.`
 
   const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
-  const allowIndex = total >= 3
+  const allowIndex = isCountryPageIndexable(total)
+
+  const localeCode = loc.countryCode ? COUNTRY_LOCALE_MAP[loc.countryCode.toUpperCase()] : undefined
+  const languages: Record<string, string> = {
+    en: getSiteUrl(),
+    'x-default': getSiteUrl(),
+  }
+  if (localeCode) languages[localeCode] = canonical
 
   return {
     title,
     description,
-    alternates: { canonical },
+    alternates: { canonical, languages },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,

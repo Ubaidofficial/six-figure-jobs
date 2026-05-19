@@ -9,6 +9,8 @@ export const SUPPORTED_ATS_PROVIDERS = [
   'smartrecruiters',
   'recruitee',
   'workable',
+  'teamtailor',
+  'breezy',
 ] as const
 
 export type AtsProvider = (typeof SUPPORTED_ATS_PROVIDERS)[number]

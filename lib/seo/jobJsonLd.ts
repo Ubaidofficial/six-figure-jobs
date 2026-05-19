@@ -1,6 +1,7 @@
 // lib/seo/jobJsonLd.ts
 
 import type { Job, Company } from '@prisma/client'
+import { normalizePublicCompanyWebsite } from '../companies/website'
 import { getSiteUrl } from './site'
 import { buildJobSlug } from '../jobs/jobSlug'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
@@ -18,7 +19,7 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   const company = job.companyRef
 
   const companyName = company?.name || job.company || 'Company'
-  const companyUrl = (company?.website && normalizeUrl(company.website)) || undefined
+  const companyUrl = normalizePublicCompanyWebsite(company?.website) || undefined
   const logo =
     (company?.logoUrl && normalizeUrl(company.logoUrl)) ||
     (job.companyLogo && normalizeUrl(job.companyLogo)) ||

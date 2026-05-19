@@ -8,8 +8,7 @@ import {
 } from '@/lib/jobs/publicStats'
 import { CompanySearch } from '@/components/companies/CompanySearch'
 
-export const revalidate = 600 // 10m
-export const dynamic = 'force-dynamic'
+export const revalidate = 600 // 10m ISR
 const SITE_URL = getSiteUrl()
 
 function buildCompaniesDescription(totalCompanies: number, totalEligibleJobs: number) {

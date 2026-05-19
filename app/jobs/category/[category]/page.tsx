@@ -1,6 +1,8 @@
 // app/jobs/category/[category]/page.tsx
 // Programmatic SEO page for broad role categories (e.g., engineering, product, data)
 
+export const revalidate = 600
+
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -99,7 +101,7 @@ export async function generateMetadata({
     pageSize: 1,
   })
 
-  const allowIndex = total >= 3
+  const allowIndex = total >= 1
   const canonical = `${SITE_URL}/jobs/category/${category}`
   const shouldIndex = allowIndex && page === 1
   const title =
@@ -108,8 +110,8 @@ export async function generateMetadata({
       : `${cfg.label} jobs paying $100k+ | ${SITE_NAME}`
   const description =
     total > 0
-      ? `Browse ${total.toLocaleString()} curated ${cfg.label.toLowerCase()} roles paying $100k+ across top companies. Remote, hybrid, and on-site.`
-      : `Browse curated ${cfg.label.toLowerCase()} roles paying $100k+ across top companies. Remote, hybrid, and on-site.`
+      ? `${total.toLocaleString()} verified $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, apply direct. No recruiters, no entry-level clutter. Remote, hybrid, and on-site roles refreshed daily from company ATS feeds.`
+      : `Verified $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, apply direct. No recruiters, no entry-level clutter. Remote, hybrid, and on-site roles from top companies.`
 
   return {
     title,

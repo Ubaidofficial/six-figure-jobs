@@ -20,13 +20,15 @@ import scrapeYCombinator from './ycombinator'
 import scrapeDice from './dice'
 import scrapeWellfound from './wellfound'
 import scrapeOtta from './otta'
+import scrapeGenericSources from './generic'
 
 export type BoardScraperTask = {
   key: string
   name: string
   run: () => Promise<unknown>
   dryRunSafe?: boolean
-  probeUrl: string
+  probeUrl?: string
+  probeMode?: 'dynamic'
 }
 
 export const BOARD_SCRAPERS: BoardScraperTask[] = [
@@ -48,6 +50,7 @@ export const BOARD_SCRAPERS: BoardScraperTask[] = [
   { key: 'dice', name: 'Dice', run: scrapeDice, probeUrl: 'https://www.dice.com/jobs' },
   { key: 'wellfound', name: 'Wellfound', run: scrapeWellfound, probeUrl: 'https://wellfound.com/jobs' },
   { key: 'otta', name: 'Otta', run: scrapeOtta, probeUrl: 'https://app.otta.com/jobs' },
+  { key: 'company-careers', name: 'CompanyCareers', run: scrapeGenericSources, probeMode: 'dynamic' },
   { key: 'ycombinator', name: 'YCombinator', run: scrapeYCombinator, probeUrl: 'https://www.ycombinator.com/jobs' },
   { key: 'remoteyeah', name: 'RemoteYeah', run: scrapeRemoteYeah, dryRunSafe: false, probeUrl: 'https://remoteyeah.com' },
   { key: 'remoteai', name: 'RemoteAI (companies only)', run: scrapeRemoteAI, dryRunSafe: false, probeUrl: 'https://remoteai.io' },
@@ -65,6 +68,7 @@ export const FAST_BOARD_SCRAPER_KEYS = new Set<string>([
   'realworkfromanywhere',
   'justjoin',
   'fourdayweek',
+  'company-careers',
   'remoteyeah',
   'remoteai',
 ])

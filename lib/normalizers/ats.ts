@@ -15,17 +15,17 @@ export interface DetectedAts {
  * - Only detect ATS URLs when we are 100% confident.
  * - Do NOT “guess” or build ATS URLs out of weak patterns.
  *
- * Supported providers (stable):
+ * Supported providers:
  * ✔ Greenhouse
  * ✔ Lever
  * ✔ Ashby
  * ✔ Workday
+ * ✔ BambooHR
  * ✔ SmartRecruiters
  * ✔ Recruitee
  * ✔ Workable
- *
- * BambooHR / Breezy / Teamtailor stay excluded until their
- * public scraping path is stable.
+ * ✔ Teamtailor
+ * ✔ Breezy
  */
 export function detectAtsFromUrl(rawUrl: string | null | undefined): DetectedAts | null {
   if (!rawUrl) return null
@@ -39,12 +39,17 @@ export function detectAtsFromUrl(rawUrl: string | null | undefined): DetectedAts
 
   const host = url.hostname.toLowerCase()
   const path = url.pathname.replace(/\/+$/, '')
+  const pathParts = path.split('/').filter(Boolean)
+  const hasFileExtension = /\.[a-z0-9]{2,8}$/i.test(pathParts[pathParts.length - 1] || '')
 
   // ---------------- Greenhouse ----------------
   // e.g. https://boards.greenhouse.io/figma/jobs/1234567
-  if (host === 'boards.greenhouse.io') {
-    const parts = path.split('/').filter(Boolean) // ["figma", "jobs", "1234567"]
-    const boardSlug = parts[0]
+  if (
+    host === 'boards.greenhouse.io' ||
+    host === 'job-boards.greenhouse.io' ||
+    /^job-boards\.[a-z0-9-]+\.greenhouse\.io$/.test(host)
+  ) {
+    const boardSlug = pathParts[0]
     if (!boardSlug) return null
 
     const atsUrl = `https://boards.greenhouse.io/${boardSlug}`
@@ -75,10 +80,27 @@ export function detectAtsFromUrl(rawUrl: string | null | undefined): DetectedAts
 
   // ---------------- Workday ----------------
   if (host.includes('myworkdayjobs.com') || host.includes('workdayjobs.com')) {
-    url.search = ''
-    url.hash = ''
-    const atsUrl = url.toString().replace(/\/$/, '')
+    if (path.includes('/assets/') || hasFileExtension) return null
+
+    const stopSegments = new Set(['job', 'jobs', 'details', 'login', 'apply'])
+    const firstStopIndex = pathParts.findIndex((part) => stopSegments.has(part.toLowerCase()))
+    const normalizedParts =
+      firstStopIndex >= 0 ? pathParts.slice(0, firstStopIndex) : pathParts
+
+    const normalizedPath = normalizedParts.length ? `/${normalizedParts.join('/')}` : ''
+    const atsUrl = `${url.origin}${normalizedPath}`.replace(/\/+$/, '')
+    if (!atsUrl || atsUrl === url.origin) return { provider: 'workday', atsUrl: url.origin }
     return { provider: 'workday', atsUrl }
+  }
+
+  // ---------------- BambooHR ----------------
+  if (host.endsWith('.bamboohr.com')) {
+    if (pathParts[0]?.toLowerCase() === 'careers') {
+      return { provider: 'bamboohr', atsUrl: `${url.origin}/careers` }
+    }
+    const subdomain = host.replace(/\.bamboohr\.com$/, '')
+    if (!subdomain) return null
+    return { provider: 'bamboohr', atsUrl: `https://${subdomain}.bamboohr.com` }
   }
 
   // ---------------- SmartRecruiters ----------------
@@ -109,6 +131,27 @@ export function detectAtsFromUrl(rawUrl: string | null | undefined): DetectedAts
 
     const atsUrl = `https://apply.workable.com/${accountSlug}`
     return { provider: 'workable', atsUrl }
+  }
+
+  // ---------------- Teamtailor ----------------
+  if (host.endsWith('teamtailor.com')) {
+    url.search = ''
+    url.hash = ''
+    const atsUrl = `${url.origin}${path || ''}`.replace(/\/+$/, '') || url.origin
+    return { provider: 'teamtailor', atsUrl }
+  }
+
+  // ---------------- Breezy ----------------
+  if (host === 'assets-cdn.breezy.hr') {
+    return null
+  }
+
+  if (host.endsWith('.breezy.hr')) {
+    return { provider: 'breezy', atsUrl: url.origin.replace(/\/+$/, '') }
+  }
+
+  if (host === 'breezy.hr' && pathParts[0] === 'companies' && pathParts[1]) {
+    return { provider: 'breezy', atsUrl: `https://breezy.hr/companies/${pathParts[1]}` }
   }
 
   // Not detected

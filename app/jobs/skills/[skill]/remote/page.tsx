@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+
+export const revalidate = 600
+
 import { SKILL_TARGETS } from '../../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJobs'
 import JobList from '../../../../components/JobList'
@@ -34,7 +37,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
 
   const title = `Remote ${skillInfo.label} $100k jobs | ${total.toLocaleString()} roles | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} remote ${skillInfo.label} $100k jobs, remote high paying ${skillInfo.label} roles, and six figure ${skillInfo.label} jobs with verified pay.`
+  const description = `${total.toLocaleString()} verified remote ${skillInfo.label} $100k+ jobs — salary shown upfront, apply direct. Work-from-anywhere ${skillInfo.label} roles at top tech companies, refreshed daily from company ATS feeds.`
   const canonical = `${SITE_URL}/jobs/skills/${skillInfo.slug}/remote`
 
   return {
@@ -43,7 +46,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     alternates: { canonical },
     openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
-    robots: total >= 3 ? { index: true, follow: true } : { index: false, follow: true },
+    robots: total >= 1 ? { index: true, follow: true } : { index: false, follow: true },
   }
 }
 

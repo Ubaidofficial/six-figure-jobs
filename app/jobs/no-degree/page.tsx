@@ -9,7 +9,6 @@ import JobList from '../../components/JobList'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 600
 
 const SITE_URL = getSiteUrl()

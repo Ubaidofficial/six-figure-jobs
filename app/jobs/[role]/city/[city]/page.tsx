@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+
+export const revalidate = 600
+
 import { CITY_TARGETS } from '../../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJobs'
 import JobList from '../../../../components/JobList'
@@ -40,7 +43,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
 
   const title = `Remote/on-site ${roleName} $100k jobs in ${cityInfo.label} | ${total.toLocaleString()} roles | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} ${roleName} $100k jobs in ${cityInfo.label}. ${cityInfo.label} $100k ${roleName} jobs, high paying ${roleName} jobs ${cityInfo.label}, six figure ${roleName} roles with verified pay.`
+  const description = `${total.toLocaleString()} verified $100k+ ${roleName} jobs in ${cityInfo.label} — salary shown upfront, apply direct. Six-figure ${roleName} roles with remote and hybrid options, refreshed daily from company ATS feeds.`
   const canonical = `${SITE_URL}/jobs/${role}/city/${cityInfo.slug}`
 
   return {
@@ -49,7 +52,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     alternates: { canonical },
     openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
-    robots: total >= 3 ? { index: true, follow: true } : { index: false, follow: true },
+    robots: total >= 1 ? { index: true, follow: true } : { index: false, follow: true },
   }
 }
 
