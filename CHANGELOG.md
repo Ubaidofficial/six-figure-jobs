@@ -4,6 +4,10 @@
 
 * **seo+scrapers:** optimize pSEO content with intent-based keywords, fix indexability thresholds (>= 3 → >= 1), expand builtin.ts CITIES from 5 to 15, increase generic scraper sources per run 100→300 and detail fetch limit 25→50
 
+### Bug Fixes
+
+* **seo:** include skills in root sitemap index and reduce longtail slice sitemap latency
+
 # 1.0.0 (2026-05-14)
 
 ### Bug Fixes

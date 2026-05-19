@@ -114,6 +114,8 @@ const SITEMAP_ROUTE_HINTS: Array<{ pattern: RegExp; source: string }> = [
   { pattern: /^\/sitemap-slices\.xml$/i, source: 'app/sitemap-slices.xml/route.ts:12' },
   { pattern: /^\/sitemap-slices\/priority$/i, source: 'app/sitemap-slices/priority/route.ts:48' },
   { pattern: /^\/sitemap-slices\/longtail$/i, source: 'app/sitemap-slices/longtail/route.ts:49' },
+  { pattern: /^\/sitemap-blog\.xml$/i, source: 'app/sitemap-blog.xml/route.ts:9' },
+  { pattern: /^\/sitemap-skills\.xml$/i, source: 'app/sitemap-skills.xml/route.ts:21' },
 ]
 
 const LEGACY_ALIAS_PATH_HINTS: Array<{ pattern: RegExp; note: string }> = [
