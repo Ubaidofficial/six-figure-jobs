@@ -47,6 +47,10 @@ const searchNoCacheHeaders = [
 ]
 
 const nextConfig = {
+  // Keep SEO metadata in the initial <head> for crawlers and audit tools.
+  // Next.js streams dynamic metadata for normal browsers, which makes tools
+  // like Screaming Frog report title/canonical/robots tags outside <head>.
+  htmlLimitedBots: /.*/,
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'logo.clearbit.com' },

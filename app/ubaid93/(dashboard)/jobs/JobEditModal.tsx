@@ -158,7 +158,7 @@ export default function JobEditModal({
             }}>
               {data.companyLogo
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={data.companyLogo} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ? <img src={data.companyLogo} alt={`${data.company || 'Company'} logo`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 : <span style={{ color: '#333', fontSize: 22 }}>🏢</span>}
             </div>
             <div style={{ flex: 1 }}>

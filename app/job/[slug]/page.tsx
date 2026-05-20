@@ -1041,14 +1041,14 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
 
   if (isCountryRecognized && countrySlug) {
     links.push({
-      href: `/jobs/${countrySlug}/100k-plus`,
+      href: `/jobs/location/${countrySlug}`,
       label: `$100k+ jobs in ${countryName}`,
     })
   }
 
   if (roleSlug) {
     links.push({
-      href: `/jobs/${roleSlug}/remote/100k-plus`,
+      href: `/remote/${roleSlug}`,
       label: `Remote $100k+ ${roleLabel} jobs`,
     })
   }

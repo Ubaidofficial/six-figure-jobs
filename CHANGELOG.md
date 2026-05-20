@@ -6,6 +6,7 @@
 
 ### Bug Fixes
 
+* **seo:** fix Screaming Frog head-tag, hreflang, alt text, and broken internal URL findings
 * **seo:** include skills in root sitemap index and reduce longtail slice sitemap latency
 
 # 1.0.0 (2026-05-14)

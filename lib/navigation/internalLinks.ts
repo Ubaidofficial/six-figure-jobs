@@ -50,7 +50,8 @@ export function buildSliceInternalLinks(slice: JobSlice): InternalLink[] {
     for (const band of SALARY_BANDS) {
       if (band === f.minAnnual) continue
       const bandSlug = `${band / 1000}k-plus`
-      const href = `/jobs/${bandSlug}/${roleSlug}/${countrySlug}`
+      const countrySegment = countrySlug ?? String(countryCode).toLowerCase()
+      const href = `/jobs/${roleSlug}/${countrySegment}/${bandSlug}`
       links.push({
         href,
         label: `${Math.round(band / 1000)}k+ ${role} jobs in ${country}`,
@@ -62,7 +63,7 @@ export function buildSliceInternalLinks(slice: JobSlice): InternalLink[] {
   if (countryCode && f.minAnnual) {
     const bandSlug = `${f.minAnnual / 1000}k-plus`
     const countrySegment = countrySlug ?? String(countryCode).toLowerCase()
-    const href = `/jobs/${bandSlug}/${countrySegment}`
+    const href = `/jobs/location/${countrySegment}`
     links.push({
       href,
       label: `${Math.round(f.minAnnual / 1000)}k+ jobs in ${country}`,

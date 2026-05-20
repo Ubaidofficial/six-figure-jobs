@@ -794,15 +794,8 @@ export async function RoleTemplate({
             <div className={styles.pathRow}>
               {career.map((step) => {
                 const s = step as typeof step & { baseSlug?: string | null }
-                // For Mid (no seniority prefix), link to base role page directly.
-                // For Junior/Senior/Staff/Principal, link to base role page with ?seniority= param
-                // so the page filters by level without 404ing when seniority slug has 0 jobs.
                 const linkSlug = s.baseSlug ?? step.slug
-                const href = linkSlug
-                  ? s.seniority
-                    ? `/jobs/${linkSlug}?seniority=${s.seniority}`
-                    : `/jobs/${linkSlug}`
-                  : '#'
+                const href = linkSlug ? `/jobs/${linkSlug}` : '#'
                 const isActive = step.slug === roleSlug
                 return (
                   <Link
@@ -843,7 +836,7 @@ export async function RoleTemplate({
                       <span className={styles.logoWrap} aria-hidden="true">
                         {c.logoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.logoUrl} alt="" className={styles.logoImg} loading="lazy" />
+                          <img src={c.logoUrl} alt={`${c.name} logo`} className={styles.logoImg} loading="lazy" />
                         ) : (
                           <span className={styles.logoFallback}>{initials || 'C'}</span>
                         )}

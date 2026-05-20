@@ -109,7 +109,7 @@ export function CompanySearch({ companies }: { companies: PublicCompanyDirectory
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={logoUrl}
-                      alt=""
+                      alt={`${c.name} logo`}
                       className="h-full w-full object-contain"
                       loading="lazy"
                       onError={(e) => {

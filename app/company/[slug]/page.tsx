@@ -313,7 +313,7 @@ export default async function CompanyPage({
               <ul className="space-y-2 text-sm text-slate-300">
                 {stats.topRoles.slice(0, 5).map((role) => (
                   <li key={role.key} className="flex items-center justify-between gap-3">
-                    <Link href={`/jobs/${role.key}/100k-plus`} className="text-blue-300 hover:underline">
+                    <Link href={`/jobs/${role.key}`} className="text-blue-300 hover:underline">
                       {role.label}
                     </Link>
                     <span className="font-mono text-xs text-slate-500">{role.count}</span>

@@ -32,6 +32,18 @@ const SALARY_TIERS: Record<string, number> = {
   '400k-plus': 400_000,
 }
 
+function redirectLegacyTwoSegmentPath(role: string, filter: string): void {
+  if (!SALARY_TIERS[filter]) return
+
+  if (role === 'remote') {
+    permanentRedirect('/remote')
+  }
+
+  if (countrySlugToCode(role)) {
+    permanentRedirect(`/jobs/location/${role}`)
+  }
+}
+
 type ParsedFilter =
   | { type: 'location'; value: string; label: string }
   | { type: 'salary'; value: number; label: string }
@@ -109,6 +121,8 @@ export async function generateMetadata({
   const role = roleRaw.toLowerCase()
   const filter = filterRaw.toLowerCase()
 
+  redirectLegacyTwoSegmentPath(role, filter)
+
   if (!isCanonicalSlug(role)) {
     const matched = findBestMatchingRole(role)
     if (matched) permanentRedirect(`/jobs/${matched}/${filter}`)
@@ -170,6 +184,8 @@ export default async function RoleFilterPage({
   const { role: roleRaw, filter: filterRaw } = await params
   const role = roleRaw.toLowerCase()
   const filter = filterRaw.toLowerCase()
+
+  redirectLegacyTwoSegmentPath(role, filter)
 
   if (!isCanonicalSlug(role)) {
     const matched = findBestMatchingRole(role)
