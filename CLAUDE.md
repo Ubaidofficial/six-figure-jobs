@@ -33,7 +33,7 @@ Loop until verified. Don't stop at "should work."
 
 **Stack**: Next.js 15 App Router · TypeScript · Prisma (PostgreSQL) · CSS Modules · Tailwind (utility classes via `cn()`)
 
-**Deploy**: Railway — deploys from the **`develop`** branch on GitHub, _not_ `main`. Always push to `develop`.
+**Deploy**: Railway — deploys from the **`main`** branch on GitHub. Always push to `main`.
 
 **Pre-commit hook**: `checkChangelogUpdated.js` blocks commits if `CHANGELOG.md` is not updated. Always add a changelog entry and stage it before committing code files.
 
