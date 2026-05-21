@@ -8,7 +8,7 @@ const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n"
 
 
 async function main() {
-    const slugs = ['personio-test', 'teamtailor-test', 'figma-test']
+    const slugs = ['figma-test', 'openai-test', 'scaleai-test']
 
     for (const slug of slugs) {
         const company = await prisma.company.findUnique({ where: { slug } })

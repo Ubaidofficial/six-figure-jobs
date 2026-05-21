@@ -1,5 +1,7 @@
 // lib/companies/logo.ts
-// Build a logo URL with Clearbit fallback if no stored logo is available.
+// Build a logo URL. Prefer stored logo.dev URLs and avoid Clearbit fallbacks
+// because failed Clearbit requests are reported as console errors by Lighthouse.
+import { normalizePublicCompanyWebsite } from './website'
 
 function extractDomain(url?: string | null): string | null {
   if (!url) return null
@@ -12,21 +14,43 @@ function extractDomain(url?: string | null): string | null {
   }
 }
 
+function appendLogoDevOptimization(url: string): string {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname !== 'img.logo.dev') return url
+    if (!parsed.searchParams.has('size')) parsed.searchParams.set('size', '64')
+    if (!parsed.searchParams.has('format')) parsed.searchParams.set('format', 'webp')
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
 export function buildLogoUrl(
   logoUrl?: string | null,
   website?: string | null,
 ): string | null {
-  if (logoUrl) return logoUrl
+  if (logoUrl) {
+    if (logoUrl.includes('logo.clearbit.com')) {
+      const clearbitDomain = extractDomain(logoUrl)
+      const logoDevKey = process.env.LOGODEV_API_KEY
+      return clearbitDomain && logoDevKey
+        ? appendLogoDevOptimization(`https://img.logo.dev/${clearbitDomain}?apikey=${logoDevKey}`)
+        : null
+    }
 
-  const domain = extractDomain(website ?? null)
-  if (!domain) return null
-
-  // Prefer logo.dev (requires API key), fall back to Clearbit
-  const logoDevKey = process.env.LOGODEV_API_KEY
-  if (logoDevKey) {
-    return `https://img.logo.dev/${domain}?apikey=${logoDevKey}`
+    return appendLogoDevOptimization(logoUrl)
   }
 
-  // Clearbit logo endpoint – public, no token required for basic usage
-  return `https://logo.clearbit.com/${domain}`
+  const publicWebsite = normalizePublicCompanyWebsite(website ?? null)
+  const domain = extractDomain(publicWebsite)
+  if (!domain) return null
+
+  // Prefer logo.dev when configured. Otherwise use the initials fallback.
+  const logoDevKey = process.env.LOGODEV_API_KEY
+  if (logoDevKey) {
+    return appendLogoDevOptimization(`https://img.logo.dev/${domain}?apikey=${logoDevKey}`)
+  }
+
+  return null
 }

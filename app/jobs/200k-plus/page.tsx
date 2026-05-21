@@ -9,7 +9,6 @@ import { SITE_NAME } from '@/lib/seo/site'
 
 import { SalaryTierTemplate, buildSalaryTierMetadata } from '../_components/SalaryTierTemplate'
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 600
 
 type SearchParams = Record<string, string | string[] | undefined>

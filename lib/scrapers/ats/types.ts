@@ -1,16 +1,23 @@
 // lib/scrapers/ats/types.ts
 
-export type AtsProvider =
-  | 'greenhouse'
-  | 'lever'
-  | 'ashby'
-  | 'workday'
-  | 'bamboohr'
-  | 'smartrecruiters'
-  | 'recruitee'
-  | 'teamtailor'
-  | 'workable'
-  | 'breezy'
+export const SUPPORTED_ATS_PROVIDERS = [
+  'greenhouse',
+  'lever',
+  'ashby',
+  'workday',
+  'bamboohr',
+  'smartrecruiters',
+  'recruitee',
+  'workable',
+  'teamtailor',
+  'breezy',
+] as const
+
+export type AtsProvider = (typeof SUPPORTED_ATS_PROVIDERS)[number]
+
+export function isSupportedAtsProvider(value: string | null | undefined): value is AtsProvider {
+  return SUPPORTED_ATS_PROVIDERS.includes(value as AtsProvider)
+}
 
 export interface AtsJob {
   externalId: string

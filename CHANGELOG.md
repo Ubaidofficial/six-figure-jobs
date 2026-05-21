@@ -1,3 +1,28 @@
+# 1.1.0 (2026-05-19)
+
+### Features
+
+* **seo+scrapers:** optimize pSEO content with intent-based keywords, fix indexability thresholds (>= 3 → >= 1), expand builtin.ts CITIES from 5 to 15, increase generic scraper sources per run 100→300 and detail fetch limit 25→50
+
+### Bug Fixes
+
+* **seo:** fix Screaming Frog head-tag, hreflang, alt text, and broken internal URL findings
+* **seo:** include skills in root sitemap index and reduce longtail slice sitemap latency
+
+# 1.0.0 (2026-05-14)
+
+### Bug Fixes
+
+* fix(scrapers): unify board registry and ATS support boundaries, block unsupported ATS drift, add production scraper maintenance workflow, and add unsupported ATS cleanup tooling
+* fix(audit): harden DB-backed health checks against transient Railway proxy failures, exclude local worktrees from lint, and clean up final audit warnings
+* fix(scrape): restore freshness by cleaning polluted job ingests, adding validThrough backfill/cleanup tooling, removing remote100k from the default run, and consolidating Google indexing notifications
+
+# 1.0.0 (2026-05-11)
+
+### Bug Fixes
+
+* fix(seo): strengthen job indexing quality with validThrough support, description cleanup, stricter salary/currency gates, richer blog/about schema, Google indexing hooks, and full audit commands
+
 # 1.0.0 (2026-05-07)
 
 ### Features
@@ -1173,5 +1198,3 @@
 ### Performance Improvements
 
 * cache headers and disable image optimization ([a4f3337](https://github.com/Ubaidofficial/six-figure-jobs/commit/a4f33374fb64d7a373ead0f36911fcd7595efb0a))
-
-

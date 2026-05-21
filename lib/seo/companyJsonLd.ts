@@ -1,6 +1,7 @@
 // lib/seo/companyJsonLd.ts
 import type { Company } from '@prisma/client'
 import type { JobWithCompany } from '../jobs/queryJobs'
+import { normalizePublicCompanyWebsite } from '../companies/website'
 import { getSiteUrl } from './site'
 
 const ORIGIN = getSiteUrl()
@@ -14,6 +15,7 @@ export function buildCompanyJsonLd(
   // Optional description is not in the Prisma type, so read via `any`
   const description =
     ((company as any).description as string | null | undefined) ?? undefined
+  const publicWebsite = normalizePublicCompanyWebsite(company.website)
 
   return {
     '@context': 'https://schema.org',
@@ -21,7 +23,7 @@ export function buildCompanyJsonLd(
     name: company.name,
     url: `${origin}/company/${company.slug}`,
     logo: company.logoUrl || undefined,
-    sameAs: company.website || undefined,
+    sameAs: publicWebsite || undefined,
     description,
   }
 }

@@ -57,24 +57,38 @@ export default async function BlogPostPage({ params }: Props) {
   const relatedPosts = related.length >= 2 ? related : fallbackRelated
 
   const postUrl = `${SITE_URL}/blog/${post.slug}`
+  const wordCount = stripHtml(post.content)
+    .split(/\s+/)
+    .filter(Boolean).length
 
   const articleJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': 'BlogPosting',
+    mainEntityOfPage: postUrl,
     headline: post.title,
     description: post.excerpt,
     url: postUrl,
     datePublished: post.publishedAt,
     dateModified: post.updatedAt,
+    articleSection: post.category,
+    keywords: post.tags,
+    wordCount,
+    inLanguage: 'en',
+    image: `${SITE_URL}/og-image.png`,
     author: {
       '@type': 'Organization',
       name: SITE_NAME,
       url: SITE_URL,
+      logo: `${SITE_URL}/logo.png`,
     },
     publisher: {
       '@type': 'Organization',
       name: SITE_NAME,
       url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/logo.png`,
+      },
     },
   }
 
@@ -217,4 +231,8 @@ function styledContent(html: string): string {
     .replace(/<li>/g, '<li style="margin-bottom:0.5em">')
     .replace(/<strong>/g, '<strong style="color:#fff;font-weight:700">')
     .replace(/<a href="/g, '<a style="color:#84cc16;text-decoration:none" href="')
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }

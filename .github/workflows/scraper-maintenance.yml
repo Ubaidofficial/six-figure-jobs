@@ -1,0 +1,91 @@
+name: Scraper Maintenance (Production)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_smoke:
+        description: "Run external board + ATS smoke checks"
+        type: boolean
+        required: false
+        default: true
+      run_qa:
+        description: "Run scraper-focused QA checks"
+        type: boolean
+        required: false
+        default: true
+      cleanup_mode:
+        description: "off | dry-run | apply"
+        required: false
+        default: "dry-run"
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Database target guard
+        shell: bash
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          npm run scrape:db-target | tee /tmp/scraper-maintenance-db-target.log
+
+      - name: Scraper audit
+        run: npm run scraper:audit | tee /tmp/scraper-maintenance-audit.log
+
+      - name: Scraper smoke
+        if: github.event.inputs.run_smoke != 'false'
+        run: npm run scraper:smoke | tee /tmp/scraper-maintenance-smoke.log
+
+      - name: Scraper QA
+        if: github.event.inputs.run_qa != 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run typecheck | tee /tmp/scraper-maintenance-typecheck.log
+          npm run lint | tee /tmp/scraper-maintenance-lint.log
+          npm test -- --runTestsByPath __tests__/scrapers/detectATS.test.ts __tests__/ats/scrapeCompanyAtsJobs.test.ts | tee /tmp/scraper-maintenance-tests.log
+          npm run scraper:ats:report | tee /tmp/scraper-maintenance-ats-report.log
+          npm run scrape:health | tee /tmp/scraper-maintenance-freshness.log
+
+      - name: Unsupported ATS cleanup
+        if: github.event.inputs.cleanup_mode != 'off'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MODE="${{ github.event.inputs.cleanup_mode }}"
+          if [ "$MODE" = "apply" ]; then
+            node --import tsx scripts/cleanupUnsupportedAtsMetadata.ts --write | tee /tmp/scraper-maintenance-cleanup.log
+          else
+            node --import tsx scripts/cleanupUnsupportedAtsMetadata.ts | tee /tmp/scraper-maintenance-cleanup.log
+          fi
+
+      - name: Post-cleanup verify
+        if: github.event.inputs.cleanup_mode == 'apply'
+        run: node --import tsx scripts/cleanupUnsupportedAtsMetadata.ts | tee /tmp/scraper-maintenance-cleanup-verify.log
+
+      - name: Upload maintenance logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scraper-maintenance-logs-${{ github.run_id }}
+          path: /tmp/scraper-maintenance*.log
+          if-no-files-found: ignore

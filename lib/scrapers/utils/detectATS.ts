@@ -13,6 +13,13 @@ export type ATSType =
   | 'teamtailor'
   | 'workable'
   | 'breezy'
+  | 'icims'
+  | 'personio'
+  | 'oraclecloud'
+  | 'workforcenow'
+  | 'jobscore'
+  | 'kula'
+  | 'gem'
   | 'generic'
 
 export function detectATS(url: string): ATSType {
@@ -56,6 +63,34 @@ export function detectATS(url: string): ATSType {
 
   if (normalized.includes('breezy.hr')) {
     return 'breezy'
+  }
+
+  if (normalized.includes('icims.com')) {
+    return 'icims'
+  }
+
+  if (normalized.includes('personio.com')) {
+    return 'personio'
+  }
+
+  if (normalized.includes('oraclecloud.com')) {
+    return 'oraclecloud'
+  }
+
+  if (normalized.includes('workforcenow.adp.com')) {
+    return 'workforcenow'
+  }
+
+  if (normalized.includes('jobscore.com')) {
+    return 'jobscore'
+  }
+
+  if (normalized.includes('kula.ai')) {
+    return 'kula'
+  }
+
+  if (normalized.includes('gem.com')) {
+    return 'gem'
   }
 
   return 'generic'
@@ -106,4 +141,3 @@ export function isExternalToHost(targetUrl: string, baseHost: string): boolean {
     return false
   }
 }
-

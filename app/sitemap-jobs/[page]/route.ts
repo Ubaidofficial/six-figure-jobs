@@ -119,6 +119,8 @@ export async function GET(
       aiOneLiner: true,
       salaryValidated: true,
       salaryConfidence: true,
+      salaryCurrency: true,
+      salaryPeriod: true,
       minAnnual: true,
       maxAnnual: true,
       currency: true,

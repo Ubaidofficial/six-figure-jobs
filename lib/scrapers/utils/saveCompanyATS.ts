@@ -3,6 +3,7 @@
 import slugify from 'slugify'
 
 import { prisma } from '../../prisma'
+import { isSupportedAtsProvider } from '../ats/types'
 import { detectATS, getCompanyJobsUrl, isExternalToHost, type ATSType } from './detectATS'
 
 function isScrapeDryRun(): boolean {
@@ -35,6 +36,7 @@ export async function saveCompanyATS(
   if (!cleanedJobAtsUrl) return
 
   const atsType: ATSType = detectATS(cleanedJobAtsUrl)
+  if (!isSupportedAtsProvider(atsType)) return
   const atsUrl = getCompanyJobsUrl(cleanedJobAtsUrl, atsType).replace(/\/+$/, '')
 
   let companySlug =

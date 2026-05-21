@@ -11,7 +11,7 @@ import {
 } from '../../lib/jobs/queryJobs'
 import { prisma } from '../../lib/prisma'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
-import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
+import { buildCleanJobsCanonicalPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
@@ -21,7 +21,6 @@ import { JobsToolbar } from './_components/JobsToolbar'
 import styles from './JobsPage.module.css'
 
 export const revalidate = 600
-export const dynamic = 'force-dynamic'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
@@ -79,7 +78,7 @@ export async function generateMetadata({
   searchParams?: Promise<SearchParams>
 }): Promise<Metadata> {
   const sp = (await searchParams) || {}
-  const canonicalPath = buildNormalizedListingPath('/jobs', sp)
+  const canonicalPath = buildCleanJobsCanonicalPath(sp)
   const canonical = `${SITE_URL}${canonicalPath}`
   const noindexUtilityState = hasNonPaginationQueryParams(sp)
 

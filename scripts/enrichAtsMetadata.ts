@@ -4,6 +4,7 @@
 import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import * as cheerio from 'cheerio'
+import { isSupportedAtsProvider } from '../lib/scrapers/ats/types'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -238,15 +239,19 @@ async function main() {
     }
 
     if (result) {
-      __slog(`   ✅ Found ATS: ${result.provider} → ${result.atsUrl}`)
-      await prisma.company.update({
-        where: { id: company.id },
-        data: {
-          atsProvider: result.provider,
-          atsUrl: result.atsUrl,
-        },
-      })
-      updated++
+      if (isSupportedAtsProvider(result.provider)) {
+        __slog(`   ✅ Found ATS: ${result.provider} → ${result.atsUrl}`)
+        await prisma.company.update({
+          where: { id: company.id },
+          data: {
+            atsProvider: result.provider,
+            atsUrl: result.atsUrl,
+          },
+        })
+        updated++
+      } else {
+        __slog(`   ↷ Detected unsupported ATS: ${result.provider} → ${result.atsUrl}`)
+      }
     } else {
       __slog('   ⚠️ No ATS found')
     }

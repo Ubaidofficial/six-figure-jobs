@@ -58,6 +58,7 @@ export async function GET() {
     ...(hasBrowseUrls ? ['sitemap-browse.xml'] : []),
     ...(hasSliceUrls ? ['sitemap-slices.xml'] : []),
     'sitemap-blog.xml',
+    'sitemap-skills.xml',
   ]
   const fallbackParts = [
     ...(failedFamilies.length > 0 ? [`optional_families=${failedFamilies.join(',')}`] : []),

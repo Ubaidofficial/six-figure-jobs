@@ -42,31 +42,34 @@ function humanize(str: string = ''): string {
 
 export function buildSliceTitle(slice: JobSlice, ctx: MetaContext): string {
   const f = slice.filters
-  const band = f.minAnnual ? `${Math.round(f.minAnnual / 1000)}k+` : null
+  const band = f.minAnnual ? `$${Math.round(f.minAnnual / 1000)}k+` : null
   const roleSlug = f.roleSlugs?.[0]
   const role = roleSlug ? humanize(roleSlug) : null
   const country = f.countryCode ? countryNameFromCode(f.countryCode) : null
+  const count = typeof ctx.totalJobs === 'number' && ctx.totalJobs > 0
+    ? `${ctx.totalJobs.toLocaleString()} `
+    : ''
 
   let base: string
 
   if (band && role && country) {
-    base = `${band} ${role} jobs in ${country}`
+    base = `${count}${band} ${role} Jobs in ${country} — Verified Salaries`
   } else if (band && country) {
-    base = `${band} jobs in ${country}`
+    base = `${count}${band} Tech Jobs in ${country} — Six Figure Salaries`
   } else if (band && role) {
-    base = `${band} ${role} jobs`
+    base = `${count}${band} ${role} Jobs — Salary Shown Upfront`
   } else if (band) {
-    base = `${band} jobs`
+    base = `${count}${band} High-Paying Tech Jobs — Apply Direct`
   } else if (role && country) {
-    base = `${role} jobs in ${country}`
+    base = `${count}${role} Jobs in ${country} — $100k+ Verified Pay`
   } else if (role) {
-    base = `${role} jobs`
+    base = `${count}${role} Jobs — $100k+ Salary Verified`
   } else {
-    base = 'Remote $100k+ jobs'
+    base = 'Remote $100k+ Tech Jobs — Verified Salaries, Direct Apply'
   }
 
   if (ctx.page > 1) {
-    base += ` – Page ${ctx.page}`
+    base += ` — Page ${ctx.page}`
   }
 
   return `${base} | ${siteName()}`
@@ -77,34 +80,27 @@ export function buildSliceDescription(
   ctx: MetaContext
 ): string {
   const f = slice.filters
-  const band = f.minAnnual ? `${Math.round(f.minAnnual / 1000)}k+` : null
+  const band = f.minAnnual ? `$${Math.round(f.minAnnual / 1000)}k+` : '$100k+'
   const roleSlug = f.roleSlugs?.[0]
   const role = roleSlug ? humanize(roleSlug) : null
   const country = f.countryCode ? countryNameFromCode(f.countryCode) : null
+  const count = typeof ctx.totalJobs === 'number' && ctx.totalJobs > 0
+    ? ctx.totalJobs.toLocaleString()
+    : null
 
-  const parts: string[] = []
+  let desc: string
 
-  parts.push('Discover curated')
-
-  if (band) parts.push(band)
-  if (role) parts.push(role)
-  parts.push('jobs')
-
-  if (country) {
-    parts.push('in', country)
-  }
-
-  parts.push('from top companies hiring now.')
-
-  if (typeof ctx.totalJobs === 'number' && ctx.totalJobs > 0) {
-    parts.push(
-      `${ctx.totalJobs.toLocaleString()}+ live roles, updated daily on ${siteName()}.`
-    )
+  if (role && country) {
+    desc = `Browse ${count ? `${count} ` : ''}verified ${band} ${role} jobs in ${country} with salary shown upfront. Apply direct — no recruiters, no entry-level clutter. Refreshed daily from company ATS feeds.`
+  } else if (role) {
+    desc = `${count ? `${count} ` : ''}verified ${band} ${role} jobs with transparent pay ranges. Skip the guesswork — every listing shows compensation upfront. Apply direct to top tech companies, updated daily.`
+  } else if (country) {
+    desc = `Find ${count ? `${count} ` : ''}verified ${band} tech jobs in ${country} with published salary ranges. No entry-level noise, no recruiter middlemen — direct apply links from company ATS feeds, updated daily.`
   } else {
-    parts.push(`Updated daily on ${siteName()}.`)
+    desc = `Browse ${count ? `${count} ` : ''}verified ${band} high-paying tech jobs with salary shown upfront. Apply direct to top companies — no recruiters, no guesswork. Roles updated daily from real company ATS feeds.`
   }
 
-  return parts.join(' ')
+  return desc
 }
 
 /* ----------------------------------------------------
@@ -124,7 +120,7 @@ export function buildSliceMetadata(
   const canonical = buildCanonicalUrl(slice, ctx.page)
   const allowIndex =
     typeof ctx.totalJobs === 'number'
-      ? ctx.totalJobs >= 5 && ctx.page <= 5
+      ? ctx.totalJobs >= 1 && ctx.page <= 5
       : ctx.page <= 5
 
   const totalPages =

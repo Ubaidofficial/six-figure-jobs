@@ -1,7 +1,7 @@
 import { format as __format } from 'node:util'
 import { prisma } from '../lib/prisma'
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
-import type { AtsProvider } from '../lib/scrapers/ats/types'
+import { isSupportedAtsProvider, type AtsProvider } from '../lib/scrapers/ats/types'
 import { upsertJobsForCompanyFromAts } from '../lib/jobs/ingestFromAts'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
@@ -10,18 +10,7 @@ const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n"
 
 function toAtsProvider(atsType: string): AtsProvider | null {
   const t = String(atsType || '').toLowerCase().trim()
-  if (
-    t === 'greenhouse' ||
-    t === 'lever' ||
-    t === 'ashby' ||
-    t === 'workday' ||
-    t === 'smartrecruiters' ||
-    t === 'recruitee' ||
-    t === 'workable'
-  ) {
-    return t
-  }
-  return null
+  return isSupportedAtsProvider(t) ? t : null
 }
 
 async function ensureCompanyRow(input: {

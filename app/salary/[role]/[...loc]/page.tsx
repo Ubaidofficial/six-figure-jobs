@@ -232,9 +232,9 @@ export async function generateMetadata({
       ],
     },
     select: { id: true },
-    take: 3,
+    take: 1,
   })
-  const allowIndex = raw.length >= 3
+  const allowIndex = raw.length >= 1
 
   return {
     title,

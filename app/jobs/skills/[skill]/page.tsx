@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+
+export const revalidate = 600
+
 import { SKILL_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
@@ -40,13 +43,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     pageSize: 1,
   })
 
-  const allowIndex = total >= 3
+  const allowIndex = total >= 1
   const titleBase = `$100k+ ${resolved.label} jobs`
   const title =
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `Browse ${resolved.label} $100k jobs, ${resolved.label} high paying jobs, and six figure ${resolved.label} roles. ${total.toLocaleString()} live listings with transparent pay, updated often.`
+  const description = `${total.toLocaleString()} verified $100k+ ${resolved.label} jobs with salary shown upfront — apply direct, no recruiters. High-paying ${resolved.label} roles at top tech companies, updated daily from company ATS feeds.`
   const canonical = `${SITE_URL}/jobs/skills/${resolved.slug}`
 
   return {

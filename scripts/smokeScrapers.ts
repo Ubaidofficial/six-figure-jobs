@@ -1,7 +1,8 @@
 import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
-import type { AtsProvider } from '../lib/scrapers/ats/types'
+import { BOARD_SCRAPERS } from '../lib/scrapers/boardRegistry'
+import { SUPPORTED_ATS_PROVIDERS, type AtsProvider } from '../lib/scrapers/ats/types'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -9,6 +10,19 @@ const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n"
 
 const prisma = new PrismaClient()
 const UA = 'SixFigureJobsBot/1.0 (+https://www.6figjobs.com)'
+const EXPECT_OUTBOUND_NETWORK = process.env.CI === 'true' || process.env.SMOKE_EXPECT_NETWORK === '1'
+
+function classifyFetchFailure(status: number, error: string | null): 'FAIL' | 'SKIP' {
+  if (!error) return 'FAIL'
+  if (EXPECT_OUTBOUND_NETWORK) return 'FAIL'
+  if (
+    status === 500 &&
+    /fetch failed|network|econn|enotfound|eai_again|socket|tls|certificate/i.test(error)
+  ) {
+    return 'SKIP'
+  }
+  return 'FAIL'
+}
 
 async function fetchWithTimeout(url: string, timeoutMs = 8000) {
   const controller = new AbortController()
@@ -21,81 +35,94 @@ async function fetchWithTimeout(url: string, timeoutMs = 8000) {
       redirect: 'follow',
     })
     clearTimeout(id)
-    return { ok: res.ok, status: res.status }
+    return { ok: res.ok, status: res.status, error: null as string | null }
   } catch (err: any) {
     clearTimeout(id)
-    return { ok: false, status: err?.name === 'AbortError' ? 408 : 500 }
+    return {
+      ok: false,
+      status: err?.name === 'AbortError' ? 408 : 500,
+      error: err?.message || String(err),
+    }
   }
 }
 
 async function checkBoardEndpoints() {
-  const endpoints = [
-    ['RemoteOK', 'https://remoteok.com'],
-    ['WeWorkRemotely', 'https://weworkremotely.com'],
-    ['NoDesk', 'https://nodesk.co/remote-jobs'],
-    ['BuiltIn', 'https://builtin.com/jobs/remote'],
-    ['RemoteRocketship', 'https://www.remoterocketship.com'],
-    ['Remotive', 'https://remotive.com/remote-jobs'],
-    ['YCombinator', 'https://www.ycombinator.com/jobs'],
-    ['RemoteAI', 'https://remoteai.io'],
-    ['RemoteOtter', 'https://remoteotter.com'],
-    ['FourDayWeek', 'https://4dayweek.io'],
-    ['Trawle', 'https://trawle.io'],
-    ['RealWorkFromAnywhere', 'https://realworkfromanywhere.com'],
-    ['JustJoin', 'https://justjoin.it'],
-  ] as const
-
   __slog('🌐 Board endpoint smoke check')
-  for (const [name, url] of endpoints) {
-    const { ok, status } = await fetchWithTimeout(url)
-    __slog(`  ${name.padEnd(22)} ${ok ? 'OK' : 'FAIL'} (status ${status})`)
+  for (const scraper of BOARD_SCRAPERS) {
+    const { name, probeUrl: url } = scraper
+    if (!url) {
+      __slog(`  ${name.padEnd(22)} SKIP (dynamic source set)`)
+      continue
+    }
+    const { ok, status, error } = await fetchWithTimeout(url)
+    const verdict = ok ? 'OK' : classifyFetchFailure(status, error)
+    __slog(
+      `  ${name.padEnd(22)} ${verdict} (status ${status}${error ? `, error=${error}` : ''})`,
+    )
   }
   __slog('')
 }
 
 async function checkAtsProviders() {
-  const providers: AtsProvider[] = [
-    'greenhouse',
-    'lever',
-    'ashby',
-    'workday',
-    'smartrecruiters',
-    'teamtailor',
-    'breezy',
-    'recruitee',
-    'workable',
-  ]
-
   __slog('🏢 ATS fetch smoke check (no DB writes)')
 
-  for (const provider of providers) {
-    const company = await prisma.company.findFirst({
-      where: { atsProvider: provider, atsUrl: { not: null } },
-      select: { name: true, atsUrl: true },
-      orderBy: [{ jobCount: 'desc' }, { updatedAt: 'desc' }],
+  try {
+    const unsupported = await prisma.company.groupBy({
+      by: ['atsProvider'],
+      where: {
+        atsProvider: {
+          not: null,
+          notIn: [...SUPPORTED_ATS_PROVIDERS],
+        },
+        atsUrl: { not: null },
+      },
+      _count: {
+        _all: true,
+      },
+      orderBy: {
+        atsProvider: 'asc',
+      },
     })
 
-    if (!company?.atsUrl) {
-      __slog(`  ${provider.padEnd(16)} SKIP (no company with atsUrl)`)
-      continue
+    if (unsupported.length) {
+      __slog(
+        `  unsupported ATS metadata present: ${unsupported
+          .map((row) => `${row.atsProvider}=${row._count._all}`)
+          .join(', ')}`,
+      )
     }
 
-    try {
-      const jobs = await scrapeCompanyAtsJobs(provider, company.atsUrl)
-      if (!jobs.success) {
-        __slog(
-          `  ${provider.padEnd(16)} FAIL – ${jobs.error}`,
-        )
+    for (const provider of SUPPORTED_ATS_PROVIDERS as readonly AtsProvider[]) {
+      const company = await prisma.company.findFirst({
+        where: { atsProvider: provider, atsUrl: { not: null } },
+        select: { name: true, atsUrl: true },
+        orderBy: [{ jobCount: 'desc' }, { updatedAt: 'desc' }],
+      })
+
+      if (!company?.atsUrl) {
+        __slog(`  ${provider.padEnd(16)} SKIP (no company with atsUrl)`)
         continue
       }
-      __slog(
-        `  ${provider.padEnd(16)} OK – ${jobs.jobs.length} jobs from ${company.name}`,
-      )
-    } catch (err: any) {
-      __slog(
-        `  ${provider.padEnd(16)} FAIL – ${err?.message || String(err)}`,
-      )
+
+      try {
+        const jobs = await scrapeCompanyAtsJobs(provider, company.atsUrl)
+        if (!jobs.success) {
+          __slog(
+            `  ${provider.padEnd(16)} FAIL – ${jobs.error}`,
+          )
+          continue
+        }
+        __slog(
+          `  ${provider.padEnd(16)} OK – ${jobs.jobs.length} jobs from ${company.name}`,
+        )
+      } catch (err: any) {
+        __slog(
+          `  ${provider.padEnd(16)} FAIL – ${err?.message || String(err)}`,
+        )
+      }
     }
+  } catch (err: any) {
+    __slog(`  DB SKIP           ${err?.message || String(err)}`)
   }
 
   __slog('')

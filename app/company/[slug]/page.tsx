@@ -11,6 +11,7 @@ import { buildSalaryText } from '../../../lib/jobs/salary'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
+import { normalizePublicCompanyWebsite } from '../../../lib/companies/website'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
@@ -664,34 +665,13 @@ function truncateText(str: string, maxChars: number): string {
   return truncated.slice(0, lastSpace > 0 ? lastSpace : maxChars) + '…'
 }
 
-// Domains that are ATS/social platforms, not company homepages
-const INVALID_WEBSITE_DOMAINS = [
-  'linkedin.com',
-  'greenhouse.io',
-  'lever.co',
-  'ashbyhq.com',
-  'workday.com',
-  'smartrecruiters.com',
-  'bamboohr.com',
-  'recruitee.com',
-  'workable.com',
-  'jobs.lever.co',
-  'twitter.com',
-  'x.com',
-  'facebook.com',
-]
-
 function isValidCompanyWebsite(url: string | null | undefined): boolean {
-  if (!url) return false
-  try {
-    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
-    return !INVALID_WEBSITE_DOMAINS.some((d) => parsed.hostname.includes(d))
-  } catch {
-    return false
-  }
+  return Boolean(normalizePublicCompanyWebsite(url))
 }
 
 function cleanUrl(url: string): string {
+  const normalized = normalizePublicCompanyWebsite(url)
+  if (normalized) return normalized
   const s = (url || '').trim()
   if (!s) return '#'
   if (s.startsWith('http://') || s.startsWith('https://')) return s

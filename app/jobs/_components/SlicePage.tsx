@@ -28,7 +28,7 @@ export function SlicePage({ slice, data }: Props) {
     ? countryCodeToSlug(String(countryCode)) ?? String(countryCode).toLowerCase()
     : null
   const minAnnual = slice.filters?.minAnnual ?? null
-  const allowIndex = total >= 3
+  const allowIndex = total >= 1
   const countryLabel =
     TARGET_COUNTRIES.find((c) => c.code.toLowerCase() === (countryCode ?? '').toLowerCase())?.label ||
     countryCode ||

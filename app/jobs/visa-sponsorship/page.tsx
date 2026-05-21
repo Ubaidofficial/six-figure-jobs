@@ -11,7 +11,6 @@ import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 600
 
 const SITE_URL = getSiteUrl()
@@ -65,7 +64,9 @@ export async function generateMetadata({
   try {
     const result = await queryJobs({ page: 1, pageSize: 1, visaSponsorship: true })
     total = result.total
-  } catch {}
+  } catch (error) {
+    void error
+  }
 
   const title = `Visa Sponsorship Tech Jobs — $100k+ | ${SITE_NAME}`
   const description = `${total > 0 ? `${total.toLocaleString()} ` : ''}H1B and visa-sponsored $100k+ tech jobs. Software engineer, data scientist, and engineering manager roles at companies actively sponsoring work visas. Verified salaries, direct apply.`

@@ -2,7 +2,6 @@
 
 import type { ATSResult, AtsJob } from './types'
 import * as cheerio from 'cheerio'
-import { writeFileSync } from 'node:fs'
 
 /**
  * Ashby no longer exposes careers.json for most companies.
@@ -443,12 +442,6 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
     }
 
     console.warn(`[Ashby] ⚠️ No jobs detected for ${atsUrl} (possible scraper breakage)`)
-    try {
-      writeFileSync('/tmp/ashby-debug.html', html)
-      console.warn(`[Ashby] Saved HTML to /tmp/ashby-debug.html`)
-    } catch (err: any) {
-      console.warn(`[Ashby] Failed to save debug HTML: ${err?.message || err}`)
-    }
     throw new Error(`[Ashby] No job postings detected (possible markup change): ${atsUrl}`)
   }
 
@@ -645,12 +638,6 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
       /\bno\s+positions\b/i.test(html)
 
     if (!noJobs) {
-      try {
-        writeFileSync('/tmp/ashby-debug.html', html)
-        console.warn(`[Ashby] Saved HTML to /tmp/ashby-debug.html`)
-      } catch (err: any) {
-        console.warn(`[Ashby] Failed to save debug HTML: ${err?.message || err}`)
-      }
       throw new Error(`[Ashby] Extracted 0 jobs (possible markup change): ${atsUrl}`)
     }
   }

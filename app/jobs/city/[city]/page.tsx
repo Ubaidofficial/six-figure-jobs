@@ -10,6 +10,8 @@ import { getCurrencyForCountry } from '../../../../lib/jobs/salaryThresholds'
 import { formatCurrencyShort, getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 import { isCityPageIndexable } from '../../../../lib/seo/indexabilityGates'
 
+export const revalidate = 600
+
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
 
@@ -51,7 +53,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `Browse ${total.toLocaleString()} verified ${salaryLabel} jobs in ${resolved.label} with published salary ranges, direct apply links, and no entry-level clutter. Updated daily from company ATS feeds.`
+  const description = `${total.toLocaleString()} verified ${salaryLabel} jobs in ${resolved.label} — salary shown upfront, apply direct. No entry-level noise, no recruiter fees. Remote, hybrid, and on-site roles refreshed daily from company ATS feeds.`
   const canonical = `${SITE_URL}/jobs/city/${resolved.slug}`
 
   return {

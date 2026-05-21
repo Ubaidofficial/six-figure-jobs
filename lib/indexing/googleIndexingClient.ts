@@ -88,7 +88,9 @@ function resolveServiceAccountCredentials(): ServiceAccountCredentials | null {
           private_key: normalizePrivateKey(parsed.private_key),
         }
       }
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   const clientEmail = process.env.GOOGLE_INDEXING_CLIENT_EMAIL?.trim()

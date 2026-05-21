@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { cleanCompanyName } from '@/lib/normalizers/company'
+import { SUPPORTED_ATS_PROVIDERS, isSupportedAtsProvider } from '@/lib/scrapers/ats/types'
 
 import { detectAtsFromUrl } from '@/lib/normalizers/ats'
 
@@ -76,6 +77,9 @@ export async function resolveCompanyApplyFallback(input: {
   const companyAts = await prisma.companyATS.findFirst({
     where: {
       isActive: true,
+      atsType: {
+        in: [...SUPPORTED_ATS_PROVIDERS],
+      },
       OR: [
         { companyName: { equals: cleanedCompanyName, mode: 'insensitive' } },
         ...(companySlug ? [{ companySlug }] : []),
@@ -84,10 +88,15 @@ export async function resolveCompanyApplyFallback(input: {
     orderBy: [{ updatedAt: 'desc' }],
     select: {
       atsUrl: true,
+      atsType: true,
     },
   })
 
-  if (companyAts?.atsUrl && isUsefulExternalApplyUrl(companyAts.atsUrl, input.boardHost)) {
+  if (
+    companyAts?.atsUrl &&
+    isSupportedAtsProvider(companyAts.atsType) &&
+    isUsefulExternalApplyUrl(companyAts.atsUrl, input.boardHost)
+  ) {
     return companyAts.atsUrl
   }
 

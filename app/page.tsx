@@ -37,16 +37,15 @@ import { Testimonials } from '@/components/home/Testimonials'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
 import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
 
-export const revalidate = 300 // 5min instead of 10min
-export const dynamic = 'force-dynamic'
+export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dynamic
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const stats = await loadPublicSiteStats()
-    const description = `Find ${stats.totalJobs.toLocaleString()}+ verified $100k+ jobs with published salary ranges. Premium roles from ${stats.totalCompanies.toLocaleString()} verified companies. Updated daily.`
+    const description = `${stats.totalJobs.toLocaleString()}+ verified $100k+ jobs — salary shown upfront, apply direct. No recruiters, no entry-level noise. Six-figure remote and on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies, updated daily.`
     const ogDescription =
-      `Find six-figure jobs and high-paying positions with verified salary ranges. ` +
-      `Explore ${stats.totalJobs.toLocaleString()}+ $100k+ opportunities from ${stats.totalCompanies.toLocaleString()} verified companies.`
+      `${stats.totalJobs.toLocaleString()}+ verified six-figure jobs with salary shown upfront. ` +
+      `Apply direct — no recruiters, no guesswork. $100k+ remote & on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
 
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
@@ -55,6 +54,14 @@ export async function generateMetadata(): Promise<Metadata> {
         '6 figure jobs, six figure jobs, 6 figure salary jobs, six-figure jobs, high paying jobs, easy 6 figure jobs, 6 figure remote jobs, 6 figure jobs no degree, 6 figure jobs without college degree, six-figure salary jobs, best 6 figure jobs',
       alternates: {
         canonical: 'https://www.6figjobs.com',
+        languages: {
+          'en': 'https://www.6figjobs.com',
+          'en-US': 'https://www.6figjobs.com',
+          'en-GB': 'https://www.6figjobs.com/jobs/country/uk',
+          'en-CA': 'https://www.6figjobs.com/jobs/country/canada',
+          'en-DE': 'https://www.6figjobs.com/jobs/country/germany',
+          'x-default': 'https://www.6figjobs.com',
+        },
       },
       openGraph: {
         title: 'Six Figure Jobs & High Paying $100k+ Positions',
@@ -175,7 +182,7 @@ function HomepageSchemas({
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${siteUrl}/jobs?q={search_term_string}`,
+        urlTemplate: `${siteUrl}/search?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -720,91 +727,91 @@ export default async function HomePage() {
       <HomeFAQ />
 
       <section className="mt-16 border-t border-slate-800 pt-8">
-        <h2 className="mb-4 text-sm font-semibold text-slate-400">
+        <h2 className="mb-4 text-sm font-semibold text-slate-300">
           Popular Six Figure Job Searches
         </h2>
-        <div className="grid gap-x-8 gap-y-2 text-xs text-slate-500 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid gap-x-8 gap-y-2 text-xs text-slate-300 sm:grid-cols-2 md:grid-cols-4">
 	          <div className="space-y-2">
-	            <p className="font-medium text-slate-400">By Role</p>
+	            <p className="font-medium text-slate-200">By Role</p>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['software-engineer'] })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Software Engineer Jobs ($100k+)
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['senior-software-engineer'] })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Senior Engineer Jobs ($100k+)
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['product-manager'] })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Product Manager Jobs ($100k+)
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['data-engineer'] })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Data Engineer Jobs ($100k+)
 	            </Link>
 	          </div>
 	          <div className="space-y-2">
-	            <p className="font-medium text-slate-400">By Location</p>
+	            <p className="font-medium text-slate-200">By Location</p>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'US' })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              $100k+ Jobs in USA
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'GB' })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              £75k+/£100k+ Jobs in UK
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'CA' })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              $100k+/CA$ Jobs in Canada
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, remoteOnly: true })}
-	              className="block hover:text-slate-300"
+	              className="block hover:text-white"
 	            >
 	              Remote $100k+ Jobs
 	            </Link>
 	          </div>
           <div className="space-y-2">
-            <p className="font-medium text-slate-400">By Salary Band</p>
-            <Link href="/jobs/100k-plus" className="block hover:text-slate-300">
+            <p className="font-medium text-slate-200">By Salary Band</p>
+            <Link href="/jobs/100k-plus" className="block hover:text-white">
               $100k+ Jobs
             </Link>
-            <Link href="/jobs/200k-plus" className="block hover:text-slate-300">
+            <Link href="/jobs/200k-plus" className="block hover:text-white">
               $200k+ Jobs
             </Link>
-            <Link href="/jobs/300k-plus" className="block hover:text-slate-300">
+            <Link href="/jobs/300k-plus" className="block hover:text-white">
               $300k+ Jobs
             </Link>
-            <Link href="/jobs/400k-plus" className="block hover:text-slate-300">
+            <Link href="/jobs/400k-plus" className="block hover:text-white">
               $400k+ Jobs
             </Link>
           </div>
           <div className="space-y-2">
-            <p className="font-medium text-slate-400">Top Companies</p>
-            <Link href="/company/stripe" className="block hover:text-slate-300">
+            <p className="font-medium text-slate-200">Top Companies</p>
+            <Link href="/company/stripe" className="block hover:text-white">
               Stripe Jobs
             </Link>
-            <Link href="/company/anthropic" className="block hover:text-slate-300">
+            <Link href="/company/anthropic" className="block hover:text-white">
               Anthropic Jobs
             </Link>
-            <Link href="/company/airbnb" className="block hover:text-slate-300">
+            <Link href="/company/airbnb" className="block hover:text-white">
               Airbnb Jobs
             </Link>
-            <Link href="/company/mongodb" className="block hover:text-slate-300">
+            <Link href="/company/mongodb" className="block hover:text-white">
               MongoDB Jobs
             </Link>
           </div>

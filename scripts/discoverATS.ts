@@ -1,166 +1,322 @@
 import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
+import { detectAtsFromUrl } from '../lib/normalizers/ats'
 
-const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
-const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
+import {
+  buildCareerCandidateUrls,
+  classifyGenericCareerSource,
+  extractCareerPageSignals,
+  extractLinkedCareerUrls,
+  fetchHtmlPage,
+  findAnyAtsFromHtml,
+  findSupportedAtsFromHtml,
+} from '../lib/scrapers/utils/companyCareersDiscovery'
+import { detectATS } from '../lib/scrapers/utils/detectATS'
 
+const __slog = (...args: any[]) => process.stdout.write(__format(...args) + '\n')
+const __serr = (...args: any[]) => process.stderr.write(__format(...args) + '\n')
 
-// Use pooled URL with a longer pool timeout to avoid P2024 timeouts
-const baseUrl =
-  process.env.POSTGRES_PRISMA_URL ||
-  process.env.DATABASE_URL ||
-  ''
-const dbUrl = baseUrl.includes('?')
-  ? `${baseUrl}&pool_timeout=30`
-  : `${baseUrl}?pool_timeout=30`
+const prisma = new PrismaClient()
 
-const prisma = new PrismaClient({
-  datasources: { db: { url: dbUrl } },
-})
+type CliOptions = {
+  limit: number
+  minJobCount: number
+  concurrency: number
+  withGeneric: boolean
+  write: boolean
+}
 
-// Common careers page paths to check
-const CAREERS_PATHS = [
-  '/careers',
-  '/jobs',
-  '/join-us',
-  '/careers/',
-  '/jobs/',
-  '/about/careers',
-  '/company/careers',
-]
+type CompanyRow = {
+  id: string
+  name: string
+  slug: string
+  website: string | null
+  jobCount: number
+}
 
-// ATS patterns to detect (expanded)
-const ATS_PATTERNS = [
-  { name: 'greenhouse', pattern: /boards\.greenhouse\.io\/([\w-]+)/i, urlTemplate: 'https://boards.greenhouse.io/$1' },
-  { name: 'greenhouse', pattern: /greenhouse\.io\/(?:embed\/)?job_board\?.*for=([\w-]+)/i, urlTemplate: 'https://boards.greenhouse.io/$1' },
-  { name: 'lever', pattern: /jobs\.lever\.co\/([\w-]+)/i, urlTemplate: 'https://jobs.lever.co/$1' },
-  { name: 'ashby', pattern: /jobs\.ashbyhq\.com\/([\w-]+)/i, urlTemplate: 'https://jobs.ashbyhq.com/$1' },
-  { name: 'ashby', pattern: /api\.ashbyhq\.com\/posting-api\/job-board\/([\w-]+)/i, urlTemplate: 'https://jobs.ashbyhq.com/$1' },
-  { name: 'workday', pattern: /https?:\/\/([^\.]+)\.wd\d+\.myworkdayjobs\.com\/[^"']+/i, urlTemplate: 'https://$1.wd5.myworkdayjobs.com' },
-  { name: 'workday', pattern: /https?:\/\/([^\.]+)\.myworkdayjobs\.com\/[^"']+/i, urlTemplate: 'https://$1.myworkdayjobs.com' },
-  { name: 'smartrecruiters', pattern: /careers\.smartrecruiters\.com\/([^\/\s"']+)/i, urlTemplate: 'https://careers.smartrecruiters.com/$1' },
-  { name: 'teamtailor', pattern: /jobs\.teamtailor\.com\/companies\/([^\/\s"']+)/i, urlTemplate: 'https://jobs.teamtailor.com/companies/$1' },
-  { name: 'breezy', pattern: /breezy\.hr\/companies\/([^\/\s"']+)/i, urlTemplate: 'https://breezy.hr/companies/$1' },
-  { name: 'recruitee', pattern: /([\w-]+)\.recruitee\.com/i, urlTemplate: 'https://$1.recruitee.com' },
-  { name: 'workable', pattern: /apply\.workable\.com\/([^\/\s"']+)/i, urlTemplate: 'https://apply.workable.com/$1' },
-]
+type DiscoveryOutcome =
+  | {
+      kind: 'ats'
+      provider: string
+      atsUrl: string
+      scannedUrl: string
+    }
+  | {
+      kind: 'generic'
+      sourceUrl: string
+      jobLinks: number
+      highSalarySignals: number
+    }
+  | {
+      kind: 'none'
+      unsupportedAtsType?: string | null
+    }
 
-async function fetchWithTimeout(url: string, timeout = 10000): Promise<string | null> {
-  const controller = new AbortController()
-  const id = setTimeout(() => controller.abort(), timeout)
-  
-  try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SixFigureJobsBot/1.0)' },
-      signal: controller.signal,
-      redirect: 'follow'
-    })
-    clearTimeout(id)
-    if (!res.ok) return null
-    return await res.text()
-  } catch {
-    clearTimeout(id)
-    return null
+type DiscoveryRecord = {
+  company: string
+  outcome: DiscoveryOutcome
+}
+
+function parseCliArgs(): CliOptions {
+  const args = process.argv.slice(2)
+
+  const getValue = (flag: string): string | null => {
+    const exact = args.indexOf(flag)
+    if (exact !== -1) return args[exact + 1] ?? null
+    const withEquals = args.find((arg) => arg.startsWith(`${flag}=`))
+    return withEquals ? withEquals.slice(flag.length + 1) : null
+  }
+
+  const parsePositiveInt = (value: string | null, fallback: number, max: number): number => {
+    const parsed = Number(value)
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+    return Math.min(Math.floor(parsed), max)
+  }
+
+  return {
+    limit: parsePositiveInt(getValue('--limit'), 100, 2000),
+    minJobCount: Math.max(0, parsePositiveInt(getValue('--min-job-count'), 0, 100_000)),
+    concurrency: parsePositiveInt(getValue('--concurrency'), 6, 16),
+    withGeneric: !args.includes('--no-generic'),
+    write: args.includes('--write'),
   }
 }
 
-async function detectATS(companyName: string, website: string): Promise<{ ats: string, url: string } | null> {
-  const baseUrl = website.replace(/\/$/, '')
-  
-  // Check careers pages
-  for (const path of CAREERS_PATHS) {
-    const url = baseUrl + path
-    const html = await fetchWithTimeout(url)
-    if (!html) continue
-    
-    // Check for ATS patterns
-    for (const { name, pattern, urlTemplate } of ATS_PATTERNS) {
-      const match = html.match(pattern)
-      if (match) {
-        const atsUrl = urlTemplate.replace('$1', match[1])
-        __slog(`  ✓ Found ${name}: ${atsUrl}`)
-        return { ats: name, url: atsUrl }
+async function loadCompanies(options: CliOptions): Promise<CompanyRow[]> {
+  return await prisma.company.findMany({
+    where: {
+      website: { not: null },
+      atsUrl: null,
+      name: { not: 'Add Your Company' },
+      jobCount: { gte: options.minJobCount },
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      website: true,
+      jobCount: true,
+    },
+    orderBy: [{ jobCount: 'desc' }, { updatedAt: 'desc' }],
+    take: options.limit,
+  })
+}
+
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const output: R[] = new Array(items.length)
+  let index = 0
+
+  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    while (index < items.length) {
+      const currentIndex = index++
+      output[currentIndex] = await mapper(items[currentIndex], currentIndex)
+    }
+  })
+
+  await Promise.all(workers)
+  return output
+}
+
+async function discoverCompany(company: CompanyRow, options: CliOptions): Promise<DiscoveryOutcome> {
+  const website = String(company.website || '').trim()
+  if (!website) return { kind: 'none' }
+
+  const directWebsiteAts = detectAtsFromUrl(website)
+  if (directWebsiteAts) {
+    return {
+      kind: 'ats',
+      provider: directWebsiteAts.provider,
+      atsUrl: directWebsiteAts.atsUrl,
+      scannedUrl: website,
+    }
+  }
+
+  const candidateUrls = new Set<string>(buildCareerCandidateUrls(website))
+  const directDetectedType = detectATS(website)
+  let unsupportedAtsType: string | null =
+    directDetectedType !== 'generic' ? directDetectedType : null
+
+  const homepage = await fetchHtmlPage(website)
+  if (homepage?.html) {
+    for (const linkedUrl of extractLinkedCareerUrls(homepage.html, homepage.url)) {
+      candidateUrls.add(linkedUrl)
+    }
+  }
+
+  for (const candidateUrl of [...candidateUrls].slice(0, 8)) {
+    const page = await fetchHtmlPage(candidateUrl)
+    if (!page?.html) continue
+
+    const supportedAts = findSupportedAtsFromHtml(page.html, page.url)
+    if (supportedAts) {
+      return {
+        kind: 'ats',
+        provider: supportedAts.provider,
+        atsUrl: supportedAts.url,
+        scannedUrl: page.url,
+      }
+    }
+
+    const anyAts = findAnyAtsFromHtml(page.html, page.url)
+    if (anyAts?.type && anyAts.type !== 'generic') {
+      unsupportedAtsType = anyAts.type
+    }
+
+    if (options.withGeneric) {
+      const signals = extractCareerPageSignals(page.html, page.url)
+      const genericSource = classifyGenericCareerSource(page.url, company.website)
+      if (genericSource.valid && signals.jobLinks.length > 0 && signals.highSalarySignals > 0) {
+        return {
+          kind: 'generic',
+          sourceUrl: genericSource.normalizedUrl || page.url,
+          jobLinks: signals.jobLinks.length,
+          highSalarySignals: signals.highSalarySignals,
+        }
       }
     }
   }
-  
-  // Also check homepage
-  const html = await fetchWithTimeout(baseUrl)
-  if (html) {
-    for (const { name, pattern, urlTemplate } of ATS_PATTERNS) {
-      const match = html.match(pattern)
-      if (match) {
-        const atsUrl = urlTemplate.replace('$1', match[1])
-        __slog(`  ✓ Found ${name} on homepage: ${atsUrl}`)
-        return { ats: name, url: atsUrl }
-      }
-    }
+
+  return {
+    kind: 'none',
+    unsupportedAtsType,
   }
-  
-  return null
+}
+
+async function persistOutcome(company: CompanyRow, outcome: DiscoveryOutcome) {
+  if (outcome.kind === 'ats') {
+    await prisma.company.update({
+      where: { id: company.id },
+      data: {
+        atsProvider: outcome.provider,
+        atsUrl: outcome.atsUrl,
+        scrapeStatus: 'ats_discovered',
+        scrapeError: null,
+      },
+    })
+    return
+  }
+
+  if (outcome.kind === 'generic') {
+    await prisma.companySource.upsert({
+      where: {
+        companyId_url: {
+          companyId: company.id,
+          url: outcome.sourceUrl,
+        },
+      },
+      create: {
+        companyId: company.id,
+        url: outcome.sourceUrl,
+        sourceType: 'generic_careers_page',
+        isActive: true,
+        priority: 90,
+        scrapeStatus: 'ready',
+      },
+      update: {
+        isActive: true,
+        priority: 90,
+        scrapeStatus: 'ready',
+        scrapeError: null,
+      },
+    })
+  }
 }
 
 async function main() {
-  const batch = 500
-  let skip = 0
-  let found = 0
+  const options = parseCliArgs()
+  const companies = await loadCompanies(options)
+
+  __slog('=== Company Careers Discovery ===')
+  __slog(`mode=${options.write ? 'write' : 'dry-run'}`)
+  __slog(`limit=${options.limit}`)
+  __slog(`minJobCount=${options.minJobCount}`)
+  __slog(`concurrency=${options.concurrency}`)
+  __slog(`withGeneric=${options.withGeneric ? 'yes' : 'no'}`)
+  __slog(`companies=${companies.length}`)
+  __slog('')
+
+  let discoveredAts = 0
+  let discoveredGeneric = 0
   let notFound = 0
-  let processed = 0
+  const unsupportedCounts = new Map<string, number>()
+  const records: DiscoveryRecord[] = []
 
-  while (true) {
-    const companies = await prisma.company.findMany({
-      where: {
-        website: { not: null },
-        atsUrl: null,
-        name: { not: 'Add Your Company' }, // Skip placeholder
-      },
-      take: batch,
-      skip,
-    })
+  await mapLimit(companies, options.concurrency, async (company) => {
+    process.stdout.write(`${company.name}...`)
+    const outcome = await discoverCompany(company, options)
+    records.push({ company: company.name, outcome })
 
-    if (companies.length === 0) break
-
-    __slog(`\n🔍 Scanning ${companies.length} companies (skip=${skip})...\n`)
-
-    for (const company of companies) {
-      processed++
-      if (!company.website) continue
-
-      process.stdout.write(`${company.name}...`)
-
-      const result = await detectATS(company.name, company.website)
-
-      if (result) {
-        await prisma.company.update({
-          where: { id: company.id },
-          data: { atsUrl: result.url, atsProvider: result.ats },
-        })
-        __slog(` ✓ ${result.ats}`)
-        found++
-      } else {
-        __slog(' ✗ No ATS found')
-        notFound++
+    if (outcome.kind === 'ats') {
+      process.stdout.write(` ATS ${outcome.provider}\n`)
+      discoveredAts++
+    } else if (outcome.kind === 'generic') {
+      process.stdout.write(
+        ` generic jobs=${outcome.jobLinks} signals=${outcome.highSalarySignals}\n`,
+      )
+      discoveredGeneric++
+    } else {
+      process.stdout.write(
+        outcome.unsupportedAtsType ? ` unsupported=${outcome.unsupportedAtsType}\n` : ' none\n',
+      )
+      notFound++
+      if (outcome.unsupportedAtsType) {
+        unsupportedCounts.set(
+          outcome.unsupportedAtsType,
+          (unsupportedCounts.get(outcome.unsupportedAtsType) || 0) + 1,
+        )
       }
-
-      // Rate limit
-      await new Promise((r) => setTimeout(r, 300))
     }
 
-    skip += companies.length
-    if (companies.length < batch) break
+    if (options.write && outcome.kind !== 'none') {
+      await persistOutcome(company, outcome)
+    }
+  })
+
+  __slog('')
+  __slog('Summary')
+  __slog(`  supported ATS discovered: ${discoveredAts}`)
+  __slog(`  generic career sources:   ${discoveredGeneric}`)
+  __slog(`  no source found:          ${notFound}`)
+
+  const atsRecords = records.filter((record) => record.outcome.kind === 'ats')
+  if (atsRecords.length > 0) {
+    __slog('  ATS discoveries:')
+    for (const record of atsRecords) {
+      const outcome = record.outcome as Extract<DiscoveryOutcome, { kind: 'ats' }>
+      __slog(`    ${record.company}: ${outcome.provider} -> ${outcome.atsUrl}`)
+    }
   }
 
-  __slog(`\n═══════════════════════════════════`)
-  __slog(`  ✅ Found ATS: ${found}`)
-  __slog(`  ❌ No ATS: ${notFound}`)
-  __slog(`  Processed: ${processed}`)
-  __slog(`═══════════════════════════════════\n`)
+  const genericRecords = records.filter((record) => record.outcome.kind === 'generic')
+  if (genericRecords.length > 0) {
+    __slog('  generic career sources:')
+    for (const record of genericRecords) {
+      const outcome = record.outcome as Extract<DiscoveryOutcome, { kind: 'generic' }>
+      __slog(
+        `    ${record.company}: ${outcome.sourceUrl} (jobs=${outcome.jobLinks}, signals=${outcome.highSalarySignals})`,
+      )
+    }
+  }
 
-  // Show updated count
-  const totalWithAts = await prisma.company.count({ where: { atsUrl: { not: null } } })
-  __slog(`Total companies with ATS URLs: ${totalWithAts}`)
-
-  await prisma.$disconnect()
+  if (unsupportedCounts.size > 0) {
+    __slog('  unsupported ATS detected:')
+    for (const [type, count] of [...unsupportedCounts.entries()].sort((a, b) =>
+      a[0].localeCompare(b[0]),
+    )) {
+      __slog(`    ${type}: ${count}`)
+    }
+  }
 }
 
-main().catch(console.error)
+main()
+  .catch((error) => {
+    __serr('[discoverATS] error:', error)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })

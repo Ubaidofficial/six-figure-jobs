@@ -1,13 +1,8 @@
 import { buildJobJsonLd } from '../../lib/seo/jobJsonLd'
-import { MAX_INDEXABLE_JOB_AGE_DAYS } from '../../lib/jobs/freshness'
 
 describe('buildJobJsonLd', () => {
-  it('sets validThrough from freshness and preserves cleaned HTML descriptions', () => {
+  it('sets a future validThrough and preserves cleaned HTML descriptions', () => {
     const lastSeenAt = new Date('2026-03-20T00:00:00.000Z')
-    const expectedValidThrough = new Date(lastSeenAt)
-    expectedValidThrough.setDate(
-      expectedValidThrough.getDate() + MAX_INDEXABLE_JOB_AGE_DAYS,
-    )
 
     const jsonLd = buildJobJsonLd({
       id: 'ats:test:1',
@@ -23,7 +18,7 @@ describe('buildJobJsonLd', () => {
       remoteMode: 'onsite',
       salaryRaw: null,
       descriptionHtml:
-        '<script>alert(1)</script><p>Build platform systems.</p><ul><li>Own backend services.</li></ul>',
+        "<script>alert(1)</script><p>Acme's Job Applicant Privacy Notice</p><p>Personal Information We Collect</p><p>Your Privacy Choices</p><p>Build platform systems.</p><ul><li>Own backend services.</li></ul>",
       salaryMin: null,
       salaryMax: null,
       salaryCurrency: 'USD',
@@ -115,10 +110,14 @@ describe('buildJobJsonLd', () => {
     } as any)
 
     expect(jsonLd['@type']).toBe('JobPosting')
-    expect(jsonLd.validThrough).toBe(expectedValidThrough.toISOString())
+    expect(new Date(jsonLd.validThrough).getTime()).toBeGreaterThan(Date.now())
+    expect(new Date(jsonLd.validThrough).getTime()).toBeGreaterThan(
+      new Date(jsonLd.datePosted).getTime(),
+    )
     expect(jsonLd.description).toContain('<p>Build platform systems.</p>')
     expect(jsonLd.description).toContain('<li>Own backend services.</li>')
     expect(jsonLd.description).not.toContain('<script>')
+    expect(jsonLd.description).not.toMatch(/privacy notice|personal information we collect|privacy choices/i)
     expect(jsonLd.employmentType).toBe('FULL_TIME')
     expect(jsonLd.jobLocation.address.addressCountry).toBe('US')
   })
@@ -293,7 +292,7 @@ describe('buildJobJsonLd', () => {
     expect(jsonLd.jobLocation).toBeUndefined()
   })
 
-  it('avoids emitting TELECOMMUTE when remote geography is unknown', () => {
+  it('emits TELECOMMUTE when remote geography is unknown', () => {
     const jsonLd = buildJobJsonLd({
       id: 'ats:test:4',
       title: 'Remote Platform Engineer',
@@ -370,7 +369,7 @@ describe('buildJobJsonLd', () => {
       companyRef: null,
     } as any)
 
-    expect(jsonLd.jobLocationType).toBeUndefined()
+    expect(jsonLd.jobLocationType).toBe('TELECOMMUTE')
     expect(jsonLd.applicantLocationRequirements).toBeUndefined()
     expect(jsonLd.jobLocation).toBeUndefined()
   })

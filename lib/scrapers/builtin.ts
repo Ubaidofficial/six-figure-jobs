@@ -14,10 +14,20 @@ const BASE_URL = 'https://builtin.com'
 
 const CITIES = [
   'san-francisco',
+  'new-york-city',
+  'seattle',
   'austin',
   'los-angeles',
   'boston',
   'chicago',
+  'denver',
+  'atlanta',
+  'miami',
+  'san-diego',
+  'washington-dc',
+  'portland',
+  'philadelphia',
+  'dallas',
 ]
 
 const PAGE_DELAY_MS = 2000

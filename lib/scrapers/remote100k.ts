@@ -52,6 +52,15 @@ const CATEGORIES = [
   'Management', 'Design', 'Operations', 'All Other', 'Data Science'
 ]
 
+const DETAIL_NOISE_PATTERNS = [
+  /\bsimilar jobs\b/i,
+  /\bshowing\s+\d+\s+jobs\b/i,
+  /\bexplore related pages\b/i,
+  /\bmeet jobcopilot\b/i,
+  /\bstop applying\b/i,
+  /\bremote jobs from companies like\b/i,
+]
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -364,13 +373,16 @@ async function scrapeJobDetailPage(
       plainText.includes('Stop applying') ||
       plainText.includes('Remote jobs from companies like') ||
       plainText.includes('Remote100K')
+    const hasBoardNoise = DETAIL_NOISE_PATTERNS.some((pattern) => pattern.test(plainText))
 
     const len = descriptionHtml.length
     const isInvalidLength =
       len < MIN_DESC_CHARS || len > MAX_DESC_CHARS || len > OVERSIZE_HARD_CAP_CHARS
 
     const finalDescription =
-      descriptionHtml && !looksLikeFullPage && !isInvalidLength ? descriptionHtml : null
+      descriptionHtml && !looksLikeFullPage && !hasBoardNoise && !isInvalidLength
+        ? descriptionHtml
+        : null
 
     // Extract actual apply URL
     const applyUrl = await page.evaluate(() => {
@@ -389,7 +401,7 @@ async function scrapeJobDetailPage(
 
     if (!finalDescription) {
       console.warn(
-        `[${BOARD_NAME}] Invalid description extracted (len=${len}, navNoise=${looksLikeFullPage}) url=${jobUrl}`,
+        `[${BOARD_NAME}] Invalid description extracted (len=${len}, navNoise=${looksLikeFullPage}, boardNoise=${hasBoardNoise}) url=${jobUrl}`,
       )
     }
 

@@ -22,6 +22,13 @@ export type SliceSitemapEntry = {
   lastmod: string
 }
 
+type SliceCandidate = {
+  slug: string
+  path: string
+  updatedAt: Date | null
+  filters: SliceFilters
+}
+
 function normalizeSlicePath(pathOrSlug: string): string | null {
   const raw = pathOrSlug.startsWith('/') ? pathOrSlug : `/${pathOrSlug}`
   const parts = raw
@@ -85,6 +92,25 @@ async function getLiveCount(filters: SliceFilters): Promise<number> {
   return prisma.job.count({ where })
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let index = 0
+
+  async function worker() {
+    while (index < items.length) {
+      const current = index++
+      results[current] = await mapper(items[current])
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker))
+  return results
+}
+
 export async function buildSliceSitemapEntries(
   shard: SliceShard,
   options?: { limit?: number },
@@ -104,7 +130,7 @@ export async function buildSliceSitemapEntries(
     take: MAX_SLICES,
   })
 
-  const byLoc = new Map<string, string>()
+  const candidates: SliceCandidate[] = []
 
   for (const slice of slices) {
     const filters: SliceFilters | null = (() => {
@@ -128,29 +154,62 @@ export async function buildSliceSitemapEntries(
     if (!path || !path.startsWith('/')) continue
     if (SALARY_TIER_PATHS.has(path)) continue
 
-    let liveCount = 0
-    try {
-      liveCount = await getLiveCount(normalizedFilters)
-    } catch (error) {
-      console.error(`[sitemap-slices/${shard}] skipping slice due to live count error`, {
-        slug: slice.slug,
-        error,
-      })
-      continue
-    }
+    candidates.push({
+      slug: slice.slug,
+      path,
+      updatedAt: slice.updatedAt,
+      filters: normalizedFilters,
+    })
+  }
 
-    if (liveCount < threshold) continue
+  const byLoc = new Map<string, string>()
 
-    const loc = `${SITE_URL}${path}`
-    const lastmod = (slice.updatedAt ?? new Date()).toISOString()
+  function addCandidate(candidate: SliceCandidate, liveCount: number) {
+    if (liveCount < threshold) return false
 
+    const loc = `${SITE_URL}${candidate.path}`
+    const lastmod = (candidate.updatedAt ?? new Date()).toISOString()
     const existing = byLoc.get(loc)
     if (!existing || lastmod > existing) {
       byLoc.set(loc, lastmod)
     }
 
     if (limit && byLoc.size >= limit) {
-      break
+      return true
+    }
+
+    return false
+  }
+
+  if (limit) {
+    for (const candidate of candidates) {
+      try {
+        if (addCandidate(candidate, await getLiveCount(candidate.filters))) break
+      } catch (error) {
+        console.error(`[sitemap-slices/${shard}] skipping slice due to live count error`, {
+          slug: candidate.slug,
+          error,
+        })
+      }
+    }
+  } else {
+    const checked = await mapWithConcurrency(candidates, 8, async (candidate) => {
+      try {
+        return {
+          candidate,
+          liveCount: await getLiveCount(candidate.filters),
+        }
+      } catch (error) {
+        console.error(`[sitemap-slices/${shard}] skipping slice due to live count error`, {
+          slug: candidate.slug,
+          error,
+        })
+        return { candidate, liveCount: 0 }
+      }
+    })
+
+    for (const { candidate, liveCount } of checked) {
+      addCandidate(candidate, liveCount)
     }
   }
 

@@ -64,6 +64,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className="h-full">
+      <head>
+        <meta charSet="UTF-8" />
+        <link rel="preconnect" href="https://img.logo.dev" />
+        <link rel="preconnect" href="https://cdn.builtin.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://logo.clearbit.com" />
+      </head>
       <body className="min-h-full bg-background text-foreground">
         <div className="flex min-h-screen flex-col">
           <SiteHeader />

@@ -23,6 +23,8 @@ const INDEXABILITY_DIAGNOSTIC_EXAMPLES_PER_REASON = Math.max(
   1,
   Number(process.env.INDEXABILITY_DIAGNOSTIC_EXAMPLES_PER_REASON || '3'),
 )
+const DB_RETRY_ATTEMPTS = Math.max(1, Number(process.env.DB_RETRY_ATTEMPTS || '3'))
+const DB_RETRY_DELAY_MS = Math.max(0, Number(process.env.DB_RETRY_DELAY_MS || '750'))
 
 type DiagnosticRow = {
   id: string
@@ -40,6 +42,8 @@ type DiagnosticRow = {
   aiOneLiner: string | null
   salaryValidated: boolean | null
   salaryConfidence: number | null
+  salaryCurrency: string | null
+  salaryPeriod: string | null
   minAnnual: bigint | null
   maxAnnual: bigint | null
   currency: string | null
@@ -73,6 +77,37 @@ function pct(n: number, d: number): string {
   return d > 0 ? `${((n / d) * 100).toFixed(1)}%` : '0.0%'
 }
 
+function isRetryableDbError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return (
+    message.includes("Can't reach database server") ||
+    message.includes('Connection terminated unexpectedly') ||
+    message.includes('Timed out fetching a new connection from the connection pool')
+  )
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function withDbRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 1; attempt <= DB_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+      if (!isRetryableDbError(error) || attempt === DB_RETRY_ATTEMPTS) throw error
+      console.warn(
+        `[checkJobFreshness] retrying ${label} after transient DB error (attempt ${attempt + 1}/${DB_RETRY_ATTEMPTS})`,
+      )
+      await sleep(DB_RETRY_DELAY_MS * attempt)
+    }
+  }
+
+  throw lastError
+}
+
 async function collectIndexabilityDiagnostics(
   eligibleWhere: Record<string, unknown>,
   freshEligibleWhere: Record<string, unknown>,
@@ -92,41 +127,45 @@ async function collectIndexabilityDiagnostics(
   } as const
 
   const [activeAfterExclusions, highSalaryEligibleJobs, structuralEligibleJobs, sampleRows] =
-    await Promise.all([
-      prisma.job.count({ where: activeAfterExclusionsWhere }),
-      prisma.job.count({ where: eligibleWhere as any }),
-      prisma.job.count({ where: structuralEligibleWhere as any }),
-      prisma.job.findMany({
-        where: activeAfterExclusionsWhere,
-        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-        take: INDEXABILITY_DIAGNOSTIC_SAMPLE_SIZE,
-        select: {
-          id: true,
-          title: true,
-          company: true,
-          roleSlug: true,
-          companyId: true,
-          locationRaw: true,
-          citySlug: true,
-          countryCode: true,
-          remote: true,
-          remoteMode: true,
-          descriptionHtml: true,
-          aiSnippet: true,
-          aiOneLiner: true,
-          salaryValidated: true,
-          salaryConfidence: true,
-          minAnnual: true,
-          maxAnnual: true,
-          currency: true,
-          isExpired: true,
-          lastSeenAt: true,
-          postedAt: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }) as Promise<DiagnosticRow[]>,
-    ])
+    await withDbRetry('collectIndexabilityDiagnostics', () =>
+      Promise.all([
+        prisma.job.count({ where: activeAfterExclusionsWhere }),
+        prisma.job.count({ where: eligibleWhere as any }),
+        prisma.job.count({ where: structuralEligibleWhere as any }),
+        prisma.job.findMany({
+          where: activeAfterExclusionsWhere,
+          orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+          take: INDEXABILITY_DIAGNOSTIC_SAMPLE_SIZE,
+          select: {
+            id: true,
+            title: true,
+            company: true,
+            roleSlug: true,
+            companyId: true,
+            locationRaw: true,
+            citySlug: true,
+            countryCode: true,
+            remote: true,
+            remoteMode: true,
+            descriptionHtml: true,
+            aiSnippet: true,
+            aiOneLiner: true,
+            salaryValidated: true,
+            salaryConfidence: true,
+            salaryCurrency: true,
+            salaryPeriod: true,
+            minAnnual: true,
+            maxAnnual: true,
+            currency: true,
+            isExpired: true,
+            lastSeenAt: true,
+            postedAt: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }) as Promise<DiagnosticRow[]>,
+      ]),
+    )
 
   const reasonCounts = new Map<string, number>()
   const reasonExamples = new Map<string, string[]>()
@@ -149,7 +188,9 @@ async function collectIndexabilityDiagnostics(
   return {
     activeAfterGlobalExclusions: activeAfterExclusions,
     highSalaryEligibleJobs,
-    freshHighSalaryEligibleJobs: await prisma.job.count({ where: freshEligibleWhere as any }),
+    freshHighSalaryEligibleJobs: await withDbRetry('freshHighSalaryEligibleJobs', () =>
+      prisma.job.count({ where: freshEligibleWhere as any }),
+    ),
     structuralEligibleJobs,
     diagnosticSampleSize: sampleRows.length,
     reasonSummaries: orderedReasons.map(([reason, count]) => ({
@@ -260,25 +301,29 @@ async function main() {
     AND: [...eligibleWhere.AND, buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS)],
   } as const
 
-  const [activeJobs, freshIndexableJobs, staleEligibleJobs, newestActive] = await Promise.all([
-    prisma.job.count({ where: { isExpired: false } }),
-    prisma.job.count({ where: freshEligibleWhere }),
-    prisma.job.count({
-      where: {
-        ...eligibleWhere,
-        AND: [
-          ...eligibleWhere.AND,
-          {
-            NOT: buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS),
+  const [activeJobs, freshIndexableJobs, staleEligibleJobs, newestActive] = await withDbRetry(
+    'freshnessCoreMetrics',
+    () =>
+      Promise.all([
+        prisma.job.count({ where: { isExpired: false } }),
+        prisma.job.count({ where: freshEligibleWhere }),
+        prisma.job.count({
+          where: {
+            ...eligibleWhere,
+            AND: [
+              ...eligibleWhere.AND,
+              {
+                NOT: buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS),
+              },
+            ],
           },
-        ],
-      },
-    }),
-    prisma.job.aggregate({
-      where: { isExpired: false },
-      _max: { lastSeenAt: true },
-    }),
-  ])
+        }),
+        prisma.job.aggregate({
+          where: { isExpired: false },
+          _max: { lastSeenAt: true },
+        }),
+      ]),
+  )
 
   const newestLastSeenAt = newestActive._max.lastSeenAt
 
