@@ -8,7 +8,7 @@ describe('buildSliceCanonicalPath', () => {
 
     expect(
       buildSliceCanonicalPath({ roleSlugs: ['software-engineer'], countryCode: 'US', minAnnual: 200_000 }),
-    ).toBe('/jobs/software-engineer/united-states/200k-plus')
+    ).toBe('/jobs/software-engineer/200k-plus')
 
     expect(
       buildSliceCanonicalPath({ roleSlugs: ['software-engineer'], remoteOnly: true, minAnnual: 300_000 }),
@@ -21,5 +21,11 @@ describe('buildSliceCanonicalPath', () => {
       '/jobs/location/united-kingdom',
     )
     expect(buildSliceCanonicalPath({ remoteOnly: true, minAnnual: 100_000 })).toBe('/remote')
+  })
+
+  it('uses supported combo routes instead of redirect-only paths', () => {
+    expect(
+      buildSliceCanonicalPath({ roleSlugs: ['software-engineer'], citySlug: 'new-york', minAnnual: 200_000 }),
+    ).toBe('/jobs/software-engineer/city/new-york')
   })
 })

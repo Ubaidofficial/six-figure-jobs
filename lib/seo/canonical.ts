@@ -37,13 +37,10 @@ function cleanSlug(input?: string | null): string | null {
 }
 
 /**
- * Canonical slice policy (v2.10):
- *  - Keep role-first path family to match seeded JobSlice slugs and avoid redirect churn.
+ * Canonical slice policy:
+ *  - Emit only routes that resolve directly, without relying on redirects.
+ *  - Role salary slices use /jobs/{role}/{band}.
  *  - Country-only and remote-only slices use their durable hub routes.
- *  - Pattern:
- *      /jobs/{role}/{country?}/{city?}/{band}
- *      /jobs/location/{country}
- *      /remote/{role?}
  */
 export function buildSliceCanonicalPath(filters: SliceFilters): string {
   const band = bandSlugFromMinAnnual(filters.minAnnual)
@@ -64,14 +61,23 @@ export function buildSliceCanonicalPath(filters: SliceFilters): string {
     return `/jobs/location/${country}`
   }
 
-  const parts: string[] = ['jobs']
+  if (role && city) {
+    return `/jobs/${role}/city/${city}`
+  }
 
-  if (role) parts.push(role)
-  if (country) parts.push(country)
-  if (city) parts.push(city)
-  parts.push(band)
+  if (role && filters.minAnnual) {
+    return `/jobs/${role}/${band}`
+  }
 
-  return '/' + parts.join('/')
+  if (role) {
+    return `/jobs/${role}`
+  }
+
+  if (filters.minAnnual) {
+    return `/jobs/${band}`
+  }
+
+  return '/jobs'
 }
 
 /**

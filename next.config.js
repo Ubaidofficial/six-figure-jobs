@@ -2,7 +2,7 @@
 const sitemapCacheHeaders = [
   {
     key: 'Cache-Control',
-    value: 'public, max-age=300, s-maxage=86400, stale-while-revalidate=86400',
+    value: 'public, max-age=300, s-maxage=300, stale-while-revalidate=600',
   },
 ]
 

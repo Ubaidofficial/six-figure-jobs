@@ -47,4 +47,26 @@ describe('browse sitemap ownership', () => {
     expect(includedPaths).not.toContain('/jobs/city/new-york')
     expect(includedPaths).not.toContain('/remote/software-engineer')
   })
+
+  it('omits top-level skill URLs owned by the dedicated skills sitemap', async () => {
+    countMock.mockResolvedValue(0)
+    groupByMock
+      .mockResolvedValueOnce([] as any)
+      .mockResolvedValueOnce([] as any)
+      .mockResolvedValueOnce([] as any)
+      .mockResolvedValueOnce([{ roleSlug: 'software-engineer', _count: { _all: 12 } }] as any)
+      .mockResolvedValueOnce([] as any)
+      .mockResolvedValueOnce([] as any)
+    findManyMock.mockResolvedValue([
+      { roleSlug: 'software-engineer', skillsJson: '["python"]' },
+      { roleSlug: 'software-engineer', skillsJson: '["python"]' },
+      { roleSlug: 'software-engineer', skillsJson: '["python"]' },
+    ] as any)
+
+    const report = await buildBrowseSitemapReport(3)
+    const includedPaths = report.included.map((row) => row.path)
+
+    expect(includedPaths).toContain('/jobs/software-engineer/skills/python')
+    expect(includedPaths).not.toContain('/jobs/skills/python')
+  })
 })

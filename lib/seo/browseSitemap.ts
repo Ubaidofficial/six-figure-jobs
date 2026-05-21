@@ -325,15 +325,8 @@ export async function buildBrowseSitemapReport(
     })
   }
 
-  // Skills
-  for (const skill of SKILL_TARGETS) {
-    const total = skillCounts.get(skill.slug) ?? 0
-    candidates.push({
-      path: `/jobs/skills/${skill.slug}`,
-      total,
-      indexable: total >= minJobs,
-    })
-  }
+  // Top-level skill pages are owned by sitemap-skills.xml. Keep this family
+  // focused on browse hubs and combo routes to avoid duplicate <loc> entries.
 
   // Industries
   for (const industry of INDUSTRY_TARGETS) {
