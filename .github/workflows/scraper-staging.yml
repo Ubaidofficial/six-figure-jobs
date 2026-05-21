@@ -53,4 +53,10 @@ jobs:
       - name: ATS coverage report
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-        run: npm run scraper:ats:report
+        run: |
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "STAGING_DATABASE_URL is not configured; skipping ATS coverage report."
+            exit 0
+          fi
+
+          npm run scraper:ats:report
