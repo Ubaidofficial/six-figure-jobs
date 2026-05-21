@@ -11,6 +11,7 @@ import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
+import { CITY_TARGET_SLUG_SET } from '@/lib/seo/pseoTargets'
 import { SEARCH_ROLE_OPTIONS } from '@/lib/roles/searchRoles'
 import { CANONICAL_ROLE_SET } from '@/lib/roles/canonicalSlugs'
 import { formatRelativeTime } from '@/lib/utils/time'
@@ -437,6 +438,7 @@ export async function RoleTemplate({
       const avg = max != null && min != null ? (max + min) / 2 : (max ?? min)
       return { slug, city, cc, count, avg }
     })
+    .filter((c) => c.slug && CITY_TARGET_SLUG_SET.has(c.slug))
     .filter((c) => c.slug && c.city)
 
   const now = new Date()

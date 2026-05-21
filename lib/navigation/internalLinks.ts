@@ -50,10 +50,8 @@ export function buildSliceInternalLinks(slice: JobSlice): InternalLink[] {
     for (const band of SALARY_BANDS) {
       if (band === f.minAnnual) continue
       const bandSlug = `${band / 1000}k-plus`
-      const countrySegment = countrySlug ?? String(countryCode).toLowerCase()
-      const href = `/jobs/${roleSlug}/${countrySegment}/${bandSlug}`
       links.push({
-        href,
+        href: `/jobs/${roleSlug}/${bandSlug}`,
         label: `${Math.round(band / 1000)}k+ ${role} jobs in ${country}`,
       })
     }

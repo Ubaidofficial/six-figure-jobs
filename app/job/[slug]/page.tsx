@@ -27,6 +27,7 @@ import {
   countryCodeToName,
   COUNTRY_CODE_TO_NAME,
 } from '../../../lib/seo/countrySlug'
+import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { JobCard } from '@/components/jobs/JobCard'
 import {
   BadgeCheck,
@@ -1078,7 +1079,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   links.push(...matchedSkillLinks)
 
   // City page link
-  if (job.citySlug && job.countryCode) {
+  if (job.citySlug && job.countryCode && CITY_TARGET_SLUG_SET.has(job.citySlug)) {
     links.push({
       href: `/jobs/city/${job.citySlug}`,
       label: `$100k+ jobs in ${job.city ?? job.citySlug}`,

@@ -8,6 +8,7 @@
 
 * **seo:** fix Screaming Frog head-tag, hreflang, alt text, and broken internal URL findings
 * **seo:** include skills in root sitemap index and reduce longtail slice sitemap latency
+* **seo:** stop generating legacy country, remote, and unsupported city links that crawl as 404s
 
 # 1.0.0 (2026-05-14)
 

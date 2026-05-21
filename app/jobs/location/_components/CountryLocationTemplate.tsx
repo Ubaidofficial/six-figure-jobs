@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
+import { CITY_TARGET_SLUG_SET } from '@/lib/seo/pseoTargets'
 import { highSalaryThresholdForCountry, TARGET_COUNTRIES } from '@/lib/seo/regions'
 import { formatRelativeTime } from '@/lib/utils/time'
 
@@ -340,7 +341,7 @@ export async function CountryLocationTemplate({
       name: String(r.city || r.citySlug || '').trim(),
       count: Number(r?._count?._all ?? 0),
     }))
-    .filter((r) => r.slug && r.name)
+    .filter((r) => r.slug && r.name && CITY_TARGET_SLUG_SET.has(r.slug))
     .slice(0, 6)
 
   const cityAvgRows =

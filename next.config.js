@@ -46,6 +46,10 @@ const searchNoCacheHeaders = [
   },
 ]
 
+const salaryBandPattern = '(100k-plus|200k-plus|300k-plus|400k-plus)'
+const countrySlugPattern =
+  '(united-states|united-kingdom|canada|germany|australia|france|netherlands|sweden)'
+
 const nextConfig = {
   // Keep SEO metadata in the initial <head> for crawlers and audit tools.
   // Next.js streams dynamic metadata for normal browsers, which makes tools
@@ -61,6 +65,31 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.githubusercontent.com' },
     ],
     // unoptimized removed — Next.js image optimization now active (WebP/AVIF, resizing, CDN)
+  },
+  async redirects() {
+    return [
+      {
+        source: `/jobs/:country${countrySlugPattern}/:band${salaryBandPattern}`,
+        destination: '/jobs/location/:country',
+        permanent: true,
+      },
+      {
+        source: `/jobs/remote/:band${salaryBandPattern}`,
+        destination: '/remote',
+        permanent: true,
+      },
+      {
+        source: `/jobs/:role/remote/:band${salaryBandPattern}`,
+        destination: '/remote/:role',
+        permanent: true,
+      },
+      {
+        source: '/jobs/:role',
+        has: [{ type: 'query', key: 'seniority' }],
+        destination: '/jobs/:role',
+        permanent: true,
+      },
+    ]
   },
   async headers() {
     return [

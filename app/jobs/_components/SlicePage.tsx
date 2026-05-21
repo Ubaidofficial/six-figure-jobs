@@ -87,8 +87,8 @@ export function SlicePage({ slice, data }: Props) {
   }
   if (roleSlug && countryCode) {
     relatedLinks.push({
-      href: `/jobs/${roleSlug}/${countrySlug ?? String(countryCode).toLowerCase()}/200k-plus`,
-      label: `${formatSalaryBandLabel(200_000, countryCode)} ${prettyRole(roleSlug)} jobs in ${countryCode.toUpperCase()}`,
+      href: `/jobs/${roleSlug}/200k-plus`,
+      label: `${formatSalaryBandLabel(200_000, countryCode)} ${prettyRole(roleSlug)} jobs`,
     })
   } else {
     relatedLinks.push({ href: '/jobs/200k-plus', label: `${formatSalaryBandLabel(200_000)} jobs` })
@@ -354,7 +354,7 @@ export function SlicePage({ slice, data }: Props) {
                 : '400k-plus'
             const basePath = roleSlug
               ? countryCode
-                ? `/jobs/${roleSlug}/${countrySlug ?? String(countryCode).toLowerCase()}/${slug}`
+                ? `/jobs/${roleSlug}/${slug}`
                 : (slice.filters as any)?.remoteOnly || (slice.filters as any)?.remoteRegion
                 ? `/remote/${roleSlug}`
                 : `/jobs/${roleSlug}/${slug}`

@@ -16,6 +16,7 @@ import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 import { buildWhere } from '../../../lib/jobs/queryJobs'
+import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 
 export const revalidate = 3600
 
@@ -763,10 +764,11 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
     workModeCounts[mode] += 1
 
     const countrySlug = job.countryCode ? countryCodeToSlug(job.countryCode) : null
+    const citySlug = job.citySlug && CITY_TARGET_SLUG_SET.has(job.citySlug) ? job.citySlug : null
     const locationKey = mode === 'remote'
       ? 'remote'
-      : job.citySlug
-        ? `city:${job.citySlug}`
+      : citySlug
+        ? `city:${citySlug}`
         : countrySlug
           ? `country:${countrySlug}`
           : null
@@ -782,8 +784,8 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
               : job.countryCode || 'Location available',
           href: mode === 'remote'
             ? '/remote'
-            : job.citySlug
-              ? `/jobs/city/${job.citySlug}`
+            : citySlug
+              ? `/jobs/city/${citySlug}`
               : countrySlug
                 ? `/jobs/location/${countrySlug}`
                 : null,

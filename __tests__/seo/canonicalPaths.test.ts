@@ -12,13 +12,14 @@ describe('buildSliceCanonicalPath', () => {
 
     expect(
       buildSliceCanonicalPath({ roleSlugs: ['software-engineer'], remoteOnly: true, minAnnual: 300_000 }),
-    ).toBe('/jobs/software-engineer/remote/300k-plus')
+    ).toBe('/remote/software-engineer')
   })
 
-  it('falls back to salary bucket for generic slices', () => {
+  it('uses durable hubs for generic slices', () => {
     expect(buildSliceCanonicalPath({ minAnnual: 100_000 })).toBe('/jobs/100k-plus')
     expect(buildSliceCanonicalPath({ countryCode: 'GB', minAnnual: 100_000 })).toBe(
-      '/jobs/united-kingdom/100k-plus',
+      '/jobs/location/united-kingdom',
     )
+    expect(buildSliceCanonicalPath({ remoteOnly: true, minAnnual: 100_000 })).toBe('/remote')
   })
 })

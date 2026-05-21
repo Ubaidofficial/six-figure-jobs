@@ -180,3 +180,5 @@ export const CITY_TARGETS: CityTarget[] = [
   { slug: 'tel-aviv', label: 'Tel Aviv', countryCode: 'IL' },
   { slug: 'dubai', label: 'Dubai', countryCode: 'AE' },
 ]
+
+export const CITY_TARGET_SLUG_SET = new Set(CITY_TARGETS.map((city) => city.slug))

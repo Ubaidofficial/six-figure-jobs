@@ -39,8 +39,11 @@ function cleanSlug(input?: string | null): string | null {
 /**
  * Canonical slice policy (v2.10):
  *  - Keep role-first path family to match seeded JobSlice slugs and avoid redirect churn.
+ *  - Country-only and remote-only slices use their durable hub routes.
  *  - Pattern:
- *      /jobs/{role?}/{remote?}/{country?}/{city?}/{band}
+ *      /jobs/{role}/{country?}/{city?}/{band}
+ *      /jobs/location/{country}
+ *      /remote/{role?}
  */
 export function buildSliceCanonicalPath(filters: SliceFilters): string {
   const band = bandSlugFromMinAnnual(filters.minAnnual)
@@ -53,10 +56,17 @@ export function buildSliceCanonicalPath(filters: SliceFilters): string {
     filters.remoteOnly === true ||
     (filters.remoteMode === 'remote' && !country && !city)
 
+  if (remoteOnly) {
+    return role ? `/remote/${role}` : '/remote'
+  }
+
+  if (!role && country && !city) {
+    return `/jobs/location/${country}`
+  }
+
   const parts: string[] = ['jobs']
 
   if (role) parts.push(role)
-  if (remoteOnly) parts.push('remote')
   if (country) parts.push(country)
   if (city) parts.push(city)
   parts.push(band)
