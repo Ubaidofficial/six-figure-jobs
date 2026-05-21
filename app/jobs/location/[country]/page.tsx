@@ -104,7 +104,9 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical, languages },
+    // Don't emit hreflang on noindex pages — Google ignores them and
+    // it creates "Hreflang: Noindex Return Links" audit warnings.
+    alternates: allowIndex ? { canonical, languages } : { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,

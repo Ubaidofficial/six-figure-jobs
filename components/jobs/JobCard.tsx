@@ -352,7 +352,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
       ) : null}
 
       <header className={styles.header}>
-        <div className={styles.logoWrap} aria-hidden="true">
+        <div className={styles.logoWrap}>
           {companyLogo ? (
             <Image
               src={companyLogo}

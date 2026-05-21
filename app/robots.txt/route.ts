@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server'
 import { getSiteUrl } from '../../lib/seo/site'
 import { resolveCoreSitemapFamilies } from '../../lib/seo/coreSitemapFamilies'
 import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
+import { BLOG_POSTS } from '../../lib/blog/posts'
+
+function hasBlogPosts(): boolean {
+  return BLOG_POSTS.length > 0
+}
 
 const SITE_URL = getSiteUrl()
 
@@ -18,6 +23,7 @@ export async function GET() {
     })
   }
 
+  const hasBlog = hasBlogPosts()
   const [
     { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
     {
@@ -58,19 +64,13 @@ export async function GET() {
     ...(fallbackParts.length > 0
       ? [`# fallback_used=1 ${fallbackParts.join(' ')}`, '']
       : []),
+    // Only list the sitemap index — child sitemaps are discovered through it.
+    // Listing both creates duplicate entries in GSC.
     `Sitemap: ${SITE_URL}/sitemap.xml`,
+    // Also list sitemap-jobs.xml directly: Google prioritises job sitemaps
+    // and having it explicitly here speeds up job discovery.
     ...(hasJobUrls ? [`Sitemap: ${SITE_URL}/sitemap-jobs.xml`] : []),
-    ...(hasCompanyUrls ? [`Sitemap: ${SITE_URL}/sitemap-company.xml`] : []),
-    ...(cityUrls.length > 0 ? [`Sitemap: ${SITE_URL}/sitemap-city.xml`] : []),
-    ...(hasSalaryUrls ? [`Sitemap: ${SITE_URL}/sitemap-salary.xml`] : []),
-    ...(hasRemoteUrls ? [`Sitemap: ${SITE_URL}/sitemap-remote.xml`] : []),
-    ...(hasCountryUrls ? [`Sitemap: ${SITE_URL}/sitemap-country.xml`] : []),
-    ...(hasCategoryUrls ? [`Sitemap: ${SITE_URL}/sitemap-category.xml`] : []),
-    ...(hasLevelUrls ? [`Sitemap: ${SITE_URL}/sitemap-level.xml`] : []),
-    ...(hasBrowseUrls ? [`Sitemap: ${SITE_URL}/sitemap-browse.xml`] : []),
-    ...(hasSliceUrls ? [`Sitemap: ${SITE_URL}/sitemap-slices.xml`] : []),
-    `Sitemap: ${SITE_URL}/sitemap-blog.xml`,
-    `Sitemap: ${SITE_URL}/sitemap-skills.xml`,
+    ...(hasBlog ? [`Sitemap: ${SITE_URL}/sitemap-blog.xml`] : []),
     '',
   ].join('\n')
 

@@ -39,7 +39,10 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   const isRemote = isRemoteJob(job)
   const isHybrid = job.remoteMode === 'hybrid' || (isRemote && hasPhysicalWorkplace(job))
   const applicantLocationRequirements = isRemote ? buildApplicantLocationRequirements(job) : undefined
-  const jobLocation = isRemote && !isHybrid ? undefined : physicalJobLocation
+  // For non-remote jobs: if buildJobLocation returned nothing, try a country-only fallback
+  // so we always satisfy Google's requirement of at least one location signal.
+  const jobLocationRaw = isRemote && !isHybrid ? undefined : (physicalJobLocation ?? buildCountryFallbackLocation(job))
+  const jobLocation = jobLocationRaw
   const jobLocationType = isRemote || isHybrid ? 'TELECOMMUTE' : undefined
 
   const employmentType = normalizeEmploymentType(job.type || job.employmentType) || 'FULL_TIME'
@@ -271,6 +274,19 @@ function buildJobLocation(job: any): any {
   }
 }
 
+/** Last-resort location for non-remote jobs with no city/region/locationRaw — infer from currency or company country */
+function buildCountryFallbackLocation(job: any): any | undefined {
+  const country = inferCountryFromJob(job)
+  if (!country) return undefined
+  return {
+    '@type': 'Place',
+    address: {
+      '@type': 'PostalAddress',
+      addressCountry: country,
+    },
+  }
+}
+
 function hasPhysicalWorkplace(job: any): boolean {
   if (job.remoteMode === 'hybrid' || job.remoteMode === 'onsite') return true
   if (typeof job.city === 'string' && job.city.trim()) return true
@@ -282,15 +298,19 @@ function hasPhysicalWorkplace(job: any): boolean {
 }
 
 function isRemoteJob(job: any): boolean {
+  // Trust explicit DB flags first — these come from ATS normalization
   if (job.remote === true || job.remoteMode === 'remote') return true
+  // Explicit onsite/hybrid → not remote
+  if (job.remoteMode === 'onsite' || job.remoteMode === 'hybrid') return false
 
+  // Only scan structured metadata fields — never description HTML.
+  // Description text commonly contains "no remote", "not remote-friendly", etc.
+  // which would produce false positives.
   const text = [
-    job.title,
     job.locationRaw,
     job.remoteRegion,
     job.workArrangement,
     job.workArrangementNormalized,
-    job.descriptionHtml,
   ]
     .filter(Boolean)
     .map(String)

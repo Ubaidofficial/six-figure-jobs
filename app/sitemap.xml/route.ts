@@ -4,6 +4,21 @@ import { getSiteUrl } from '../../lib/seo/site'
 import { resolveCoreSitemapFamilies } from '../../lib/seo/coreSitemapFamilies'
 import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
 import { prisma } from '../../lib/prisma'
+import { BLOG_POSTS } from '../../lib/blog/posts'
+
+function hasBlogPosts(): boolean {
+  return BLOG_POSTS.length > 0
+}
+
+async function hasSkillPages(): Promise<boolean> {
+  // Skills sitemap is always present if the site has active jobs with tech stack data
+  try {
+    const count = await prisma.job.count({
+      where: { isExpired: false, techStack: { not: null } },
+    })
+    return count > 0
+  } catch { return true }
+}
 
 const SITE_URL = getSiteUrl()
 
@@ -29,6 +44,7 @@ async function getLastmod(): Promise<string> {
 }
 
 export async function GET() {
+  const hasBlog = hasBlogPosts()
   const [
     { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
     {
@@ -41,10 +57,12 @@ export async function GET() {
       failedFamilies: failedCoreFamilies,
     },
     lastmod,
+    hasSkills,
   ] = await Promise.all([
     resolveOptionalSitemapFamilies('sitemap.xml'),
     resolveCoreSitemapFamilies('sitemap.xml'),
     getLastmod(),
+    hasSkillPages(),
   ])
   const sitemaps = [
     ...(hasJobUrls ? ['sitemap-jobs.xml'] : []),
@@ -57,8 +75,8 @@ export async function GET() {
     ...(hasLevelUrls ? ['sitemap-level.xml'] : []),
     ...(hasBrowseUrls ? ['sitemap-browse.xml'] : []),
     ...(hasSliceUrls ? ['sitemap-slices.xml'] : []),
-    'sitemap-blog.xml',
-    'sitemap-skills.xml',
+    ...(hasBlog ? ['sitemap-blog.xml'] : []),
+    ...(hasSkills ? ['sitemap-skills.xml'] : []),
   ]
   const fallbackParts = [
     ...(failedFamilies.length > 0 ? [`optional_families=${failedFamilies.join(',')}`] : []),

@@ -30,6 +30,12 @@
 
 * fix(seo): hreflang en-GB/CA/DE on homepage pointed to broken /jobs/country/uk|canada|germany URLs; fixed to canonical /jobs/location/ paths
 * fix(seo): salary page country job links used 3-segment /jobs/{role}/{country}/{band} pattern; fixed to canonical /jobs/{role}/{band}
+* fix(google-jobs): isRemoteJob() was scanning descriptionHtml for "remote" keyword causing false positives on onsite jobs — now only checks structured fields (remoteMode, locationRaw, workArrangement)
+* fix(google-jobs): non-remote jobs with no city/region/locationRaw had neither jobLocation nor applicantLocationRequirements in JobPosting schema — added country-inferred fallback so Google required location is always present
+* fix(seo): hreflang tags were emitted on noindex country pages (0 jobs) — now only set when page is indexable
+* fix(seo): robots.txt was listing all child sitemaps redundantly alongside the sitemap index — cleaned to only list sitemap.xml + sitemap-jobs.xml + sitemap-blog.xml
+* fix(seo): sitemap-blog.xml and sitemap-skills.xml now conditionally included in sitemap index and robots.txt instead of always
+* fix(a11y): removed aria-hidden="true" from job card logo wrapper div that was hiding descriptive alt text from screen readers
 
 ### Features
 
