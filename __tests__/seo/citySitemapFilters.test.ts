@@ -20,10 +20,10 @@ describe('city sitemap filters', () => {
   it('excludes cities below robots threshold and includes cities that meet it', async () => {
     aggregateMock.mockImplementation(async ({ where }: any) => {
       if (where?.citySlug === 'new-york' && where?.countryCode === 'US') {
-        return { _count: { _all: 2 }, _max: { updatedAt: new Date('2026-02-14T00:00:00.000Z') } }
+        return { _count: { _all: 0 }, _max: { updatedAt: new Date('2026-02-14T00:00:00.000Z') } }
       }
       if (where?.citySlug === 'london' && where?.countryCode === 'GB') {
-        return { _count: { _all: 3 }, _max: { updatedAt: new Date('2026-02-14T01:00:00.000Z') } }
+        return { _count: { _all: 1 }, _max: { updatedAt: new Date('2026-02-14T01:00:00.000Z') } }
       }
       return { _count: { _all: 0 }, _max: { updatedAt: null } }
     })
@@ -51,4 +51,3 @@ describe('city sitemap filters', () => {
     )
   })
 })
-

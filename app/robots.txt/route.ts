@@ -25,14 +25,9 @@ export async function GET() {
 
   const hasBlog = hasBlogPosts()
   const [
-    { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
+    { failedFamilies },
     {
       hasJobUrls,
-      hasCompanyUrls,
-      hasSalaryUrls,
-      hasCategoryUrls,
-      hasLevelUrls,
-      hasBrowseUrls,
       failedFamilies: failedCoreFamilies,
     },
   ] = await Promise.all([
