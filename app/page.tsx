@@ -693,7 +693,7 @@ export default async function HomePage() {
             🏢 Explore companies →
           </Link>
           <Link
-            href="/jobs/location/remote"
+            href="/remote"
             className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500"
           >
             🌍 Remote $100k+ roles

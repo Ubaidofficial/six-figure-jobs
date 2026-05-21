@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { permanentRedirect } from 'next/navigation'
 import { CITY_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
@@ -34,7 +34,7 @@ function buildBreadcrumbJsonLd(citySlug: string, cityLabel: string, salaryLabel:
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { city } = await params
   const resolved = resolveCity(city)
-  if (!resolved) notFound()
+  if (!resolved) permanentRedirect('/jobs/100k-plus')
 
   const { total } = await queryJobs({
     citySlug: resolved.slug,
@@ -77,7 +77,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function CityPage({ params }: { params: Params }) {
   const { city } = await params
   const resolved = resolveCity(city)
-  if (!resolved) notFound()
+  if (!resolved) permanentRedirect('/jobs/100k-plus')
 
   const { jobs, total, totalPages, page } = await queryJobs({
     citySlug: resolved.slug,

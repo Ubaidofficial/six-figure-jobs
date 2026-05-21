@@ -356,7 +356,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
           {companyLogo ? (
             <Image
               src={companyLogo}
-              alt=""
+              alt={`${companyName} logo`}
               width={48}
               height={48}
               className={styles.logoImg}

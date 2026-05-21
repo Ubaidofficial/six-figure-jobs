@@ -616,7 +616,7 @@ export default async function SalaryRolePage(props: PageProps) {
           </li>
           <li>
             <Link
-              href={`/jobs/${roleSlug}/100k-plus`}
+              href={`/jobs/${roleSlug}`}
               className="hover:underline"
             >
               All $100k+ {roleName} jobs →

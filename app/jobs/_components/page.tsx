@@ -37,6 +37,7 @@ type PageProps = {
 }
 
 const PAGE_SIZE = 20
+const SALARY_BAND_SEGMENTS = new Set(['100k-plus', '200k-plus', '300k-plus', '400k-plus'])
 
 function humanizeRole(slug?: string | null): string | null {
   if (!slug) return null
@@ -72,14 +73,18 @@ function bandLabel(minAnnual?: number | null): string {
 // Redirect salary pages to their dedicated routes
 function checkSalaryPageRedirect(slug?: string[]) {
   if (!slug || slug.length === 0) return
-  
+
   const path = slug.join('/')
   const salaryPages = ['200k-plus', '300k-plus', '400k-plus']
-  
+
   for (const salaryPage of salaryPages) {
     if (path === salaryPage || path === `${salaryPage}-jobs`) {
       redirect(`/jobs/${salaryPage}`)
     }
+  }
+
+  if (slug.length === 3 && slug[1] === 'remote' && SALARY_BAND_SEGMENTS.has(slug[2])) {
+    permanentRedirect(`/remote/${slug[0]}`)
   }
 }
 

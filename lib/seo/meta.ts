@@ -146,7 +146,7 @@ export function buildSliceMetadata(
 
   const countryCode = slice.filters.countryCode?.toUpperCase()
   const hreflang =
-    countryCode != null
+    allowIndex && countryCode != null
       ? { [`en-${countryCode}`]: canonical, 'x-default': canonical }
       : undefined
 

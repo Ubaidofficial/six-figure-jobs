@@ -77,11 +77,11 @@ export function SlicePage({ slice, data }: Props) {
   const relatedLinks: { href: string; label: string }[] = []
   if (roleSlug) {
     relatedLinks.push({
-      href: `/jobs/${roleSlug}/100k-plus`,
+      href: `/jobs/${roleSlug}`,
       label: `${baseBandLabel} ${prettyRole(roleSlug)} jobs`,
     })
     relatedLinks.push({
-      href: `/jobs/${roleSlug}/remote/100k-plus`,
+      href: `/remote/${roleSlug}`,
       label: `Remote ${baseBandLabel} ${prettyRole(roleSlug)} jobs`,
     })
   }
@@ -95,11 +95,11 @@ export function SlicePage({ slice, data }: Props) {
   }
   if (countryCode) {
     relatedLinks.push({
-      href: `/jobs/location/${countryCode.toLowerCase()}`,
+      href: `/jobs/location/${countrySlug ?? String(countryCode).toLowerCase()}`,
       label: `${baseBandLabel} jobs in ${countryCode.toUpperCase()}`,
     })
     relatedLinks.push({
-      href: `/jobs/location/remote`,
+      href: `/remote`,
       label: `Remote ${baseBandLabel} jobs`,
     })
   }
@@ -356,10 +356,10 @@ export function SlicePage({ slice, data }: Props) {
               ? countryCode
                 ? `/jobs/${roleSlug}/${countrySlug ?? String(countryCode).toLowerCase()}/${slug}`
                 : (slice.filters as any)?.remoteOnly || (slice.filters as any)?.remoteRegion
-                ? `/jobs/${roleSlug}/remote/${slug}`
+                ? `/remote/${roleSlug}`
                 : `/jobs/${roleSlug}/${slug}`
               : countryCode
-              ? `/jobs/${countrySlug ?? String(countryCode).toLowerCase()}/${slug}`
+              ? `/jobs/location/${countrySlug ?? String(countryCode).toLowerCase()}`
               : `/jobs/${slug}`
 
             return (

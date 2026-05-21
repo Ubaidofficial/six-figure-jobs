@@ -4,6 +4,10 @@
 
 * feat(ui): white logo containers on job cards and detail page; full job posting open by default; remove "High salary role" fallback pill; homepage 2-column job grid; tablet breakpoints for sidebar layouts; mobile font/spacing improvements
 
+### Bug Fixes
+
+* fix(seo): resolve Screaming Frog head-tag, hreflang, alt text, and legacy internal 404 findings
+
 # 1.0.0 (2026-05-06)
 
 
@@ -1169,6 +1173,5 @@
 ### Performance Improvements
 
 * cache headers and disable image optimization ([a4f3337](https://github.com/Ubaidofficial/six-figure-jobs/commit/a4f33374fb64d7a373ead0f36911fcd7595efb0a))
-
 
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { permanentRedirect } from 'next/navigation'
 import { CITY_TARGETS } from '../../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJobs'
 import JobList from '../../../../components/JobList'
@@ -23,7 +23,7 @@ function resolveCity(slug: string) {
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { role, city } = await params
   const cityInfo = resolveCity(city)
-  if (!cityInfo) notFound()
+  if (!cityInfo) permanentRedirect(`/jobs/${role}`)
 
   const roleName = prettyRole(role)
 
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function RoleCityPage({ params }: { params: Params }) {
   const { role, city } = await params
   const cityInfo = resolveCity(city)
-  if (!cityInfo) notFound()
+  if (!cityInfo) permanentRedirect(`/jobs/${role}`)
   const roleName = prettyRole(role)
 
   const { jobs, total, totalPages, page } = await queryJobs({
@@ -67,7 +67,7 @@ export default async function RoleCityPage({ params }: { params: Params }) {
     pageSize: PAGE_SIZE,
   })
 
-  if (total === 0) notFound()
+  if (total === 0) permanentRedirect(`/jobs/${role}`)
 
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
