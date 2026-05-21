@@ -3,39 +3,12 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Menu, Search, X } from 'lucide-react'
+import { Menu, Search, X } from 'lucide-react'
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 
 import styles from './SiteHeader.module.css'
-
-type NavLink = { href: string; title: string; description?: string; onClick?: () => void }
-
-const SALARY_LINKS: NavLink[] = [
-  { href: '/jobs/100k-plus', title: '💵 $100k+ jobs', description: 'Core six-figure roles' },
-  { href: '/jobs/200k-plus', title: '💰 $200k+ jobs', description: 'Senior + staff band' },
-  { href: '/jobs/300k-plus', title: '💎 $300k+ jobs', description: 'Principal + leadership band' },
-  { href: '/jobs/400k-plus', title: '🏆 $400k+ jobs', description: 'Executive + elite band' },
-  { href: '/salary', title: '📊 Salary guides', description: 'Role-based compensation insights' },
-]
-
-const LOCATION_LINKS: NavLink[] = [
-  { href: '/jobs/location/united-states', title: '🇺🇸 United States', description: '$100k+ (USD)' },
-  { href: '/jobs/location/united-kingdom', title: '🇬🇧 United Kingdom', description: '£75k+ (GBP)' },
-  { href: '/jobs/location/canada', title: '🇨🇦 Canada', description: '$120k+ (CAD)' },
-  { href: '/jobs/location/germany', title: '🇩🇪 Germany', description: '€80k+ (EUR)' },
-  { href: '/jobs/location/australia', title: '🇦🇺 Australia', description: '$140k+ (AUD)' },
-  { href: '/jobs/location/netherlands', title: '🇳🇱 Netherlands', description: '€80k+ (EUR)' },
-]
 
 function useScrolled(thresholdPx: number = 10): boolean {
   const [scrolled, setScrolled] = React.useState(false)
@@ -52,37 +25,14 @@ function useScrolled(thresholdPx: number = 10): boolean {
   return scrolled
 }
 
-function MenuItem({ href, title, description, onClick }: NavLink) {
-  return (
-    <DropdownMenuItem asChild className={styles.dropdownItem}>
-      <Link href={href} onClick={onClick}>
-        <div>
-          <div className={styles.dropdownItemTitle}>{title}</div>
-          {description ? <div className={styles.dropdownItemDesc}>{description}</div> : null}
-        </div>
-      </Link>
-    </DropdownMenuItem>
-  )
-}
-
 export function SiteHeader() {
   const scrolled = useScrolled(8)
   const router = useRouter()
-
-  const [jobsOpen, setJobsOpen] = React.useState(false)
 
   const [searchOpen, setSearchOpen] = React.useState(false)
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [query, setQuery] = React.useState('')
   const inputRef = React.useRef<HTMLInputElement | null>(null)
-
-  React.useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setJobsOpen(false)
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [])
 
   React.useEffect(() => {
     if (!searchOpen) return
@@ -117,85 +67,11 @@ export function SiteHeader() {
           </span>
 
           <nav className={styles.nav} aria-label="Primary">
-            <DropdownMenu open={jobsOpen} onOpenChange={setJobsOpen}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className={styles.navTrigger}
-                  aria-haspopup="menu"
-                  aria-expanded={jobsOpen}
-                  onMouseEnter={() => setJobsOpen(true)}
-                >
-                  Jobs <ChevronDown className={styles.chev} aria-hidden="true" />
-                </button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent
-                className={styles.dropdown}
-                sideOffset={10}
-                onMouseEnter={() => setJobsOpen(true)}
-                onMouseLeave={() => setJobsOpen(false)}
-              >
-                <div className={styles.dropdownGrid}>
-                  {/* Left column */}
-                  <div className={styles.dropdownCol}>
-                    <div className={styles.dropdownLabel}>Explore</div>
-                    <MenuItem
-                      href="/jobs"
-                      title="🗂 All Jobs"
-                      description="Every six-figure listing"
-                      onClick={() => setJobsOpen(false)}
-                    />
-                    <MenuItem
-                      href="/remote"
-                      title="🌍 Remote Jobs"
-                      description="Work from anywhere"
-                      onClick={() => setJobsOpen(false)}
-                    />
-                    <MenuItem
-                      href="/companies"
-                      title="🏢 Companies"
-                      description="Top employers hiring now"
-                      onClick={() => setJobsOpen(false)}
-                    />
-                    <MenuItem
-                      href="/salary"
-                      title="📊 Salary Guides"
-                      description="Role-based pay benchmarks"
-                      onClick={() => setJobsOpen(false)}
-                    />
-
-                    <div className={`${styles.dropdownLabel} ${styles.dropdownLabelSpaced}`}>By Salary</div>
-                    {SALARY_LINKS.filter(l => !l.href.includes('/salary')).map((l) => (
-                      <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
-                    ))}
-                  </div>
-
-                  {/* Divider */}
-                  <div className={styles.dropdownDivider} />
-
-                  {/* Right column */}
-                  <div className={styles.dropdownCol}>
-                    <div className={styles.dropdownLabel}>By Location</div>
-                    {LOCATION_LINKS.map((l) => (
-                      <MenuItem key={l.href} {...l} onClick={() => setJobsOpen(false)} />
-                    ))}
-                  </div>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Link href="/companies" className={styles.navLink}>
-              Companies
-            </Link>
-
-            <Link href="/salary" className={styles.navLink}>
-              Salaries
-            </Link>
-
-            <Link href="/blog" className={styles.navLink}>
-              Blog
-            </Link>
+            <Link href="/jobs" className={styles.navLink}>Jobs</Link>
+            <Link href="/remote" className={styles.navLink}>Remote</Link>
+            <Link href="/companies" className={styles.navLink}>Companies</Link>
+            <Link href="/salary" className={styles.navLink}>Salaries</Link>
+            <Link href="/blog" className={styles.navLink}>Blog</Link>
           </nav>
         </div>
 
@@ -230,53 +106,60 @@ export function SiteHeader() {
 
                 <div className={styles.mobileNav}>
                   <div className={styles.mobileSection}>
-                    <div className={styles.mobileSectionTitle}>Jobs</div>
+                    <div className={styles.mobileSectionTitle}>Browse</div>
                     <Link className={styles.mobileItem} href="/jobs" onClick={() => setMobileOpen(false)}>
-                      All jobs <span className={styles.mobileMeta}>/jobs</span>
+                      All Jobs <span className={styles.mobileMeta}>$100k+ only</span>
                     </Link>
                     <Link className={styles.mobileItem} href="/remote" onClick={() => setMobileOpen(false)}>
-                      Remote <span className={styles.mobileMeta}>/remote</span>
+                      Remote Jobs <span className={styles.mobileMeta}>Work anywhere</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/companies" onClick={() => setMobileOpen(false)}>
+                      Companies <span className={styles.mobileMeta}>Top employers</span>
                     </Link>
                   </div>
 
                   <div className={styles.mobileSection}>
                     <div className={styles.mobileSectionTitle}>By Salary</div>
-                    {SALARY_LINKS.map((l) => (
-                      <Link
-                        key={l.href}
-                        className={styles.mobileItem}
-                        href={l.href}
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        {l.title} <span className={styles.mobileMeta}>{l.description ?? ''}</span>
-                      </Link>
-                    ))}
+                    <Link className={styles.mobileItem} href="/jobs/100k-plus" onClick={() => setMobileOpen(false)}>
+                      💵 $100k+ jobs <span className={styles.mobileMeta}>Core six-figure</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/jobs/200k-plus" onClick={() => setMobileOpen(false)}>
+                      💰 $200k+ jobs <span className={styles.mobileMeta}>Senior + staff</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/jobs/300k-plus" onClick={() => setMobileOpen(false)}>
+                      💎 $300k+ jobs <span className={styles.mobileMeta}>Principal + lead</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/jobs/400k-plus" onClick={() => setMobileOpen(false)}>
+                      🏆 $400k+ jobs <span className={styles.mobileMeta}>Executive band</span>
+                    </Link>
                   </div>
 
                   <div className={styles.mobileSection}>
                     <div className={styles.mobileSectionTitle}>By Location</div>
-                    {LOCATION_LINKS.map((l) => (
-                      <Link
-                        key={l.href}
-                        className={styles.mobileItem}
-                        href={l.href}
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        {l.title} <span className={styles.mobileMeta}>{l.description ?? ''}</span>
-                      </Link>
-                    ))}
+                    <Link className={styles.mobileItem} href="/jobs/location/united-states" onClick={() => setMobileOpen(false)}>
+                      🇺🇸 United States <span className={styles.mobileMeta}>$100k+ USD</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/jobs/location/united-kingdom" onClick={() => setMobileOpen(false)}>
+                      🇬🇧 United Kingdom <span className={styles.mobileMeta}>£75k+ GBP</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/jobs/location/canada" onClick={() => setMobileOpen(false)}>
+                      🇨🇦 Canada <span className={styles.mobileMeta}>$120k+ CAD</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/jobs/location/germany" onClick={() => setMobileOpen(false)}>
+                      🇩🇪 Germany <span className={styles.mobileMeta}>€80k+ EUR</span>
+                    </Link>
+                    <Link className={styles.mobileItem} href="/jobs/location/australia" onClick={() => setMobileOpen(false)}>
+                      🇦🇺 Australia <span className={styles.mobileMeta}>$140k+ AUD</span>
+                    </Link>
                   </div>
 
                   <div className={styles.mobileSection}>
                     <div className={styles.mobileSectionTitle}>More</div>
-                    <Link className={styles.mobileItem} href="/companies" onClick={() => setMobileOpen(false)}>
-                      Companies <span className={styles.mobileMeta}>/companies</span>
-                    </Link>
                     <Link className={styles.mobileItem} href="/salary" onClick={() => setMobileOpen(false)}>
-                      Salary Guides <span className={styles.mobileMeta}>/salary</span>
+                      Salary Guides <span className={styles.mobileMeta}>Pay benchmarks</span>
                     </Link>
                     <Link className={styles.mobileItem} href="/blog" onClick={() => setMobileOpen(false)}>
-                      Career Blog <span className={styles.mobileMeta}>/blog</span>
+                      Career Blog <span className={styles.mobileMeta}>Tips + insights</span>
                     </Link>
                     <button
                       type="button"
@@ -286,7 +169,7 @@ export function SiteHeader() {
                         setSearchOpen(true)
                       }}
                     >
-                      Find jobs <span className={styles.mobileMeta}>/search</span>
+                      Search Jobs <span className={styles.mobileMeta}>Find roles</span>
                     </button>
                   </div>
                 </div>

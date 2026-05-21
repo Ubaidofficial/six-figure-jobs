@@ -1,3 +1,10 @@
+# 1.2.0 (2026-05-21)
+
+### Features
+
+* **nav:** simplify site header from mega-dropdown to flat nav (Jobs, Remote, Companies, Salaries, Blog) inspired by remote100k UX
+* **docs:** add CLAUDE.md with Karpathy coding guidelines and project context (stack, deploy, SEO rules, component patterns)
+
 # 1.1.0 (2026-05-19)
 
 ### Features
