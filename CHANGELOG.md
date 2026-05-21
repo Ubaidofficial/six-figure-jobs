@@ -1,3 +1,11 @@
+# 1.4.0 (2026-05-21)
+
+### Bug Fixes
+
+* **seo:** fix `builder.ts` generating 3-segment slice slugs with raw ISO country codes — now uses `countryCodeToSlug` for proper SEO slugs (e.g. `united-states` not `us`)
+* **seo:** fix `getLocationCanonicalPath` generating 3-segment canonical URLs (`/jobs/role/country/band`) with no matching route — now emits 2-segment `/jobs/role/country-slug`
+* **seo:** add `rel="nofollow"` to seniority and skill filter chip links in RoleTemplate to stop Googlebot crawling `?seniority=X` and `?skill=X` query-param URLs that generate 404s
+
 # 1.3.0 (2026-05-21)
 
 ### Bug Fixes

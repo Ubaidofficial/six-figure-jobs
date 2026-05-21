@@ -665,6 +665,7 @@ export async function RoleTemplate({
                     key={chip.value}
                     href={href}
                     scroll={false}
+                    rel="nofollow"
                     className={`${styles.chip} ${active ? styles.chipActive : ''}`}
                   >
                     {chip.label}
@@ -766,6 +767,7 @@ export async function RoleTemplate({
                     key={s.name}
                     href={buildToggleMultiHref(basePath, sp, 'skill', s.name)}
                     scroll={false}
+                    rel="nofollow"
                     className={`${styles.skill} ${active ? styles.skillActive : ''}`}
                     style={cssVarStyle({ '--s': String(s.w) })}
                     title={`${s.count.toLocaleString()} jobs`}

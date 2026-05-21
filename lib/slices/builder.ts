@@ -2,6 +2,7 @@
 
 import slugify from 'slugify';
 import { prisma } from '../prisma';
+import { countryCodeToSlug } from '../seo/countrySlug';
 
 export type SliceType =
   | 'role-country'
@@ -33,8 +34,11 @@ function buildRoleCountrySlice(job: any): SliceKey | null {
 
   const role = job.roleSlug;          // e.g. "data-scientist"
   const country = job.countryCode;    // e.g. "us"
+  // Use SEO slug (e.g. "united-states") not raw ISO code — raw ISO codes produced 3-seg 404s
+  const countrySlug = countryCodeToSlug(country.toUpperCase()) ?? country.toLowerCase();
   const name = `${roleToLabel(role)} jobs in ${country.toUpperCase()} paying 100k+`;
-  const slug = `jobs/${role}/${country}/100k-plus`;
+  // 2-segment canonical: /jobs/data-scientist/united-states (handled by [role]/[filter]/page)
+  const slug = `jobs/${role}/${countrySlug}`;
 
   return {
     type: 'role-country',

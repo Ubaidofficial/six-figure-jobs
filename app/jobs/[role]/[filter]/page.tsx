@@ -84,7 +84,8 @@ function parseFilter(filter: string): ParsedFilter {
 
 function getLocationCanonicalPath(role: string, countryCode: string): string {
   const countrySlug = countryCodeToSlug(countryCode) ?? countryCode.toLowerCase()
-  return `/jobs/${role}/${countrySlug}/100k-plus`
+  // 2-segment canonical — /jobs/role/country-slug handled by [role]/[filter] route
+  return `/jobs/${role}/${countrySlug}`
 }
 
 function getSalaryRangeText(jobs: JobWithCompany[]): string {
