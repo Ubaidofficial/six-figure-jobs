@@ -26,6 +26,11 @@
 
 # 1.0.0 (2026-05-07)
 
+### Bug Fixes
+
+* fix(seo): hreflang en-GB/CA/DE on homepage pointed to broken /jobs/country/uk|canada|germany URLs; fixed to canonical /jobs/location/ paths
+* fix(seo): salary page country job links used 3-segment /jobs/{role}/{country}/{band} pattern; fixed to canonical /jobs/{role}/{band}
+
 ### Features
 
 * feat(ui): white logo containers on job cards and detail page; full job posting open by default; remove "High salary role" fallback pill; homepage 2-column job grid; tablet breakpoints for sidebar layouts; mobile font/spacing improvements

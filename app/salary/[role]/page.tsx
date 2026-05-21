@@ -621,7 +621,7 @@ export default async function SalaryRolePage(props: PageProps) {
           {Object.keys(byCountry).slice(0, 3).map((cc) => (
             <li key={cc}>
               <Link
-                href={`/jobs/${roleSlug}/${countryCodeToSlug(cc)}/${minAnnual / 1000}k-plus`}
+                href={`/jobs/${roleSlug}/${minAnnual / 1000}k-plus`}
                 className="hover:underline"
               >
                 {getBandLabel(minAnnual)} {roleName} jobs in {cc} →

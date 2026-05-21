@@ -57,9 +57,9 @@ export async function generateMetadata(): Promise<Metadata> {
         languages: {
           'en': 'https://www.6figjobs.com',
           'en-US': 'https://www.6figjobs.com',
-          'en-GB': 'https://www.6figjobs.com/jobs/country/uk',
-          'en-CA': 'https://www.6figjobs.com/jobs/country/canada',
-          'en-DE': 'https://www.6figjobs.com/jobs/country/germany',
+          'en-GB': 'https://www.6figjobs.com/jobs/location/united-kingdom',
+          'en-CA': 'https://www.6figjobs.com/jobs/location/canada',
+          'en-DE': 'https://www.6figjobs.com/jobs/location/germany',
           'x-default': 'https://www.6figjobs.com',
         },
       },
