@@ -13,10 +13,10 @@ const SITE_URL = getSiteUrl()
 
 function buildCompaniesDescription(totalCompanies: number, totalEligibleJobs: number) {
   if (totalCompanies > 0) {
-    return `Explore ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} verified $100k+ jobs, six figure roles, remote jobs, and high paying positions with direct apply links.`
+    return `Browse ${totalCompanies.toLocaleString()} companies actively hiring for ${totalEligibleJobs.toLocaleString()} verified $100k+ tech jobs. Find six-figure roles at top startups, FAANG, and high-growth companies with direct apply links.`
   }
 
-  return 'Explore companies hiring for verified $100k+ jobs, six figure roles, remote jobs, and high paying positions with direct apply links.'
+  return 'Browse companies actively hiring for verified $100k+ tech jobs. Find six-figure roles at top startups, FAANG, and high-growth companies with direct apply links.'
 }
 
 function buildBreadcrumbJsonLd() {

@@ -86,6 +86,12 @@ function checkSalaryPageRedirect(slug?: string[]) {
   if (slug.length === 3 && slug[1] === 'remote' && SALARY_BAND_SEGMENTS.has(slug[2])) {
     permanentRedirect(`/remote/${slug[0]}`)
   }
+
+  // Fallback: role / any-country-or-null / band → role/band
+  // Handles stale 3-segment URLs that slip past next.config.js redirects.
+  if (slug.length === 3 && SALARY_BAND_SEGMENTS.has(slug[2]) && slug[1] !== 'remote') {
+    permanentRedirect(`/jobs/${slug[0]}/${slug[2]}`)
+  }
 }
 
 async function resolveSearchParams(

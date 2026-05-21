@@ -68,24 +68,43 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // 2-segment: bare country slug + salary band → location page
       {
         source: `/jobs/:country${countrySlugPattern}/:band${salaryBandPattern}`,
         destination: '/jobs/location/:country',
         permanent: true,
       },
+      // 2-segment: "remote" as role slug → /remote hub
       {
         source: `/jobs/remote/:band${salaryBandPattern}`,
         destination: '/remote',
         permanent: true,
       },
+      // 3-segment: role / "remote" / band → /remote/role (must come before generic 3-seg rule)
       {
         source: `/jobs/:role/remote/:band${salaryBandPattern}`,
         destination: '/remote/:role',
         permanent: true,
       },
+      // 3-segment: role / any-country-or-null / band → role/band (catches all stale 3-seg URLs)
+      // Handles: /jobs/software-engineer/united-states/100k-plus,
+      //          /jobs/senior-pm/singapore/100k-plus, /jobs/engineer/null/100k-plus, etc.
+      {
+        source: `/jobs/:role/:country/:band${salaryBandPattern}`,
+        destination: '/jobs/:role/:band',
+        permanent: true,
+      },
+      // Strip ?seniority query param — canonical role pages have no seniority filter in URL
       {
         source: '/jobs/:role',
         has: [{ type: 'query', key: 'seniority' }],
+        destination: '/jobs/:role',
+        permanent: true,
+      },
+      // Strip ?skill query param combos (e.g. /jobs/other?skill=react&seniority=staff)
+      {
+        source: '/jobs/:role',
+        has: [{ type: 'query', key: 'skill' }],
         destination: '/jobs/:role',
         permanent: true,
       },

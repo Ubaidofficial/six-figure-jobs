@@ -83,26 +83,26 @@ export async function generateMetadata({
   const noindexUtilityState = hasNonPaginationQueryParams(sp)
 
   return {
-    title: `All $100k+ Jobs | ${SITE_NAME}`,
+    title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
     description:
-      'Browse verified $100k+ jobs with published salary ranges, direct apply links, and fresh ATS listings. Filter by role, location, remote work, seniority, and company size.',
+      'Browse thousands of verified $100k+ tech jobs with published salaries, direct apply links, and real-time ATS listings. Filter by role, location, remote work, seniority, and company size.',
     alternates: {
       canonical,
     },
     robots: noindexUtilityState ? { index: false, follow: true } : { index: true, follow: true },
     openGraph: {
-      title: `All $100k+ Jobs | ${SITE_NAME}`,
+      title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
       description:
-        'Browse verified $100k+ jobs with salary ranges, direct apply links, and fresh listings by role, location, and work type.',
+        'Thousands of verified $100k+ tech jobs with salary ranges, direct apply links, and fresh listings by role, location, and work type.',
       url: canonical,
       siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `All $100k+ Jobs | ${SITE_NAME}`,
+      title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
       description:
-        'Browse verified $100k+ jobs with published salaries, direct apply links, and fresh ATS listings.',
+        'Thousands of verified $100k+ tech jobs with published salaries, direct apply links, and fresh ATS listings.',
     },
   }
 }

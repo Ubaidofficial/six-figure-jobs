@@ -26,11 +26,18 @@ const COUNTRIES: Array<{ code: string; label: string }> = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Salary guides for $100k+ tech roles | Six Figure Jobs',
+  title: 'Tech Salary Guides: $100k–$400k+ by Role & Country | Six Figure Jobs',
   description:
-    'Browse salary guides for top tech roles using live $100k+ job data. Filter by country to see local ranges for engineering, product, data, design, and more.',
+    'Real salary ranges for software engineers, product managers, data scientists, and 10+ more roles. Live data from verified $100k+ job listings filtered by seniority, country, and work type.',
   alternates: {
     canonical: 'https://www.6figjobs.com/salary',
+  },
+  openGraph: {
+    title: 'Tech Salary Guides: $100k–$400k+ by Role & Country | Six Figure Jobs',
+    description:
+      'Real salary ranges for software engineers, product managers, data scientists, and 10+ more roles. Updated continuously from verified $100k+ job listings.',
+    url: 'https://www.6figjobs.com/salary',
+    type: 'website',
   },
 }
 
@@ -42,11 +49,11 @@ export default function SalaryIndexPage() {
           Salary guides
         </p>
         <h1 className="text-2xl font-semibold text-slate-50">
-          Salary guides powered by live $100k+ jobs
+          Tech salary guides: $100k–$400k+ by role, seniority &amp; country
         </h1>
         <p className="max-w-3xl text-sm text-slate-300">
-          Explore salary ranges for core tech roles using verified $100k+ job listings.
-          Jump to a role guide, then choose a country to see localized pay.
+          Real compensation ranges for software engineers, product managers, data scientists, and 10+ more roles.
+          Built from verified $100k+ job listings — not surveys. Filter by country to see US, UK, Canada, Germany, and more.
         </p>
       </header>
 
@@ -84,13 +91,27 @@ export default function SalaryIndexPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-900 bg-slate-950/60 p-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-100">
+      <section className="rounded-2xl border border-slate-900 bg-slate-950/60 p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-slate-100">
           How we build these salary guides
         </h2>
         <p className="text-sm leading-relaxed text-slate-300">
-          Six Figure Jobs assembles each salary guide from live $100k+ tech job listings scraped directly from ATS-powered company boards. We normalize salaries, filter out expired or lowball roles, and tag each job with role, seniority, country, currency, and remote mode. This data lets us surface real-time medians and ranges, broken out by band and location, while keeping the sample clean and current. Unlike static survey reports, the numbers you see refresh continuously as companies publish or close openings. Remote and hybrid roles include region labels like US-only, EMEA, APAC, or global so you can see how compensation shifts across markets. Country pages highlight local-currency bands (GBP, EUR, CAD, AUD, CHF, SGD) and sample sizes so you know when a guide is ready for indexing. Each guide links directly to the live openings used to generate the figures, giving candidates a fast path from research to application. If you want to compare roles or countries, start from this hub, choose a role, then drill into the location that best matches your search.
+          Each guide is assembled from live $100k+ tech job listings scraped directly from ATS-powered company career pages — not recruiter surveys. We normalize compensation, remove expired or lowball postings, and tag every role with title, seniority, country, currency, and remote eligibility.
         </p>
+        <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            <span className="font-semibold text-slate-100 block mb-1">Real-time data</span>
+            Numbers refresh continuously as companies post or close roles — not once a year.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            <span className="font-semibold text-slate-100 block mb-1">Local currencies</span>
+            Country guides show GBP, EUR, CAD, AUD, SGD ranges so you can benchmark locally.
+          </li>
+          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            <span className="font-semibold text-slate-100 block mb-1">Direct to jobs</span>
+            Every salary range links to the live openings behind it — research to application in one click.
+          </li>
+        </ul>
       </section>
     </main>
   )

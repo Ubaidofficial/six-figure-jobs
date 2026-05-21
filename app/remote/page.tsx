@@ -84,11 +84,11 @@ export async function generateMetadata({
   const noindexUtilityState = hasNonPaginationQueryParams(sp)
   const regionLabel = prettyRemoteRegion(activeRemoteRegion)
   const title = regionLabel
-    ? `${regionLabel} Remote Jobs (${total.toLocaleString()}) | ${SITE_NAME}`
-    : `Remote Jobs (Minimum $100k+ USD) (${total.toLocaleString()}) | ${SITE_NAME}`
+    ? `${regionLabel} Remote $100k+ Jobs (${total.toLocaleString()} Open Roles) | ${SITE_NAME}`
+    : `Remote $100k+ Jobs — ${total.toLocaleString()} Six-Figure Openings | ${SITE_NAME}`
   const description = regionLabel
-    ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs across engineering, product, data, and more.`
-    : `Browse ${total.toLocaleString()} remote six-figure jobs across engineering, product, data, and more. $100k+ remote jobs, remote high paying jobs, six figure remote jobs.`
+    ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs in engineering, product, data, and more. Verified salaries, direct apply links, and fresh listings.`
+    : `Browse ${total.toLocaleString()} remote six-figure jobs with verified salaries and direct apply links. Software engineering, product, data, and more — $100k+ remote roles updated daily.`
 
   return {
     title,

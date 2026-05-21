@@ -1,3 +1,16 @@
+# 1.3.0 (2026-05-21)
+
+### Bug Fixes
+
+* **seo:** add next.config.js redirect for 3-segment `/jobs/role/country/band` URLs → `/jobs/role/band` (fixes hundreds of 404s from stale internal links)
+* **seo:** add server-side fallback redirect in `_components/page.tsx` for 3-segment paths that bypass next.config.js
+* **seo:** add `?skill=` query-param redirect to strip legacy filter combos from indexed URLs
+
+### Features
+
+* **seo:** improve pillar page meta titles and descriptions for `/jobs`, `/salary`, `/remote`, and `/companies` with higher-intent keyword targeting
+* **ux:** rewrite salary guide body copy — break 1-paragraph wall into scannable 3-column grid with role, real-time, and local-currency callouts
+
 # 1.2.0 (2026-05-21)
 
 ### Features
