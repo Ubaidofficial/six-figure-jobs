@@ -19,7 +19,10 @@ function readPositiveInt(value: string | undefined, fallback: number): number {
 }
 
 export function isCoreOnlySitemapMode(): boolean {
-  return process.env.SEO_CORE_ONLY === '1'
+  const value = process.env.SEO_CORE_ONLY?.trim()
+  if (value === '1') return true
+  if (value === '0') return false
+  return process.env.NODE_ENV === 'production'
 }
 
 export function getCoreOnlyFamilies(): Set<CoreSitemapFamily> {
@@ -51,4 +54,3 @@ export function getMaxRemoteSitemapUrls(): number {
     isCoreOnlySitemapMode() ? 150 : 100000,
   )
 }
-
