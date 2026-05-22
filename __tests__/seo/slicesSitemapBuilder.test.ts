@@ -59,9 +59,9 @@ describe('slice sitemap builder', () => {
     countMock.mockResolvedValue(12)
 
     const entries = await buildSliceSitemapEntries('longtail')
-    const locs = entries.map((entry) => entry.loc)
+    const paths = entries.map((entry) => new URL(entry.loc).pathname)
 
-    expect(locs).not.toContain('https://www.6figjobs.com/jobs/software-engineer/100k-plus')
-    expect(locs).toContain('https://www.6figjobs.com/jobs/backend-engineer/100k-plus')
+    expect(paths).not.toContain('/jobs/software-engineer/100k-plus')
+    expect(paths).toContain('/jobs/backend-engineer/100k-plus')
   })
 })
