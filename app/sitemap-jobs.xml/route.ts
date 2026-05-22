@@ -10,6 +10,7 @@ import {
 } from '../../lib/jobs/queryJobs'
 import { buildIndexableJobStructureWhere } from '../../lib/jobs/qualityGate'
 import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../../lib/jobs/freshness'
+import { getMaxJobSitemapShards } from '../../lib/seo/sitemapPolicy'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
@@ -49,13 +50,14 @@ function encodeCursor(cursor: Cursor): string {
 export async function GET() {
   try {
     const baseWhere = buildHundredKWhereBase()
+    const maxShards = getMaxJobSitemapShards()
 
     const sitemapEntries: string[] = []
     let cursor: Cursor | null = null
 
     // Build cursor-based shards (stable ordering; no deep OFFSET/skip).
     // `cursor` represents the last item of the previous page ("after" cursor).
-    for (let page = 1; page <= 5000; page++) {
+    for (let page = 1; page <= maxShards; page++) {
       const where: any = cursor
         ? ({
             ...baseWhere,

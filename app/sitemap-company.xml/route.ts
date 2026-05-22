@@ -6,6 +6,7 @@ import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '../../lib/seo/indexabilityGates'
 import { buildWhere } from '../../lib/jobs/queryJobs'
+import { getMaxCompanySitemapPages } from '../../lib/seo/sitemapPolicy'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 45000
@@ -49,7 +50,10 @@ async function fetchEligibleCompanyCount(): Promise<number> {
 export async function GET() {
   try {
     const total = await fetchEligibleCompanyCount()
-    const totalPages = Math.ceil(total / PAGE_SIZE)
+    const totalPages = Math.min(
+      Math.ceil(total / PAGE_SIZE),
+      getMaxCompanySitemapPages(),
+    )
 
     const lastmod = new Date().toISOString()
     const entries = Array.from({ length: totalPages }).map((_, i) => {

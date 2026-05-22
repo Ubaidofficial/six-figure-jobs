@@ -5,6 +5,7 @@ import { resolveCoreSitemapFamilies } from '../../lib/seo/coreSitemapFamilies'
 import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
 import { prisma } from '../../lib/prisma'
 import { BLOG_POSTS } from '../../lib/blog/posts'
+import { shouldAdvertiseSitemapFamily } from '../../lib/seo/sitemapPolicy'
 
 function hasBlogPosts(): boolean {
   return BLOG_POSTS.length > 0
@@ -65,18 +66,18 @@ export async function GET() {
     hasSkillPages(),
   ])
   const sitemaps = [
-    ...(hasJobUrls ? ['sitemap-jobs.xml'] : []),
-    ...(hasCompanyUrls ? ['sitemap-company.xml'] : []),
-    ...(cityUrls.length > 0 ? ['sitemap-city.xml'] : []),
-    ...(hasRemoteUrls ? ['sitemap-remote.xml'] : []),
-    ...(hasSalaryUrls ? ['sitemap-salary.xml'] : []),
-    ...(hasCountryUrls ? ['sitemap-country.xml'] : []),
-    ...(hasCategoryUrls ? ['sitemap-category.xml'] : []),
-    ...(hasLevelUrls ? ['sitemap-level.xml'] : []),
-    ...(hasBrowseUrls ? ['sitemap-browse.xml'] : []),
-    ...(hasSliceUrls ? ['sitemap-slices.xml'] : []),
-    ...(hasBlog ? ['sitemap-blog.xml'] : []),
-    ...(hasSkills ? ['sitemap-skills.xml'] : []),
+    ...(hasJobUrls && shouldAdvertiseSitemapFamily('jobs') ? ['sitemap-jobs.xml'] : []),
+    ...(hasCompanyUrls && shouldAdvertiseSitemapFamily('company') ? ['sitemap-company.xml'] : []),
+    ...(cityUrls.length > 0 && shouldAdvertiseSitemapFamily('city') ? ['sitemap-city.xml'] : []),
+    ...(hasRemoteUrls && shouldAdvertiseSitemapFamily('remote') ? ['sitemap-remote.xml'] : []),
+    ...(hasSalaryUrls && shouldAdvertiseSitemapFamily('salary') ? ['sitemap-salary.xml'] : []),
+    ...(hasCountryUrls && shouldAdvertiseSitemapFamily('country') ? ['sitemap-country.xml'] : []),
+    ...(hasCategoryUrls && shouldAdvertiseSitemapFamily('category') ? ['sitemap-category.xml'] : []),
+    ...(hasLevelUrls && shouldAdvertiseSitemapFamily('level') ? ['sitemap-level.xml'] : []),
+    ...(hasBrowseUrls && shouldAdvertiseSitemapFamily('browse') ? ['sitemap-browse.xml'] : []),
+    ...(hasSliceUrls && shouldAdvertiseSitemapFamily('slices') ? ['sitemap-slices.xml'] : []),
+    ...(hasBlog && shouldAdvertiseSitemapFamily('blog') ? ['sitemap-blog.xml'] : []),
+    ...(hasSkills && shouldAdvertiseSitemapFamily('skills') ? ['sitemap-skills.xml'] : []),
   ]
   const fallbackParts = [
     ...(failedFamilies.length > 0 ? [`optional_families=${failedFamilies.join(',')}`] : []),

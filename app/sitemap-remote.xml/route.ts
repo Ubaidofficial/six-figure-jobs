@@ -1,6 +1,7 @@
 // app/sitemap-remote.xml/route.ts
 import { collectRemoteRoleRows } from '../../lib/seo/remoteSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
+import { getMaxRemoteSitemapUrls } from '../../lib/seo/sitemapPolicy'
 
 const SITE_URL = getSiteUrl()
 
@@ -17,7 +18,7 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
-  const rows = await collectRemoteRoleRows()
+  const rows = (await collectRemoteRoleRows()).slice(0, getMaxRemoteSitemapUrls())
   if (rows.length === 0) {
     return new Response('Not found', { status: 404 })
   }

@@ -4,6 +4,7 @@ import { getSiteUrl } from '../../lib/seo/site'
 import { resolveCoreSitemapFamilies } from '../../lib/seo/coreSitemapFamilies'
 import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
 import { BLOG_POSTS } from '../../lib/blog/posts'
+import { shouldAdvertiseSitemapFamily } from '../../lib/seo/sitemapPolicy'
 
 function hasBlogPosts(): boolean {
   return BLOG_POSTS.length > 0
@@ -64,8 +65,12 @@ export async function GET() {
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     // Also list sitemap-jobs.xml directly: Google prioritises job sitemaps
     // and having it explicitly here speeds up job discovery.
-    ...(hasJobUrls ? [`Sitemap: ${SITE_URL}/sitemap-jobs.xml`] : []),
-    ...(hasBlog ? [`Sitemap: ${SITE_URL}/sitemap-blog.xml`] : []),
+    ...(hasJobUrls && shouldAdvertiseSitemapFamily('jobs')
+      ? [`Sitemap: ${SITE_URL}/sitemap-jobs.xml`]
+      : []),
+    ...(hasBlog && shouldAdvertiseSitemapFamily('blog')
+      ? [`Sitemap: ${SITE_URL}/sitemap-blog.xml`]
+      : []),
     '',
   ].join('\n')
 
