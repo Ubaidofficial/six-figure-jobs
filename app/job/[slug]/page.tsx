@@ -1035,7 +1035,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
 
   if (roleSlug && isCountryRecognized && countrySlug) {
     links.push({
-      href: `/jobs/${roleSlug}/${countrySlug}/100k-plus`,
+      href: `/jobs/${roleSlug}/100k-plus`,
       label: `$100k+ ${roleLabel} jobs in ${countryName ?? countryCode ?? 'this country'}`,
     })
   }

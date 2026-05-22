@@ -18,6 +18,8 @@ import {
 } from '../../../lib/seo/structuredData'
 import { buildSliceInternalLinks } from '../../../lib/navigation/internalLinks'
 import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
+import { countrySlugToCode } from '../../../lib/seo/countrySlug'
+import { isCanonicalSlug } from '../../../lib/roles/canonicalSlugs'
 
 export const revalidate = 3600
 
@@ -83,14 +85,36 @@ function checkSalaryPageRedirect(slug?: string[]) {
     }
   }
 
+  if (slug.length === 2 && SALARY_BAND_SEGMENTS.has(slug[1])) {
+    const first = slug[0].toLowerCase()
+    const band = slug[1].toLowerCase()
+
+    if (first === 'remote') {
+      permanentRedirect('/remote')
+    }
+
+    if (countrySlugToCode(first)) {
+      permanentRedirect(`/jobs/location/${first}`)
+    }
+
+    if (isCanonicalSlug(first)) {
+      permanentRedirect(`/jobs/${first}/${band}`)
+    }
+
+    permanentRedirect(`/jobs/${band}`)
+  }
+
   if (slug.length === 3 && slug[1] === 'remote' && SALARY_BAND_SEGMENTS.has(slug[2])) {
-    permanentRedirect(`/remote/${slug[0]}`)
+    const role = slug[0].toLowerCase()
+    permanentRedirect(isCanonicalSlug(role) ? `/remote/${role}` : '/remote')
   }
 
   // Fallback: role / any-country-or-null / band → role/band
   // Handles stale 3-segment URLs that slip past next.config.js redirects.
   if (slug.length === 3 && SALARY_BAND_SEGMENTS.has(slug[2]) && slug[1] !== 'remote') {
-    permanentRedirect(`/jobs/${slug[0]}/${slug[2]}`)
+    const role = slug[0].toLowerCase()
+    const band = slug[2].toLowerCase()
+    permanentRedirect(isCanonicalSlug(role) ? `/jobs/${role}/${band}` : `/jobs/${band}`)
   }
 }
 

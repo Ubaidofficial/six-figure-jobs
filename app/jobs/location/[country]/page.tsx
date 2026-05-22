@@ -96,7 +96,7 @@ export async function generateMetadata({
 
   const localeCode = loc.countryCode ? COUNTRY_LOCALE_MAP[loc.countryCode.toUpperCase()] : undefined
   const languages: Record<string, string> = {
-    en: getSiteUrl(),
+    en: canonical,
     'x-default': getSiteUrl(),
   }
   if (localeCode) languages[localeCode] = canonical

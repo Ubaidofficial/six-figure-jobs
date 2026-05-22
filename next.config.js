@@ -46,6 +46,18 @@ const searchNoCacheHeaders = [
   },
 ]
 
+const securityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+  {
+    key: 'Content-Security-Policy',
+    value:
+      "default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
+  },
+]
+
 const salaryBandPattern = '(100k-plus|200k-plus|300k-plus|400k-plus)'
 const countrySlugPattern =
   '(united-states|united-kingdom|canada|germany|australia|france|netherlands|sweden)'
@@ -112,6 +124,7 @@ const nextConfig = {
   },
   async headers() {
     return [
+      { source: '/:path*', headers: securityHeaders },
       ...sitemapSources.map((source) => ({ source, headers: sitemapCacheHeaders })),
       { source: '/robots.txt', headers: sitemapCacheHeaders },
       {
