@@ -37,7 +37,14 @@ export function shouldAdvertiseSitemapFamily(family: CoreSitemapFamily): boolean
 export function getMaxJobSitemapShards(): number {
   return readPositiveInt(
     process.env.SEO_CORE_JOB_SITEMAP_SHARDS,
-    isCoreOnlySitemapMode() ? 8 : 5000,
+    isCoreOnlySitemapMode() ? 1 : 5000,
+  )
+}
+
+export function getMaxJobUrlsPerShard(): number {
+  return readPositiveInt(
+    process.env.SEO_CORE_JOB_URLS_PER_SHARD,
+    isCoreOnlySitemapMode() ? 1000 : 20000,
   )
 }
 
@@ -48,9 +55,16 @@ export function getMaxCompanySitemapPages(): number {
   )
 }
 
+export function getMaxCompanyUrlsPerPage(): number {
+  return readPositiveInt(
+    process.env.SEO_CORE_COMPANY_URLS_PER_PAGE,
+    isCoreOnlySitemapMode() ? 500 : 45000,
+  )
+}
+
 export function getMaxRemoteSitemapUrls(): number {
   return readPositiveInt(
     process.env.SEO_CORE_REMOTE_SITEMAP_URLS,
-    isCoreOnlySitemapMode() ? 150 : 100000,
+    isCoreOnlySitemapMode() ? 100 : 100000,
   )
 }

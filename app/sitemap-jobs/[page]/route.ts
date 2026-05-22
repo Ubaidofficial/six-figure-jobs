@@ -13,6 +13,7 @@ import {
   evaluateJobIndexability,
 } from '../../../lib/jobs/qualityGate'
 import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../../../lib/jobs/freshness'
+import { getMaxJobUrlsPerShard } from '../../../lib/seo/sitemapPolicy'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
@@ -136,7 +137,7 @@ export async function GET(
 
   const indexableJobs = dedupeIndexableJobs(
     jobs.filter((job) => evaluateJobIndexability(job).indexable),
-  )
+  ).slice(0, getMaxJobUrlsPerShard())
 
   const urlXml = indexableJobs
     .map((job) => {

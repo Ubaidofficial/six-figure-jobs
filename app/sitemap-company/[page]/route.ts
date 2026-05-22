@@ -5,7 +5,10 @@ import { prisma } from '../../../lib/prisma'
 import { getSiteUrl } from '../../../lib/seo/site'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '../../../lib/seo/indexabilityGates'
 import { buildWhere } from '../../../lib/jobs/queryJobs'
-import { getMaxCompanySitemapPages } from '../../../lib/seo/sitemapPolicy'
+import {
+  getMaxCompanySitemapPages,
+  getMaxCompanyUrlsPerPage,
+} from '../../../lib/seo/sitemapPolicy'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 45000
@@ -92,7 +95,7 @@ export async function GET(
     return new Response('Not found', { status: 404 })
   }
 
-  const rows = await fetchCompanyPage(page)
+  const rows = (await fetchCompanyPage(page)).slice(0, getMaxCompanyUrlsPerPage())
 
   if (rows.length === 0) {
     if (page === 1) {

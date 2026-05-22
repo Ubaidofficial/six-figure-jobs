@@ -3,7 +3,7 @@
 ### Bug Fixes
 
 * **seo:** move preconnect tags to `app/head.tsx` so metadata tags stay in the HTML head for crawlers, add stronger legacy salary-slice redirects to defuse stale 404 URLs, switch job-detail internal links to canonical role salary paths, add hreflang self-reference on country location pages, and ship baseline security headers
-* **seo:** add staged GSC recovery controls via `SEO_CORE_ONLY` and sitemap caps (jobs shards, company pages, remote URLs), gate sitemap/robots advertisement to core families during controlled reindex rollouts, and default this core-only mode on in production unless explicitly disabled
+* **seo:** add staged GSC recovery controls via `SEO_CORE_ONLY` and sitemap caps (jobs shards + URLs, company pages + URLs, remote URLs), gate sitemap/robots advertisement to core families during controlled reindex rollouts, and default this core-only mode on in production unless explicitly disabled
 * **ci:** align SEO gate tests with current sitemap/robots policy and prepare the CI database before Jest runs
 * **ci:** avoid Prisma migration conflicts in SEO gates and skip staging ATS reports when the staging DB secret is missing
 * **ci:** keep SEO gates on Prisma schema sync for the disposable Postgres database because legacy migrations contain non-Postgres SQL
