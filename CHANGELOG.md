@@ -7,6 +7,7 @@
 * **ci:** keep SEO gates on Prisma schema sync for the disposable Postgres database because legacy migrations contain non-Postgres SQL
 * **ci:** run the local Next.js binary through `npx` in SEO gates
 * **seo:** stop slice sitemaps from emitting redirect-only role/country/band URLs and keep top-level skill pages out of the browse sitemap duplicate set
+* **seo:** prevent longtail slice sitemaps from duplicating canonical URLs already owned by priority slices
 * **seo:** shorten sitemap CDN freshness windows so crawler fixes appear quickly after deployment
 * **seo:** fix `builder.ts` generating 3-segment slice slugs with raw ISO country codes — now uses `countryCodeToSlug` for proper SEO slugs (e.g. `united-states` not `us`)
 * **seo:** fix `getLocationCanonicalPath` generating 3-segment canonical URLs (`/jobs/role/country/band`) with no matching route — now emits 2-segment `/jobs/role/country-slug`

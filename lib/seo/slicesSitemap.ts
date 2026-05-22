@@ -29,6 +29,12 @@ type SliceCandidate = {
   filters: SliceFilters
 }
 
+type SliceRow = {
+  slug: string
+  updatedAt: Date | null
+  filtersJson: string | null
+}
+
 function normalizeSlicePath(pathOrSlug: string): string | null {
   const raw = pathOrSlug.startsWith('/') ? pathOrSlug : `/${pathOrSlug}`
   const parts = raw
@@ -111,6 +117,56 @@ async function mapWithConcurrency<T, R>(
   return results
 }
 
+function buildCandidateFromSlice(slice: SliceRow): SliceCandidate | null {
+  const filters: SliceFilters | null = (() => {
+    if (!slice.filtersJson) return null
+    try {
+      return JSON.parse(slice.filtersJson)
+    } catch {
+      return null
+    }
+  })()
+
+  const normalizedFilters = normalizeSliceFilters(filters)
+  if (!normalizedFilters) return null
+
+  const primaryRole = getPrimaryRole(normalizedFilters)
+  if (!primaryRole || !isCanonicalSlug(primaryRole)) return null
+
+  const rawPath = resolveSliceCanonicalPath(normalizedFilters, slice.slug)
+  const path = rawPath ? normalizeSlicePath(rawPath) : null
+
+  if (!path || !path.startsWith('/')) return null
+  if (SALARY_TIER_PATHS.has(path)) return null
+
+  return {
+    slug: slice.slug,
+    path,
+    updatedAt: slice.updatedAt,
+    filters: normalizedFilters,
+  }
+}
+
+async function getPriorityOwnedLocs(): Promise<Set<string>> {
+  const slices = await prisma.jobSlice.findMany({
+    select: {
+      slug: true,
+      updatedAt: true,
+      filtersJson: true,
+    },
+    where: buildSliceQueryWhere('priority'),
+    orderBy: [{ updatedAt: 'desc' }, { jobCount: 'desc' }],
+    take: MAX_SLICES,
+  })
+
+  const locs = new Set<string>()
+  for (const slice of slices) {
+    const candidate = buildCandidateFromSlice(slice)
+    if (candidate) locs.add(`${SITE_URL}${candidate.path}`)
+  }
+  return locs
+}
+
 export async function buildSliceSitemapEntries(
   shard: SliceShard,
   options?: { limit?: number },
@@ -130,36 +186,16 @@ export async function buildSliceSitemapEntries(
     take: MAX_SLICES,
   })
 
-  const candidates: SliceCandidate[] = []
+  let candidates: SliceCandidate[] = []
 
   for (const slice of slices) {
-    const filters: SliceFilters | null = (() => {
-      if (!slice.filtersJson) return null
-      try {
-        return JSON.parse(slice.filtersJson)
-      } catch {
-        return null
-      }
-    })()
+    const candidate = buildCandidateFromSlice(slice)
+    if (candidate) candidates.push(candidate)
+  }
 
-    const normalizedFilters = normalizeSliceFilters(filters)
-    if (!normalizedFilters) continue
-
-    const primaryRole = getPrimaryRole(normalizedFilters)
-    if (!primaryRole || !isCanonicalSlug(primaryRole)) continue
-
-    const rawPath = resolveSliceCanonicalPath(normalizedFilters, slice.slug)
-    const path = rawPath ? normalizeSlicePath(rawPath) : null
-
-    if (!path || !path.startsWith('/')) continue
-    if (SALARY_TIER_PATHS.has(path)) continue
-
-    candidates.push({
-      slug: slice.slug,
-      path,
-      updatedAt: slice.updatedAt,
-      filters: normalizedFilters,
-    })
+  if (shard === 'longtail' && candidates.length > 0) {
+    const priorityOwnedLocs = await getPriorityOwnedLocs()
+    candidates = candidates.filter((candidate) => !priorityOwnedLocs.has(`${SITE_URL}${candidate.path}`))
   }
 
   const byLoc = new Map<string, string>()
