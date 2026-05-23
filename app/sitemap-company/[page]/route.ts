@@ -9,6 +9,7 @@ import {
   getMaxCompanySitemapPages,
   getMaxCompanyUrlsPerPage,
 } from '../../../lib/seo/sitemapPolicy'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 45000
@@ -101,11 +102,15 @@ export async function GET(
     if (page === 1) {
       const emptyXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${buildSitemapMetaComment('sitemap-company-page')}
 </urlset>`
 
       return new Response(emptyXml, {
         status: 200,
-        headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+        headers: {
+          'Content-Type': 'application/xml; charset=utf-8',
+          ...buildSitemapMetaHeaders('sitemap-company-page'),
+        },
       })
     }
 
@@ -127,10 +132,14 @@ export async function GET(
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.join('\n')}
+  ${buildSitemapMetaComment('sitemap-company-page')}
 </urlset>`
 
   return new Response(xml, {
     status: 200,
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      ...buildSitemapMetaHeaders('sitemap-company-page'),
+    },
   })
 }

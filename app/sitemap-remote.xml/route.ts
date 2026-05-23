@@ -2,6 +2,7 @@
 import { collectRemoteRoleRows } from '../../lib/seo/remoteSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
 import { getMaxRemoteSitemapUrls } from '../../lib/seo/sitemapPolicy'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 
@@ -40,10 +41,14 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.join('\n')}
+  ${buildSitemapMetaComment('sitemap-remote')}
 </urlset>`
 
   return new Response(xml, {
     status: 200,
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      ...buildSitemapMetaHeaders('sitemap-remote'),
+    },
   })
 }

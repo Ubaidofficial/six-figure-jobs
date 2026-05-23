@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSkillSitemapUrls } from '../../lib/seo/skillSitemap'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200
@@ -27,22 +28,30 @@ ${urls
   </url>`,
   )
   .join('\n')}
+  ${buildSitemapMetaComment('sitemap-skills')}
 </urlset>`
 
     return new NextResponse(xml, {
-      headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        ...buildSitemapMetaHeaders('sitemap-skills'),
+      },
     })
   } catch (error) {
     console.error('[sitemap-skills] fallback_used=1 reason=builder_error', error)
 
     const fallback = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><!-- fallback_used=1 --></urlset>`
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- fallback_used=1 -->
+  ${buildSitemapMetaComment('sitemap-skills')}
+</urlset>`
 
     return new NextResponse(fallback, {
       status: 200,
       headers: {
         'Content-Type': 'application/xml; charset=utf-8',
         'X-Sitemap-Fallback': '1',
+        ...buildSitemapMetaHeaders('sitemap-skills'),
       },
     })
   }

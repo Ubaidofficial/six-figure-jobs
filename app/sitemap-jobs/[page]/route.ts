@@ -14,6 +14,7 @@ import {
 } from '../../../lib/jobs/qualityGate'
 import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../../../lib/jobs/freshness'
 import { getMaxJobUrlsPerShard } from '../../../lib/seo/sitemapPolicy'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
@@ -156,9 +157,13 @@ export async function GET(
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urlXml}
+  ${buildSitemapMetaComment('sitemap-jobs-page')}
 </urlset>`
 
   return new Response(xml, {
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      ...buildSitemapMetaHeaders('sitemap-jobs-page'),
+    },
   })
 }

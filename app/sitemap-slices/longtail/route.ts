@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server'
 import { buildSliceSitemapEntries } from '../../../lib/seo/slicesSitemap'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../../lib/seo/sitemapResponseMeta'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 86400 // 24h
@@ -30,10 +31,14 @@ export async function GET() {
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.join('\n')}
+  ${buildSitemapMetaComment('sitemap-slices-longtail')}
 </urlset>`
 
   return new NextResponse(body, {
     status: 200,
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      ...buildSitemapMetaHeaders('sitemap-slices-longtail'),
+    },
   })
 }

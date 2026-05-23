@@ -6,6 +6,7 @@ import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFam
 import { prisma } from '../../lib/prisma'
 import { BLOG_POSTS } from '../../lib/blog/posts'
 import { shouldAdvertiseSitemapFamily } from '../../lib/seo/sitemapPolicy'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 function hasBlogPosts(): boolean {
   return BLOG_POSTS.length > 0
@@ -101,10 +102,12 @@ ${sitemaps
   </sitemap>`
   })
   .join('\n')}${fallbackComment}
+  ${buildSitemapMetaComment('sitemap')}
 </sitemapindex>`
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/xml; charset=utf-8',
+    ...buildSitemapMetaHeaders('sitemap'),
   }
   if (fallbackParts.length > 0) {
     headers['X-Sitemap-Fallback'] = '1'

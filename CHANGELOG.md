@@ -1,3 +1,9 @@
+# 1.4.1 (2026-05-23)
+
+### Bug Fixes
+
+* **seo:** add sitemap response metadata comments + `X-SEO-*` headers across sitemap routes and fallback sitemap responses so crawl sources can verify active sitemap caps/mode directly from responses
+
 # 1.4.0 (2026-05-21)
 
 ### Bug Fixes

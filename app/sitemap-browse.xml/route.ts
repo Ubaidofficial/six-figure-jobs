@@ -8,6 +8,7 @@ import { buildFallbackUrlsetResponse } from '@/lib/seo/fallbackSitemap'
 import { getSiteUrl } from '@/lib/seo/site'
 import { prisma } from '@/lib/prisma'
 import { buildWhere } from '@/lib/jobs/queryJobs'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '@/lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 
@@ -63,12 +64,14 @@ ${uniqueUrls
   </url>`,
   )
   .join('\n')}
+  ${buildSitemapMetaComment('sitemap-browse')}
 </urlset>`
 
     return new NextResponse(body, {
       status: 200,
       headers: {
         'Content-Type': 'application/xml; charset=utf-8',
+        ...buildSitemapMetaHeaders('sitemap-browse'),
       },
     })
   } catch (error) {

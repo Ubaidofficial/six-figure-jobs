@@ -5,6 +5,7 @@ import { SALARY_TIERS, type SalaryTierId } from '../../lib/jobs/salaryTiers'
 import { isSalaryTierPageIndexable } from '../../lib/seo/indexabilityGates'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 
@@ -51,16 +52,20 @@ export async function GET() {
       )
     ).filter((entry): entry is SalarySitemapUrl => entry != null)
 
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(u => `  <url>
     <loc>${u.url}</loc>
     <lastmod>${u.lastModified}</lastmod>
   </url>`).join('\n')}
+  ${buildSitemapMetaComment('sitemap-salary')}
 </urlset>`
 
     return new Response(xml, {
-      headers: { 'Content-Type': 'application/xml' },
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        ...buildSitemapMetaHeaders('sitemap-salary'),
+      },
     })
   } catch (error) {
     return buildFallbackUrlsetResponse('sitemap-salary', [], error)

@@ -3,6 +3,7 @@
 
 import { getSiteUrl } from '../../lib/seo/site'
 import { buildSliceSitemapEntries, type SliceShard } from '../../lib/seo/slicesSitemap'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 
@@ -43,10 +44,14 @@ ${entries
   </sitemap>`,
   )
   .join('\n')}
+  ${buildSitemapMetaComment('sitemap-slices')}
 </sitemapindex>`
 
   return new Response(body, {
     status: 200,
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      ...buildSitemapMetaHeaders('sitemap-slices'),
+    },
   })
 }

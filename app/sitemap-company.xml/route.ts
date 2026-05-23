@@ -7,6 +7,7 @@ import { getSiteUrl } from '../../lib/seo/site'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '../../lib/seo/indexabilityGates'
 import { buildWhere } from '../../lib/jobs/queryJobs'
 import { getMaxCompanySitemapPages } from '../../lib/seo/sitemapPolicy'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 45000
@@ -67,11 +68,15 @@ export async function GET() {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries.join('\n')}
+  ${buildSitemapMetaComment('sitemap-company')}
 </sitemapindex>`
 
     return new Response(xml, {
       status: 200,
-      headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        ...buildSitemapMetaHeaders('sitemap-company'),
+      },
     })
   } catch (error) {
     return buildFallbackUrlsetResponse('sitemap-company', [], error)

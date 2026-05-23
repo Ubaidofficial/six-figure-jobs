@@ -1,4 +1,5 @@
 import { getCountrySitemapUrls } from '../../lib/seo/countrySitemap'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,9 +15,13 @@ ${urls.map(u => `  <url>
     <loc>${u.url}</loc>
     <lastmod>${u.lastModified}</lastmod>
   </url>`).join('\n')}
+  ${buildSitemapMetaComment('sitemap-country')}
 </urlset>`
 
   return new Response(xml, {
-    headers: { 'Content-Type': 'application/xml' },
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      ...buildSitemapMetaHeaders('sitemap-country'),
+    },
   })
 }

@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server'
 import { getAllPosts } from '@/lib/blog/posts'
 import { getSiteUrl } from '@/lib/seo/site'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '@/lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 
@@ -41,10 +42,14 @@ ${urls
   </url>`,
   )
   .join('\n')}
+  ${buildSitemapMetaComment('sitemap-blog')}
 </urlset>`
 
   return new NextResponse(body, {
     status: 200,
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      ...buildSitemapMetaHeaders('sitemap-blog'),
+    },
   })
 }

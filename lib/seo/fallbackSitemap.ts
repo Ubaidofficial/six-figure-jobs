@@ -1,5 +1,6 @@
 import { logRuntimeFallback } from '../runtime/fallback'
 import { getSiteUrl } from './site'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from './sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 
@@ -41,6 +42,7 @@ ${normalizedPaths
   })
   .join('\n')}
   <!-- fallback_used=1 -->
+  ${buildSitemapMetaComment(scope)}
 </urlset>`
 
   return new Response(xml, {
@@ -48,6 +50,7 @@ ${normalizedPaths
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
       'X-Sitemap-Fallback': '1',
+      ...buildSitemapMetaHeaders(scope),
     },
   })
 }

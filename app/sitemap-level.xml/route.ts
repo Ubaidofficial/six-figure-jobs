@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { buildWhere } from '../../lib/jobs/queryJobs'
 import { getSiteUrl } from '../../lib/seo/site'
+import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 
@@ -44,16 +45,20 @@ export async function GET() {
         lastModified: string
       }>
 
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(u => `  <url>
     <loc>${u.url}</loc>
     <lastmod>${u.lastModified}</lastmod>
   </url>`).join('\n')}
+  ${buildSitemapMetaComment('sitemap-level')}
 </urlset>`
 
     return new Response(xml, {
-      headers: { 'Content-Type': 'application/xml' },
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        ...buildSitemapMetaHeaders('sitemap-level'),
+      },
     })
   } catch (error) {
     return buildFallbackUrlsetResponse('sitemap-level', [], error)
