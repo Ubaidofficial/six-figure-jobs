@@ -79,10 +79,6 @@ export async function generateMetadata({
         }),
       ])
 
-      if (total === 0) {
-        return { title: 'Not Found', robots: { index: false, follow: false } }
-      }
-
       const shouldIndex = isTier1Role(role) && total >= 3
       const avgMax = asNumber((avgAgg as any)?._avg?.maxAnnual)
       const avgMin = asNumber((avgAgg as any)?._avg?.minAnnual)

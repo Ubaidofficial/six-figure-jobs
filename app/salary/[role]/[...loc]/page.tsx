@@ -364,10 +364,6 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
     pageSize: PAGE_SIZE,
   })
 
-  if (jobsResult.total === 0) {
-    notFound()
-  }
-
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -561,7 +557,14 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
         <h2 className="text-sm font-semibold text-slate-50">
           {roleName} job openings in {locationLabel || 'top regions'}
         </h2>
-        <JobList jobs={jobsResult.jobs as JobWithCompany[]} />
+        {jobsResult.jobs.length > 0 ? (
+          <JobList jobs={jobsResult.jobs as JobWithCompany[]} />
+        ) : (
+          <p className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+            No live jobs match this salary slice right now. The guide remains available for
+            context and will update automatically when matching verified roles return.
+          </p>
+        )}
       </section>
 
       {/* Pagination */}
