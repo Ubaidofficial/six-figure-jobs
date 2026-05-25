@@ -14,17 +14,6 @@ import { isCountryPageIndexable } from '../../../../lib/seo/indexabilityGates'
 
 export const revalidate = 600
 
-const COUNTRY_LOCALE_MAP: Record<string, string> = {
-  GB: 'en-GB',
-  CA: 'en-CA',
-  DE: 'en-DE',
-  US: 'en-US',
-  ES: 'en-ES',
-  IE: 'en-IE',
-  AU: 'en-AU',
-  NL: 'en-NL',
-}
-
 const LOCATION_MAP: Record<
   string,
   { label: string; countryCode?: string; remoteOnly?: boolean; slug?: string }
@@ -94,19 +83,10 @@ export async function generateMetadata({
   const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
   const allowIndex = isCountryPageIndexable(total)
 
-  const localeCode = loc.countryCode ? COUNTRY_LOCALE_MAP[loc.countryCode.toUpperCase()] : undefined
-  const languages: Record<string, string> = {
-    en: canonical,
-    'x-default': getSiteUrl(),
-  }
-  if (localeCode) languages[localeCode] = canonical
-
   return {
     title,
     description,
-    // Don't emit hreflang on noindex pages — Google ignores them and
-    // it creates "Hreflang: Noindex Return Links" audit warnings.
-    alternates: allowIndex ? { canonical, languages } : { canonical },
+    alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       title,

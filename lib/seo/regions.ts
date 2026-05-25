@@ -19,6 +19,7 @@ export const TARGET_COUNTRIES: TargetCountry[] = [
   { code: 'IE', label: 'Ireland', currency: 'EUR' },
   { code: 'DE', label: 'Germany', currency: 'EUR' },
   { code: 'FR', label: 'France', currency: 'EUR' },
+  { code: 'IT', label: 'Italy', currency: 'EUR' },
   { code: 'ES', label: 'Spain', currency: 'EUR' },
   { code: 'NL', label: 'Netherlands', currency: 'EUR' },
   { code: 'SE', label: 'Sweden', currency: 'SEK' },

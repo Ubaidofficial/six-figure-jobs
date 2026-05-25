@@ -97,7 +97,9 @@ function buildPageHref(
     }
   }
 
-  params.set('page', String(page))
+  if (page > 1) {
+    params.set('page', String(page))
+  }
   const query = params.toString()
   return query ? `${basePath}?${query}` : basePath
 }
@@ -123,8 +125,7 @@ function buildFilterHref(
     }
   }
 
-  // reset page
-  params.set('page', '1')
+  params.delete('page')
 
   if (updates.country !== undefined) {
     if (!updates.country) params.delete('country')
@@ -410,6 +411,7 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
             <span className="text-slate-400">Country:</span>
             <Link
               href={buildFilterHref(basePath, sp, { country: null })}
+              rel="nofollow"
               className={`rounded-full px-2 py-1 ${
                 !selectedCountry ? 'bg-slate-200 text-slate-900' : 'bg-slate-900 text-slate-200'
               }`}
@@ -420,6 +422,7 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
               <Link
                 key={cc}
                 href={buildFilterHref(basePath, sp, { country: cc })}
+                rel="nofollow"
                 className={`rounded-full px-2 py-1 ${
                   selectedCountry === cc
                     ? 'bg-slate-200 text-slate-900'
@@ -453,6 +456,7 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
                 <Link
                   key={slug || 'any'}
                   href={buildFilterHref(basePath, sp, { remoteRegion: slug || null })}
+                  rel="nofollow"
                   className={`rounded-full px-2 py-1 ${
                     (selectedRegion || '') === slug
                       ? 'bg-slate-200 text-slate-900'
@@ -472,6 +476,7 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
               <Link
                 key={s}
                 href={buildFilterHref(basePath, sp, { min: s })}
+                rel="nofollow"
                 className={`rounded-full px-2 py-1 ${
                   activeMinAnnual === s
                     ? 'bg-slate-200 text-slate-900'

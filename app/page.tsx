@@ -54,14 +54,6 @@ export async function generateMetadata(): Promise<Metadata> {
         '6 figure jobs, six figure jobs, 6 figure salary jobs, six-figure jobs, high paying jobs, easy 6 figure jobs, 6 figure remote jobs, 6 figure jobs no degree, 6 figure jobs without college degree, six-figure salary jobs, best 6 figure jobs',
       alternates: {
         canonical: 'https://www.6figjobs.com',
-        languages: {
-          'en': 'https://www.6figjobs.com',
-          'en-US': 'https://www.6figjobs.com',
-          'en-GB': 'https://www.6figjobs.com/jobs/location/united-kingdom',
-          'en-CA': 'https://www.6figjobs.com/jobs/location/canada',
-          'en-DE': 'https://www.6figjobs.com/jobs/location/germany',
-          'x-default': 'https://www.6figjobs.com',
-        },
       },
       openGraph: {
         title: 'Six Figure Jobs & High Paying $100k+ Positions',

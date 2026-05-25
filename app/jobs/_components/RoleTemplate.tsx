@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
-import { notFound } from 'next/navigation'
 
 import { JobCard } from '@/components/jobs/JobCard'
 import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
@@ -311,9 +310,8 @@ export async function RoleTemplate({
     `jobs.role.${roleSlug}.page`,
     async () => {
   const data = await queryJobs(queryInput)
-  if (data.total === 0) notFound()
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
-  const totalPages = data.totalPages
+  const totalPages = Math.max(1, data.totalPages || 1)
   const mostRecentUpdateMs = jobs.reduce((acc, job: any) => {
     const candidate = job?.updatedAt ?? job?.postedAt ?? job?.createdAt ?? null
     if (!candidate) return acc
