@@ -52,8 +52,8 @@ export function RemoteHero({
 
           <p className={styles.subheadline} style={delay(240)}>
             <strong>{remoteJobCount.toLocaleString()}</strong> fully remote positions from{' '}
-            <strong>{companyCount.toLocaleString()}</strong> companies worldwide. No commute, just
-            premium pay.
+            <strong>{companyCount.toLocaleString()}</strong> companies worldwide, with salary
+            visibility and direct apply links.
           </p>
 
           <form className={styles.searchForm} action="/search" method="get" style={delay(360)}>

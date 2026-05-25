@@ -5,6 +5,7 @@
 * **seo:** remove self-redirecting `/jobs/:role` query-strip rules from `next.config.js` and move legacy query normalization (`seniority`, `skill`, `tech`) into middleware so crawlers receive a real canonical redirect target
 * **seo:** improve role slug recovery with conservative token-overlap matching so malformed but clear slugs (word-order variants) redirect to canonical role hubs instead of 404
 * **scrape:** stop running legacy slice bootstrap scripts in the cron pipeline that generate non-canonical salary/country slice patterns and inflate redirect churn
+* **ux:** refresh core hub information hierarchy: cleaner homepage/remote hero copy, canonical salary guide links (remove redirect-prone slugs), and stronger companies hub summary + quick navigation
 
 # 1.4.1 (2026-05-23)
 

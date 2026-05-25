@@ -37,16 +37,17 @@ export function Hero({
           </div>
 
           <h1 className={styles.headline} style={delay(120)}>
-            <span>The Premium Job Board for </span>
+            <span>The Premium Job Board for</span>
+            <br />
             <span className={styles.gradientText}>Six Figure Jobs</span>
             <br />
-            <span>— Verified Salaries, Zero Noise</span>
+            <span>with Published Salaries</span>
           </h1>
 
           <p className={styles.subheadline} style={delay(240)}>
             Browse <strong>{jobCount.toLocaleString()}+</strong> verified $100k+ roles from{' '}
-            <strong>{companyCount.toLocaleString()}</strong> companies. Every listing shows a
-            real salary — no vague ranges, no entry-level clutter, no "competitive compensation."
+            <strong>{companyCount.toLocaleString()}</strong> companies. Salary ranges, work mode,
+            and apply paths are shown upfront so you can move from search to application faster.
           </p>
 
           <form
@@ -71,7 +72,7 @@ export function Hero({
                   spellCheck={false}
                 />
                 <Button variant="primary" size="lg" type="submit" className={styles.cta}>
-                  Find six-figure jobs <span aria-hidden="true">→</span>
+                  Search jobs <span aria-hidden="true">→</span>
                 </Button>
               </div>
             </div>

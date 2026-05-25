@@ -142,6 +142,27 @@ export default async function CompaniesPage() {
           )}
         </header>
 
+        <section className="mb-8 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3">
+            <div className="text-xs uppercase tracking-wide text-slate-400">Companies</div>
+            <div className="mt-1 text-xl font-semibold text-slate-100">
+              {totalCompanies.toLocaleString()}
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3">
+            <div className="text-xs uppercase tracking-wide text-slate-400">Live $100k+ jobs</div>
+            <div className="mt-1 text-xl font-semibold text-slate-100">
+              {totalEligibleJobs.toLocaleString()}
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3">
+            <div className="text-xs uppercase tracking-wide text-slate-400">Next step</div>
+            <div className="mt-1 text-sm font-medium text-slate-200">
+              Open a company, then filter by role/location.
+            </div>
+          </div>
+        </section>
+
         {companies.length === 0 ? (
           <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-8 text-center">
             <p className="text-slate-400">No companies found yet. Try again soon — listings update frequently.</p>
@@ -159,6 +180,17 @@ export default async function CompaniesPage() {
                 on-site six figure jobs across engineering, product, data, sales, finance,
                 marketing, operations, and leadership roles.
               </p>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <Link href="/jobs" className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-200 hover:border-slate-500">
+                  Browse all jobs
+                </Link>
+                <Link href="/remote" className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-200 hover:border-slate-500">
+                  Remote jobs
+                </Link>
+                <Link href="/salary" className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-200 hover:border-slate-500">
+                  Salary guides
+                </Link>
+              </div>
             </section>
 
             <CompanySearch companies={companies} />

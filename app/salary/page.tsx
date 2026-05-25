@@ -10,9 +10,11 @@ const GUIDES: Array<{ slug: string; label: string }> = [
   { slug: 'product-manager', label: 'Product Manager salary' },
   { slug: 'data-engineer', label: 'Data Engineer salary' },
   { slug: 'data-scientist', label: 'Data Scientist salary' },
-  { slug: 'devops', label: 'DevOps / SRE salary' },
-  { slug: 'designer', label: 'Designer salary' },
-  { slug: 'machine-learning', label: 'ML / AI Engineer salary' },
+  { slug: 'devops-engineer', label: 'DevOps Engineer salary' },
+  { slug: 'product-designer', label: 'Product Designer salary' },
+  { slug: 'machine-learning-engineer', label: 'Machine Learning Engineer salary' },
+  { slug: 'engineering-manager', label: 'Engineering Manager salary' },
+  { slug: 'account-executive', label: 'Account Executive salary' },
 ]
 
 const COUNTRIES: Array<{ code: string; label: string }> = [
@@ -88,6 +90,38 @@ export default function SalaryIndexPage() {
               {c.label} – Software Engineer
             </Link>
           ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-5">
+        <h2 className="mb-3 text-sm font-semibold text-slate-100">
+          Salary bands
+        </h2>
+        <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/jobs/100k-plus"
+            className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-100 hover:border-slate-600"
+          >
+            $100k+ jobs
+          </Link>
+          <Link
+            href="/jobs/200k-plus"
+            className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-100 hover:border-slate-600"
+          >
+            $200k+ jobs
+          </Link>
+          <Link
+            href="/jobs/300k-plus"
+            className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-100 hover:border-slate-600"
+          >
+            $300k+ jobs
+          </Link>
+          <Link
+            href="/jobs/400k-plus"
+            className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-100 hover:border-slate-600"
+          >
+            $400k+ jobs
+          </Link>
         </div>
       </section>
 
