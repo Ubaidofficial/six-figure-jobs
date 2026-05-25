@@ -106,20 +106,6 @@ const nextConfig = {
         destination: '/jobs/:role/:band',
         permanent: true,
       },
-      // Strip ?seniority query param — canonical role pages have no seniority filter in URL
-      {
-        source: '/jobs/:role',
-        has: [{ type: 'query', key: 'seniority' }],
-        destination: '/jobs/:role',
-        permanent: true,
-      },
-      // Strip ?skill query param combos (e.g. /jobs/other?skill=react&seniority=staff)
-      {
-        source: '/jobs/:role',
-        has: [{ type: 'query', key: 'skill' }],
-        destination: '/jobs/:role',
-        permanent: true,
-      },
     ]
   },
   async headers() {

@@ -216,11 +216,10 @@ function runScrapeAndEnrichPipeline(jobId: string, mode: Mode) {
           console.log("✅ Location parsing complete");
           console.log("🧩 Updating role and salary slices...");
 
-          const scripts = [
-            "scripts/bootstrapRoleSlices.ts",
-            "scripts/seedJobSlices.ts",
-            "scripts/bootstrapCountrySalarySlices.ts",
-          ];
+          // Keep slice generation on a single canonical script.
+          // Legacy bootstrap scripts create non-canonical URL patterns
+          // (for example /jobs/us/100k-plus) that inflate redirect churn.
+          const scripts = ["scripts/seedJobSlices.ts"];
 
           let step = 0;
           let slicesOk = true;

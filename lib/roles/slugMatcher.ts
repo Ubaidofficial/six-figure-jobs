@@ -49,6 +49,72 @@ const ROLE_KEYWORD_MAP: Record<string, CanonicalRoleSlug> = {
   marketer: 'marketing-manager',
 }
 
+const TOKEN_STOPWORDS = new Set([
+  'job',
+  'jobs',
+  'role',
+  'roles',
+  'position',
+  'positions',
+  'and',
+  'or',
+  'for',
+  'with',
+  'the',
+  'a',
+  'an',
+])
+
+function normalizeToken(token: string): string {
+  const t = token.trim().toLowerCase()
+  if (!t) return ''
+  if (t === 'fullstack') return 'full-stack'
+  if (t === 'frontend') return 'front-end'
+  if (t === 'backend') return 'back-end'
+  return t
+}
+
+function slugTokens(slug: string): string[] {
+  return slug
+    .split('-')
+    .map(normalizeToken)
+    .flatMap((token) => token.split('-'))
+    .map((token) => token.trim())
+    .filter((token) => token && !TOKEN_STOPWORDS.has(token))
+}
+
+function findByTokenOverlap(inputSlug: string): CanonicalRoleSlug | null {
+  const input = new Set(slugTokens(inputSlug))
+  if (input.size < 2) return null
+
+  let best: { slug: CanonicalRoleSlug; score: number } | null = null
+
+  for (const candidate of CANONICAL_ROLE_SLUGS) {
+    const parts = slugTokens(candidate)
+    if (parts.length < 2) continue
+
+    const candidateSet = new Set(parts)
+    let overlap = 0
+    for (const token of input) {
+      if (candidateSet.has(token)) overlap += 1
+    }
+
+    if (overlap < 2) continue
+
+    const coverage = overlap / candidateSet.size
+    if (coverage < 0.5) continue
+
+    const precision = overlap / input.size
+    const score = overlap * 10 + coverage * 3 + precision
+
+    if (!best || score > best.score) {
+      best = { slug: candidate as CanonicalRoleSlug, score }
+    }
+  }
+
+  return best?.slug ?? null
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN MATCHING FUNCTION
 // ═══════════════════════════════════════════════════════════════════════════
@@ -120,7 +186,11 @@ export function findBestMatchingRole(badSlug: string): CanonicalRoleSlug | null 
     }
   }
 
-  // 5. Catch-all patterns
+  // 5. Conservative token-overlap matcher (handles reordered/expanded slugs)
+  const overlapMatch = findByTokenOverlap(slug)
+  if (overlapMatch) return overlapMatch
+
+  // 6. Catch-all patterns
   if (slug.includes('engineer') && !slug.includes('manager')) {
     if (hasSenior) return 'senior-software-engineer'
     return 'software-engineer'
@@ -142,7 +212,7 @@ export function findBestMatchingRole(badSlug: string): CanonicalRoleSlug | null 
     }
   }
 
-  // 6. No match found - return null (will 404)
+  // 7. No match found - return null (will 404)
   return null
 }
 

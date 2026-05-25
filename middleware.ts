@@ -13,6 +13,27 @@ const PUBLIC_PATHS = [`${ADMIN_ROOT}/login`, `${ADMIN_ROOT}/setup`]
 // Canonical host — ensure apex redirects to www for consistent PageRank consolidation
 const WWW_HOST = 'www.6figjobs.com'
 const APEX_HOST = '6figjobs.com'
+const LEGACY_ROLE_QUERY_KEYS = ['seniority', 'skill', 'tech'] as const
+
+function normalizeLegacyRoleQuery(request: NextRequest): NextResponse | null {
+  const url = request.nextUrl.clone()
+  if (!url.pathname.startsWith('/jobs/')) return null
+
+  const segments = url.pathname.split('/').filter(Boolean)
+  // Only normalize legacy query params on /jobs/:role routes.
+  if (segments.length !== 2) return null
+
+  let changed = false
+  for (const key of LEGACY_ROLE_QUERY_KEYS) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key)
+      changed = true
+    }
+  }
+
+  if (!changed) return null
+  return NextResponse.redirect(url, { status: 308 })
+}
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? ''
@@ -23,6 +44,9 @@ export function middleware(request: NextRequest) {
     url.host = WWW_HOST
     return NextResponse.redirect(url, { status: 301 })
   }
+
+  const normalizedRoleQueryRedirect = normalizeLegacyRoleQuery(request)
+  if (normalizedRoleQueryRedirect) return normalizedRoleQueryRedirect
 
   const { pathname } = request.nextUrl
 
