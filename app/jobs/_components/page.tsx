@@ -20,6 +20,7 @@ import { buildSliceInternalLinks } from '../../../lib/navigation/internalLinks'
 import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
 import { countrySlugToCode } from '../../../lib/seo/countrySlug'
 import { isCanonicalSlug } from '../../../lib/roles/canonicalSlugs'
+import { RoleTemplate, buildRoleMetadata } from './RoleTemplate'
 
 export const revalidate = 3600
 
@@ -62,6 +63,12 @@ function countryNameFromCode(code?: string | null): string | null {
     IN: 'India',
   }
   return map[upper] ?? upper
+}
+
+function resolveCanonicalRoleHub(slug?: string[] | null): string | null {
+  if (!slug || slug.length !== 1) return null
+  const role = slug[0]?.toLowerCase()
+  return isCanonicalSlug(role) ? role : null
 }
 
 function bandLabel(minAnnual?: number | null): string {
@@ -138,6 +145,14 @@ export async function generateMetadata({
   const resolvedParams = await params
   checkSalaryPageRedirect(resolvedParams.slug)
   const sp = await resolveSearchParams(searchParams)
+  const roleHub = resolveCanonicalRoleHub(resolvedParams.slug)
+  if (roleHub) {
+    return {
+      ...buildRoleMetadata(roleHub, 0, null, { canonicalPath: `/jobs/${roleHub}` }),
+      robots: { index: false, follow: true },
+    }
+  }
+
   const page = getPageFromSearchParams(sp)
   const requestedPath = `/jobs/${(resolvedParams.slug || []).join('/')}`.replace(/\/+$/, '') || '/jobs'
 
@@ -178,6 +193,11 @@ export default async function JobsSlicePage({
   const resolvedParams = await params
   checkSalaryPageRedirect(resolvedParams.slug)
   const sp = await resolveSearchParams(searchParams)
+  const roleHub = resolveCanonicalRoleHub(resolvedParams.slug)
+  if (roleHub) {
+    return <RoleTemplate roleSlug={roleHub} searchParams={searchParams} />
+  }
+
   const page = getPageFromSearchParams(sp)
   const requestedPath = `/jobs/${(resolvedParams.slug || []).join('/')}`.replace(/\/+$/, '') || '/jobs'
 
