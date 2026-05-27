@@ -1154,9 +1154,19 @@ function sanitizeDescriptionHtml(html: string): string {
   const withoutScripts = decoded.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
   const withoutStyles = withoutScripts.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
   const withoutComments = withoutStyles.replace(/<!--[\s\S]*?-->/g, '')
+  const withoutEmailProtection = withoutComments
+    .replace(
+      /<a\b[^>]*href=(["'])[^"']*\/cdn-cgi\/l\/email-protection[^"']*\1[^>]*>[\s\S]*?<\/a>/gi,
+      '',
+    )
+    .replace(
+      /<(?:a|span)\b[^>]*(?:class=(["'])[^"']*__cf_email__[^"']*\1|data-cfemail=(["'])[^"']*\2)[^>]*>[\s\S]*?<\/(?:a|span)>/gi,
+      '',
+    )
+    .replace(/\s(?:href|data-cfemail)=(["'])[^"']*\/cdn-cgi\/l\/email-protection[^"']*\1/gi, '')
 
   const allowedTags = ['p', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'br']
-  const filtered = withoutComments.replace(
+  const filtered = withoutEmailProtection.replace(
     /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi,
     (match, tag) => {
       const lower = String(tag).toLowerCase()

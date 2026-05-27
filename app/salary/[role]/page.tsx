@@ -506,10 +506,10 @@ export default async function SalaryRolePage(props: PageProps) {
             )
           })}
           <Link
-            href={`/jobs/${roleSlug}/${minAnnual / 1000}k-plus`}
+            href={`/jobs/${roleSlug}`}
             className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-blue-300 hover:border-slate-600"
           >
-            Browse {getBandLabel(minAnnual)} {roleName} jobs →
+            Browse live {roleName} jobs →
           </Link>
         </div>
 
@@ -596,10 +596,10 @@ export default async function SalaryRolePage(props: PageProps) {
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
           <li>
             <Link
-              href={`/jobs/${roleSlug}/${minAnnual / 1000}k-plus`}
+              href={`/jobs/${roleSlug}`}
               className="hover:underline"
             >
-              {getBandLabel(minAnnual)} {roleName} jobs →
+              Live {roleName} jobs →
             </Link>
           </li>
           <li>
@@ -618,16 +618,13 @@ export default async function SalaryRolePage(props: PageProps) {
               All $100k+ {roleName} jobs →
             </Link>
           </li>
-          {Object.keys(byCountry).slice(0, 3).map((cc) => (
-            <li key={cc}>
-              <Link
-                href={`/jobs/${roleSlug}/${minAnnual / 1000}k-plus`}
-                className="hover:underline"
-              >
-                {getBandLabel(minAnnual)} {roleName} jobs in {cc} →
+          {Object.keys(byCountry).length > 0 ? (
+            <li>
+              <Link href={`/jobs/${roleSlug}`} className="hover:underline">
+                Browse live {roleName} jobs by location →
               </Link>
             </li>
-          ))}
+          ) : null}
         </ul>
       </section>
 

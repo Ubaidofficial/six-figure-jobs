@@ -11,8 +11,10 @@ import {
 } from '../../lib/jobs/queryJobs'
 import { prisma } from '../../lib/prisma'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
+import { resolveSliceCanonicalPath } from '../../lib/seo/canonical'
 import { buildCleanJobsCanonicalPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
+import { parseSliceFilters } from '../../lib/slices/types'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
 
@@ -426,6 +428,38 @@ export default async function JobsIndexPage({
         })
       )
     )
+  const bandCanonicalLinks = bandSlices.map((slices) => {
+    const seen = new Set<string>()
+    const normalized: Array<{
+      slug: string
+      title: string | null
+      h1: string | null
+      jobCount: number
+      href: string
+    }> = []
+
+    for (const slice of slices) {
+      const parsed = parseSliceFilters(slice)
+      const roleSlug = parsed.filters.roleSlugs?.[0]?.toLowerCase()
+      if (roleSlug === 'other') continue
+
+      const canonicalPath = resolveSliceCanonicalPath(parsed.filters, parsed.slug)
+      if (!canonicalPath || !canonicalPath.startsWith('/')) continue
+      if (canonicalPath.includes('/other/')) continue
+      if (seen.has(canonicalPath)) continue
+      seen.add(canonicalPath)
+
+      normalized.push({
+        slug: slice.slug,
+        title: slice.title,
+        h1: slice.h1,
+        jobCount: slice.jobCount,
+        href: canonicalPath,
+      })
+    }
+
+    return normalized.slice(0, 12)
+  })
 
   const basePath = '/jobs'
   const totalPages = data.totalPages
@@ -582,7 +616,7 @@ export default async function JobsIndexPage({
         </div>
 
         {BANDS.map((band, idx) => {
-          const slices = bandSlices[idx]
+          const slices = bandCanonicalLinks[idx]
 
           if (!slices || slices.length === 0) {
             return null
@@ -603,7 +637,7 @@ export default async function JobsIndexPage({
                 {slices.map((slice: any) => (
                   <li key={slice.slug}>
                     <Link
-                      href={`/${slice.slug}`}
+                      href={slice.href}
                       className="inline-flex items-center rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-slate-200 hover:border-slate-600 hover:bg-slate-900"
                     >
                       <span className="truncate">
