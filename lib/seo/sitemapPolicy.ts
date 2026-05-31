@@ -44,7 +44,7 @@ export function getMaxJobSitemapShards(): number {
 export function getMaxJobUrlsPerShard(): number {
   return readPositiveInt(
     process.env.SEO_CORE_JOB_URLS_PER_SHARD,
-    isCoreOnlySitemapMode() ? 1000 : 20000,
+    isCoreOnlySitemapMode() ? 20000 : 20000,
   )
 }
 
