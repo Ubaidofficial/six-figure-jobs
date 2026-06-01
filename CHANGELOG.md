@@ -2,6 +2,7 @@
 
 ### Bug Fixes
 
+* **seo:** strengthen Google Jobs `JobPosting` schema for remote applicant locations, direct apply URLs, and salary ranges while exposing the full eligible job sitemap in core mode
 * **seo:** remove self-redirecting `/jobs/:role` query-strip rules from `next.config.js` and move legacy query normalization (`seniority`, `skill`, `tech`) into middleware so crawlers receive a real canonical redirect target
 * **seo:** improve role slug recovery with conservative token-overlap matching so malformed but clear slugs (word-order variants) redirect to canonical role hubs instead of 404
 * **seo:** keep internally linked low-volume role and salary slices crawlable as noindex pages, remove inconsistent country hreflang alternates, and tighten remote filter crawl paths

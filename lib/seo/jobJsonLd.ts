@@ -472,11 +472,16 @@ function inferCountryFromLocationRaw(locationRaw: string): string | null {
   }
 
   const upper = raw.toUpperCase()
+  const parentheticalCountry = upper.match(/\(([A-Z]{2})\)/)
+  if (parentheticalCountry?.[1]) {
+    if (US_STATE_CODES.has(parentheticalCountry[1])) return 'US'
+    return parentheticalCountry[1]
+  }
   if (US_STATE_CODES.has(upper) || US_STATE_NAMES.has(lower)) return 'US'
   if (/^[A-Z]{2}$/.test(upper)) return upper
 
   const tokens = raw
-    .split(/[,\-/|]/)
+    .split(/[,\-/|()\s]+/)
     .map((part) => part.trim())
     .filter(Boolean)
 
