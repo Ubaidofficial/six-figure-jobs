@@ -3,6 +3,15 @@
 
 import { prisma } from '../prisma'
 import { notifyJobDeletedForIndexing } from './indexingNotifications'
+import { triggerSitemapRevalidation } from '../seo/sitemapRevalidate'
+
+let sitemapRevalidatedThisProcess = false
+
+async function guardedSitemapRevalidate() {
+  if (sitemapRevalidatedThisProcess) return
+  sitemapRevalidatedThisProcess = true
+  await triggerSitemapRevalidation()
+}
 
 export async function runExpiryCycle(): Promise<{ expired: number }> {
   // Mark jobs as expired if they haven't been seen in 7 days
@@ -35,6 +44,10 @@ export async function runExpiryCycle(): Promise<{ expired: number }> {
   })
 
   await Promise.all(expiringJobs.map((job) => notifyJobDeletedForIndexing(job)))
+
+  if (result.count > 0) {
+    await guardedSitemapRevalidate()
+  }
 
   return { expired: result.count }
 }
@@ -97,6 +110,10 @@ export async function markJobsExpiredBySource(
   })
 
   await Promise.all(expiringJobs.map((job) => notifyJobDeletedForIndexing(job)))
+
+  if (result.count > 0) {
+    await guardedSitemapRevalidate()
+  }
 
   return { expired: result.count }
 }
