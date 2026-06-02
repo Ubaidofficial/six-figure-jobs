@@ -38,7 +38,7 @@ function buildHundredKWhereBase() {
     AND: [
       buildGlobalExclusionsWhere(),
       buildHighSalaryEligibilityWhere(),
-      buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS),
+      buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS - 2),
       buildIndexableJobStructureWhere(),
     ],
   }
