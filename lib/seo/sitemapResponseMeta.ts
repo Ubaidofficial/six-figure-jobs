@@ -4,12 +4,12 @@ import {
   getMaxJobSitemapShards,
   getMaxJobUrlsPerShard,
   getMaxRemoteSitemapUrls,
-  isCoreOnlySitemapMode,
+  getSeoPhase,
 } from './sitemapPolicy'
 
 type SitemapMeta = {
   generatedAtIso: string
-  coreOnly: boolean
+  phase: number
   jobsShards: number
   jobsUrlsPerShard: number
   companyPages: number
@@ -20,7 +20,7 @@ type SitemapMeta = {
 function readMeta(): SitemapMeta {
   return {
     generatedAtIso: new Date().toISOString(),
-    coreOnly: isCoreOnlySitemapMode(),
+    phase: getSeoPhase(),
     jobsShards: getMaxJobSitemapShards(),
     jobsUrlsPerShard: getMaxJobUrlsPerShard(),
     companyPages: getMaxCompanySitemapPages(),
@@ -31,7 +31,7 @@ function readMeta(): SitemapMeta {
 
 export function buildSitemapMetaComment(routeName: string): string {
   const meta = readMeta()
-  return `<!-- seo_sitemap_meta route=${routeName} generated_at=${meta.generatedAtIso} core_only=${meta.coreOnly ? '1' : '0'} jobs_shards=${meta.jobsShards} jobs_urls_per_shard=${meta.jobsUrlsPerShard} company_pages=${meta.companyPages} company_urls_per_page=${meta.companyUrlsPerPage} remote_urls=${meta.remoteUrls} -->`
+  return `<!-- seo_sitemap_meta route=${routeName} generated_at=${meta.generatedAtIso} phase=${meta.phase} jobs_shards=${meta.jobsShards} jobs_urls_per_shard=${meta.jobsUrlsPerShard} company_pages=${meta.companyPages} company_urls_per_page=${meta.companyUrlsPerPage} remote_urls=${meta.remoteUrls} -->`
 }
 
 export function buildSitemapMetaHeaders(routeName: string): Record<string, string> {
@@ -39,7 +39,7 @@ export function buildSitemapMetaHeaders(routeName: string): Record<string, strin
   return {
     'X-SEO-Sitemap-Route': routeName,
     'X-SEO-Sitemap-Generated-At': meta.generatedAtIso,
-    'X-SEO-Core-Only': meta.coreOnly ? '1' : '0',
+    'X-SEO-Phase': String(meta.phase),
     'X-SEO-Jobs-Shards': String(meta.jobsShards),
     'X-SEO-Jobs-Urls-Per-Shard': String(meta.jobsUrlsPerShard),
     'X-SEO-Company-Pages': String(meta.companyPages),
