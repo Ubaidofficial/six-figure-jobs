@@ -45,6 +45,14 @@ const hasSliceSitemapEntriesMock = hasSliceSitemapEntries as jest.MockedFunction
 >
 
 describe('sitemap.xml route conditional sitemap inclusion', () => {
+  beforeAll(() => {
+    process.env.SEO_INDEXATION_PHASE = '3'
+  })
+
+  afterAll(() => {
+    delete process.env.SEO_INDEXATION_PHASE
+  })
+
   beforeEach(() => {
     getCitySitemapUrlsMock.mockReset()
     resolveCoreSitemapFamiliesMock.mockReset()
