@@ -28,13 +28,27 @@ async function getSitemapLocs(url: string): Promise<string[]> {
   }
 }
 
-async function fetchWithRetry(url: string, retries = 2) {
-  for (let i=0; i<=retries; i++) {
+async function fetchWithRetry(url: string, retries = 3) {
+  for (let i = 0; i <= retries; i++) {
     try {
-      return await fetch(url, { method: 'GET', redirect: 'manual', headers: HEADERS })
-    } catch (e) {
-      if (i === retries) throw e
-      await new Promise(r => setTimeout(r, 1000))
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 15000)
+      const res = await fetch(url, { method: 'GET', redirect: 'manual', headers: HEADERS, signal: controller.signal })
+      clearTimeout(timer)
+      
+      // Retry on 5xx or 429
+      if (res.status >= 500 || res.status === 429) {
+        if (i === retries) return res
+        throw new Error(`Transient HTTP ${res.status}`)
+      }
+      return res
+    } catch (e: any) {
+      if (i === retries) {
+        throw e
+      }
+      // Exponential backoff: 1s, 2s, 4s...
+      const delay = 1000 * Math.pow(2, i)
+      await new Promise(r => setTimeout(r, delay))
     }
   }
 }

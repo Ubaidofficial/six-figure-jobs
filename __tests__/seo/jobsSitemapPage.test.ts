@@ -1,6 +1,7 @@
 import { GET } from '../../app/sitemap-jobs/[page]/route'
 import { prisma } from '../../lib/prisma'
 import { getShortStableIdForJobId } from '../../lib/jobs/jobSlug'
+import { MAX_INDEXABLE_JOB_AGE_DAYS } from '../../lib/jobs/freshness'
 
 jest.mock('../../lib/prisma', () => ({
   prisma: {
@@ -76,7 +77,31 @@ describe('sitemap-jobs/[page] route', () => {
 
     expect(response.status).toBe(200)
     expect(xml).toContain(validShortId)
-    expect(xml).not.toContain(getShortStableIdForJobId('job2'))
     expect(xml).not.toContain(getShortStableIdForJobId('job3'))
+  })
+
+  it('applies the stability buffer (MAX_INDEXABLE_JOB_AGE_DAYS - 2) to the query', async () => {
+    findManyMock.mockResolvedValueOnce([])
+    await GET({} as any, { params: Promise.resolve({ page: '1' }) })
+    
+    expect(findManyMock).toHaveBeenCalledTimes(1)
+    const callArgs = findManyMock.mock.calls[0][0]
+    
+    // Search the AND array for the freshness query block
+    const andClauses = callArgs?.where?.AND || []
+    const freshnessClause = andClauses.find((c: any) => c.OR && c.OR.some((orClause: any) => orClause.lastSeenAt?.gte))
+    
+    expect(freshnessClause).toBeDefined()
+    
+    const expectedDaysAgo = MAX_INDEXABLE_JOB_AGE_DAYS - 2
+    // getDateThreshold uses baseDate.setDate(baseDate.getDate() - days), which uses calendar days rather than exact ms
+    const expectedDate = new Date()
+    expectedDate.setDate(expectedDate.getDate() - expectedDaysAgo)
+    const expectedDateMs = expectedDate.getTime()
+    
+    // Allow 1 minute of slack
+    const gteDate = freshnessClause.OR[0].lastSeenAt.gte
+    const actualDateMs = gteDate.getTime()
+    expect(Math.abs(actualDateMs - expectedDateMs)).toBeLessThan(60 * 1000)
   })
 })
