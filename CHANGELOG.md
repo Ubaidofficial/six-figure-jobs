@@ -216,3 +216,8 @@
 
 
 
+
+## [Unreleased]
+- feat(seo): implement phase 1 indexing rollout and on-demand revalidation webhook
+- test(seo): mock indexation phase to pass sitemap assertions
+- fix(seo): update broken sitemapPolicy exports in response meta
