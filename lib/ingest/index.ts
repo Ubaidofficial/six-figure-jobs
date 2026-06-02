@@ -19,6 +19,7 @@ import {
   parseSalaryFromText,
   validateHighSalaryEligibility,
   estimateUsdAnnualFromNormalized,
+  inferCurrencyFromCountryCode,
   type SalarySource,
 } from '../normalizers/salary'
 import { normalizeLocation as normalizeLocationData } from '../normalizers/location'
@@ -915,11 +916,18 @@ function processSalary(input: ScrapedJobInput) {
     if (textToParse.length > 0) {
       const parsed = parseSalaryFromText(textToParse)
       if (parsed) {
+        const inferredCurrency =
+          parsed.currency == null && /\$/.test(parsed.raw)
+            ? inferCurrencyFromCountryCode(inferredCountryCode)
+            : null
         salaryMin = parsed.min
         salaryMax = parsed.max
-        salaryCurrency = parsed.currency
+        salaryCurrency = parsed.currency ?? inferredCurrency
         salaryInterval = parsed.interval ?? 'year'
         salarySource = salaryRawText ? 'salaryRaw' : 'descriptionText'
+        if (parsed.currency == null && /\$/.test(parsed.raw) && inferredCurrency == null) {
+          currencyAmbiguous = true
+        }
       }
     }
   }
@@ -936,6 +944,7 @@ function processSalary(input: ScrapedJobInput) {
     source: salarySource,
     currencyAmbiguous,
     now,
+    title: input.title,
   })
 
   const usdAnnual = estimateUsdAnnualFromNormalized(normalized)

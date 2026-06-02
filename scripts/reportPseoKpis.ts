@@ -1,4 +1,5 @@
 import { appendFile } from 'node:fs/promises'
+import 'dotenv/config'
 
 import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../lib/jobs/freshness'
 import {
@@ -17,6 +18,9 @@ type PseoKpis = {
   jobSitemapEligibleJobs: number
   newestActiveLastSeenAt: Date | null
 }
+
+const DB_RETRY_ATTEMPTS = Math.max(1, Number(process.env.DB_RETRY_ATTEMPTS || '4'))
+const DB_RETRY_DELAY_MS = Math.max(0, Number(process.env.DB_RETRY_DELAY_MS || '1000'))
 
 function pct(numerator: number, denominator: number): string {
   return denominator > 0 ? `${((numerator / denominator) * 100).toFixed(1)}%` : '0.0%'
@@ -63,6 +67,36 @@ async function appendStepSummary(lines: string[]) {
   await appendFile(summaryPath, `${lines.join('\n')}\n`)
 }
 
+function isRetryableDbError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return (
+    message.includes("Can't reach database server") ||
+    message.includes('Connection terminated unexpectedly') ||
+    message.includes('Timed out fetching a new connection from the connection pool')
+  )
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function withDbRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 1; attempt <= DB_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+      if (!isRetryableDbError(error) || attempt === DB_RETRY_ATTEMPTS) throw error
+      console.warn(
+        `[reportPseoKpis] retrying ${label} after transient DB error (attempt ${attempt + 1}/${DB_RETRY_ATTEMPTS})`,
+      )
+      await sleep(DB_RETRY_DELAY_MS * attempt)
+    }
+  }
+  throw lastError
+}
+
 async function main() {
   const highSalaryEligibleWhere = {
     isExpired: false,
@@ -82,17 +116,19 @@ async function main() {
   } as const
 
   const [totalJobs, activeJobs, highSalaryEligibleJobs, browseEligibleJobs, jobSitemapEligibleJobs, newestActive] =
-    await Promise.all([
-      prisma.job.count(),
-      prisma.job.count({ where: { isExpired: false } }),
-      prisma.job.count({ where: highSalaryEligibleWhere }),
-      prisma.job.count({ where: browseEligibleWhere }),
-      prisma.job.count({ where: jobSitemapEligibleWhere }),
-      prisma.job.aggregate({
-        where: { isExpired: false },
-        _max: { lastSeenAt: true },
-      }),
-    ])
+    await withDbRetry('kpiCounts', async () =>
+      Promise.all([
+        prisma.job.count(),
+        prisma.job.count({ where: { isExpired: false } }),
+        prisma.job.count({ where: highSalaryEligibleWhere }),
+        prisma.job.count({ where: browseEligibleWhere }),
+        prisma.job.count({ where: jobSitemapEligibleWhere }),
+        prisma.job.aggregate({
+          where: { isExpired: false },
+          _max: { lastSeenAt: true },
+        }),
+      ]),
+    )
 
   const kpis: PseoKpis = {
     totalJobs,

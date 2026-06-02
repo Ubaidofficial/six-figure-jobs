@@ -514,8 +514,8 @@ export default async function RemoteRoleCityPage({
             </Link>
           </li>
           <li>
-            <Link href={`/jobs/${roleSlug}/200k-plus`} className="hover:underline">
-              $200k+ {prettyRole(roleSlug)} jobs →
+            <Link href="/jobs/200k-plus" className="hover:underline">
+              $200k+ jobs →
             </Link>
           </li>
           <li>

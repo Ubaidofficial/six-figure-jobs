@@ -1,0 +1,38 @@
+name: SEO Schema Smoke Test
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # Run daily at 8am UTC
+  workflow_dispatch:
+
+env:
+  PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.6figjobs.com' }}
+
+jobs:
+  schema-smoke-test:
+    name: Validate Job Schema in Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run Schema Smoke Test
+        run: |
+          echo "Running SEO Schema Smoke Test against $PRODUCTION_SITE_URL"
+          SEO_BASE_URL="$PRODUCTION_SITE_URL" npx tsx scripts/seo-schema-smoke.ts --samples=20
+
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "::warning::SEO Schema Smoke Test failed. This indicates a potential issue with Google Jobs eligibility."

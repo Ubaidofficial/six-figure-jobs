@@ -35,6 +35,31 @@ function normalizeLegacyRoleQuery(request: NextRequest): NextResponse | null {
   return NextResponse.redirect(url, { status: 308 })
 }
 
+const ALLOWED_PUBLIC_QUERY_PARAMS = new Set(['page', 'q', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'gclid', 'fbclid'])
+
+function enforceQueryAllowlist(request: NextRequest): NextResponse | null {
+  const url = request.nextUrl.clone()
+  
+  if (request.method !== 'GET') return null
+  if (!url.pathname.startsWith('/jobs')) return null
+
+  let changed = false
+  const keysToDelete: string[] = []
+
+  url.searchParams.forEach((_, key) => {
+    if (!ALLOWED_PUBLIC_QUERY_PARAMS.has(key)) {
+      keysToDelete.push(key)
+    }
+  })
+
+  if (keysToDelete.length > 0) {
+    keysToDelete.forEach((key) => url.searchParams.delete(key))
+    return NextResponse.redirect(url, { status: 301 })
+  }
+
+  return null
+}
+
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? ''
 
@@ -50,8 +75,15 @@ export function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!pathname.startsWith(ADMIN_ROOT)) return NextResponse.next()
-  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) return NextResponse.next()
+  if (!pathname.startsWith(ADMIN_ROOT)) {
+    const queryEnforcement = enforceQueryAllowlist(request)
+    if (queryEnforcement) return queryEnforcement
+    return NextResponse.next()
+  }
+
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
+    return NextResponse.next()
+  }
 
   const token = request.cookies.get('admin_session')?.value
   if (!token) {

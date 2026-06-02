@@ -30,6 +30,7 @@ export interface AtsJob {
   salaryMax?: number | null
   salaryCurrency?: string | null
   salaryInterval?: string | null
+  salaryRaw?: string | null
 
   employmentType?: string | null
   descriptionHtml?: string | null

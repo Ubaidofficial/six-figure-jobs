@@ -17,6 +17,7 @@ import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 import { buildWhere } from '../../../lib/jobs/queryJobs'
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
+import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
 
 export const revalidate = 3600
 
@@ -474,19 +475,19 @@ export default async function CompanyPage({
             All $100k+ Jobs
           </Link>
           <Link
-            href="/jobs/software-engineer/100k-plus"
+            href="/jobs/software-engineer"
             className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-300 hover:border-slate-500"
           >
             Software Engineer Jobs
           </Link>
           <Link
-            href="/jobs/product-manager/100k-plus"
+            href="/jobs/product-manager"
             className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-300 hover:border-slate-500"
           >
             Product Manager Jobs
           </Link>
           <Link
-            href="/jobs/data-engineer/100k-plus"
+            href="/jobs/data-engineer"
             className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-300 hover:border-slate-500"
           >
             Data Engineer Jobs
@@ -752,7 +753,8 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
   let highestValue = 0
 
   for (const job of jobs) {
-    if (job.roleSlug) incrementMap(roleCounts, job.roleSlug)
+    const indexableRoleSlug = resolveIndexableRoleSlug(job.roleSlug)
+    if (indexableRoleSlug) incrementMap(roleCounts, indexableRoleSlug)
 
     const mode = job.remote === true || job.remoteMode === 'remote'
       ? 'remote'

@@ -45,45 +45,74 @@ async function getLastmod(): Promise<string> {
   }
 }
 
-export async function GET() {
-  const hasBlog = hasBlogPosts()
-  const [
-    { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
-    {
+import { unstable_cache } from 'next/cache'
+
+const getSitemapData = unstable_cache(
+  async () => {
+    const hasBlog = hasBlogPosts()
+    const [
+      { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
+      {
+        hasJobUrls,
+        hasCompanyUrls,
+        hasSalaryUrls,
+        hasCategoryUrls,
+        hasLevelUrls,
+        hasBrowseUrls,
+        failedFamilies: failedCoreFamilies,
+      },
+      lastmod,
+      hasSkills,
+    ] = await Promise.all([
+      resolveOptionalSitemapFamilies('sitemap.xml'),
+      resolveCoreSitemapFamilies('sitemap.xml'),
+      getLastmod(),
+      hasSkillPages(),
+    ])
+
+    return {
+      hasBlog,
+      cityUrls,
+      hasRemoteUrls,
+      hasCountryUrls,
+      hasSliceUrls,
+      failedFamilies,
       hasJobUrls,
       hasCompanyUrls,
       hasSalaryUrls,
       hasCategoryUrls,
       hasLevelUrls,
       hasBrowseUrls,
-      failedFamilies: failedCoreFamilies,
-    },
-    lastmod,
-    hasSkills,
-  ] = await Promise.all([
-    resolveOptionalSitemapFamilies('sitemap.xml'),
-    resolveCoreSitemapFamilies('sitemap.xml'),
-    getLastmod(),
-    hasSkillPages(),
-  ])
+      failedCoreFamilies,
+      lastmod,
+      hasSkills,
+    }
+  },
+  ['sitemap-index-v2'],
+  { revalidate: 3600, tags: ['sitemap'] }
+)
+
+export async function GET() {
+  const data = await getSitemapData()
+  
   const sitemaps = [
-    ...(hasJobUrls && shouldAdvertiseSitemapFamily('jobs') ? ['sitemap-jobs.xml'] : []),
-    ...(hasCompanyUrls && shouldAdvertiseSitemapFamily('company') ? ['sitemap-company.xml'] : []),
-    ...(cityUrls.length > 0 && shouldAdvertiseSitemapFamily('city') ? ['sitemap-city.xml'] : []),
-    ...(hasRemoteUrls && shouldAdvertiseSitemapFamily('remote') ? ['sitemap-remote.xml'] : []),
-    ...(hasSalaryUrls && shouldAdvertiseSitemapFamily('salary') ? ['sitemap-salary.xml'] : []),
-    ...(hasCountryUrls && shouldAdvertiseSitemapFamily('country') ? ['sitemap-country.xml'] : []),
-    ...(hasCategoryUrls && shouldAdvertiseSitemapFamily('category') ? ['sitemap-category.xml'] : []),
-    ...(hasLevelUrls && shouldAdvertiseSitemapFamily('level') ? ['sitemap-level.xml'] : []),
-    ...(hasBrowseUrls && shouldAdvertiseSitemapFamily('browse') ? ['sitemap-browse.xml'] : []),
-    ...(hasSliceUrls && shouldAdvertiseSitemapFamily('slices') ? ['sitemap-slices.xml'] : []),
-    ...(hasBlog && shouldAdvertiseSitemapFamily('blog') ? ['sitemap-blog.xml'] : []),
-    ...(hasSkills && shouldAdvertiseSitemapFamily('skills') ? ['sitemap-skills.xml'] : []),
+    ...(data.hasJobUrls && shouldAdvertiseSitemapFamily('jobs') ? ['sitemap-jobs.xml'] : []),
+    ...(data.hasCompanyUrls && shouldAdvertiseSitemapFamily('company') ? ['sitemap-company.xml'] : []),
+    ...(data.cityUrls.length > 0 && shouldAdvertiseSitemapFamily('city') ? ['sitemap-city.xml'] : []),
+    ...(data.hasRemoteUrls && shouldAdvertiseSitemapFamily('remote') ? ['sitemap-remote.xml'] : []),
+    ...(data.hasSalaryUrls && shouldAdvertiseSitemapFamily('salary') ? ['sitemap-salary.xml'] : []),
+    ...(data.hasCountryUrls && shouldAdvertiseSitemapFamily('country') ? ['sitemap-country.xml'] : []),
+    ...(data.hasCategoryUrls && shouldAdvertiseSitemapFamily('category') ? ['sitemap-category.xml'] : []),
+    ...(data.hasLevelUrls && shouldAdvertiseSitemapFamily('level') ? ['sitemap-level.xml'] : []),
+    ...(data.hasBrowseUrls && shouldAdvertiseSitemapFamily('browse') ? ['sitemap-browse.xml'] : []),
+    ...(data.hasSliceUrls && shouldAdvertiseSitemapFamily('slices') ? ['sitemap-slices.xml'] : []),
+    ...(data.hasBlog && shouldAdvertiseSitemapFamily('blog') ? ['sitemap-blog.xml'] : []),
+    ...(data.hasSkills && shouldAdvertiseSitemapFamily('skills') ? ['sitemap-skills.xml'] : []),
   ]
   const fallbackParts = [
-    ...(failedFamilies.length > 0 ? [`optional_families=${failedFamilies.join(',')}`] : []),
-    ...(failedCoreFamilies.length > 0
-      ? [`core_families=${failedCoreFamilies.join(',')}`]
+    ...(data.failedFamilies.length > 0 ? [`optional_families=${data.failedFamilies.join(',')}`] : []),
+    ...(data.failedCoreFamilies.length > 0
+      ? [`core_families=${data.failedCoreFamilies.join(',')}`]
       : []),
   ]
   const fallbackComment =
@@ -98,7 +127,7 @@ ${sitemaps
     const loc = escapeXml(`${SITE_URL}/${s}`)
     return `  <sitemap>
     <loc>${loc}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <lastmod>${data.lastmod}</lastmod>
   </sitemap>`
   })
   .join('\n')}${fallbackComment}

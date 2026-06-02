@@ -6,7 +6,7 @@ export const MIN_CITY_INDEXABLE_JOBS = 1
 export const MIN_COUNTRY_INDEXABLE_JOBS = 1
 export const MIN_REMOTE_ROLE_INDEXABLE_JOBS = 1
 export const MIN_ROLE_FILTER_INDEXABLE_JOBS = 3
-export const MIN_SALARY_TIER_INDEXABLE_JOBS = 1
+export const MIN_SALARY_TIER_INDEXABLE_JOBS = 3
 
 function toSafeCount(value: number | null | undefined): number {
   const n = Number(value ?? 0)

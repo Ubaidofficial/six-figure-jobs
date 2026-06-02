@@ -36,6 +36,30 @@ function extractCompanySlug(atsUrl: string): string | null {
   }
 }
 
+function normalizeTextValue(value: unknown): string | null {
+  if (typeof value === 'string') return value.trim() || null
+  if (typeof value === 'number') return String(value)
+  return null
+}
+
+function collectSalaryRawFromPayload(payload: any): string | null {
+  const values = [
+    payload?.compensation,
+    payload?.compensationText,
+    payload?.compensationTierSummary,
+    payload?.compensationRange,
+    payload?.salary,
+    payload?.salaryText,
+    payload?.salaryRange,
+    payload?.pay,
+    payload?.payRange,
+  ]
+    .map(normalizeTextValue)
+    .filter((value): value is string => Boolean(value))
+
+  return values.length ? Array.from(new Set(values)).join(' | ') : null
+}
+
 async function fetchTextWithRetry(
   url: string,
   attempts = 3,
@@ -179,6 +203,8 @@ function processApiJobs(
         ? new Date(p.updatedAt || p.dateModified)
         : postedAt
 
+    const salaryRaw = collectSalaryRawFromPayload(p)
+
     jobs.push({
       externalId,
       title,
@@ -190,6 +216,7 @@ function processApiJobs(
       salaryMax: null,
       salaryCurrency: null,
       salaryInterval: null,
+      salaryRaw,
 
       employmentType: p?.employmentType ?? null,
       descriptionHtml,
@@ -209,6 +236,7 @@ function processApiJobs(
         _descriptionLength: (descriptionHtml || '').length,
         _sixFigureJobs: {
           descriptionText,
+          salaryRaw,
         },
       },
     })
@@ -571,6 +599,7 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
         salaryMax,
         salaryCurrency,
         salaryInterval,
+        salaryRaw: j.compText,
 
         employmentType,
         descriptionHtml,
@@ -587,10 +616,12 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
           title: j.title,
           locationText: j.locationText,
           compText: j.compText,
+          salaryRaw: j.compText,
           descriptionHtml,
           _source: 'html',
           _sixFigureJobs: {
             descriptionText,
+            salaryRaw: j.compText,
           },
         },
       } satisfies AtsJob
@@ -610,6 +641,7 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
         salaryMax: null,
         salaryCurrency: null,
         salaryInterval: null,
+        salaryRaw: j.compText,
 
         employmentType: null,
         descriptionHtml: null,
@@ -622,7 +654,13 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
 
         postedAt: null,
         updatedAt: null,
-        raw: { title: j.title, locationText: j.locationText, compText: j.compText, _source: 'html' },
+        raw: {
+          title: j.title,
+          locationText: j.locationText,
+          compText: j.compText,
+          salaryRaw: j.compText,
+          _source: 'html',
+        },
       } satisfies AtsJob
     }
   })

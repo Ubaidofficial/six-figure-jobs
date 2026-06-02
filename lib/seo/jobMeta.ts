@@ -162,11 +162,28 @@ function buildLocation(job: any): string | null {
     return 'Remote'
   }
 
-  if (job.city && job.countryCode) return `${job.city}, ${String(job.countryCode).toUpperCase()}`
+  if (job.city && job.countryCode) {
+    return `${humanizeLocationText(String(job.city))}, ${String(job.countryCode).toUpperCase()}`
+  }
   if (job.countryCode) return String(job.countryCode).toUpperCase()
-  if (job.locationRaw) return String(job.locationRaw)
+  if (job.locationRaw) return humanizeLocationText(String(job.locationRaw))
 
   return null
+}
+
+function humanizeLocationText(value: string): string {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return ''
+
+  if (/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(trimmed)) {
+    return trimmed
+      .split('-')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  }
+
+  return trimmed
 }
 
 function decodeHtmlEntities(str: string): string {

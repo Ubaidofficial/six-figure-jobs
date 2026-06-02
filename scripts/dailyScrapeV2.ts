@@ -686,8 +686,10 @@ async function main() {
   await notifyGoogleOfNewJobs(scrapeStartedAt, options.dryRun)
 
   // Expire stale jobs (not seen/updated in 7+ days)
+  let jobsExpired = 0
   try {
     const expiryResult = await runExpiryCycle()
+    jobsExpired = expiryResult.expired
     __slog(`🗑  Expiry cycle: ${expiryResult.expired} jobs marked expired`)
   } catch (err) {
     __serr('⚠️  Expiry cycle failed:', err)
@@ -730,12 +732,24 @@ async function main() {
       error: metric.error,
     }))
 
-  __slog(`__SCRAPE_STATS__ ${JSON.stringify({
+  const runtimeMs = Date.now() - scrapeStartedAt.getTime()
+  
+  const jobsUpdated = stats.sourceMetrics.reduce((acc, curr) => acc + (curr.updated || 0), 0)
+  const skippedByGate = stats.sourceMetrics.reduce((acc, curr) => acc + (curr.skipped || 0), 0)
+
+  const summary = {
     jobsAdded: stats.jobsAdded,
+    jobsUpdated,
+    jobsExpired,
+    skippedByGate,
     failures: stats.failures,
+    runtime: runtimeMs,
     failedSources: Array.from(new Set(stats.failedSources)).sort(),
     slowSources,
-  })}`)
+  }
+
+  __slog(`__SCRAPE_STATS__ ${JSON.stringify(summary)}`)
+  require('node:fs').writeFileSync('scrape-summary.json', JSON.stringify(summary, null, 2))
 }
 
 main()

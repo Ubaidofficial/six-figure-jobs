@@ -11,6 +11,7 @@ import { buildSalaryText } from '@/lib/jobs/salary'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { getJobCardSnippet } from '@/lib/jobs/snippet'
+import { SKILL_TARGETS } from '@/lib/seo/pseoTargets'
 import {
   ArrowRight,
   BadgeCheck,
@@ -47,6 +48,21 @@ function countryFlag(code?: string | null): string {
 
 function toKCase(text: string): string {
   return text.replace(/(\d)K\b/g, '$1k').replace(/(\d)M\b/g, '$1M')
+}
+
+function humanizeLocationText(value: string): string {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return ''
+
+  if (/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(trimmed)) {
+    return trimmed
+      .split('-')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  }
+
+  return trimmed
 }
 
 function getWorkType(job: JobWithCompany): { label: string; Icon: React.ComponentType<any> } | null {
@@ -128,6 +144,36 @@ function uniqStrings(values: string[]): string[] {
   return result
 }
 
+function normalizeSkillKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '')
+}
+
+const SKILL_KEY_TO_SLUG = new Map<string, string>()
+for (const target of SKILL_TARGETS) {
+  SKILL_KEY_TO_SLUG.set(normalizeSkillKey(target.slug), target.slug)
+  SKILL_KEY_TO_SLUG.set(normalizeSkillKey(target.label), target.slug)
+}
+
+const SKILL_ALIASES: Record<string, string> = {
+  c: 'c-plus-plus',
+  cpp: 'c-plus-plus',
+  node: 'node-js',
+  nodejs: 'node-js',
+  next: 'nextjs',
+  postgres: 'postgresql',
+  ml: 'machine-learning',
+  machinelearning: 'machine-learning',
+  go: 'golang',
+}
+
+function resolveSkillSlug(value: string): string | null {
+  const key = normalizeSkillKey(value.trim())
+  if (!key) return null
+  const alias = SKILL_ALIASES[key]
+  if (alias) return alias
+  return SKILL_KEY_TO_SLUG.get(key) ?? null
+}
+
 function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; locationsJson?: any }): {
   label: string
   hasMultiple: boolean
@@ -180,7 +226,7 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
       
       // Only map 2-letter country codes to full names
       // If it's already descriptive text (like "Remote, USA"), use as-is without flag
-      let displayName = locationValue
+      let displayName = humanizeLocationText(locationValue)
       if (locationValue.length === 2 && locationValue === locationValue.toUpperCase()) {
         // It's a bare country code like "US" - map to "USA" and add flag
         displayName = countryNames[locationValue] || locationValue
@@ -199,7 +245,7 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
       }
     }
 
-    const primary = String(job.primaryLocation)
+    const primary = humanizeLocationText(String(job.primaryLocation))
     const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
     const flag = countryFlag(cc)
 
@@ -213,7 +259,7 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
   // Fallback to old logic
   const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
   const flag = countryFlag(cc)
-  const city = job.city ? String(job.city).trim() : ''
+  const city = job.city ? humanizeLocationText(String(job.city)) : ''
   const isRemote = job.remote === true || job.remoteMode === 'remote'
 
   if (isRemote) {
@@ -244,7 +290,7 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
   if (job.locationRaw) {
     const raw = String(job.locationRaw)
     return {
-      label: raw.split(/[;,]/)[0].trim(),
+      label: humanizeLocationText(raw.split(/[;,]/)[0]),
       hasMultiple: raw.includes(';') || raw.includes(','),
       count: raw.split(/[;,]/).length
     }
@@ -423,21 +469,27 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
         </div>
 
         <div className={styles.metaRow} aria-label="Job metadata">
-          <span className={styles.metaPill}>
-            <MapPin className={styles.metaIcon} aria-hidden="true" />
-            {locationData?.label ?? '—'}
-            {locationData?.hasMultiple ? ` +${locationData.count - 1}` : ''}
-          </span>
+          {locationData ? (
+            <span className={styles.metaPill}>
+              <MapPin className={styles.metaIcon} aria-hidden="true" />
+              {locationData.label}
+              {locationData.hasMultiple ? ` +${locationData.count - 1}` : ''}
+            </span>
+          ) : null}
 
-          <span className={styles.metaPill}>
-            {workType ? <workType.Icon className={styles.metaIcon} aria-hidden="true" /> : null}
-            {workType?.label ?? '—'}
-          </span>
+          {workType ? (
+            <span className={styles.metaPill}>
+              <workType.Icon className={styles.metaIcon} aria-hidden="true" />
+              {workType.label}
+            </span>
+          ) : null}
 
-          <span className={styles.metaPill}>
-            <TrendingUp className={styles.metaIcon} aria-hidden="true" />
-            {seniority ?? '—'}
-          </span>
+          {seniority ? (
+            <span className={styles.metaPill}>
+              <TrendingUp className={styles.metaIcon} aria-hidden="true" />
+              {seniority}
+            </span>
+          ) : null}
         </div>
 
         {truncatedSnippet ? (
@@ -446,19 +498,30 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
 
         {shownSkills.length > 0 ? (
           <div className={styles.skills} aria-label="Skills">
-            {shownSkills.map((s) => (
-              <Link
-                key={s}
-                href={`/jobs?tech=${encodeURIComponent(s.toLowerCase())}`}
-                className={styles.skill}
-                onClick={(e) => {
-                  e.stopPropagation()
-                }}
-                title={`Filter jobs by ${s}`}
-              >
-                {s}
-              </Link>
-            ))}
+            {shownSkills.map((s) => {
+              const skillSlug = resolveSkillSlug(s)
+              if (!skillSlug) {
+                return (
+                  <span key={s} className={styles.skill} title={s}>
+                    {s}
+                  </span>
+                )
+              }
+
+              return (
+                <Link
+                  key={s}
+                  href={`/jobs/skills/${skillSlug}`}
+                  className={styles.skill}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                  }}
+                  title={`Browse ${s} jobs`}
+                >
+                  {s}
+                </Link>
+              )
+            })}
             {extraSkills > 0 ? (
               <span className={cn(styles.skill, styles.moreSkill)}>+{extraSkills} more</span>
             ) : null}

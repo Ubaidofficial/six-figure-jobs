@@ -1,7 +1,7 @@
 // app/sitemap-jobs/[page]/route.ts
 
 import { prisma } from '../../../lib/prisma'
-import { buildJobSlug } from '../../../lib/jobs/jobSlug'
+import { buildJobSlug, hasCanonicalJobShortId } from '../../../lib/jobs/jobSlug'
 import { getSiteUrl } from '../../../lib/seo/site'
 import {
   buildGlobalExclusionsWhere,
@@ -34,6 +34,7 @@ function escapeXml(s: string) {
 function buildHundredKWhereBase() {
   return {
     isExpired: false,
+    shortId: { not: null },
     AND: [
       buildGlobalExclusionsWhere(),
       buildHighSalaryEligibilityWhere(),
@@ -106,6 +107,7 @@ export async function GET(
     where,
     select: {
       id: true,
+      shortId: true,
       externalId: true,
       title: true,
       roleSlug: true,
@@ -137,7 +139,9 @@ export async function GET(
   })
 
   const indexableJobs = dedupeIndexableJobs(
-    jobs.filter((job) => evaluateJobIndexability(job).indexable),
+    jobs.filter(
+      (job) => hasCanonicalJobShortId(job) && evaluateJobIndexability(job).indexable,
+    ),
   ).slice(0, getMaxJobUrlsPerShard())
 
   const urlXml = indexableJobs

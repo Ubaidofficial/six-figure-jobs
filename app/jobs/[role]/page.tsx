@@ -41,6 +41,21 @@ function hasLegacySeniorityParam(sp: SearchParams): boolean {
   return sp.seniority != null
 }
 
+function redirectLegacyRoleQueryState(role: string, sp: SearchParams): void {
+  if (!hasLegacySeniorityParam(sp)) return
+
+  if (isCanonicalSlug(role)) {
+    permanentRedirect(`/jobs/${role}`)
+  }
+
+  const matched = findBestMatchingRole(role)
+  if (matched) {
+    permanentRedirect(`/jobs/${matched}`)
+  }
+
+  permanentRedirect('/jobs')
+}
+
 export async function generateMetadata({
   params,
   searchParams,
@@ -52,14 +67,12 @@ export async function generateMetadata({
   const sp = (await searchParams) || {}
   const role = roleRaw.toLowerCase()
 
+  redirectLegacyRoleQueryState(role, sp)
+
   if (!isCanonicalSlug(role)) {
     const matched = findBestMatchingRole(role)
     if (matched) permanentRedirect(`/jobs/${matched}`)
     return { title: 'Not Found', robots: { index: false, follow: false } }
-  }
-
-  if (hasLegacySeniorityParam(sp)) {
-    permanentRedirect(`/jobs/${role}`)
   }
 
   const canonicalPath = buildNormalizedListingPath(`/jobs/${role}`, sp)
@@ -114,14 +127,12 @@ export default async function RolePage({
   const sp = (await searchParams) || {}
   const role = roleRaw.toLowerCase()
 
+  redirectLegacyRoleQueryState(role, sp)
+
   if (!isCanonicalSlug(role)) {
     const matched = findBestMatchingRole(role)
     if (matched) permanentRedirect(`/jobs/${matched}`)
     notFound()
-  }
-
-  if (hasLegacySeniorityParam(sp)) {
-    permanentRedirect(`/jobs/${role}`)
   }
 
   return <RoleTemplate roleSlug={role} searchParams={searchParams} />

@@ -705,8 +705,18 @@ export async function upsertJobsForCompanyFromAts(
       const descriptionHtml: string | null =
         raw.descriptionHtml ?? raw.description ?? raw.content ?? null
 
+      const rawPayload = (raw as any).raw ?? {}
       const salaryRaw: string | null =
-        raw.salaryHtml ?? raw.salaryRaw ?? raw.salary ?? null
+        raw.salaryHtml ??
+        raw.salaryRaw ??
+        raw.salary ??
+        rawPayload.salaryHtml ??
+        rawPayload.salaryRaw ??
+        rawPayload.salary ??
+        rawPayload.compText ??
+        rawPayload.compensation ??
+        rawPayload._sixFigureJobs?.salaryRaw ??
+        null
 
       const postedAt: Date | null = raw.postedAt
         ? new Date(raw.postedAt)

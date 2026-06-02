@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { permanentRedirect } from 'next/navigation'
 import { prisma } from '../../../lib/prisma'
 import {
   queryJobs,
@@ -16,6 +17,8 @@ import type { Job } from '@prisma/client'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
+import { isCanonicalSlug } from '../../../lib/roles/canonicalSlugs'
+import { findBestMatchingRole } from '../../../lib/roles/slugMatcher'
 
 export const revalidate = 1800
 
@@ -119,6 +122,17 @@ function formatMoney(value: number, currency = 'USD'): string {
   )
 }
 
+function resolveCanonicalRoleOrRedirect(rawRole: string): string {
+  const normalized = String(rawRole || '').trim().toLowerCase()
+  if (!normalized) permanentRedirect('/salary/software-engineer')
+  if (isCanonicalSlug(normalized)) return normalized
+
+  const matched = findBestMatchingRole(normalized)
+  if (matched) permanentRedirect(`/salary/${matched}`)
+
+  permanentRedirect('/salary/software-engineer')
+}
+
 /* -------------------------------------------------------------------------- */
 /* Metadata                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -132,7 +146,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { role } = await params
   const sp = searchParams ? await resolveSearchParams(searchParams) : {}
-  const roleSlug = role
+  const roleSlug = resolveCanonicalRoleOrRedirect(role)
   const roleName = prettyRole(roleSlug)
   const bandSlug = typeof sp.band === 'string' ? sp.band : undefined
   const minAnnual =
@@ -262,7 +276,7 @@ function StructuredData({
 export default async function SalaryRolePage(props: PageProps) {
   const { role } = await props.params
   const sp = await resolveSearchParams(props.searchParams)
-  const roleSlug = role
+  const roleSlug = resolveCanonicalRoleOrRedirect(role)
   const roleName = prettyRole(roleSlug)
   const page = parsePage(sp)
   const basePath = `/salary/${roleSlug}`
@@ -506,7 +520,7 @@ export default async function SalaryRolePage(props: PageProps) {
             )
           })}
           <Link
-            href={`/jobs/${roleSlug}/${minAnnual / 1000}k-plus`}
+            href={`/jobs/${roleSlug}`}
             className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-blue-300 hover:border-slate-600"
           >
             Browse {getBandLabel(minAnnual)} {roleName} jobs →
@@ -596,7 +610,7 @@ export default async function SalaryRolePage(props: PageProps) {
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
           <li>
             <Link
-              href={`/jobs/${roleSlug}/${minAnnual / 1000}k-plus`}
+              href={`/jobs/${roleSlug}`}
               className="hover:underline"
             >
               {getBandLabel(minAnnual)} {roleName} jobs →
@@ -618,16 +632,13 @@ export default async function SalaryRolePage(props: PageProps) {
               All $100k+ {roleName} jobs →
             </Link>
           </li>
-          {Object.keys(byCountry).slice(0, 3).map((cc) => (
-            <li key={cc}>
-              <Link
-                href={`/jobs/${roleSlug}/${minAnnual / 1000}k-plus`}
-                className="hover:underline"
-              >
-                {getBandLabel(minAnnual)} {roleName} jobs in {cc} →
+          {Object.keys(byCountry).length > 0 ? (
+            <li>
+              <Link href={`/jobs/${roleSlug}`} className="hover:underline">
+                Browse live {roleName} jobs by location →
               </Link>
             </li>
-          ))}
+          ) : null}
         </ul>
       </section>
 

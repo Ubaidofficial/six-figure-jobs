@@ -163,3 +163,12 @@ function extractExternalId(jobId: string): string | null {
 export function getShortStableIdForJobId(id: string): string {
   return shortStableId(id)
 }
+
+export function hasCanonicalJobShortId(job: {
+  id?: string | null
+  shortId?: string | null
+}): boolean {
+  const id = String(job.id || '').trim()
+  const shortId = String(job.shortId || '').trim()
+  return Boolean(id && shortId && shortId === shortStableId(id))
+}

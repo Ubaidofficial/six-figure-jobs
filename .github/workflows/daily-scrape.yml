@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
-    if: github.event_name == 'schedule' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main'
 
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -166,9 +166,27 @@ jobs:
           echo "Running: npx tsx scripts/dailyScrapeV2.ts ${ARGS[*]}"
           npx tsx scripts/dailyScrapeV2.ts "${ARGS[@]}" | tee /tmp/daily-scrape.log
 
+      - name: Verify Scraper Yield
+        if: steps.prep.outputs.dry_run != 'true'
+        run: |
+          if [ -f scrape-summary.json ]; then
+            ADDED=$(jq -r '.jobsAdded' scrape-summary.json)
+            if [ "$ADDED" = "0" ]; then
+              echo "::warning::Scraper yielded 0 new jobs today. This requires investigation if it persists."
+            fi
+            FAILURES=$(jq -r '.failures' scrape-summary.json)
+            if [ "$FAILURES" -gt 0 ]; then
+              echo "::warning::Scraper reported $FAILURES failure(s)."
+            fi
+          fi
+
       - name: Enrich apply URLs
         if: steps.prep.outputs.dry_run != 'true' && steps.prep.outputs.mode_has_boards == 'true'
         run: npx tsx scripts/enrich-apply-urls.ts | tee /tmp/daily-scrape-enrich.log
+
+      - name: Backfill job short IDs
+        if: steps.prep.outputs.dry_run != 'true'
+        run: npx tsx scripts/backfill-shortId.ts | tee /tmp/daily-scrape-short-id.log
 
       - name: Freshness guard
         if: steps.prep.outputs.dry_run != 'true'

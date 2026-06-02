@@ -33,7 +33,7 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   const description = buildStructuredDescription(job, companyName)
   const baseSalary = buildBaseSalary(job)
   const validThrough = buildValidThrough(job)
-  const directApply = false
+  const directApply = isValidPublicUrl((job as any).applyUrl)
 
   const physicalJobLocation = buildJobLocation(job)
   const isRemote = isRemoteJob(job)
@@ -106,6 +106,8 @@ function buildStructuredDescription(job: any, companyName: string): string {
 }
 
 function buildBaseSalary(job: any): any | undefined {
+  if (!job.salaryValidated) return undefined
+
   const rawMin = toNumberSafe(job.salaryMin ?? job.minAnnual)
   const rawMax = toNumberSafe(job.salaryMax ?? job.maxAnnual)
 
@@ -119,9 +121,16 @@ function buildBaseSalary(job: any): any | undefined {
   if (!currency) return undefined
 
   if ((min && min <= 0) || (max && max <= 0)) return undefined
-  if (min && min < 100_000) return undefined
   const cap = getAnnualSalaryCapForCurrency(currency)
   if ((min && min > cap) || (max && max > cap)) return undefined
+
+  let unitText = 'YEAR'
+  if (job.salaryPeriod) {
+    const period = String(job.salaryPeriod).toLowerCase()
+    if (period === 'hourly' || period === 'hour') unitText = 'HOUR'
+    else if (period === 'monthly' || period === 'month') unitText = 'MONTH'
+    else if (period === 'weekly' || period === 'week') unitText = 'WEEK'
+  }
 
   return {
     '@type': 'MonetaryAmount',
@@ -130,7 +139,7 @@ function buildBaseSalary(job: any): any | undefined {
       '@type': 'QuantitativeValue',
       ...(min ? { minValue: min } : {}),
       ...(max ? { maxValue: max } : {}),
-      unitText: 'YEAR',
+      unitText,
     },
   }
 }
@@ -145,28 +154,63 @@ function buildValidThrough(job: any): string | undefined {
 function buildApplicantLocationRequirements(job: any): any | undefined {
   const remoteRegion = typeof job.remoteRegion === 'string' ? job.remoteRegion.trim() : ''
   if (remoteRegion) {
-    return { '@type': 'Country', name: remoteRegion }
+    const regionRequirement = parseRemoteRegionApplicantRequirements(remoteRegion)
+    if (regionRequirement) return regionRequirement
   }
 
-  const rawCandidates = [
-    job.countryCode ? String(job.countryCode) : '',
-    job.locationRaw ? String(job.locationRaw) : '',
-  ].filter(Boolean)
+  const explicitCountry = job.countryCode ? String(job.countryCode).trim().toUpperCase() : ''
+  if (/^[A-Z]{2}$/.test(explicitCountry)) {
+    return buildCountryRequirement(explicitCountry)
+  }
 
-  for (const candidate of rawCandidates) {
-    const requirement = parseApplicantLocationRequirement(candidate)
-    if (requirement) return requirement
+  const locationCountry = inferCountryFromLocationRaw(job.locationRaw ? String(job.locationRaw) : '')
+  if (locationCountry) {
+    return buildCountryRequirement(locationCountry)
+  }
+
+  if (remoteRegion) {
+    const parsedRemoteRegion = parseApplicantLocationRequirement(remoteRegion)
+    if (parsedRemoteRegion) return parsedRemoteRegion
   }
 
   const fallbackCountry = inferCountryFromJob(job)
   if (fallbackCountry) {
-    return {
-      '@type': 'Country',
-      name: countryNameFromCode(fallbackCountry) || fallbackCountry,
-    }
+    return buildCountryRequirement(fallbackCountry)
   }
 
   return undefined
+}
+
+function buildCountryRequirement(countryCode: string): any {
+  const code = countryCode.toUpperCase()
+  return {
+    '@type': 'Country',
+    name: countryNameFromCode(code) || code,
+  }
+}
+
+function parseRemoteRegionApplicantRequirements(raw: string): any | undefined {
+  const normalized = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+  const regionMap: Record<string, string[]> = {
+    emea: ['GB', 'IE', 'DE', 'FR', 'NL', 'ES', 'IT', 'SE'],
+    europe: ['GB', 'IE', 'DE', 'FR', 'NL', 'ES', 'IT', 'SE'],
+    apac: ['AU', 'SG', 'IN', 'JP'],
+    asia: ['SG', 'IN', 'JP'],
+    latam: ['MX', 'BR'],
+    'latin america': ['MX', 'BR'],
+    americas: ['US', 'CA', 'MX', 'BR'],
+    'north america': ['US', 'CA'],
+    na: ['US', 'CA'],
+  }
+
+  const codes = regionMap[normalized]
+  if (!codes) return undefined
+  return codes.map(buildCountryRequirement)
 }
 
 function parseApplicantLocationRequirement(raw: string): any | undefined {
@@ -410,27 +454,51 @@ function inferCountryFromLocationRaw(locationRaw: string): string | null {
   const raw = String(locationRaw || '').trim()
   if (!raw) return null
 
-  const upper = raw.toUpperCase()
-  if (/^[A-Z]{2}$/.test(upper)) return upper
-
-  const tokens = raw
-    .split(/[,\-/|]/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-
-  for (const token of tokens) {
-    const code = token.toUpperCase()
-    if (/^[A-Z]{2}$/.test(code)) return code
-  }
-
   const lower = raw.toLowerCase()
-  const regionNames = ['United States', 'United Kingdom', 'Canada', 'Germany', 'Australia', 'India']
+  const regionNames = [
+    'United States',
+    'United Kingdom',
+    'Canada',
+    'Germany',
+    'Australia',
+    'India',
+    'Ireland',
+    'France',
+    'Netherlands',
+    'Spain',
+    'Italy',
+    'Sweden',
+    'Singapore',
+    'Japan',
+    'Mexico',
+    'Brazil',
+  ]
 
   for (const name of regionNames) {
     if (lower.includes(name.toLowerCase())) {
       const match = regionCodeFromName(name)
       if (match) return match
     }
+  }
+
+  const upper = raw.toUpperCase()
+  const parentheticalCountry = upper.match(/\(([A-Z]{2})\)/)
+  if (parentheticalCountry?.[1]) {
+    if (US_STATE_CODES.has(parentheticalCountry[1])) return 'US'
+    return parentheticalCountry[1]
+  }
+  if (US_STATE_CODES.has(upper) || US_STATE_NAMES.has(lower)) return 'US'
+  if (/^[A-Z]{2}$/.test(upper)) return upper
+
+  const tokens = raw
+    .split(/[,\-/|()\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  for (const token of tokens) {
+    const code = token.toUpperCase()
+    if (US_STATE_CODES.has(code) || US_STATE_NAMES.has(token.toLowerCase())) return 'US'
+    if (/^[A-Z]{2}$/.test(code)) return code
   }
 
   return null
@@ -477,7 +545,24 @@ function inferCountryFromJob(job: any): string | null {
 
 function regionCodeFromName(name: string): string | null {
   try {
-    const regions = ['US', 'GB', 'CA', 'DE', 'AU', 'IN']
+    const regions = [
+      'US',
+      'GB',
+      'CA',
+      'DE',
+      'AU',
+      'IN',
+      'IE',
+      'FR',
+      'NL',
+      'ES',
+      'IT',
+      'SE',
+      'SG',
+      'JP',
+      'MX',
+      'BR',
+    ]
     const dn = new Intl.DisplayNames(['en'], { type: 'region' })
     for (const code of regions) {
       if (dn.of(code)?.toLowerCase() === name.toLowerCase()) return code
@@ -486,6 +571,124 @@ function regionCodeFromName(name: string): string | null {
     return null
   }
   return null
+}
+
+const US_STATE_CODES = new Set([
+  'AL',
+  'AK',
+  'AZ',
+  'AR',
+  'CA',
+  'CO',
+  'CT',
+  'DE',
+  'DC',
+  'FL',
+  'GA',
+  'HI',
+  'IA',
+  'ID',
+  'IL',
+  'IN',
+  'KS',
+  'KY',
+  'LA',
+  'MA',
+  'MD',
+  'ME',
+  'MI',
+  'MN',
+  'MO',
+  'MS',
+  'MT',
+  'NC',
+  'ND',
+  'NE',
+  'NH',
+  'NJ',
+  'NM',
+  'NV',
+  'NY',
+  'OH',
+  'OK',
+  'OR',
+  'PA',
+  'RI',
+  'SC',
+  'SD',
+  'TN',
+  'TX',
+  'UT',
+  'VA',
+  'VT',
+  'WA',
+  'WI',
+  'WV',
+  'WY',
+])
+
+const US_STATE_NAMES = new Set([
+  'alabama',
+  'alaska',
+  'arizona',
+  'arkansas',
+  'california',
+  'colorado',
+  'connecticut',
+  'delaware',
+  'district of columbia',
+  'florida',
+  'georgia',
+  'hawaii',
+  'idaho',
+  'illinois',
+  'indiana',
+  'iowa',
+  'kansas',
+  'kentucky',
+  'louisiana',
+  'maine',
+  'maryland',
+  'massachusetts',
+  'michigan',
+  'minnesota',
+  'mississippi',
+  'missouri',
+  'montana',
+  'nebraska',
+  'nevada',
+  'new hampshire',
+  'new jersey',
+  'new mexico',
+  'new york',
+  'north carolina',
+  'north dakota',
+  'ohio',
+  'oklahoma',
+  'oregon',
+  'pennsylvania',
+  'rhode island',
+  'south carolina',
+  'south dakota',
+  'tennessee',
+  'texas',
+  'utah',
+  'vermont',
+  'virginia',
+  'washington',
+  'west virginia',
+  'wisconsin',
+  'wyoming',
+])
+
+function isValidPublicUrl(value: unknown): boolean {
+  if (typeof value !== 'string') return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+  } catch {
+    return false
+  }
 }
 
 function toNumberSafe(v: any): number | null {

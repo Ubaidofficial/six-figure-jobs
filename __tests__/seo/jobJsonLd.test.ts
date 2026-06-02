@@ -373,4 +373,71 @@ describe('buildJobJsonLd', () => {
     expect(jsonLd.applicantLocationRequirements).toBeUndefined()
     expect(jsonLd.jobLocation).toBeUndefined()
   })
+
+  it('omits baseSalary if salary is not validated', () => {
+    const jsonLd = buildJobJsonLd({
+      id: 'ats:test:5',
+      title: 'Software Engineer',
+      salaryMin: 100000,
+      salaryMax: 150000,
+      salaryCurrency: 'USD',
+      minAnnual: BigInt(100000),
+      maxAnnual: BigInt(150000),
+      currency: 'USD',
+      salaryValidated: false,
+    } as any)
+
+    expect(jsonLd.baseSalary).toBeUndefined()
+  })
+
+  it('includes baseSalary if salary is validated', () => {
+    const jsonLd = buildJobJsonLd({
+      id: 'ats:test:6',
+      title: 'Software Engineer',
+      salaryMin: 100000,
+      salaryMax: 150000,
+      salaryCurrency: 'USD',
+      minAnnual: BigInt(100000),
+      maxAnnual: BigInt(150000),
+      currency: 'USD',
+      salaryValidated: true,
+    } as any)
+
+    expect(jsonLd.baseSalary).toBeDefined()
+    expect(jsonLd.baseSalary.value.minValue).toBe(100000)
+    expect(jsonLd.baseSalary.value.maxValue).toBe(150000)
+    expect(jsonLd.baseSalary.currency).toBe('USD')
+  })
+
+  it('omits maxValue if salaryMax and maxAnnual are missing', () => {
+    const jsonLd = buildJobJsonLd({
+      id: 'ats:test:7',
+      title: 'Software Engineer',
+      salaryMin: 100000,
+      minAnnual: BigInt(100000),
+      currency: 'USD',
+      salaryValidated: true,
+    } as any)
+
+    expect(jsonLd.baseSalary).toBeDefined()
+    expect(jsonLd.baseSalary.value.minValue).toBe(100000)
+    expect(jsonLd.baseSalary.value.maxValue).toBeUndefined()
+  })
+
+  it('correctly formats baseSalary for hourly rates', () => {
+    const jsonLd = buildJobJsonLd({
+      id: 'ats:test:8',
+      title: 'Hourly Worker',
+      salaryMin: 50,
+      salaryMax: 75,
+      salaryPeriod: 'hourly',
+      currency: 'USD',
+      salaryValidated: true,
+    } as any)
+
+    expect(jsonLd.baseSalary).toBeDefined()
+    expect(jsonLd.baseSalary.value.minValue).toBe(50)
+    expect(jsonLd.baseSalary.value.maxValue).toBe(75)
+    expect(jsonLd.baseSalary.value.unitText).toBe('HOUR')
+  })
 })

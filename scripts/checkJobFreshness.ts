@@ -1,4 +1,5 @@
 import { appendFile } from 'node:fs/promises'
+import 'dotenv/config'
 import { prisma } from '../lib/prisma'
 import { MAX_INDEXABLE_JOB_AGE_DAYS, buildFreshJobWhere } from '../lib/jobs/freshness'
 import { buildGlobalExclusionsWhere, buildHighSalaryEligibilityWhere } from '../lib/jobs/queryJobs'

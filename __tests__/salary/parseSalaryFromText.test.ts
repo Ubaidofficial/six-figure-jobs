@@ -54,6 +54,24 @@ describe('validateHighSalaryEligibility – description cap', () => {
     expect(validation.salaryValidated).toBe(true)
     expect(validation.salaryParseReason).toBe('ok')
   })
+
+  it('rejects junior and intern titles even when salary is above threshold', () => {
+    const normalized = normalizeSalary({
+      min: 150_000,
+      max: 180_000,
+      currency: 'USD',
+      interval: 'year',
+    })
+
+    const validation = validateHighSalaryEligibility({
+      normalized,
+      source: 'ats',
+      title: 'Junior Software Engineer',
+    })
+
+    expect(validation.salaryValidated).toBe(false)
+    expect(validation.salaryRejectedReason).toBe('banned-title:intern-junior-entry')
+  })
 })
 
 describe('salary parsing edge cases (v2.10)', () => {
