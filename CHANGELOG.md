@@ -118,6 +118,7 @@
 * **seo:** normalize JobPosting JSON-LD description and salary values ([55e14ae](https://github.com/Ubaidofficial/six-figure-jobs/commit/55e14ae47cb8052d2ee36afe6e07923d42eaef49))
 * **seo:** omit empty slice shards from sitemap index ([fbfe68d](https://github.com/Ubaidofficial/six-figure-jobs/commit/fbfe68df25fab7d6ddd718b4e06898ee01e42a95))
 * **seo:** redirect 3-seg 404s + improve pillar page SEO copy ([be25aa5](https://github.com/Ubaidofficial/six-figure-jobs/commit/be25aa529f7b21f97d7c5c1e06252dd4ad88d04a))
+* **seo:** reduce crawl errors from low-volume slices ([3beebeb](https://github.com/Ubaidofficial/six-figure-jobs/commit/3beebebf044de51e052efdf848a6f230ad00acd3))
 * **seo:** reduce crawl errors from low-volume slices ([#4](https://github.com/Ubaidofficial/six-figure-jobs/issues/4)) ([a593ed6](https://github.com/Ubaidofficial/six-figure-jobs/commit/a593ed6b55cc64c6cc47f1b549f349de4c800056))
 * **seo:** remove duplicate sitemap ownership ([fbe4eab](https://github.com/Ubaidofficial/six-figure-jobs/commit/fbe4eab773361ae04a1c8ca581effac9afed6f04))
 * **seo:** remove redirecting and duplicate sitemap urls ([108754e](https://github.com/Ubaidofficial/six-figure-jobs/commit/108754edce1bb90deacc3c34b2f7312ddafd4f84))

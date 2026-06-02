@@ -70,7 +70,9 @@ async function taskA() {
          const canonical = $('link[rel="canonical"]').attr('href')
          if (!canonical) { totalMissingCanonical++; continue }
          if (canonical !== url) { totalMismatchCanonical++; }
-       } catch (e) {}
+       } catch {
+        /* ignore */
+      }
     }
   }
   console.log(`Counts -> Redirects: ${totalRedirect}, Non-200: ${totalNon200}, Noindex: ${totalNoindex}, Canonical Missing: ${totalMissingCanonical}, Canonical Mismatch: ${totalMismatchCanonical}`)

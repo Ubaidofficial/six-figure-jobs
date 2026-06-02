@@ -86,7 +86,9 @@ async function taskA() {
            const canonical = $('link[rel="canonical"]').attr('href')
            if (!canonical) { totalMissingCanonical++; return }
            if (canonical !== url) { totalMismatchCanonical++; }
-         } catch (e) {}
+         } catch {
+          /* ignore */
+        }
        }))
     }
   }
