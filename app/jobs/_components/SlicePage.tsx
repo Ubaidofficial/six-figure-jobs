@@ -87,8 +87,8 @@ export function SlicePage({ slice, data }: Props) {
   }
   if (roleSlug && countryCode) {
     relatedLinks.push({
-      href: `/jobs/${roleSlug}/200k-plus`,
-      label: `${formatSalaryBandLabel(200_000, countryCode)} ${prettyRole(roleSlug)} jobs`,
+      href: `/jobs/${roleSlug}`,
+      label: `${baseBandLabel} ${prettyRole(roleSlug)} jobs`,
     })
   } else {
     relatedLinks.push({ href: '/jobs/200k-plus', label: `${formatSalaryBandLabel(200_000)} jobs` })
@@ -352,15 +352,9 @@ export function SlicePage({ slice, data }: Props) {
                 : band === 300_000
                 ? '300k-plus'
                 : '400k-plus'
-            const basePath = roleSlug
-              ? countryCode
-                ? `/jobs/${roleSlug}/${slug}`
-                : (slice.filters as any)?.remoteOnly || (slice.filters as any)?.remoteRegion
-                ? `/remote/${roleSlug}`
-                : `/jobs/${roleSlug}/${slug}`
-              : countryCode
-              ? `/jobs/location/${countrySlug ?? String(countryCode).toLowerCase()}`
-              : `/jobs/${slug}`
+            // Keep band navigation on stable, indexable hubs to avoid redirect churn
+            // from low-volume role+band combinations.
+            const basePath = `/jobs/${slug}`
 
             return (
               <Link

@@ -28,6 +28,7 @@ import {
   COUNTRY_CODE_TO_NAME,
 } from '../../../lib/seo/countrySlug'
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
+import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
 import { JobCard } from '@/components/jobs/JobCard'
 import {
   BadgeCheck,
@@ -175,7 +176,7 @@ export async function generateMetadata({
         },
         robots: qualityGate.indexable
           ? (base.robots ?? { index: true, follow: true })
-          : { index: false, follow: false },
+          : { index: false, follow: true },
       }
     },
     () =>
@@ -245,6 +246,7 @@ export default async function JobPage({
 
   const salaryText = buildSalaryText(typedJob)
   const locationText = buildLocationText(typedJob)
+  const canonicalRoleSlug = resolveIndexableRoleSlug(typedJob.roleSlug)
   const seniority = inferSeniorityFromTitle(typedJob.title)
   const postedLabel = formatRelativeTime(
     typedJob.postedAt ?? typedJob.createdAt ?? typedJob.updatedAt ?? null,
@@ -323,7 +325,7 @@ export default async function JobPage({
     `job.${typedJob.id}.similar`,
     async () =>
       queryJobs({
-        roleSlugs: typedJob.roleSlug ? [typedJob.roleSlug] : undefined,
+        roleSlugs: canonicalRoleSlug ? [canonicalRoleSlug] : undefined,
         countryCode: typedJob.countryCode || undefined,
         isHundredKLocal: true,
         page: 1,
@@ -826,12 +828,12 @@ export default async function JobPage({
                 <div className={styles.similarTitle}>Similar Six Figure Opportunities</div>
                 <div className={styles.similarSub}>Based on role, country and salary band</div>
               </div>
-              {typedJob.roleSlug ? (
+              {canonicalRoleSlug ? (
                 <NextLink
-                  href={`/jobs/${typedJob.roleSlug}`}
+                  href={`/jobs/${canonicalRoleSlug}`}
                   className={styles.browseAllLink}
                 >
-                  Browse all {prettyRole(typedJob.roleSlug)} jobs →
+                  Browse all {prettyRole(canonicalRoleSlug)} jobs →
                 </NextLink>
               ) : null}
             </div>
@@ -986,6 +988,21 @@ function extractBenefitsFromAi(raw: any): string[] {
   return []
 }
 
+function humanizeLocationText(value: string): string {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return ''
+
+  if (/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(trimmed)) {
+    return trimmed
+      .split('-')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  }
+
+  return trimmed
+}
+
 /**
  * Build location text - handles remote vs physical location
  */
@@ -1007,9 +1024,9 @@ function buildLocationText(job: any): string {
   const hasValidCityAndCountry =
     job.city && job.countryCode && isLocationValid(job.city, job.countryCode, job.locationRaw)
 
-  if (hasValidCityAndCountry) return `${job.city}, ${job.countryCode}`
+  if (hasValidCityAndCountry) return `${humanizeLocationText(String(job.city))}, ${job.countryCode}`
 
-  if (job.locationRaw) return job.locationRaw
+  if (job.locationRaw) return humanizeLocationText(String(job.locationRaw))
   if (job.countryCode) return job.countryCode
   return 'Location not specified'
 }
@@ -1030,13 +1047,13 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
     countryName && countryCode ? countryName.toUpperCase() !== countryCode : false
   const isCountryRecognized = hasCountryInfo && isCountryMismatch
   const countrySlug = isCountryRecognized && countryCode ? countryCodeToSlug(countryCode) : null
-  const roleSlug = job.roleSlug
+  const roleSlug = resolveIndexableRoleSlug(job.roleSlug)
   const roleLabel = roleSlug ? prettyRole(roleSlug) : ''
 
   if (roleSlug && isCountryRecognized && countrySlug) {
     links.push({
-      href: `/jobs/${roleSlug}/100k-plus`,
-      label: `$100k+ ${roleLabel} jobs in ${countryName ?? countryCode ?? 'this country'}`,
+      href: `/jobs/${roleSlug}`,
+      label: `${roleLabel} jobs in ${countryName ?? countryCode ?? 'this country'}`,
     })
   }
 

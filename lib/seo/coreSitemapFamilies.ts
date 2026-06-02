@@ -69,16 +69,15 @@ export async function hasJobSitemapEntries(): Promise<boolean> {
 
 export async function hasCompanySitemapEntries(): Promise<boolean> {
   const eligibleJobWhere = buildWhere({})
-  const rows = await prisma.job.groupBy({
-    by: ['companyId'],
+  const row = await prisma.job.findFirst({
     where: {
       ...eligibleJobWhere,
       companyId: { not: null },
     },
-    _count: { _all: true },
+    select: { id: true },
   })
 
-  return rows.some((row) => Number((row as any)._count?._all ?? 0) >= MIN_COMPANY_INDEXABLE_JOBS)
+  return Boolean(row)
 }
 
 export async function hasSalarySitemapEntries(): Promise<boolean> {
@@ -100,16 +99,16 @@ export async function hasSalarySitemapEntries(): Promise<boolean> {
 
 export async function hasCategorySitemapEntries(): Promise<boolean> {
   const baseWhere = buildWhere({})
-  const roleRows = await prisma.job.groupBy({
-    by: ['roleSlug'],
+  const roleRows = await prisma.job.findMany({
     where: { ...baseWhere, roleSlug: { not: null } },
-    _count: { _all: true },
+    select: { roleSlug: true },
+    distinct: ['roleSlug'],
   })
 
   const roleStats = roleRows
     .map((row) => ({
       slug: row.roleSlug ? String(row.roleSlug).toLowerCase() : '',
-      count: Number((row as any)._count?._all ?? 0),
+      count: 1,
     }))
     .filter((row) => row.slug)
 
@@ -129,13 +128,12 @@ export async function hasCategorySitemapEntries(): Promise<boolean> {
 
 export async function hasLevelSitemapEntries(): Promise<boolean> {
   const baseWhere = buildWhere({})
-  const rows = await prisma.job.groupBy({
-    by: ['experienceLevel'],
+  const row = await prisma.job.findFirst({
     where: { ...baseWhere, experienceLevel: { in: [...LEVELS] } },
-    _count: { _all: true },
+    select: { id: true },
   })
 
-  return rows.some((row) => Number((row as any)._count?._all ?? 0) >= LEVEL_MIN_INDEXABLE_JOBS)
+  return Boolean(row)
 }
 
 export async function hasBrowseSitemapEntries(): Promise<boolean> {

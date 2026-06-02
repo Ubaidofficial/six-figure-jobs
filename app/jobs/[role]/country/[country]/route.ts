@@ -1,5 +1,5 @@
 // app/jobs/[role]/country/[country]/route.ts
-// Redirect helper: /jobs/{role}/country/{country} → canonical slice
+// Redirect helper: /jobs/{role}/country/{country} → canonical location hub
 
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
@@ -18,6 +18,6 @@ export async function GET(
       : countrySlugToCode(rawCountry)
 
   const canonicalCountry = countryCodeToSlug(countryCode ?? '') ?? rawCountry
-  const target = new URL(`/jobs/${role}/${canonicalCountry}/100k-plus`, request.url)
+  const target = new URL(`/jobs/location/${canonicalCountry}`, request.url)
   return NextResponse.redirect(target, 308)
 }

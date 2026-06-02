@@ -74,9 +74,9 @@ describe('indexability gates alignment', () => {
   })
 
   it('shares salary tier gating between page robots and salary sitemap output', () => {
-    expect(MIN_SALARY_TIER_INDEXABLE_JOBS).toBe(1)
-    expect(isSalaryTierPageIndexable(0)).toBe(false)
-    expect(isSalaryTierPageIndexable(1)).toBe(true)
+    expect(MIN_SALARY_TIER_INDEXABLE_JOBS).toBe(3)
+    expect(isSalaryTierPageIndexable(2)).toBe(false)
+    expect(isSalaryTierPageIndexable(3)).toBe(true)
 
     const salaryTierPage = readRepoFile('app/jobs/100k-plus/page.tsx')
     const salarySitemapRoute = readRepoFile('app/sitemap-salary.xml/route.ts')

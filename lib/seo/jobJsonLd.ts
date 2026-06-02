@@ -106,6 +106,8 @@ function buildStructuredDescription(job: any, companyName: string): string {
 }
 
 function buildBaseSalary(job: any): any | undefined {
+  if (!job.salaryValidated) return undefined
+
   const rawMin = toNumberSafe(job.salaryMin ?? job.minAnnual)
   const rawMax = toNumberSafe(job.salaryMax ?? job.maxAnnual)
 
@@ -122,6 +124,14 @@ function buildBaseSalary(job: any): any | undefined {
   const cap = getAnnualSalaryCapForCurrency(currency)
   if ((min && min > cap) || (max && max > cap)) return undefined
 
+  let unitText = 'YEAR'
+  if (job.salaryPeriod) {
+    const period = String(job.salaryPeriod).toLowerCase()
+    if (period === 'hourly' || period === 'hour') unitText = 'HOUR'
+    else if (period === 'monthly' || period === 'month') unitText = 'MONTH'
+    else if (period === 'weekly' || period === 'week') unitText = 'WEEK'
+  }
+
   return {
     '@type': 'MonetaryAmount',
     currency,
@@ -129,7 +139,7 @@ function buildBaseSalary(job: any): any | undefined {
       '@type': 'QuantitativeValue',
       ...(min ? { minValue: min } : {}),
       ...(max ? { maxValue: max } : {}),
-      unitText: 'YEAR',
+      unitText,
     },
   }
 }

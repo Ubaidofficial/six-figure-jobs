@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { appendFile } from 'node:fs/promises'
+import 'dotenv/config'
 
 type TargetSummary = {
   source: 'DATABASE_URL' | 'POSTGRES_PRISMA_URL'

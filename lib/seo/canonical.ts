@@ -4,6 +4,8 @@
 import { getSiteUrl } from './site'
 import type { SliceFilters } from '../slices/types'
 import { countryCodeToSlug } from './countrySlug'
+import { isCanonicalSlug } from '../roles/canonicalSlugs'
+import { findBestMatchingRole } from '../roles/slugMatcher'
 
 const BAND_SLUGS: Record<number, string> = {
   100000: '100k-plus',
@@ -36,6 +38,13 @@ function cleanSlug(input?: string | null): string | null {
   return out || null
 }
 
+function resolveCanonicalRoleSlug(input?: string | null): string | null {
+  const slug = cleanSlug(input)
+  if (!slug) return null
+  if (isCanonicalSlug(slug)) return slug
+  return findBestMatchingRole(slug)
+}
+
 /**
  * Canonical slice policy:
  *  - Emit only routes that resolve directly, without relying on redirects.
@@ -44,7 +53,7 @@ function cleanSlug(input?: string | null): string | null {
  */
 export function buildSliceCanonicalPath(filters: SliceFilters): string {
   const band = bandSlugFromMinAnnual(filters.minAnnual)
-  const role = cleanSlug(filters.roleSlugs?.[0] ?? null)
+  const role = resolveCanonicalRoleSlug(filters.roleSlugs?.[0] ?? null)
   const country = filters.countryCode
     ? cleanSlug(countryCodeToSlug(filters.countryCode) ?? filters.countryCode)
     : null

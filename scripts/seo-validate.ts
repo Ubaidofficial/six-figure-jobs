@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma'
-import { buildJobSlug } from '../lib/jobs/jobSlug'
+import { buildJobSlug, hasCanonicalJobShortId } from '../lib/jobs/jobSlug'
 import {
   buildGlobalExclusionsWhere,
   buildHighSalaryEligibilityWhere,
@@ -74,6 +74,10 @@ const TIMEOUT_MS = Math.max(1000, Number(process.env.SEO_TIMEOUT_MS || '15000'))
 const CONCURRENCY = Math.max(1, Math.min(64, Number(process.env.SEO_CONCURRENCY || '12')))
 const URL_RETRY_ATTEMPTS = Math.max(0, Number(process.env.SEO_URL_RETRY_ATTEMPTS || '2'))
 const URL_RETRY_DELAY_MS = Math.max(0, Number(process.env.SEO_URL_RETRY_DELAY_MS || '750'))
+const SITEMAP_RETRY_ATTEMPTS = Math.max(
+  0,
+  Number(process.env.SEO_SITEMAP_RETRY_ATTEMPTS || process.env.SEO_URL_RETRY_ATTEMPTS || '2'),
+)
 const MIN_STRICT_SAMPLE = 1000
 const JOB_SITEMAP_SOURCE = 'app/sitemap-jobs/[page]/route.ts:62'
 
@@ -287,28 +291,46 @@ function isRetryableValidationError(error: unknown): boolean {
 }
 
 async function fetchText(url: string): Promise<string> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
-  try {
-    const res = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: {
-        'user-agent': 'seo-validator/1.0',
-        accept: 'application/xml,text/xml,text/html;q=0.9,*/*;q=0.8',
-      },
-    })
-    const body = await readBodyTextWithTimeout(res)
+  let lastError: unknown = null
 
-    if (!res.ok) {
-      throw new Error(formatHttpError(res, body))
+  for (let attempt = 0; attempt <= SITEMAP_RETRY_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow',
+        signal: controller.signal,
+        headers: {
+          'user-agent': 'seo-validator/1.0',
+          accept: 'application/xml,text/xml,text/html;q=0.9,*/*;q=0.8',
+        },
+      })
+      const body = await readBodyTextWithTimeout(res)
+
+      if (!res.ok) {
+        throw new Error(formatHttpError(res, body))
+      }
+
+      return body
+    } catch (error) {
+      lastError = error
+      if (attempt >= SITEMAP_RETRY_ATTEMPTS || !isRetryableValidationError(error)) {
+        throw error
+      }
+
+      const retryNumber = attempt + 1
+      const detail = summarizeRetryableFailures([String((error as Error)?.message || error)])
+      console.warn(
+        `[seo:validate] transient sitemap fetch failure; retrying ${retryNumber}/${SITEMAP_RETRY_ATTEMPTS} ${url} (${detail})`,
+      )
+      await sleep(URL_RETRY_DELAY_MS * retryNumber)
+    } finally {
+      clearTimeout(timer)
     }
-
-    return body
-  } finally {
-    clearTimeout(timer)
   }
+
+  throw lastError ?? new Error(`Unable to fetch sitemap: ${url}`)
 }
 
 async function fetchManual(url: string, method: 'HEAD' | 'GET'): Promise<Response> {
@@ -364,6 +386,7 @@ function detectLegacyAliasPath(pathname: string): string | null {
 
 type SitemapJobRow = {
   id: string
+  shortId: string | null
   externalId: string | null
   title: string
   roleSlug: string | null
@@ -396,6 +419,7 @@ async function getIndexableJobUrlSet(): Promise<Set<string>> {
     cachedIndexableJobUrlSetPromise = (async () => {
       const where = {
         isExpired: false,
+        shortId: { not: null },
         AND: [
           buildGlobalExclusionsWhere(),
           buildHighSalaryEligibilityWhere(),
@@ -408,6 +432,7 @@ async function getIndexableJobUrlSet(): Promise<Set<string>> {
         where,
         select: {
           id: true,
+          shortId: true,
           externalId: true,
           title: true,
           roleSlug: true,
@@ -438,7 +463,9 @@ async function getIndexableJobUrlSet(): Promise<Set<string>> {
       })) as SitemapJobRow[]
 
       const deduped = dedupeIndexableJobs(
-        jobs.filter((job) => evaluateJobIndexability(job).indexable),
+        jobs.filter(
+          (job) => hasCanonicalJobShortId(job) && evaluateJobIndexability(job).indexable,
+        ),
       )
 
       const urls = deduped.map((job) => {
@@ -478,9 +505,15 @@ async function checkUrl(url: string, sitemapUrl: string, sitemapSource: string):
   }
 
   if (parsed.search) {
-    failures.push(
-      buildFailure('loc_has_query', sitemapUrl, sitemapSource, url, `query=${parsed.search}`),
-    )
+    const allowedParams = ['page']
+    const keys = Array.from(parsed.searchParams.keys())
+    const invalidKeys = keys.filter((k) => !allowedParams.includes(k))
+
+    if (invalidKeys.length > 0) {
+      failures.push(
+        buildFailure('loc_has_query', sitemapUrl, sitemapSource, url, `invalid_query=${parsed.search}`),
+      )
+    }
   }
 
   const aliasNote = detectLegacyAliasPath(parsed.pathname)

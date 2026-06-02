@@ -63,13 +63,11 @@ function MarqueeRow({
   companies: FeaturedCompany[]
   reverse?: boolean
 }) {
-  const repeated = [...companies, ...companies]
-
   return (
     <div className={styles.marquee} data-reverse={reverse ? 'true' : 'false'}>
       <ul className={styles.track} aria-label="Featured companies">
-        {repeated.map((company, idx) => (
-          <LogoItem key={`${company.id}-${idx}`} company={company} index={idx} />
+        {companies.map((company, idx) => (
+          <LogoItem key={company.id} company={company} index={idx} />
         ))}
       </ul>
     </div>

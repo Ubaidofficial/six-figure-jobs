@@ -499,8 +499,8 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
             </Link>
           </li>
           <li>
-            <Link href={`/jobs/${roleSlug}/200k-plus`} className="hover:underline">
-              $200k+ {roleName} jobs →
+            <Link href="/jobs/200k-plus" className="hover:underline">
+              $200k+ jobs →
             </Link>
           </li>
           <li>

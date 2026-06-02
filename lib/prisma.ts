@@ -13,10 +13,12 @@ function addUrlParam(url: string, key: string, value: string | undefined): strin
   return `${url}${sep}${key}=${encodeURIComponent(value)}`
 }
 
-const baseUrl =
-  process.env.POSTGRES_PRISMA_URL ||
-  process.env.DATABASE_URL ||
-  ''
+const isProductionRuntime = process.env.NODE_ENV === 'production'
+const preferDatabaseUrl = !isProductionRuntime || process.env.PRISMA_PREFER_DATABASE_URL === '1'
+
+const baseUrl = preferDatabaseUrl
+  ? process.env.DATABASE_URL || process.env.POSTGRES_PRISMA_URL || ''
+  : process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL || ''
 
 const pooledUrl = addUrlParam(
   addUrlParam(baseUrl, 'connection_limit', process.env.PRISMA_CONNECTION_LIMIT ?? '3'),

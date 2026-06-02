@@ -1,4 +1,5 @@
 import { appendFile } from 'node:fs/promises'
+import 'dotenv/config'
 
 import { prisma } from '../lib/prisma'
 import { resolveCoreSitemapFamilies } from '../lib/seo/coreSitemapFamilies'
@@ -6,6 +7,8 @@ import { resolveOptionalSitemapFamilies } from '../lib/seo/optionalSitemapFamili
 
 const ALL_CORE_FAMILIES = ['jobs', 'company', 'salary', 'category', 'level', 'browse'] as const
 const ALL_OPTIONAL_FAMILIES = ['city', 'remote', 'country', 'slices'] as const
+const DB_RETRY_ATTEMPTS = Math.max(1, Number(process.env.DB_RETRY_ATTEMPTS || '4'))
+const DB_RETRY_DELAY_MS = Math.max(0, Number(process.env.DB_RETRY_DELAY_MS || '1000'))
 
 type CoreFamilyKey = (typeof ALL_CORE_FAMILIES)[number]
 type OptionalFamilyKey = (typeof ALL_OPTIONAL_FAMILIES)[number]
@@ -21,6 +24,20 @@ function parseRequiredFamilies<T extends string>(raw: string | undefined, allowe
 
 function statusLabel(value: boolean): 'ok' | 'missing' {
   return value ? 'ok' : 'missing'
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function allFamiliesFailed(
+  coreState: { failedFamilies: CoreFamilyKey[] },
+  optionalState: { failedFamilies: OptionalFamilyKey[] },
+): boolean {
+  return (
+    coreState.failedFamilies.length === ALL_CORE_FAMILIES.length &&
+    optionalState.failedFamilies.length === ALL_OPTIONAL_FAMILIES.length
+  )
 }
 
 async function appendStepSummary(lines: string[]) {
@@ -39,10 +56,31 @@ async function main() {
     ALL_OPTIONAL_FAMILIES,
   )
 
-  const [coreState, optionalState] = await Promise.all([
-    resolveCoreSitemapFamilies('checkPseoOutputs'),
-    resolveOptionalSitemapFamilies('checkPseoOutputs'),
-  ])
+  let coreState: Awaited<ReturnType<typeof resolveCoreSitemapFamilies>> | null = null
+  let optionalState: Awaited<ReturnType<typeof resolveOptionalSitemapFamilies>> | null = null
+
+  for (let attempt = 1; attempt <= DB_RETRY_ATTEMPTS; attempt++) {
+    const [nextCoreState, nextOptionalState] = await Promise.all([
+      resolveCoreSitemapFamilies('checkPseoOutputs'),
+      resolveOptionalSitemapFamilies('checkPseoOutputs'),
+    ])
+
+    coreState = nextCoreState
+    optionalState = nextOptionalState
+
+    if (!allFamiliesFailed(nextCoreState, nextOptionalState) || attempt === DB_RETRY_ATTEMPTS) {
+      break
+    }
+
+    console.warn(
+      `[checkPseoOutputs] all sitemap family resolvers failed; retrying after transient DB outage (attempt ${attempt + 1}/${DB_RETRY_ATTEMPTS})`,
+    )
+    await sleep(DB_RETRY_DELAY_MS * attempt)
+  }
+
+  if (!coreState || !optionalState) {
+    throw new Error('pSEO output guard failed: resolver state was not produced')
+  }
 
   const coreStatuses: Record<CoreFamilyKey, boolean> = {
     jobs: coreState.hasJobUrls,

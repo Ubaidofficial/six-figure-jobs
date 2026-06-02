@@ -1,7 +1,7 @@
 /* ==========================================================================
    Six Figure Jobs — Featured Companies Carousel
    - Token-driven, dark premium card
-   - GPU-friendly marquee animation with pause-on-hover
+   - Crawlable company links rendered once each
    - Grayscale logos → color on hover
    ========================================================================== */
 
@@ -85,35 +85,14 @@
 }
 
 .track {
-  --marquee-duration: 32s;
-
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: var(--space-16);
-  width: max-content;
+  width: 100%;
   padding: var(--space-8) 0;
   list-style: none;
-
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
-  animation: marquee var(--marquee-duration) linear infinite;
-}
-
-.marquee[data-reverse="true"] .track {
-  animation-direction: reverse;
-}
-
-.marquee:hover .track {
-  animation-play-state: paused;
-}
-
-@keyframes marquee {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
 }
 
 .item {
@@ -201,17 +180,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .track {
-    animation: none;
-  }
-
   .marquee {
     overflow-x: auto;
     scroll-behavior: smooth;
-  }
-
-  .marquee:hover .track {
-    animation-play-state: running;
   }
 }
 
@@ -229,7 +200,6 @@
   }
 
   .track {
-    --marquee-duration: 26s;
     gap: var(--space-12);
   }
 

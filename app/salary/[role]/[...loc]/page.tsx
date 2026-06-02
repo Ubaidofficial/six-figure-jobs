@@ -18,6 +18,8 @@ import type { Job } from '@prisma/client'
 import { SITE_NAME, getSiteUrl } from '../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
+import { isCanonicalSlug } from '../../../../lib/roles/canonicalSlugs'
+import { findBestMatchingRole } from '../../../../lib/roles/slugMatcher'
 
 export const revalidate = 1800
 
@@ -176,6 +178,17 @@ function buildBandHref(
   return qs ? `${basePath}?${qs}` : basePath
 }
 
+function resolveCanonicalRoleOrRedirect(rawRole: string): string {
+  const normalized = String(rawRole || '').trim().toLowerCase()
+  if (!normalized) permanentRedirect('/salary/software-engineer')
+  if (isCanonicalSlug(normalized)) return normalized
+
+  const matched = findBestMatchingRole(normalized)
+  if (matched) permanentRedirect(`/salary/${matched}`)
+
+  permanentRedirect('/salary/software-engineer')
+}
+
 /* -------------------------------------------------------------------------- */
 /* Metadata                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -197,7 +210,7 @@ export async function generateMetadata({
   }
 
   const sp = searchParams ? await resolveSearchParams(searchParams) : {}
-  const roleSlug = role
+  const roleSlug = resolveCanonicalRoleOrRedirect(role)
   const roleName = prettyRole(roleSlug)
   const countryCode = normalizedLoc.countryCode
   const citySlug = normalizedLoc.citySlug
@@ -271,7 +284,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
   if (!normalizedLoc) notFound()
 
   const sp = await resolveSearchParams(props.searchParams)
-  const roleSlug = role
+  const roleSlug = resolveCanonicalRoleOrRedirect(role)
   const roleName = prettyRole(roleSlug)
   const countryCode = normalizedLoc.countryCode
   const citySlug = normalizedLoc.citySlug

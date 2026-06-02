@@ -5,6 +5,10 @@ import { hasCountrySitemapEntries } from '../../lib/seo/countrySitemap'
 import { hasRemoteRoleSitemapEntries } from '../../lib/seo/remoteSitemap'
 import { hasSliceSitemapEntries } from '../../lib/seo/slicesSitemap'
 
+jest.mock('next/cache', () => ({
+  unstable_cache: (cb: any) => cb,
+}))
+
 jest.mock('../../lib/seo/coreSitemapFamilies', () => ({
   resolveCoreSitemapFamilies: jest.fn(),
 }))

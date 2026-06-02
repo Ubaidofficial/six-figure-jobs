@@ -84,8 +84,8 @@ function parseFilter(filter: string): ParsedFilter {
 
 function getLocationCanonicalPath(role: string, countryCode: string): string {
   const countrySlug = countryCodeToSlug(countryCode) ?? countryCode.toLowerCase()
-  // 2-segment canonical — /jobs/role/country-slug handled by [role]/[filter] route
-  return `/jobs/${role}/${countrySlug}`
+  // Country hubs are canonical for location-intent navigation.
+  return `/jobs/location/${countrySlug}`
 }
 
 function getSalaryRangeText(jobs: JobWithCompany[]): string {
@@ -127,7 +127,10 @@ export async function generateMetadata({
   if (!isCanonicalSlug(role)) {
     const matched = findBestMatchingRole(role)
     if (matched) permanentRedirect(`/jobs/${matched}/${filter}`)
-    notFound()
+    if (SALARY_TIERS[filter]) {
+      permanentRedirect(`/jobs/${filter}`)
+    }
+    permanentRedirect('/jobs')
   }
 
   let parsed: ParsedFilter
@@ -191,7 +194,10 @@ export default async function RoleFilterPage({
   if (!isCanonicalSlug(role)) {
     const matched = findBestMatchingRole(role)
     if (matched) permanentRedirect(`/jobs/${matched}/${filter}`)
-    notFound()
+    if (SALARY_TIERS[filter]) {
+      permanentRedirect(`/jobs/${filter}`)
+    }
+    permanentRedirect('/jobs')
   }
 
   let parsed: ParsedFilter
