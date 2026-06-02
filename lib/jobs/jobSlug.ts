@@ -123,6 +123,15 @@ export function parseJobSlugParam(param: string): ParsedJobSlug {
     }
   }
 
+  // v2.8: ...-j-<shortStableId>
+  // ⚠️ Must be checked BEFORE the legacy `-job-` pattern, because job titles
+  // containing the word "job" (e.g. "External Job Post" → external-job-post-j-k8mub4)
+  // would otherwise be greedily matched by the legacy regex.
+  const v28 = lastSegment.match(/-j-([a-z0-9]{5,12})$/)
+  if (v28?.[1]) {
+    return { roleSlug: lastSegment || null, jobId: null, externalId: null, shortId: v28[1] }
+  }
+
   // legacy: -job-<raw id>
   const legacy = lastSegment.match(/-job-(.+)$/)
   if (legacy?.[1]) {
@@ -134,12 +143,6 @@ export function parseJobSlugParam(param: string): ParsedJobSlug {
   if (lastSegment.includes(':')) {
     const jobId = lastSegment
     return { roleSlug: null, jobId, externalId: extractExternalId(jobId), shortId: null }
-  }
-
-  // v2.8: ...-j-<shortStableId>
-  const v28 = lastSegment.match(/-j-([a-z0-9]{5,12})$/)
-  if (v28?.[1]) {
-    return { roleSlug: lastSegment || null, jobId: null, externalId: null, shortId: v28[1] }
   }
 
 
