@@ -103,6 +103,7 @@
 * **seo:** add GSC URL classification audit script ([c783417](https://github.com/Ubaidofficial/six-figure-jobs/commit/c783417e25843a56d44472686fab9902de0ffefb))
 * **seo:** align slice seed/canonical country slugs [PRD-2 Task 4] ([8c06759](https://github.com/Ubaidofficial/six-figure-jobs/commit/8c067595b915187f4cccbed5136ca85f766d986e))
 * **seo:** avoid empty company sitemap shard 404s ([5570254](https://github.com/Ubaidofficial/six-figure-jobs/commit/5570254045465776a8c7192e1a7914c95240e8cd))
+* **seo:** check v2.8 shortId before legacy -job- pattern in slug parser ([d0ef7fa](https://github.com/Ubaidofficial/six-figure-jobs/commit/d0ef7fa3f80fa4fccb34e92ff1609ddd1685fd53))
 * **seo:** dedupe slice sitemap ownership ([494d706](https://github.com/Ubaidofficial/six-figure-jobs/commit/494d7068bc78f3bd07170fed97007f6d1db6afb4))
 * **seo:** default core-only sitemap mode on production ([688f728](https://github.com/Ubaidofficial/six-figure-jobs/commit/688f72873184eecd53daa04b4b861dd1c46944cd))
 * **seo:** enforce low-URL caps for core-only sitemap mode ([3f9c932](https://github.com/Ubaidofficial/six-figure-jobs/commit/3f9c932b763aa62ef4a9a96dff854bd52413abed))
