@@ -121,6 +121,7 @@
 * **seo:** reduce crawl errors from low-volume slices ([3beebeb](https://github.com/Ubaidofficial/six-figure-jobs/commit/3beebebf044de51e052efdf848a6f230ad00acd3))
 * **seo:** reduce crawl errors from low-volume slices ([#4](https://github.com/Ubaidofficial/six-figure-jobs/issues/4)) ([a593ed6](https://github.com/Ubaidofficial/six-figure-jobs/commit/a593ed6b55cc64c6cc47f1b549f349de4c800056))
 * **seo:** remove duplicate sitemap ownership ([fbe4eab](https://github.com/Ubaidofficial/six-figure-jobs/commit/fbe4eab773361ae04a1c8ca581effac9afed6f04))
+* **seo:** remove hasJobShortIdColumn fallback that causes cached 404s ([e448209](https://github.com/Ubaidofficial/six-figure-jobs/commit/e44820927992171de8bb94e68c1eaa0bbe3e833f))
 * **seo:** remove redirecting and duplicate sitemap urls ([108754e](https://github.com/Ubaidofficial/six-figure-jobs/commit/108754edce1bb90deacc3c34b2f7312ddafd4f84))
 * **seo:** remove redirects from sitemap-browse [PRD-2 Task 1] ([7f3344b](https://github.com/Ubaidofficial/six-figure-jobs/commit/7f3344b9d536b6e140887bc81b33133eddfec2c7))
 * **seo:** remove residual internal crawl traps ([07f97bb](https://github.com/Ubaidofficial/six-figure-jobs/commit/07f97bbdfe2c21fb71733b5334761e990a7b0bc7))
@@ -132,6 +133,7 @@
 * **seo:** strengthen Google Jobs schema ([0e1725e](https://github.com/Ubaidofficial/six-figure-jobs/commit/0e1725ef45defa30b8d9224ecf17c49781a3f394))
 * **seo:** strict sitemap gates + prod CI proof ([6db0a6d](https://github.com/Ubaidofficial/six-figure-jobs/commit/6db0a6d74c23b772c417685ab9526fd61d7419c0))
 * **seo:** tighten remote job schema markup ([bf1f6bf](https://github.com/Ubaidofficial/six-figure-jobs/commit/bf1f6bf23bbadd623cd22c6890c3bb2ab68636e1))
+* **seo:** update broken sitemapPolicy exports in response meta ([a0c48df](https://github.com/Ubaidofficial/six-figure-jobs/commit/a0c48df11a44e567321e1f4de3b5439b989edd68))
 * **seo:** v2.8 job slugs, canonical redirects, job page UI + salary restore ([ba98105](https://github.com/Ubaidofficial/six-figure-jobs/commit/ba981058b5886883005bb40476a51cf5c5aac41d))
 * show full job description alongside AI highlights ([02b1771](https://github.com/Ubaidofficial/six-figure-jobs/commit/02b177189af033bd7e2191eb1e411d9b844301ef))
 * show full job description alongside AI highlights ([9c247f0](https://github.com/Ubaidofficial/six-figure-jobs/commit/9c247f05cfa2bf1ba5b08c17b066a573efbca344))
@@ -201,6 +203,7 @@
 * **seo:** comprehensive SEO audit — apex redirect, og:image, city targets, robots, canonical fixes ([2582d7d](https://github.com/Ubaidofficial/six-figure-jobs/commit/2582d7d16f629aa0c5d191ff7eafa49b3356425c))
 * **seo:** expand TIER_1 roles — AI/ML focus + long-tail engineering with ≥3 DB jobs ([c6d134a](https://github.com/Ubaidofficial/six-figure-jobs/commit/c6d134a6158d55b7f9f8331c2dd07750e9088e04))
 * **seo:** fix all Severity 3 pSEO issues — blog, occupationalCategory, noDegreeMention, sitemap lastmod ([4f3bc48](https://github.com/Ubaidofficial/six-figure-jobs/commit/4f3bc48de8c31bbb8a37d7f20076717b4e0154b9))
+* **seo:** implement phase 1 indexing rollout and on-demand revalidation webhook ([aa2dc42](https://github.com/Ubaidofficial/six-figure-jobs/commit/aa2dc42a5f6c6e9c5cccdd9b8a6240467fd2dccf))
 * **seo:** implement v1.5 rules - 90% compliance ([5c7a9cf](https://github.com/Ubaidofficial/six-figure-jobs/commit/5c7a9cf81baae556738c9b59e2c3b9323741bab2))
 * **seo:** strengthen secondary pSEO templates ([26c74df](https://github.com/Ubaidofficial/six-figure-jobs/commit/26c74df7b10469bae3948812d391aa722c993dc5))
 * strengthen pseo guardrails ([53b3664](https://github.com/Ubaidofficial/six-figure-jobs/commit/53b3664f6139141c799105cc0086fdc323847850))
@@ -216,8 +219,3 @@
 
 
 
-
-## [Unreleased]
-- feat(seo): implement phase 1 indexing rollout and on-demand revalidation webhook
-- test(seo): mock indexation phase to pass sitemap assertions
-- fix(seo): update broken sitemapPolicy exports in response meta
