@@ -56,29 +56,7 @@ const SITE_URL = getSiteUrl()
 // Feature flag (NO routing/SEO changes)
 const AI_UI_ENABLED = process.env.AI_UI_ENABLED === '1'
 
-// During rollout, code may deploy before the DB migration has run.
-// Cache `true` once detected; keep re-checking while false.
-let cachedHasJobShortIdColumn: true | null = null
 
-async function hasJobShortIdColumn(): Promise<boolean> {
-  if (cachedHasJobShortIdColumn) return true
-  try {
-    const rows = await prisma.$queryRaw<{ exists: boolean }[]>`
-      SELECT EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND lower(table_name) = 'job'
-          AND lower(column_name) = 'shortid'
-      ) as "exists"
-    `
-    const exists = rows?.[0]?.exists === true
-    if (exists) cachedHasJobShortIdColumn = true
-    return exists
-  } catch {
-    return false
-  }
-}
 
 function tryDecodeJidFromSlug(slug: string): string | null {
   const decoded = decodeURIComponent(slug || '')
@@ -110,20 +88,10 @@ const getJobBySlug = cache(async (slug: string): Promise<JobWithCompany | null> 
   if (jobId) ors.push({ id: jobId })
   if (externalId) ors.push({ externalId })
 
-  // v2.8 shortId lookup (only if DB has the column during rollout)
-  const canUseShortId = Boolean(shortId) && (await hasJobShortIdColumn())
-  if (shortId && canUseShortId) ors.push({ shortId })
+  // v2.8 shortId lookup
+  if (shortId) ors.push({ shortId })
 
-  // Extra fallback for hybrid URLs where shortId is present but DB isn't migrated yet.
-  // Only attempt when shortId routing is requested but not available.
-  if (shortId && !canUseShortId) {
-    const jidJobId = tryDecodeJidFromSlug(slug)
-    if (jidJobId) {
-      const decodedExternalId = extractExternalIdFromJobId(jidJobId)
-      ors.push({ id: jidJobId })
-      if (decodedExternalId) ors.push({ externalId: decodedExternalId })
-    }
-  }
+
 
   if (ors.length === 0) return null
 
