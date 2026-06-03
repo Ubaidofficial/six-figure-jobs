@@ -25,6 +25,17 @@ export function hasNonPaginationQueryParams(searchParams: ListingSearchParams): 
   return false
 }
 
+/**
+ * Returns true if a listing page should be noindexed.
+ * Reasons: non-pagination query params (search/filter state) OR page 2+.
+ * Page 1 with no filters is the only indexable listing page variant.
+ */
+export function shouldNoindexListingPage(searchParams: ListingSearchParams): boolean {
+  if (hasNonPaginationQueryParams(searchParams)) return true
+  const page = readListingPageParam(searchParams)
+  return page > 1
+}
+
 export function buildNormalizedListingPath(
   basePath: string,
   searchParams: ListingSearchParams,

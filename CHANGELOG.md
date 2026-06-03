@@ -1,3 +1,9 @@
+# 1.1.0 (2026-06-03)
+
+### Features
+
+* **seo:** implement Phase 1 indexation rollout, jobs listing pagination noindex, expired jobs CI validation gate, and timeout exponential backoff ([#bbac72d](https://github.com/Ubaidofficial/six-figure-jobs/commit/bbac72d))
+
 # 1.0.0 (2026-06-03)
 
 

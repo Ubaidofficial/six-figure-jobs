@@ -141,6 +141,8 @@ const REPORT_REASON_ORDER = [
   'no_url_sitemaps',
   'invalid_sitemap_xml',
   'duplicate_loc',
+  'expired_job_in_sitemap',
+  'expired_job_not_404',
 ]
 
 let cachedIndexableJobUrlSetPromise: Promise<Set<string>> | null = null
@@ -286,7 +288,13 @@ function isRetryableValidationError(error: unknown): boolean {
     message.includes('operation was aborted') ||
     message.includes('this operation was aborted') ||
     message.includes('terminated') ||
-    message.includes('fetch failed')
+    message.includes('fetch failed') ||
+    message.includes('timeout') ||
+    message.includes('timedout') ||
+    message.includes('socket hang up') ||
+    message.includes('econnreset') ||
+    message.includes('etimedout') ||
+    message.includes('socket')
   )
 }
 
@@ -324,7 +332,7 @@ async function fetchText(url: string): Promise<string> {
       console.warn(
         `[seo:validate] transient sitemap fetch failure; retrying ${retryNumber}/${SITEMAP_RETRY_ATTEMPTS} ${url} (${detail})`,
       )
-      await sleep(URL_RETRY_DELAY_MS * retryNumber)
+      await sleep(URL_RETRY_DELAY_MS * Math.pow(2, attempt))
     } finally {
       clearTimeout(timer)
     }
@@ -663,7 +671,7 @@ async function checkUrlWithRetry(
         console.warn(
           `[seo:validate] transient validation failure; retrying ${retryNumber}/${URL_RETRY_ATTEMPTS} ${url} (${summarizeRetryableFailures(retryableFailures)})`,
         )
-        await sleep(URL_RETRY_DELAY_MS * retryNumber)
+        await sleep(URL_RETRY_DELAY_MS * Math.pow(2, attempt))
         continue
       }
 
@@ -679,7 +687,7 @@ async function checkUrlWithRetry(
       console.warn(
         `[seo:validate] transient check error; retrying ${retryNumber}/${URL_RETRY_ATTEMPTS} ${url} (${detail})`,
       )
-      await sleep(URL_RETRY_DELAY_MS * retryNumber)
+      await sleep(URL_RETRY_DELAY_MS * Math.pow(2, attempt))
     }
   }
 
@@ -966,6 +974,68 @@ async function main() {
         )
       }
     })
+  }
+
+  if (process.env.DATABASE_URL) {
+    console.log('\n[seo:validate] database url present, checking expired jobs status')
+    try {
+      const expiredJobs = await prisma.job.findMany({
+        where: { isExpired: true },
+        select: { id: true, title: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+      })
+      console.log(`[seo:validate] testing status of ${expiredJobs.length} expired jobs`)
+      
+      const sitemapUrlsSet = new Set(
+        buckets.flatMap((b) => b.urls.map((u) => normalizeComparableUrl(u)))
+      )
+
+      await runWithConcurrency(expiredJobs, async (job) => {
+        const slug = buildJobSlug({ id: job.id, title: job.title })
+        const url = `${BASE_URL}/job/${slug}`
+        const normalized = normalizeComparableUrl(url)
+
+        if (sitemapUrlsSet.has(normalized)) {
+          failures.push(
+            buildFailure(
+              'expired_job_in_sitemap',
+              'sitemap.xml',
+              'database',
+              url,
+              'Expired job found in active sitemap',
+            )
+          )
+        }
+
+        try {
+          const res = await fetchManual(url, 'GET')
+          if (res.status !== 404 && res.status !== 410) {
+            failures.push(
+              buildFailure(
+                'expired_job_not_404',
+                'database',
+                'database',
+                url,
+                `Expired job returned status=${res.status} instead of 404/410`,
+              )
+            )
+          }
+        } catch (err: any) {
+          failures.push(
+            buildFailure(
+              'expired_job_check_failed',
+              'database',
+              'database',
+              url,
+              err?.message || String(err),
+            )
+          )
+        }
+      })
+    } catch (dbErr: any) {
+      console.error('[seo:validate] failed to check expired jobs:', dbErr)
+    }
   }
 
   printGroupedFailures(failures)
