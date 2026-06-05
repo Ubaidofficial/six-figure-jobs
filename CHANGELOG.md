@@ -3,6 +3,7 @@
 ### Bug Fixes
 
 * reconcile broken Greenhouse salary intervals, repair live outliers, and unblock indexable job pages
+* add source expiry fields to scraped ingest input for consistent validThrough handling
 
 # 1.1.0 (2026-06-03)
 
@@ -229,5 +230,4 @@
 ### Performance Improvements
 
 * cache headers and disable image optimization ([a4f3337](https://github.com/Ubaidofficial/six-figure-jobs/commit/a4f33374fb64d7a373ead0f36911fcd7595efb0a))
-
 

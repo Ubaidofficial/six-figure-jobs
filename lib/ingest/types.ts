@@ -140,6 +140,12 @@ export interface ScrapedJobInput {
   /** When the job was last updated at source */
   updatedAt?: Date | null
 
+  /** Original source expiration/application deadline when published */
+  validThrough?: Date | null
+
+  /** Original source expiration/application deadline alias */
+  expiresAt?: Date | null
+
   // === ATS hints (for board scrapers that detect ATS) ===
   
   /** Detected ATS provider from apply URL */
@@ -258,6 +264,8 @@ export function createScrapedJob(
     descriptionText: partial.descriptionText ?? null,
     postedAt: partial.postedAt ?? null,
     updatedAt: partial.updatedAt ?? null,
+    validThrough: partial.validThrough ?? null,
+    expiresAt: partial.expiresAt ?? null,
     companyWebsiteUrl: partial.companyWebsiteUrl ?? null,
     companyLogoUrl: partial.companyLogoUrl ?? null,
     remoteRegion: partial.remoteRegion ?? null,
