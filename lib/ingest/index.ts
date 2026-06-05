@@ -26,6 +26,7 @@ import { normalizeLocation as normalizeLocationData } from '../normalizers/locat
 import { normalizeRole } from '../normalizers/role'
 import slugify from 'slugify'
 import { parseGreenhouseSalary } from './greenhouseSalaryParser'
+import { shouldPreferParsedGreenhouseSalary } from './greenhouseSalaryReconciliation'
 import { getShortStableIdForJobId } from '../jobs/jobSlug'
 import { buildJobValidThroughDate } from '../jobs/validThrough'
 import {
@@ -91,8 +92,26 @@ function isIngestDryRun(): boolean {
   return process.env.SCRAPE_DRY_RUN === '1' || process.env.DRY_RUN === '1'
 }
 
-function buildPublishValidThroughDate(postedAt: Date | null | undefined): Date {
-  return buildJobValidThroughDate(postedAt ?? new Date())
+function coerceSourceDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isFinite(date.getTime()) ? date : null
+}
+
+function getSourceExpirationDate(input: ScrapedJobInput, now = new Date()): Date | null {
+  const explicit = coerceSourceDate(input.validThrough) ?? coerceSourceDate(input.expiresAt)
+  if (!explicit || explicit.getTime() <= now.getTime()) return null
+  return explicit
+}
+
+function buildEffectiveValidThroughDate(
+  input: ScrapedJobInput,
+  fallbackPostedAt?: Date | string | null,
+): Date {
+  return (
+    getSourceExpirationDate(input) ??
+    buildJobValidThroughDate(input.postedAt ?? fallbackPostedAt ?? new Date())
+  )
 }
 
 function getSalaryGateRejection(
@@ -335,6 +354,8 @@ async function createNewJob(
 
   // Check if this is an unverified board job
   const isUnverifiedBoardJob = await checkUnverifiedBoardJob(company, input, dedupeKey)
+  const sourceExpiresAt = getSourceExpirationDate(input)
+  const validThrough = sourceExpiresAt ?? buildEffectiveValidThroughDate(input)
 
   const jobData = {
     id: jobId,
@@ -398,7 +419,8 @@ async function createNewJob(
     isExpired: false,
     lastSeenAt: new Date(),
     postedAt: input.postedAt ?? null,
-    validThrough: buildPublishValidThroughDate(input.postedAt),
+    expiresAt: sourceExpiresAt,
+    validThrough,
     createdAt: new Date(),
     updatedAt: new Date(),
   }
@@ -418,7 +440,8 @@ async function createNewJob(
         update: {
           lastSeenAt: new Date(),
           updatedAt: new Date(),
-          validThrough: buildPublishValidThroughDate(input.postedAt),
+          expiresAt: sourceExpiresAt,
+          validThrough,
         },
       }),
     )
@@ -489,6 +512,8 @@ async function upgradeJob(
 
   // Infer role
   const roleData = normalizeRole(input.title)
+  const sourceExpiresAt = getSourceExpirationDate(input)
+  const validThrough = sourceExpiresAt ?? buildEffectiveValidThroughDate(input, existing.postedAt)
 
   const updateData = {
     // Update source info
@@ -552,7 +577,8 @@ async function upgradeJob(
     isExpired: false,
     lastSeenAt: new Date(),
     postedAt: input.postedAt ?? existing.postedAt,
-    validThrough: buildPublishValidThroughDate(input.postedAt ?? existing.postedAt),
+    expiresAt: sourceExpiresAt ?? existing.expiresAt ?? null,
+    validThrough,
     updatedAt: new Date(),
 
     // v2.9: deterministic experience level from title
@@ -579,6 +605,7 @@ async function upgradeJob(
 // =============================================================================
 
 async function refreshJob(existing: any, input: ScrapedJobInput): Promise<IngestResult> {
+  const sourceExpiresAt = getSourceExpirationDate(input)
   const updateData: any = {
     lastSeenAt: new Date(),
     updatedAt: new Date(),
@@ -650,6 +677,10 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
     }
   }
 
+  if (sourceExpiresAt) {
+    updateData.expiresAt = sourceExpiresAt
+  }
+
   if (isIngestDryRun()) {
     ingestLog(`[ingest:dry-run] would refresh job ${existing.id}`)
     return { status: 'skipped', reason: 'dry-run-refresh', jobId: existing.id, dedupeKey: existing.dedupeKey }
@@ -659,7 +690,7 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
     where: { id: existing.id },
     data: {
       ...updateData,
-      validThrough: buildPublishValidThroughDate(existing.postedAt as Date | null | undefined),
+      validThrough: sourceExpiresAt ?? buildEffectiveValidThroughDate(input, existing.postedAt),
     },
   })
 
@@ -738,12 +769,12 @@ async function findExistingJob(
     return cache.byId.get(stableJobId) ?? null
   }
 
-  // Look for existing job by dedupe key (active jobs only).
+  // Look for existing job by dedupe key, including expired rows so a live
+  // ATS posting can reactivate a previously expired record.
   const existingByKey = await prisma.job.findFirst({
     where: {
       companyId: company.id,
       dedupeKey,
-      isExpired: false,
     },
     select: existingJobSelect(),
   })
@@ -827,7 +858,6 @@ function rememberExistingJob(
   if (!cache || !job) return
 
   cache.byId.set(job.id, job)
-  if (job.isExpired) return
 
   if (job.dedupeKey) {
     cache.byDedupeKey.set(job.dedupeKey, job)
@@ -875,26 +905,39 @@ function processSalary(input: ScrapedJobInput) {
     ? countryToCode(normalizeLocationData(input.locationText).country)
     : null
   const isBoardSource = String(input.source || '').startsWith('board:')
+  const isGreenhouseSource = input.source === 'ats:greenhouse'
+  const greenhouseRawMeta = isGreenhouseSource
+    ? (input.raw as any)?.metadata ?? (input.raw as any)?.greenhouseMetadata ?? null
+    : null
+  const greenhouseSalary = isGreenhouseSource
+    ? parseGreenhouseSalary({
+        html: input.descriptionHtml ?? '',
+        locationText: input.locationText ?? null,
+        countryCode: inferredCountryCode,
+        metadata: greenhouseRawMeta,
+      })
+    : null
 
-  // Try Greenhouse-specific parsing first (more accurate)
-  if (salaryMin === null && salaryMax === null && input.source === 'ats:greenhouse') {
-    const html = input.descriptionHtml ?? ''
-    const rawMeta =
-      (input.raw as any)?.metadata ?? (input.raw as any)?.greenhouseMetadata ?? null
-    const greenhouseSalary = parseGreenhouseSalary({
-      html,
-      locationText: input.locationText ?? null,
-      countryCode: inferredCountryCode,
-      metadata: rawMeta,
+  // Try Greenhouse-specific parsing first, and also repair suspicious structured salary ranges
+  // that were ingested with a non-annual interval even though the source HTML is annual.
+  if (
+    greenhouseSalary &&
+    shouldPreferParsedGreenhouseSalary({
+      structured: {
+        min: salaryMin,
+        max: salaryMax,
+        currency: salaryCurrency,
+        interval: salaryInterval,
+      },
+      parsed: greenhouseSalary,
     })
-    if (greenhouseSalary) {
-      salaryMin = greenhouseSalary.min
-      salaryMax = greenhouseSalary.max
-      salaryCurrency = greenhouseSalary.currency
-      salaryInterval = greenhouseSalary.interval ?? 'year'
-      salarySource = 'descriptionText'
-      if (!greenhouseSalary.currency) currencyAmbiguous = true
-    }
+  ) {
+    salaryMin = greenhouseSalary.min
+    salaryMax = greenhouseSalary.max
+    salaryCurrency = greenhouseSalary.currency
+    salaryInterval = greenhouseSalary.interval ?? 'year'
+    salarySource = 'descriptionText'
+    currencyAmbiguous = !greenhouseSalary.currency
   }
 
   // ATS structured salary

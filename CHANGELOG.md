@@ -1,3 +1,9 @@
+# Unreleased
+
+### Bug Fixes
+
+* reconcile broken Greenhouse salary intervals, repair live outliers, and unblock indexable job pages
+
 # 1.1.0 (2026-06-03)
 
 ### Features
@@ -223,6 +229,5 @@
 ### Performance Improvements
 
 * cache headers and disable image optimization ([a4f3337](https://github.com/Ubaidofficial/six-figure-jobs/commit/a4f33374fb64d7a373ead0f36911fcd7595efb0a))
-
 
 
