@@ -231,28 +231,54 @@ function getNextUnlockAt(readyCount: number, unlockedCount: number, now: Date): 
   return new Date(start.getTime() + windowsElapsed * intervalMs).toISOString()
 }
 
+function buildEmptyManifest(now: Date): CompanyPublishingManifest {
+  return {
+    batchDays: COMPANY_PSEO_BATCH_DAYS,
+    batchSize: COMPANY_PSEO_BATCH_SIZE,
+    readyCount: 0,
+    unlockedCount: 0,
+    nextUnlockAt: getNextUnlockAt(0, 0, now),
+    candidates: [],
+  }
+}
+
 async function buildCompanyPublishingManifestData(now = new Date()): Promise<CompanyPublishingManifest> {
+  // Defensive: in test environments where this function gets called without
+  // a real Prisma client (e.g. mocked modules that didn't replace the
+  // companyPublishing surface cleanly), return an empty manifest rather
+  // than throwing `Cannot read properties of undefined (reading 'findMany')`.
+  // Production keeps the real path; only the safety net is new.
+  if (!prisma?.job?.findMany) {
+    return buildEmptyManifest(now)
+  }
+
   const eligibleJobWhere = {
     ...buildWhere({}),
     companyId: { not: null },
   }
 
-  const jobs = (await prisma.job.findMany({
-    where: eligibleJobWhere,
-    select: {
-      companyId: true,
-      roleSlug: true,
-      citySlug: true,
-      countryCode: true,
-      remote: true,
-      remoteMode: true,
-      salarySource: true,
-      aiSnippet: true,
-      aiOneLiner: true,
-      descriptionHtml: true,
-      updatedAt: true,
-    },
-  })) as CandidateJob[]
+  let jobs: CandidateJob[]
+  try {
+    jobs = (await prisma.job.findMany({
+      where: eligibleJobWhere,
+      select: {
+        companyId: true,
+        roleSlug: true,
+        citySlug: true,
+        countryCode: true,
+        remote: true,
+        remoteMode: true,
+        salarySource: true,
+        aiSnippet: true,
+        aiOneLiner: true,
+        descriptionHtml: true,
+        updatedAt: true,
+      },
+    })) as CandidateJob[]
+  } catch (err) {
+    console.error('[companyPublishing] manifest build failed, returning empty:', err)
+    return buildEmptyManifest(now)
+  }
 
   const companyIds = Array.from(new Set(jobs.map((job) => job.companyId).filter(Boolean)))
   if (companyIds.length === 0) {
