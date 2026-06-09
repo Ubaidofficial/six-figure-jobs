@@ -328,17 +328,47 @@ export default async function CompanyPage({
           {company.name} hiring snapshot
         </h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <CompanySignalPanel title="Top roles">
+          <CompanySignalPanel title="Top roles & pay">
             {stats.topRoles.length > 0 ? (
-              <ul className="space-y-2 text-sm text-slate-300">
-                {stats.topRoles.slice(0, 5).map((role) => (
-                  <li key={role.key} className="flex items-center justify-between gap-3">
-                    <Link href={`/jobs/${role.key}`} className="text-blue-300 hover:underline">
-                      {role.label}
-                    </Link>
-                    <span className="font-mono text-xs text-slate-500">{role.count}</span>
-                  </li>
-                ))}
+              <ul className="space-y-3 text-sm text-slate-300">
+                {stats.topRoles.slice(0, 5).map((role) => {
+                  // Format the salary range when we have at least one bound.
+                  // Median-of-mins / median-of-maxes avoids smearing outliers;
+                  // currency comes from the first sample with disclosed pay.
+                  const salaryText = (() => {
+                    const s = role.salary
+                    if (!s) return null
+                    const sym = s.currency === 'USD' || !s.currency ? '$' : `${s.currency} `
+                    const fmt = (n: number) =>
+                      n >= 1000 ? `${sym}${Math.round(n / 1000)}k` : `${sym}${n.toLocaleString('en-US')}`
+                    if (s.minMedian != null && s.maxMedian != null) {
+                      return `${fmt(s.minMedian)}–${fmt(s.maxMedian)}`
+                    }
+                    return fmt((s.minMedian ?? s.maxMedian) as number)
+                  })()
+                  return (
+                    <li key={role.key}>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <Link href={`/jobs/${role.key}`} className="text-blue-300 hover:underline">
+                          {role.label}
+                        </Link>
+                        <span className="font-mono text-xs text-slate-500">
+                          {role.count} {role.count === 1 ? 'role' : 'roles'}
+                        </span>
+                      </div>
+                      {salaryText ? (
+                        <div className="mt-0.5 text-xs text-emerald-300">
+                          {salaryText}
+                          <span className="text-slate-500"> · median range</span>
+                        </div>
+                      ) : (
+                        <div className="mt-0.5 text-xs text-slate-500">
+                          Salary not disclosed
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             ) : (
               <p className="text-sm text-slate-400">Role mix is still being normalized for this company.</p>
@@ -770,8 +800,18 @@ function sortedCounts(map: Map<string, number>) {
     .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
 }
 
+// Per-role salary samples — feeds the "Software Engineer: $180-240k avg
+// (N roles)" breakdown that's the company-page differentiator vs the
+// company's own careers page.
+type RoleSalarySample = {
+  minValues: number[]
+  maxValues: number[]
+  currency: string | null
+}
+
 function buildCompanySeoStats(jobs: JobWithFlags[]) {
   const roleCounts = new Map<string, number>()
+  const roleSalary = new Map<string, RoleSalarySample>()
   const locationCounts = new Map<string, number>()
   const locationMeta = new Map<string, { label: string; href: string | null }>()
   const workModeCounts = {
@@ -792,7 +832,23 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
 
   for (const job of jobs) {
     const indexableRoleSlug = resolveIndexableRoleSlug(job.roleSlug)
-    if (indexableRoleSlug) incrementMap(roleCounts, indexableRoleSlug)
+    if (indexableRoleSlug) {
+      incrementMap(roleCounts, indexableRoleSlug)
+      // Collect salary samples per role (raw min/max in the job's currency).
+      const sample = roleSalary.get(indexableRoleSlug) ?? {
+        minValues: [],
+        maxValues: [],
+        currency: null,
+      }
+      const minN = asAnnualNumber(job.minAnnual)
+      const maxN = asAnnualNumber(job.maxAnnual)
+      if (minN != null) sample.minValues.push(minN)
+      if (maxN != null) sample.maxValues.push(maxN)
+      if (sample.currency == null && (minN != null || maxN != null)) {
+        sample.currency = (job.currency || 'USD').toUpperCase()
+      }
+      roleSalary.set(indexableRoleSlug, sample)
+    }
 
     const mode = job.remote === true || job.remoteMode === 'remote'
       ? 'remote'
@@ -847,10 +903,28 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
     }
   }
 
-  const topRoles = sortedCounts(roleCounts).map((role) => ({
-    ...role,
-    label: toTitleCaseSlug(role.key),
-  }))
+  const topRoles = sortedCounts(roleCounts).map((role) => {
+    const sample = roleSalary.get(role.key)
+    // Median of mins and max-of-maxes gives a representative "$X-$Y" range
+    // without smearing two distinct distributions together.
+    const sortedMin = (sample?.minValues ?? []).slice().sort((a, b) => a - b)
+    const sortedMax = (sample?.maxValues ?? []).slice().sort((a, b) => a - b)
+    const minMedian = sortedMin.length > 0 ? sortedMin[Math.floor(sortedMin.length / 2)] : null
+    const maxMedian = sortedMax.length > 0 ? sortedMax[Math.floor(sortedMax.length / 2)] : null
+    return {
+      ...role,
+      label: toTitleCaseSlug(role.key),
+      salary:
+        minMedian != null || maxMedian != null
+          ? {
+              minMedian,
+              maxMedian,
+              currency: sample?.currency ?? 'USD',
+              sampleSize: (sample?.minValues.length ?? 0) + (sample?.maxValues.length ?? 0),
+            }
+          : null,
+    }
+  })
 
   const topLocations = sortedCounts(locationCounts).map((location) => {
     const meta = locationMeta.get(location.key)

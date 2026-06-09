@@ -4,6 +4,7 @@
 
 * surface live USD medians on `/salary` hub. Page now async with 30-minute ISR — queries top 12 role guides in a single DB roundtrip, annotates every guide link with `$Xk median · N data points`, and replaces the static stat grid with live Software Engineer / Product Manager / Data Scientist medians. Users land and see real $ figures instead of "12 role guides".
 * emit `AggregateOffer` JSON-LD alongside the existing Occupation schema on `/salary/[role]` and `/salary/[role]/[...loc]`. This is the schema Google actually uses to render the salary rich-snippet card on the SERP — Glassdoor and Levels.fyi both emit it. Computed `lowPrice` / `highPrice` / `offerCount` directly from live DB data; only emits when a real range exists (no undefined fields).
+* per-role salary breakdown on `/company/[slug]`. The "Top roles" panel now shows `$180k–$240k · median range` next to each role count (e.g., "Software Engineer · 8 roles · $180k–$240k median"). Audit identified this as the single biggest comparative-value lift vs the company's own careers page (which often hides salaries). Uses median-of-min and median-of-max so outliers don't smear the displayed range.
 
 ### Bug Fixes
 
