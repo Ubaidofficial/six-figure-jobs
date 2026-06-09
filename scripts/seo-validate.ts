@@ -730,15 +730,23 @@ async function collectSitemapBuckets(rootUrl: string): Promise<SitemapCollection
 
     if (kind === 'urlset') {
       if (locs.length === 0) {
-        structureFailures.push(
-          buildFailure(
-            'empty_sitemap',
-            url,
-            sitemapSource,
-            url,
-            'urlset contains 0 <loc> entries',
-          ),
-        )
+        // Phase 1 sitemap silencing returns 200 OK with an empty <urlset>
+        // intentionally — that's the indexing-rollout strategy, not a bug.
+        // The marker comment is added by buildPhase1SilencedSitemapResponse
+        // in lib/seo/indexingPhase.ts; we detect it here so the validator
+        // doesn't fail the gate on a silencing-by-design empty payload.
+        const phaseSilenced = /silenced by INDEXING_PHASE=/.test(xml)
+        if (!phaseSilenced) {
+          structureFailures.push(
+            buildFailure(
+              'empty_sitemap',
+              url,
+              sitemapSource,
+              url,
+              'urlset contains 0 <loc> entries',
+            ),
+          )
+        }
       }
 
       buckets.push({
@@ -918,7 +926,15 @@ async function main() {
   console.log(`[seo:validate] discovered sitemaps: ${buckets.length}`)
   console.log(`[seo:validate] discovered urls: ${totalUrls}`)
 
-  if (totalUrls === 0) {
+  // Phase 1 silences most sitemap families by design. In a build-time
+  // validation against a freshly-built app with no DB rows, the surviving
+  // families (jobs/company/salary) may all return empty urlsets too — that's
+  // expected, not a failure. Skip the `no_urls_discovered` gate when
+  // INDEXING_PHASE=1 is in effect.
+  const indexingPhase = String(process.env.INDEXING_PHASE ?? '1').trim()
+  const inPhase1 = indexingPhase === '1' || indexingPhase === ''
+
+  if (totalUrls === 0 && !inPhase1) {
     failures.push(
       buildFailure(
         'no_urls_discovered',
@@ -927,6 +943,10 @@ async function main() {
         ROOT_SITEMAP_URL,
         `url_sitemaps=${buckets.length}`,
       ),
+    )
+  } else if (totalUrls === 0) {
+    console.log(
+      `[seo:validate] skipping no_urls_discovered — INDEXING_PHASE=${indexingPhase} (Phase 1 silences sitemap families by design)`,
     )
   }
 
