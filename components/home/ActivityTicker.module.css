@@ -1,0 +1,137 @@
+/* components/home/ActivityTicker.module.css
+   Live recent-postings ticker. Stays slim — full-width but vertically minimal
+   so it never crowds the hero below. */
+
+.tickerWrap {
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(20, 20, 20, 0.85),
+    rgba(15, 25, 18, 0.85)
+  );
+  border-bottom: 1px solid rgba(132, 204, 22, 0.15);
+}
+
+.tickerInner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: 8px var(--space-16);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* LIVE pill with pulsing dot */
+
+.livePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.1em;
+  color: rgb(132, 204, 22);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(132, 204, 22, 0.12);
+  border: 1px solid rgba(132, 204, 22, 0.3);
+}
+
+.liveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(132, 204, 22);
+  box-shadow: 0 0 0 0 rgba(132, 204, 22, 0.6);
+  animation: livePulse 1.6s ease-out infinite;
+}
+
+@keyframes livePulse {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(132, 204, 22, 0.55);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(132, 204, 22, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(132, 204, 22, 0);
+  }
+}
+
+/* The rotating event content */
+
+.tickerEvent {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-1);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+  animation: tickerFade 0.4s ease-out;
+}
+
+.tickerEvent:hover {
+  color: var(--color-text-0);
+}
+
+@keyframes tickerFade {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.eventCompany {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-0);
+}
+
+.eventVerb {
+  color: var(--color-text-2);
+}
+
+.eventTitle {
+  color: var(--color-text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 480px;
+}
+
+.eventTime {
+  color: var(--color-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* On narrow screens, drop the verb and shorten the title aggressively so
+   the strip never overflows or wraps. */
+@media (max-width: 640px) {
+  .tickerInner {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+  .eventVerb {
+    display: none;
+  }
+  .eventTitle {
+    max-width: 60vw;
+  }
+}
+
+/* Reduced-motion users get a static, non-pulsing dot. */
+@media (prefers-reduced-motion: reduce) {
+  .liveDot {
+    animation: none;
+  }
+  .tickerEvent {
+    animation: none;
+  }
+}

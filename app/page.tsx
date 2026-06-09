@@ -17,6 +17,8 @@ import { CATEGORY_LINKS } from '@/lib/constants/category-links'
 import { LOCATIONS, SALARY_BANDS } from '@/lib/constants/homepage'
 import { countryCodeToSlug } from '@/lib/seo/countrySlug'
 import { Hero } from '@/components/home/Hero'
+import { ActivityTicker, type ActivityEvent } from '@/components/home/ActivityTicker'
+import { buildJobSlugHref } from '../lib/jobs/jobSlug'
 import {
   FeaturedCompaniesCarousel,
   type FeaturedCompany,
@@ -493,6 +495,26 @@ export default async function HomePage() {
   })
 
   const jobs = jobsData.jobs as JobWithCompany[]
+
+  // Honest activity ticker: the most recent indexable postings the homepage
+  // already pulled. No "Someone applied from X" synthesis — just the actual
+  // newest jobs, served up rotating. Cap at 8 so the client component
+  // doesn't drag too much serialized payload across the wire.
+  const tickerEvents: ActivityEvent[] = jobs
+    .slice(0, 8)
+    .map((job) => {
+      const postedAt = job.postedAt ?? job.createdAt ?? job.updatedAt
+      if (!postedAt) return null
+      const companyName = job.companyRef?.name || job.company || 'A hiring company'
+      return {
+        id: job.id,
+        company: companyName,
+        title: job.title || 'a new role',
+        postedAtISO: postedAt.toISOString(),
+        href: buildJobSlugHref(job),
+      }
+    })
+    .filter((e): e is ActivityEvent => e !== null)
   const salaryTiers: SalaryTier[] = [
     {
       slug: '100k-plus',
@@ -570,11 +592,13 @@ export default async function HomePage() {
   })
 
     return (
-    <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
-      <HomepageSchemas
-        jobCount={stats.totalJobs}
-        companyCount={stats.totalCompanies}
-      />
+    <>
+      {tickerEvents.length > 0 ? <ActivityTicker events={tickerEvents} /> : null}
+      <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+        <HomepageSchemas
+          jobCount={stats.totalJobs}
+          companyCount={stats.totalCompanies}
+        />
       <Hero
         jobCount={stats.totalJobs}
         companyCount={stats.totalCompanies}
@@ -878,6 +902,7 @@ export default async function HomePage() {
         </div>
       </section>
     </main>
+    </>
     )
   } catch (error) {
     logRuntimeFallback('home.page', error)
