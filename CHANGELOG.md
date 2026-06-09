@@ -1,5 +1,10 @@
 # Unreleased
 
+### Features
+
+* surface live USD medians on `/salary` hub. Page now async with 30-minute ISR — queries top 12 role guides in a single DB roundtrip, annotates every guide link with `$Xk median · N data points`, and replaces the static stat grid with live Software Engineer / Product Manager / Data Scientist medians. Users land and see real $ figures instead of "12 role guides".
+* emit `AggregateOffer` JSON-LD alongside the existing Occupation schema on `/salary/[role]` and `/salary/[role]/[...loc]`. This is the schema Google actually uses to render the salary rich-snippet card on the SERP — Glassdoor and Levels.fyi both emit it. Computed `lowPrice` / `highPrice` / `offerCount` directly from live DB data; only emits when a real range exists (no undefined fields).
+
 ### Bug Fixes
 
 * fix the SEO Gates CI job. After the Phase 1 sitemap silencing landed (`02fe416`) and the indexability-gate threshold bumps (`188f1b8`), 6 sitemap-route tests broke: 4 because they called silenced routes and expected non-empty XML, 2 because they mocked tier counts below the new 5-job threshold. Adds `jest.setup.js` that sets `INDEXING_PHASE=2` for the test suite (the phase silencing itself is exercised separately in `indexingPhase.test.ts`) and bumps the mocked counts in `sitemapSalaryRoute`, `countrySitemapRoute`, and `citySitemapFilters` tests to clear the unified 5-job gate.

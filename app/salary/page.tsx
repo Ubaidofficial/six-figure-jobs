@@ -1,6 +1,15 @@
 // app/salary/page.tsx
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
+import { prisma } from '../../lib/prisma'
+import {
+  buildGlobalExclusionsWhere,
+  buildHighSalaryEligibilityWhere,
+} from '../../lib/jobs/queryJobs'
+
+// 30-minute ISR — salary numbers change slowly, the page is high-traffic.
+export const revalidate = 1800
 
 const GUIDES: Array<{ slug: string; label: string }> = [
   { slug: 'software-engineer', label: 'Software Engineer salary' },
@@ -43,43 +52,167 @@ export const metadata: Metadata = {
   },
 }
 
-export default function SalaryIndexPage() {
+// Pulls USD min/max samples for the hub roles in a single DB roundtrip, then
+// computes per-role median + count in JS. Cached behind ISR.
+async function loadGuideMedians(): Promise<Map<string, { median: number | null; count: number }>> {
+  const slugs = GUIDES.map((g) => g.slug)
+  const rows = await prisma.job.findMany({
+    where: {
+      isExpired: false,
+      currency: 'USD',
+      roleSlug: { in: slugs },
+      AND: [buildHighSalaryEligibilityWhere(), buildGlobalExclusionsWhere()],
+    },
+    select: { roleSlug: true, minAnnual: true, maxAnnual: true },
+  })
+
+  const byRole = new Map<string, number[]>()
+  for (const r of rows) {
+    if (!r.roleSlug) continue
+    const bucket = byRole.get(r.roleSlug) ?? []
+    if (r.minAnnual != null) bucket.push(Number(r.minAnnual))
+    if (r.maxAnnual != null) bucket.push(Number(r.maxAnnual))
+    byRole.set(r.roleSlug, bucket)
+  }
+
+  const result = new Map<string, { median: number | null; count: number }>()
+  for (const slug of slugs) {
+    const values = (byRole.get(slug) ?? []).slice().sort((a, b) => a - b)
+    const count = values.length
+    result.set(slug, {
+      count,
+      median: count > 0 ? values[Math.floor(count / 2)] : null,
+    })
+  }
+  return result
+}
+
+function formatMoneyShort(value: number | null): string {
+  if (value == null) return '—'
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `$${Math.round(value / 1_000)}k`
+  return `$${value.toLocaleString('en-US')}`
+}
+
+export default async function SalaryIndexPage() {
+  let medians: Map<string, { median: number | null; count: number }> | null = null
+  try {
+    medians = await loadGuideMedians()
+  } catch {
+    // Hub page must always render — fall back to the role-only view if the
+    // DB is unreachable. The role guides themselves still link out.
+    medians = null
+  }
+
+  const softwareEngineerMedian = medians?.get('software-engineer')?.median ?? null
+  const productManagerMedian = medians?.get('product-manager')?.median ?? null
+  const dataScientistMedian = medians?.get('data-scientist')?.median ?? null
+
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10 space-y-8">
-      <header className="space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-400">
-          Salary guides
-        </p>
-        <h1 className="text-2xl font-semibold text-slate-50">
-          Tech salary guides: $100k–$400k+ by role, seniority &amp; country
-        </h1>
-        <p className="max-w-3xl text-sm text-slate-300">
-          Real compensation ranges for software engineers, product managers, data scientists, and 10+ more roles.
-          Built from verified $100k+ job listings — not surveys. Filter by country to see US, UK, Canada, Germany, and more.
-        </p>
-      </header>
-
-      <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-5">
-        <h2 className="mb-3 text-sm font-semibold text-slate-100">
-          Choose a role
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {GUIDES.map((guide) => (
+      <PageHero
+        eyebrow="Salary guides"
+        title="Tech salary guides: $100k–$400k+ by role, seniority & country"
+        description={
+          <>
+            Real compensation ranges for software engineers, product managers, data
+            scientists, and 10+ more roles. Built from verified $100k+ job listings
+            instead of surveys, then normalized by role, country, and salary band.
+          </>
+        }
+        helper="Every guide is tied back to live jobs so users can move from salary research to applications without leaving the site."
+        actions={
+          <>
             <Link
-              key={guide.slug}
-              href={`/salary/${guide.slug}`}
-              className="rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 hover:border-slate-600"
+              href="/jobs/100k-plus"
+              className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
             >
-              {guide.label}
+              Browse $100k+ jobs
             </Link>
-          ))}
-        </div>
-      </section>
+            <Link
+              href="/companies"
+              className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+            >
+              Explore companies
+            </Link>
+          </>
+        }
+      >
+        <PageStatGrid
+          items={[
+            // Live median anchors so users see real $ figures above the fold —
+            // not just "12 role guides". Falls back to descriptive copy if
+            // the DB query failed.
+            {
+              label: 'Software Engineer median',
+              value: formatMoneyShort(softwareEngineerMedian),
+              hint:
+                softwareEngineerMedian != null
+                  ? 'Live USD median, verified $100k+ listings'
+                  : 'Open the role guide for the latest median',
+            },
+            {
+              label: 'Product Manager median',
+              value: formatMoneyShort(productManagerMedian),
+              hint:
+                productManagerMedian != null
+                  ? 'Live USD median, verified $100k+ listings'
+                  : 'Open the role guide for the latest median',
+            },
+            {
+              label: 'Data Scientist median',
+              value: formatMoneyShort(dataScientistMedian),
+              hint:
+                dataScientistMedian != null
+                  ? 'Live USD median, verified $100k+ listings'
+                  : 'Open the role guide for the latest median',
+            },
+            {
+              label: 'Source method',
+              value: 'ATS-backed',
+              hint: 'Built from live verified salary listings',
+            },
+          ]}
+        />
+      </PageHero>
 
-      <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-5">
-        <h2 className="mb-3 text-sm font-semibold text-slate-100">
-          Popular countries
-        </h2>
+      <PageSection
+        title="Choose a role"
+        description="Start with the role, then narrow into country-specific guides and higher salary bands."
+      >
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+          {GUIDES.map((guide) => {
+            const stats = medians?.get(guide.slug)
+            const median = stats?.median ?? null
+            const sampleHint =
+              median != null
+                ? `${formatMoneyShort(median)} median USD${stats && stats.count > 0 ? ` · ${Math.floor(stats.count / 2)} data points` : ''}`
+                : 'Live median refreshes on each ISR window'
+            return (
+              <Link
+                key={guide.slug}
+                href={`/salary/${guide.slug}`}
+                className="block rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 hover:border-slate-600"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span>{guide.label}</span>
+                  {median != null ? (
+                    <span className="font-semibold text-emerald-300">
+                      {formatMoneyShort(median)}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-1 text-xs text-slate-400">{sampleHint}</div>
+              </Link>
+            )
+          })}
+        </div>
+      </PageSection>
+
+      <PageSection
+        title="Popular countries"
+        description="Use country shortcuts when you want local market pay instead of global blended numbers."
+      >
         <div className="flex flex-wrap gap-2 text-sm">
           {COUNTRIES.map((c) => (
             <Link
@@ -91,12 +224,12 @@ export default function SalaryIndexPage() {
             </Link>
           ))}
         </div>
-      </section>
+      </PageSection>
 
-      <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-5">
-        <h2 className="mb-3 text-sm font-semibold text-slate-100">
-          Salary bands
-        </h2>
+      <PageSection
+        title="Salary bands"
+        description="Jump directly into the compensation tier that matches the search intent."
+      >
         <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Link
             href="/jobs/100k-plus"
@@ -123,15 +256,12 @@ export default function SalaryIndexPage() {
             $400k+ jobs
           </Link>
         </div>
-      </section>
+      </PageSection>
 
-      <section className="rounded-2xl border border-slate-900 bg-slate-950/60 p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-slate-100">
-          How we build these salary guides
-        </h2>
-        <p className="text-sm leading-relaxed text-slate-300">
-          Each guide is assembled from live $100k+ tech job listings scraped directly from ATS-powered company career pages — not recruiter surveys. We normalize compensation, remove expired or lowball postings, and tag every role with title, seniority, country, currency, and remote eligibility.
-        </p>
+      <PageSection
+        title="How we build these salary guides"
+        description="Each guide is assembled from live $100k+ tech job listings scraped directly from ATS-powered company career pages. We normalize compensation, remove expired or lowball postings, and tag every role with title, seniority, country, currency, and remote eligibility."
+      >
         <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
           <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
             <span className="font-semibold text-slate-100 block mb-1">Real-time data</span>
@@ -146,7 +276,7 @@ export default function SalaryIndexPage() {
             Every salary range links to the live openings behind it — research to application in one click.
           </li>
         </ul>
-      </section>
+      </PageSection>
     </main>
   )
 }

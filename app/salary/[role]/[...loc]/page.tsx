@@ -439,6 +439,29 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
     },
   }
 
+  // AggregateOffer is what triggers the salary rich-snippet card on the SERP
+  // — Occupation alone won't do it. Only emit when we have a real range and
+  // job count, so the schema validator doesn't choke on undefined fields.
+  const aggregateOfferJsonLd =
+    raw.length > 0 && minVal != null && maxVal != null
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'AggregateOffer',
+          priceCurrency: 'USD',
+          lowPrice: minVal,
+          highPrice: maxVal,
+          offerCount: raw.length,
+          url: `${SITE_URL}${basePath}`,
+          itemOffered: {
+            '@type': 'Occupation',
+            name: `${roleName}${locationLabel ? ` in ${locationLabel}` : ''}`,
+            ...(locationLabel
+              ? { occupationLocation: [{ '@type': 'City', name: locationLabel }] }
+              : {}),
+          },
+        }
+      : null
+
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-8 space-y-8">
       <StructuredData jobs={jobsResult.jobs} roleName={roleName} locationLabel={locationLabel} />
@@ -450,6 +473,12 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(occupationJsonLd) }}
       />
+      {aggregateOfferJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
+        />
+      ) : null}
       <nav
         aria-label="Breadcrumb"
         className="text-xs text-slate-400"

@@ -19,6 +19,7 @@ import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 import { isCanonicalSlug } from '../../../lib/roles/canonicalSlugs'
 import { findBestMatchingRole } from '../../../lib/roles/slugMatcher'
+import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
 
 export const revalidate = 1800
 
@@ -418,6 +419,28 @@ export default async function SalaryRolePage(props: PageProps) {
     },
   }
 
+  // AggregateOffer is what Google actually uses to render the salary card on
+  // the SERP — Occupation alone doesn't trigger it. Glassdoor/Levels.fyi both
+  // emit this. We attach the underlying Occupation as `itemOffered` so the
+  // two schemas reinforce each other.
+  const aggregateOfferJsonLd =
+    totalListings > 0 && statMin != null && statMax != null
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'AggregateOffer',
+          priceCurrency: 'USD',
+          lowPrice: statMin,
+          highPrice: statMax,
+          offerCount: totalListings,
+          url: `${siteUrl}/salary/${roleSlug}`,
+          itemOffered: {
+            '@type': 'Occupation',
+            name: roleName,
+            ...(onetCode ? { occupationalCategory: onetCode } : {}),
+          },
+        }
+      : null
+
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       <StructuredData jobs={jobs} roleName={roleName} />
@@ -443,6 +466,12 @@ export default async function SalaryRolePage(props: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(occupationJsonLd) }}
       />
+      {aggregateOfferJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
+        />
+      ) : null}
       {/* Breadcrumb */}
       <nav
         aria-label="Breadcrumb"
@@ -473,107 +502,97 @@ export default async function SalaryRolePage(props: PageProps) {
         </ol>
       </nav>
 
-      {/* Header + stats */}
-      <header className="mb-8 space-y-4">
-        <h1 className="text-2xl font-semibold text-slate-50">
-          {roleName} salary guide
-        </h1>
-        <p
-          className="max-w-2xl text-sm text-slate-300"
-          data-speakable="summary"
-        >
-          Live six-figure salary ranges for {roleName.toLowerCase()} roles, based on verified $100k+ job listings from top tech and SaaS companies. Remote, hybrid, and on-site pay data—across USD and local currencies—updated regularly.
-        </p>
-        <p className="text-xs text-slate-400">
-          Data freshness: updated from live $100k+ listings; thin pages stay noindex until more roles are available.
-        </p>
-        <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            Salary-first: {getBandLabel(minAnnual)} compensation sourced from ATS feeds.
-          </li>
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            Remote eligibility noted; local currency kept where provided for transparency.
-          </li>
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            Seniority focus: mid-to-senior and leadership roles; junior only when six-figure.
-          </li>
-        </ul>
-        <div className="flex flex-wrap gap-2 text-xs text-blue-300">
-          {[100_000, 200_000, 300_000, 400_000].map((band) => {
-            const href =
-              band === 100_000
-                ? basePath
-                : `${basePath}?band=${band / 1000}k-plus`
-            const label = getBandLabel(band)
-            return (
+      <div className="mb-8">
+        <PageHero
+          eyebrow="Salary guide"
+          title={`${roleName} salary guide`}
+          description={
+            <span data-speakable="summary">
+              Live six-figure salary ranges for {roleName.toLowerCase()} roles, based on
+              verified $100k+ job listings from top tech and SaaS companies. Remote,
+              hybrid, and on-site pay data across USD and local currencies updates
+              regularly.
+            </span>
+          }
+          helper="Data freshness: updated from live $100k+ listings; thin pages stay noindex until more roles are available."
+          actions={
+            <>
+              {[100_000, 200_000, 300_000, 400_000].map((band) => {
+                const href =
+                  band === 100_000 ? basePath : `${basePath}?band=${band / 1000}k-plus`
+                const label = getBandLabel(band)
+                return (
+                  <Link
+                    key={band}
+                    href={href}
+                    className={`rounded-full border px-3 py-1.5 text-xs ${
+                      minAnnual === band
+                        ? 'border-blue-500/50 bg-blue-500/10 text-blue-100'
+                        : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-500'
+                    }`}
+                  >
+                    {label} band
+                  </Link>
+                )
+              })}
               <Link
-                key={band}
-                href={href}
-                className={`rounded-full border px-3 py-1 ${
-                  minAnnual === band
-                    ? 'border-blue-500/50 bg-blue-500/10 text-blue-100'
-                    : 'border-slate-800 bg-slate-900 text-blue-300 hover:border-slate-600'
-                }`}
+                href={`/jobs/${roleSlug}`}
+                className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200 hover:border-slate-500"
               >
-                {label} band
+                Browse live {roleName} jobs
               </Link>
-            )
-          })}
-          <Link
-            href={`/jobs/${roleSlug}`}
-            className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-blue-300 hover:border-slate-600"
-          >
-            Browse live {roleName} jobs →
-          </Link>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-            <p className="text-xs text-slate-400">Median base salary</p>
-            <p className="mt-2 text-xl font-semibold text-slate-50">
-              {statMedian
-                ? `${formatMoney(statMedian)}/yr`
-                : 'Not enough data yet'}
-            </p>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Calculated from live $100k+ job listings.
-            </p>
+            </>
+          }
+        >
+          <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+            <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+              Salary-first: {getBandLabel(minAnnual)} compensation sourced from ATS feeds.
+            </li>
+            <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+              Remote eligibility noted; local currency kept where provided for transparency.
+            </li>
+            <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+              Seniority focus: mid-to-senior and leadership roles; junior only when six-figure.
+            </li>
+          </ul>
+          <div className="mt-4">
+            <PageStatGrid
+              items={[
+                {
+                  label: 'Median base salary',
+                  value: statMedian ? `${formatMoney(statMedian)}/yr` : 'Not enough data yet',
+                  hint: 'Calculated from live $100k+ job listings.',
+                },
+                {
+                  label: 'Typical range',
+                  value:
+                    statMin && statMax
+                      ? `${formatMoney(statMin)}–${formatMoney(statMax)}/yr`
+                      : 'Not enough data yet',
+                  hint: 'Based on min / max ranges across all roles.',
+                },
+                {
+                  label: 'Sample size',
+                  value: totalListings.toLocaleString(),
+                  hint: 'Live jobs with $100k+ local base compensation.',
+                },
+                {
+                  label: 'Country coverage',
+                  value: Object.keys(byCountry).length.toLocaleString(),
+                  hint: 'Distinct country buckets in the active sample.',
+                },
+              ]}
+            />
           </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-            <p className="text-xs text-slate-400">Typical range</p>
-            <p className="mt-2 text-xl font-semibold text-slate-50">
-              {statMin && statMax
-                ? `${formatMoney(statMin)}–${formatMoney(
-                    statMax,
-                  )}/yr`
-                : 'Not enough data yet'}
-            </p>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Based on min / max ranges across all roles.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-            <p className="text-xs text-slate-400">
-              Sample size (live jobs)
-            </p>
-            <p className="mt-2 text-xl font-semibold text-slate-50">
-              {totalListings.toLocaleString()}
-            </p>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Only includes roles with $100k+ local base compensation.
-            </p>
-          </div>
-        </div>
-      </header>
+        </PageHero>
+      </div>
 
       {/* Country breakdown (simple) */}
       {Object.keys(byCountry).length > 0 && (
-        <section className="mb-8 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-50">
-            Salary snapshot by country
-          </h2>
+        <PageSection
+          title="Salary snapshot by country"
+          description="Country-level pay snapshots help separate local market effects from global blended salary ranges."
+        >
           <div className="flex flex-wrap gap-2 text-xs">
             {Object.entries(byCountry).map(([cc, arr]) => {
               arr.sort((a, b) => a - b)
@@ -600,13 +619,13 @@ export default async function SalaryRolePage(props: PageProps) {
               )
             })}
           </div>
-        </section>
+        </PageSection>
       )}
 
-      <section className="mb-8 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h2 className="text-sm font-semibold text-slate-50">
-          Explore related high-paying pages
-        </h2>
+      <PageSection
+        title="Explore related high-paying pages"
+        description="Move from pay benchmarking into live openings, remote filters, and more specific role/location views."
+      >
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
           <li>
             <Link
@@ -640,7 +659,7 @@ export default async function SalaryRolePage(props: PageProps) {
             </li>
           ) : null}
         </ul>
-      </section>
+      </PageSection>
 
       {/* Job list */}
       <section className="space-y-4">
@@ -711,14 +730,25 @@ export default async function SalaryRolePage(props: PageProps) {
         )}
       </section>
 
-      <section className="mt-10 rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
-        <h2 className="mb-2 text-sm font-semibold text-slate-100">
-          How this {roleName.toLowerCase()} salary guide is built
-        </h2>
-        <p className="text-sm leading-relaxed text-slate-300">
-          We source only verified $100k+ {roleName.toLowerCase()} roles directly from ATS-powered company job boards. Every listing is normalized for salary, role slug, country, and remote mode, then deduped and expired when it goes stale. The medians and ranges on this page are computed from live openings rather than historical surveys, so the data reflects current hiring demand. When a company publishes a new {roleName.toLowerCase()} job with a clear range, it feeds into the stats; when the job is filled or closed, it disappears from the sample. Remote and hybrid roles are labeled, and local currencies are preserved wherever possible. This approach keeps the guide aligned with what hiring managers are paying today, not last year. Use the band toggles to see how compensation shifts at $200k, $300k, and $400k, then scroll the job list to apply to the exact roles behind the numbers.
-        </p>
-      </section>
+      <PageSection
+        title={`How this ${roleName.toLowerCase()} salary guide is built`}
+        description={`We source only verified $100k+ ${roleName.toLowerCase()} roles directly from ATS-powered company job boards. Every listing is normalized for salary, role slug, country, and remote mode, then deduped and expired when it goes stale. The medians and ranges on this page are computed from live openings rather than historical surveys, so the data reflects current hiring demand. When a company publishes a new ${roleName.toLowerCase()} job with a clear range, it feeds into the stats; when the job is filled or closed, it disappears from the sample. Remote and hybrid roles are labeled, and local currencies are preserved wherever possible. This approach keeps the guide aligned with what hiring managers are paying today, not last year. Use the band toggles to see how compensation shifts at $200k, $300k, and $400k, then scroll the job list to apply to the exact roles behind the numbers.`}
+      >
+        <div className="grid gap-3 text-xs text-slate-300 md:grid-cols-3">
+          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-3">
+            <div className="font-semibold text-slate-100">Source quality</div>
+            <div className="mt-1">Direct ATS and company-careers feeds, not self-reported surveys.</div>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-3">
+            <div className="font-semibold text-slate-100">Normalization</div>
+            <div className="mt-1">Role slugs, currency, seniority, and work mode are standardized before analysis.</div>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-3">
+            <div className="font-semibold text-slate-100">Freshness</div>
+            <div className="mt-1">Expired jobs are removed so salary stats reflect the current market, not stale demand.</div>
+          </div>
+        </div>
+      </PageSection>
     </main>
   )
 }
