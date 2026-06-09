@@ -2,6 +2,7 @@
 
 import type { ATSResult, AtsJob } from './types'
 import * as cheerio from 'cheerio'
+import { fetchWithBackoff, fetchJsonWithBackoff } from '../utils/fetchWithBackoff'
 
 /**
  * Ashby no longer exposes careers.json for most companies.
@@ -60,97 +61,41 @@ function collectSalaryRawFromPayload(payload: any): string | null {
   return values.length ? Array.from(new Set(values)).join(' | ') : null
 }
 
+// Ashby-tagged wrappers around the shared scraper fetch helper. Previously
+// these were blind linear-backoff loops that ignored Retry-After on 429/503.
 async function fetchTextWithRetry(
   url: string,
-  attempts = 3,
+  attempts = 4,
   timeoutMs = TIMEOUT_MS,
   extraHeaders: Record<string, string> = {},
 ): Promise<string> {
-  let lastError: any = null
-
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const controller = new AbortController()
-      const id = setTimeout(() => controller.abort(), timeoutMs)
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'User-Agent': USER_AGENT,
-          ...extraHeaders,
-        },
-        cache: 'no-store',
-        signal: controller.signal,
-      })
-
-      clearTimeout(id)
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} ${res.statusText}`)
-      }
-
-      return await res.text()
-    } catch (err: any) {
-      lastError = err
-      const msg = err?.message || String(err)
-      console.warn(`[Ashby] fetch attempt ${i + 1} failed for ${url}: ${msg}`)
-
-      if (i < attempts - 1) {
-        // simple backoff: 500ms, 1000ms, 1500ms
-        await new Promise((r) => setTimeout(r, 500 * (i + 1)))
-      }
-    }
-  }
-
-  throw lastError
+  const res = await fetchWithBackoff(url, {
+    attempts,
+    timeoutMs,
+    headers: { 'User-Agent': USER_AGENT, ...extraHeaders },
+    onRetry: (info) =>
+      console.warn(
+        `[Ashby] retry ${info.attempt}/${info.attempts} for ${info.url} in ${info.delayMs}ms (${info.reason})`,
+      ),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
+  return res.text()
 }
 
 async function fetchJsonWithRetry<T>(
   url: string,
-  attempts = 3,
+  attempts = 4,
   timeoutMs = TIMEOUT_MS,
 ): Promise<T> {
-  let lastError: any = null
-
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const controller = new AbortController()
-      const id = setTimeout(() => controller.abort(), timeoutMs)
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'User-Agent': USER_AGENT,
-          Accept: 'application/json',
-        },
-        cache: 'no-store',
-        signal: controller.signal,
-      })
-
-      clearTimeout(id)
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} ${res.statusText}`)
-      }
-
-      const ct = res.headers.get('content-type') || ''
-      if (!ct.includes('json')) {
-        throw new Error(`Unexpected content-type: ${ct || 'unknown'}`)
-      }
-
-      return (await res.json()) as T
-    } catch (err: any) {
-      lastError = err
-      const msg = err?.message || String(err)
-      console.warn(`[Ashby] fetch attempt ${i + 1} failed for ${url}: ${msg}`)
-
-      if (i < attempts - 1) {
-        await new Promise((r) => setTimeout(r, 500 * (i + 1)))
-      }
-    }
-  }
-
-  throw lastError
+  return fetchJsonWithBackoff<T>(url, {
+    attempts,
+    timeoutMs,
+    headers: { 'User-Agent': USER_AGENT },
+    onRetry: (info) =>
+      console.warn(
+        `[Ashby] retry ${info.attempt}/${info.attempts} for ${info.url} in ${info.delayMs}ms (${info.reason})`,
+      ),
+  })
 }
 
 function extractApiJobArray(json: any): any[] | null {
@@ -158,8 +103,76 @@ function extractApiJobArray(json: any): any[] | null {
   if (Array.isArray(json)) return json
   if (Array.isArray(json.jobs)) return json.jobs
   if (Array.isArray(json.jobPostings)) return json.jobPostings
+  if (Array.isArray(json.jobBoard?.jobPostings)) return json.jobBoard.jobPostings
   if (json.data && Array.isArray(json.data.jobs)) return json.data.jobs
   return null
+}
+
+function extractJsonObjectAfterMarker(text: string, marker: string): any | null {
+  const markerIndex = text.indexOf(marker)
+  if (markerIndex < 0) return null
+
+  const start = text.indexOf('{', markerIndex + marker.length)
+  if (start < 0) return null
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]
+
+    if (inString) {
+      if (escaped) {
+        escaped = false
+      } else if (ch === '\\') {
+        escaped = true
+      } else if (ch === '"') {
+        inString = false
+      }
+      continue
+    }
+
+    if (ch === '"') {
+      inString = true
+      continue
+    }
+
+    if (ch === '{') {
+      depth++
+    } else if (ch === '}') {
+      depth--
+      if (depth === 0) {
+        try {
+          return JSON.parse(text.slice(start, i + 1))
+        } catch {
+          return null
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+function collectEmbeddedAshbyPostings(appData: any): any[] | null {
+  const direct = extractApiJobArray(appData)
+  if (direct) return direct
+
+  const board = appData?.jobBoard
+  if (!board) return null
+
+  const postings: any[] = []
+  if (Array.isArray(board.jobPostings)) postings.push(...board.jobPostings)
+
+  if (Array.isArray(board.teams)) {
+    for (const team of board.teams) {
+      if (Array.isArray(team?.jobPostings)) postings.push(...team.jobPostings)
+      if (Array.isArray(team?.jobs)) postings.push(...team.jobs)
+    }
+  }
+
+  return postings
 }
 
 function processApiJobs(
@@ -337,6 +350,21 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
   console.log(`[Ashby] Found ${$('a[href*="/job/"]').length} job links with /job/`)
   console.log(`[Ashby] Found ${$('a[href*="/jobs/"]').length} job links with /jobs/`)
   console.log(`[Ashby] Found ${$('[class*="JobPosting"]').length} JobPosting components`)
+
+  const appData = extractJsonObjectAfterMarker(html, 'window.__appData')
+  const embeddedPostings = collectEmbeddedAshbyPostings(appData)
+  if (embeddedPostings && embeddedPostings.length > 0) {
+    console.log(`[Ashby] Extracted ${embeddedPostings.length} jobs via embedded app data (${atsUrl})`)
+    return processApiJobs(embeddedPostings, {
+      apiUrl: `${htmlUrl}#__appData`,
+      htmlUrl,
+    })
+  }
+
+  if (appData?.jobBoard && embeddedPostings && embeddedPostings.length === 0) {
+    console.log(`[Ashby] No open positions in embedded app data for ${atsUrl}`)
+    return []
+  }
 
   // Check for "Load More" or pagination
   const hasLoadMore =

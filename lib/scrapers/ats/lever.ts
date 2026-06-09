@@ -1,6 +1,8 @@
 // lib/scrapers/ats/lever.ts
 
 import type { ATSResult, AtsJob } from './types'
+import { inferCurrencyFromSalaryText } from './salaryCurrency'
+import { fetchJsonWithBackoff } from '../utils/fetchWithBackoff'
 
 const USER_AGENT = 'SixFigureJobs/1.0 (+job-board-scraper)'
 const TIMEOUT_MS = 15000
@@ -87,24 +89,17 @@ function collectSalaryMentions(item: any): string[] {
   return dedupeStrings(mentions)
 }
 
-function detectCurrencyFromText(text: string): string | null {
-  const t = (text || '').toUpperCase()
-  if (t.includes('EUR') || text.includes('€')) return 'EUR'
-  if (t.includes('GBP') || text.includes('£')) return 'GBP'
-  if (t.includes('CAD') || t.includes('CA$')) return 'CAD'
-  if (t.includes('AUD') || t.includes('A$')) return 'AUD'
-  if (t.includes('USD')) return 'USD'
-  if (text.includes('$')) return 'USD'
-  return null
-}
-
-function parseSalaryRangeFromText(text: string): {
+function parseSalaryRangeFromText(
+  text: string,
+  locationText: string | null | undefined,
+): {
   salaryMin: number | null
   salaryMax: number | null
   salaryCurrency: string | null
   salaryInterval: string | null
+  salaryRaw: string | null
 } {
-  const currency = detectCurrencyFromText(text)
+  const currency = inferCurrencyFromSalaryText(text, { locationText })
 
   const lower = (text || '').toLowerCase()
   const interval =
@@ -140,61 +135,27 @@ function parseSalaryRangeFromText(text: string): {
     salaryMax,
     salaryCurrency: currency,
     salaryInterval: salaryMin || salaryMax ? interval : null,
+    salaryRaw: salaryMin || salaryMax ? text : null,
   }
 }
 
-/**
- * Minimal fetch-with-retries helper for Lever JSON endpoint.
- * Uses AbortController to enforce a per-request timeout.
- */
+// Lever-tagged wrapper around the shared scraper fetch helper. Previous
+// linear-backoff policy ignored Retry-After. Lever is a heavy throttler at
+// the IP level so honoring the header matters for keeping jobs fresh.
 async function fetchLeverWithRetry<T>(
   url: string,
-  attempts = 3,
+  attempts = 4,
   timeoutMs = TIMEOUT_MS,
 ): Promise<T> {
-  let lastError: any = null
-
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const controller = new AbortController()
-      const id = setTimeout(() => controller.abort(), timeoutMs)
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'User-Agent': USER_AGENT,
-        },
-        cache: 'no-store',
-        signal: controller.signal,
-      })
-
-      clearTimeout(id)
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} ${res.statusText}`)
-      }
-
-      const contentType = res.headers.get('content-type') || ''
-      if (!contentType.includes('application/json')) {
-        console.error(`[Lever] Non-JSON response (${contentType || 'unknown'}) for ${url}`)
-        throw new Error('Lever returned HTML instead of JSON (likely rate limited or blocked)')
-      }
-
-      return (await res.json()) as T
-    } catch (err: any) {
-      lastError = err
-      const msg = err?.message || String(err)
-      console.warn(`[Lever] fetch attempt ${i + 1} failed for ${url}: ${msg}`)
-
-      if (i < attempts - 1) {
-        // exponential-ish backoff: 500ms, 1000ms, 1500ms
-        await new Promise((r) => setTimeout(r, 500 * (i + 1)))
-      }
-    }
-  }
-
-  throw lastError
+  return fetchJsonWithBackoff<T>(url, {
+    attempts,
+    timeoutMs,
+    headers: { 'User-Agent': USER_AGENT },
+    onRetry: (info) =>
+      console.warn(
+        `[Lever] retry ${info.attempt}/${info.attempts} for ${info.url} in ${info.delayMs}ms (${info.reason})`,
+      ),
+  })
 }
 
 /**
@@ -229,12 +190,15 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
     // Enhanced salary parsing: collect all mentions, parse a best-effort range.
     const salaryMentions = collectSalaryMentions(item)
     const bestSalaryText = salaryMentions.join(' | ')
-    const parsedSalary = bestSalaryText ? parseSalaryRangeFromText(bestSalaryText) : null
+    const parsedSalary = bestSalaryText
+      ? parseSalaryRangeFromText(bestSalaryText, locationText)
+      : null
 
     let salaryMin: number | null = parsedSalary?.salaryMin ?? null
     let salaryMax: number | null = parsedSalary?.salaryMax ?? null
     let salaryCurrency: string | null = parsedSalary?.salaryCurrency ?? null
     let salaryInterval: string | null = parsedSalary?.salaryInterval ?? null
+    const salaryRaw: string | null = parsedSalary?.salaryRaw ?? (bestSalaryText || null)
 
     // Backward-compatible fallback: some Lever boards expose salary in lists[].content
     if (!salaryMin && !salaryMax) {
@@ -245,10 +209,11 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
 
       if (comp && typeof comp.content === 'string') {
         const m = comp.content.match(/\$?\s*([\d,]+)(?:[^\d]+\$?\s*([\d,]+))?/)
-        if (m) {
+        const fallbackCurrency = inferCurrencyFromSalaryText(comp.content, { locationText })
+        if (m && fallbackCurrency) {
           salaryMin = Number(m[1].replace(/,/g, ''))
           if (m[2]) salaryMax = Number(m[2].replace(/,/g, ''))
-          salaryCurrency = salaryCurrency ?? 'USD'
+          salaryCurrency = salaryCurrency ?? fallbackCurrency
           salaryInterval = salaryInterval ?? 'year'
         }
       }
@@ -279,6 +244,7 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
       salaryMax,
       salaryCurrency,
       salaryInterval,
+      salaryRaw,
 
       employmentType: commitment,
       descriptionHtml,
@@ -298,6 +264,7 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
         _sixFigureJobs: {
           descriptionText,
           salaryMentions,
+          salaryRaw,
         },
       },
     }

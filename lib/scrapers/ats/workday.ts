@@ -1,4 +1,6 @@
 import type { ATSResult, AtsJob } from './types'
+import { inferCurrencyFromSalaryText } from './salaryCurrency'
+import { fetchWithBackoff } from '../utils/fetchWithBackoff'
 
 const USER_AGENT = 'SixFigureJobs/1.0 (+job-board-scraper)'
 const TIMEOUT_MS = 15000
@@ -119,45 +121,33 @@ function extractContextFromHtml(html: string, fallbackOrigin: string): WorkdayCo
   }
 }
 
+// Workday-tagged wrapper around the shared scraper fetch helper. The
+// previous custom retry loop ignored Retry-After. Workday tenants can
+// rate-limit aggressively when scraped during their cron windows.
 async function fetchTextWithRetry(
   url: string,
   init: RequestInit = {},
-  attempts = 3,
+  attempts = 4,
   timeoutMs = TIMEOUT_MS,
 ): Promise<string> {
-  let lastError: unknown = null
-
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
-      const res = await fetch(url, {
-        ...init,
-        headers: {
-          'User-Agent': USER_AGENT,
-          ...(init.headers || {}),
-        },
-        cache: 'no-store',
-        signal: controller.signal,
-      })
-
-      clearTimeout(timeoutId)
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} ${res.statusText}`)
-      }
-
-      return await res.text()
-    } catch (error) {
-      lastError = error
-      if (attempt < attempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
-      }
-    }
-  }
-
-  throw lastError
+  const method = (typeof init.method === 'string' ? init.method : 'GET').toUpperCase()
+  const callerHeaders =
+    init.headers && !Array.isArray(init.headers) && !(init.headers instanceof Headers)
+      ? (init.headers as Record<string, string>)
+      : {}
+  const res = await fetchWithBackoff(url, {
+    method,
+    attempts,
+    timeoutMs,
+    body: (init.body as BodyInit | null | undefined) ?? undefined,
+    headers: { 'User-Agent': USER_AGENT, ...callerHeaders },
+    onRetry: (info) =>
+      console.warn(
+        `[Workday] retry ${info.attempt}/${info.attempts} for ${info.url} in ${info.delayMs}ms (${info.reason})`,
+      ),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
+  return res.text()
 }
 
 async function fetchJsonWithRetry<T>(
@@ -213,24 +203,27 @@ function stripHtml(html: string): string {
     .trim()
 }
 
-function detectCurrencyFromText(text: string): string | null {
-  const upper = text.toUpperCase()
-  if (upper.includes('EUR') || text.includes('€')) return 'EUR'
-  if (upper.includes('GBP') || text.includes('£')) return 'GBP'
-  if (upper.includes('CAD') || upper.includes('CA$')) return 'CAD'
-  if (upper.includes('AUD') || upper.includes('A$')) return 'AUD'
-  if (upper.includes('USD')) return 'USD'
-  if (text.includes('$')) return 'USD'
-  return null
+function extractSalarySnippet(text: string): string | null {
+  const label = /(salary|pay|compensation|base\s+salary)\s*(?:range)?\s*[:\-]?/i.exec(text)
+  if (!label || label.index == null) return null
+  const start = label.index
+  const end = Math.min(text.length, label.index + 900)
+  return text.slice(start, end).trim() || null
 }
 
-function parseSalaryRangeFromText(text: string): {
+function parseSalaryRangeFromText(
+  text: string,
+  locationText: string | null | undefined,
+  countryCode: string | null | undefined,
+): {
   salaryMin: number | null
   salaryMax: number | null
   salaryCurrency: string | null
   salaryInterval: string | null
+  salaryRaw: string | null
 } {
-  const lower = text.toLowerCase()
+  const salarySnippet = extractSalarySnippet(text) ?? text
+  const lower = salarySnippet.toLowerCase()
   const interval =
     /\/\s*hour|per\s*hour|\bhr\b/.test(lower)
       ? 'hour'
@@ -244,12 +237,12 @@ function parseSalaryRangeFromText(text: string): {
 
   const numbers: number[] = []
 
-  for (const match of text.matchAll(/(\d+(?:\.\d+)?)\s*k\b/gi)) {
+  for (const match of salarySnippet.matchAll(/(\d+(?:\.\d+)?)\s*k\b/gi)) {
     const value = Number(match[1])
     if (Number.isFinite(value)) numbers.push(Math.round(value * 1000))
   }
 
-  for (const match of text.matchAll(/\b(\d{1,3}(?:,\d{3})+|\d{5,})\b/g)) {
+  for (const match of salarySnippet.matchAll(/\b(\d{1,3}(?:,\d{3})+|\d{5,})\b/g)) {
     const value = Number(match[1].replace(/,/g, ''))
     if (Number.isFinite(value)) numbers.push(value)
   }
@@ -261,8 +254,9 @@ function parseSalaryRangeFromText(text: string): {
   return {
     salaryMin: unique[0] ?? null,
     salaryMax: unique[1] ?? null,
-    salaryCurrency: detectCurrencyFromText(text),
+    salaryCurrency: inferCurrencyFromSalaryText(salarySnippet, { locationText, countryCode }),
     salaryInterval: unique.length ? interval : null,
+    salaryRaw: unique.length ? salarySnippet : null,
   }
 }
 
@@ -343,20 +337,21 @@ function mapWorkdayDetailToJob(
   const { summary, detail } = mapped
   const descriptionHtml = detail?.jobDescription ?? null
   const descriptionText = descriptionHtml ? stripHtml(descriptionHtml) : ''
-  const parsedSalary = descriptionText
-    ? parseSalaryRangeFromText(descriptionText)
-    : {
-        salaryMin: null,
-        salaryMax: null,
-        salaryCurrency: null,
-        salaryInterval: null,
-      }
-
   const locationText =
     detail?.location ??
     summary.locationsText ??
     detail?.jobRequisitionLocation?.descriptor ??
     null
+  const countryCode = detail?.jobRequisitionLocation?.country?.alpha2Code ?? null
+  const parsedSalary = descriptionText
+    ? parseSalaryRangeFromText(descriptionText, locationText, countryCode)
+    : {
+        salaryMin: null,
+        salaryMax: null,
+        salaryCurrency: null,
+        salaryInterval: null,
+        salaryRaw: null,
+      }
 
   const postedAt =
     parsePostedOn(detail?.postedOn) ||
@@ -385,6 +380,7 @@ function mapWorkdayDetailToJob(
     salaryMax: parsedSalary.salaryMax,
     salaryCurrency: parsedSalary.salaryCurrency,
     salaryInterval: parsedSalary.salaryInterval,
+    salaryRaw: parsedSalary.salaryRaw,
 
     employmentType: detail?.timeType ?? null,
     descriptionHtml,

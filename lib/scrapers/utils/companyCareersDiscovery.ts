@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio'
 
+import { fetchWithBackoff } from './fetchWithBackoff'
 import { normalizePublicCompanyWebsite } from '../../companies/website'
 import { cleanJobDescriptionHtml, stripJobHtmlTags } from '../../jobs/descriptionCleaning'
 import { detectAtsFromUrl } from '../../normalizers/ats'
@@ -32,6 +33,10 @@ const CAREERS_LINK_TEXT_RE =
 const JOB_PATH_RE = /\/(jobs?|careers?|positions?|openings?)(?:\/|$)/i
 const SALARY_SIGNAL_RE =
   /(?:US\$|A\$|C\$|NZ\$|S\$|CHF|SEK|NOK|DKK|USD|EUR|GBP|AUD|CAD|SGD|INR|₹|€|£|\$)\s*\d[\d,.\s]*[kKmM]?/i
+const COMPENSATION_CONTEXT_RE =
+  /\b(base\s+salary|salary\s+range|salary\s+band|salary|pay\s+range|pay\s+transparency|target\s+pay|compensation\s+range|compensation|annual\s+pay|annual\s+salary|hiring\s+range|ote)\b/i
+const MONEY_TEXT_RE =
+  /(?:US\$|A\$|C\$|NZ\$|S\$|CHF|SEK|NOK|DKK|USD|EUR|GBP|AUD|CAD|SGD|INR|₹|€|£|\$)\s*\d[\d,.\s]*[kKmM]?|\d[\d,.\s]*[kKmM]?\s*(?:USD|EUR|GBP|AUD|CAD|SGD|INR|CHF|SEK|NOK|DKK)\b/i
 const GENERIC_LINK_TEXT_RE =
   /^(all jobs|job openings|open positions|careers|jobs|view openings|see openings|open roles)$/i
 const BLOCKED_LINK_RE =
@@ -516,7 +521,10 @@ export function hasStrongHighSalarySignal(job: Partial<StructuredJobSnapshot>): 
     if (usdAnnual != null && usdAnnual >= 100_000) return true
   }
 
-  const parsed = parseSalaryFromText(job.salaryRaw || job.descriptionText || job.descriptionHtml || null)
+  const salaryText =
+    job.salaryRaw ||
+    extractCompensationSnippet(job.descriptionText || job.descriptionHtml || null)
+  const parsed = parseSalaryFromText(salaryText)
   if (!parsed) return false
 
   const normalized = normalizeSalary({
@@ -527,6 +535,36 @@ export function hasStrongHighSalarySignal(job: Partial<StructuredJobSnapshot>): 
   })
   const usdAnnual = estimateUsdAnnualFromNormalized(normalized)
   return usdAnnual != null && usdAnnual >= 100_000
+}
+
+function extractCompensationSnippet(text: string | null | undefined): string | null {
+  const normalized = normalizeText(stripJobHtmlTags(String(text || '')))
+  if (!normalized) return null
+
+  const contexts = Array.from(normalized.matchAll(new RegExp(COMPENSATION_CONTEXT_RE, 'ig')))
+  const money = Array.from(normalized.matchAll(new RegExp(MONEY_TEXT_RE, 'ig')))
+  if (!contexts.length || !money.length) return null
+
+  for (const context of contexts) {
+    const contextIndex = context.index ?? -1
+    if (contextIndex < 0) continue
+
+    const nearbyMoney = money.find((match) => {
+      const moneyIndex = match.index ?? -1
+      return moneyIndex >= 0 && Math.abs(moneyIndex - contextIndex) <= 700
+    })
+
+    if (!nearbyMoney) continue
+
+    const start = Math.max(0, Math.min(contextIndex, nearbyMoney.index ?? contextIndex) - 160)
+    const end = Math.min(
+      normalized.length,
+      Math.max(contextIndex + context[0].length, (nearbyMoney.index ?? contextIndex) + nearbyMoney[0].length) + 700,
+    )
+    return normalized.slice(start, end).trim() || null
+  }
+
+  return null
 }
 
 export function extractCareerPageSignals(html: string, pageUrl: string): CareerPageSignals {
@@ -586,15 +624,11 @@ export function extractGenericJobDetail(html: string, pageUrl: string): Structur
     primaryStructured?.descriptionText ||
     (descriptionHtml ? stripJobHtmlTags(descriptionHtml) : normalizeText($('main').text()) || null)
 
-  const salaryFromText = parseSalaryFromText(
-    [
-      primaryStructured?.salaryRaw,
-      normalizeText($('main').text()),
-      normalizeText($('body').text()).slice(0, 5000),
-    ]
-      .filter(Boolean)
-      .join(' '),
-  )
+  const textSalarySnippet =
+    primaryStructured?.salaryRaw ||
+    extractCompensationSnippet(descriptionText) ||
+    extractCompensationSnippet(normalizeText($('main').text()))
+  const salaryFromText = parseSalaryFromText(textSalarySnippet)
 
   return {
     title,
@@ -623,22 +657,20 @@ export async function fetchHtmlPage(
   url: string,
   timeoutMs = DEFAULT_DISCOVERY_TIMEOUT_MS,
 ): Promise<{ url: string; html: string } | null> {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
+  // Routed through the shared fetchWithBackoff util — Retry-After-aware on
+  // 429/503, exponential backoff for transient 5xx/network errors. Cascading
+  // benefit: breezy/teamtailor/icims ATS scrapers (which all rely on this
+  // helper) inherit the rate-limit aware retry without any per-scraper
+  // changes.
   try {
-    const response = await fetch(url, {
-      method: 'GET',
+    const response = await fetchWithBackoff(url, {
+      timeoutMs,
       headers: {
         'User-Agent': DISCOVERY_USER_AGENT,
         Accept: 'text/html,application/xhtml+xml',
       },
-      cache: 'no-store',
-      redirect: 'follow',
-      signal: controller.signal,
     })
 
-    clearTimeout(timeoutId)
     if (!response.ok) return null
 
     const contentType = response.headers.get('content-type') || ''
@@ -649,7 +681,6 @@ export async function fetchHtmlPage(
       html: await response.text(),
     }
   } catch {
-    clearTimeout(timeoutId)
     return null
   }
 }

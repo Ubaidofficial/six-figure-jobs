@@ -86,6 +86,15 @@ const MAX_ATS_TIMEOUT_MS = 10 * 60 * 1000
 const ATS_FAILURE_COOLDOWN_MS =
   Math.max(0, Number(process.env.ATS_FAILURE_COOLDOWN_MINUTES ?? '60')) * 60 * 1000
 
+// Each board scraper gets a hard time budget — a hung board (e.g. one that
+// loses its connection mid-fetch) used to block the entire orchestrator
+// because the runWithConcurrency loop only had per-ATS timeouts. Default
+// 60s, configurable via env.
+const DEFAULT_BOARD_TIMEOUT_MS = Math.max(
+  5_000,
+  Number(process.env.BOARD_SCRAPE_TIMEOUT_MS ?? '60000'),
+)
+
 function parseCliArgs(): CliOptions {
   const args = process.argv.slice(2)
 
@@ -254,7 +263,12 @@ async function runBoardScrapers(options: CliOptions): Promise<DailyScrapeStats> 
     const startTime = Date.now()
 
     try {
-      const result = (await run()) as any
+      // Per-board hard timeout — see DEFAULT_BOARD_TIMEOUT_MS above.
+      const result = (await withTimeout(
+        Promise.resolve(run() as Promise<any>),
+        DEFAULT_BOARD_TIMEOUT_MS,
+        `board ${name}`,
+      )) as any
       const elapsedMs = Date.now() - startTime
 
       const created = Number(result?.created ?? 0)

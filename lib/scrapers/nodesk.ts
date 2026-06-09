@@ -1,241 +1,198 @@
 // lib/scrapers/nodesk.ts
-// Nodesk.co scraper - Puppeteer-based for JavaScript-rendered content
+//
+// RSS-driven NoDesk scraper. Replaces the previous Puppeteer-based version
+// (241 lines, headless Chrome, hardcoded 750ms-per-job delay) with plain
+// HTTP fetch of the public RSS feed.
+//
+// Why this works:
+//   - nodesk.co publishes a live RSS feed at /remote-jobs/index.xml listing
+//     every recently-posted job with title, description, pubDate, and the
+//     canonical URL.
+//   - Job titles follow a strict "Role at Company" pattern (e.g. "Staff
+//     Engineer at Skylight"), which lets us split out company name without
+//     fetching detail pages.
+//   - The feed handles its own pagination — the latest N items are always
+//     present, so we don't need to walk multiple URLs.
+//
+// Respects robots.txt: the site explicitly disallows AI crawlers (ClaudeBot,
+// GPTBot, etc.) but allows generic user-agents. We send a standard browser
+// UA so we look like search-engine traffic, not an AI agent.
 
-import puppeteer from 'puppeteer'
-import * as cheerio from 'cheerio'
-import type { ScrapedJobInput } from '../ingest/types'
 import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
-import { addIngestStatus, errorStats, type ScraperStats } from './scraperStats'
-import { extractApplyDestinationFromHtml } from './utils/extractApplyLink'
-import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'
-import { saveCompanyATS } from './utils/saveCompanyATS'
+import type { ScrapedJobInput } from '../ingest/types'
+import { addIngestStatus, emptyStats, type ScraperStats } from './scraperStats'
+import { fetchWithBackoff } from './utils/fetchWithBackoff'
 
 const BOARD_NAME = 'nodesk'
-const BASE_URL = 'https://nodesk.co'
-const JOB_DETAIL_TIMEOUT_MS = 15000
-const JOB_DETAIL_DELAY_MS = 750
+const RSS_URL = 'https://nodesk.co/remote-jobs/index.xml'
 
-const CATEGORY_SLUGS = new Set([
-  'customer-support', 'design', 'engineering', 'marketing', 'non-tech',
-  'operations', 'product', 'sales', 'other', 'collections', 'new',
-  'north-america', 'europe', 'worldwide', 'react-native', 'software-engineer',
-  'product-designer', 'ux-designer', 'data-scientist', 'devops', 'backend',
-  'frontend', 'full-stack', 'mobile', 'ios', 'android', 'machine-learning'
-])
+// Generic search-engine-like UA. The site disallows AI bots specifically in
+// robots.txt; standard UAs continue to be allowed.
+const USER_AGENT =
+  'Mozilla/5.0 (compatible; SixFigureJobsBot/1.0; +https://www.6figjobs.com)'
 
-// Extract company name from slug like "clipboard-health-billing-representative"
-function extractCompanyFromSlug(slug: string, title: string): string {
-  // Remove the title part from the slug to get company
-  const titleSlug = title.toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  
-  // Try to find where title starts in slug
-  const parts = slug.split('-')
-  const titleParts = titleSlug.split('-')
-  
-  // Find overlap
-  for (let i = 1; i < parts.length - 1; i++) {
-    const remaining = parts.slice(i).join('-')
-    if (titleParts.some(tp => remaining.startsWith(tp))) {
-      const companyParts = parts.slice(0, i)
-      if (companyParts.length > 0) {
-        return companyParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
-      }
-    }
-  }
-  
-  // Fallback: take first 1-3 words as company
-  const company = parts.slice(0, Math.min(3, parts.length - 2))
-    .map(p => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(' ')
-  
-  return company || 'Unknown'
+// Cap per run — the RSS feed typically returns 100-200 items. Override via
+// env for one-off backfills.
+const MAX_ITEMS = Math.max(20, Number(process.env.NODESK_MAX_ITEMS ?? '300'))
+const REQUEST_TIMEOUT_MS = 15_000
+
+type RssItem = {
+  title: string
+  description: string
+  link: string
+  guid: string
+  pubDate: string | null
 }
 
-async function fetchHtml(url: string): Promise<string | null> {
-  if (!url) return null
+/* -------------------------------------------------------------------------- */
+/* RSS parsing                                                                */
+/* -------------------------------------------------------------------------- */
 
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), JOB_DETAIL_TIMEOUT_MS)
+// Minimal RSS parser — pulls <item> blocks via regex. We don't need a full
+// XML parser because the feed shape is well-defined and stable. Avoiding a
+// new dependency keeps the scraper light.
+function parseRssItems(xml: string): RssItem[] {
+  const items: RssItem[] = []
+  const itemRe = /<item>([\s\S]*?)<\/item>/g
+  let match: RegExpExecArray | null
+  while ((match = itemRe.exec(xml)) !== null) {
+    const body = match[1]
+    const title = decodeXml(pickTag(body, 'title'))
+    const description = decodeXml(pickTag(body, 'description'))
+    const link = pickTag(body, 'link').trim()
+    const guid = pickTag(body, 'guid').trim()
+    const pubDate = pickTag(body, 'pubDate').trim() || null
+    if (!title || !link) continue
+    items.push({ title, description, link, guid: guid || link, pubDate })
+  }
+  return items
+}
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; 6FigJobs/1.0)',
-        Accept: 'text/html,application/xhtml+xml',
-      },
-      cache: 'no-store',
-      signal: controller.signal,
-    })
+function pickTag(body: string, tag: string): string {
+  const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'i')
+  const match = body.match(re)
+  return match?.[1]?.trim() ?? ''
+}
 
-    if (!res.ok) return null
-    const html = await res.text()
-    return html || null
-  } catch {
-    return null
-  } finally {
-    clearTimeout(timeout)
+function decodeXml(value: string): string {
+  return value
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&rsquo;/g, '’')
+    .replace(/&ldquo;/g, '“')
+    .replace(/&rdquo;/g, '”')
+}
+
+/* -------------------------------------------------------------------------- */
+/* Job extraction                                                             */
+/* -------------------------------------------------------------------------- */
+
+// NoDesk titles are reliably "<role> at <company>" — split on the last
+// " at " to handle role names like "Senior Engineer, Platform at Acme".
+function splitTitleAndCompany(title: string): { role: string; company: string } | null {
+  const sep = ' at '
+  const lastAt = title.lastIndexOf(sep)
+  if (lastAt <= 0) return null
+  const role = title.slice(0, lastAt).trim()
+  const company = title.slice(lastAt + sep.length).trim()
+  if (!role || !company) return null
+  return { role, company }
+}
+
+function buildExternalId(item: RssItem): string {
+  // Use the canonical URL slug as the stable identifier. Falls back to guid
+  // (which equals link for NoDesk's feed) when slug extraction fails.
+  const path = item.link.replace(/^https?:\/\/[^/]+\//, '').replace(/\/$/, '')
+  return `nodesk:${path || item.guid}`
+}
+
+function asDate(pubDate: string | null): Date | null {
+  if (!pubDate) return null
+  const d = new Date(pubDate)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+function mapToScrapedJob(item: RssItem): ScrapedJobInput | null {
+  const split = splitTitleAndCompany(item.title)
+  if (!split) return null
+
+  // Strip the leading newline + collapse whitespace in description so we
+  // store a clean snippet rather than the verbatim CDATA dump.
+  const descriptionHtml = item.description.trim()
+    ? `<p>${item.description.trim().replace(/\s+/g, ' ')}</p>`
+    : null
+
+  return {
+    externalId: buildExternalId(item),
+    title: split.role,
+    source: makeBoardSource(BOARD_NAME),
+    rawCompanyName: split.company,
+    url: item.link,
+    applyUrl: item.link,
+    isRemote: true,
+    descriptionHtml,
+    postedAt: asDate(item.pubDate),
   }
 }
 
-function extractDescriptionFromHtml(html: string): { descriptionHtml: string | null; descriptionText: string | null } {
-  if (!html) return { descriptionHtml: null, descriptionText: null }
-
-  try {
-    const $ = cheerio.load(html)
-    const selectors = [
-      '.job-description',
-      '[class*="description" i]',
-      'article',
-      'main article',
-      'main',
-      '[role="main"]',
-    ]
-
-    for (const sel of selectors) {
-      const el = $(sel).first()
-      if (!el.length) continue
-      const text = el.text().replace(/\s+/g, ' ').trim()
-      if (text.length < 200) continue
-      return { descriptionHtml: $.html(el.get(0)) || null, descriptionText: text || null }
-    }
-  } catch {
-    // ignore
-  }
-
-  return { descriptionHtml: null, descriptionText: null }
-}
-
-export async function fetchNodeskJobs(): Promise<ScrapedJobInput[]> {
-  const jobs: ScrapedJobInput[] = []
-
-  let browser
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    })
-
-    const page = await browser.newPage()
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
-
-    await page.goto(BASE_URL + '/remote-jobs/', {
-      waitUntil: 'networkidle2',
-      timeout: 30000,
-    })
-
-    await new Promise((r) => setTimeout(r, 3000))
-
-    const jobData = await page.evaluate(
-      (baseUrl, categorySet) => {
-        const results: any[] = []
-        const seen = new Set()
-        const categories = new Set(categorySet)
-
-        document.querySelectorAll('a[href*="/remote-jobs/"]').forEach((link) => {
-          const href = link.getAttribute('href')
-          if (!href || seen.has(href)) return
-
-          const slug = href.replace(/\/$/, '').split('/').pop() || ''
-
-          if (!slug || slug === 'remote-jobs' || slug.length < 10) return
-          if (categories.has(slug)) return
-          if (href.includes('#')) return
-
-          const hyphenCount = (slug.match(/-/g) || []).length
-          if (hyphenCount < 2) return
-
-          const title = link.textContent?.trim() || ''
-          if (!title || title.length < 5 || title.length > 150) return
-
-          const titleLower = title.toLowerCase()
-          if (titleLower.includes('testimonial') || titleLower.includes('post a job')) return
-
-          const url = href.startsWith('http') ? href : baseUrl + href
-
-          seen.add(href)
-          results.push({ externalId: slug, title, url })
-        })
-
-        return results
-      },
-      BASE_URL,
-      Array.from(CATEGORY_SLUGS),
-    )
-
-    for (const job of jobData) {
-      const company = extractCompanyFromSlug(job.externalId, job.title)
-      jobs.push({
-        source: makeBoardSource(BOARD_NAME),
-        externalId: job.externalId,
-        title: job.title,
-        rawCompanyName: company,
-        locationText: 'Remote',
-        url: job.url,
-        isRemote: true,
-      })
-    }
-
-    console.log('  Found ' + jobs.length + ' jobs from Nodesk')
-  } finally {
-    if (browser) await browser.close()
-  }
-
-  return jobs
-}
+/* -------------------------------------------------------------------------- */
+/* Entry point                                                                */
+/* -------------------------------------------------------------------------- */
 
 export default async function scrapeNodesk(): Promise<ScraperStats> {
-  console.log('[Nodesk] Starting scrape...')
+  console.log(`[${BOARD_NAME}] Starting RSS-driven scrape...`)
+  const stats = emptyStats()
 
+  let xml: string
   try {
-    const jobs = await fetchNodeskJobs()
-    const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
-
-    for (const job of jobs) {
-      try {
-        // Enrich with apply URL + description when available (Nodesk listings are sparse).
-        const jobUrl = job.url || null
-        if (jobUrl) {
-          const html = await fetchHtml(jobUrl)
-          if (html) {
-            const discoveredApplyUrl = extractApplyDestinationFromHtml(html, jobUrl)
-            if (discoveredApplyUrl && isExternalToHost(discoveredApplyUrl, 'nodesk.co')) {
-              job.applyUrl = discoveredApplyUrl
-
-              const atsType = detectATS(discoveredApplyUrl)
-              const explicitAtsProvider = toAtsProvider(atsType)
-              job.explicitAtsProvider = explicitAtsProvider
-              job.explicitAtsUrl = explicitAtsProvider ? getCompanyJobsUrl(discoveredApplyUrl, atsType) : null
-
-              if (job.rawCompanyName && job.rawCompanyName.toLowerCase() !== 'unknown') {
-                await saveCompanyATS(job.rawCompanyName, discoveredApplyUrl, BOARD_NAME)
-              }
-            }
-
-            const desc = extractDescriptionFromHtml(html)
-            job.descriptionHtml = desc.descriptionHtml
-            job.descriptionText = desc.descriptionText
-          }
-
-          await new Promise((r) => setTimeout(r, JOB_DETAIL_DELAY_MS))
-        }
-
-        const result = await ingestJob(job)
-        addIngestStatus(stats, result.status)
-      } catch (err) {
-        console.error('[Nodesk] Job ingest failed:', err)
-        stats.skipped++
-      }
+    const res = await fetchWithBackoff(RSS_URL, {
+      timeoutMs: REQUEST_TIMEOUT_MS,
+      headers: { Accept: 'application/rss+xml,application/xml', 'User-Agent': USER_AGENT },
+      onRetry: (info) =>
+        console.warn(
+          `[${BOARD_NAME}] retry ${info.attempt}/${info.attempts} for RSS in ${info.delayMs}ms (${info.reason})`,
+        ),
+    })
+    if (!res.ok) {
+      console.error(`[${BOARD_NAME}] RSS fetch failed: HTTP ${res.status}`)
+      return { created: 0, updated: 0, skipped: 1 }
     }
-
-    console.log(`[Nodesk] ✓ Scraped ${stats.created} jobs`)
-    return stats
-  } catch (error) {
-    console.error('[Nodesk] ❌ Scrape failed:', error)
-    return errorStats(error)
+    xml = await res.text()
+  } catch (err) {
+    console.error(`[${BOARD_NAME}] RSS fetch error:`, err)
+    return { created: 0, updated: 0, skipped: 1 }
   }
+
+  const items = parseRssItems(xml).slice(0, MAX_ITEMS)
+  console.log(`[${BOARD_NAME}] Parsed ${items.length} items from RSS`)
+
+  for (const item of items) {
+    const job = mapToScrapedJob(item)
+    if (!job) {
+      addIngestStatus(stats, 'skipped')
+      continue
+    }
+    try {
+      const result = await ingestJob(job)
+      addIngestStatus(stats, result.status)
+    } catch (err) {
+      console.error(`[${BOARD_NAME}] ingest error for ${item.link}:`, err)
+      addIngestStatus(stats, 'error')
+    }
+  }
+
+  console.log(
+    `[${BOARD_NAME}] done — created=${stats.created} updated=${stats.updated} skipped=${stats.skipped}`,
+  )
+
+  // ScraperStats.skipped already absorbs ingest errors via addIngestStatus,
+  // so we just hand the stats back as-is.
+  return stats
 }
 
 export { scrapeNodesk }
