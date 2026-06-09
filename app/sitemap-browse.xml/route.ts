@@ -9,6 +9,10 @@ import { getSiteUrl } from '@/lib/seo/site'
 import { prisma } from '@/lib/prisma'
 import { buildWhere } from '@/lib/jobs/queryJobs'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '@/lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '@/lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 
@@ -37,6 +41,9 @@ async function getGlobalLastmod(): Promise<string> {
 }
 
 export async function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-browse')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-browse')
+  }
   try {
     const [report, lastmod] = await Promise.all([
       buildBrowseSitemapReport(3),

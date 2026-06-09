@@ -15,6 +15,11 @@
 
 ### Features
 
+* phased indexing rollout (`INDEXING_PHASE` env var, defaults to `1`). Phase 1 silences 11 sitemap families (blog, browse, category, city, country, level, remote, skills, slices + 2 slice shards), letting only `sitemap-jobs`, `sitemap-company`, `sitemap-salary` ship URLs. Direct response from this audit: only the homepage was indexed despite Google crawling ~20k URLs — pushing thousands more crawlable pages made the "Crawled - currently not indexed" bucket worse, not better. Silenced families return 200 with an empty `<urlset>` and an `X-Indexing-Phase` header. Bump `INDEXING_PHASE=2` to re-enable.
+* `scripts/pushPhase1ToIndexingApi.ts` — one-shot enumeration of the 105 Phase 1 URLs (hubs, top-10 role guides, role × top-5 country combos, top-20 priority companies) submitted to Google's Indexing API as `URL_UPDATED`. Run via `railway run` to seed the crawl queue after Phase 1 ships.
+
+### Features
+
 * emit per-job JobPosting JSON-LD on /company/[slug] (top 10 indexable jobs) so company pages can surface in Google Jobs rich results in addition to the existing Organization/ItemList/CollectionPage schemas
 * reconcile broken Greenhouse salary intervals, repair live outliers, and unblock indexable job pages
 * add source expiry fields to scraped ingest input for consistent validThrough handling

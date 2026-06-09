@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getCitySitemapUrls } from '../../lib/seo/citySitemap'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '../../lib/seo/indexingPhase'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200
@@ -15,6 +19,9 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-city')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-city')
+  }
   try {
     const urls = await getCitySitemapUrls()
 

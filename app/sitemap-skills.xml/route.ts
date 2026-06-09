@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getSkillSitemapUrls } from '../../lib/seo/skillSitemap'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '../../lib/seo/indexingPhase'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200
@@ -15,6 +19,9 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-skills')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-skills')
+  }
   try {
     const urls = await getSkillSitemapUrls()
 

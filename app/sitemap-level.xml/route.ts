@@ -3,12 +3,19 @@ import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { buildWhere } from '../../lib/jobs/queryJobs'
 import { getSiteUrl } from '../../lib/seo/site'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '../../lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-level')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-level')
+  }
   try {
     const MIN_INDEXABLE_JOBS = 3
     const levels = ['entry', 'mid', 'senior', 'lead', 'executive']

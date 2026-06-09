@@ -4,6 +4,10 @@
 import { NextResponse } from 'next/server'
 import { buildSliceSitemapEntries } from '../../../lib/seo/slicesSitemap'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../../lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '../../../lib/seo/indexingPhase'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 86400 // 24h
@@ -18,6 +22,9 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-slices')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-slices-priority')
+  }
   const entries = await buildSliceSitemapEntries('priority')
 
   const urls = entries

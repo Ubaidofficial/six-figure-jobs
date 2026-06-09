@@ -4,6 +4,10 @@
 import { getSiteUrl } from '../../lib/seo/site'
 import { buildSliceSitemapEntries, type SliceShard } from '../../lib/seo/slicesSitemap'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '../../lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 
@@ -21,6 +25,9 @@ const SHARDS: ShardConfig[] = [
 ]
 
 export async function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-slices')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-slices')
+  }
   const checks = await Promise.all(
     SHARDS.map(async ({ shard, path }) => {
       const hasUrls = (await buildSliceSitemapEntries(shard, { limit: 1 })).length > 0

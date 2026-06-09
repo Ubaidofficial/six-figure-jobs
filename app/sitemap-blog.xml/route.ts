@@ -5,6 +5,10 @@ import { NextResponse } from 'next/server'
 import { getAllPosts } from '@/lib/blog/posts'
 import { getSiteUrl } from '@/lib/seo/site'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '@/lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '@/lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 
@@ -21,6 +25,9 @@ function escapeXml(s: string) {
 }
 
 export function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-blog')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-blog')
+  }
   const posts = getAllPosts()
 
   const urls = [

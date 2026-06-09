@@ -1,9 +1,16 @@
 import { getCountrySitemapUrls } from '../../lib/seo/countrySitemap'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '../../lib/seo/indexingPhase'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-country')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-country')
+  }
   const urls = await getCountrySitemapUrls()
   if (urls.length === 0) {
     return new Response('Not found', { status: 404 })

@@ -4,12 +4,19 @@ import { buildWhere } from '../../lib/jobs/queryJobs'
 import { getSiteUrl } from '../../lib/seo/site'
 import { JOB_CATEGORY_MAP, JOB_CATEGORY_SLUGS } from '../../lib/seo/jobCategories'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '../../lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-category')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-category')
+  }
   try {
     const MIN_INDEXABLE_JOBS = 3
     const categories = JOB_CATEGORY_SLUGS

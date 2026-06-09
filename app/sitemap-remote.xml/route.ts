@@ -3,6 +3,10 @@ import { collectRemoteRoleRows } from '../../lib/seo/remoteSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
 import { getMaxRemoteSitemapUrls } from '../../lib/seo/sitemapPolicy'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
+import {
+  buildPhase1SilencedSitemapResponse,
+  isSitemapFamilyEnabled,
+} from '../../lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 
@@ -19,6 +23,9 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
+  if (!isSitemapFamilyEnabled('sitemap-remote')) {
+    return buildPhase1SilencedSitemapResponse('sitemap-remote')
+  }
   const rows = (await collectRemoteRoleRows()).slice(0, getMaxRemoteSitemapUrls())
   if (rows.length === 0) {
     return new Response('Not found', { status: 404 })
