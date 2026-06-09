@@ -1,4 +1,5 @@
 import type { ATSResult, AtsJob } from './types'
+import { fetchJsonWithBackoff } from '../utils/fetchWithBackoff'
 
 const USER_AGENT = 'SixFigureJobs/1.0 (+job-board-scraper)'
 const TIMEOUT_MS = 15000
@@ -47,53 +48,39 @@ function extractAccountSlug(atsUrl: string): string | null {
   }
 }
 
+// Workable-tagged wrapper around the shared scraper fetch helper. The
+// upstream is sensitive to throttling under bursty company loads; the shared
+// util honors Retry-After on 429/503 and applies exponential backoff for
+// transient errors. Workable needs custom headers (Content-Type +
+// X-Requested-With) so we forward them through `init`.
 async function fetchJsonWithRetry<T>(
   url: string,
   init: RequestInit,
-  attempts = 3,
+  attempts = 4,
   timeoutMs = TIMEOUT_MS,
 ): Promise<T> {
-  let lastError: unknown = null
+  const method = (typeof init.method === 'string' ? init.method : 'GET').toUpperCase()
+  const callerHeaders =
+    init.headers && !Array.isArray(init.headers) && !(init.headers instanceof Headers)
+      ? (init.headers as Record<string, string>)
+      : {}
 
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
-      const res = await fetch(url, {
-        ...init,
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'User-Agent': USER_AGENT,
-          'X-Requested-With': 'XMLHttpRequest',
-          ...(init.headers || {}),
-        },
-        cache: 'no-store',
-        signal: controller.signal,
-      })
-
-      clearTimeout(timeoutId)
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} ${res.statusText}`)
-      }
-
-      const contentType = res.headers.get('content-type') || ''
-      if (!contentType.includes('application/json')) {
-        throw new Error(`Unexpected content-type: ${contentType || 'unknown'}`)
-      }
-
-      return (await res.json()) as T
-    } catch (error) {
-      lastError = error
-      if (attempt < attempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
-      }
-    }
-  }
-
-  throw lastError
+  return fetchJsonWithBackoff<T>(url, {
+    method,
+    attempts,
+    timeoutMs,
+    body: (init.body as BodyInit | null | undefined) ?? undefined,
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': USER_AGENT,
+      'X-Requested-With': 'XMLHttpRequest',
+      ...callerHeaders,
+    },
+    onRetry: (info) =>
+      console.warn(
+        `[Workable] retry ${info.attempt}/${info.attempts} for ${info.url} in ${info.delayMs}ms (${info.reason})`,
+      ),
+  })
 }
 
 async function mapLimit<T, R>(

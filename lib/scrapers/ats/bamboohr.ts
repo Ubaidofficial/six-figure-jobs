@@ -13,6 +13,7 @@
 //   GET https://{subdomain}.bamboohr.com/careers/{jobId}?detail=true
 
 import type { ATSResult, AtsJob } from './types'
+import { fetchJsonWithBackoff } from '../utils/fetchWithBackoff'
 
 const USER_AGENT = 'SixFigureJobs/1.0 (+job-board-scraper)'
 const TIMEOUT_MS = 15000
@@ -63,25 +64,19 @@ function extractSubdomain(atsUrl: string): string | null {
   }
 }
 
+// BambooHR-tagged wrapper around the shared scraper fetch helper. Previously
+// this scraper had NO retry at all — a single transient 429 or network blip
+// dropped every BambooHR-hosted company for the day. The shared util honors
+// Retry-After + exponential backoff on transient errors.
 async function fetchJson<T>(url: string, timeoutMs = TIMEOUT_MS): Promise<T> {
-  const controller = new AbortController()
-  const tid = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': USER_AGENT,
-      },
-      cache: 'no-store',
-      signal: controller.signal,
-    })
-    clearTimeout(tid)
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
-    return res.json() as Promise<T>
-  } catch (err) {
-    clearTimeout(tid)
-    throw err
-  }
+  return fetchJsonWithBackoff<T>(url, {
+    timeoutMs,
+    headers: { 'User-Agent': USER_AGENT },
+    onRetry: (info) =>
+      console.warn(
+        `[BambooHR] retry ${info.attempt}/${info.attempts} for ${info.url} in ${info.delayMs}ms (${info.reason})`,
+      ),
+  })
 }
 
 function parseNumber(val: number | string | null | undefined): number | null {
