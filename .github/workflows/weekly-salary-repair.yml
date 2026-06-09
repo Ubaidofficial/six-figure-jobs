@@ -1,0 +1,91 @@
+name: Weekly salary outlier repair
+
+# Description-derived salaries above $600k USD are almost always parser
+# misreads (e.g. "$1.5M total comp over 5 years" → $1.5M annual). The repair
+# script nulls those out and sets salaryParseReason="capped_description" so
+# they fall out of the indexable pool. Running weekly keeps the live result
+# set clean without trampling daily-scrape concerns.
+
+on:
+  schedule:
+    # Sundays 09:00 UTC — picks up the prior week's outliers in one pass and
+    # is well clear of the daily scrape window (06:00 / 18:00 UTC).
+    - cron: "0 9 * * 0"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply the repair (false = dry-run, prints what would change)"
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: weekly-salary-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main'
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Database target guard
+        shell: bash
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          npm run scrape:db-target | tee /tmp/weekly-salary-repair-db-target.log
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Resolve apply flag
+        id: prep
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            APPLY="${{ github.event.inputs.apply }}"
+          else
+            APPLY="true"
+          fi
+          echo "apply=$APPLY" >> "$GITHUB_OUTPUT"
+          echo "Apply mode: $APPLY"
+
+      - name: Dry-run preview (always)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx tsx scripts/repairDescriptionSalaryOutliers.ts | tee /tmp/weekly-salary-repair-preview.log
+
+      - name: Apply repair
+        if: steps.prep.outputs.apply == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx tsx scripts/repairDescriptionSalaryOutliers.ts --apply | tee /tmp/weekly-salary-repair-apply.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: weekly-salary-repair-${{ github.run_id }}
+          path: /tmp/weekly-salary-repair*.log
+          if-no-files-found: ignore
