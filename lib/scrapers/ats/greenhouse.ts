@@ -1,6 +1,7 @@
 // lib/scrapers/ats/greenhouse.ts
 
 import type { ATSResult, AtsJob } from './types'
+import { fetchJsonWithBackoff } from '../utils/fetchWithBackoff'
 
 interface GreenhouseLocation {
   name?: string
@@ -74,55 +75,22 @@ function extractBoardSlug(atsUrl: string): string | null {
   return null
 }
 
-/**
- * Minimal fetch-with-retries helper for Greenhouse API.
- * Uses AbortController to enforce a per-request timeout.
- */
+// Greenhouse-tagged wrapper around the shared scraper fetch helper. We use the
+// shared util so 429 / Retry-After / transient 5xx behavior matches every other
+// ATS — Greenhouse previously did blind linear backoff and ignored Retry-After.
 async function fetchJsonWithRetry<T>(
   url: string,
-  attempts = 3,
+  attempts = 4,
   timeoutMs = 15000,
 ): Promise<T> {
-  let lastError: any = null
-
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const controller = new AbortController()
-      const id = setTimeout(() => controller.abort(), timeoutMs)
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'User-Agent': 'SixFigureJobs/1.0 (+job-board-scraper)',
-        },
-        cache: 'no-store',
-        signal: controller.signal,
-      })
-
-      clearTimeout(id)
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} ${res.statusText}`)
-      }
-
-      const json = (await res.json()) as T
-      return json
-    } catch (err: any) {
-      lastError = err
-      const msg = err?.message || String(err)
+  return fetchJsonWithBackoff<T>(url, {
+    attempts,
+    timeoutMs,
+    onRetry: (info) =>
       console.warn(
-        `[Greenhouse] fetch attempt ${i + 1} failed for ${url}: ${msg}`,
-      )
-
-      if (i < attempts - 1) {
-        // simple backoff: 500ms, 1000ms, ...
-        await new Promise((r) => setTimeout(r, 500 * (i + 1)))
-      }
-    }
-  }
-
-  throw lastError
+        `[Greenhouse] retry ${info.attempt}/${info.attempts} for ${info.url} in ${info.delayMs}ms (${info.reason})`,
+      ),
+  })
 }
 
 /**

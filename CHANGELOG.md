@@ -5,6 +5,7 @@
 * return 410 Gone (instead of 404) for expired and stale job pages — Google clears 410s from the index quickly while 404s keep re-crawling; addresses the GSC "Not found (404)" backlog on /job/* URLs
 * render SSR pagination links on /jobs so Google can crawl beyond page 1; previous client-only InfiniteJobsList left pages 2+ invisible to crawlers
 * swap /search from force-dynamic to ISR 60s with public CDN cache headers — the page is noindex by design so caching has no SEO impact, but every search hit was re-rendering server-side
+* add shared `fetchWithBackoff` scraper util that honors HTTP 429/503 Retry-After and applies exponential backoff on transient 5xx/network errors; Greenhouse rewired to use it (previously did blind linear backoff and ignored Retry-After). Other ATS scrapers can adopt incrementally.
 
 ### Features
 
