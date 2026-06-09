@@ -1,88 +1,331 @@
 // lib/scrapers/remote100k.ts
-// UPDATED: Fixes "Detached Frame" error by using fresh pages for each category
+//
+// Sitemap-driven Remote100k scraper. Replaces the previous Puppeteer-based
+// version (668 lines, headless browser, 2 categories per run capped at the
+// "Load More" button) with plain HTTP + JSON-LD parsing.
+//
+// Why this works:
+//   1. https://remote100k.com/sitemap.xml is a flat urlset listing every job
+//      URL — no need to interact with the "Load More" button.
+//   2. Every /remote-job/[slug] page emits a complete schema.org JobPosting
+//      JSON-LD with title, salary (min+max+currency), employer name,
+//      employment type, datePosted, applicant location requirements, and
+//      the canonical URL. No HTML parsing brittleness.
+//   3. The external "Apply now" employer URL is in the page HTML (the
+//      JSON-LD's `url` field points back to remote100k itself). We extract
+//      it via a focused regex so users click straight through.
+//
+// Respects robots.txt: only hits public pages from the sitemap, never /api/.
 
-import puppeteer, { Browser, Page } from 'puppeteer'
 import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
 import type { ScrapedJobInput, IngestStats } from '../ingest/types'
 import type { ScraperStats } from './scraperStats'
-
-// =============================================================================
-// Constants
-// =============================================================================
+import { fetchWithBackoff } from './utils/fetchWithBackoff'
 
 const BOARD_NAME = 'remote100k'
 const BASE_URL = 'https://remote100k.com'
+const SITEMAP_URL = `${BASE_URL}/sitemap.xml`
 
-// Rate limiting
-const MAX_PAGES_PER_RUN = 2
-const DELAY_BETWEEN_PAGES_MS = 1000 // Increased delay slightly
-const PAGE_LOAD_TIMEOUT_MS = 45000 // Increased timeout
-const WAIT_FOR_CONTENT_MS = 3000
+// Polite pacing — sitemap has ~1k URLs, we don't want to hammer the host.
+const FETCH_CONCURRENCY = 4
+const REQUEST_TIMEOUT_MS = 15_000
 
-// Description sanity limits (Remote100k should be small; full pages are huge)
-const MIN_DESC_CHARS = 500
-const MAX_DESC_CHARS = 50_000
-const OVERSIZE_HARD_CAP_CHARS = 120_000
+// Hard cap on detail-page fetches per run. Set high enough to catch every
+// new job posted during a normal day, low enough to avoid burning the
+// rate-limit budget when something goes wrong. Override via env if needed.
+const MAX_DETAIL_FETCHES = Math.max(
+  50,
+  Number(process.env.REMOTE100K_MAX_DETAIL_FETCHES || '600'),
+)
 
-const CATEGORY_PAGES = [
-  '/remote-jobs/engineering',
-  '/remote-jobs/data-science',
-  '/remote-jobs/product',
-  '/remote-jobs/marketing',
-  '/remote-jobs/sales',
-  '/remote-jobs/design',
-  '/remote-jobs/management',
-  '/remote-jobs/operations',
-  '/remote-jobs/all-other',
-  '/remote-jobs/ai-engineer',
-  '/remote-jobs/software-engineer',
-  '/remote-jobs/devops',
-  '/remote-jobs/frontend-development',
-  '/remote-jobs/backend-development',
-  '/remote-jobs/full-stack-development',
-  '/remote-jobs/data-engineer',
-  '/remote-jobs/machine-learning',
-  '/remote-jobs/cybersecurity',
-  '/remote-jobs/cloud-engineer',
-]
+const USER_AGENT = 'SixFigureJobs/1.0 (+job-board-scraper)'
 
-const CATEGORIES = [
-  'Engineering', 'Marketing', 'Product', 'Data', 'Sales', 
-  'Management', 'Design', 'Operations', 'All Other', 'Data Science'
-]
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
 
-const DETAIL_NOISE_PATTERNS = [
-  /\bsimilar jobs\b/i,
-  /\bshowing\s+\d+\s+jobs\b/i,
-  /\bexplore related pages\b/i,
-  /\bmeet jobcopilot\b/i,
-  /\bstop applying\b/i,
-  /\bremote jobs from companies like\b/i,
-]
-
-// =============================================================================
-// Types
-// =============================================================================
-
-interface ParsedJob {
-  title: string
-  company: string
-  location: string
-  category: string
-  salaryText: string
-  employmentType: string
-  ageText: string
-  url: string
+type RemoteJobPostingJsonLd = {
+  '@context'?: string
+  '@type'?: string
+  title?: string
+  description?: string
+  identifier?: { '@type'?: string; name?: string; value?: string }
+  datePosted?: string
+  validThrough?: string
+  employmentType?: string | string[]
+  hiringOrganization?: { '@type'?: string; name?: string; sameAs?: string; logo?: string }
+  jobLocationType?: string
+  url?: string
+  baseSalary?: {
+    '@type'?: string
+    currency?: string
+    value?: {
+      '@type'?: string
+      minValue?: number
+      maxValue?: number
+      value?: number
+      unitText?: string
+    }
+  }
+  applicantLocationRequirements?:
+    | { '@type'?: string; name?: string }
+    | Array<{ '@type'?: string; name?: string }>
 }
 
-// =============================================================================
-// Scraper Functions
-// =============================================================================
+type JobDetailExtraction = {
+  jsonLd: RemoteJobPostingJsonLd
+  externalApplyUrl: string | null
+  descriptionHtml: string | null
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sitemap discovery                                                          */
+/* -------------------------------------------------------------------------- */
+
+function decodeEntities(input: string): string {
+  return input
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+}
+
+async function loadJobUrlsFromSitemap(): Promise<string[]> {
+  const res = await fetchWithBackoff(SITEMAP_URL, {
+    timeoutMs: REQUEST_TIMEOUT_MS,
+    headers: { Accept: 'application/xml,text/xml,*/*', 'User-Agent': USER_AGENT },
+    onRetry: (info) =>
+      console.warn(
+        `[${BOARD_NAME}] sitemap retry ${info.attempt}/${info.attempts} in ${info.delayMs}ms (${info.reason})`,
+      ),
+  })
+  if (!res.ok) {
+    throw new Error(`[${BOARD_NAME}] sitemap fetch failed: HTTP ${res.status}`)
+  }
+  const xml = await res.text()
+
+  const urls = new Set<string>()
+  const locRegex = /<loc>([^<]+)<\/loc>/g
+  let match: RegExpExecArray | null
+  while ((match = locRegex.exec(xml)) !== null) {
+    const url = decodeEntities(match[1].trim())
+    if (url.startsWith(`${BASE_URL}/remote-job/`)) {
+      urls.add(url)
+    }
+  }
+  return Array.from(urls)
+}
+
+/* -------------------------------------------------------------------------- */
+/* Detail-page parsing                                                        */
+/* -------------------------------------------------------------------------- */
+
+const JSON_LD_REGEX =
+  /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+
+function findJobPostingJsonLd(html: string): RemoteJobPostingJsonLd | null {
+  JSON_LD_REGEX.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = JSON_LD_REGEX.exec(html)) !== null) {
+    const body = match[1].trim()
+    if (!body) continue
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(body)
+    } catch {
+      continue
+    }
+    if (Array.isArray(parsed)) {
+      for (const item of parsed) {
+        if (item && typeof item === 'object' && (item as any)['@type'] === 'JobPosting') {
+          return item as RemoteJobPostingJsonLd
+        }
+      }
+    } else if (parsed && typeof parsed === 'object' && (parsed as any)['@type'] === 'JobPosting') {
+      return parsed as RemoteJobPostingJsonLd
+    }
+  }
+  return null
+}
+
+// External apply URL is on the page but NOT in the JSON-LD — we want to
+// link users directly to the employer ATS, not through the remote100k page.
+// The site appends `?ref=remote100k` to the outbound link, which is a nice
+// signal we can use to find it.
+function findExternalApplyUrl(html: string): string | null {
+  const refMatch = html.match(
+    /href="(https?:\/\/[^"]+ref=remote100k[^"]*)"/i,
+  )
+  if (refMatch?.[1]) return decodeEntities(refMatch[1])
+
+  // Fallback: look for known ATS hosts (greenhouse, lever, workday, ashby).
+  const atsMatch = html.match(
+    /href="(https?:\/\/(?:[a-z0-9.-]+\.)?(?:greenhouse\.io|lever\.co|ashbyhq\.com|workday(?:jobs)?\.com|smartrecruiters\.com|bamboohr\.com|recruitee\.com|workable\.com|breezy\.hr|teamtailor\.com|icims\.com|myworkdayjobs\.com)[^"]*)"/i,
+  )
+  if (atsMatch?.[1]) return decodeEntities(atsMatch[1])
+
+  return null
+}
+
+// Snip a reasonable chunk of description HTML if available. The detail
+// pages have a main content area we can try to capture conservatively.
+function extractDescriptionHtml(html: string): string | null {
+  // Look for the first <article> or a job-description container — fall back
+  // to the meta description so we never store nothing.
+  const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)
+  if (articleMatch?.[1]) {
+    const trimmed = articleMatch[1].trim()
+    if (trimmed.length > 200) return trimmed.slice(0, 20_000)
+  }
+  const metaDesc = html.match(/<meta name="description" content="([^"]+)"/i)
+  if (metaDesc?.[1]) return `<p>${decodeEntities(metaDesc[1])}</p>`
+  return null
+}
+
+async function fetchJobDetail(url: string): Promise<JobDetailExtraction | null> {
+  const res = await fetchWithBackoff(url, {
+    timeoutMs: REQUEST_TIMEOUT_MS,
+    headers: { Accept: 'text/html,application/xhtml+xml', 'User-Agent': USER_AGENT },
+    onRetry: (info) =>
+      console.warn(
+        `[${BOARD_NAME}] detail retry ${info.attempt}/${info.attempts} for ${info.url} in ${info.delayMs}ms (${info.reason})`,
+      ),
+  })
+  if (!res.ok) {
+    if (res.status === 404 || res.status === 410) return null
+    throw new Error(`HTTP ${res.status}`)
+  }
+  const html = await res.text()
+  const jsonLd = findJobPostingJsonLd(html)
+  if (!jsonLd) return null
+
+  return {
+    jsonLd,
+    externalApplyUrl: findExternalApplyUrl(html),
+    descriptionHtml: extractDescriptionHtml(html),
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mapping JobPosting -> ScrapedJobInput                                      */
+/* -------------------------------------------------------------------------- */
+
+function normalizeEmploymentType(input: string | string[] | undefined): string | null {
+  if (!input) return null
+  const value = Array.isArray(input) ? input[0] : input
+  if (!value) return null
+  // Schema.org uses FULL_TIME / PART_TIME / CONTRACTOR / TEMPORARY / INTERN.
+  const map: Record<string, string> = {
+    FULL_TIME: 'Full-time',
+    PART_TIME: 'Part-time',
+    CONTRACTOR: 'Contract',
+    TEMPORARY: 'Temporary',
+    INTERN: 'Internship',
+  }
+  return map[String(value).toUpperCase().replace(/[\s-]+/g, '_')] ?? value
+}
+
+function asISODate(value: string | undefined): Date | null {
+  if (!value) return null
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+function locationFromRequirements(
+  req: RemoteJobPostingJsonLd['applicantLocationRequirements'],
+): string | null {
+  if (!req) return null
+  if (Array.isArray(req)) {
+    const names = req.map((r) => r.name).filter(Boolean) as string[]
+    return names.length > 0 ? names.join(', ') : null
+  }
+  return req.name ?? null
+}
+
+function buildExternalId(url: string, jsonLd: RemoteJobPostingJsonLd): string {
+  const slug = jsonLd.identifier?.value || url.split('/remote-job/').pop() || url
+  return `remote100k:${slug}`
+}
+
+function jsonLdToScrapedJob(
+  detailUrl: string,
+  extraction: JobDetailExtraction,
+): ScrapedJobInput | null {
+  const { jsonLd, externalApplyUrl, descriptionHtml } = extraction
+  const title = decodeEntities(jsonLd.title || '').trim()
+  const company = decodeEntities(jsonLd.hiringOrganization?.name || '').trim()
+  if (!title || !company) return null
+
+  const salaryValue = jsonLd.baseSalary?.value
+  const salaryMin =
+    typeof salaryValue?.minValue === 'number'
+      ? salaryValue.minValue
+      : typeof salaryValue?.value === 'number'
+        ? salaryValue.value
+        : null
+  const salaryMax =
+    typeof salaryValue?.maxValue === 'number' ? salaryValue.maxValue : salaryMin
+
+  const isRemote = (jsonLd.jobLocationType || '').toUpperCase() === 'TELECOMMUTE'
+  const location = locationFromRequirements(jsonLd.applicantLocationRequirements)
+
+  return {
+    externalId: buildExternalId(detailUrl, jsonLd),
+    title,
+    source: makeBoardSource(BOARD_NAME),
+    rawCompanyName: company,
+    url: detailUrl,
+    applyUrl: externalApplyUrl ?? detailUrl,
+    locationText: location,
+    isRemote,
+    remoteRegion: location,
+    salaryMin,
+    salaryMax,
+    salaryCurrency: jsonLd.baseSalary?.currency ?? null,
+    salaryInterval:
+      (salaryValue?.unitText || '').toUpperCase() === 'YEAR' ? 'YEAR' : null,
+    salaryRaw:
+      salaryMin != null || salaryMax != null
+        ? `${salaryMin ?? ''}${salaryMax != null && salaryMax !== salaryMin ? ` - ${salaryMax}` : ''} ${jsonLd.baseSalary?.currency ?? ''}`.trim()
+        : null,
+    employmentType: normalizeEmploymentType(jsonLd.employmentType),
+    descriptionHtml,
+    postedAt: asISODate(jsonLd.datePosted),
+    validThrough: asISODate(jsonLd.validThrough),
+    raw: { jsonLd: jsonLd as unknown as Record<string, unknown> },
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Concurrency helper                                                         */
+/* -------------------------------------------------------------------------- */
+
+async function mapWithLimit<T, R>(
+  items: T[],
+  worker: (item: T, index: number) => Promise<R>,
+  limit: number,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const i = cursor++
+      results[i] = await worker(items[i], i)
+    }
+  })
+  await Promise.all(workers)
+  return results
+}
+
+/* -------------------------------------------------------------------------- */
+/* Entry point                                                                */
+/* -------------------------------------------------------------------------- */
 
 export default async function scrapeRemote100k(): Promise<ScraperStats> {
-  console.log('[Remote100k] Starting scrape...')
-  
+  console.log(`[${BOARD_NAME}] Starting sitemap-driven scrape...`)
+
   const stats: IngestStats = {
     created: 0,
     updated: 0,
@@ -91,578 +334,66 @@ export default async function scrapeRemote100k(): Promise<ScraperStats> {
     errors: 0,
   }
 
-  let browser: Browser | null = null
-
+  let allUrls: string[]
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-      ],
-    })
-
-    // Test mode: validate a single detail page extraction before doing any full scrape.
-    if (process.env.TEST_REMOTE100K === 'true') {
-      const testUrl =
-        process.env.TEST_REMOTE100K_URL ||
-        `${BASE_URL}/remote-job/attentive-frontend-engineer-integrations-experiences`
-      console.log(`[${BOARD_NAME}] TEST_REMOTE100K enabled, scraping single job: ${testUrl}`)
-      const detail = await scrapeJobDetailPage(browser, testUrl)
-      const preview = (detail.descriptionHtml || '').slice(0, 220).replace(/\s+/g, ' ')
-      console.log(`[${BOARD_NAME}] Test result:`, {
-        url: testUrl,
-        descLength: detail.descriptionHtml?.length ?? 0,
-        applyUrl: detail.applyUrl,
-        preview,
-      })
-      return { created: 0, updated: 0, skipped: 0 }
-    }
-
-    // Track seen jobs to avoid duplicates across category pages
-    const seenJobUrls = new Set<string>()
-
-    const pagesToScrape = CATEGORY_PAGES.slice(0, MAX_PAGES_PER_RUN)
-    
-    for (let i = 0; i < pagesToScrape.length; i++) {
-      const categoryPath = pagesToScrape[i]
-      const url = `${BASE_URL}${categoryPath}`
-      
-      console.log(`[${BOARD_NAME}] Scraping page ${i + 1}/${pagesToScrape.length}: ${url}`)
-      
-      // CRITICAL FIX: Open a new page for EVERY request to prevent "Detached Frame" errors
-      let page: Page | null = null;
-
-      try {
-        page = await browser.newPage()
-        
-        await page.setUserAgent(
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        )
-
-        const jobs = await scrapeListingPage(browser, page, url, seenJobUrls)
-        console.log(`[${BOARD_NAME}] Found ${jobs.length} new jobs on ${categoryPath}`)
-        
-        for (const job of jobs) {
-          try {
-            const result = await ingestJob(job)
-            if (result.status === 'error') {
-              stats.errors++
-            } else {
-              stats[result.status]++
-            }
-          } catch (err) {
-            console.error(`[${BOARD_NAME}] Error ingesting job:`, err)
-            stats.errors++
-          }
-        }
-        
-      } catch (err) {
-        console.error(`[${BOARD_NAME}] Error scraping ${url}:`, err)
-        stats.errors++
-      } finally {
-        // CRITICAL FIX: Always close the page to free up memory/context
-        if (page) await page.close().catch(() => {}) 
-      }
-
-      // Rate limit
-      if (i < pagesToScrape.length - 1) {
-        await delay(DELAY_BETWEEN_PAGES_MS)
-      }
-    }
-
+    allUrls = await loadJobUrlsFromSitemap()
   } catch (err) {
-    console.error(`[${BOARD_NAME}] Fatal error:`, err)
-    stats.errors++
-  } finally {
-    if (browser) {
-      await browser.close()
-    }
+    console.error(`[${BOARD_NAME}] Sitemap fetch failed:`, err)
+    return { created: 0, updated: 0, skipped: 1 }
+  }
+  console.log(`[${BOARD_NAME}] Sitemap returned ${allUrls.length} /remote-job URLs`)
+
+  const urls = allUrls.slice(0, MAX_DETAIL_FETCHES)
+  if (urls.length < allUrls.length) {
+    console.log(
+      `[${BOARD_NAME}] Capping at REMOTE100K_MAX_DETAIL_FETCHES=${MAX_DETAIL_FETCHES} (drop ${allUrls.length - urls.length})`,
+    )
   }
 
-  console.log(`[Remote100k] ✓ Scraped ${stats.created} jobs`)
+  let processed = 0
+  await mapWithLimit(
+    urls,
+    async (url) => {
+      try {
+        const extraction = await fetchJobDetail(url)
+        if (!extraction) {
+          stats.skipped += 1
+          return
+        }
+        const job = jsonLdToScrapedJob(url, extraction)
+        if (!job) {
+          stats.skipped += 1
+          return
+        }
+        const result = await ingestJob(job)
+        if (result.status === 'error') {
+          stats.errors += 1
+        } else {
+          stats[result.status] += 1
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(`[${BOARD_NAME}] error on ${url}: ${msg}`)
+        stats.errors += 1
+      } finally {
+        processed += 1
+        if (processed % 50 === 0) {
+          console.log(
+            `[${BOARD_NAME}] progress ${processed}/${urls.length}  created=${stats.created} updated=${stats.updated} skipped=${stats.skipped} errors=${stats.errors}`,
+          )
+        }
+      }
+    },
+    FETCH_CONCURRENCY,
+  )
+
+  console.log(
+    `[${BOARD_NAME}] done — created=${stats.created} updated=${stats.updated} upgraded=${stats.upgraded} skipped=${stats.skipped} errors=${stats.errors}`,
+  )
+
   return {
     created: stats.created,
     updated: stats.updated + stats.upgraded,
     skipped: stats.skipped + stats.errors,
   }
 }
-
-async function scrapeListingPage(
-  browser: Browser,
-  page: Page, 
-  url: string,
-  seenJobUrls: Set<string>
-): Promise<ScrapedJobInput[]> {
-  const jobs: ScrapedJobInput[] = []
-
-  try {
-    await page.goto(url, {
-      waitUntil: 'domcontentloaded', // Changed from networkidle2 to be faster/safer
-      timeout: PAGE_LOAD_TIMEOUT_MS,
-    })
-
-    await delay(WAIT_FOR_CONTENT_MS)
-
-    const pageText = await page.evaluate(() => document.body.innerText)
-    
-    const jobUrls = await page.evaluate(() => {
-      const urls: string[] = []
-      document.querySelectorAll('a[href*="/remote-job/"]').forEach(link => {
-        const fullUrl = (link as HTMLAnchorElement).href
-        if (fullUrl && fullUrl.includes('/remote-job/') && !urls.includes(fullUrl)) {
-          urls.push(fullUrl)
-        }
-      })
-      return urls
-    })
-
-    const parsedJobs = parseJobsFromText(pageText, jobUrls)
-    
-    for (const parsed of parsedJobs) {
-      if (seenJobUrls.has(parsed.url)) {
-        continue
-      }
-
-      // Fetch description from detail page
-      const detailData = await scrapeJobDetailPage(browser, parsed.url)
-
-      seenJobUrls.add(parsed.url)
-
-      if (!detailData.descriptionHtml) {
-        console.warn(
-          `[${BOARD_NAME}] Skipping job with missing/invalid description: ${parsed.url}`,
-        )
-        continue
-      }
-
-      const salary = parseSalaryText(parsed.salaryText)
-      
-      const job: ScrapedJobInput = {
-        externalId: generateExternalId(parsed.url),
-        title: parsed.title,
-        source: makeBoardSource(BOARD_NAME),
-        rawCompanyName: parsed.company,
-        url: parsed.url,
-        applyUrl: detailData.applyUrl || parsed.url,
-        locationText: parsed.location,
-        isRemote: true,
-        descriptionHtml: detailData.descriptionHtml,
-        salaryMin: salary.min,
-        salaryMax: salary.max,
-        salaryCurrency: salary.currency,
-        salaryInterval: 'year',
-        salaryRaw: parsed.salaryText,
-        employmentType: parsed.employmentType,
-        department: parsed.category || null,
-        postedAt: parseAgeToDate(parsed.ageText),
-        raw: parsed as unknown as Record<string, unknown>,
-      }
-      
-      jobs.push(job)
-    }
-
-  } catch (err) {
-    console.error(`[${BOARD_NAME}] Error parsing page ${url}:`, err)
-    throw err; // Re-throw so the main loop knows it failed
-  }
-
-  return jobs
-}
-
-
-/**
- * Scrape job description from detail page
- */
-async function scrapeJobDetailPage(
-  browser: Browser,
-  jobUrl: string
-): Promise<{ descriptionHtml: string | null; applyUrl: string | null }> {
-  let page: Page | null = null
-  try {
-    page = await browser.newPage()
-    // Remote100k uses Framer; content often renders after initial load.
-    // Prefer `networkidle0`, but fall back to `domcontentloaded` if it times out.
-    try {
-      await page.goto(jobUrl, { waitUntil: 'networkidle0', timeout: 30000 })
-    } catch {
-      await page.goto(jobUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: PAGE_LOAD_TIMEOUT_MS,
-      })
-    }
-
-    // Wait for dynamic content to appear (Framer renders text nodes late).
-    await page.waitForSelector('p', { timeout: 10000 }).catch(() => {})
-    await delay(2000)
-
-    const extracted = (await page.evaluate(`(() => {
-      // Remote100k specific: Find the main content container
-      // It's usually the largest block of <p> and <li> tags
-      function extractContent() {
-        var paragraphs = Array.from(document.querySelectorAll('p'));
-        var lists = Array.from(document.querySelectorAll('ul, ol'));
-
-        var bestBlock = null;
-        var bestScore = 0;
-
-        var contentDivs = Array.from(document.querySelectorAll('div')).filter(function(div) {
-          var pCount = div.querySelectorAll('p').length;
-          var liCount = div.querySelectorAll('li').length;
-          var textLen = (div.textContent || '').trim().length;
-
-          if (textLen < 500) return false;
-          if (pCount + liCount < 3) return false;
-
-          var classes = div.className || '';
-          if (classes.indexOf('nav') !== -1) return false;
-          if (classes.indexOf('header') !== -1) return false;
-          if (classes.indexOf('footer') !== -1) return false;
-
-          return true;
-        });
-
-        for (var i = 0; i < contentDivs.length; i++) {
-          var div = contentDivs[i];
-          var pCount = div.querySelectorAll('p').length;
-          var liCount = div.querySelectorAll('li').length;
-          var textLen = (div.textContent || '').trim().length;
-          var linkCount = div.querySelectorAll('a').length;
-
-          var score = textLen + (pCount * 100) + (liCount * 50);
-          if (linkCount > 10) score = score * 0.3;
-
-          if (score > bestScore) {
-            bestScore = score;
-            bestBlock = div;
-          }
-        }
-
-        if (bestBlock) {
-          return bestBlock.innerHTML;
-        }
-
-        var content = '';
-        for (var p = 0; p < paragraphs.length; p++) {
-          if (paragraphs[p].textContent && paragraphs[p].textContent.trim().length > 20) {
-            content += '<p>' + paragraphs[p].innerHTML + '</p>';
-          }
-        }
-
-        for (var l = 0; l < lists.length; l++) {
-          if (lists[l].textContent && lists[l].textContent.trim().length > 20) {
-            content += lists[l].outerHTML;
-          }
-        }
-
-        return content;
-      }
-
-      var html = extractContent() || '';
-      return { html: html, textLen: (html.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim()).length };
-    })()`)) as { html: string; textLen: number }
-
-    const rawHtml = extracted?.html ? String(extracted.html) : ''
-    const descriptionHtml = sanitizeRemote100kDescriptionHtml(rawHtml)
-    const plainText = stripHtmlToText(descriptionHtml)
-
-    const looksLikeFullPage =
-      plainText.includes('Meet JobCopilot') ||
-      plainText.includes('Stop applying') ||
-      plainText.includes('Remote jobs from companies like') ||
-      plainText.includes('Remote100K')
-    const hasBoardNoise = DETAIL_NOISE_PATTERNS.some((pattern) => pattern.test(plainText))
-
-    const len = descriptionHtml.length
-    const isInvalidLength =
-      len < MIN_DESC_CHARS || len > MAX_DESC_CHARS || len > OVERSIZE_HARD_CAP_CHARS
-
-    const finalDescription =
-      descriptionHtml && !looksLikeFullPage && !hasBoardNoise && !isInvalidLength
-        ? descriptionHtml
-        : null
-
-    // Extract actual apply URL
-    const applyUrl = await page.evaluate(() => {
-      const links = Array.from(document.querySelectorAll('a[href]'))
-      for (const link of links) {
-        const href = (link as HTMLAnchorElement).href
-        const text = link.textContent?.toLowerCase() || ''
-        if (href.includes('remote100k.com')) continue
-        if (text.includes('apply') || href.includes('greenhouse.io') || href.includes('lever.co') || 
-            href.includes('ashbyhq.com') || href.includes('/jobs/') || href.includes('/careers/')) {
-          return href
-        }
-      }
-      return null
-    })
-
-    if (!finalDescription) {
-      console.warn(
-        `[${BOARD_NAME}] Invalid description extracted (len=${len}, navNoise=${looksLikeFullPage}, boardNoise=${hasBoardNoise}) url=${jobUrl}`,
-      )
-    }
-
-    return { descriptionHtml: finalDescription, applyUrl }
-  } catch (err) {
-    console.error(`[${BOARD_NAME}] Error scraping detail page ${jobUrl}:`, err)
-    return { descriptionHtml: null, applyUrl: null }
-  } finally {
-    if (page) await page.close().catch(() => {})
-  }
-}
-
-function sanitizeRemote100kDescriptionHtml(html: string): string {
-  if (!html) return ''
-
-  let cleaned = html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  // Remove Framer-heavy noise (Remote100k uses Framer) and inline styles.
-  cleaned = cleaned
-    .replace(/\sclass="framer-[^"]*"/g, '')
-    .replace(/\sdata-framer-[^=]*="[^"]*"/g, '')
-    .replace(/\sstyle="[^"]*"/g, '')
-
-  return cleaned
-}
-
-function stripHtmlToText(html: string): string {
-  return (html || '')
-    .replace(/<\/?[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function parseJobsFromText(pageText: string, jobUrls: string[]): ParsedJob[] {
-  const jobs: ParsedJob[] = []
-  const lines = pageText.split('\n').map(l => l.trim()).filter(l => l.length > 0)
-  
-  const urlMap = new Map<string, string>()
-  for (const url of jobUrls) {
-    const match = url.match(/\/remote-job\/([^/]+)/)
-    if (match) {
-      urlMap.set(match[1].toLowerCase(), url)
-    }
-  }
-
-  for (let i = 0; i < lines.length - 5; i++) {
-    const line = lines[i]
-    if (isNavigationLine(line)) continue
-    if (/^(Full-Time|Part-Time|Contract)$/i.test(line)) continue
-    
-    let salaryLineIdx = -1
-    for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
-      if (/^[$£€][\d,]+/.test(lines[j])) {
-        salaryLineIdx = j
-        break
-      }
-    }
-    
-    if (salaryLineIdx === -1) continue
-    
-    let remoteIdx = -1
-    for (let j = i + 1; j < salaryLineIdx; j++) {
-      if (lines[j] === 'Remote:') {
-        remoteIdx = j
-        break
-      }
-    }
-    
-    if (remoteIdx === -1) continue
-    
-    const title = line
-    if (!isValidJobTitle(title)) continue
-    
-    let company = ''
-    for (let j = i + 1; j < remoteIdx; j++) {
-      const candidateLine = lines[j]
-      if (!isNavigationLine(candidateLine) && 
-          candidateLine !== 'NEW' && 
-          !/^\d+d$/.test(candidateLine) &&
-          !/^(Full-Time|Part-Time|Contract)$/i.test(candidateLine) &&
-          candidateLine.length > 1) {
-        company = candidateLine
-        break
-      }
-    }
-    
-    if (!company || !isValidCompanyName(company)) continue
-    
-    const locationParts: string[] = []
-    let category = ''
-    for (let j = remoteIdx + 1; j < salaryLineIdx; j++) {
-      const l = lines[j]
-      if (CATEGORIES.includes(l)) {
-        category = l
-        break
-      } else if (l && !isNavigationLine(l) && l.length > 0) {
-        if (l !== ',') {
-          locationParts.push(l)
-        }
-      }
-    }
-    
-    const location = cleanLocation(locationParts.join(', '))
-    const salaryText = lines[salaryLineIdx]
-    
-    let employmentType = 'Full-Time'
-    if (salaryLineIdx + 1 < lines.length) {
-      const typeLine = lines[salaryLineIdx + 1]
-      if (/full-time/i.test(typeLine)) employmentType = 'Full-Time'
-      else if (/part-time/i.test(typeLine)) employmentType = 'Part-Time'
-      else if (/contract/i.test(typeLine)) employmentType = 'Contract'
-    }
-    
-    let ageText = ''
-    if (salaryLineIdx + 2 < lines.length) {
-      const potentialAge = lines[salaryLineIdx + 2]
-      if (/^(NEW|\d+d)$/i.test(potentialAge)) {
-        ageText = potentialAge
-      }
-    }
-    if (!ageText && i > 0) {
-      const lineBefore = lines[i - 1]
-      if (/^(NEW|\d+d)$/i.test(lineBefore)) {
-        ageText = lineBefore
-      }
-    }
-    
-    const url = findMatchingUrl(company, title, urlMap)
-    
-    jobs.push({
-      title,
-      company,
-      location: location || 'Remote',
-      category,
-      salaryText,
-      employmentType,
-      ageText,
-      url,
-    })
-    
-    i = salaryLineIdx + 2
-  }
-  
-  return jobs
-}
-
-function isValidJobTitle(title: string): boolean {
-  if (title.length < 5) return false
-  if (/^(Full-Time|Part-Time|Contract|Remote)$/i.test(title)) return false
-  if (/^\d+d$/.test(title)) return false
-  if (!/[a-zA-Z]/.test(title)) return false
-  return true
-}
-
-function isValidCompanyName(name: string): boolean {
-  if (name.length < 2) return false
-  if (/^(Full-Time|Part-Time|Contract|Remote|NEW)$/i.test(name)) return false
-  if (/^\d+d$/.test(name)) return false
-  if (CATEGORIES.includes(name)) return false
-  return true
-}
-
-function findMatchingUrl(company: string, title: string, urlMap: Map<string, string>): string {
-  const companySlug = company.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-  const titleSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
-  
-  const entries = Array.from(urlMap.entries())
-  for (const [urlSlug, fullUrl] of entries) {
-    if (urlSlug.startsWith(companySlug)) {
-      urlMap.delete(urlSlug)
-      return fullUrl
-    }
-  }
-  
-  const shortCompanySlug = companySlug.slice(0, Math.max(5, companySlug.length))
-  for (const [urlSlug, fullUrl] of entries) {
-    if (urlSlug.startsWith(shortCompanySlug)) {
-      urlMap.delete(urlSlug)
-      return fullUrl
-    }
-  }
-  
-  return `${BASE_URL}/remote-job/${companySlug}-${titleSlug}`
-}
-
-function isNavigationLine(line: string): boolean {
-  const navPatterns = [
-    'Remote100K', 'Stop applying', 'Meet JobCopilot', 'Remote jobs from companies like',
-    'Land your next', 'Apply directly', 'Find remote', '💻',
-  ]
-  for (const pattern of navPatterns) {
-    if (line.includes(pattern)) return true
-  }
-  if (/^(Engineering|Marketing|Product|Data|Sales|Management|Design|Operations|All Other)$/.test(line)) {
-    return true
-  }
-  return false
-}
-
-function cleanLocation(location: string): string {
-  let cleaned = location
-  for (const cat of CATEGORIES) {
-    cleaned = cleaned.replace(new RegExp(`\\s*,?\\s*${cat}\\s*,?\\s*`, 'gi'), ', ')
-  }
-  cleaned = cleaned.replace(/,\s*,+/g, ',').replace(/,\s*$/g, '').replace(/^\s*,/g, '').replace(/\s+/g, ' ').trim()
-  return cleaned || 'Remote'
-}
-
-function parseSalaryText(text: string): { min: number | null; max: number | null; currency: string } {
-  if (!text) return { min: null, max: null, currency: 'USD' }
-  let currency = 'USD'
-  if (text.includes('£')) currency = 'GBP'
-  else if (text.includes('€')) currency = 'EUR'
-  else if (text.includes('CAD')) currency = 'CAD'
-  else if (text.includes('AUD')) currency = 'AUD'
-
-  const matches = text.match(/[\d,]+/g)
-  if (!matches) return { min: null, max: null, currency }
-
-  const numbers = matches.map(m => parseInt(m.replace(/,/g, ''), 10)).filter(n => !isNaN(n) && n > 10000)
-  if (numbers.length === 0) return { min: null, max: null, currency }
-  if (numbers.length === 1) return { min: numbers[0], max: numbers[0], currency }
-  return { min: Math.min(...numbers), max: Math.max(...numbers), currency }
-}
-
-function parseAgeToDate(ageText: string): Date | null {
-  if (!ageText) return null
-  const now = new Date()
-  if (ageText.toLowerCase() === 'new') return now
-  const daysMatch = ageText.match(/(\d+)d/)
-  if (daysMatch) {
-    const days = parseInt(daysMatch[1], 10)
-    return new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
-  }
-  return null
-}
-
-function generateExternalId(url: string): string {
-  try {
-    const urlObj = new URL(url)
-    const match = urlObj.pathname.match(/\/remote-job\/(.+)/)
-    if (match) return match[1]
-    return urlObj.pathname.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home'
-  } catch {
-    return Buffer.from(url).toString('base64').slice(0, 32)
-  }
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-export { scrapeRemote100k, scrapeListingPage }
