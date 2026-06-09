@@ -7,9 +7,29 @@ import {
   type PublicCompanyDirectoryEntry,
 } from '@/lib/jobs/publicStats'
 import { CompanySearch } from '@/components/companies/CompanySearch'
+import { getCompanyPublishingManifest } from '@/lib/seo/companyPublishing'
+import { getPriorityCompanyRank } from '@/lib/seo/priorityCompanies'
+import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
 
 export const revalidate = 600 // 10m ISR
 const SITE_URL = getSiteUrl()
+
+// Server-side pagination so Google can crawl past page 1. Previously the page
+// rendered the entire directory in one shot — long tail companies were
+// effectively orphaned (only reachable through client-side CompanySearch,
+// which Googlebot can't see).
+const COMPANIES_PAGE_SIZE = 48
+
+function parsePageParam(value: string | string[] | undefined): number {
+  const raw = Array.isArray(value) ? value[0] : value
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 1) return 1
+  return Math.floor(n)
+}
+
+function buildCompaniesPageHref(page: number): string {
+  return page <= 1 ? '/companies' : `/companies?page=${page}`
+}
 
 function buildCompaniesDescription(totalCompanies: number, totalEligibleJobs: number) {
   if (totalCompanies > 0) {
@@ -114,11 +134,59 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default async function CompaniesPage() {
+type CompaniesPageProps = {
+  searchParams?: Promise<{ page?: string | string[] }>
+}
+
+export default async function CompaniesPage({ searchParams }: CompaniesPageProps) {
   try {
-    const { companies, totalCompanies, totalEligibleJobs } = await loadEligibleCompaniesDirectory()
+    const sp = (await searchParams) || {}
+    const requestedPage = parsePageParam(sp.page)
+    const [{ companies, totalCompanies, totalEligibleJobs }, manifest] = await Promise.all([
+      loadEligibleCompaniesDirectory(),
+      getCompanyPublishingManifest(),
+    ])
+    const manifestBySlug = new Map(
+      manifest.candidates.map((candidate) => [candidate.slug, candidate] as const),
+    )
+    const orderedCompanies = [...companies].sort((a, b) => {
+      const aCandidate = a.slug ? manifestBySlug.get(a.slug) : null
+      const bCandidate = b.slug ? manifestBySlug.get(b.slug) : null
+      const aUnlocked = aCandidate?.unlocked ? 1 : 0
+      const bUnlocked = bCandidate?.unlocked ? 1 : 0
+      if (aUnlocked !== bUnlocked) return bUnlocked - aUnlocked
+
+      const aPriority = getPriorityCompanyRank(a.slug)
+      const bPriority = getPriorityCompanyRank(b.slug)
+      if ((aPriority ?? Infinity) !== (bPriority ?? Infinity)) {
+        return (aPriority ?? Infinity) - (bPriority ?? Infinity)
+      }
+
+      const aJobs = aCandidate?.liveJobs ?? a._count.jobs ?? 0
+      const bJobs = bCandidate?.liveJobs ?? b._count.jobs ?? 0
+      if (bJobs !== aJobs) return bJobs - aJobs
+
+      return (a.name ?? '').localeCompare(b.name ?? '')
+    })
+
+    const featuredCompanies = orderedCompanies
+      .filter((company) => {
+        const candidate = company.slug ? manifestBySlug.get(company.slug) : null
+        return Boolean(candidate?.unlocked)
+      })
+      .slice(0, 12)
+
+    // Pagination — clamp the requested page to a real one, then slice the
+    // ordered directory so each page renders a distinct 48-company window.
+    const totalPages = Math.max(1, Math.ceil(orderedCompanies.length / COMPANIES_PAGE_SIZE))
+    const currentPage = Math.min(requestedPage, totalPages)
+    const pageStart = (currentPage - 1) * COMPANIES_PAGE_SIZE
+    const pagedCompanies = orderedCompanies.slice(pageStart, pageStart + COMPANIES_PAGE_SIZE)
+
     const breadcrumbJsonLd = buildBreadcrumbJsonLd()
-    const itemListJsonLd = buildCompaniesItemListJsonLd(companies)
+    // ItemList describes the visible page so /companies?page=2 isn't a duplicate
+    // signal of page 1 to Google.
+    const itemListJsonLd = buildCompaniesItemListJsonLd(pagedCompanies)
     const collectionPageJsonLd = buildCompaniesCollectionPageJsonLd(
       totalCompanies,
       totalEligibleJobs,
@@ -126,60 +194,102 @@ export default async function CompaniesPage() {
 
     return (
       <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
-        <header className="mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-50">
-            Companies hiring $100k+ roles
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-            {companies.length > 0
-              ? `Browse ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} live $100k+ jobs, six figure roles, remote jobs, and high paying positions with direct apply links.`
-              : 'Only companies with live high-paying roles, verified salary signals, and direct apply links.'}
-          </p>
-          {totalCompanies > companies.length && (
-            <p className="mt-2 text-xs text-slate-500">
-              Showing the first {companies.length.toLocaleString()} companies alphabetically.
-            </p>
-          )}
-        </header>
+        <div className="mb-8">
+          <PageHero
+            eyebrow="Company directory"
+            title="Companies hiring $100k+ roles"
+            description={
+              companies.length > 0
+                ? `Browse ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} live $100k+ jobs, six figure roles, remote jobs, and high paying positions with direct apply links.`
+                : 'Only companies with live high-paying roles, verified salary signals, and direct apply links.'
+            }
+            helper={
+              totalCompanies > orderedCompanies.length
+                ? `Showing the first ${orderedCompanies.length.toLocaleString()} companies with priority company hubs first.`
+                : 'Open a company page first, then narrow into salary bands, roles, and locations.'
+            }
+            actions={
+              <>
+                <Link
+                  href="/jobs"
+                  className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+                >
+                  Browse all jobs
+                </Link>
+                <Link
+                  href="/salary"
+                  className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+                >
+                  Salary guides
+                </Link>
+              </>
+            }
+          >
+            <PageStatGrid
+              items={[
+                {
+                  label: 'Companies',
+                  value: totalCompanies.toLocaleString(),
+                  hint: 'Employers with live eligible six-figure roles',
+                },
+                {
+                  label: 'Live $100k+ jobs',
+                  value: totalEligibleJobs.toLocaleString(),
+                  hint: 'Current inventory across the company directory',
+                },
+                {
+                  label: 'Priority hubs',
+                  value: featuredCompanies.length.toLocaleString(),
+                  hint: 'Highest-quality company pages surfaced first',
+                },
+                {
+                  label: 'Primary workflow',
+                  value: 'Company → role',
+                  hint: 'Open a company, then narrow by role and location',
+                },
+              ]}
+            />
+          </PageHero>
+        </div>
 
-        <section className="mb-8 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400">Companies</div>
-            <div className="mt-1 text-xl font-semibold text-slate-100">
-              {totalCompanies.toLocaleString()}
-            </div>
-          </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400">Live $100k+ jobs</div>
-            <div className="mt-1 text-xl font-semibold text-slate-100">
-              {totalEligibleJobs.toLocaleString()}
-            </div>
-          </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400">Next step</div>
-            <div className="mt-1 text-sm font-medium text-slate-200">
-              Open a company, then filter by role/location.
-            </div>
-          </div>
-        </section>
-
-        {companies.length === 0 ? (
+        {orderedCompanies.length === 0 ? (
           <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-8 text-center">
             <p className="text-slate-400">No companies found yet. Try again soon — listings update frequently.</p>
           </div>
         ) : (
           <>
-            <section className="mb-8 rounded-xl border border-slate-800 bg-slate-950/50 p-5">
-              <h2 className="text-sm font-semibold text-slate-50">
-                Find companies with verified six figure jobs
-              </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
-                This company directory groups employers with live $100k+ job openings,
-                published salary ranges where available, and direct apply paths to company
-                career pages. Use it to compare companies hiring for remote, hybrid, and
-                on-site six figure jobs across engineering, product, data, sales, finance,
-                marketing, operations, and leadership roles.
-              </p>
+            {featuredCompanies.length > 0 && (
+              <PageSection
+                title="Priority company pages to start with"
+                description="These company pages have enough live jobs, salary support, and content depth to be worth crawling repeatedly. They are the main company hubs we are deliberately pushing first."
+              >
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {featuredCompanies.map((company) => {
+                    const candidate = company.slug ? manifestBySlug.get(company.slug) : null
+                    if (!company.slug || !candidate) return null
+                    return (
+                      <Link
+                        key={company.id}
+                        href={`/company/${company.slug}`}
+                        className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-colors hover:border-slate-600"
+                      >
+                        <div className="text-sm font-semibold text-slate-100">{company.name}</div>
+                        <div className="mt-2 text-xs text-slate-400">
+                          {candidate.liveJobs.toLocaleString()} live jobs •{' '}
+                          {candidate.salaryBackedJobs.toLocaleString()} salary-backed •{' '}
+                          {candidate.roleDiversity.toLocaleString()} role groups
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </PageSection>
+            )}
+
+            <PageSection
+              title="Find companies with verified six figure jobs"
+              description="This company directory groups employers with live $100k+ job openings, published salary ranges where available, and direct apply paths to company career pages. Use it to compare companies hiring for remote, hybrid, and on-site six figure jobs across engineering, product, data, sales, finance, marketing, operations, and leadership roles."
+            >
               <div className="mt-4 flex flex-wrap gap-2 text-xs">
                 <Link href="/jobs" className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-200 hover:border-slate-500">
                   Browse all jobs
@@ -191,9 +301,40 @@ export default async function CompaniesPage() {
                   Salary guides
                 </Link>
               </div>
-            </section>
+            </PageSection>
 
-            <CompanySearch companies={companies} />
+            <CompanySearch companies={pagedCompanies} />
+
+            {totalPages > 1 ? (
+              <nav
+                aria-label="Companies pagination"
+                className="mt-10 flex items-center justify-between gap-3 border-t border-slate-800 pt-6 text-sm"
+              >
+                <div className="text-xs text-slate-400">
+                  Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()} • Showing {pagedCompanies.length} of {orderedCompanies.length.toLocaleString()} companies
+                </div>
+                <div className="flex items-center gap-2">
+                  {currentPage > 1 ? (
+                    <Link
+                      href={buildCompaniesPageHref(currentPage - 1)}
+                      rel="prev"
+                      className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+                    >
+                      ← Previous
+                    </Link>
+                  ) : null}
+                  {currentPage < totalPages ? (
+                    <Link
+                      href={buildCompaniesPageHref(currentPage + 1)}
+                      rel="next"
+                      className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+                    >
+                      Next →
+                    </Link>
+                  ) : null}
+                </div>
+              </nav>
+            ) : null}
           </>
         )}
 

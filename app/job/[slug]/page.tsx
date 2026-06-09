@@ -1039,7 +1039,17 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
     })
   }
 
+  // Conditional, context-aware links above. Below: baseline hub links that are
+  // ALWAYS present, so a job page never sits orphaned with only sitemap
+  // inclusion (a known "Crawled - currently not indexed" trigger in GSC).
   links.push({ href: '/jobs/100k-plus', label: 'All Six Figure Jobs' })
+  links.push({ href: '/companies', label: 'Browse companies hiring' })
+  links.push({ href: '/salary', label: 'Six figure salary guides' })
+  if (!roleSlug) {
+    // Only add the generic /remote hub when we couldn't surface a role-scoped
+    // /remote/<role> link above — avoids duplicating that intent.
+    links.push({ href: '/remote', label: 'Remote $100k+ jobs' })
+  }
 
   if (roleSlug) {
     links.push({ href: `/salary/${roleSlug}`, label: `${roleLabel} salary guide` })

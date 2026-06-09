@@ -7,6 +7,9 @@
 * swap /search from force-dynamic to ISR 60s with public CDN cache headers — the page is noindex by design so caching has no SEO impact, but every search hit was re-rendering server-side
 * add shared `fetchWithBackoff` scraper util that honors HTTP 429/503 Retry-After and applies exponential backoff on transient 5xx/network errors; Greenhouse rewired to use it (previously did blind linear backoff and ignored Retry-After). Other ATS scrapers can adopt incrementally.
 * track `lib/seo/companyPublishing`, `lib/seo/priorityCompanies`, and `components/seo/PageChrome` in git — they were referenced by committed code but never staged, breaking the production build
+* guarantee at least four internal hub links on every job page (`/jobs/100k-plus`, `/companies`, `/salary`, plus `/remote` when no role-scoped link is present) — orphaned job pages with only sitemap inclusion were a known "Crawled - currently not indexed" trigger
+* add server-rendered pagination to /companies (48/page with prev/next links) so Googlebot can crawl past page 1; the previous client-only CompanySearch left the long-tail directory uncrawlable
+* rename `middleware.ts` → `proxy.ts` (and `middleware()` → `proxy()`) to match the Next.js 16 file convention and clear the build-time deprecation warning
 
 ### Features
 

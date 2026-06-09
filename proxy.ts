@@ -95,12 +95,12 @@ async function handleJobDetailStatus(request: NextRequest): Promise<NextResponse
   } catch (err) {
     // Don't break the request if the lookup fails — the page route will fall
     // back to its own DB query and 404 path. We just lose the 410 upgrade.
-    console.error('[middleware] job availability check failed', err)
+    console.error('[proxy] job availability check failed', err)
   }
   return null
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const host = request.headers.get('host') ?? ''
 
   // 301 apex → www (SEO: consolidate PageRank on canonical www host)
