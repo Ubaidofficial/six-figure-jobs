@@ -20,6 +20,10 @@ import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { isCanonicalSlug } from '../../../../lib/roles/canonicalSlugs'
 import { findBestMatchingRole } from '../../../../lib/roles/slugMatcher'
+import {
+  isSalaryRoleLocationPageIndexable,
+  MIN_SALARY_ROLE_LOCATION_INDEXABLE_JOBS,
+} from '../../../../lib/seo/indexabilityGates'
 
 export const revalidate = 1800
 
@@ -227,6 +231,9 @@ export async function generateMetadata({
   const canonicalBase = `${SITE_URL}/salary/${roleSlug}/${normalizedLoc.canonicalSegments.join('/')}`
   const canonical = `${canonicalBase}${bandSlug ? `?band=${bandSlug}` : ''}`
 
+  // Take just enough rows to evaluate the unified indexability gate; counting
+  // exactly is more expensive than `take: N` and we don't need the precise
+  // total for metadata.
   const raw = await prisma.job.findMany({
     where: {
       isExpired: false,
@@ -245,9 +252,9 @@ export async function generateMetadata({
       ],
     },
     select: { id: true },
-    take: 1,
+    take: MIN_SALARY_ROLE_LOCATION_INDEXABLE_JOBS,
   })
-  const allowIndex = raw.length >= 1
+  const allowIndex = isSalaryRoleLocationPageIndexable(raw.length)
 
   return {
     title,

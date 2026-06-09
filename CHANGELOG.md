@@ -11,6 +11,7 @@
 * add server-rendered pagination to /companies (48/page with prev/next links) so Googlebot can crawl past page 1; the previous client-only CompanySearch left the long-tail directory uncrawlable
 * rename `middleware.ts` → `proxy.ts` (and `middleware()` → `proxy()`) to match the Next.js 16 file convention and clear the build-time deprecation warning
 * drop `runtime: 'nodejs'` from `proxy.ts` config — Next.js 16 always runs proxy on Node.js and rejects the override at build time
+* align /salary/[role]/[...loc] indexability gate with the unified 5-job threshold via new `isSalaryRoleLocationPageIndexable`. The route was admitting role×country pages with just 1 live job — exactly the kind of thin pSEO doorway that ends up in GSC's "Crawled - currently not indexed".
 
 ### Features
 
