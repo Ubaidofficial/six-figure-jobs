@@ -9,6 +9,19 @@ jest.mock('next/cache', () => ({
   unstable_cache: (cb: any) => cb,
 }))
 
+// The route under test makes two direct prisma calls (hasSkillPages,
+// getLastmod) that aren't routed through any of the mocked sitemap helpers.
+// Without a mock here they hang the test waiting on a DB that isn't there
+// in jest, which surfaces as a 5s test timeout in CI.
+jest.mock('../../lib/prisma', () => ({
+  prisma: {
+    job: {
+      count: jest.fn().mockResolvedValue(0),
+      aggregate: jest.fn().mockResolvedValue({ _max: { updatedAt: null } }),
+    },
+  },
+}))
+
 jest.mock('../../lib/seo/coreSitemapFamilies', () => ({
   resolveCoreSitemapFamilies: jest.fn(),
 }))

@@ -382,11 +382,28 @@ async function buildCompanyPublishingManifestData(now = new Date()): Promise<Com
   }
 }
 
-export const getCompanyPublishingManifest = unstable_cache(
+// `unstable_cache` requires Next.js's incremental cache context. In jest /
+// plain-Node environments (CI's SEO Gates tests) that context is missing and
+// the helper throws `Invariant: incrementalCache missing`. Wrap in a
+// try/catch so the route stays callable from tests — the live runtime still
+// benefits from the cache; tests just fall back to a fresh build per call.
+const cachedManifest = unstable_cache(
   async () => buildCompanyPublishingManifestData(new Date()),
   ['company-pseo-manifest-v1'],
   { revalidate: 3600, tags: ['company-pseo', 'sitemap'] },
 )
+
+export async function getCompanyPublishingManifest(): Promise<CompanyPublishingManifest> {
+  try {
+    return await cachedManifest()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('incrementalCache missing')) {
+      return buildCompanyPublishingManifestData(new Date())
+    }
+    throw err
+  }
+}
 
 export async function getCompanyPublishingDecision(slug: string) {
   const manifest = await getCompanyPublishingManifest()
