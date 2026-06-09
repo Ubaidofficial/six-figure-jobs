@@ -1,16 +1,26 @@
 import type { CSSProperties, ReactNode } from 'react'
 import Link from 'next/link'
+import NextImage from 'next/image'
 import { Search } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
 import styles from './Hero.module.css'
 
+export type HeroCompanyLogo = {
+  slug: string
+  name: string
+  logoUrl: string | null
+}
+
 type HeroProps = {
   jobCount?: number
   companyCount?: number
   countryCount?: number
   newThisWeek?: number
+  // Top 6-8 hiring company logos rendered above the fold as a trust strip
+  // (the remoteyeah pattern — "these real companies trust this site").
+  companyLogos?: HeroCompanyLogo[]
   children?: ReactNode
 }
 
@@ -23,6 +33,7 @@ export function Hero({
   companyCount = 2_643,
   countryCount = 10,
   newThisWeek,
+  companyLogos,
   children,
 }: HeroProps) {
   return (
@@ -109,6 +120,40 @@ export function Hero({
               <span className={styles.helperStrong}>{newThisWeek.toLocaleString()}</span> new this
               week • Updated daily
             </p>
+          ) : null}
+
+          {companyLogos && companyLogos.length > 0 ? (
+            <div
+              className={styles.logoStrip}
+              style={delay(560)}
+              aria-label="Companies actively hiring on Six Figure Jobs"
+            >
+              <span className={styles.logoStripLabel}>Companies hiring now</span>
+              <ul className={styles.logoStripList}>
+                {companyLogos.slice(0, 8).map((c) => (
+                  <li key={c.slug} className={styles.logoStripItem}>
+                    <Link
+                      href={`/company/${c.slug}`}
+                      className={styles.logoStripLink}
+                      title={c.name}
+                    >
+                      {c.logoUrl ? (
+                        <NextImage
+                          src={c.logoUrl}
+                          alt={c.name}
+                          width={88}
+                          height={32}
+                          className={styles.logoStripImg}
+                          unoptimized
+                        />
+                      ) : (
+                        <span className={styles.logoStripFallback}>{c.name}</span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
 
           <div className={styles.stats} style={delay(600)}>

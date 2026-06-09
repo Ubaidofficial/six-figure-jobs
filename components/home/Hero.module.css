@@ -365,6 +365,77 @@
 }
 
 /* --------------------------------------------------------------------------
+   Company logo strip — the remoteyeah pattern of "real companies trust us"
+   visible above the fold.
+   -------------------------------------------------------------------------- */
+
+.logoStrip {
+  width: 100%;
+  margin-top: var(--space-12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.logoStripLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.logoStripList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12) var(--space-24);
+  align-items: center;
+  justify-content: center;
+  max-width: 760px;
+}
+
+.logoStripItem {
+  display: inline-flex;
+}
+
+.logoStripLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  opacity: 0.75;
+  filter: grayscale(15%);
+  transition: opacity 0.2s ease, filter 0.2s ease, transform 0.2s ease;
+}
+
+.logoStripLink:hover {
+  opacity: 1;
+  filter: grayscale(0);
+  transform: translateY(-1px);
+}
+
+.logoStripImg {
+  height: 24px;
+  width: auto;
+  max-width: 110px;
+  object-fit: contain;
+}
+
+.logoStripFallback {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+}
+
+/* --------------------------------------------------------------------------
    Stats bar
    -------------------------------------------------------------------------- */
 

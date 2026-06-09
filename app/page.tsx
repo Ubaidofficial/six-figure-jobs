@@ -36,6 +36,7 @@ import { WhySixFigureJobs } from '@/components/home/WhySixFigureJobs'
 import { Testimonials } from '@/components/home/Testimonials'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
 import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
+import { getPriorityPublishedCompanyCandidates } from '@/lib/seo/companyPublishing'
 
 export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dynamic
 
@@ -278,6 +279,7 @@ export default async function HomePage() {
     const publicJobWhere = stats.publicJobWhere
     const [
       jobsData,
+      priorityCompanyCandidates,
       featuredCompanyGroups,
       salaryBandCounts,
       locationCounts,
@@ -292,6 +294,7 @@ export default async function HomePage() {
         sortBy: 'date',
         excludeInternships: true,
       }),
+      getPriorityPublishedCompanyCandidates(8),
       prisma.job.groupBy({
         by: ['companyId'],
         where: {
@@ -429,16 +432,42 @@ export default async function HomePage() {
       .map((g) => g.companyId)
       .filter((id): id is string => typeof id === 'string')
 
-    const featuredCompaniesRaw = featuredCompanyIds.length
+    const priorityCompanySlugs = priorityCompanyCandidates.map((candidate) => candidate.slug)
+
+    const featuredCompaniesRaw = featuredCompanyIds.length || priorityCompanySlugs.length
       ? await prisma.company.findMany({
-          where: { id: { in: featuredCompanyIds } },
+          where: {
+            OR: [
+              ...(featuredCompanyIds.length ? [{ id: { in: featuredCompanyIds } }] : []),
+              ...(priorityCompanySlugs.length ? [{ slug: { in: priorityCompanySlugs } }] : []),
+            ],
+          },
           select: { id: true, name: true, slug: true, logoUrl: true },
         })
       : []
 
   const featuredCompaniesById = new Map(featuredCompaniesRaw.map((c) => [c.id, c]))
+  const featuredCompaniesBySlug = new Map(
+    featuredCompaniesRaw
+      .filter((c) => typeof c.slug === 'string')
+      .map((c) => [c.slug as string, c] as const),
+  )
 
-  const featuredCompanies: FeaturedCompany[] = featuredCompanyGroups
+  const priorityFeaturedCompanies: FeaturedCompany[] = priorityCompanyCandidates
+    .map((candidate) => {
+      const company = featuredCompaniesBySlug.get(candidate.slug)
+      if (!company?.slug) return null
+      return {
+        id: company.id,
+        name: company.name,
+        slug: company.slug,
+        logoUrl: company.logoUrl ?? null,
+        activeHighPayingJobs: candidate.liveJobs,
+      }
+    })
+    .filter((company): company is FeaturedCompany => Boolean(company))
+
+  const volumeFeaturedCompanies: FeaturedCompany[] = featuredCompanyGroups
     .map((g) => {
       if (!g.companyId) return null
       const company = featuredCompaniesById.get(g.companyId)
@@ -452,6 +481,16 @@ export default async function HomePage() {
       }
     })
     .filter((c): c is FeaturedCompany => Boolean(c))
+
+  const seenFeaturedCompanyIds = new Set<string>()
+  const featuredCompanies: FeaturedCompany[] = [
+    ...priorityFeaturedCompanies,
+    ...volumeFeaturedCompanies,
+  ].filter((company) => {
+    if (seenFeaturedCompanyIds.has(company.id)) return false
+    seenFeaturedCompanyIds.add(company.id)
+    return true
+  })
 
   const jobs = jobsData.jobs as JobWithCompany[]
   const salaryTiers: SalaryTier[] = [
@@ -541,6 +580,11 @@ export default async function HomePage() {
         companyCount={stats.totalCompanies}
         countryCount={TARGET_COUNTRIES.length}
         newThisWeek={stats.newThisWeek}
+        companyLogos={featuredCompanies.slice(0, 8).map((c) => ({
+          slug: c.slug,
+          name: c.name,
+          logoUrl: c.logoUrl,
+        }))}
       >
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
@@ -667,6 +711,30 @@ export default async function HomePage() {
       </Hero>
 
       <FeaturedCompaniesCarousel companies={featuredCompanies} />
+
+      {priorityFeaturedCompanies.length > 0 && (
+        <section className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+          <h2 className="text-sm font-semibold text-slate-50">
+            Priority company pages
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
+            These company hubs are refreshed from live ATS feeds and kept stable for
+            repeat crawling. Start with the employers that consistently show transparent
+            high-salary demand.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {priorityFeaturedCompanies.map((company) => (
+              <Link
+                key={company.id}
+                href={`/company/${company.slug}`}
+                className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200 transition-colors hover:border-slate-500"
+              >
+                {company.name} ({company.activeHighPayingJobs.toLocaleString()})
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-semibold text-slate-50">
