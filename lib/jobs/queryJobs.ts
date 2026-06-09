@@ -74,6 +74,8 @@ const jobListingSelect = {
   url: true,
   applyUrl: true,
   postedAt: true,
+  expiresAt: true,
+  validThrough: true,
   createdAt: true,
   updatedAt: true,
   isHighSalary: true,
@@ -451,6 +453,9 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
         OR: [
           { title: { contains: kw, mode: 'insensitive' } },
           { company: { contains: kw, mode: 'insensitive' } },
+          { locationRaw: { contains: kw, mode: 'insensitive' } },
+          { techStack: { contains: kw, mode: 'insensitive' } },
+          { skillsJson: { contains: kw, mode: 'insensitive' } },
         ],
       })
     }
@@ -479,33 +484,66 @@ export function buildHighSalaryEligibilityWhere(): Prisma.JobWhereInput {
   }
 }
 
+// Tokens that mark a job as something we never surface (interns, contracts,
+// part-time, etc.). Kept as a flat list so the SQL stays one `LIKE ANY (...)`
+// equivalent per column instead of many separate NOT branches.
+const EXCLUDED_TITLE_TOKENS = [
+  'intern',
+  'internship',
+  'junior',
+  ' jr',
+  'jr.',
+  'entry',
+  'entry level',
+  'graduate',
+  'new grad',
+  'new-gr',
+  '(new grad',
+  'new graduate',
+  'phd graduate',
+]
+
+const EXCLUDED_EMPLOYMENT_TOKENS = ['part-time', 'part time', 'contract', 'temporary']
+
+// Wrap each NOT-contains check in an `OR field is null` so jobs with null
+// employmentType/type aren't silently filtered out. Prisma's `NOT: [...]`
+// of `contains` evaluates to NULL (filter-out) when the column is NULL —
+// that was masking a huge number of legitimate jobs (e.g. Stripe had 19/20
+// salary-validated roles dropped because employmentType was null even
+// though the job was full-time).
+// title is non-nullable on Job — a straight NOT contains is correct.
+function titleNotContains(token: string): Prisma.JobWhereInput {
+  return { title: { not: { contains: token }, mode: 'insensitive' } }
+}
+
+// type / employmentType are nullable. Prisma's `NOT contains` evaluates to
+// NULL (filter-out) when the column itself is NULL, so we have to explicitly
+// allow nulls with an OR. That was the Stripe display-gate bug: 19/20
+// salary-validated Stripe jobs had `employmentType=null` and were being
+// dropped by `NOT { employmentType: { contains: 'part-time' } }`.
+function typeNotContains(token: string): Prisma.JobWhereInput {
+  return {
+    OR: [
+      { type: { equals: null } },
+      { type: { not: { contains: token }, mode: 'insensitive' } },
+    ],
+  }
+}
+function employmentTypeNotContains(token: string): Prisma.JobWhereInput {
+  return {
+    OR: [
+      { employmentType: { equals: null } },
+      { employmentType: { not: { contains: token }, mode: 'insensitive' } },
+    ],
+  }
+}
+
 export function buildGlobalExclusionsWhere(): Prisma.JobWhereInput {
   return {
-    NOT: [
-      { title: { contains: 'intern', mode: 'insensitive' } },
-      { title: { contains: 'internship', mode: 'insensitive' } },
-      { title: { contains: 'junior', mode: 'insensitive' } },
-      { title: { contains: ' jr', mode: 'insensitive' } },
-      { title: { contains: 'jr.', mode: 'insensitive' } },
-      { title: { contains: 'entry', mode: 'insensitive' } },
-      { title: { contains: 'entry level', mode: 'insensitive' } },
-
-      { title: { contains: 'graduate', mode: 'insensitive' } },
-      { title: { contains: 'new grad', mode: 'insensitive' } },
-      { title: { contains: 'new-gr', mode: 'insensitive' } },
-      { title: { contains: '(new grad', mode: 'insensitive' } },
-      { title: { contains: 'new graduate', mode: 'insensitive' } },
-      { title: { contains: 'phd graduate', mode: 'insensitive' } },
-
-      { type: { contains: 'part-time', mode: 'insensitive' } },
-      { type: { contains: 'part time', mode: 'insensitive' } },
-      { type: { contains: 'contract', mode: 'insensitive' } },
-      { type: { contains: 'temporary', mode: 'insensitive' } },
-
-      { employmentType: { contains: 'part-time', mode: 'insensitive' } },
-      { employmentType: { contains: 'part time', mode: 'insensitive' } },
-      { employmentType: { contains: 'contract', mode: 'insensitive' } },
-      { employmentType: { contains: 'temporary', mode: 'insensitive' } },
+    AND: [
+      ...EXCLUDED_TITLE_TOKENS.map(titleNotContains),
+      ...EXCLUDED_EMPLOYMENT_TOKENS.map(typeNotContains),
+      ...EXCLUDED_EMPLOYMENT_TOKENS.map(employmentTypeNotContains),
     ],
   }
 }
