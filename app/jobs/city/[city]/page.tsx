@@ -9,6 +9,7 @@ import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/
 import { getCurrencyForCountry } from '../../../../lib/jobs/salaryThresholds'
 import { formatCurrencyShort, getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 import { isCityPageIndexable } from '../../../../lib/seo/indexabilityGates'
+import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
 export const revalidate = 600
 
@@ -47,7 +48,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   })
 
   const salaryLabel = getThresholdLabelForCountry(resolved.countryCode ?? null)
-  const allowIndex = isCityPageIndexable(total)
+  // City pages aren't in the Phase 1 allowlist — noindex until phase 2.
+  const allowIndex =
+    isCityPageIndexable(total) &&
+    isPhaseIndexable({
+      countryCode: resolved.countryCode ?? null,
+      pathname: `/jobs/city/${resolved.slug}`,
+    })
   const titleBase = `${salaryLabel} jobs in ${resolved.label}`
   const title =
     total > 0

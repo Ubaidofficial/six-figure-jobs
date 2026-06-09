@@ -5,6 +5,7 @@ import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
 export const revalidate = 3600
 
@@ -84,7 +85,9 @@ export async function generateMetadata({
     pageSize: 1,
   })
 
-  const allowIndex = total >= 1
+  // Level pages aren't in the Phase 1 allowlist — noindex until phase 2.
+  const allowIndex =
+    total >= 1 && isPhaseIndexable({ pathname: `/jobs/level/${level}` })
   const canonical = `${SITE_URL}/jobs/level/${level}`
 
   const title =

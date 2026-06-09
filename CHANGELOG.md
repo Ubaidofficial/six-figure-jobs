@@ -17,6 +17,7 @@
 
 * phased indexing rollout (`INDEXING_PHASE` env var, defaults to `1`). Phase 1 silences 11 sitemap families (blog, browse, category, city, country, level, remote, skills, slices + 2 slice shards), letting only `sitemap-jobs`, `sitemap-company`, `sitemap-salary` ship URLs. Direct response from this audit: only the homepage was indexed despite Google crawling ~20k URLs — pushing thousands more crawlable pages made the "Crawled - currently not indexed" bucket worse, not better. Silenced families return 200 with an empty `<urlset>` and an `X-Indexing-Phase` header. Bump `INDEXING_PHASE=2` to re-enable.
 * `scripts/pushPhase1ToIndexingApi.ts` — one-shot enumeration of the 105 Phase 1 URLs (hubs, top-10 role guides, role × top-5 country combos, top-20 priority companies) submitted to Google's Indexing API as `URL_UPDATED`. Run via `railway run` to seed the crawl queue after Phase 1 ships.
+* phase-aware `noindex` on 11 pSEO route families so the next layer is defended even if Google reaches them via internal links: `/jobs/[role]`, `/jobs/[role]/[filter]`, `/remote/[role]`, `/salary/[role]/[...loc]`, `/jobs/skills/[skill]`, `/jobs/city/[city]`, `/jobs/level/[level]`, `/jobs/category/[category]`, `/jobs/state/[state]`, `/jobs/location/[country]`, `/jobs/industry/[industry]`. Each calls `isPhaseIndexable()` last, so a tier-1 role + tier-1 country combination is still indexable while every other variant emits `index: false`.
 
 ### Features
 

@@ -24,6 +24,7 @@ import {
   isSalaryRoleLocationPageIndexable,
   MIN_SALARY_ROLE_LOCATION_INDEXABLE_JOBS,
 } from '../../../../lib/seo/indexabilityGates'
+import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
 export const revalidate = 1800
 
@@ -254,7 +255,13 @@ export async function generateMetadata({
     select: { id: true },
     take: MIN_SALARY_ROLE_LOCATION_INDEXABLE_JOBS,
   })
-  const allowIndex = isSalaryRoleLocationPageIndexable(raw.length)
+  const allowIndex =
+    isSalaryRoleLocationPageIndexable(raw.length) &&
+    isPhaseIndexable({
+      roleSlug,
+      countryCode,
+      pathname: `/salary/${roleSlug}/${normalizedLoc.canonicalSegments.join('/')}`,
+    })
 
   return {
     title,

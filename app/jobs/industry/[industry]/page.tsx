@@ -9,6 +9,7 @@ import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
+import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -43,7 +44,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     pageSize: 1,
   })
 
-  const allowIndex = total >= 1
+  // Industry pages aren't in the Phase 1 allowlist — noindex until phase 2.
+  const allowIndex =
+    total >= 1 && isPhaseIndexable({ pathname: `/jobs/industry/${resolved.slug}` })
   const titleBase = `$100k+ ${resolved.label} jobs`
   const title =
     total > 0

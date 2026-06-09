@@ -13,6 +13,7 @@ import { formatRelativeTime } from '../../../../lib/utils/time'
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
 import { countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { resolveJobCategory } from '../../../../lib/seo/jobCategories'
@@ -101,7 +102,9 @@ export async function generateMetadata({
     pageSize: 1,
   })
 
-  const allowIndex = total >= 1
+  // Category pages aren't in the Phase 1 allowlist — noindex until phase 2.
+  const allowIndex =
+    total >= 1 && isPhaseIndexable({ pathname: `/jobs/category/${category}` })
   const canonical = `${SITE_URL}/jobs/category/${category}`
   const shouldIndex = allowIndex && page === 1
   const title =

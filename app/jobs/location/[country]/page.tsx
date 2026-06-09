@@ -11,6 +11,7 @@ import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 
 import { CountryLocationTemplate } from '../_components/CountryLocationTemplate'
 import { isCountryPageIndexable } from '../../../../lib/seo/indexabilityGates'
+import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
 export const revalidate = 600
 
@@ -81,7 +82,13 @@ export async function generateMetadata({
     : `Browse ${total.toLocaleString()} ${salaryLabel} jobs in ${loc.label}. Find high paying ${loc.label} roles, six figure jobs, direct apply links, and verified salary ranges.`
 
   const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
-  const allowIndex = isCountryPageIndexable(total)
+  // Country listing pages aren't in the Phase 1 allowlist — noindex until phase 2.
+  const allowIndex =
+    isCountryPageIndexable(total) &&
+    isPhaseIndexable({
+      countryCode: loc.countryCode ?? null,
+      pathname: `/jobs/location/${loc.slug ?? country}`,
+    })
 
   return {
     title,

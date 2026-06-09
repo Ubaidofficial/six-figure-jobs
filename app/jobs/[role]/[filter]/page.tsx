@@ -7,6 +7,7 @@ import JobList from '../../../components/JobList'
 import { getSiteUrl } from '../../../../lib/seo/site'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { isRoleFilterPageIndexable } from '../../../../lib/seo/indexabilityGates'
+import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isCanonicalSlug } from '../../../../lib/roles/canonicalSlugs'
 import { findBestMatchingRole } from '../../../../lib/roles/slugMatcher'
 
@@ -156,7 +157,9 @@ export async function generateMetadata({
   }
 
   const salaryRange = getSalaryRangeText(jobs as JobWithCompany[])
-  const allowIndex = isRoleFilterPageIndexable(total)
+  const allowIndex =
+    isRoleFilterPageIndexable(total) &&
+    isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}/${filter}` })
   const title = `${roleTitle} ${parsed.label} Jobs - ${total} Verified Positions`
   const description = `${total} ${roleTitle.toLowerCase()} roles paying ${parsed.label} (${salaryRange}) with salary transparency and direct-apply links.`
 

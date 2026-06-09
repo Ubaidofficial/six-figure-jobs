@@ -14,6 +14,7 @@ import JobList from '../../components/JobList'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { isRemoteRolePageIndexable } from '../../../lib/seo/indexabilityGates'
+import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20
@@ -226,7 +227,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       })
 
       const jobCount = result.total
-      const shouldIndex = isTier1Role(roleSlug) && isRemoteRolePageIndexable(jobCount)
+      const shouldIndex =
+        isTier1Role(roleSlug) &&
+        isRemoteRolePageIndexable(jobCount) &&
+        isPhaseIndexable({ roleSlug, pathname: `/remote/${roleSlug}` })
 
       const title = `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs | ${SITE_NAME}`
       const description = `Find ${jobCount.toLocaleString()} remote ${roleName} jobs paying $100k+. Browse high paying remote ${roleName.toLowerCase()} positions with verified six figure salaries.`
