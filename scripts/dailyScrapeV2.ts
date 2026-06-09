@@ -80,6 +80,12 @@ const ATS_COMPANY_PAGE_SIZE = 500
 const DEFAULT_ATS_TIMEOUT_MS = 90_000
 const MAX_ATS_TIMEOUT_MS = 10 * 60 * 1000
 
+// Companies whose last scrape failed get a cooldown before we retry them, so
+// a persistently broken endpoint doesn't burn cycles every run. Override via
+// env (in minutes); 0 disables the cooldown.
+const ATS_FAILURE_COOLDOWN_MS =
+  Math.max(0, Number(process.env.ATS_FAILURE_COOLDOWN_MINUTES ?? '60')) * 60 * 1000
+
 function parseCliArgs(): CliOptions {
   const args = process.argv.slice(2)
 
@@ -324,10 +330,24 @@ async function loadAtsCompanies(options: CliOptions) {
 
     if (remaining <= 0) break
 
+    const failureCooldownCutoff =
+      ATS_FAILURE_COOLDOWN_MS > 0 ? new Date(Date.now() - ATS_FAILURE_COOLDOWN_MS) : null
     const page = await prisma.company.findMany({
       where: {
         atsProvider: { in: [...SUPPORTED_ATS_PROVIDERS] },
         atsUrl: { not: null },
+        // Recently-failed companies get a cooldown so we don't hammer broken
+        // endpoints every run. Companies that have never been scraped
+        // (lastScrapedAt = null) always pass — first attempts are unrestricted.
+        ...(failureCooldownCutoff
+          ? {
+              OR: [
+                { scrapeStatus: { not: 'failed' } },
+                { lastScrapedAt: null },
+                { lastScrapedAt: { lt: failureCooldownCutoff } },
+              ],
+            }
+          : {}),
       },
       orderBy: [
         { lastScrapedAt: 'asc' },
@@ -445,6 +465,10 @@ async function runAtsScrapers(options: CliOptions): Promise<DailyScrapeStats> {
           await prisma.company.update({
             where: { id: company.id },
             data: {
+              // Stamping lastScrapedAt on failure (in addition to scrapeStatus)
+              // rotates broken companies to the back of the queue and lets the
+              // cooldown above gate the next retry.
+              lastScrapedAt: new Date(),
               scrapeStatus: 'failed',
               scrapeError: String(result.error).slice(0, 500),
             },
@@ -507,6 +531,8 @@ async function runAtsScrapers(options: CliOptions): Promise<DailyScrapeStats> {
         await prisma.company.update({
           where: { id: company.id },
           data: {
+            // See above — push to back of queue so we don't hammer it next run.
+            lastScrapedAt: new Date(),
             scrapeStatus: 'failed',
             scrapeError: message.slice(0, 500),
           },
@@ -682,7 +708,11 @@ async function main() {
     stats.sourceMetrics.push(...atsStats.sourceMetrics)
   }
 
-  await printJobSummary()
+  try {
+    await printJobSummary()
+  } catch (err) {
+    __serr('⚠️  Job summary failed:', getErrorMessage(err))
+  }
   await notifyGoogleOfNewJobs(scrapeStartedAt, options.dryRun)
 
   // Expire stale jobs (not seen/updated in 7+ days)
