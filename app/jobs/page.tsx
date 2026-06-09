@@ -21,6 +21,7 @@ import { logRuntimeFallback } from '@/lib/runtime/fallback'
 import { JobsFiltersPanel, type JobsFacets } from './_components/JobsFilters'
 import { JobsToolbar } from './_components/JobsToolbar'
 import styles from './JobsPage.module.css'
+import { PageStatGrid } from '@/components/seo/PageChrome'
 
 export const revalidate = 600
 
@@ -308,6 +309,15 @@ export default async function JobsIndexPage({
       ? Math.min(450_000, Math.max(100_000, minSalaryRaw))
       : null
   const salaryCurrency = minSalary ? resolveCurrencyFromCountryCode(country) ?? 'USD' : null
+  const activeFilterCount =
+    roles.length +
+    seniority.length +
+    companySizes.length +
+    (country ? 1 : 0) +
+    (remoteMode ? 1 : 0) +
+    (techFilter ? 1 : 0) +
+    (keyword ? 1 : 0) +
+    (minSalary ? 1 : 0)
 
   const queryInput: JobQueryInput = {
     page,
@@ -493,6 +503,33 @@ export default async function JobsIndexPage({
         <JobsToolbar facets={facets} />
       </header>
 
+      <div className="mb-8">
+        <PageStatGrid
+          items={[
+            {
+              label: 'Live opportunities',
+              value: data.total.toLocaleString(),
+              hint: 'Verified six-figure openings in the current result set',
+            },
+            {
+              label: 'Page freshness',
+              value: lastUpdatedLabel ? `Updated ${lastUpdatedLabel}` : 'Live feed',
+              hint: 'ATS-driven listings are refreshed and deduped regularly',
+            },
+            {
+              label: 'Active filters',
+              value: activeFilterCount.toLocaleString(),
+              hint: activeFilterCount > 0 ? 'Current query is narrowed from the full jobs hub' : 'Showing the broadest jobs hub view',
+            },
+            {
+              label: 'Pay floor',
+              value: minSalary ? `$${Math.round(minSalary / 1000)}k+` : '$100k+',
+              hint: salaryCurrency ? `Applied in ${salaryCurrency}` : 'Default high-salary threshold',
+            },
+          ]}
+        />
+      </div>
+
       <div className={styles.layout}>
         <aside className={styles.sidebar} aria-label="Filters">
           <JobsFiltersPanel facets={facets} />
@@ -539,12 +576,42 @@ export default async function JobsIndexPage({
               </div>
             </div>
           ) : (
-            <InfiniteJobsList
-              initialJobs={dedupedJobs}
-              initialPage={page}
-              totalPages={totalPages}
-              view={view}
-            />
+            <>
+              <InfiniteJobsList
+                initialJobs={dedupedJobs}
+                initialPage={page}
+                totalPages={totalPages}
+                view={view}
+              />
+              {totalPages > 1 ? (
+                <nav
+                  className={styles.pagination}
+                  aria-label="Jobs pagination"
+                  // SSR pagination links so Google can crawl pages beyond 1.
+                  // The client-side InfiniteJobsList above appends pages for
+                  // human users; these anchor tags are the discoverable index.
+                >
+                  {page > 1 ? (
+                    <Link
+                      className={styles.pageLink}
+                      href={buildPageHref(basePath, sp, page - 1)}
+                      rel="prev"
+                    >
+                      ← Previous page
+                    </Link>
+                  ) : null}
+                  {page < totalPages ? (
+                    <Link
+                      className={styles.pageLink}
+                      href={buildPageHref(basePath, sp, page + 1)}
+                      rel="next"
+                    >
+                      Next page →
+                    </Link>
+                  ) : null}
+                </nav>
+              ) : null}
+            </>
           )}
         </section>
       </div>

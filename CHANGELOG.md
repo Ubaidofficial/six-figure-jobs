@@ -2,6 +2,13 @@
 
 ### Bug Fixes
 
+* return 410 Gone (instead of 404) for expired and stale job pages — Google clears 410s from the index quickly while 404s keep re-crawling; addresses the GSC "Not found (404)" backlog on /job/* URLs
+* render SSR pagination links on /jobs so Google can crawl beyond page 1; previous client-only InfiniteJobsList left pages 2+ invisible to crawlers
+* swap /search from force-dynamic to ISR 60s with public CDN cache headers — the page is noindex by design so caching has no SEO impact, but every search hit was re-rendering server-side
+
+### Features
+
+* emit per-job JobPosting JSON-LD on /company/[slug] (top 10 indexable jobs) so company pages can surface in Google Jobs rich results in addition to the existing Organization/ItemList/CollectionPage schemas
 * reconcile broken Greenhouse salary intervals, repair live outliers, and unblock indexable job pages
 * add source expiry fields to scraped ingest input for consistent validThrough handling
 

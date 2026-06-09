@@ -15,9 +15,17 @@ import { normalizePublicCompanyWebsite } from '../../../lib/companies/website'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
+import { getCompanyPublishingDecision } from '../../../lib/seo/companyPublishing'
 import { buildWhere } from '../../../lib/jobs/queryJobs'
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
+import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
+import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
+
+// Per-job JobPosting count emitted on the company page. Capped to avoid HTML
+// bloat while still exposing the highest-value jobs to Google's job-search
+// surfaces from the company hub.
+const COMPANY_JOB_POSTING_JSON_LD_LIMIT = 10
 
 export const revalidate = 3600
 
@@ -75,13 +83,19 @@ export async function generateMetadata({
   return withRuntimeFallback<Metadata>(
     `company.${slug}.metadata`,
     async () => {
-      const data = await getCompanyWithJobs(slug)
+      const [data, publishingDecision] = await Promise.all([
+        getCompanyWithJobs(slug),
+        getCompanyPublishingDecision(slug),
+      ])
 
       if (!data) return { title: `Company not found | ${SITE_NAME}` }
 
       const { company, jobs } = data
       const jobCount = jobs.length
-      const allowIndex = isCompanyPageIndexable(jobCount)
+      const allowIndex =
+        isCompanyPageIndexable(jobCount) &&
+        publishingDecision.ready &&
+        publishingDecision.unlocked
 
       const title = `${company.name} $100k+ Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
       const companyDesc = company.description
@@ -158,6 +172,10 @@ export default async function CompanyPage({
       const itemListJsonLd = buildCompanyJobsItemListJsonLd(company, qualifiedJobs)
       const collectionPageJsonLd = buildCompanyCollectionPageJsonLd(company, qualifiedJobs, stats)
       const faqJsonLd = buildCompanyFaqJsonLd(company, qualifiedJobs)
+      const jobPostingJsonLds = qualifiedJobs
+        .filter((job) => evaluateJobIndexability(job).indexable)
+        .slice(0, COMPANY_JOB_POSTING_JSON_LD_LIMIT)
+        .map((job) => buildJobJsonLd(job))
 
       const tags = parseTags(company.tagsJson)
       const heroLogo = buildLogoUrl(company.logoUrl ?? null, company.website ?? null)
@@ -516,6 +534,13 @@ export default async function CompanyPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
+      {jobPostingJsonLds.map((jsonLd, index) => (
+        <script
+          key={`job-posting-jsonld-${index}`}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      ))}
         </main>
       )
     },
@@ -539,12 +564,7 @@ function JobListItem({ job }: { job: JobWithFlags }) {
   const locationText = buildLocationText(job)
   const isHighSalary = job.isHighSalary
 
-  const rawSnippet =
-    (job as any).descriptionHtml ?? (job as any).description ?? (job as any).body ?? null
-
-  const snippet = rawSnippet
-    ? truncateText(toPlainText(String(rawSnippet)), 140)
-    : null
+  const snippet = buildJobPreviewSnippet(job)
 
   return (
     <div className="group rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-colors hover:border-slate-700">
@@ -595,6 +615,24 @@ function JobListItem({ job }: { job: JobWithFlags }) {
       </div>
     </div>
   )
+}
+
+function buildJobPreviewSnippet(job: JobWithFlags): string | null {
+  const aiSnippet = typeof job.aiSnippet === 'string' ? job.aiSnippet.trim() : ''
+  if (aiSnippet.length >= 80) {
+    return truncateText(aiSnippet, 180)
+  }
+
+  const aiOneLiner = typeof job.aiOneLiner === 'string' ? job.aiOneLiner.trim() : ''
+  if (aiOneLiner.length >= 32) {
+    return truncateText(aiOneLiner, 160)
+  }
+
+  const rawSnippet =
+    (job as any).descriptionHtml ?? (job as any).description ?? (job as any).body ?? null
+  if (!rawSnippet) return null
+
+  return truncateText(toPlainText(String(rawSnippet)), 140)
 }
 
 function CompanySignalPanel({

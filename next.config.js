@@ -39,10 +39,13 @@ const pageCacheHeaders = [
   },
 ]
 
-const searchNoCacheHeaders = [
+// /search is noindex (X-Robots-Tag below) so cache headers don't affect SEO.
+// We cache the rendered HTML per-URL at the CDN for 60s, with a longer SWR
+// window so repeat searches hit cache while a background regen runs.
+const searchCacheHeaders = [
   {
     key: 'Cache-Control',
-    value: 'private, no-cache, no-store, max-age=0, must-revalidate',
+    value: 'public, s-maxage=60, stale-while-revalidate=300',
   },
 ]
 
@@ -116,7 +119,7 @@ const nextConfig = {
       {
         source: '/search',
         headers: [
-          ...searchNoCacheHeaders,
+          ...searchCacheHeaders,
           { key: 'X-Robots-Tag', value: 'noindex, follow' },
         ],
       },

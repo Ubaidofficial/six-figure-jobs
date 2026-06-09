@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { checkJobAvailability } from './lib/jobs/jobAvailabilityCheck'
 
-// NOTE: Node.js crypto (createHmac, createHash) is NOT available in Edge Runtime.
-// The middleware only checks cookie *existence* — a fast gate for the common case
-// (no cookie = definitely not logged in → redirect immediately).
-// Actual HMAC verification happens in the server-side layout (Node.js runtime)
-// via getAdminSession(), which runs for every dashboard page render.
+// Runs in the Node.js runtime so we can call Prisma directly (e.g. for the
+// /job/:slug 410 check below). The previous edge-only setup couldn't tell Google
+// the difference between a removed job (410) and an unknown URL (404), which
+// caused the "Not found (404)" pile-up in Google Search Console — Google
+// retries 404s for weeks but drops 410s immediately.
+export const config = {
+  runtime: 'nodejs',
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json)).*)',
+  ],
+}
 
 const ADMIN_ROOT = '/ubaid93'
 const PUBLIC_PATHS = [`${ADMIN_ROOT}/login`, `${ADMIN_ROOT}/setup`]
@@ -60,7 +67,40 @@ function enforceQueryAllowlist(request: NextRequest): NextResponse | null {
   return null
 }
 
-export function middleware(request: NextRequest) {
+function buildGoneResponse(): NextResponse {
+  // Minimal 410 body — Google reads the status, not the HTML. Keeping the body
+  // small avoids wasting bandwidth and prevents accidental indexing.
+  return new NextResponse(
+    '<!doctype html><title>Gone</title>This job posting is no longer available.',
+    {
+      status: 410,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=300, s-maxage=86400, stale-while-revalidate=86400',
+        'X-Robots-Tag': 'noindex',
+      },
+    },
+  )
+}
+
+async function handleJobDetailStatus(request: NextRequest): Promise<NextResponse | null> {
+  const match = request.nextUrl.pathname.match(/^\/job\/([^/]+)\/?$/)
+  if (!match) return null
+
+  try {
+    const availability = await checkJobAvailability(match[1])
+    if (availability === 'expired' || availability === 'stale') {
+      return buildGoneResponse()
+    }
+  } catch (err) {
+    // Don't break the request if the lookup fails — the page route will fall
+    // back to its own DB query and 404 path. We just lose the 410 upgrade.
+    console.error('[middleware] job availability check failed', err)
+  }
+  return null
+}
+
+export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? ''
 
   // 301 apex → www (SEO: consolidate PageRank on canonical www host)
@@ -69,6 +109,9 @@ export function middleware(request: NextRequest) {
     url.host = WWW_HOST
     return NextResponse.redirect(url, { status: 301 })
   }
+
+  const goneResponse = await handleJobDetailStatus(request)
+  if (goneResponse) return goneResponse
 
   const normalizedRoleQueryRedirect = normalizeLegacyRoleQuery(request)
   if (normalizedRoleQueryRedirect) return normalizedRoleQueryRedirect
@@ -91,11 +134,4 @@ export function middleware(request: NextRequest) {
   }
 
   return NextResponse.next()
-}
-
-export const config = {
-  matcher: [
-    // Match all paths except static files and Next.js internals
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json)).*)',
-  ],
 }

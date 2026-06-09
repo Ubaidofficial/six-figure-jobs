@@ -4,19 +4,21 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { SearchUnavailablePage } from '@/components/runtime/FallbackPresets'
-import { prisma } from '../../lib/prisma'
 import {
-  buildGlobalExclusionsWhere,
-  buildHighSalaryEligibilityWhere,
+  queryJobs,
   type JobWithCompany,
 } from '../../lib/jobs/queryJobs'
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../components/JobList'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
-import { countryCodeToSlug, countrySlugToCode } from '../../lib/seo/countrySlug'
 
-export const dynamic = "force-dynamic"
+// CDN-cacheable per-query. /search is noindex by design (X-Robots-Tag header in
+// next.config), so caching has no SEO impact — but every search hit was
+// re-rendering server-side under the previous `force-dynamic`. 60s ISR plus a
+// public s-maxage gives identical queries a near-free hit while keeping results
+// fresh enough for a job board.
+export const revalidate = 60
 
 const PAGE_SIZE = 40
 
@@ -60,6 +62,43 @@ function normalizeLocation(value: string | undefined): string | undefined {
   if (!trimmed) return undefined
   if (trimmed.length === 2) return trimmed.toUpperCase()
   return trimmed.toLowerCase()
+}
+
+function normalizeRemoteMode(
+  value: string | undefined,
+): 'remote' | 'hybrid' | 'onsite' | undefined {
+  if (value === 'remote' || value === 'hybrid' || value === 'onsite') return value
+  return undefined
+}
+
+function resolveCountryCode(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const normalized = value.trim().toUpperCase()
+  return normalized.length === 2 ? normalized : undefined
+}
+
+function resolveSeniorityLevels(
+  explicit: string | undefined,
+  inferred: string | undefined,
+): string[] | undefined {
+  const value = (explicit || inferred || '').trim().toLowerCase()
+  if (!value) return undefined
+
+  switch (value) {
+    case 'entry':
+    case 'mid':
+    case 'senior':
+    case 'staff':
+    case 'principal':
+    case 'lead':
+    case 'director':
+    case 'vp':
+      return [value]
+    case 'executive':
+      return ['director', 'vp']
+    default:
+      return undefined
+  }
 }
 
 function normalizeSearchParams(sp: SearchParams): SearchParams {
@@ -231,7 +270,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const q = getParam(sp, 'q')?.trim() || ''
   const role = getParam(sp, 'role')?.trim() || ''
   const location = getParam(sp, 'location')?.trim() || ''
-  const remoteMode = getParam(sp, 'remoteMode')?.trim() || ''
+  const remoteMode = normalizeRemoteMode(getParam(sp, 'remoteMode')?.trim())
   const remoteRegion = getParam(sp, 'remoteRegion')?.trim() || ''
   const seniority = getParam(sp, 'seniority')?.trim() || ''
   const minSalaryParam = getParam(sp, 'minSalary')
@@ -247,7 +286,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   )
 
   const resolvedLocation = location || aiFilters.countryCode || ''
-  const resolvedRemoteMode = remoteMode || aiFilters.remoteMode || ''
+  const resolvedRemoteMode = remoteMode || normalizeRemoteMode(aiFilters.remoteMode)
   const resolvedRemoteRegion = remoteRegion || aiFilters.remoteRegion || ''
   const resolvedSeniority = seniority || aiFilters.experienceLevel || ''
   const roleSlugs = aiFilters.roleSlugs?.length
@@ -255,110 +294,31 @@ export default async function SearchPage({ searchParams }: PageProps) {
     : role
     ? [role]
     : []
-
-  const andConditions: any[] = []
-
-  // v2.9 hard gates: eligibility + global exclusions
-  andConditions.push(buildHighSalaryEligibilityWhere())
-  andConditions.push(buildGlobalExclusionsWhere())
-
-  // Optional user min-salary filter (additional constraint on top of eligibility)
+  const resolvedCountryCode =
+    resolvedLocation === 'remote' ? undefined : resolveCountryCode(resolvedLocation)
+  const remoteOnly = resolvedLocation === 'remote' || (Boolean(aiFilters.remoteOnly) && !remoteMode)
+  const seniorityLevels = resolveSeniorityLevels(seniority, aiFilters.experienceLevel)
   const hasUserMinSalary = Boolean(minSalaryParam) || aiFilters.minAnnual != null
-  if (hasUserMinSalary) {
-    andConditions.push({
-      OR: [
-        { maxAnnual: { gte: BigInt(minAnnual) } },
-        { minAnnual: { gte: BigInt(minAnnual) } },
-      ],
-    })
-  }
-
-  if (q) {
-    andConditions.push({
-      OR: [
-        { title: { contains: q, mode: 'insensitive' } },
-        { company: { contains: q, mode: 'insensitive' } },
-        { locationRaw: { contains: q, mode: 'insensitive' } },
-      ],
-    })
-  }
-
-  if (roleSlugs.length) {
-    andConditions.push({
-      OR: roleSlugs.map((slug) => ({
-        roleSlug: { contains: slug, mode: 'insensitive' },
-      })),
-    })
-  }
-
-  if (resolvedLocation) {
-    if (resolvedLocation === 'remote') {
-      andConditions.push({
-        OR: [{ remote: true }, { remoteMode: 'remote' }],
-      })
-    } else if (resolvedLocation.length === 2) {
-      const slugFromCode = countryCodeToSlug(resolvedLocation.toUpperCase())
-      if (slugFromCode) {
-        const code = countrySlugToCode(slugFromCode)
-        if (code) {
-          andConditions.push({
-            countryCode: code.toUpperCase(),
-          })
-        }
-      }
-    }
-  }
-
-  if (aiFilters.remoteOnly && !resolvedRemoteMode) {
-    andConditions.push({
-      OR: [{ remote: true }, { remoteMode: 'remote' }],
-    })
-  }
-
-  if (
-    resolvedRemoteMode === 'remote' ||
-    resolvedRemoteMode === 'hybrid' ||
-    resolvedRemoteMode === 'onsite'
-  ) {
-    andConditions.push({ remoteMode: resolvedRemoteMode })
-  }
-
-  if (resolvedRemoteRegion) {
-    andConditions.push({ remoteRegion: resolvedRemoteRegion })
-  }
-
-  if (resolvedSeniority) {
-    andConditions.push({
-      roleInference: {
-        seniority: resolvedSeniority,
-      },
-    })
-  }
-
-  const where: any =
-    andConditions.length > 0
-      ? { isExpired: false, AND: andConditions }
-      : { isExpired: false }
 
   return withRuntimeFallback(
     'search.page',
     async () => {
-      const [jobsRaw, total] = await Promise.all([
-        prisma.job.findMany({
-          where,
-          orderBy: [
-            { maxAnnual: 'desc' },
-            { createdAt: 'desc' },
-          ],
-          skip: (page - 1) * PAGE_SIZE,
-          take: PAGE_SIZE,
-          include: { companyRef: true },
-        }),
-        prisma.job.count({ where }),
-      ])
+      const data = await queryJobs({
+        page,
+        pageSize: PAGE_SIZE,
+        sortBy: 'salary',
+        roleSlugs: roleSlugs.length ? roleSlugs : undefined,
+        countryCode: resolvedCountryCode,
+        remoteOnly: remoteOnly || undefined,
+        remoteMode: resolvedRemoteMode,
+        remoteRegion: resolvedRemoteRegion || undefined,
+        seniorityLevels,
+        keyword: q || undefined,
+        ...(hasUserMinSalary ? { minAnnual } : {}),
+      })
 
-      const jobs = jobsRaw as JobWithCompany[]
-      const hasNextPage = page * PAGE_SIZE < total
+      const jobs = data.jobs as JobWithCompany[]
+      const hasNextPage = data.page * PAGE_SIZE < data.total
       const hasPrevPage = page > 1
       const paginationState: SearchParams = {
         ...sp,
@@ -525,7 +485,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             </h1>
             <p className="mt-2 text-sm text-slate-400">
               <span className="font-semibold text-slate-100">
-                {total.toLocaleString()}
+                {data.total.toLocaleString()}
               </span>{' '}
               opportunities found
               {resolvedLocation &&
@@ -569,7 +529,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             <span className="text-sm text-slate-400">
               Page <span className="font-semibold text-slate-200">{page}</span> of{' '}
               <span className="font-semibold text-slate-200">
-                {Math.max(1, Math.ceil(total / PAGE_SIZE))}
+                {data.totalPages}
               </span>
             </span>
 
