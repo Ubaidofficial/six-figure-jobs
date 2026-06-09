@@ -2,6 +2,7 @@
 
 ### Bug Fixes
 
+* fix the SEO Gates CI job. After the Phase 1 sitemap silencing landed (`02fe416`) and the indexability-gate threshold bumps (`188f1b8`), 6 sitemap-route tests broke: 4 because they called silenced routes and expected non-empty XML, 2 because they mocked tier counts below the new 5-job threshold. Adds `jest.setup.js` that sets `INDEXING_PHASE=2` for the test suite (the phase silencing itself is exercised separately in `indexingPhase.test.ts`) and bumps the mocked counts in `sitemapSalaryRoute`, `countrySitemapRoute`, and `citySitemapFilters` tests to clear the unified 5-job gate.
 * return 410 Gone (instead of 404) for expired and stale job pages — Google clears 410s from the index quickly while 404s keep re-crawling; addresses the GSC "Not found (404)" backlog on /job/* URLs
 * render SSR pagination links on /jobs so Google can crawl beyond page 1; previous client-only InfiniteJobsList left pages 2+ invisible to crawlers
 * swap /search from force-dynamic to ISR 60s with public CDN cache headers — the page is noindex by design so caching has no SEO impact, but every search hit was re-rendering server-side

@@ -20,11 +20,14 @@ describe('sitemap-salary.xml route', () => {
   })
 
   it('omits empty salary tiers from the sitemap', async () => {
+    // Mock counts must clear the unified MIN_SALARY_TIER_INDEXABLE_JOBS=5
+    // threshold to be considered indexable. 400k-plus is bumped 3 → 7 here so
+    // it stays in the assertion set after the gate change.
     countMock
       .mockResolvedValueOnce(42)
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(11)
-      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(7)
 
     aggregateMock
       .mockResolvedValueOnce({ _max: { updatedAt: new Date('2026-03-10T00:00:00.000Z') } } as any)
