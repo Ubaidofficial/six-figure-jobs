@@ -254,7 +254,10 @@
   }
 
   .sidebar {
-    display: none;
+    /* Was display: none — mobile users had no way to filter at all.
+       Now the sidebar's <details> wrapper collapses by default on mobile
+       (open via the summary tap) and stays open on desktop. */
+    width: 100%;
   }
 
   .resultsHeader {

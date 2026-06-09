@@ -532,7 +532,48 @@ export default async function JobsIndexPage({
 
       <div className={styles.layout}>
         <aside className={styles.sidebar} aria-label="Filters">
-          <JobsFiltersPanel facets={facets} />
+          {/* Collapsible on mobile, always-open on desktop via CSS that
+              hides the summary at md+. <details> gives us a free, no-JS
+              drawer that respects keyboard / screen readers. */}
+          <details
+            open
+            className="group rounded-2xl border border-slate-800/80 bg-slate-950/60 md:border-0 md:bg-transparent md:p-0"
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-900/60 md:hidden [&::-webkit-details-marker]:hidden">
+              <span className="inline-flex items-center gap-2">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4 text-emerald-400"
+                >
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="7" y1="12" x2="17" y2="12" />
+                  <line x1="10" y1="18" x2="14" y2="18" />
+                </svg>
+                Filters
+              </span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </summary>
+            <div className="md:block">
+              <JobsFiltersPanel facets={facets} />
+            </div>
+          </details>
         </aside>
 
         <section className={styles.results} aria-label="Job results">
