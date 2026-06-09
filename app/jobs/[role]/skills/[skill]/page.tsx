@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 export const revalidate = 600
 
 import { SKILL_TARGETS } from '../../../../../lib/seo/pseoTargets'
+import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
 import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJobs'
 import JobList from '../../../../components/JobList'
 import { getSiteUrl, SITE_NAME } from '../../../../../lib/seo/site'
@@ -51,7 +52,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     alternates: { canonical },
     openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
-    robots: total >= 1 ? { index: true, follow: true } : { index: false, follow: true },
+    // Phase-aware: role × skill deep combos aren't in the Phase 1 allowlist.
+    robots:
+      total >= 1 &&
+      isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}/skills/${skillInfo.slug}` })
+        ? { index: true, follow: true }
+        : { index: false, follow: true },
   }
 }
 

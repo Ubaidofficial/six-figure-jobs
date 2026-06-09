@@ -13,6 +13,7 @@ import JobList from '../../../../components/JobList'
 import { buildJobSlugHref } from '../../../../../lib/jobs/jobSlug'
 import { SITE_NAME, getSiteUrl } from '../../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
+import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
 
 export const revalidate = 300
 
@@ -268,8 +269,10 @@ export async function generateMetadata({
     alternates: {
       canonical: canonicalUrl,
     },
+    // Phase-aware: remote × city deep combos aren't in Phase 1 allowlist.
     robots:
-      totalJobs >= 3
+      totalJobs >= 3 &&
+      isPhaseIndexable({ roleSlug, pathname: canonicalUrl.replace(SITE_URL, '') })
         ? { index: true, follow: true }
         : { index: false, follow: true },
     openGraph: {

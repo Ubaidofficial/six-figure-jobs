@@ -8,6 +8,7 @@ import { prisma } from '../../../lib/prisma'
 import { queryJobs, buildWhere, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 
@@ -73,10 +74,14 @@ export async function generateMetadata({
 
   const canonical = page > 1 ? `${SITE_URL}/jobs/visa-sponsorship?page=${page}` : `${SITE_URL}/jobs/visa-sponsorship`
 
+  // Specialty pages aren't in the Phase 1 allowlist — noindex until phase 2.
+  const allowIndex = isPhaseIndexable({ pathname: '/jobs/visa-sponsorship' })
+
   return {
     title,
     description,
     alternates: { canonical },
+    robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
   }
