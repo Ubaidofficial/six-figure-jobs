@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { checkJobAvailability } from './lib/jobs/jobAvailabilityCheck'
 
-// Runs in the Node.js runtime so we can call Prisma directly (e.g. for the
-// /job/:slug 410 check below). The previous edge-only setup couldn't tell Google
-// the difference between a removed job (410) and an unknown URL (404), which
-// caused the "Not found (404)" pile-up in Google Search Console — Google
-// retries 404s for weeks but drops 410s immediately.
+// Next.js 16 `proxy.ts` always runs in the Node.js runtime (no `runtime`
+// override allowed — that errors at build time). Node access is what lets us
+// call Prisma directly for the /job/:slug 410 check below; under the old
+// edge-only middleware setup we couldn't tell Google the difference between a
+// removed job (410) and an unknown URL (404), which caused the "Not found
+// (404)" pile-up in Google Search Console.
 export const config = {
-  runtime: 'nodejs',
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json)).*)',
   ],

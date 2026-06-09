@@ -10,6 +10,7 @@
 * guarantee at least four internal hub links on every job page (`/jobs/100k-plus`, `/companies`, `/salary`, plus `/remote` when no role-scoped link is present) — orphaned job pages with only sitemap inclusion were a known "Crawled - currently not indexed" trigger
 * add server-rendered pagination to /companies (48/page with prev/next links) so Googlebot can crawl past page 1; the previous client-only CompanySearch left the long-tail directory uncrawlable
 * rename `middleware.ts` → `proxy.ts` (and `middleware()` → `proxy()`) to match the Next.js 16 file convention and clear the build-time deprecation warning
+* drop `runtime: 'nodejs'` from `proxy.ts` config — Next.js 16 always runs proxy on Node.js and rejects the override at build time
 
 ### Features
 
