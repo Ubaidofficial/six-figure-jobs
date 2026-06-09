@@ -1,10 +1,8 @@
 // app/sitemap-company/[page]/route.ts
 // Sharded company sitemap pages
 
-import { prisma } from '../../../lib/prisma'
 import { getSiteUrl } from '../../../lib/seo/site'
-import { MIN_COMPANY_INDEXABLE_JOBS } from '../../../lib/seo/indexabilityGates'
-import { buildWhere } from '../../../lib/jobs/queryJobs'
+import { getPublishedCompanyCandidatesPage } from '../../../lib/seo/companyPublishing'
 import {
   getMaxCompanySitemapPages,
   getMaxCompanyUrlsPerPage,
@@ -12,8 +10,7 @@ import {
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
-const PAGE_SIZE = 45000
-const MIN_INDEXABLE_JOBS = MIN_COMPANY_INDEXABLE_JOBS
+const PAGE_SIZE = getMaxCompanyUrlsPerPage()
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200 // 24h
@@ -38,48 +35,15 @@ function toMs(value: unknown): number {
 
 type CompanyRow = {
   slug: string
-  companyUpdatedAt: Date
-  latestJobUpdatedAt: Date | null
+  latestUpdatedAt: string
 }
 
 async function fetchCompanyPage(page: number): Promise<CompanyRow[]> {
-  const offset = (page - 1) * PAGE_SIZE
-  const eligibleJobWhere = buildWhere({})
-
-  return prisma.company.findMany({
-    where: {
-      jobs: {
-        some: eligibleJobWhere,
-      },
-    },
-    select: {
-      slug: true,
-      updatedAt: true,
-      jobs: {
-        where: eligibleJobWhere,
-        select: {
-          updatedAt: true,
-        },
-        orderBy: {
-          updatedAt: 'desc',
-        },
-        take: MIN_INDEXABLE_JOBS,
-      },
-    },
-    orderBy: {
-      updatedAt: 'desc',
-    },
-    skip: offset,
-    take: PAGE_SIZE,
-  }).then((rows) =>
-    rows
-      .filter((row) => row.jobs.length >= MIN_INDEXABLE_JOBS)
-      .map((row) => ({
-        slug: row.slug,
-        companyUpdatedAt: row.updatedAt,
-        latestJobUpdatedAt: row.jobs[0]?.updatedAt ?? null,
-      })),
-  )
+  const candidates = await getPublishedCompanyCandidatesPage(page, PAGE_SIZE)
+  return candidates.map((candidate) => ({
+    slug: candidate.slug,
+    latestUpdatedAt: candidate.latestUpdatedAt,
+  }))
 }
 
 export async function GET(
@@ -119,9 +83,7 @@ export async function GET(
 
   const urls = rows.map((row) => {
     const loc = escapeXml(`${SITE_URL}/company/${row.slug}`)
-    const lastmod = new Date(
-      Math.max(toMs(row.latestJobUpdatedAt), toMs(row.companyUpdatedAt)),
-    ).toISOString()
+    const lastmod = new Date(toMs(row.latestUpdatedAt)).toISOString()
 
     return `  <url>
     <loc>${loc}</loc>

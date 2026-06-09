@@ -1,17 +1,17 @@
 // app/sitemap-company.xml/route.ts
 // Sitemap index for /company/[slug] pages (sharded)
 
-import { prisma } from '../../lib/prisma'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
-import { MIN_COMPANY_INDEXABLE_JOBS } from '../../lib/seo/indexabilityGates'
-import { buildWhere } from '../../lib/jobs/queryJobs'
-import { getMaxCompanySitemapPages } from '../../lib/seo/sitemapPolicy'
+import { getPublishedCompanyCandidateCount } from '../../lib/seo/companyPublishing'
+import {
+  getMaxCompanySitemapPages,
+  getMaxCompanyUrlsPerPage,
+} from '../../lib/seo/sitemapPolicy'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
-const PAGE_SIZE = 45000
-const MIN_INDEXABLE_JOBS = MIN_COMPANY_INDEXABLE_JOBS
+const PAGE_SIZE = getMaxCompanyUrlsPerPage()
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 43200 // 24h
@@ -25,32 +25,9 @@ function escapeXml(s: string) {
     .replace(/'/g, '&apos;')
 }
 
-async function fetchEligibleCompanyCount(): Promise<number> {
-  const eligibleJobWhere = buildWhere({})
-  const rows = await prisma.company.findMany({
-    where: {
-      jobs: {
-        some: eligibleJobWhere,
-      },
-    },
-    select: {
-      id: true,
-      jobs: {
-        where: eligibleJobWhere,
-        select: {
-          id: true,
-        },
-        take: MIN_INDEXABLE_JOBS,
-      },
-    },
-  })
-
-  return rows.filter((row) => row.jobs.length >= MIN_INDEXABLE_JOBS).length
-}
-
 export async function GET() {
   try {
-    const total = await fetchEligibleCompanyCount()
+    const total = await getPublishedCompanyCandidateCount()
     const totalPages = Math.min(
       Math.ceil(total / PAGE_SIZE),
       getMaxCompanySitemapPages(),
