@@ -11,6 +11,7 @@ export const SUPPORTED_ATS_PROVIDERS = [
   'workable',
   'teamtailor',
   'breezy',
+  'icims',
 ] as const
 
 export type AtsProvider = (typeof SUPPORTED_ATS_PROVIDERS)[number]
@@ -43,6 +44,7 @@ export interface AtsJob {
 
   postedAt?: Date | null
   updatedAt?: Date | null
+  validThrough?: Date | null
 
   raw?: any
 }

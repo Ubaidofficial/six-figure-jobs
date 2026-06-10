@@ -6,6 +6,7 @@ describe('ATS detection support boundaries', () => {
     expect(toAtsProvider('greenhouse')).toBe('greenhouse')
     expect(toAtsProvider('breezy')).toBe('breezy')
     expect(toAtsProvider('teamtailor')).toBe('teamtailor')
+    expect(toAtsProvider('icims')).toBe('icims')
     expect(toAtsProvider('generic')).toBeNull()
   })
 
@@ -18,6 +19,7 @@ describe('ATS detection support boundaries', () => {
     expect(detectATS('https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html')).toBe('workforcenow')
     expect(isSupportedAtsProvider('breezy')).toBe(true)
     expect(isSupportedAtsProvider('teamtailor')).toBe(true)
+    expect(isSupportedAtsProvider('icims')).toBe(true)
   })
 
   it('keeps the supported provider registry aligned with implemented scrapers', () => {
@@ -32,6 +34,7 @@ describe('ATS detection support boundaries', () => {
       'workable',
       'teamtailor',
       'breezy',
+      'icims',
     ])
   })
 })

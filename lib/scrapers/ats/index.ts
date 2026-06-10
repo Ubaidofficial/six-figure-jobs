@@ -11,6 +11,7 @@ import { scrapeWorkableResult } from './workable'
 import { scrapeBambooHRResult } from './bamboohr'
 import { scrapeTeamtailorResult } from './teamtailor'
 import { scrapeBreezyResult } from './breezy'
+import { scrapeIcimsResult } from './icims'
 
 export type { ATSResult } from './types'
 
@@ -69,6 +70,9 @@ export async function scrapeCompanyAtsJobs(
 
       case 'breezy':
         return await scrapeBreezyResult(atsUrl)
+
+      case 'icims':
+        return await scrapeIcimsResult(atsUrl)
 
       default:
         return {

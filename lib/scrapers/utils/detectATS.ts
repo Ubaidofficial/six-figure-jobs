@@ -108,6 +108,7 @@ export function toAtsProvider(atsType: ATSType): AtsProvider | null {
     case 'teamtailor':
     case 'workable':
     case 'breezy':
+    case 'icims':
       return atsType
     default:
       return null
