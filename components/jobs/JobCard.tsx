@@ -15,6 +15,7 @@ import { SKILL_TARGETS } from '@/lib/seo/pseoTargets'
 import {
   ArrowRight,
   BadgeCheck,
+  Banknote,
   Building2,
   Clock,
   Globe,
@@ -63,6 +64,18 @@ function humanizeLocationText(value: string): string {
   }
 
   return trimmed
+}
+
+function formatApplyByDate(input: Date | string | number | null | undefined): string | null {
+  if (!input) return null
+  const date = input instanceof Date ? input : new Date(input)
+  if (!Number.isFinite(date.getTime())) return null
+  if (date.getTime() <= Date.now()) return null
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
 }
 
 function getWorkType(job: JobWithCompany): { label: string; Icon: React.ComponentType<any> } | null {
@@ -341,7 +354,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
     ...parseJsonArray((job as any)?.skillsJson),
   ])
 
-  const shownSkills = skills.slice(0, isHomepage ? 5 : isGrid ? 4 : 10)
+  const shownSkills = skills.slice(0, isHomepage ? 5 : isGrid ? 4 : 6)
   const extraSkills = Math.max(0, skills.length - shownSkills.length)
 
   if (
@@ -360,6 +373,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
   }
 
   const postedLabel = formatRelativeTime(job.postedAt ?? job.updatedAt ?? job.createdAt ?? null)
+  const applyByLabel = formatApplyByDate((job as any).expiresAt ?? (job as any).validThrough ?? null)
   const jobHref = buildJobSlugHref(job as any)
 
   // "NEW" badge: show for jobs posted within the last 3 days
@@ -454,9 +468,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
           {hasSalary ? (
             <div className={styles.salaryStack}>
               <div className={styles.salaryPill} aria-label={`Salary ${salary}`}>
-                <span className={styles.salaryIcon} aria-hidden="true">
-                  💰
-                </span>
+                <Banknote className={styles.salaryIcon} aria-hidden="true" />
                 <span className={styles.salaryValue}>{salary}</span>
               </div>
 
@@ -488,6 +500,13 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
             <span className={styles.metaPill}>
               <TrendingUp className={styles.metaIcon} aria-hidden="true" />
               {seniority}
+            </span>
+          ) : null}
+
+          {applyByLabel ? (
+            <span className={styles.metaPill}>
+              <Clock className={styles.metaIcon} aria-hidden="true" />
+              Apply by {applyByLabel}
             </span>
           ) : null}
         </div>

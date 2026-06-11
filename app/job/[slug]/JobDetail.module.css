@@ -441,9 +441,44 @@
 
 .richText {
   margin-top: var(--space-16);
-  color: var(--color-text-1);
-  font-size: var(--text-sm);
-  line-height: var(--line-height-relaxed);
+  color: rgba(255, 255, 255, 0.80);
+  font-size: 15px;
+  line-height: 1.75;
+  max-width: 72ch;
+}
+
+/* Premium prose rhythm — the global `* { margin: 0 }` reset strips spacing
+   from the sanitized description, leaving a dense wall of text. Restore it. */
+.richText > *:first-child {
+  margin-top: 0;
+}
+
+.richText > *:last-child {
+  margin-bottom: 0;
+}
+
+.richText p {
+  margin: 0 0 1em;
+}
+
+.richText ul,
+.richText ol {
+  margin: 0.4em 0 1.15em;
+  padding-left: 1.35em;
+}
+
+.richText li {
+  margin: 0 0 0.5em;
+}
+
+.richText li::marker {
+  color: var(--color-primary);
+}
+
+.richText strong,
+.richText b {
+  color: var(--color-text-0);
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Prose description (About the Role) — flowing paragraphs, not bullets */
