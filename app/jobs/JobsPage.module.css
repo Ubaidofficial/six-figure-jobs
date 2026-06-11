@@ -258,6 +258,11 @@
        Now the sidebar's <details> wrapper collapses by default on mobile
        (open via the summary tap) and stays open on desktop. */
     width: 100%;
+    /* MUST unstick on mobile: a sticky sidebar in the single-column layout
+       stays pinned while the results scroll up and paint over it (the cards
+       overlapping the filter panel). Static keeps it in normal flow. */
+    position: static;
+    top: auto;
   }
 
   .resultsHeader {

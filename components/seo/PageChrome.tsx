@@ -66,7 +66,7 @@ export function PageStatGrid({
   }>
 }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       {items.map((item) => (
         <div
           key={item.label}
@@ -74,7 +74,7 @@ export function PageStatGrid({
           style={STAT_CARD_BACKDROP}
         >
           <div className="text-xs uppercase tracking-wide text-slate-400">{item.label}</div>
-          <div className="mt-2 text-xl font-semibold text-slate-50 transition-colors group-hover:text-emerald-200">
+          <div className="mt-2 text-lg sm:text-xl font-semibold text-slate-50 transition-colors group-hover:text-emerald-200">
             {item.value}
           </div>
           {item.hint ? <div className="mt-1 text-[11px] text-slate-400">{item.hint}</div> : null}

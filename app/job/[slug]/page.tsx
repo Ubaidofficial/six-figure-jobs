@@ -451,46 +451,36 @@ export default async function JobPage({
         {/* Two-column layout */}
         <div className={styles.layout}>
           <aside className={styles.sidebar}>
-            <section className={styles.card}>
-              <div className={styles.cardTitle}>Job Highlights</div>
-              <div className={styles.highlightGrid}>
-                <div className={styles.highlightRow}>
-                  <div className={styles.highlightLeft}>
-                    <div className={styles.iconChip} aria-hidden="true">
-                      <Sparkles />
-                    </div>
-                    <div>
-                      <div className={styles.hlLabel}>Seniority</div>
-                      <div className={styles.hlValue}>{seniority || '—'}</div>
-                    </div>
-                  </div>
-                </div>
+            {(() => {
+              const highlights = [
+                { label: 'Seniority', value: seniority, Icon: Sparkles },
+                { label: 'Team size', value: teamSize, Icon: Users },
+                { label: 'Employment type', value: employmentType, Icon: Briefcase },
+              ].filter((h) => h.value)
 
-                <div className={styles.highlightRow}>
-                  <div className={styles.highlightLeft}>
-                    <div className={styles.iconChip} aria-hidden="true">
-                      <Users />
-                    </div>
-                    <div>
-                      <div className={styles.hlLabel}>Team size</div>
-                      <div className={styles.hlValue}>{teamSize || '—'}</div>
-                    </div>
-                  </div>
-                </div>
+              if (highlights.length === 0) return null
 
-                <div className={styles.highlightRow}>
-                  <div className={styles.highlightLeft}>
-                    <div className={styles.iconChip} aria-hidden="true">
-                      <Briefcase />
-                    </div>
-                    <div>
-                      <div className={styles.hlLabel}>Employment type</div>
-                      <div className={styles.hlValue}>{employmentType || '—'}</div>
-                    </div>
+              return (
+                <section className={styles.card}>
+                  <div className={styles.cardTitle}>Job Highlights</div>
+                  <div className={styles.highlightGrid}>
+                    {highlights.map(({ label, value, Icon }) => (
+                      <div key={label} className={styles.highlightRow}>
+                        <div className={styles.highlightLeft}>
+                          <div className={styles.iconChip} aria-hidden="true">
+                            <Icon />
+                          </div>
+                          <div>
+                            <div className={styles.hlLabel}>{label}</div>
+                            <div className={styles.hlValue}>{value}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-            </section>
+                </section>
+              )
+            })()}
 
             <section className={styles.card}>
               <div className={styles.cardTitle}>Verification</div>

@@ -645,7 +645,7 @@ details[open] .fullPostingSummary::before {
     padding-top: var(--space-16);
     padding-left: var(--space-12);
     padding-right: var(--space-12);
-    padding-bottom: calc(var(--space-64) + 98px);
+    padding-bottom: calc(var(--space-32) + 72px);
   }
 
   .headerMain {
@@ -684,25 +684,47 @@ details[open] .fullPostingSummary::before {
     margin: 0;
     padding: 10px 12px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom));
-    background: rgba(10, 10, 10, 0.4);
-    backdrop-filter: blur(14px);
+    /* Opaque: the description must NOT bleed through the sticky bar. */
+    background: rgba(12, 12, 12, 0.97);
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(12px);
   }
 
   .actionBar {
-    max-width: 1200px;
+    max-width: 640px;
     margin: 0 auto;
-    padding: 12px 12px;
+    padding: 0;
+    gap: 8px;
+    /* Two slim rows: compact salary chip, then full-width Apply + actions.
+       Strip the inner card chrome so it isn't a card-on-a-bar. */
     flex-direction: column;
     align-items: stretch;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
   }
 
   .salaryBox {
     min-width: 0;
-    flex: 1 1 auto;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+  }
+
+  .salaryLabel,
+  .salaryPeriod {
+    display: none;
   }
 
   .salaryValue {
-    font-size: 22px;
+    margin-top: 0;
+    font-size: 16px;
+    white-space: nowrap;
   }
 
   .applyNote {
@@ -710,8 +732,9 @@ details[open] .fullPostingSummary::before {
   }
 
   .applyButton {
-    width: 100%;
-    flex: 1 1 100%;
+    width: auto;
+    flex: 1 1 auto;
+    white-space: nowrap;
   }
 
   .benefitsGrid {
@@ -720,7 +743,10 @@ details[open] .fullPostingSummary::before {
 
   .actions {
     width: 100%;
+    flex: 0 0 auto;
+    align-items: center;
     justify-content: flex-start;
+    gap: 8px;
   }
 
   .cardSubtitle,

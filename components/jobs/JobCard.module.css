@@ -185,6 +185,10 @@
     transform: translateX(4px);
   }
 
+  .card:hover .cta {
+    background: var(--color-primary-light);
+  }
+
   .card:hover .title {
     color: var(--color-primary-light);
   }
@@ -472,10 +476,14 @@
 .cta {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
+  gap: 8px;
+  background: var(--color-primary);
+  color: #0a0a0a;
+  font-weight: var(--font-weight-bold);
   font-size: var(--text-sm);
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
 }
 
 .ctaIcon {

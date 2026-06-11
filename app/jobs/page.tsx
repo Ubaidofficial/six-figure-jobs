@@ -536,8 +536,7 @@ export default async function JobsIndexPage({
               hides the summary at md+. <details> gives us a free, no-JS
               drawer that respects keyboard / screen readers. */}
           <details
-            open
-            className="group rounded-2xl border border-slate-800/80 bg-slate-950/60 md:border-0 md:bg-transparent md:p-0"
+            className="group rounded-2xl border border-slate-800/80 bg-slate-950/60 md:border-0 md:bg-transparent md:p-0 md:[&>div]:!block"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-900/60 md:hidden [&::-webkit-details-marker]:hidden">
               <span className="inline-flex items-center gap-2">
