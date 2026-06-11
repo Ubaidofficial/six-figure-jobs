@@ -212,13 +212,13 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
               <>
                 <Link
                   href="/jobs"
-                  className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+                  className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
                 >
                   Browse all jobs
                 </Link>
                 <Link
                   href="/salary"
-                  className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+                  className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
                 >
                   Salary guides
                 </Link>
@@ -253,8 +253,8 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
         </div>
 
         {orderedCompanies.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-8 text-center">
-            <p className="text-slate-400">No companies found yet. Try again soon — listings update frequently.</p>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-8 text-center">
+            <p className="text-neutral-400">No companies found yet. Try again soon — listings update frequently.</p>
           </div>
         ) : (
           <>
@@ -271,10 +271,10 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
                       <Link
                         key={company.id}
                         href={`/company/${company.slug}`}
-                        className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-colors hover:border-slate-600"
+                        className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 transition-colors hover:border-neutral-600"
                       >
-                        <div className="text-sm font-semibold text-slate-100">{company.name}</div>
-                        <div className="mt-2 text-xs text-slate-400">
+                        <div className="text-sm font-semibold text-neutral-100">{company.name}</div>
+                        <div className="mt-2 text-xs text-neutral-400">
                           {candidate.liveJobs.toLocaleString()} live jobs •{' '}
                           {candidate.salaryBackedJobs.toLocaleString()} salary-backed •{' '}
                           {candidate.roleDiversity.toLocaleString()} role groups
@@ -291,13 +291,13 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
               description="This company directory groups employers with live $100k+ job openings, published salary ranges where available, and direct apply paths to company career pages. Use it to compare companies hiring for remote, hybrid, and on-site six figure jobs across engineering, product, data, sales, finance, marketing, operations, and leadership roles."
             >
               <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                <Link href="/jobs" className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-200 hover:border-slate-500">
+                <Link href="/jobs" className="rounded-full border border-neutral-700 px-3 py-1.5 text-neutral-200 hover:border-neutral-500">
                   Browse all jobs
                 </Link>
-                <Link href="/remote" className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-200 hover:border-slate-500">
+                <Link href="/remote" className="rounded-full border border-neutral-700 px-3 py-1.5 text-neutral-200 hover:border-neutral-500">
                   Remote jobs
                 </Link>
-                <Link href="/salary" className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-200 hover:border-slate-500">
+                <Link href="/salary" className="rounded-full border border-neutral-700 px-3 py-1.5 text-neutral-200 hover:border-neutral-500">
                   Salary guides
                 </Link>
               </div>
@@ -308,9 +308,9 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
             {totalPages > 1 ? (
               <nav
                 aria-label="Companies pagination"
-                className="mt-10 flex items-center justify-between gap-3 border-t border-slate-800 pt-6 text-sm"
+                className="mt-10 flex items-center justify-between gap-3 border-t border-neutral-800 pt-6 text-sm"
               >
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-neutral-400">
                   Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()} • Showing {pagedCompanies.length} of {orderedCompanies.length.toLocaleString()} companies
                 </div>
                 <div className="flex items-center gap-2">
@@ -318,7 +318,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
                     <Link
                       href={buildCompaniesPageHref(currentPage - 1)}
                       rel="prev"
-                      className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+                      className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
                     >
                       ← Previous
                     </Link>
@@ -327,7 +327,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
                     <Link
                       href={buildCompaniesPageHref(currentPage + 1)}
                       rel="next"
-                      className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+                      className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
                     >
                       Next →
                     </Link>
@@ -357,23 +357,23 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     return (
       <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
         <header className="mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-50">
+          <h1 className="text-3xl font-extrabold tracking-tight text-neutral-50">
             Companies hiring $100k+ roles
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-400">
             Company profiles are temporarily unavailable while the production database reconnects.
           </p>
         </header>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-8 text-center">
-          <p className="text-slate-300">
+        <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-8 text-center">
+          <p className="text-neutral-300">
             Browse the live job hubs while company data comes back online.
           </p>
           <div className="mt-4 flex justify-center gap-3 text-sm">
-            <Link href="/jobs" className="rounded-full border border-slate-700 px-4 py-2 text-slate-100">
+            <Link href="/jobs" className="rounded-full border border-neutral-700 px-4 py-2 text-neutral-100">
               Browse jobs
             </Link>
-            <Link href="/salary" className="rounded-full border border-slate-700 px-4 py-2 text-slate-100">
+            <Link href="/salary" className="rounded-full border border-neutral-700 px-4 py-2 text-neutral-100">
               Salary guides
             </Link>
           </div>

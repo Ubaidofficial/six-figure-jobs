@@ -141,7 +141,7 @@ export default async function RoleSkillPage({ params }: { params: Params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-400">
         <ol className="flex items-center gap-1">
           <li><Link href="/">Home</Link></li>
           <li className="px-1">/</li>
@@ -151,17 +151,17 @@ export default async function RoleSkillPage({ params }: { params: Params }) {
         </ol>
       </nav>
 
-      <h1 className="mb-3 text-2xl font-semibold text-slate-50">
+      <h1 className="mb-3 text-2xl font-semibold text-neutral-50">
         {total.toLocaleString()} {roleName} $100k+ Jobs requiring {skillInfo.label}
       </h1>
-      <p className="mb-6 text-sm text-slate-300">
+      <p className="mb-6 text-sm text-neutral-300">
         {roleName} {skillInfo.label} $100k jobs • $100k {roleName} jobs needing {skillInfo.label} • high paying {roleName} roles with {skillInfo.label} • six figure {roleName} positions with verified compensation.
       </p>
 
       <JobList jobs={jobs as JobWithCompany[]} />
 
       {totalPages > 1 && (
-        <nav className="mt-6 flex items-center justify-between text-xs text-slate-300">
+        <nav className="mt-6 flex items-center justify-between text-xs text-neutral-300">
           <span>
             Page {page} of {totalPages}
           </span>

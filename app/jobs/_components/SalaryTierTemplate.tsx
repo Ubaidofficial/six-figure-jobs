@@ -721,7 +721,7 @@ export async function SalaryTierTemplate({
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-10">
-        <p className="mb-2 text-slate-300 leading-relaxed">
+        <p className="mb-2 text-neutral-300 leading-relaxed">
           <strong>{tier.rangeLabel} jobs</strong> on Six Figure Jobs include {data.total.toLocaleString()} verified roles across engineering, product, data, design, and sales.
           {avgSalary ? ` Average salary: ${formatUsdK(avgSalary)} USD.` : ''}{' '}
           Every listing shows the salary range upfront — sourced directly from company ATS feeds. Filter by role, location, or work type to find the right fit.
@@ -794,12 +794,12 @@ export async function SalaryTierTemplate({
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16" aria-label="Frequently asked questions">
-        <h2 className="mb-6 text-xl font-semibold text-slate-50">Frequently Asked Questions</h2>
+        <h2 className="mb-6 text-xl font-semibold text-neutral-50">Frequently Asked Questions</h2>
         <dl className="space-y-6">
           {faqJsonLd.mainEntity.map((item: { name: string; acceptedAnswer: { text: string } }, i: number) => (
-            <div key={i} className="border-t border-slate-700 pt-5">
-              <dt className="mb-2 font-medium text-slate-100">{item.name}</dt>
-              <dd className="text-slate-400 leading-relaxed">{item.acceptedAnswer.text}</dd>
+            <div key={i} className="border-t border-neutral-700 pt-5">
+              <dt className="mb-2 font-medium text-neutral-100">{item.name}</dt>
+              <dd className="text-neutral-400 leading-relaxed">{item.acceptedAnswer.text}</dd>
             </div>
           ))}
         </dl>

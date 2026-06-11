@@ -175,13 +175,13 @@ export default async function CategoryPage({
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       <header className="mb-6 space-y-2">
-        <h1 className="text-2xl font-semibold text-slate-50">
+        <h1 className="text-2xl font-semibold text-neutral-50">
           {cfg.label} jobs paying $100k+
         </h1>
-        <p className="text-sm text-slate-300">
+        <p className="text-sm text-neutral-300">
           Remote, hybrid, and on-site high-paying {cfg.label.toLowerCase()} roles from top companies.
         </p>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-neutral-400">
           Updated {formatRelativeTime(new Date())} — {total.toLocaleString()} open roles.
         </p>
       </header>
@@ -193,31 +193,31 @@ export default async function CategoryPage({
         <MetricCard label="Average listed pay" value={avgSalaryLabel} detail="From visible salary ranges" />
       </section>
 
-      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h2 className="text-sm font-semibold text-slate-50">
+      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
+        <h2 className="text-sm font-semibold text-neutral-50">
           Why this {cfg.label.toLowerCase()} category is built for Google and job seekers
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+        <p className="mt-2 text-sm leading-relaxed text-neutral-300">
           This page combines adjacent {cfg.label.toLowerCase()} role titles into one canonical category,
           filters to compensation-backed $100k+ opportunities, and keeps only fresh listings that pass
           salary and content quality gates. Unlike broad job boards, the feed emphasizes salary evidence,
           direct company/ATS sources, remote eligibility, and related salary-band paths.
         </p>
-        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-200">
-          <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-neutral-200">
+          <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
             {insights.atsSalaryCount.toLocaleString()} ATS salary-backed
           </span>
-          <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+          <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
             {insights.topCompanies.length.toLocaleString()} top companies surfaced
           </span>
-          <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+          <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
             No JobPosting schema on listing pages
           </span>
         </div>
       </section>
 
-      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
           Explore salary bands
         </h2>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -228,7 +228,7 @@ export default async function CategoryPage({
                 salaryMin: Number(band.replace('k-plus', '000')),
                 roleSlug: primaryRoleSlug,
               })}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200 hover:border-slate-600"
+              className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-neutral-200 hover:border-neutral-600"
             >
               💵 {band.replace('-plus', 'k+')}
             </Link>
@@ -242,8 +242,8 @@ export default async function CategoryPage({
         </div>
       </section>
 
-      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
           Popular slices
         </h2>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -259,7 +259,7 @@ export default async function CategoryPage({
                       countryCode: countrySlugToCode(loc.code) ?? undefined,
                     })
               }
-              className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200 hover:border-slate-600"
+              className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-neutral-200 hover:border-neutral-600"
             >
               <span>{loc.flag}</span>
               <span>{loc.code === 'remote' ? 'Remote' : loc.label}</span>
@@ -277,15 +277,15 @@ export default async function CategoryPage({
       {(insights.topCompanies.length > 0 || insights.topSkills.length > 0) && (
         <section className="mb-6 grid gap-4 lg:grid-cols-2">
           {insights.topCompanies.length > 0 && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
                 Top companies hiring {cfg.label.toLowerCase()} talent
               </h2>
               <div className="flex flex-wrap gap-2 text-xs">
                 {insights.topCompanies.map((company) => (
                   <span
                     key={company.name}
-                    className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200"
+                    className="rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-neutral-200"
                   >
                     {company.name} · {company.count}
                   </span>
@@ -295,8 +295,8 @@ export default async function CategoryPage({
           )}
 
           {insights.topSkills.length > 0 && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
                 In-demand skills in current listings
               </h2>
               <div className="flex flex-wrap gap-2 text-xs">
@@ -315,18 +315,18 @@ export default async function CategoryPage({
       )}
 
       {jobs.length === 0 ? (
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-neutral-400">
           No {cfg.label.toLowerCase()} roles meet the $100k+ filter yet. Check back soon.
         </p>
       ) : (
         <>
           <JobList jobs={jobs as JobWithCompany[]} />
           {totalPages > 1 && (
-            <nav className="mt-6 flex items-center justify-between text-xs text-slate-300">
+            <nav className="mt-6 flex items-center justify-between text-xs text-neutral-300">
               <Link
                 href={page > 1 ? `?page=${page - 1}` : '#'}
                 className={`rounded-full px-3 py-2 ${
-                  page > 1 ? 'bg-slate-800 hover:bg-slate-700' : 'cursor-not-allowed bg-slate-900 text-slate-600'
+                  page > 1 ? 'bg-neutral-800 hover:bg-neutral-700' : 'cursor-not-allowed bg-neutral-900 text-neutral-600'
                 }`}
                 aria-disabled={page <= 1}
               >
@@ -338,7 +338,7 @@ export default async function CategoryPage({
               <Link
                 href={page < totalPages ? `?page=${page + 1}` : '#'}
                 className={`rounded-full px-3 py-2 ${
-                  page < totalPages ? 'bg-slate-800 hover:bg-slate-700' : 'cursor-not-allowed bg-slate-900 text-slate-600'
+                  page < totalPages ? 'bg-neutral-800 hover:bg-neutral-700' : 'cursor-not-allowed bg-neutral-900 text-neutral-600'
                 }`}
                 aria-disabled={page >= totalPages}
               >
@@ -349,15 +349,15 @@ export default async function CategoryPage({
         </>
       )}
 
-      <section className="mt-10 space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-        <h2 className="text-sm font-semibold text-slate-50">
+      <section className="mt-10 space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
+        <h2 className="text-sm font-semibold text-neutral-50">
           FAQs about high-paying {cfg.label.toLowerCase()} jobs
         </h2>
-        <div className="space-y-3 text-sm text-slate-300">
+        <div className="space-y-3 text-sm text-neutral-300">
           {faqs.map((item) => (
             <div key={item.q}>
-              <p className="font-semibold text-slate-100">{item.q}</p>
-              <p className="text-slate-300">{item.a}</p>
+              <p className="font-semibold text-neutral-100">{item.q}</p>
+              <p className="text-neutral-300">{item.a}</p>
             </div>
           ))}
         </div>
@@ -381,12 +381,12 @@ export default async function CategoryPage({
 
 function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
         {label}
       </div>
-      <div className="mt-2 text-2xl font-semibold text-slate-50">{value}</div>
-      <div className="mt-1 text-xs text-slate-400">{detail}</div>
+      <div className="mt-2 text-2xl font-semibold text-neutral-50">{value}</div>
+      <div className="mt-1 text-xs text-neutral-400">{detail}</div>
     </div>
   )
 }

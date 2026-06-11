@@ -174,6 +174,17 @@ function parseStringArray(raw?: string | null): string[] {
   }
 }
 
+function stripHtml(value: string | null | undefined): string {
+  return String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function truncateText(value: string | null | undefined, max = 120): string | null {
+  const clean = stripHtml(value)
+  if (!clean) return null
+  if (clean.length <= max) return clean
+  return `${clean.slice(0, max - 3).trim()}...`
+}
+
 function dedupeJobs(jobs: JobWithCompany[]): JobWithCompany[] {
   const seen = new Set<string>()
   return jobs.filter((job: any) => {
@@ -526,7 +537,17 @@ export async function RoleTemplate({
   const companies = companyIds.length
     ? await prisma.company.findMany({
         where: { id: { in: companyIds } },
-        select: { id: true, name: true, slug: true, logoUrl: true, website: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          logoUrl: true,
+          website: true,
+          description: true,
+          industry: true,
+          sizeBucket: true,
+          headquarters: true,
+        },
       })
     : []
   const companyById = new Map(companies.map((c) => [c.id, c]))
@@ -540,6 +561,10 @@ export async function RoleTemplate({
         name: info?.name ?? null,
         slug: info?.slug ?? null,
         logoUrl: buildLogoUrl(info?.logoUrl ?? null, info?.website ?? null),
+        description: truncateText(info?.description ?? null),
+        industry: info?.industry ?? null,
+        sizeBucket: info?.sizeBucket ?? null,
+        headquarters: info?.headquarters ?? null,
         count: Number(r?._count?._all ?? 0),
       }
     })
@@ -834,18 +859,26 @@ export async function RoleTemplate({
                   .toUpperCase()
                 return (
                   <Link key={c.id} href={href} className={styles.companyCard}>
-                    <span className={styles.companyLeft}>
-                      <span className={styles.logoWrap} aria-hidden="true">
-                        {c.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.logoUrl} alt={`${c.name} logo`} className={styles.logoImg} loading="lazy" />
-                        ) : (
-                          <span className={styles.logoFallback}>{initials || 'C'}</span>
-                        )}
+                    <span className={styles.companyHead}>
+                      <span className={styles.companyLeft}>
+                        <span className={styles.logoWrap} aria-hidden="true">
+                          {c.logoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={c.logoUrl} alt={`${c.name} logo`} className={styles.logoImg} loading="lazy" />
+                          ) : (
+                            <span className={styles.logoFallback}>{initials || 'C'}</span>
+                          )}
+                        </span>
+                        <span className={styles.companyTitleBlock}>
+                          <span className={styles.companyName}>{c.name}</span>
+                          <span className={styles.companyMetaLine}>
+                            {[c.industry, c.sizeBucket, c.headquarters].filter(Boolean).slice(0, 2).join(' · ') || 'Hiring now'}
+                          </span>
+                        </span>
                       </span>
-                      <span className={styles.companyName}>{c.name}</span>
+                      <span className={styles.companyCount}>{c.count.toLocaleString()} jobs</span>
                     </span>
-                    <span className={styles.companyCount}>{c.count.toLocaleString()}</span>
+                    {c.description ? <span className={styles.companyDescription}>{c.description}</span> : null}
                   </Link>
                 )
               })
@@ -855,13 +888,13 @@ export async function RoleTemplate({
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-10">
-        <p className="mb-4 text-slate-300 leading-relaxed">
+        <p className="mb-4 text-neutral-300 leading-relaxed">
           {data.total.toLocaleString()} verified <strong>{roleTitle}</strong> jobs paying $100k+ are live on Six Figure Jobs.
           {avgUsd ? ` The average salary is ${formatUsdK(avgUsd)} USD.` : ''}{' '}
           All listings show the salary range upfront — no hidden compensation. Use the filters to narrow by seniority, location, tech stack, or work type.
         </p>
         {skills.length > 0 && (
-          <p className="text-slate-400 text-sm leading-relaxed">
+          <p className="text-neutral-400 text-sm leading-relaxed">
             Top skills for {roleTitle} roles: {skills.slice(0, 8).map((s) => s.name).join(', ')}.
           </p>
         )}
@@ -930,12 +963,12 @@ export async function RoleTemplate({
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16" aria-label="Frequently asked questions">
-        <h2 className="mb-6 text-xl font-semibold text-slate-50">Frequently Asked Questions</h2>
+        <h2 className="mb-6 text-xl font-semibold text-neutral-50">Frequently Asked Questions</h2>
         <dl className="space-y-6">
           {faqJsonLd.mainEntity.map((item: { name: string; acceptedAnswer: { text: string } }, i: number) => (
-            <div key={i} className="border-t border-slate-700 pt-5">
-              <dt className="mb-2 font-medium text-slate-100">{item.name}</dt>
-              <dd className="text-slate-400 leading-relaxed">{item.acceptedAnswer.text}</dd>
+            <div key={i} className="border-t border-neutral-700 pt-5">
+              <dt className="mb-2 font-medium text-neutral-100">{item.name}</dt>
+              <dd className="text-neutral-400 leading-relaxed">{item.acceptedAnswer.text}</dd>
             </div>
           ))}
         </dl>

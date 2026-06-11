@@ -230,7 +230,7 @@ export default async function RoleFilterPage({
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-400">
         <ol className="flex items-center gap-1">
           <li><Link href="/">Home</Link></li>
           <li className="px-1">/</li>
@@ -242,10 +242,10 @@ export default async function RoleFilterPage({
         </ol>
       </nav>
 
-      <h1 className="mb-3 text-2xl font-semibold text-slate-50">
+      <h1 className="mb-3 text-2xl font-semibold text-neutral-50">
         {roleTitle} {parsed.label} Jobs ({total.toLocaleString()})
       </h1>
-      <p className="mb-4 text-sm text-slate-300">
+      <p className="mb-4 text-sm text-neutral-300">
         Verified {roleTitle.toLowerCase()} opportunities at the {parsed.label} tier, with current observed ranges around {salaryRange} and direct application links from hiring teams.
       </p>
 
@@ -255,8 +255,8 @@ export default async function RoleFilterPage({
         </p>
       )}
 
-      <section className="mb-6 rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-sm text-slate-300">
-        <h2 className="mb-2 text-sm font-semibold text-slate-50">Market Snapshot</h2>
+      <section className="mb-6 rounded-xl border border-neutral-800 bg-neutral-950/50 p-4 text-sm text-neutral-300">
+        <h2 className="mb-2 text-sm font-semibold text-neutral-50">Market Snapshot</h2>
         <ul className="list-disc space-y-1 pl-5">
           <li>{total.toLocaleString()} live roles currently match this salary filter.</li>
           <li>Observed minimum-to-maximum salary range: {salaryRange}.</li>
@@ -267,36 +267,36 @@ export default async function RoleFilterPage({
 
       <JobList jobs={typedJobs} />
 
-      <section className="mt-10 rounded-xl border border-slate-800 bg-slate-950/50 p-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">How to Use This Page</h2>
-        <p className="mb-3 text-sm text-slate-300">
+      <section className="mt-10 rounded-xl border border-neutral-800 bg-neutral-950/50 p-6">
+        <h2 className="mb-3 text-sm font-semibold text-neutral-50">How to Use This Page</h2>
+        <p className="mb-3 text-sm text-neutral-300">
           Start with this tier page to benchmark salary expectations, then move to the role hub and location pages for market-specific depth. This flow helps avoid stale or low-fit applications when targeting high-paying roles.
         </p>
-        <p className="text-sm text-slate-300">
+        <p className="text-sm text-neutral-300">
           For teams publishing pSEO at scale, submit only indexable sitemap URLs and avoid manually pushing low-volume filter pages into GSC until they clear job-count quality gates.
         </p>
       </section>
 
-      <section className="mt-10 rounded-xl border border-slate-800 bg-slate-950/50 p-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">FAQ</h2>
-        <div className="space-y-3 text-sm text-slate-300">
+      <section className="mt-10 rounded-xl border border-neutral-800 bg-neutral-950/50 p-6">
+        <h2 className="mb-3 text-sm font-semibold text-neutral-50">FAQ</h2>
+        <div className="space-y-3 text-sm text-neutral-300">
           <div>
-            <h3 className="font-medium text-slate-100">Why can a salary filter page be noindex?</h3>
+            <h3 className="font-medium text-neutral-100">Why can a salary filter page be noindex?</h3>
             <p>Low-volume pages can underperform search intent. We keep them followable and index them only after they pass minimum live-job thresholds.</p>
           </div>
           <div>
-            <h3 className="font-medium text-slate-100">Should I submit every filter URL to GSC?</h3>
+            <h3 className="font-medium text-neutral-100">Should I submit every filter URL to GSC?</h3>
             <p>No. Submit only sitemap-backed, indexable URLs. Let uncataloged thin variants mature before requesting indexing.</p>
           </div>
           <div>
-            <h3 className="font-medium text-slate-100">What is the best next page after this filter?</h3>
+            <h3 className="font-medium text-neutral-100">What is the best next page after this filter?</h3>
             <p>Open the role hub for broader coverage, then review location-specific pages for market differences and compensation context.</p>
           </div>
         </div>
       </section>
 
-      <section className="mt-12 rounded-xl border border-slate-800 bg-slate-950/50 p-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">Related Searches</h2>
+      <section className="mt-12 rounded-xl border border-neutral-800 bg-neutral-950/50 p-6">
+        <h2 className="mb-3 text-sm font-semibold text-neutral-50">Related Searches</h2>
         <div className="grid gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
           <Link href={`/jobs/${role}`} className="text-blue-400 hover:underline">
             All {roleTitle} Jobs

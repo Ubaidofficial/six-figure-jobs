@@ -242,12 +242,12 @@ function buildJobsFaqJsonLd() {
 function JobsIndexFallback({ techFilter }: { techFilter?: string }) {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
-      <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-8 shadow-2xl shadow-slate-950/40">
+      <div className="rounded-3xl border border-neutral-800 bg-neutral-950/80 p-8 shadow-2xl shadow-neutral-950/40">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
           Live job data temporarily unavailable
         </p>
-        <h1 className="mt-3 text-3xl font-semibold text-slate-50">All $100k+ Jobs</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+        <h1 className="mt-3 text-3xl font-semibold text-neutral-50">All $100k+ Jobs</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-neutral-300">
           The production database is reconnecting. Search metadata is still live, but the full job
           feed is temporarily unavailable.
           {techFilter ? ` Active filter: ${techFilter}.` : ''}
@@ -258,10 +258,10 @@ function JobsIndexFallback({ techFilter }: { techFilter?: string }) {
             <Link
               key={band.id}
               href={band.href}
-              className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-100 transition hover:border-slate-600"
+              className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-4 text-sm text-neutral-100 transition hover:border-neutral-600"
             >
               <div className="font-semibold">{band.label}</div>
-              <p className="mt-2 text-xs text-slate-400">{band.blurb}</p>
+              <p className="mt-2 text-xs text-neutral-400">{band.blurb}</p>
             </Link>
           ))}
         </div>
@@ -536,9 +536,9 @@ export default async function JobsIndexPage({
               hides the summary at md+. <details> gives us a free, no-JS
               drawer that respects keyboard / screen readers. */}
           <details
-            className="group rounded-2xl border border-slate-800/80 bg-slate-950/60 md:border-0 md:bg-transparent md:p-0 md:[&>div]:!block"
+            className="group rounded-2xl border border-neutral-800/80 bg-neutral-950/60 md:border-0 md:bg-transparent md:p-0 md:[&>div]:!block"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-900/60 md:hidden [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-neutral-100 transition hover:bg-neutral-900/60 md:hidden [&::-webkit-details-marker]:hidden">
               <span className="inline-flex items-center gap-2">
                 <svg
                   aria-hidden="true"
@@ -564,7 +564,7 @@ export default async function JobsIndexPage({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180"
+                className="h-4 w-4 text-neutral-400 transition-transform group-open:rotate-180"
               >
                 <polyline points="6 9 12 15 18 9" />
               </svg>
@@ -578,18 +578,18 @@ export default async function JobsIndexPage({
         <section className={styles.results} aria-label="Job results">
           {techFilter ? (
             <div className="mb-6 flex flex-wrap items-center gap-3">
-              <span className="text-sm text-slate-400">Filtering by technology:</span>
+              <span className="text-sm text-neutral-400">Filtering by technology:</span>
               <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2">
                 <span className="font-semibold text-emerald-400">{techFilter}</span>
                 <Link
                   href="/jobs"
-                  className="ml-1 text-slate-400 transition-colors hover:text-white"
+                  className="ml-1 text-neutral-400 transition-colors hover:text-white"
                   aria-label="Clear tech filter"
                 >
                   <span className="text-lg">✕</span>
                 </Link>
               </div>
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-neutral-500">
                 ({data.total} {data.total === 1 ? 'job' : 'jobs'} found)
               </span>
             </div>
@@ -665,22 +665,22 @@ export default async function JobsIndexPage({
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
-            <h3 className="text-sm font-semibold text-slate-50">Verified pay floor</h3>
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/80 p-4 text-sm text-neutral-300">
+            <h3 className="text-sm font-semibold text-neutral-50">Verified pay floor</h3>
             <p className="mt-2">
               Jobs shown here pass validated salary checks and highlight published compensation
               ranges, keeping the main index aligned with $100k+ job search intent.
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
-            <h3 className="text-sm font-semibold text-slate-50">Fresh live inventory</h3>
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/80 p-4 text-sm text-neutral-300">
+            <h3 className="text-sm font-semibold text-neutral-50">Fresh live inventory</h3>
             <p className="mt-2">
               ATS-driven listings are refreshed frequently, and stale jobs are removed to reduce dead
               clicks and keep the hub trustworthy.
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
-            <h3 className="text-sm font-semibold text-slate-50">Clean internal routing</h3>
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/80 p-4 text-sm text-neutral-300">
+            <h3 className="text-sm font-semibold text-neutral-50">Clean internal routing</h3>
             <p className="mt-2">
               Salary-band pages, countries, categories, and role hubs sit one click away so Google can
               discover narrower high-intent pages from the main jobs index.
@@ -702,10 +702,10 @@ export default async function JobsIndexPage({
             <Link
               key={band.id}
               href={band.href}
-              className="group flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-950/80 p-4 transition hover:border-slate-600 hover:bg-slate-900"
+              className="group flex flex-col justify-between rounded-2xl border border-neutral-800 bg-neutral-950/80 p-4 transition hover:border-neutral-600 hover:bg-neutral-900"
             >
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-400">
                   {band.id === '100k'
                     ? 'Core band'
                     : band.id === '200k'
@@ -714,10 +714,10 @@ export default async function JobsIndexPage({
                     ? 'Principal band'
                     : 'Executive band'}
                 </p>
-                <h3 className="mt-2 text-sm font-semibold text-slate-50">{band.label}</h3>
-                <p className="mt-2 text-xs text-slate-300">{band.blurb}</p>
+                <h3 className="mt-2 text-sm font-semibold text-neutral-50">{band.label}</h3>
+                <p className="mt-2 text-xs text-neutral-300">{band.blurb}</p>
               </div>
-              <p className="mt-3 text-[11px] text-slate-400">View all {band.id}+ jobs →</p>
+              <p className="mt-3 text-[11px] text-neutral-400">View all {band.id}+ jobs →</p>
             </Link>
           ))}
         </div>
@@ -732,7 +732,7 @@ export default async function JobsIndexPage({
           return (
             <section key={band.id} className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-slate-50">
+                <h3 className="text-sm font-semibold text-neutral-50">
                   Popular {band.id}+ jobs by role &amp; country
                 </h3>
                 <Link href={band.href} className="text-[11px] text-blue-400 hover:underline">
@@ -745,12 +745,12 @@ export default async function JobsIndexPage({
                   <li key={slice.slug}>
                     <Link
                       href={slice.href}
-                      className="inline-flex items-center rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-slate-200 hover:border-slate-600 hover:bg-slate-900"
+                      className="inline-flex items-center rounded-full border border-neutral-800 bg-neutral-950 px-3 py-1 text-neutral-200 hover:border-neutral-600 hover:bg-neutral-900"
                     >
                       <span className="truncate">
                         {slice.title || slice.h1 || prettyRoleAndCountryFromSlug(slice.slug)}
                       </span>
-                      <span className="ml-1 text-slate-500">({slice.jobCount})</span>
+                      <span className="ml-1 text-neutral-500">({slice.jobCount})</span>
                     </Link>
                   </li>
                 ))}

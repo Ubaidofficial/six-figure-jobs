@@ -125,13 +125,13 @@ export default async function SalaryIndexPage() {
           <>
             <Link
               href="/jobs/100k-plus"
-              className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+              className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
             >
               Browse $100k+ jobs
             </Link>
             <Link
               href="/companies"
-              className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
+              className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
             >
               Explore companies
             </Link>
@@ -192,7 +192,7 @@ export default async function SalaryIndexPage() {
               <Link
                 key={guide.slug}
                 href={`/salary/${guide.slug}`}
-                className="block rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 hover:border-slate-600"
+                className="block rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3 text-sm text-neutral-100 hover:border-neutral-600"
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span>{guide.label}</span>
@@ -202,7 +202,7 @@ export default async function SalaryIndexPage() {
                     </span>
                   ) : null}
                 </div>
-                <div className="mt-1 text-xs text-slate-400">{sampleHint}</div>
+                <div className="mt-1 text-xs text-neutral-400">{sampleHint}</div>
               </Link>
             )
           })}
@@ -218,7 +218,7 @@ export default async function SalaryIndexPage() {
             <Link
               key={c.code}
               href={`/salary/software-engineer/${c.code}`}
-              className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-100 hover:border-slate-600"
+              className="rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-neutral-100 hover:border-neutral-600"
             >
               {c.label} – Software Engineer
             </Link>
@@ -233,25 +233,25 @@ export default async function SalaryIndexPage() {
         <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Link
             href="/jobs/100k-plus"
-            className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-100 hover:border-slate-600"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/70 px-3 py-2 text-neutral-100 hover:border-neutral-600"
           >
             $100k+ jobs
           </Link>
           <Link
             href="/jobs/200k-plus"
-            className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-100 hover:border-slate-600"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/70 px-3 py-2 text-neutral-100 hover:border-neutral-600"
           >
             $200k+ jobs
           </Link>
           <Link
             href="/jobs/300k-plus"
-            className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-100 hover:border-slate-600"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/70 px-3 py-2 text-neutral-100 hover:border-neutral-600"
           >
             $300k+ jobs
           </Link>
           <Link
             href="/jobs/400k-plus"
-            className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-100 hover:border-slate-600"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/70 px-3 py-2 text-neutral-100 hover:border-neutral-600"
           >
             $400k+ jobs
           </Link>
@@ -262,17 +262,17 @@ export default async function SalaryIndexPage() {
         title="How we build these salary guides"
         description="Each guide is assembled from live $100k+ tech job listings scraped directly from ATS-powered company career pages. We normalize compensation, remove expired or lowball postings, and tag every role with title, seniority, country, currency, and remote eligibility."
       >
-        <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            <span className="font-semibold text-slate-100 block mb-1">Real-time data</span>
+        <ul className="grid gap-2 text-xs text-neutral-300 sm:grid-cols-3">
+          <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+            <span className="font-semibold text-neutral-100 block mb-1">Real-time data</span>
             Numbers refresh continuously as companies post or close roles — not once a year.
           </li>
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            <span className="font-semibold text-slate-100 block mb-1">Local currencies</span>
+          <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+            <span className="font-semibold text-neutral-100 block mb-1">Local currencies</span>
             Country guides show GBP, EUR, CAD, AUD, SGD ranges so you can benchmark locally.
           </li>
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            <span className="font-semibold text-slate-100 block mb-1">Direct to jobs</span>
+          <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+            <span className="font-semibold text-neutral-100 block mb-1">Direct to jobs</span>
             Every salary range links to the live openings behind it — research to application in one click.
           </li>
         </ul>

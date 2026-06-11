@@ -187,7 +187,7 @@ export function SlicePage({ slice, data }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <nav className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+      <nav className="flex flex-wrap items-center gap-2 text-xs text-neutral-400">
         <Link href="/" className="hover:underline">
           Home
         </Link>
@@ -196,29 +196,29 @@ export function SlicePage({ slice, data }: Props) {
           {baseBandLabel} jobs
         </Link>
         <span>/</span>
-        <span className="text-slate-200">{heading}</span>
+        <span className="text-neutral-200">{heading}</span>
       </nav>
 
       {/* Hero */}
-      <header className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 md:p-6">
+      <header className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-5 md:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold leading-tight text-slate-50 md:text-3xl">
+            <h1 className="text-2xl font-semibold leading-tight text-neutral-50 md:text-3xl">
               {heading}
             </h1>
             {description && (
-              <p className="max-w-3xl text-sm text-slate-300">
+              <p className="max-w-3xl text-sm text-neutral-300">
                 {description}
               </p>
             )}
-            <div className="flex flex-wrap gap-2 text-[11px] text-slate-200">
-              <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+            <div className="flex flex-wrap gap-2 text-[11px] text-neutral-200">
+              <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
                 {showingLabel || `${formatNumberCompact(total)} roles`}
               </span>
-              <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+              <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
                 Verified companies
               </span>
-              <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+              <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
                 Refreshed daily
               </span>
             </div>
@@ -232,7 +232,7 @@ export function SlicePage({ slice, data }: Props) {
             </Link>
             <Link
               href="/jobs/100k-plus"
-              className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-slate-500"
+              className="inline-flex flex-1 items-center justify-center rounded-full border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-100 hover:border-neutral-500"
             >
               Explore all six-figure →
             </Link>
@@ -241,25 +241,25 @@ export function SlicePage({ slice, data }: Props) {
       </header>
 
       {seoBody && (
-        <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm leading-relaxed text-slate-300">
+        <section className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm leading-relaxed text-neutral-300">
           {seoBody}
         </section>
       )}
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+      <section className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-300">
         <p>
           {roleLabel ? `Verified ${salaryBand} ${roleLabel.toLowerCase()}` : `Verified ${salaryBand} tech`} roles
           {countryLabel ? ` in ${countryLabel}` : ''}. Remote, hybrid, and on-site options from ATS feeds and trusted boards,
           refreshed daily and ranked by salary.
         </p>
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-neutral-400">
           Need another region? Explore remote-only roles, adjacent cities, or sibling salary bands below.
         </p>
-        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-200">
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-neutral-200">
           {countryCode && roleSlug && (
             <Link
               href={`/remote/${roleSlug}`}
-              className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600"
+              className="rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1 hover:border-neutral-600"
             >
               🌎 Remote {roleLabel} roles
             </Link>
@@ -267,7 +267,7 @@ export function SlicePage({ slice, data }: Props) {
           {roleSlug && (
             <Link
               href={`/remote/${roleSlug}`}
-              className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600"
+              className="rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1 hover:border-neutral-600"
             >
               Remote regions →
             </Link>
@@ -276,8 +276,8 @@ export function SlicePage({ slice, data }: Props) {
       </section>
 
       {relatedLinks.length > 0 && (
-        <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-200">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+        <section className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-200">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400">
             Related searches
           </p>
           <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
@@ -285,7 +285,7 @@ export function SlicePage({ slice, data }: Props) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="inline-flex items-center rounded-full border border-slate-800 bg-slate-900 px-3 py-1 hover:border-slate-600"
+                className="inline-flex items-center rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1 hover:border-neutral-600"
               >
                 {link.label}
               </Link>
@@ -302,7 +302,7 @@ export function SlicePage({ slice, data }: Props) {
           </p>
         )}
         {jobs.length === 0 ? (
-          <p className="py-4 text-sm text-slate-400">
+          <p className="py-4 text-sm text-neutral-400">
             No jobs found. Try another salary band, region, or explore all {baseBandLabel} opportunities.
           </p>
         ) : (
@@ -312,7 +312,7 @@ export function SlicePage({ slice, data }: Props) {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <nav className="mt-4 flex items-center justify-between text-xs text-slate-300">
+        <nav className="mt-4 flex items-center justify-between text-xs text-neutral-300">
           <span>
             Page {page} of {totalPages}
           </span>
@@ -320,7 +320,7 @@ export function SlicePage({ slice, data }: Props) {
             {page > 1 && (
               <Link
                 href={`?page=${page - 1}`}
-                className="rounded-full border border-slate-700 px-3 py-1 hover:border-slate-500 hover:text-slate-100"
+                className="rounded-full border border-neutral-700 px-3 py-1 hover:border-neutral-500 hover:text-neutral-100"
               >
                 Previous
               </Link>
@@ -328,7 +328,7 @@ export function SlicePage({ slice, data }: Props) {
             {page < totalPages && (
               <Link
                 href={`?page=${page + 1}`}
-                className="rounded-full border border-slate-700 px-3 py-1 hover:border-slate-500 hover:text-slate-100"
+                className="rounded-full border border-neutral-700 px-3 py-1 hover:border-neutral-500 hover:text-neutral-100"
               >
                 Next
               </Link>
@@ -338,11 +338,11 @@ export function SlicePage({ slice, data }: Props) {
       )}
 
       {relatedSalaryBands.length > 0 && (
-      <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-        <h2 className="mb-2 text-sm font-semibold text-slate-50">
+      <section className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
+        <h2 className="mb-2 text-sm font-semibold text-neutral-50">
           Explore salary bands
         </h2>
-        <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+        <div className="flex flex-wrap gap-2 text-xs text-neutral-300">
           {relatedSalaryBands.map((band) => {
             const slug =
               band === 100_000
@@ -360,7 +360,7 @@ export function SlicePage({ slice, data }: Props) {
               <Link
                 key={band}
                 href={basePath}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 hover:border-slate-600"
+                className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 hover:border-neutral-600"
               >
                 💵 {formatSalaryBandLabel(band, countryCode)}
               </Link>
@@ -371,19 +371,19 @@ export function SlicePage({ slice, data }: Props) {
       )}
 
       {topCompanies.length > 0 && (
-        <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-50">
+        <section className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
+          <h2 className="mb-3 text-sm font-semibold text-neutral-50">
             Top companies hiring {roleLabel ? roleLabel : 'for these roles'}
           </h2>
-          <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+          <div className="flex flex-wrap gap-2 text-xs text-neutral-300">
             {topCompanies.map((c) => (
               <Link
                 key={`${c.name}-${c.slug ?? ''}`}
                 href={c.slug ? `/company/${c.slug}` : '#'}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 hover:border-slate-600"
+                className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 hover:border-neutral-600"
               >
-                <span className="font-semibold text-slate-100">{c.name}</span>
-                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">
+                <span className="font-semibold text-neutral-100">{c.name}</span>
+                <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] text-neutral-400">
                   {c.count} roles
                 </span>
               </Link>
@@ -392,15 +392,15 @@ export function SlicePage({ slice, data }: Props) {
         </section>
       )}
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">
+      <section className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
+        <h2 className="mb-3 text-sm font-semibold text-neutral-50">
           FAQs about {roleLabel ? `${roleLabel} roles` : 'high-paying tech roles'} paying {salaryBand}
         </h2>
-        <div className="space-y-3 text-sm text-slate-300">
+        <div className="space-y-3 text-sm text-neutral-300">
           {buildFaqs(roleLabel, countryLabel, salaryBand).map((item) => (
             <div key={item.q}>
-              <p className="font-semibold text-slate-100">{item.q}</p>
-              <p className="text-slate-300">{item.a}</p>
+              <p className="font-semibold text-neutral-100">{item.q}</p>
+              <p className="text-neutral-300">{item.a}</p>
             </div>
           ))}
         </div>

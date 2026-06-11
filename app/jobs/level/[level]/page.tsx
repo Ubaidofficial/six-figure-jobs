@@ -154,7 +154,7 @@ export default async function LevelPage({
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-400">
         <ol className="flex items-center gap-1">
           <li>
             <Link href="/">Home</Link>
@@ -168,19 +168,19 @@ export default async function LevelPage({
         </ol>
       </nav>
 
-      <h1 className="mb-4 text-2xl font-semibold text-slate-50">
+      <h1 className="mb-4 text-2xl font-semibold text-neutral-50">
         {info.label} $100k+ Jobs ({total.toLocaleString()})
       </h1>
-      <p className="mb-6 text-sm text-slate-300">{info.description}</p>
+      <p className="mb-6 text-sm text-neutral-300">{info.description}</p>
 
       {jobs.length === 0 ? (
-        <p className="text-slate-400">No jobs found. Try exploring all $100k+ opportunities.</p>
+        <p className="text-neutral-400">No jobs found. Try exploring all $100k+ opportunities.</p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}
 
-      <section className="mt-12 rounded-xl border border-slate-800 bg-slate-950/50 p-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">Related Searches</h2>
+      <section className="mt-12 rounded-xl border border-neutral-800 bg-neutral-950/50 p-6">
+        <h2 className="mb-3 text-sm font-semibold text-neutral-50">Related Searches</h2>
         <div className="grid gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
           <Link href="/jobs/category/engineering" className="text-blue-400 hover:underline">
             {info.label} Engineering Jobs

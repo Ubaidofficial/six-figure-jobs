@@ -233,23 +233,23 @@ export default async function JobsSlicePage({
           <SlicePage slice={slice} data={data} />
 
           <section className="mx-auto mt-10 max-w-5xl px-4">
-            <h2 className="text-sm font-semibold text-slate-50">
+            <h2 className="text-sm font-semibold text-neutral-50">
               High-paying {roleName ? `${roleName} ` : ''}jobs {countryName ? `in ${countryName} ` : ''}{band}
             </h2>
             <p
-              className="mt-2 text-sm leading-relaxed text-slate-200"
+              className="mt-2 text-sm leading-relaxed text-neutral-200"
               data-speakable="summary"
             >
               {band} roles are curated from verified company ATS feeds with salary evidence and six-figure positioning. Listings highlight compensation upfront, note remote or hybrid eligibility{remoteLabel ? ` (${remoteLabel})` : ''}, and stay live only while hiring teams keep them open.
             </p>
-            <ul className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
-              <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            <ul className="mt-3 grid gap-2 text-xs text-neutral-300 sm:grid-cols-3">
+              <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
                 Salary focus: {band} tech and product roles with pay transparency.
               </li>
-              <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+              <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
                 Location clarity: {slice.filters.remoteOnly ? 'Remote-eligible first' : countryName ? `Open to ${countryName}` : 'Global-friendly where stated'}; hybrid/on-site tagged.
               </li>
-              <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+              <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
                 Freshness: refreshed frequently; expired postings are removed to avoid stale clicks.
               </li>
             </ul>
@@ -292,7 +292,7 @@ export default async function JobsSlicePage({
 
           {internalLinks.length > 0 && (
             <section className="mx-auto mt-10 max-w-5xl px-4 pb-12">
-              <h2 className="mb-3 text-sm font-semibold text-slate-50">
+              <h2 className="mb-3 text-sm font-semibold text-neutral-50">
                 Explore related six-figure pages
               </h2>
               <ul className="list-disc space-y-1 pl-5 text-sm text-blue-400">

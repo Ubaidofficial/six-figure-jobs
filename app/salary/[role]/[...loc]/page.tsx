@@ -481,90 +481,90 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
       ) : null}
       <nav
         aria-label="Breadcrumb"
-        className="text-xs text-slate-400"
+        className="text-xs text-neutral-400"
       >
         <ol className="flex flex-wrap items-center gap-1">
           <li>
-            <Link href="/" className="hover:text-slate-200 hover:underline">
+            <Link href="/" className="hover:text-neutral-200 hover:underline">
               Home
             </Link>
           </li>
-          <li className="px-1 text-slate-600">/</li>
+          <li className="px-1 text-neutral-600">/</li>
           <li>
             <Link
               href="/jobs/100k-plus"
-              className="hover:text-slate-200 hover:underline"
+              className="hover:text-neutral-200 hover:underline"
             >
               $100k+ jobs
             </Link>
           </li>
-          <li className="px-1 text-slate-600">/</li>
-          <li aria-current="page" className="text-slate-200">
+          <li className="px-1 text-neutral-600">/</li>
+          <li aria-current="page" className="text-neutral-200">
             {roleName} salary in {locationLabel || 'All regions'}
           </li>
         </ol>
       </nav>
 
-      <header className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 md:p-6">
+      <header className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-5 md:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-400">
               Salary guide · {bandLabel}
             </p>
-            <h1 className="text-2xl font-semibold leading-tight text-slate-50 md:text-3xl">
+            <h1 className="text-2xl font-semibold leading-tight text-neutral-50 md:text-3xl">
               {roleName} salary in {locationLabel || 'top regions'}
             </h1>
-            <p className="max-w-3xl text-sm text-slate-300">
+            <p className="max-w-3xl text-sm text-neutral-300">
               Live salary signals from verified {bandLabel} roles. Remote, hybrid, and on-site jobs included; refreshed daily with $100k+ openings.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-[11px] text-slate-200">
-            <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+          <div className="flex flex-wrap gap-2 text-[11px] text-neutral-200">
+            <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
               Sample size: {formatNumberCompact(raw.length)}
             </span>
-            <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+            <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
               Verified companies
             </span>
-            <span className="rounded-full bg-slate-900 px-3 py-1 ring-1 ring-slate-800">
+            <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
               Updated daily
             </span>
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl bg-slate-900/60 p-3">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">
+          <div className="rounded-xl bg-neutral-900/60 p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-neutral-400">
               Median base salary
             </p>
-            <p className="text-xl font-semibold text-slate-50">
+            <p className="text-xl font-semibold text-neutral-50">
               {median ? formatMoney(median) + '/yr' : 'N/A'}
             </p>
           </div>
-          <div className="rounded-xl bg-slate-900/60 p-3">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">
+          <div className="rounded-xl bg-neutral-900/60 p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-neutral-400">
               Typical range
             </p>
-            <p className="text-xl font-semibold text-slate-50">
+            <p className="text-xl font-semibold text-neutral-50">
               {minVal && maxVal
                 ? `${formatMoney(minVal)}–${formatMoney(maxVal)}/yr`
                 : 'N/A'}
             </p>
           </div>
-          <div className="rounded-xl bg-slate-900/60 p-3">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">
+          <div className="rounded-xl bg-neutral-900/60 p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-neutral-400">
               Salary band
             </p>
-            <p className="text-xl font-semibold text-slate-50">{bandLabel}</p>
+            <p className="text-xl font-semibold text-neutral-50">{bandLabel}</p>
           </div>
         </div>
       </header>
 
       {/* Band switcher */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-        <h2 className="mb-2 text-sm font-semibold text-slate-50">
+      <section className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
+        <h2 className="mb-2 text-sm font-semibold text-neutral-50">
           Salary bands
         </h2>
-        <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+        <div className="flex flex-wrap gap-2 text-xs text-neutral-300">
           {Object.keys(BAND_MAP).map((slug) => (
             <Link
               key={slug}
@@ -572,7 +572,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
               className={`inline-flex items-center rounded-full border px-3 py-1.5 ${
                 bandSlug === slug || (!bandSlug && slug === '100k-plus')
                   ? 'border-blue-500 bg-blue-600/20 text-blue-100'
-                  : 'border-slate-800 bg-slate-900 hover:border-slate-600'
+                  : 'border-neutral-800 bg-neutral-900 hover:border-neutral-600'
               }`}
             >
               {formatSalaryBandLabel(BAND_MAP[slug], countryCode)}
@@ -583,23 +583,23 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
 
       {/* Country snapshots */}
       {countryStats.length > 0 && (
-        <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-          <h2 className="mb-2 text-sm font-semibold text-slate-50">
+        <section className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
+          <h2 className="mb-2 text-sm font-semibold text-neutral-50">
             Salary snapshot by country
           </h2>
           <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
             {countryStats.map((stat) => (
               <div
                 key={stat.country}
-                className="rounded-xl bg-slate-900/60 p-3 text-sm text-slate-200"
+                className="rounded-xl bg-neutral-900/60 p-3 text-sm text-neutral-200"
               >
-                <p className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                <p className="text-xs uppercase tracking-[0.12em] text-neutral-400">
                   {humanizeCountry(stat.country)}
                 </p>
-                <p className="text-base font-semibold text-slate-50">
+                <p className="text-base font-semibold text-neutral-50">
                   {formatMoney(stat.median)}/yr median
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-neutral-400">
                   {formatMoney(stat.min)}–{formatMoney(stat.max)} range · {stat.sample} datapoints
                 </p>
               </div>
@@ -610,13 +610,13 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
 
       {/* Job list */}
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-slate-50">
+        <h2 className="text-sm font-semibold text-neutral-50">
           {roleName} job openings in {locationLabel || 'top regions'}
         </h2>
         {jobsResult.jobs.length > 0 ? (
           <JobList jobs={jobsResult.jobs as JobWithCompany[]} />
         ) : (
-          <p className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+          <p className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-300">
             No live jobs match this salary slice right now. The guide remains available for
             context and will update automatically when matching verified roles return.
           </p>
@@ -625,7 +625,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
 
       {/* Pagination */}
       {jobsResult.totalPages > 1 && (
-        <nav className="flex items-center justify-between text-xs text-slate-300">
+        <nav className="flex items-center justify-between text-xs text-neutral-300">
           <span>
             Page {page} of {jobsResult.totalPages}
           </span>
@@ -633,7 +633,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
             {page > 1 && (
               <Link
                 href={buildPageHref(basePath, sp, page - 1)}
-                className="rounded-full border border-slate-700 px-3 py-1 hover:border-slate-500"
+                className="rounded-full border border-neutral-700 px-3 py-1 hover:border-neutral-500"
               >
                 Previous
               </Link>
@@ -641,7 +641,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
             {page < jobsResult.totalPages && (
               <Link
                 href={buildPageHref(basePath, sp, page + 1)}
-                className="rounded-full border border-slate-700 px-3 py-1 hover:border-slate-500"
+                className="rounded-full border border-neutral-700 px-3 py-1 hover:border-neutral-500"
               >
                 Next
               </Link>
@@ -650,11 +650,11 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
         </nav>
       )}
 
-      <section className="mt-10 rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
-        <h2 className="mb-2 text-sm font-semibold text-slate-100">
+      <section className="mt-10 rounded-2xl border border-neutral-900 bg-neutral-950/70 p-6">
+        <h2 className="mb-2 text-sm font-semibold text-neutral-100">
           How this {roleName.toLowerCase()} salary guide uses local data
         </h2>
-        <p className="text-sm leading-relaxed text-slate-300">
+        <p className="text-sm leading-relaxed text-neutral-300">
           This page pulls live $100k+ {roleName.toLowerCase()} roles filtered to {locationLabel || 'the selected region'}, including remote and hybrid openings tagged for this market. Salary ranges are shown in local currency where provided, and converted bands (like €90k+/£75k+/CHF 120k+) are used to align with regional expectations. Every listing comes from an ATS-powered company board and is expired when it goes stale, keeping the sample fresh. As new roles are published, medians and ranges update automatically. Use the salary band toggles to see how compensation shifts at higher thresholds and explore the live openings below to move from research to application in one click.
         </p>
       </section>

@@ -155,7 +155,7 @@ export default async function CityPage({ params }: { params: Params }) {
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-400">
         <ol className="flex items-center gap-1">
           <li><Link href="/">Home</Link></li>
           <li className="px-1">/</li>
@@ -165,10 +165,10 @@ export default async function CityPage({ params }: { params: Params }) {
         </ol>
       </nav>
 
-      <h1 className="mb-3 text-2xl font-semibold text-slate-50">
+      <h1 className="mb-3 text-2xl font-semibold text-neutral-50">
         {salaryLabel} jobs in {resolved.label} ({total.toLocaleString()})
       </h1>
-      <p className="mb-4 text-sm text-slate-300">
+      <p className="mb-4 text-sm text-neutral-300">
         Find <strong className="text-white">{total.toLocaleString()}</strong>{' '}
         <strong className="text-white">high paying</strong>{' '}
         <strong className="text-green-500">{salaryLabel}</strong> jobs in {resolved.label}{' '}
@@ -178,12 +178,12 @@ export default async function CityPage({ params }: { params: Params }) {
         {salaryMinLabel} to {salaryMaxLabel} across
         remote, hybrid, and on-site teams.
       </p>
-      <p className="mb-6 text-xs text-slate-400">
+      <p className="mb-6 text-xs text-neutral-400">
         Showing page {page} of {totalPages}. Only verified compensation and mid-to-senior roles are listed.
       </p>
 
       {jobs.length === 0 ? (
-        <p className="text-sm text-slate-400">No {salaryLabel} roles in {resolved.label} yet. New postings land daily.</p>
+        <p className="text-sm text-neutral-400">No {salaryLabel} roles in {resolved.label} yet. New postings land daily.</p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}

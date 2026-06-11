@@ -59,7 +59,7 @@ export function JobsToolbar({
         </SheetTrigger>
         <SheetContent side="bottom" className={filterStyles.drawerContent}>
           <SheetHeader>
-            <SheetTitle className="text-slate-50">Filters</SheetTitle>
+            <SheetTitle className="text-neutral-50">Filters</SheetTitle>
           </SheetHeader>
           <div style={{ marginTop: 12 }}>
             <JobsFiltersPanel

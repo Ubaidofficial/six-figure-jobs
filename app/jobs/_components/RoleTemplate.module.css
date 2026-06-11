@@ -327,14 +327,12 @@
 .companyGrid {
   margin-top: var(--space-16);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-12);
 }
 
 .companyCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: var(--space-12);
   border-radius: var(--radius-xl);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -351,10 +349,24 @@
   box-shadow: var(--shadow-sm-glow);
 }
 
+.companyHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
 .companyLeft {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.companyTitleBlock {
+  display: grid;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -400,10 +412,25 @@
   text-overflow: ellipsis;
 }
 
+.companyMetaLine,
+.companyDescription {
+  font-size: 11px;
+  color: var(--color-text-2);
+  line-height: 1.45;
+}
+
+.companyDescription {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .companyCount {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--color-text-2);
+  white-space: nowrap;
 }
 
 .path {
@@ -578,7 +605,7 @@
   }
 
   .companyGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

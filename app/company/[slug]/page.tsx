@@ -183,7 +183,7 @@ export default async function CompanyPage({
       return (
         <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
       {/* Company Header */}
-      <header className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/80 p-6">
+      <header className="mb-8 rounded-2xl border border-neutral-800 bg-neutral-950/80 p-6">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
           {/* Logo */}
           <div className="flex-shrink-0">
@@ -195,7 +195,7 @@ export default async function CompanyPage({
                 className="h-20 w-20 rounded-xl bg-white object-contain p-2"
               />
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-800 text-2xl font-bold text-slate-100">
+              <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-neutral-800 text-2xl font-bold text-neutral-100">
                 {company.name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -203,37 +203,37 @@ export default async function CompanyPage({
 
           {/* Company Info */}
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-slate-50">{company.name}</h1>
+            <h1 className="text-2xl font-bold text-neutral-50">{company.name}</h1>
 
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-400">
               {company.industry && (
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-xs">
+                <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs">
                   {company.industry}
                 </span>
               )}
               {company.sizeBucket && (
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-xs">
+                <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs">
                   {company.sizeBucket} employees
                 </span>
               )}
               {company.headquarters && (
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-xs">
+                <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs">
                   📍 {company.headquarters}
                 </span>
               )}
               {company.countryCode && !company.headquarters && (
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-xs">
+                <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs">
                   📍 {company.countryCode}
                 </span>
               )}
             </div>
 
             {company.description ? (
-              <p className="mt-4 text-sm leading-relaxed text-slate-300">
+              <p className="mt-4 text-sm leading-relaxed text-neutral-300">
                 {truncateText(toPlainText(company.description), 400)}
               </p>
             ) : (
-              <p className="mt-4 text-sm leading-relaxed text-slate-300">
+              <p className="mt-4 text-sm leading-relaxed text-neutral-300">
                 {company.name} is hiring $100k+ talent across{' '}
                 {company.industry ?? 'multiple teams'}. Explore roles in{' '}
                 {qualifiedJobs.length > 0 ? 'high-compensation' : 'their latest'}{' '}
@@ -261,7 +261,7 @@ export default async function CompanyPage({
                   href={cleanUrl(company.website!)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-100 hover:border-slate-500"
+                  className="inline-flex items-center rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs font-medium text-neutral-100 hover:border-neutral-500"
                 >
                   🌐 Website
                 </a>
@@ -271,7 +271,7 @@ export default async function CompanyPage({
                   href={cleanUrl(company.atsUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-100 hover:border-slate-500"
+                  className="inline-flex items-center rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs font-medium text-neutral-100 hover:border-neutral-500"
                 >
                   💼 Careers Page
                 </a>
@@ -282,15 +282,15 @@ export default async function CompanyPage({
           {/* Stats */}
           <div className="flex gap-4 sm:flex-col sm:items-end sm:gap-2">
             <div className="text-center sm:text-right">
-              <div className="text-2xl font-bold text-slate-50">{jobs.length}</div>
-              <div className="text-xs text-slate-400">$100k+ Jobs</div>
+              <div className="text-2xl font-bold text-neutral-50">{jobs.length}</div>
+              <div className="text-xs text-neutral-400">$100k+ Jobs</div>
             </div>
             {qualifiedJobs.length > 0 && (
               <div className="text-center sm:text-right">
                 <div className="text-2xl font-bold text-emerald-400">
                   {qualifiedJobs.filter((job) => job.salarySource === 'ats').length}
                 </div>
-                <div className="text-xs text-slate-400">ATS salary-backed</div>
+                <div className="text-xs text-neutral-400">ATS salary-backed</div>
               </div>
             )}
           </div>
@@ -298,11 +298,11 @@ export default async function CompanyPage({
       </header>
 
       {/* SEO body copy */}
-      <section className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
-        <h2 className="text-sm font-semibold text-slate-50">
+      <section className="mb-8 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-5">
+        <h2 className="text-sm font-semibold text-neutral-50">
           Why $100k+ roles at {company.name}?
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+        <p className="mt-2 text-sm leading-relaxed text-neutral-300">
           {company.name} is actively hiring experienced talent for $100k+ roles across{' '}
           {stats.topRoles.length
             ? formatList(stats.topRoles.slice(0, 3).map((role) => role.label))
@@ -324,13 +324,13 @@ export default async function CompanyPage({
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-4 text-sm font-semibold text-slate-50">
+        <h2 className="mb-4 text-sm font-semibold text-neutral-50">
           {company.name} hiring snapshot
         </h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <CompanySignalPanel title="Top roles & pay">
             {stats.topRoles.length > 0 ? (
-              <ul className="space-y-3 text-sm text-slate-300">
+              <ul className="space-y-3 text-sm text-neutral-300">
                 {stats.topRoles.slice(0, 5).map((role) => {
                   // Format the salary range when we have at least one bound.
                   // Median-of-mins / median-of-maxes avoids smearing outliers;
@@ -352,17 +352,17 @@ export default async function CompanyPage({
                         <Link href={`/jobs/${role.key}`} className="text-blue-300 hover:underline">
                           {role.label}
                         </Link>
-                        <span className="font-mono text-xs text-slate-500">
+                        <span className="font-mono text-xs text-neutral-500">
                           {role.count} {role.count === 1 ? 'role' : 'roles'}
                         </span>
                       </div>
                       {salaryText ? (
                         <div className="mt-0.5 text-xs text-emerald-300">
                           {salaryText}
-                          <span className="text-slate-500"> · median range</span>
+                          <span className="text-neutral-500"> · median range</span>
                         </div>
                       ) : (
-                        <div className="mt-0.5 text-xs text-slate-500">
+                        <div className="mt-0.5 text-xs text-neutral-500">
                           Salary not disclosed
                         </div>
                       )}
@@ -371,33 +371,33 @@ export default async function CompanyPage({
                 })}
               </ul>
             ) : (
-              <p className="text-sm text-slate-400">Role mix is still being normalized for this company.</p>
+              <p className="text-sm text-neutral-400">Role mix is still being normalized for this company.</p>
             )}
           </CompanySignalPanel>
 
           <CompanySignalPanel title="Salary bands">
             {stats.salaryBands.some((band) => band.count > 0) ? (
-              <ul className="space-y-2 text-sm text-slate-300">
+              <ul className="space-y-2 text-sm text-neutral-300">
                 {stats.salaryBands.filter((band) => band.count > 0).map((band) => (
                   <li key={band.href} className="flex items-center justify-between gap-3">
                     <Link href={band.href} className="text-blue-300 hover:underline">
                       {band.label}
                     </Link>
-                    <span className="font-mono text-xs text-slate-500">{band.count}</span>
+                    <span className="font-mono text-xs text-neutral-500">{band.count}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-slate-400">Published salary bands are limited in the current feed.</p>
+              <p className="text-sm text-neutral-400">Published salary bands are limited in the current feed.</p>
             )}
           </CompanySignalPanel>
 
           <CompanySignalPanel title="Work setup">
-            <ul className="space-y-2 text-sm text-slate-300">
+            <ul className="space-y-2 text-sm text-neutral-300">
               {stats.workModes.map((mode) => (
                 <li key={mode.key} className="flex items-center justify-between gap-3">
                   <span>{mode.label}</span>
-                  <span className="font-mono text-xs text-slate-500">{mode.count}</span>
+                  <span className="font-mono text-xs text-neutral-500">{mode.count}</span>
                 </li>
               ))}
             </ul>
@@ -405,7 +405,7 @@ export default async function CompanyPage({
 
           <CompanySignalPanel title="Top locations">
             {stats.topLocations.length > 0 ? (
-              <ul className="space-y-2 text-sm text-slate-300">
+              <ul className="space-y-2 text-sm text-neutral-300">
                 {stats.topLocations.slice(0, 5).map((location) => (
                   <li key={location.key} className="flex items-center justify-between gap-3">
                     {location.href ? (
@@ -415,19 +415,19 @@ export default async function CompanyPage({
                     ) : (
                       <span>{location.label}</span>
                     )}
-                    <span className="font-mono text-xs text-slate-500">{location.count}</span>
+                    <span className="font-mono text-xs text-neutral-500">{location.count}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-slate-400">Location signals are still being normalized for this feed.</p>
+              <p className="text-sm text-neutral-400">Location signals are still being normalized for this feed.</p>
             )}
           </CompanySignalPanel>
         </div>
       </section>
 
-      <section className="mb-8 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h2 className="text-sm font-semibold text-slate-50">
+      <section className="mb-8 space-y-2 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
+        <h2 className="text-sm font-semibold text-neutral-50">
           Explore related high-paying pages
         </h2>
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
@@ -456,15 +456,15 @@ export default async function CompanyPage({
         </ul>
       </section>
 
-      <section className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
-        <h2 className="text-sm font-semibold text-slate-50">
+      <section className="mb-8 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-5">
+        <h2 className="text-sm font-semibold text-neutral-50">
           {company.name} jobs FAQ
         </h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           {buildCompanyFaqItems(company, qualifiedJobs).map((item) => (
-            <article key={item.q} className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-              <h3 className="text-sm font-semibold text-slate-100">{item.q}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{item.a}</p>
+            <article key={item.q} className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <h3 className="text-sm font-semibold text-neutral-100">{item.q}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-400">{item.a}</p>
             </article>
           ))}
         </div>
@@ -472,14 +472,14 @@ export default async function CompanyPage({
 
       {/* Job Listings */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-slate-50">
+        <h2 className="mb-4 text-lg font-semibold text-neutral-50">
           Open Positions at {company.name}
         </h2>
 
         {jobs.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-8 text-center">
-            <p className="text-slate-400">No live $100k+ positions at the moment.</p>
-            <p className="mt-2 text-sm text-slate-500">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-8 text-center">
+            <p className="text-neutral-400">No live $100k+ positions at the moment.</p>
+            <p className="mt-2 text-sm text-neutral-500">
               Check back later or visit their{' '}
               {company.atsUrl ? (
                 <a
@@ -512,31 +512,31 @@ export default async function CompanyPage({
 
       {/* Related Links */}
       <section className="mt-10">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">
+        <h2 className="mb-3 text-sm font-semibold text-neutral-50">
           Explore More Six Figure Jobs
         </h2>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/jobs/100k-plus"
-            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-300 hover:border-slate-500"
+            className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-300 hover:border-neutral-500"
           >
             All $100k+ Jobs
           </Link>
           <Link
             href="/jobs/software-engineer"
-            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-300 hover:border-slate-500"
+            className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-300 hover:border-neutral-500"
           >
             Software Engineer Jobs
           </Link>
           <Link
             href="/jobs/product-manager"
-            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-300 hover:border-slate-500"
+            className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-300 hover:border-neutral-500"
           >
             Product Manager Jobs
           </Link>
           <Link
             href="/jobs/data-engineer"
-            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-300 hover:border-slate-500"
+            className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-300 hover:border-neutral-500"
           >
             Data Engineer Jobs
           </Link>
@@ -597,24 +597,24 @@ function JobListItem({ job }: { job: JobWithFlags }) {
   const snippet = buildJobPreviewSnippet(job)
 
   return (
-    <div className="group rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition-colors hover:border-slate-700">
+    <div className="group rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 transition-colors hover:border-neutral-700">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1">
           <Link
             href={buildJobSlugHref(job)}
-            className="text-base font-medium text-slate-100 group-hover:text-blue-400"
+            className="text-base font-medium text-neutral-100 group-hover:text-blue-400"
           >
             {job.title}
           </Link>
 
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
             {locationText && <span>📍 {locationText}</span>}
             {job.type && <span>· {job.type}</span>}
             {job.postedAt && <span>· Posted {formatRelativeTime(job.postedAt) ?? ''}</span>}
           </div>
 
           {snippet && snippet.length > 20 && (
-            <p className="mt-2 text-sm text-slate-300">{snippet}</p>
+            <p className="mt-2 text-sm text-neutral-300">{snippet}</p>
           )}
         </div>
 
@@ -624,7 +624,7 @@ function JobListItem({ job }: { job: JobWithFlags }) {
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 isHighSalary
                   ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40'
-                  : 'bg-slate-800 text-slate-300'
+                  : 'bg-neutral-800 text-neutral-300'
               }`}
             >
               {salaryText}
@@ -673,8 +673,8 @@ function CompanySignalPanel({
   children: ReactNode
 }) {
   return (
-    <article className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-      <h3 className="mb-3 text-sm font-semibold text-slate-100">{title}</h3>
+    <article className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
+      <h3 className="mb-3 text-sm font-semibold text-neutral-100">{title}</h3>
       {children}
     </article>
   )

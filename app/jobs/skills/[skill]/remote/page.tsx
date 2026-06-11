@@ -129,7 +129,7 @@ export default async function SkillRemotePage({ params }: { params: Params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-slate-400">
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-400">
         <ol className="flex items-center gap-1">
           <li><Link href="/">Home</Link></li>
           <li className="px-1">/</li>
@@ -139,17 +139,17 @@ export default async function SkillRemotePage({ params }: { params: Params }) {
         </ol>
       </nav>
 
-      <h1 className="mb-3 text-2xl font-semibold text-slate-50">
+      <h1 className="mb-3 text-2xl font-semibold text-neutral-50">
         {total.toLocaleString()} Remote {skillInfo.label} $100k+ Jobs
       </h1>
-      <p className="mb-6 text-sm text-slate-300">
+      <p className="mb-6 text-sm text-neutral-300">
         Remote {skillInfo.label} $100k jobs • $100k remote {skillInfo.label} jobs • high paying remote {skillInfo.label} jobs • six figure {skillInfo.label} roles with verified compensation and flexible locations.
       </p>
 
       <JobList jobs={jobs as JobWithCompany[]} />
 
       {totalPages > 1 && (
-        <nav className="mt-6 flex items-center justify-between text-xs text-slate-300">
+        <nav className="mt-6 flex items-center justify-between text-xs text-neutral-300">
           <span>
             Page {page} of {totalPages}
           </span>

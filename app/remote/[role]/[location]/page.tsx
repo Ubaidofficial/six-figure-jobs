@@ -417,37 +417,37 @@ export default async function RemoteRoleCityPage({
       {/* -------------------------------- Breadcrumbs -------------------------------- */}
       <nav
         aria-label="Breadcrumb"
-        className="mb-4 text-xs text-slate-400"
+        className="mb-4 text-xs text-neutral-400"
       >
         <ol className="flex flex-wrap items-center gap-1">
           <li>
             <Link
               href="/"
-              className="hover:text-slate-200 hover:underline"
+              className="hover:text-neutral-200 hover:underline"
             >
               Home
             </Link>
           </li>
-          <li className="px-1 text-slate-600">/</li>
+          <li className="px-1 text-neutral-600">/</li>
           <li>
             <Link
               href="/jobs/100k-plus"
-              className="hover:text-slate-200 hover:underline"
+              className="hover:text-neutral-200 hover:underline"
             >
               $100k+ jobs
             </Link>
           </li>
-          <li className="px-1 text-slate-600">/</li>
+          <li className="px-1 text-neutral-600">/</li>
           <li>
             <Link
               href={`/remote/${roleSlug}`}
-              className="hover:text-slate-200 hover:underline"
+              className="hover:text-neutral-200 hover:underline"
             >
               Remote {prettyRole(roleSlug)}
             </Link>
           </li>
-          <li className="px-1 text-slate-600">/</li>
-          <li aria-current="page" className="text-slate-200">
+          <li className="px-1 text-neutral-600">/</li>
+          <li aria-current="page" className="text-neutral-200">
             {cityName}
           </li>
         </ol>
@@ -455,33 +455,33 @@ export default async function RemoteRoleCityPage({
 
       {/* --------------------------------- Header ---------------------------------- */}
       <header className="mb-6 space-y-3">
-        <h1 className="text-2xl font-semibold text-slate-50">
+        <h1 className="text-2xl font-semibold text-neutral-50">
           Remote {prettyRole(roleSlug)} jobs in {cityName} paying $100k+ ({totalJobs.toLocaleString()})
         </h1>
-        <p className="text-sm text-slate-300" data-speakable="summary">
+        <p className="text-sm text-neutral-300" data-speakable="summary">
           Browse high-paying remote {prettyRole(
             roleSlug
           )} roles based in {cityName}. All jobs are filtered for
           at least $100k local total compensation.
         </p>
-        <ul className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+        <ul className="grid gap-2 text-xs text-neutral-300 sm:grid-cols-3">
+          <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
             Salary-first: $100k+ roles only, pulled from ATS and vetted boards.
           </li>
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+          <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
             Eligibility clarity: remote/hybrid flagged; local currency kept when provided.
           </li>
-          <li className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+          <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
             Freshness: stale roles expire automatically to avoid dead applies.
           </li>
         </ul>
       </header>
 
       {/* --------------------------------- Filters --------------------------------- */}
-      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-xs text-slate-200">
+      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/80 px-4 py-3 text-xs text-neutral-200">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-slate-400">Min salary:</span>
+            <span className="text-neutral-400">Min salary:</span>
             {salaryOptions.map((s) => (
               <Link
                 key={s}
@@ -490,8 +490,8 @@ export default async function RemoteRoleCityPage({
                 })}
                 className={`rounded-full px-2 py-1 ${
                   minAnnual === s
-                    ? 'bg-slate-200 text-slate-900'
-                    : 'bg-slate-900 text-slate-200'
+                    ? 'bg-neutral-200 text-neutral-900'
+                    : 'bg-neutral-900 text-neutral-200'
                 }`}
               >
                 ${Math.round(s / 1000)}k+
@@ -499,15 +499,15 @@ export default async function RemoteRoleCityPage({
             ))}
           </div>
 
-          <p className="text-slate-500">
+          <p className="text-neutral-500">
             Showing roles tagged with {cityName} and estimated $100k+
             compensation.
           </p>
         </div>
       </section>
 
-      <section className="mb-6 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h2 className="text-sm font-semibold text-slate-50">
+      <section className="mb-6 space-y-2 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
+        <h2 className="text-sm font-semibold text-neutral-50">
           Explore related high-paying pages
         </h2>
         <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
@@ -536,7 +536,7 @@ export default async function RemoteRoleCityPage({
 
       {/* -------------------------------- Job list -------------------------------- */}
       {jobs.length === 0 ? (
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-neutral-400">
           No remote {prettyRole(roleSlug)} roles in {cityName} match
           your current filters. Try lowering the salary filter or
           check back soon.
@@ -551,13 +551,13 @@ export default async function RemoteRoleCityPage({
               aria-label="Pagination"
               className="mt-6 flex items-center justify-between gap-3 text-xs"
             >
-              <div className="text-slate-400">
+              <div className="text-neutral-400">
                 Page{' '}
-                <span className="font-semibold text-slate-100">
+                <span className="font-semibold text-neutral-100">
                   {page}
                 </span>{' '}
                 of{' '}
-                <span className="font-semibold text-slate-100">
+                <span className="font-semibold text-neutral-100">
                   {totalPages}
                 </span>
               </div>
@@ -570,7 +570,7 @@ export default async function RemoteRoleCityPage({
                       sp,
                       page - 1
                     )}
-                    className="rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-1.5 text-slate-200 hover:border-slate-700 hover:bg-slate-900"
+                    className="rounded-lg border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900"
                   >
                     Previous
                   </Link>
@@ -583,7 +583,7 @@ export default async function RemoteRoleCityPage({
                       sp,
                       page + 1
                     )}
-                    className="rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-1.5 text-slate-200 hover:border-slate-700 hover:bg-slate-900"
+                    className="rounded-lg border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900"
                   >
                     Next
                   </Link>

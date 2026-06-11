@@ -104,7 +104,7 @@ export function InfiniteJobsList({
       {!hasMore && jobs.length > 0 && (
         <div className={styles.endMessage}>
           <p>You've reached the end! 🎉</p>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-neutral-400">
             Showing all {jobs.length} jobs matching your filters
           </p>
         </div>
@@ -115,27 +115,27 @@ export function InfiniteJobsList({
 
 function SkeletonJobCard() {
   return (
-    <article className="rounded-xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm">
+    <article className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-5 shadow-sm">
       <div className="flex gap-4">
-        <div className="h-12 w-12 shrink-0 rounded-xl bg-slate-800/70" />
+        <div className="h-12 w-12 shrink-0 rounded-xl bg-neutral-800/70" />
 
         <div className="min-w-0 flex-1">
-          <div className="h-5 w-3/4 rounded bg-slate-800/70" />
-          <div className="mt-3 h-4 w-1/2 rounded bg-slate-800/60" />
+          <div className="h-5 w-3/4 rounded bg-neutral-800/70" />
+          <div className="mt-3 h-4 w-1/2 rounded bg-neutral-800/60" />
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <div className="h-6 w-20 rounded-full bg-slate-800/60" />
-            <div className="h-6 w-24 rounded-full bg-slate-800/60" />
-            <div className="h-6 w-28 rounded-full bg-slate-800/60" />
+            <div className="h-6 w-20 rounded-full bg-neutral-800/60" />
+            <div className="h-6 w-24 rounded-full bg-neutral-800/60" />
+            <div className="h-6 w-28 rounded-full bg-neutral-800/60" />
           </div>
 
           <div className="mt-4 space-y-2">
-            <div className="h-3 w-full rounded bg-slate-800/50" />
-            <div className="h-3 w-5/6 rounded bg-slate-800/50" />
+            <div className="h-3 w-full rounded bg-neutral-800/50" />
+            <div className="h-3 w-5/6 rounded bg-neutral-800/50" />
           </div>
         </div>
 
-        <div className="hidden w-36 shrink-0 rounded-lg bg-slate-800/50 md:block" />
+        <div className="hidden w-36 shrink-0 rounded-lg bg-neutral-800/50 md:block" />
       </div>
     </article>
   )
