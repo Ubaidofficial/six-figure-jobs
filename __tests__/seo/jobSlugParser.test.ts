@@ -35,6 +35,31 @@ describe('parseJobSlugParam', () => {
       expect(result3.jobId).toBeNull()
     })
 
+    it('parses a short (1–4 char) suffix (regression: sitemap URL → 404)', () => {
+      // shortStableId() is base36 of a 32-bit FNV hash sliced to 8 chars, so a
+      // small hash value yields a short suffix. The id below hashes to "ckck"
+      // (4 chars). A {5,12} parser bound returned shortId=null → notFound() →
+      // 404 on a URL the sitemap still listed (production "non_200" failure).
+      const result = parseJobSlugParam('sr-lifecycle-marketing-manager-j-ckck')
+      expect(result.shortId).toBe('ckck')
+      expect(result.jobId).toBeNull()
+    })
+
+    it('roundtrips buildJobSlug → parseJobSlugParam across many ids, incl. short suffixes', () => {
+      let sawShort = false
+      for (let i = 0; i < 5000; i++) {
+        const jobId = `ats:greenhouse:${i}`
+        const slug = buildJobSlug({ id: jobId, title: 'Senior Marketing Manager' })
+        const expectedShortId = getShortStableIdForJobId(jobId)
+        if (expectedShortId.length <= 4) sawShort = true
+
+        const parsed = parseJobSlugParam(slug)
+        expect(parsed.shortId).toBe(expectedShortId)
+      }
+      // Guard the guard: ensure the loop actually exercised a short suffix.
+      expect(sawShort).toBe(true)
+    })
+
     it('roundtrips buildJobSlug → parseJobSlugParam for titles containing "job"', () => {
       const jobId = 'board:builtin:builtin-9564198'
       const slug = buildJobSlug({ id: jobId, title: 'External Job Post' })

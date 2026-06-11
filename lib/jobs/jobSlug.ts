@@ -127,7 +127,12 @@ export function parseJobSlugParam(param: string): ParsedJobSlug {
   // ⚠️ Must be checked BEFORE the legacy `-job-` pattern, because job titles
   // containing the word "job" (e.g. "External Job Post" → external-job-post-j-k8mub4)
   // would otherwise be greedily matched by the legacy regex.
-  const v28 = lastSegment.match(/-j-([a-z0-9]{5,12})$/)
+  // Lower bound is 1, not 5: shortStableId() is base36 of a 32-bit FNV hash
+  // sliced to 8 chars, so a small hash value yields a 1–4 char suffix
+  // (e.g. id hashing to 586244 → "ckck"). A {5,12} bound silently failed to
+  // parse those, returning shortId=null → notFound() → 404 on a URL the
+  // sitemap still listed (the production "non_200" SEO-guard failure).
+  const v28 = lastSegment.match(/-j-([a-z0-9]{1,12})$/)
   if (v28?.[1]) {
     return { roleSlug: lastSegment || null, jobId: null, externalId: null, shortId: v28[1] }
   }

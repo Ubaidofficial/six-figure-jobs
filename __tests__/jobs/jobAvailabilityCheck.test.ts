@@ -38,6 +38,24 @@ describe('checkJobAvailability', () => {
     expect(await checkJobAvailability('staff-engineer-j-abc12345')).toBe('expired')
   })
 
+  it("classifies a short (1–4 char) suffix instead of falling through to 'missing'", async () => {
+    // Regression: shortStableId can emit a 1–4 char suffix (e.g. "ckck"). The
+    // old parser bound {5,12} failed to parse it, so checkJobAvailability
+    // returned 'missing' without querying — an EXPIRED short-suffix job served
+    // 404 instead of 410, defeating the crawl-budget 410 upgrade.
+    findFirst.mockResolvedValue({
+      id: 'job-short',
+      isExpired: true,
+      lastSeenAt: new Date(),
+      postedAt: new Date(),
+      createdAt: new Date(),
+    })
+    expect(await checkJobAvailability('sr-lifecycle-marketing-manager-j-ckck')).toBe('expired')
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { shortId: 'ckck' } }),
+    )
+  })
+
   it("returns 'stale' for jobs with no fresh signal in MAX_INDEXABLE_JOB_AGE_DAYS", async () => {
     const old = new Date(Date.now() - (MAX_INDEXABLE_JOB_AGE_DAYS + 5) * 24 * 60 * 60 * 1000)
     findFirst.mockResolvedValue({
