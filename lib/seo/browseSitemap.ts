@@ -111,7 +111,7 @@ function initializeRoleSkillCounts(): Map<string, number> {
 }
 
 export async function buildBrowseSitemapReport(
-  minJobs: number = 3,
+  minJobs: number = 5,
 ): Promise<BrowseSitemapReport> {
   // Avoid duplicating salary tier pages across multiple sitemap families.
   const INCLUDE_SALARY_TIERS = false

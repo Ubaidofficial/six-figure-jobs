@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
   // Skill pages aren't in the Phase 1 allowlist — they noindex until phase 2.
   const allowIndex =
-    total >= 1 &&
+    total >= 5 &&
     isPhaseIndexable({ pathname: `/jobs/skills/${resolved.slug}` })
   const titleBase = `$100k+ ${resolved.label} jobs`
   const title =

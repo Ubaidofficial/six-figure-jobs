@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     twitter: { card: 'summary_large_image', title, description },
     // Phase-aware: role × city deep combos aren't in the Phase 1 allowlist.
     robots:
-      total >= 1 &&
+      total >= 5 &&
       isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}/city/${cityInfo.slug}` })
         ? { index: true, follow: true }
         : { index: false, follow: true },

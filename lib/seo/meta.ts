@@ -120,7 +120,7 @@ export function buildSliceMetadata(
   const canonical = buildCanonicalUrl(slice, ctx.page)
   const allowIndex =
     typeof ctx.totalJobs === 'number'
-      ? ctx.totalJobs >= 1 && ctx.page <= 5
+      ? ctx.totalJobs >= 5 && ctx.page <= 5
       : ctx.page <= 5
 
   const totalPages =

@@ -104,7 +104,7 @@ export async function generateMetadata({
 
   // Category pages aren't in the Phase 1 allowlist — noindex until phase 2.
   const allowIndex =
-    total >= 1 && isPhaseIndexable({ pathname: `/jobs/category/${category}` })
+    total >= 5 && isPhaseIndexable({ pathname: `/jobs/category/${category}` })
   const canonical = `${SITE_URL}/jobs/category/${category}`
   const shouldIndex = allowIndex && page === 1
   const title =
