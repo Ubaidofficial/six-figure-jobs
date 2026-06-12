@@ -14,9 +14,11 @@
 
 import { prisma } from '../prisma'
 import { upsertCompanyFromBoard } from '../companies/upsertFromBoard'
+import { cleanApplyUrl } from '../jobs/applyUrl'
 import {
   normalizeSalary,
   parseSalaryFromText,
+  extractCompensationSnippet,
   validateHighSalaryEligibility,
   estimateUsdAnnualFromNormalized,
   inferCurrencyFromCountryCode,
@@ -237,7 +239,7 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
           companyLogo: input.companyLogoUrl ?? null,
           source: input.source,
           url: input.url ?? null,
-          applyUrl: input.applyUrl ?? input.url ?? null,
+          applyUrl: cleanApplyUrl(input.applyUrl, input.url),
           sourcePriority: incomingPriority,
           dedupeKey,
           isExpired: false,
@@ -407,7 +409,7 @@ async function createNewJob(
     type: input.employmentType ?? 'Full-time',
     employmentType: input.employmentType ?? null,
     experienceLevel: inferExperienceLevelFromTitle(input.title),
-    applyUrl: input.applyUrl ?? input.url ?? null,
+    applyUrl: cleanApplyUrl(input.applyUrl, input.url),
     url: input.url ?? null,
     descriptionHtml: input.descriptionHtml ?? null,
 
@@ -565,8 +567,8 @@ async function upgradeJob(
     type: input.employmentType ?? existing.type,
     employmentType: input.employmentType ?? existing.employmentType,
 
-    // URLs
-    applyUrl: input.applyUrl ?? input.url ?? existing.applyUrl,
+    // URLs — never let the apply button point at an aggregator we scraped from.
+    applyUrl: cleanApplyUrl(input.applyUrl, input.url, existing.applyUrl),
     url: input.url ?? existing.url,
     descriptionHtml: input.descriptionHtml ?? existing.descriptionHtml,
 
@@ -954,7 +956,8 @@ function processSalary(input: ScrapedJobInput) {
   if (salaryMin === null && salaryMax === null) {
     const salaryRawText: string = input.salaryRaw ?? ''
     const descText: string = input.descriptionText ?? input.descriptionHtml ?? ''
-    const textToParse: string = salaryRawText || descText
+    const descriptionSnippet = salaryRawText ? '' : extractCompensationSnippet(descText) ?? ''
+    const textToParse: string = salaryRawText || descriptionSnippet
 
     if (textToParse.length > 0) {
       const parsed = parseSalaryFromText(textToParse)
