@@ -313,7 +313,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
         remoteMode: resolvedRemoteMode,
         remoteRegion: resolvedRemoteRegion || undefined,
         seniorityLevels,
-        keyword: q || undefined,
+        // If the query already resolved to a structured role (e.g. "ML engineer"
+        // → machine-learning-engineer), don't also AND the raw phrase — it would
+        // require the literal text in the title and wipe out valid matches. Only
+        // fall back to free-text keyword when nothing structured matched.
+        keyword: aiFilters.roleSlugs?.length ? undefined : q || undefined,
         ...(hasUserMinSalary ? { minAnnual } : {}),
       })
 

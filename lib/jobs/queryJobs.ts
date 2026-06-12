@@ -449,15 +449,31 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   if (filters.keyword) {
     const kw = filters.keyword.trim()
     if (kw) {
-      addAnd({
-        OR: [
-          { title: { contains: kw, mode: 'insensitive' } },
-          { company: { contains: kw, mode: 'insensitive' } },
-          { locationRaw: { contains: kw, mode: 'insensitive' } },
-          { techStack: { contains: kw, mode: 'insensitive' } },
-          { skillsJson: { contains: kw, mode: 'insensitive' } },
-        ],
-      })
+      // Match each meaningful word independently (AND) across the searchable
+      // fields, so multi-word queries like "senior backend python" match by
+      // intent regardless of word order — not only when the exact phrase
+      // appears in a single field. Stopwords + 1-char tokens are dropped.
+      const STOPWORDS = new Set([
+        'the', 'and', 'or', 'for', 'of', 'to', 'in', 'at', 'an', 'with',
+        'jobs', 'job', 'remote', 'role', 'roles', 'hiring',
+      ])
+      const tokens = kw
+        .toLowerCase()
+        .split(/[^a-z0-9+#.]+/i)
+        .filter((t) => t.length >= 2 && !STOPWORDS.has(t))
+        .slice(0, 6)
+      const terms = tokens.length > 0 ? tokens : [kw]
+      for (const term of terms) {
+        addAnd({
+          OR: [
+            { title: { contains: term, mode: 'insensitive' } },
+            { company: { contains: term, mode: 'insensitive' } },
+            { locationRaw: { contains: term, mode: 'insensitive' } },
+            { techStack: { contains: term, mode: 'insensitive' } },
+            { skillsJson: { contains: term, mode: 'insensitive' } },
+          ],
+        })
+      }
     }
   }
 
