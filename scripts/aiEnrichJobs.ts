@@ -171,7 +171,11 @@ async function selectJobsToEnrich(params: {
 
 async function main() {
   const maxJobsPerRun = envInt('AI_ENRICH_MAX_JOBS_PER_RUN', 200)
-  const maxOutputTokens = envInt('AI_ENRICH_MAX_OUTPUT_TOKENS', 600)
+  // Must fit the full enrichment JSON (oneLiner + snippet + ~6 responsibility
+  // bullets + ~8 requirement bullets + benefits). Below ~1200 the model truncates
+  // mid-JSON and the whole job fails with "AI returned invalid JSON" — which is
+  // what silently starved enrichment coverage. Verified 1500 produces clean output.
+  const maxOutputTokens = envInt('AI_ENRICH_MAX_OUTPUT_TOKENS', 1500)
   const maxDailyTokensTotal = envInt('AI_ENRICH_MAX_DAILY_TOKENS_TOTAL', 500000)
   const maxDailyJobs = envInt('AI_ENRICH_MAX_DAILY_JOBS', 500)
   const recentDays = envInt('AI_ENRICH_RECENT_DAYS', 30)
