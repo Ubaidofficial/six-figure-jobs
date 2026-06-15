@@ -1076,9 +1076,12 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('[seo:validate] fatal error:', error)
-  process.exit(1)
-}).finally(async () => {
-  await prisma.$disconnect()
-})
+main()
+  .catch((error) => {
+    console.error('[seo:validate] fatal error:', error)
+    process.exitCode = 1
+  })
+  .finally(async () => {
+    await prisma.$disconnect().catch(() => undefined)
+    process.exit(process.exitCode ?? 0)
+  })

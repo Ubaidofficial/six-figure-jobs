@@ -1,5 +1,6 @@
 # Unreleased
 
+- Forced the SEO validator CLI to exit after Prisma cleanup so successful CI validation does not hang.
 - Allowed strict local SEO validation to tolerate an empty Phase 1 root sitemap index when CI has no seeded sitemap URLs.
 - Restored exported compensation snippet helper used by salary ingestion build.
 - Fixed Phase 1 sitemap advertising so only active sitemap families are listed in sitemap index and robots.txt.
