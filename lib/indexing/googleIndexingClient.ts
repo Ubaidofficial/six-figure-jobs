@@ -181,11 +181,54 @@ export async function publishUrl(
 
   if (!res.ok) {
     const body = await res.text()
-    throw new Error(
+    const error = new Error(
       `Indexing API error status=${res.status} url=${url} body=${body.slice(0, 240)}`,
     )
+    ;(error as any).status = res.status
+    ;(error as any).body = body
+    throw error
   }
 }
+
+export type UrlNotificationMetadata = {
+  url: string
+  latestUpdate?: {
+    url: string
+    type: IndexingRequestType
+    notifyTime: string
+  }
+}
+
+/**
+ * Get the current metadata/status of a URL from the Google Indexing API.
+ */
+export async function getUrlNotificationMetadata(
+  url: string,
+  token?: string,
+): Promise<UrlNotificationMetadata> {
+  const activeToken = token || (await getAccessToken())
+  const apiUrl = `https://indexing.googleapis.com/v3/urlNotifications/metadata?url=${encodeURIComponent(url)}`
+  const res = await fetch(apiUrl, {
+    method: 'GET',
+    headers: {
+      authorization: `Bearer ${activeToken}`,
+    },
+  })
+
+  if (!res.ok) {
+    const body = await res.text()
+    const error = new Error(
+      `Indexing API metadata error status=${res.status} url=${url} body=${body.slice(0, 240)}`,
+    )
+    ;(error as any).status = res.status
+    ;(error as any).body = body
+    throw error
+  }
+
+  return (await res.json()) as UrlNotificationMetadata
+}
+
+
 
 /**
  * Notify Google Indexing API for a batch of URLs.

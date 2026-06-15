@@ -1,11 +1,9 @@
 import type { JobSlugSource } from './jobSlug'
-import { buildJobSlug } from './jobSlug'
+import { buildJobSlug, parseJobSlugParam } from './jobSlug'
 import { getSiteUrl } from '../seo/site'
-import {
-  hasIndexingCredentials,
-  notifyUrls,
-  type IndexingRequestType,
-} from '../indexing/googleIndexingClient'
+import { prisma } from '../prisma'
+import { type IndexingRequestType } from '../indexing/googleIndexingClient'
+import { enqueueJobIndexingUpdate, enqueueJobIndexingDelete } from './indexingQueue'
 
 export type IndexableJob = JobSlugSource
 
@@ -15,16 +13,36 @@ type IndexingNotifier = (
 ) => Promise<unknown>
 
 async function defaultNotifier(url: string, type: IndexingRequestType): Promise<unknown> {
-  if (!hasIndexingCredentials()) {
-    return { skipped: true, reason: 'missing_credentials' }
-  }
+  try {
+    const pathname = new URL(url).pathname
+    const slug = pathname.split('/').pop() || ''
+    const { jobId, shortId } = parseJobSlugParam(slug)
 
-  const [result] = await notifyUrls([url], { type, concurrency: 1 })
-  if (!result?.success) {
-    throw new Error(result?.error || `Indexing notification failed for ${url}`)
-  }
+    let resolvedId = jobId
+    if (!resolvedId && shortId) {
+      const job = await prisma.job.findFirst({
+        where: { shortId },
+        select: { id: true },
+      })
+      resolvedId = job?.id ?? null
+    }
 
-  return result
+    if (!resolvedId) {
+      console.error(`[indexing:notifier] Could not resolve job ID from URL: ${url}`)
+      return { skipped: true, reason: 'unresolved_job_id' }
+    }
+
+    if (type === 'URL_UPDATED') {
+      await enqueueJobIndexingUpdate(resolvedId, 'pipeline')
+    } else {
+      await enqueueJobIndexingDelete(resolvedId, 'pipeline')
+    }
+
+    return { ok: true }
+  } catch (error: any) {
+    console.error(`[indexing:notifier] Failed to enqueue URL ${url}:`, error)
+    throw error
+  }
 }
 
 let notifier: IndexingNotifier = defaultNotifier
@@ -36,6 +54,7 @@ export function setJobIndexingNotifierForTests(nextNotifier: IndexingNotifier): 
 export function resetJobIndexingNotifierForTests(): void {
   notifier = defaultNotifier
 }
+
 
 export function buildCanonicalJobUrl(job: IndexableJob): string {
   return `${getSiteUrl()}/job/${buildJobSlug(job)}`

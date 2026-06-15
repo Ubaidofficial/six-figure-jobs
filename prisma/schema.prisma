@@ -344,3 +344,24 @@ model ErrorLog {
   @@index([createdAt])
   @@index([severity])
 }
+
+model JobIndexingQueue {
+  id             String    @id @default(cuid())
+  jobId          String
+  url            String
+  type           String    // "URL_UPDATED" | "URL_DELETED"
+  reason         String    // "new_job", "job_updated", "job_expired", "manual"
+  status         String    @default("pending") // "pending", "sent", "failed", "skipped"
+  dedupeKey      String    @unique
+  attempts       Int       @default(0)
+  lastError      String?
+  googleResponse String?
+  notBefore      DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status])
+  @@index([notBefore])
+  @@index([createdAt])
+}

@@ -36,6 +36,7 @@ import {
   warnMinimumSalaryRejected,
 } from '../jobs/salaryPublicationGate'
 import { notifyJobInsertedForIndexing } from '../jobs/indexingNotifications'
+import { enqueueJobIndexingUpdate } from '../jobs/indexingQueue'
 import {
   hasJobDescriptionNoise,
   sanitizeJobDescriptionFields,
@@ -474,6 +475,20 @@ async function createNewJob(
   }
 }
 
+function hasCriticalFieldsChanged(existing: any, updated: any): boolean {
+  if (updated.title !== undefined && updated.title !== existing.title) return true
+  if (updated.company !== undefined && updated.company !== existing.company) return true
+  if (updated.companyId !== undefined && updated.companyId !== existing.companyId) return true
+  if (updated.locationRaw !== undefined && updated.locationRaw !== existing.locationRaw) return true
+  if (updated.city !== undefined && updated.city !== existing.city) return true
+  if (updated.countryCode !== undefined && updated.countryCode !== existing.countryCode) return true
+  if (updated.remote !== undefined && updated.remote !== existing.remote) return true
+  if (updated.salaryMin !== undefined && updated.salaryMin !== existing.salaryMin) return true
+  if (updated.salaryMax !== undefined && updated.salaryMax !== existing.salaryMax) return true
+  if (updated.descriptionHtml !== undefined && updated.descriptionHtml !== existing.descriptionHtml) return true
+  return false
+}
+
 // =============================================================================
 // Job Upgrade (better source found)
 // =============================================================================
@@ -587,6 +602,8 @@ async function upgradeJob(
     experienceLevel: inferExperienceLevelFromTitle(input.title),
   }
 
+  const changed = hasCriticalFieldsChanged(existing, updateData)
+
   if (isIngestDryRun()) {
     ingestLog(`[ingest:dry-run] would upgrade job ${existing.id}`)
     return { status: 'skipped', reason: 'dry-run-upgrade', jobId: existing.id, dedupeKey }
@@ -598,6 +615,10 @@ async function upgradeJob(
   })
 
   ingestLog(`[ingest] Upgraded job ${existing.id} from ${existing.source} to ${input.source}`)
+
+  if (changed) {
+    await enqueueJobIndexingUpdate(existing.id, 'job_updated', updateData.title)
+  }
 
   return { status: 'upgraded', jobId: existing.id, dedupeKey }
 }
@@ -683,6 +704,8 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
     updateData.expiresAt = sourceExpiresAt
   }
 
+  const changed = hasCriticalFieldsChanged(existing, updateData)
+
   if (isIngestDryRun()) {
     ingestLog(`[ingest:dry-run] would refresh job ${existing.id}`)
     return { status: 'skipped', reason: 'dry-run-refresh', jobId: existing.id, dedupeKey: existing.dedupeKey }
@@ -695,6 +718,10 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
       validThrough: sourceExpiresAt ?? buildEffectiveValidThroughDate(input, existing.postedAt),
     },
   })
+
+  if (changed) {
+    await enqueueJobIndexingUpdate(existing.id, 'job_updated', updateData.title || existing.title)
+  }
 
   return { status: 'updated', jobId: existing.id, dedupeKey: existing.dedupeKey }
 }

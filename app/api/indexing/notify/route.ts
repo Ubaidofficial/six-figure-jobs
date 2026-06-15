@@ -1,127 +1,177 @@
 // app/api/indexing/notify/route.ts
-// Internal endpoint: notify Google Indexing API for a batch of job URLs.
-// Called by the ingest pipeline after new jobs are scraped.
+// Internal endpoint: notify/enqueue Google Indexing API for job URLs.
 //
 // Auth: Authorization: Bearer <INDEXING_API_INTERNAL_KEY>
 //
 // POST body (JSON):
-//   { urls: string[] }                        — notify specific URLs
-//   { type?: "URL_UPDATED" | "URL_DELETED" }  — default: URL_UPDATED
-//   { concurrency?: number }                  — default: 4, max: 16
+//   {
+//     "urls": ["https://www.6figjobs.com/job/some-slug"],
+//     "type": "URL_UPDATED" | "URL_DELETED",
+//     "dryRun": boolean (optional, defaults to true)
+//   }
 
 import { NextResponse } from 'next/server'
+import { prisma } from '../../../../lib/prisma'
 import {
-  notifyUrls,
-  hasIndexingCredentials,
-  type IndexingRequestType,
-} from '../../../../lib/indexing/googleIndexingClient'
-import { getSiteUrl } from '../../../../lib/seo/site'
+  validateJobIndexingUrl,
+  verifyJobIndexingUpdateSafety,
+  verifyJobIndexingDeleteSafety,
+} from '../../../../lib/indexing/safetyGates'
+import { parseJobSlugParam } from '../../../../lib/jobs/jobSlug'
 
 export const dynamic = 'force-dynamic'
 
-const MAX_URLS_PER_REQUEST = 200
-const SITE_URL = getSiteUrl()
-
-function isAuthorized(req: Request): boolean {
+export async function POST(req: Request): Promise<NextResponse> {
   const internalKey = process.env.INDEXING_API_INTERNAL_KEY?.trim()
-  if (!internalKey) {
-    // If no key is configured, fall back to Railway-internal check:
-    // only allow requests from localhost / Railway private network.
-    const host = req.headers.get('host') ?? ''
-    return host.startsWith('localhost') || host.startsWith('127.')
+  const isProduction = process.env.NODE_ENV === 'production'
+
+  // Block weak or missing keys in production
+  if (isProduction) {
+    if (!internalKey || internalKey.length < 16) {
+      return NextResponse.json(
+        { error: 'Forbidden: Weak or missing INDEXING_API_INTERNAL_KEY in production' },
+        { status: 403 },
+      )
+    }
   }
 
+  // Extract bearer token
   const authHeader = req.headers.get('authorization') ?? ''
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
-  return token === internalKey
-}
 
-function isJobUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    return parsed.pathname.startsWith('/job/')
-  } catch {
-    return false
+  let authorized = false
+  if (internalKey) {
+    authorized = token === internalKey
+  } else {
+    // Local/dev fallback
+    const host = req.headers.get('host') ?? ''
+    authorized = host.startsWith('localhost') || host.startsWith('127.')
   }
-}
 
-function normalizeUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    // Accept absolute URLs on our domain or path-only inputs
-    if (parsed.origin === SITE_URL || parsed.protocol === 'https:') return parsed.href
-    return null
-  } catch {
-    // Could be a path like /job/some-slug
-    if (url.startsWith('/')) return `${SITE_URL}${url}`
-    return null
-  }
-}
-
-export async function POST(req: Request): Promise<NextResponse> {
-  if (!isAuthorized(req)) {
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (!hasIndexingCredentials()) {
-    return NextResponse.json(
-      {
-        error: 'Google Indexing API credentials not configured',
-        hint: 'Set GOOGLE_OAUTH_CLIENT_ID + GOOGLE_OAUTH_CLIENT_SECRET + GOOGLE_OAUTH_REFRESH_TOKEN (preferred), or GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON',
-      },
-      { status: 503 },
-    )
-  }
-
-  let body: unknown
+  // Parse POST body
+  let body: any
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (typeof body !== 'object' || body === null || !Array.isArray((body as any).urls)) {
+  if (typeof body !== 'object' || body === null || !Array.isArray(body.urls)) {
     return NextResponse.json({ error: 'Body must be { urls: string[] }' }, { status: 400 })
   }
 
-  const raw = (body as any).urls as unknown[]
-  const type: IndexingRequestType =
-    (body as any).type === 'URL_DELETED' ? 'URL_DELETED' : 'URL_UPDATED'
-  const concurrency = Math.max(1, Math.min(Number((body as any).concurrency) || 4, 16))
+  const rawUrls = body.urls as unknown[]
+  const type = body.type || 'URL_UPDATED'
 
-  // Normalize + deduplicate + validate URLs
-  const urls = Array.from(
-    new Set(
-      raw
-        .filter((u): u is string => typeof u === 'string')
-        .map(normalizeUrl)
-        .filter((u): u is string => u !== null && isJobUrl(u)),
-    ),
-  ).slice(0, MAX_URLS_PER_REQUEST)
-
-  if (urls.length === 0) {
-    return NextResponse.json({ submitted: 0, results: [], message: 'No valid job URLs provided' })
-  }
-
-  let results
-  try {
-    results = await notifyUrls(urls, { type, concurrency })
-  } catch (err) {
-    console.error('[indexing/notify] fatal error:', err)
+  if (type !== 'URL_UPDATED' && type !== 'URL_DELETED') {
     return NextResponse.json(
-      { error: 'Failed to obtain access token', detail: String((err as Error).message ?? err) },
-      { status: 502 },
+      { error: 'Invalid request type. Must be URL_UPDATED or URL_DELETED' },
+      { status: 400 },
     )
   }
 
-  const succeeded = results.filter((r) => r.success).length
-  const failed = results.filter((r) => !r.success).length
+  // Determine dry-run status
+  const dryRunEnv = process.env.INDEXING_API_DRY_RUN !== '0'
+  const dryRun = body.dryRun !== false || dryRunEnv
 
-  console.log(`[indexing/notify] type=${type} submitted=${succeeded} failed=${failed}`)
+  const accepted: string[] = []
+  const skipped: { url: string; reason: string }[] = []
+  const errors: { url: string; error: string }[] = []
+
+  for (const rawUrl of rawUrls) {
+    if (typeof rawUrl !== 'string') {
+      errors.push({ url: String(rawUrl), error: 'url_must_be_string' })
+      continue
+    }
+
+    const url = rawUrl.trim()
+
+    // 1. Basic URL validation
+    const urlCheck = validateJobIndexingUrl(url)
+    if (!urlCheck.valid) {
+      errors.push({ url, error: urlCheck.reason || 'invalid_url' })
+      continue
+    }
+
+    // 2. Extract job slug and parse details
+    let pathname: string
+    try {
+      pathname = new URL(url).pathname
+    } catch {
+      errors.push({ url, error: 'malformed_url_parsing' })
+      continue
+    }
+
+    const slug = pathname.split('/').pop() || ''
+    const { jobId: parsedJobId, shortId } = parseJobSlugParam(slug)
+    const ors: any[] = []
+    if (parsedJobId) ors.push({ id: parsedJobId })
+    if (shortId) ors.push({ shortId })
+
+    if (ors.length === 0) {
+      errors.push({ url, error: 'invalid_slug_identifier' })
+      continue
+    }
+
+    // 3. Resolve job in database
+    const job = await prisma.job.findFirst({
+      where: { OR: ors },
+    })
+
+    if (!job) {
+      errors.push({ url, error: 'job_not_found_in_db' })
+      continue
+    }
+
+    // 4. Verify safety gates
+    let safety: { safe: boolean; reason?: string }
+    if (type === 'URL_UPDATED') {
+      safety = await verifyJobIndexingUpdateSafety(job.id, url)
+    } else {
+      safety = await verifyJobIndexingDeleteSafety(job.id, url)
+    }
+
+    if (!safety.safe) {
+      skipped.push({ url, reason: safety.reason || 'safety_gate_rejected' })
+      continue
+    }
+
+    // 5. Enqueue (or simulate enqueuing)
+    if (dryRun) {
+      accepted.push(url)
+    } else {
+      try {
+        await prisma.jobIndexingQueue.create({
+          data: {
+            jobId: job.id,
+            url,
+            type,
+            reason: 'api_route',
+            status: 'pending',
+            dedupeKey: `${job.id}:${type}:pending`,
+          },
+        })
+        accepted.push(url)
+      } catch (err: any) {
+        if (err?.code === 'P2002') {
+          skipped.push({ url, reason: 'already_queued_pending' })
+        } else {
+          errors.push({ url, error: err.message || String(err) })
+        }
+      }
+    }
+  }
 
   return NextResponse.json({
-    submitted: succeeded,
-    failed,
-    results,
+    ok: errors.length === 0,
+    dryRun,
+    accepted,
+    skipped,
+    errors,
   })
 }
+
