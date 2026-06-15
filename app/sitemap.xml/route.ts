@@ -5,7 +5,7 @@ import { resolveCoreSitemapFamilies } from '../../lib/seo/coreSitemapFamilies'
 import { resolveOptionalSitemapFamilies } from '../../lib/seo/optionalSitemapFamilies'
 import { prisma } from '../../lib/prisma'
 import { BLOG_POSTS } from '../../lib/blog/posts'
-import { getSeoPhase, shouldAdvertiseSitemapFamily } from '../../lib/seo/sitemapPolicy'
+import { shouldAdvertiseSitemapFamily } from '../../lib/seo/sitemapPolicy'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 function hasBlogPosts(): boolean {
@@ -100,7 +100,7 @@ export async function GET() {
     ...(data.hasCompanyUrls && shouldAdvertiseSitemapFamily('company') ? ['sitemap-company.xml'] : []),
     ...(data.cityUrls.length > 0 && shouldAdvertiseSitemapFamily('city') ? ['sitemap-city.xml'] : []),
     ...(data.hasRemoteUrls && shouldAdvertiseSitemapFamily('remote') ? ['sitemap-remote.xml'] : []),
-    ...((data.hasSalaryUrls || getSeoPhase() <= 1) && shouldAdvertiseSitemapFamily('salary') ? ['sitemap-salary.xml'] : []),
+    ...(data.hasSalaryUrls && shouldAdvertiseSitemapFamily('salary') ? ['sitemap-salary.xml'] : []),
     ...(data.hasCountryUrls && shouldAdvertiseSitemapFamily('country') ? ['sitemap-country.xml'] : []),
     ...(data.hasCategoryUrls && shouldAdvertiseSitemapFamily('category') ? ['sitemap-category.xml'] : []),
     ...(data.hasLevelUrls && shouldAdvertiseSitemapFamily('level') ? ['sitemap-level.xml'] : []),

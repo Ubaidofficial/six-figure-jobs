@@ -1,6 +1,5 @@
 # Unreleased
 
-- Kept the Phase 1 sitemap index non-empty in CI by advertising the approved salary sitemap fallback only during Phase 1.
 - Restored exported compensation snippet helper used by salary ingestion build.
 - Fixed Phase 1 sitemap advertising so only active sitemap families are listed in sitemap index and robots.txt.
 ### Features
