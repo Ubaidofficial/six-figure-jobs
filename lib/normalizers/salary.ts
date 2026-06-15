@@ -341,6 +341,12 @@ export interface ParsedSalaryFromText {
   raw: string
 }
 
+const COMPENSATION_CONTEXT_RE =
+  /\b(compensation(?:\s+and\s+benefits)?|salary(?:\s+range|\s+band)?|pay(?:\s+range|\s+transparency)?|base\s+salary|cash\s+compensation|total\s+compensation|target\s+compensation|on[-\s]?target\s+earnings|ote)\b/i
+
+const MONEY_TEXT_RE =
+  /\b(?:USD|EUR|GBP|AUD|CAD|SGD|CHF|SEK|NOK|DKK|INR|NZD)\s*\d[\d,.\s]*[kKmM]?|(?:US\$|A\$|C\$|NZ\$|S\$|₹|€|£|\$)\s*\d[\d,.\s]*[kKmM]?|\d[\d,.\s]*[kKmM]?\s*(?:USD|EUR|GBP|AUD|CAD|SGD|CHF|SEK|NOK|DKK|INR|NZD)\b/g
+
 /**
  * Normalize salary to annual in LOCAL currency (no FX conversion)
  */
@@ -412,6 +418,52 @@ export function parseSalaryFromText(
   }
 
   return { min, max, currency, interval, raw: text }
+}
+
+/**
+ * Pull the most compensation-like slice from a larger body of text.
+ * This is intentionally strict: when compensation context is absent, we return null
+ * rather than guessing from unrelated numbers in funding or growth copy.
+ */
+export function extractCompensationSnippet(
+  text: string | null | undefined,
+  maxDistance: number = 700,
+): string | null {
+  const normalized = String(text ?? '').replace(/\s+/g, ' ').trim()
+  if (!normalized) return null
+
+  const contexts = Array.from(normalized.matchAll(new RegExp(COMPENSATION_CONTEXT_RE, 'ig')))
+  const money = Array.from(normalized.matchAll(new RegExp(MONEY_TEXT_RE, 'ig')))
+  if (!contexts.length || !money.length) return null
+
+  for (const context of contexts) {
+    const contextIndex = context.index ?? -1
+    if (contextIndex < 0) continue
+
+    const nearbyMoney = money.find((match) => {
+      const moneyIndex = match.index ?? -1
+      return moneyIndex >= 0 && Math.abs(moneyIndex - contextIndex) <= maxDistance
+    })
+
+    if (!nearbyMoney) continue
+
+    const snippetStart = Math.max(
+      0,
+      Math.min(contextIndex, nearbyMoney.index ?? contextIndex) - 160,
+    )
+    const snippetEnd = Math.min(
+      normalized.length,
+      Math.max(
+        contextIndex + context[0].length,
+        (nearbyMoney.index ?? contextIndex) + nearbyMoney[0].length,
+      ) + 700,
+    )
+
+    const snippet = normalized.slice(snippetStart, snippetEnd).trim()
+    if (snippet) return snippet
+  }
+
+  return null
 }
 
 function detectCurrency(text: string): SupportedCurrency | null {
