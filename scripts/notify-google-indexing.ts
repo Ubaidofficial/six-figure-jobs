@@ -16,10 +16,10 @@
 //   INDEXING_API_JOB_SITEMAP_URL           — override sitemap index URL
 //   INDEXING_API_BASE_URL                  — override base URL for canonical links
 
-import {
-  notifyUrls,
-  type IndexingRequestType,
-} from '../lib/indexing/googleIndexingClient'
+import { type IndexingRequestType } from '../lib/indexing/googleIndexingClient'
+import { prisma } from '../lib/prisma'
+import { parseJobSlugParam } from '../lib/jobs/jobSlug'
+import { enqueueJobIndexingUpdate, enqueueJobIndexingDelete } from '../lib/jobs/indexingQueue'
 
 type SitemapEntry = {
   loc: string
@@ -142,22 +142,57 @@ async function main() {
   if (urls.length === 0) return
 
   if (DRY_RUN) {
-    urls.slice(0, 20).forEach((url) => console.log(`[indexing] dry-run ${REQUEST_TYPE} ${url}`))
-    if (urls.length > 20) console.log(`[indexing] dry-run omitted=${urls.length - 20}`)
-    console.log('[indexing] set INDEXING_API_DRY_RUN=0 to publish notifications')
+    console.log(`[indexing] --- DRY RUN MODE ---`)
+    urls.slice(0, 20).forEach((url) => console.log(`[indexing] [dry-run] Would enqueue ${REQUEST_TYPE} for ${url}`))
+    if (urls.length > 20) console.log(`[indexing] [dry-run] omitted=${urls.length - 20}`)
+    console.log('[indexing] set INDEXING_API_DRY_RUN=0 to actually enqueue notifications')
     return
   }
 
-  const results = await notifyUrls(urls, { type: REQUEST_TYPE, concurrency: CONCURRENCY })
-  const failures = results.filter((r) => !r.success).length
-  const succeeded = results.length - failures
+  console.log(`[indexing] Enqueuing ${urls.length} URLs into the durable queue...`)
+  let enqueued = 0
+  let skipped = 0
 
-  results
-    .filter((r) => !r.success)
-    .forEach((r) => console.error(`[indexing] failed url=${r.url} error=${r.error}`))
+  for (const url of urls) {
+    try {
+      const pathname = new URL(url).pathname
+      const slug = pathname.split('/').pop() || ''
+      const { jobId, shortId } = parseJobSlugParam(slug)
+      const ors: any[] = []
+      if (jobId) ors.push({ id: jobId })
+      if (shortId) ors.push({ shortId })
 
-  console.log(`[indexing] submitted=${succeeded} failed=${failures}`)
-  if (failures > 0) process.exitCode = 1
+      if (ors.length === 0) {
+        console.log(`[indexing] Skipped: invalid slug identifier for ${url}`)
+        skipped++
+        continue
+      }
+
+      const job = await prisma.job.findFirst({
+        where: { OR: ors },
+        select: { id: true },
+      })
+
+      if (!job) {
+        console.log(`[indexing] Skipped: job not found in DB for URL ${url}`)
+        skipped++
+        continue
+      }
+
+      if (REQUEST_TYPE === 'URL_UPDATED') {
+        await enqueueJobIndexingUpdate(job.id, 'legacy_bulk_script')
+      } else {
+        await enqueueJobIndexingDelete(job.id, 'legacy_bulk_script')
+      }
+      enqueued++
+    } catch (err: any) {
+      console.error(`[indexing] Error enqueuing ${url}:`, err.message)
+      skipped++
+    }
+  }
+
+  console.log(`[indexing] Finished bulk enqueue: enqueued=${enqueued} skipped=${skipped}`)
+  console.log(`[indexing] Run scripts/process-google-indexing-queue.ts to process the queue.`)
 }
 
 main().catch((error) => {
