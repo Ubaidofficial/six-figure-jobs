@@ -899,6 +899,8 @@ function printGroupedFailures(failures: Failure[]) {
   }
 }
 
+let validationExitCode = 0
+
 async function main() {
   if (STRICT && !FULL && SAMPLE_PER_SITEMAP < MIN_STRICT_SAMPLE) {
     throw new Error(
@@ -1071,15 +1073,16 @@ async function main() {
 
   printGroupedFailures(failures)
 
-  process.exitCode = failures.length > 0 ? 1 : 0
+  validationExitCode = failures.length > 0 ? 1 : 0
 }
 
 main()
   .catch((error) => {
     console.error('[seo:validate] fatal error:', error)
-    process.exitCode = 1
+    validationExitCode = 1
   })
   .finally(async () => {
     await prisma.$disconnect().catch(() => undefined)
-    process.exit(process.exitCode ?? 0)
+    console.log(`[seo:validate] exiting with code ${validationExitCode}`)
+    process.exit(validationExitCode)
   })
