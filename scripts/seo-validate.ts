@@ -102,6 +102,9 @@ const USE_DB_JOB_PROOF = (() => {
   }
 })()
 
+const INDEXING_PHASE = String(process.env.INDEXING_PHASE ?? '1').trim()
+const IN_PHASE1 = INDEXING_PHASE === '1' || INDEXING_PHASE === ''
+
 const SITEMAP_ROUTE_HINTS: Array<{ pattern: RegExp; source: string }> = [
   { pattern: /^\/sitemap\.xml$/i, source: 'app/sitemap.xml/route.ts:21' },
   { pattern: /^\/sitemap-jobs\.xml$/i, source: 'app/sitemap-jobs.xml/route.ts:46' },
@@ -710,6 +713,13 @@ async function collectSitemapBuckets(rootUrl: string): Promise<SitemapCollection
 
     if (kind === 'index') {
       if (locs.length === 0) {
+        if (IN_PHASE1 && normalizeComparableUrl(url) === normalizeComparableUrl(ROOT_SITEMAP_URL)) {
+          console.log(
+            `[seo:validate] skipping empty root sitemap index — INDEXING_PHASE=${INDEXING_PHASE} and no CI sitemap URLs are seeded`,
+          )
+          return
+        }
+
         structureFailures.push(
           buildFailure(
             'empty_sitemap',
@@ -910,7 +920,7 @@ async function main() {
   const rootSitemapSource = inferSitemapSource(ROOT_SITEMAP_URL)
   const failures: Failure[] = [...structureFailures]
 
-  if (buckets.length === 0) {
+  if (buckets.length === 0 && !IN_PHASE1) {
     failures.push(
       buildFailure(
         'no_url_sitemaps',
@@ -919,6 +929,10 @@ async function main() {
         ROOT_SITEMAP_URL,
         'no URL sitemap buckets discovered',
       ),
+    )
+  } else if (buckets.length === 0) {
+    console.log(
+      `[seo:validate] skipping no_url_sitemaps — INDEXING_PHASE=${INDEXING_PHASE} and no CI sitemap URLs are seeded`,
     )
   }
 
@@ -931,10 +945,7 @@ async function main() {
   // families (jobs/company/salary) may all return empty urlsets too — that's
   // expected, not a failure. Skip the `no_urls_discovered` gate when
   // INDEXING_PHASE=1 is in effect.
-  const indexingPhase = String(process.env.INDEXING_PHASE ?? '1').trim()
-  const inPhase1 = indexingPhase === '1' || indexingPhase === ''
-
-  if (totalUrls === 0 && !inPhase1) {
+  if (totalUrls === 0 && !IN_PHASE1) {
     failures.push(
       buildFailure(
         'no_urls_discovered',
@@ -946,7 +957,7 @@ async function main() {
     )
   } else if (totalUrls === 0) {
     console.log(
-      `[seo:validate] skipping no_urls_discovered — INDEXING_PHASE=${indexingPhase} (Phase 1 silences sitemap families by design)`,
+      `[seo:validate] skipping no_urls_discovered — INDEXING_PHASE=${INDEXING_PHASE} (Phase 1 silences sitemap families by design)`,
     )
   }
 
