@@ -1,5 +1,6 @@
 # Unreleased
 
+- Fixed Phase 1 sitemap advertising so only active sitemap families are listed in sitemap index and robots.txt.
 ### Features
 
 * add an honest "live activity" ticker to the homepage. Rotates through the most recent indexable job postings already loaded for the page ("Anthropic posted Senior Engineer · 12 minutes ago"). Same psychological "site is alive" effect remoteyeah.com gets from their synthesized "Someone from X applied to Y" ticker — but with real data instead of fabricated events. Client component, 4.5s rotation, pulsing green LIVE pill, relative timestamps re-snapshot every 30s, respects `prefers-reduced-motion`.

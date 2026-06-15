@@ -19,20 +19,17 @@ function readPositiveInt(value: string | undefined, fallback: number): number {
 }
 
 export function getSeoPhase(): number {
-  return Number.parseInt(process.env.SEO_INDEXATION_PHASE || '1', 10)
+  const raw = process.env.INDEXING_PHASE || process.env.SEO_INDEXATION_PHASE
+  const parsed = Number.parseInt(String(raw || '1'), 10)
+  return Number.isFinite(parsed) ? parsed : 1
 }
 
 export function shouldAdvertiseSitemapFamily(family: CoreSitemapFamily): boolean {
   const phase = getSeoPhase()
-  const p1 = new Set(['jobs', 'company', 'remote', 'blog', 'browse'])
-  const p2 = new Set(['city', 'country', 'category', 'level', 'salary'])
-  const p3 = new Set(['slices', 'skills'])
+  const p1 = new Set(['jobs', 'company', 'salary'])
   
-  if (p1.has(family)) return phase >= 1
-  if (p2.has(family)) return phase >= 2
-  if (p3.has(family)) return phase >= 3
-  
-  return true // default fallback
+  if (p1.has(family)) return true
+  return phase >= 2
 }
 
 export function getMaxJobSitemapShards(): number {
