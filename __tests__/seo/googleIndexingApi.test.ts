@@ -5,26 +5,54 @@ import { POST as notifyRoutePOST } from '../../app/api/indexing/notify/route'
 import { evaluateJobIndexability } from '../../lib/jobs/qualityGate'
 import { enqueueJobIndexingUpdate } from '../../lib/jobs/indexingQueue'
 
-jest.mock('../../lib/prisma', () => ({
-  prisma: {
-    job: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
+jest.mock('../../lib/prisma', () => {
+  process.env.SITE_URL = 'https://www.6figjobs.com'
+  process.env.INDEXING_API_BASE_URL = 'https://www.6figjobs.com'
+  return {
+    prisma: {
+      job: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+      },
+      jobIndexingQueue: {
+        create: jest.fn(),
+        update: jest.fn(),
+        upsert: jest.fn(),
+        count: jest.fn(),
+        findMany: jest.fn(),
+      },
     },
-    jobIndexingQueue: {
-      create: jest.fn(),
-      update: jest.fn(),
-      count: jest.fn(),
-      findMany: jest.fn(),
-    },
-  },
-}))
+  }
+})
 
 jest.mock('../../lib/jobs/qualityGate', () => ({
   evaluateJobIndexability: jest.fn(),
 }))
 
 describe('Google Indexing API & Safety Gates', () => {
+  let originalSiteUrl: string | undefined
+  let originalBaseUrl: string | undefined
+
+  beforeAll(() => {
+    originalSiteUrl = process.env.SITE_URL
+    originalBaseUrl = process.env.INDEXING_API_BASE_URL
+    process.env.SITE_URL = 'https://www.6figjobs.com'
+    process.env.INDEXING_API_BASE_URL = 'https://www.6figjobs.com'
+  })
+
+  afterAll(() => {
+    if (originalSiteUrl === undefined) {
+      delete process.env.SITE_URL
+    } else {
+      process.env.SITE_URL = originalSiteUrl
+    }
+    if (originalBaseUrl === undefined) {
+      delete process.env.INDEXING_API_BASE_URL
+    } else {
+      process.env.INDEXING_API_BASE_URL = originalBaseUrl
+    }
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
     delete process.env.INDEXING_API_INTERNAL_KEY
