@@ -1071,9 +1071,7 @@ async function main() {
 
   printGroupedFailures(failures)
 
-  if (failures.length > 0) {
-    process.exitCode = 1
-  }
+  process.exitCode = failures.length > 0 ? 1 : 0
 }
 
 main()
