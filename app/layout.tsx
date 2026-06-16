@@ -7,6 +7,7 @@ import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
 import ErrorTracker from '@/components/ErrorTracker'
 import { getSiteUrl } from '../lib/seo/site'
+import { PreloadResources } from './preload-resources'
 
 const SITE_URL = getSiteUrl()
 
@@ -65,6 +66,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="h-full">
       <body className="min-h-full bg-background text-foreground">
+        <PreloadResources />
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
 

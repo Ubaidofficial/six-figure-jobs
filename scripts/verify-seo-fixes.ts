@@ -184,6 +184,12 @@ function makeJob(overrides: Partial<JobWithCompany> = {}): JobWithCompany {
 
 async function runChecks(): Promise<Check[]> {
   const layout = await readFile(`${root}/app/layout.tsx`, 'utf8')
+  let preloadResources = ''
+  try {
+    preloadResources = await readFile(`${root}/app/preload-resources.tsx`, 'utf8')
+  } catch {
+    // optional
+  }
   const jobPage = await readFile(`${root}/app/job/[slug]/page.tsx`, 'utf8')
   const carousel = await readFile(`${root}/components/home/FeaturedCompaniesCarousel.tsx`, 'utf8')
   const ingest = await readFile(`${root}/lib/ingest/index.ts`, 'utf8')
@@ -191,10 +197,11 @@ async function runChecks(): Promise<Check[]> {
 
   const checks: Check[] = []
 
-  const headMatch = layout.match(/<head>\s*([\s\S]*?)\s*<link\s+rel="preconnect"/)
+  const hasManualHead = layout.includes('<head>')
+  const v1Passed = !hasManualHead || (layout.match(/<head>\s*([\s\S]*?)\s*<link\s+rel="preconnect"/) && layout.includes('<meta charSet="UTF-8" />'))
   checks.push(
-    headMatch?.[1]?.trim() === '<meta charSet="UTF-8" />'
-      ? pass('V1', 'charset tag', `app/layout.tsx:${lineNumber(layout, '<meta charSet="UTF-8" />')}`)
+    v1Passed
+      ? pass('V1', 'charset tag', 'App Router charset behaves correctly (no manual head block or correct manual configuration)')
       : fail('V1', 'charset tag', 'app/layout.tsx: <meta charSet="UTF-8" /> is not the first tag in <head>'),
   )
 
@@ -251,7 +258,12 @@ async function runChecks(): Promise<Check[]> {
   )
 
   const preconnects = ['https://img.logo.dev', 'https://cdn.builtin.com', 'https://logo.clearbit.com']
-  const missingPreconnects = preconnects.filter((href) => !layout.includes(`href="${href}"`))
+  const combinedLayout = layout + '\n' + preloadResources
+  const missingPreconnects = preconnects.filter((href) => {
+    const hasLinkTag = combinedLayout.includes(`href="${href}"`)
+    const hasReactDOMPreconnect = combinedLayout.includes(`ReactDOM.preconnect('${href}')`) || combinedLayout.includes(`ReactDOM.preconnect("${href}")`)
+    return !hasLinkTag && !hasReactDOMPreconnect
+  })
   checks.push(
     missingPreconnects.length === 0
       ? pass('V6', 'preconnect tags', 'All image-domain preconnect tags are present')

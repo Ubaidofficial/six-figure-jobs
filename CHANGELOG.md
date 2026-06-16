@@ -1,5 +1,8 @@
 # Unreleased
 
+- Implemented App Router-safe image-domain preconnects using ReactDOM.preconnect inside a dedicated PreloadResources client component.
+- Reverted direct manual <head> blocks from app/layout.tsx to avoid compilation warnings.
+- Cleaned up audit comments for noindexUtilityState in app/jobs/page.tsx.
 - Implemented a durable, deduplicated Google Indexing API queue with strict safety gates, background queue processor, and API route validations (dry-run by default, with conservative caps to respect Google limits).
 - Isolated strict SEO validator exit handling from Node process.exitCode state.
 - Made strict SEO validation exit with code 0 when the failure count is clean.

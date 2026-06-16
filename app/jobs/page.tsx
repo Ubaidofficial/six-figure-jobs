@@ -12,7 +12,7 @@ import {
 import { prisma } from '../../lib/prisma'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
 import { resolveSliceCanonicalPath } from '../../lib/seo/canonical'
-import { buildCleanJobsCanonicalPath, shouldNoindexListingPage } from '../../lib/seo/listingSearchParams'
+import { buildCleanJobsCanonicalPath, shouldNoindexListingPage, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 import { parseSliceFilters } from '../../lib/slices/types'
 import { formatRelativeTime } from '@/lib/utils/time'
@@ -83,7 +83,9 @@ export async function generateMetadata({
   const sp = (await searchParams) || {}
   const canonicalPath = buildCleanJobsCanonicalPath(sp)
   const canonical = `${SITE_URL}${canonicalPath}`
-  const shouldNoindex = shouldNoindexListingPage(sp)
+  
+  // Noindex utility states (filtered lists or pagination beyond page 1) to conserve crawl budget
+  const noindexUtilityState = hasNonPaginationQueryParams(sp) || shouldNoindexListingPage(sp)
 
   return {
     title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
@@ -92,7 +94,7 @@ export async function generateMetadata({
     alternates: {
       canonical,
     },
-    robots: shouldNoindex ? { index: false, follow: true } : { index: true, follow: true },
+    robots: noindexUtilityState ? { index: false, follow: true } : { index: true, follow: true },
     openGraph: {
       title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
       description:

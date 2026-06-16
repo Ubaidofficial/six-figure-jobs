@@ -1,17 +1,18 @@
 // scripts/notify-google-indexing.ts
-// Notify Google Indexing API for job URLs found in the jobs sitemap.
+// Enqueues Google Indexing API updates/deletes into the durable JobIndexingQueue
+// for job URLs found in the jobs sitemap.
 //
 // Usage:
 //   npm run google:indexing:jobs
 //
+// Note: This script does not notify Google directly. It enqueues entries into
+// JobIndexingQueue. To process the queue and send requests to Google, run:
+//   npx tsx scripts/process-google-indexing-queue.ts
+//
 // Env vars:
-//   GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON   — full service account JSON string
-//   GOOGLE_INDEXING_CLIENT_EMAIL           — or separate email + key
-//   GOOGLE_INDEXING_PRIVATE_KEY
-//   INDEXING_API_DRY_RUN                   — "0" to actually publish (default: dry run)
+//   INDEXING_API_DRY_RUN                   — "0" to actually enqueue (default: dry run, prints info only)
 //   INDEXING_API_MAX_URLS                  — cap per run (default: 200)
 //   INDEXING_API_SINCE                     — ISO date; skip jobs older than this
-//   INDEXING_API_CONCURRENCY               — parallel requests (default: 4)
 //   INDEXING_API_REQUEST_TYPE              — "URL_UPDATED" | "URL_DELETED" (default: URL_UPDATED)
 //   INDEXING_API_JOB_SITEMAP_URL           — override sitemap index URL
 //   INDEXING_API_BASE_URL                  — override base URL for canonical links
