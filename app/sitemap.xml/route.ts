@@ -101,6 +101,7 @@ export async function GET() {
   const data = await getSitemapData()
   
   const sitemaps = [
+    'sitemap-hubs.xml', // always present — pillar nav pages not covered by any other family
     ...(data.hasJobUrls && shouldAdvertiseSitemapFamily('jobs') ? ['sitemap-jobs.xml'] : []),
     ...(data.hasCompanyUrls && shouldAdvertiseSitemapFamily('company') ? ['sitemap-company.xml'] : []),
     ...(data.cityUrls.length > 0 && shouldAdvertiseSitemapFamily('city') ? ['sitemap-city.xml'] : []),
