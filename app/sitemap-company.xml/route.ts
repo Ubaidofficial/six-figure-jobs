@@ -4,6 +4,7 @@
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
 import { getPublishedCompanyCandidateCount } from '../../lib/seo/companyPublishing'
+import { prisma } from '../../lib/prisma'
 import {
   getMaxCompanySitemapPages,
   getMaxCompanyUrlsPerPage,
@@ -13,8 +14,16 @@ import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = getMaxCompanyUrlsPerPage()
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 43200 // 24h
+export const revalidate = 43200 // 12h
+
+async function getCompaniesLastmod(): Promise<string> {
+  try {
+    const agg = await prisma.company.aggregate({ _max: { updatedAt: true } })
+    return (agg._max.updatedAt ?? new Date()).toISOString()
+  } catch {
+    return new Date().toISOString()
+  }
+}
 
 function escapeXml(s: string) {
   return s
@@ -27,13 +36,14 @@ function escapeXml(s: string) {
 
 export async function GET() {
   try {
-    const total = await getPublishedCompanyCandidateCount()
+    const [total, lastmod] = await Promise.all([
+      getPublishedCompanyCandidateCount(),
+      getCompaniesLastmod(),
+    ])
     const totalPages = Math.min(
       Math.ceil(total / PAGE_SIZE),
       getMaxCompanySitemapPages(),
     )
-
-    const lastmod = new Date().toISOString()
     const entries = Array.from({ length: totalPages }).map((_, i) => {
       const loc = escapeXml(`${SITE_URL}/sitemap-company/${i + 1}`)
       return `  <sitemap>

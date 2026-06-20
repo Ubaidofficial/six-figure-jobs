@@ -9,7 +9,7 @@ import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/
 
 const SITE_URL = getSiteUrl()
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 43200
 
 type SalarySitemapUrl = {
   url: string

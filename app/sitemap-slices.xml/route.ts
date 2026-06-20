@@ -3,6 +3,7 @@
 
 import { getSiteUrl } from '../../lib/seo/site'
 import { buildSliceSitemapEntries, type SliceShard } from '../../lib/seo/slicesSitemap'
+import { prisma } from '../../lib/prisma'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 import {
   buildPhase1SilencedSitemapResponse,
@@ -11,8 +12,16 @@ import {
 
 const SITE_URL = getSiteUrl()
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 43200 // 24h
+export const revalidate = 43200 // 12h
+
+async function getSlicesLastmod(): Promise<string> {
+  try {
+    const agg = await prisma.job.aggregate({ where: { isExpired: false }, _max: { updatedAt: true } })
+    return (agg._max.updatedAt ?? new Date()).toISOString()
+  } catch {
+    return new Date().toISOString()
+  }
+}
 
 type ShardConfig = {
   shard: SliceShard
@@ -28,19 +37,20 @@ export async function GET() {
   if (!isSitemapFamilyEnabled('sitemap-slices')) {
     return buildPhase1SilencedSitemapResponse('sitemap-slices')
   }
-  const checks = await Promise.all(
-    SHARDS.map(async ({ shard, path }) => {
-      const hasUrls = (await buildSliceSitemapEntries(shard, { limit: 1 })).length > 0
-      return hasUrls ? path : null
-    }),
-  )
+  const [checks, lastmod] = await Promise.all([
+    Promise.all(
+      SHARDS.map(async ({ shard, path }) => {
+        const hasUrls = (await buildSliceSitemapEntries(shard, { limit: 1 })).length > 0
+        return hasUrls ? path : null
+      }),
+    ),
+    getSlicesLastmod(),
+  ])
 
   const entries = checks.filter(Boolean) as string[]
   if (entries.length === 0) {
     return new Response('Not found', { status: 404 })
   }
-
-  const lastmod = new Date().toISOString()
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries

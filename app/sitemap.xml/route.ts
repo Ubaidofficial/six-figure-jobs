@@ -24,8 +24,7 @@ async function hasSkillPages(): Promise<boolean> {
 
 const SITE_URL = getSiteUrl()
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 43200 // 24h
+export const revalidate = 43200 // 12h
 
 function escapeXml(s: string) {
   return s
@@ -45,52 +44,58 @@ async function getLastmod(): Promise<string> {
   }
 }
 
-import { unstable_cache } from 'next/cache'
+async function getCompaniesLastmod(): Promise<string> {
+  try {
+    const agg = await prisma.company.aggregate({ _max: { updatedAt: true } })
+    return (agg._max.updatedAt ?? new Date()).toISOString()
+  } catch {
+    return new Date().toISOString()
+  }
+}
 
-const getSitemapData = unstable_cache(
-  async () => {
-    const hasBlog = hasBlogPosts()
-    const [
-      { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
-      {
-        hasJobUrls,
-        hasCompanyUrls,
-        hasSalaryUrls,
-        hasCategoryUrls,
-        hasLevelUrls,
-        hasBrowseUrls,
-        failedFamilies: failedCoreFamilies,
-      },
-      lastmod,
-      hasSkills,
-    ] = await Promise.all([
-      resolveOptionalSitemapFamilies('sitemap.xml'),
-      resolveCoreSitemapFamilies('sitemap.xml'),
-      getLastmod(),
-      hasSkillPages(),
-    ])
-
-    return {
-      hasBlog,
-      cityUrls,
-      hasRemoteUrls,
-      hasCountryUrls,
-      hasSliceUrls,
-      failedFamilies,
+async function getSitemapData() {
+  const hasBlog = hasBlogPosts()
+  const [
+    { cityUrls, hasRemoteUrls, hasCountryUrls, hasSliceUrls, failedFamilies },
+    {
       hasJobUrls,
       hasCompanyUrls,
       hasSalaryUrls,
       hasCategoryUrls,
       hasLevelUrls,
       hasBrowseUrls,
-      failedCoreFamilies,
-      lastmod,
-      hasSkills,
-    }
-  },
-  ['sitemap-index-v2'],
-  { revalidate: 3600, tags: ['sitemap'] }
-)
+      failedFamilies: failedCoreFamilies,
+    },
+    lastmod,
+    hasSkills,
+    companiesLastmod,
+  ] = await Promise.all([
+    resolveOptionalSitemapFamilies('sitemap.xml'),
+    resolveCoreSitemapFamilies('sitemap.xml'),
+    getLastmod(),
+    hasSkillPages(),
+    getCompaniesLastmod(),
+  ])
+
+  return {
+    hasBlog,
+    cityUrls,
+    hasRemoteUrls,
+    hasCountryUrls,
+    hasSliceUrls,
+    failedFamilies,
+    hasJobUrls,
+    hasCompanyUrls,
+    hasSalaryUrls,
+    hasCategoryUrls,
+    hasLevelUrls,
+    hasBrowseUrls,
+    failedCoreFamilies,
+    lastmod,
+    companiesLastmod,
+    hasSkills,
+  }
+}
 
 export async function GET() {
   const data = await getSitemapData()
@@ -125,9 +130,10 @@ export async function GET() {
 ${sitemaps
   .map((s) => {
     const loc = escapeXml(`${SITE_URL}/${s}`)
+    const lastmod = s === 'sitemap-company.xml' ? data.companiesLastmod : data.lastmod
     return `  <sitemap>
     <loc>${loc}</loc>
-    <lastmod>${data.lastmod}</lastmod>
+    <lastmod>${lastmod}</lastmod>
   </sitemap>`
   })
   .join('\n')}${fallbackComment}

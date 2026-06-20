@@ -1,5 +1,9 @@
 # Unreleased
 
+- Removed `force-dynamic` from all 18 sitemap and robots.txt route handlers — it was overriding `revalidate` entirely, making every Googlebot crawl hit Railway with no HTTP caching. Routes now correctly ISR-cache at their declared intervals (12h for sitemaps, 24h for robots.txt and job-shard pages). Also added missing `revalidate = 43200` to sitemap-level, sitemap-salary, sitemap-country, and sitemap-category which had only `force-dynamic` and no revalidate. Fixed misleading `// 24h` comments on routes whose revalidate was 43200s (12h).
+- Fixed sitemap index `lastmod`: the sitemap index (`/sitemap.xml`) was using max(job.updatedAt) as the lastmod for every child sitemap, causing Google to recrawl all 12 sitemaps on every job update. Company sitemap now tracks its own lastmod via `getCompaniesLastmod()` (max company.updatedAt). All other families remain job-update-driven, which is correct since their content is derived from job data.
+- Removed `unstable_cache` from `sitemap.xml` route — it used a 1h TTL inside the 12h ISR cycle, which caused urgent `revalidatePath` calls (triggered on job expiry) to bake stale data into the new ISR response. Route ISR alone handles caching correctly. Fixed `sitemap-company.xml` and `sitemap-slices.xml` which used `new Date().toISOString()` as lastmod (always-fresh timestamp, triggering unnecessary Googlebot recrawls); both now query DB for real max(updatedAt).
+
 - Implemented App Router-safe image-domain preconnects using ReactDOM.preconnect inside a dedicated PreloadResources client component.
 - Reverted direct manual <head> blocks from app/layout.tsx to avoid compilation warnings.
 - Cleaned up audit comments for noindexUtilityState in app/jobs/page.tsx.

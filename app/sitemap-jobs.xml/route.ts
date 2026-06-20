@@ -16,8 +16,7 @@ import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 43200 // 24h
+export const revalidate = 43200 // 12h
 
 function escapeXml(s: string) {
   return s

@@ -5,7 +5,7 @@ import {
   isSitemapFamilyEnabled,
 } from '../../lib/seo/indexingPhase'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 43200
 
 export async function GET() {
   if (!isSitemapFamilyEnabled('sitemap-country')) {

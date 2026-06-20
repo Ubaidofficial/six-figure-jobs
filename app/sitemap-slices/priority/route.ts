@@ -9,8 +9,7 @@ import {
   isSitemapFamilyEnabled,
 } from '../../../lib/seo/indexingPhase'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 86400 // 24h
+export const revalidate = 86400
 
 function escapeXml(s: string) {
   return s

@@ -6,7 +6,6 @@ import {
   isSitemapFamilyEnabled,
 } from '../../lib/seo/indexingPhase'
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 43200
 
 function escapeXml(s: string) {
