@@ -96,10 +96,9 @@ export async function generateMetadata({
     alternates: {
       canonical,
     },
-    robots:
-      !noindexUtilityState && total > 0
-        ? { index: true, follow: true }
-        : { index: false, follow: true },
+    robots: noindexUtilityState
+      ? { index: false, follow: true }
+      : { index: true, follow: true },
     openGraph: {
       title,
       description,

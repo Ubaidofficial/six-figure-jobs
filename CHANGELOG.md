@@ -1,5 +1,10 @@
 # Unreleased
 
+- Fixed 4 SEO-gates CI failures on the `sitemap-hubs.xml` pillar pages:
+  - `canonical_mismatch` on `/` and `/salary` — both had hardcoded `https://www.6figjobs.com` literals that ignored the `SITE_URL` env var set by CI. Homepage now calls `getSiteUrl()` for canonical and OG url; salary page adds `const SITE_URL = getSiteUrl()` at module level and uses it in the static `metadata` export.
+  - `robots_noindex` on `/companies` — removed the `totalCompanies > 0` gate; the page always returns `{ index: true, follow: true }` since it's a structural hub that renders a useful fallback even with no data.
+  - `robots_noindex` on `/remote` — removed the `total > 0` gate; only `noindexUtilityState` (non-pagination query params) still triggers noindex.
+
 - Created `scripts/repairDescriptionSalaryOutliers.ts` — the weekly GHA workflow referenced this script but it never existed, causing the job to fail with `ERR_MODULE_NOT_FOUND`. Script finds jobs with `salarySource='description'` and `minAnnual` or `maxAnnual` above $600k USD, then (with `--apply`) nulls those salary fields and sets `salaryParseReason='capped_description'` and `salaryValidated=false`.
 
 - Added `sitemap-hubs.xml` — a dedicated urlset for the 5 core nav pages (`/`, `/jobs`, `/salary`, `/companies`, `/remote`). These pillar pages were absent from every sitemap family, causing Google to never crawl them (GSC showed "URL is unknown to Google", Last crawl: N/A for `/salary` and `/companies`). The new sitemap is always listed first in the sitemap index regardless of indexing phase.

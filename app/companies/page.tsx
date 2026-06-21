@@ -101,16 +101,11 @@ export async function generateMetadata(): Promise<Metadata> {
         ? `${totalCompanies.toLocaleString()} Companies Hiring $100k+ Roles | ${SITE_NAME}`
         : `Companies hiring $100k+ roles | ${SITE_NAME}`
     const description = buildCompaniesDescription(totalCompanies, totalEligibleJobs)
-    const robots =
-      totalCompanies > 0
-        ? { index: true, follow: true }
-        : { index: false, follow: true }
-
     return {
       title,
       description,
       alternates: { canonical: `${SITE_URL}/companies` },
-      robots,
+      robots: { index: true, follow: true },
       openGraph: {
         title,
         description,

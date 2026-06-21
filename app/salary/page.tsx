@@ -2,6 +2,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
+import { getSiteUrl } from '@/lib/seo/site'
 import { prisma } from '../../lib/prisma'
 import {
   buildGlobalExclusionsWhere,
@@ -36,18 +37,20 @@ const COUNTRIES: Array<{ code: string; label: string }> = [
   { code: 'sg', label: 'Singapore' },
 ]
 
+const SITE_URL = getSiteUrl()
+
 export const metadata: Metadata = {
   title: 'Tech Salary Guides: $100k–$400k+ by Role & Country | Six Figure Jobs',
   description:
     'Real salary ranges for software engineers, product managers, data scientists, and 10+ more roles. Live data from verified $100k+ job listings filtered by seniority, country, and work type.',
   alternates: {
-    canonical: 'https://www.6figjobs.com/salary',
+    canonical: `${SITE_URL}/salary`,
   },
   openGraph: {
     title: 'Tech Salary Guides: $100k–$400k+ by Role & Country | Six Figure Jobs',
     description:
       'Real salary ranges for software engineers, product managers, data scientists, and 10+ more roles. Updated continuously from verified $100k+ job listings.',
-    url: 'https://www.6figjobs.com/salary',
+    url: `${SITE_URL}/salary`,
     type: 'website',
   },
 }

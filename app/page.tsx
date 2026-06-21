@@ -56,12 +56,12 @@ export async function generateMetadata(): Promise<Metadata> {
       keywords:
         '6 figure jobs, six figure jobs, 6 figure salary jobs, six-figure jobs, high paying jobs, easy 6 figure jobs, 6 figure remote jobs, 6 figure jobs no degree, 6 figure jobs without college degree, six-figure salary jobs, best 6 figure jobs',
       alternates: {
-        canonical: 'https://www.6figjobs.com',
+        canonical: getSiteUrl(),
       },
       openGraph: {
         title: 'Six Figure Jobs & High Paying $100k+ Positions',
         description: ogDescription,
-        url: 'https://www.6figjobs.com',
+        url: getSiteUrl(),
         siteName: '6FigJobs - Six Figure Jobs',
         type: 'website',
         images: [
@@ -97,7 +97,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description:
         'Find verified $100k+ jobs with published salary ranges. Premium roles from verified companies. Updated daily.',
       alternates: {
-        canonical: 'https://www.6figjobs.com',
+        canonical: getSiteUrl(),
       },
     }
   }
