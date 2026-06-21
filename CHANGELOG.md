@@ -1,5 +1,7 @@
 # Unreleased
 
+- Created `scripts/repairDescriptionSalaryOutliers.ts` — the weekly GHA workflow referenced this script but it never existed, causing the job to fail with `ERR_MODULE_NOT_FOUND`. Script finds jobs with `salarySource='description'` and `minAnnual` or `maxAnnual` above $600k USD, then (with `--apply`) nulls those salary fields and sets `salaryParseReason='capped_description'` and `salaryValidated=false`.
+
 - Added `sitemap-hubs.xml` — a dedicated urlset for the 5 core nav pages (`/`, `/jobs`, `/salary`, `/companies`, `/remote`). These pillar pages were absent from every sitemap family, causing Google to never crawl them (GSC showed "URL is unknown to Google", Last crawl: N/A for `/salary` and `/companies`). The new sitemap is always listed first in the sitemap index regardless of indexing phase.
 
 - Removed `force-dynamic` from all 18 sitemap and robots.txt route handlers — it was overriding `revalidate` entirely, making every Googlebot crawl hit Railway with no HTTP caching. Routes now correctly ISR-cache at their declared intervals (12h for sitemaps, 24h for robots.txt and job-shard pages). Also added missing `revalidate = 43200` to sitemap-level, sitemap-salary, sitemap-country, and sitemap-category which had only `force-dynamic` and no revalidate. Fixed misleading `// 24h` comments on routes whose revalidate was 43200s (12h).
