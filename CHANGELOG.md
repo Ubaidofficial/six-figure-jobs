@@ -1,5 +1,8 @@
 # Unreleased
 
+- Reduced scraper schedule from twice daily (`0 6,18 * * *`) to twice weekly — Monday and Thursday at 6am UTC (`0 6 * * 1,4`). Renamed workflow from "Daily Job Scraper" to "Scheduled Job Scraper". Bumped `MAX_ACTIVE_LAST_SEEN_AGE_HOURS` from 72 to 120 so the freshness guard doesn't trip on the longer gap between runs (Thursday→Monday is ~84h).
+- Added `output: 'standalone'` to next.config.js to reduce Railway memory footprint — standalone mode strips dev dependencies from the server bundle. Added `experimental.outputFileTracingIncludes` for `./node_modules/.prisma/client/**` so Prisma 5's native `.node` library engine is included in the bundle (Next.js file tracing misses `.node` files by default). Set `NODE_OPTIONS=--max-old-space-size=768` on Railway to cap Node.js heap at 768 MB instead of the default ~4 GB, forcing earlier GC on a zero-traffic app averaging 2+ GB RAM.
+
 - Fixed 4 SEO-gates CI failures on the `sitemap-hubs.xml` pillar pages:
   - `canonical_mismatch` on `/` and `/salary` — both had hardcoded `https://www.6figjobs.com` literals that ignored the `SITE_URL` env var set by CI. Homepage now calls `getSiteUrl()` for canonical and OG url; salary page adds `const SITE_URL = getSiteUrl()` at module level and uses it in the static `metadata` export.
   - `robots_noindex` on `/companies` — removed the `totalCompanies > 0` gate; the page always returns `{ index: true, follow: true }` since it's a structural hub that renders a useful fallback even with no data.

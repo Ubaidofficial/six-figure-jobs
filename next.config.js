@@ -66,6 +66,14 @@ const countrySlugPattern =
   '(united-states|united-kingdom|canada|germany|australia|france|netherlands|sweden)'
 
 const nextConfig = {
+  output: 'standalone',
+  experimental: {
+    // Prisma 5 uses a native .node library engine that Next.js file tracing
+    // misses without this — without it the standalone bundle has no DB access.
+    outputFileTracingIncludes: {
+      '/**': ['./node_modules/.prisma/client/**'],
+    },
+  },
   // Keep SEO metadata in the initial <head> for crawlers and audit tools.
   // Next.js streams dynamic metadata for normal browsers, which makes tools
   // like Screaming Frog report title/canonical/robots tags outside <head>.
