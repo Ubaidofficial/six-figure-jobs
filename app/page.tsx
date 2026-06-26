@@ -66,7 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
         type: 'website',
         images: [
           {
-            url: 'https://www.6figjobs.com/og-image.png',
+            url: `${getSiteUrl()}/og-image.png`,
             width: 1200,
             height: 630,
             alt: 'Six Figure Jobs - Find High Paying $100k+ Positions',
@@ -77,7 +77,7 @@ export async function generateMetadata(): Promise<Metadata> {
         card: 'summary_large_image',
         title: 'Six Figure Jobs | High Paying $100k+ Positions',
         description: `Find six-figure jobs with verified salaries. Explore ${stats.totalJobs.toLocaleString()}+ high-paying opportunities.`,
-        images: ['https://www.6figjobs.com/og-image.png'],
+        images: [`${getSiteUrl()}/og-image.png`],
       },
       robots: {
         index: true,

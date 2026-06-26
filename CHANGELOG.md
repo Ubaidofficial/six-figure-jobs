@@ -1,5 +1,6 @@
 # Unreleased
 
+- Fixed homepage OG image URL hardcoded to `https://www.6figjobs.com/og-image.png` — changed both OpenGraph and Twitter card instances to use `` `${getSiteUrl()}/og-image.png` `` so staging/preview deployments don't serve production OG images.
 - Added "Drain Google Indexing queue" step to the scrape workflow — `process-google-indexing-queue.ts` was never scheduled anywhere, so the queue was filling up (from the expiry cycle's deletion notifications) but URLs were never actually submitted to Google. Now runs after every scrape with `INDEXING_API_DRY_RUN=0` and the 180 URL/day cap. Requires `GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON` GitHub secret to be set (the value is already in Railway — copy it to GitHub → Settings → Secrets).
 
 - Reduced scraper schedule from twice daily (`0 6,18 * * *`) to twice weekly — Monday and Thursday at 6am UTC (`0 6 * * 1,4`). Renamed workflow from "Daily Job Scraper" to "Scheduled Job Scraper". Bumped `MAX_ACTIVE_LAST_SEEN_AGE_HOURS` from 72 to 120 so the freshness guard doesn't trip on the longer gap between runs (Thursday→Monday is ~84h).
