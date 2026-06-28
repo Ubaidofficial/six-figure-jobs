@@ -23,6 +23,7 @@
     "backfill:role-slugs": "tsx scripts/backfill-role-slugs.ts",
     "backfill:locations": "tsx scripts/backfillLocations.ts",
     "audit:ci": "tsx scripts/audit-v2.9.ts",
+    "audit:data-quality": "tsx scripts/audit-data-quality.ts",
     "scraper:smoke": "node --import tsx scripts/smokeScrapers.ts",
     "scraper:audit": "node --import tsx scripts/auditScrapers.ts",
     "scraper:ats:report": "tsx scripts/reportAtsCoverage.ts",

@@ -237,6 +237,13 @@ jobs:
           INDEXING_API_DAILY_LIMIT: "180"
         run: npx tsx scripts/process-google-indexing-queue.ts | tee /tmp/daily-scrape-indexing.log
 
+      - name: Data quality guard
+        if: steps.prep.outputs.dry_run != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run audit:data-quality | tee /tmp/daily-scrape-data-quality.log
+
       - name: Upload scrape logs
         if: always()
         uses: actions/upload-artifact@v7
