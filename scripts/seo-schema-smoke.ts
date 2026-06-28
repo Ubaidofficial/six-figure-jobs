@@ -1,5 +1,7 @@
 import * as cheerio from 'cheerio'
 
+import { validateJobPostingEligibility } from '../lib/seo/jobPostingEligibility'
+
 const SITEMAP_URL = process.env.SEO_BASE_URL
   ? `${process.env.SEO_BASE_URL}/sitemap-jobs.xml`
   : 'http://localhost:3000/sitemap-jobs.xml'
@@ -73,22 +75,9 @@ async function validateJobPage(url: string): Promise<string[]> {
       return errors
     }
 
-    // Validate required fields
-    if (!jobPosting.title) errors.push('Missing title')
-    if (!jobPosting.description) errors.push('Missing description')
-    if (!jobPosting.datePosted) errors.push('Missing datePosted')
-    if (!jobPosting.validThrough) errors.push('Missing validThrough')
-    
-    if (!jobPosting.hiringOrganization || !jobPosting.hiringOrganization.name) {
-      errors.push('Missing hiringOrganization.name')
-    }
-
-    // Check baseSalary logic
-    if (jobPosting.baseSalary) {
-      if (!jobPosting.baseSalary.value || !jobPosting.baseSalary.value.minValue) {
-        errors.push('baseSalary present but missing value/minValue')
-      }
-    }
+    // Validate Google Jobs eligibility (shared rules — also gated per-PR by
+    // __tests__/seo/jobPostingEligibility.test.ts).
+    errors.push(...validateJobPostingEligibility(jobPosting))
 
   } catch (err: any) {
     errors.push(`Error fetching/parsing: ${err.message}`)
