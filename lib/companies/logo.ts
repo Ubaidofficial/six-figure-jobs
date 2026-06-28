@@ -35,7 +35,7 @@ export function buildLogoUrl(
       const clearbitDomain = extractDomain(logoUrl)
       const logoDevKey = process.env.LOGODEV_API_KEY
       return clearbitDomain && logoDevKey
-        ? appendLogoDevOptimization(`https://img.logo.dev/${clearbitDomain}?apikey=${logoDevKey}`)
+        ? appendLogoDevOptimization(`https://img.logo.dev/${clearbitDomain}?token=${logoDevKey}`)
         : null
     }
 
@@ -49,7 +49,7 @@ export function buildLogoUrl(
   // Prefer logo.dev when configured. Otherwise use the initials fallback.
   const logoDevKey = process.env.LOGODEV_API_KEY
   if (logoDevKey) {
-    return appendLogoDevOptimization(`https://img.logo.dev/${domain}?apikey=${logoDevKey}`)
+    return appendLogoDevOptimization(`https://img.logo.dev/${domain}?token=${logoDevKey}`)
   }
 
   return null

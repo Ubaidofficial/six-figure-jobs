@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fixed the logo.dev fallback URL in `lib/companies/logo.ts` — it used the query param `?apikey=` but logo.dev's image API expects `?token=` (with a publishable `pk_` key). The fallback (company website → logo) silently 401'd for every company without a stored `logoUrl`. Companies with a stored `logoUrl` were unaffected (those embed a working token). Also set `LOGODEV_API_KEY` to the publishable `pk_` key in Railway (a secret `sk_` key had been set, which the public image endpoint rejects).
+
 - CI hardening: added a `Typecheck` step (`npm run typecheck`) to the CI workflow — type errors in app code were previously only caught at build time, not gated on PRs. Added a daily `Data Quality Guard` workflow (`.github/workflows/data-quality.yml`, 07:00 UTC + manual dispatch) that runs `audit:data-quality` against production so data drift is caught within 24h rather than only on Mon/Thu scrape runs. Added a `duplicate_apply_url` invariant to the guard.
 
 - One-off data cleanup: expired 118 duplicate active jobs (multiple rows sharing the exact same apply URL — kept the most complete row per URL), expired 91 dead-end active jobs (no recoverable employer apply URL — url was null or an aggregator), and nulled the salary on 4 remote jobs with an unverifiable currency (AUD/SEK on remote roles with no country anchor). Active job count 10,382 → 10,173.
