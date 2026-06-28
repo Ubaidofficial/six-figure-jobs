@@ -1,5 +1,7 @@
 # Unreleased
 
+- Hardened crawler entry points: `app/sitemap.xml/route.ts` and `app/robots.txt/route.ts` no longer depend on live Prisma queries to advertise sitemap families. This avoids origin-level 502s on sitemap discovery, keeps crawler discovery deterministic, and ensures the root sitemap/robots endpoints stay cheap even when the database is under load. Added focused route tests for both endpoints.
+
 - Fixed homepage OG image URL hardcoded to `https://www.6figjobs.com/og-image.png` — changed both OpenGraph and Twitter card instances to use `` `${getSiteUrl()}/og-image.png` `` so staging/preview deployments don't serve production OG images.
 - Added "Drain Google Indexing queue" step to the scrape workflow — `process-google-indexing-queue.ts` was never scheduled anywhere, so the queue was filling up (from the expiry cycle's deletion notifications) but URLs were never actually submitted to Google. Now runs after every scrape with `INDEXING_API_DRY_RUN=0` and the 180 URL/day cap. Requires `GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON` GitHub secret to be set (the value is already in Railway — copy it to GitHub → Settings → Secrets).
 
@@ -320,4 +322,3 @@
 ### Performance Improvements
 
 * cache headers and disable image optimization ([a4f3337](https://github.com/Ubaidofficial/six-figure-jobs/commit/a4f33374fb64d7a373ead0f36911fcd7595efb0a))
-
