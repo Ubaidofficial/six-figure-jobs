@@ -5,6 +5,7 @@ import { normalizePublicCompanyWebsite } from '../companies/website'
 import { getSiteUrl } from './site'
 import { buildJobSlug } from '../jobs/jobSlug'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
+import { resolveSalaryCurrency } from '../jobs/salary'
 import { buildJobValidThroughDate } from '../jobs/validThrough'
 import {
   cleanJobDescriptionHtml,
@@ -116,7 +117,10 @@ function buildBaseSalary(job: any): any | undefined {
   const min = rawMin ? normalizeAnnualAmount(rawMin) : null
   const max = rawMax ? normalizeAnnualAmount(rawMax) : null
 
-  const currency = (job.salaryCurrency as string | null | undefined) || (job.currency as string | null | undefined)
+  // Use the same resolver as the visible salary so structured data and the page
+  // never disagree (parsers can mislabel currency; for non-remote jobs we trust
+  // the country over the parsed currency).
+  const currency = resolveSalaryCurrency(job)
 
   if (!currency) return undefined
 

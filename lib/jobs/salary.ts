@@ -73,6 +73,28 @@ function currencyForCountry(code?: string | null): string | null {
 }
 
 /* -------------------------------------------------------------
+   Resolve the display currency for a job.
+   For non-remote jobs we trust the job's country over the parsed
+   currency (parsers occasionally mislabel currency from description
+   text). Remote jobs keep the parsed currency. Shared by the salary
+   text builder AND the JobPosting JSON-LD so the page and structured
+   data always agree.
+------------------------------------------------------------- */
+export function resolveSalaryCurrency(job: {
+  currency?: string | null
+  salaryCurrency?: string | null
+  countryCode?: string | null
+  remote?: boolean | null
+  remoteMode?: string | null
+}): string | null {
+  const base = job.currency || job.salaryCurrency || null
+  const expected = currencyForCountry(job.countryCode)
+  const isRemote = job.remote === true || job.remoteMode === 'remote'
+  if (!isRemote && expected) return expected
+  return base ? base.toUpperCase() : null
+}
+
+/* -------------------------------------------------------------
    Convert bigint → number safely
 ------------------------------------------------------------- */
 function toNum(v: number | bigint | null | undefined): number | null {
@@ -180,13 +202,8 @@ export function buildSalaryText(job: SalaryJob): string | null {
     if (max != null && max < minThreshold) max = null
   }
 
-  // Country → currency correction (non-remote)
-  const expectedCurrency = currencyForCountry(job.countryCode)
-  const isRemote = job.remote === true || job.remoteMode === "remote"
-
-  if (!isRemote && expectedCurrency) {
-    cur = expectedCurrency
-  }
+  // Country → currency correction (non-remote). Shared with the JSON-LD builder.
+  cur = resolveSalaryCurrency({ ...job, currency: cur }) ?? cur
 
   // Canonical formatter handles caps + High salary role
   if (min != null || max != null) {
