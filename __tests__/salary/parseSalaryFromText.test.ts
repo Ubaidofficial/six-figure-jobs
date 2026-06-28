@@ -178,3 +178,37 @@ describe('salary parsing edge cases (v2.10)', () => {
     expect(['bad_range', 'ambiguous']).toContain(validated.salaryParseReason)
   })
 })
+
+// Regression guards for the 2026-06-28 salary-currency parser fixes.
+describe('salary parsing – retirement-plan tokens are not salaries', () => {
+  it('does not read "401k" as a $401,000 salary', () => {
+    const parsed = parseSalaryFromText('Competitive compensation and equity, 401k, health insurance')
+    expect(parsed?.min).not.toBe(401_000)
+    expect(parsed?.max).not.toBe(401_000)
+  })
+
+  it('ignores 401(k)/403(b)/457(b) while keeping the real salary', () => {
+    const parsed = parseSalaryFromText('Base salary $160,000 - $190,000. 401(k) match, 403(b), 457(b).')
+    expect(parsed?.min).toBe(160_000)
+    expect(parsed?.max).toBe(190_000)
+  })
+})
+
+describe('salary parsing – currency disambiguation', () => {
+  it('uses the earliest currency marker (primary), not a later "equivalent"', () => {
+    const parsed = parseSalaryFromText('Salary: USD 200,000 - 250,000. AUD equivalent 320,000')
+    expect(parsed?.currency).toBe('USD')
+  })
+
+  it('does not misdetect AUD from words like "fraud"/"audit"/"applaud"', () => {
+    const parsed = parseSalaryFromText('Work on fraud and audit tooling. Base pay $150,000 - $180,000 USD')
+    expect(parsed?.currency).toBe('USD')
+  })
+
+  it('preserves a genuine A$ (AUD) salary', () => {
+    const parsed = parseSalaryFromText('A$180,000 - A$220,000 per year')
+    expect(parsed?.currency).toBe('AUD')
+    expect(parsed?.min).toBe(180_000)
+    expect(parsed?.max).toBe(220_000)
+  })
+})

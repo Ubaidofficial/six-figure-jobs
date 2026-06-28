@@ -1,4 +1,4 @@
-import { isAggregatorApplyUrl, cleanApplyUrl } from '../../lib/jobs/applyUrl'
+import { isAggregatorApplyUrl, cleanApplyUrl, unwrapRedirectUrl } from '../../lib/jobs/applyUrl'
 
 describe('isAggregatorApplyUrl', () => {
   it('flags aggregator/scraper hosts (incl. subdomains + www)', () => {
@@ -31,5 +31,38 @@ describe('cleanApplyUrl', () => {
   it('returns null when every candidate is an aggregator or invalid', () => {
     expect(cleanApplyUrl('https://builtin.com/job/1', 'https://builtin.com/job/1')).toBeNull()
     expect(cleanApplyUrl(null, undefined, 'not-a-url')).toBeNull()
+  })
+
+  // Regression: BuiltIn surfaces some jobs as ad.doubleclick.net links that
+  // embed the real employer URL. cleanApplyUrl must unwrap, not pass through.
+  it('unwraps ad-redirect wrappers to the embedded employer URL', () => {
+    expect(
+      cleanApplyUrl(
+        'https://ad.doubleclick.net/ddm/clk/628601142;435308584;f?https://www.capitalonecareers.com/job/-/-/234/9096540',
+      ),
+    ).toBe('https://www.capitalonecareers.com/job/-/-/234/9096540')
+  })
+})
+
+describe('unwrapRedirectUrl', () => {
+  it('extracts the destination from a doubleclick /ddm/clk wrapper', () => {
+    expect(
+      unwrapRedirectUrl('https://ad.doubleclick.net/ddm/clk/1;2;f?https://jobs.example.com/123'),
+    ).toBe('https://jobs.example.com/123')
+  })
+
+  it('extracts the destination from an ?adurl= / ?url= param redirect', () => {
+    expect(
+      unwrapRedirectUrl('https://www.googleadservices.com/pagead/aclk?sa=L&adurl=https%3A%2F%2Fcareers.acme.com%2Frole'),
+    ).toBe('https://careers.acme.com/role')
+  })
+
+  it('leaves a normal ATS URL untouched (incl. legit query params)', () => {
+    expect(unwrapRedirectUrl('https://jobs.lever.co/acme/abc?utm_source=x')).toBe(
+      'https://jobs.lever.co/acme/abc?utm_source=x',
+    )
+    expect(unwrapRedirectUrl('https://boards.greenhouse.io/x/jobs/2')).toBe(
+      'https://boards.greenhouse.io/x/jobs/2',
+    )
   })
 })
