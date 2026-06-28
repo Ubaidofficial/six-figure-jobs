@@ -700,6 +700,15 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
     }
   }
 
+  // Re-sanitize: clear stale aggregator links and unwrap ad-redirect wrappers
+  // (e.g. ad.doubleclick.net → the real employer URL) that were set before the
+  // apply-URL rules existed and would otherwise persist across refreshes.
+  const resolvedApplyUrl = updateData.applyUrl ?? existing.applyUrl ?? null
+  const sanitizedApplyUrl = cleanApplyUrl(resolvedApplyUrl)
+  if (sanitizedApplyUrl !== (existing.applyUrl ?? null)) {
+    updateData.applyUrl = sanitizedApplyUrl
+  }
+
   if (sourceExpiresAt) {
     updateData.expiresAt = sourceExpiresAt
   }

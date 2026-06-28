@@ -467,9 +467,18 @@ export function extractCompensationSnippet(
 }
 
 function detectCurrency(text: string): SupportedCurrency | null {
+  // Pick the currency whose marker appears EARLIEST in the text. The primary pay
+  // currency is stated first; secondary mentions ("… AUD equivalent 320,000")
+  // come later and must not win over the leading currency. (Array order alone is
+  // not enough — AUD/CAD/SGD precede USD/EUR/GBP in CURRENCY_PATTERNS.)
+  let best: { currency: SupportedCurrency; index: number } | null = null
   for (const { pattern, currency } of CURRENCY_PATTERNS) {
-    if (pattern.test(text)) return currency
+    const m = new RegExp(pattern.source, pattern.flags).exec(text)
+    if (m && m.index >= 0 && (best === null || m.index < best.index)) {
+      best = { currency, index: m.index }
+    }
   }
+  if (best) return best.currency
 
   // Fallback: if only "$" is present, infer USD when the text explicitly signals US.
   if (/\$/.test(text)) {
@@ -486,6 +495,10 @@ function detectCurrency(text: string): SupportedCurrency | null {
  */
 function extractNumbers(text: string, currency: SupportedCurrency | null): number[] {
   const numbers: number[] = []
+
+  // Strip US retirement-plan references so "401k" / "403(b)" / "457(b)" are never
+  // read as salary figures (e.g. "Competitive comp and 401k" → bogus 401,000).
+  text = text.replace(/\b40[13]\s*\(?\s*[kb]\s*\)?/gi, ' ').replace(/\b457\s*\(?\s*b\s*\)?/gi, ' ')
 
   if (currency === 'INR') {
     const lakhMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:l(?:akh?s?)?|lpa)/gi)
