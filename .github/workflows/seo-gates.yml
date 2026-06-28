@@ -54,6 +54,9 @@ jobs:
       - name: Prepare database schema
         run: npx prisma db push
 
+      - name: Seed CI fixture (indexable jobs for sitemap/job-page validation)
+        run: npm run seed:ci
+
       - name: Run tests
         run: npm test
 
