@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:staging": "dotenv -e .env.staging.local -- next dev -p 3001",
     "dev:prod": "dotenv -e .env.production.local -- next dev -p 3000",
-    "build": "npx prisma migrate deploy && npx prisma generate && next build --webpack",
+    "build": "npx prisma migrate deploy && npx prisma generate && next build --webpack && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/public",
     "start": "next start -p 3000",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
