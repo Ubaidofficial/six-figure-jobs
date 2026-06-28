@@ -63,6 +63,19 @@ async function main() {
     sample: noCurrency.slice(0, 5).map((j) => j.id),
   })
 
+  // 5. No two active jobs should share the exact same apply URL (true duplicates).
+  const byApply = new Map<string, number>()
+  for (const j of withApply) {
+    const k = (j.applyUrl as string).trim()
+    byApply.set(k, (byApply.get(k) ?? 0) + 1)
+  }
+  const dupUrls = [...byApply.entries()].filter(([, n]) => n > 1)
+  checks.push({
+    name: 'duplicate_apply_url',
+    bad: dupUrls.reduce((sum, [, n]) => sum + (n - 1), 0),
+    sample: dupUrls.slice(0, 5).map(([u, n]) => `${n}× ${u}`),
+  })
+
   let failed = 0
   console.log(`\n[data-quality] active jobs scanned: ${withApply.length} (apply), ${validated.length} (validated salary)\n`)
   for (const c of checks) {
