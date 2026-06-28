@@ -77,7 +77,10 @@ jobs:
           exit 1
 
       - name: Strict sitemap validation (local)
-        run: SEO_BASE_URL=http://localhost:3000 SEO_FULL=1 SEO_STRICT=1 npm run seo:validate:strict
+        # The CI database is empty, so job/company/salary urlsets are empty by
+        # design — tolerate that here. The production proof job runs without this
+        # flag, so a genuinely-empty sitemap on the live site still fails.
+        run: SEO_BASE_URL=http://localhost:3000 SEO_FULL=1 SEO_STRICT=1 SEO_ALLOW_EMPTY_SITEMAP=1 npm run seo:validate:strict
 
       - name: Template sanity sample (local)
         run: SEO_BASE_URL=http://localhost:3000 SEO_TEMPLATE_SAMPLE_TOTAL=20 npm run seo:sample

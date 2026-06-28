@@ -70,6 +70,11 @@ const ROOT_SITEMAP_URL = (process.env.SEO_SITEMAP_URL || `${BASE_URL}/sitemap.xm
 const SAMPLE_PER_SITEMAP = Math.max(1, Number(process.env.SEO_SAMPLE_PER_SITEMAP || '200'))
 const FULL = process.env.SEO_FULL === '1'
 const STRICT = process.env.SEO_STRICT === '1'
+// Tolerate legitimately-empty child sitemaps (e.g. the CI build runs against an
+// empty database, so the jobs/company/salary urlsets are empty by design).
+// Only set in the LOCAL CI gate — the production proof leaves this off so a real
+// empty sitemap on the live site still fails.
+const ALLOW_EMPTY_SITEMAP = process.env.SEO_ALLOW_EMPTY_SITEMAP === '1'
 const TIMEOUT_MS = Math.max(1000, Number(process.env.SEO_TIMEOUT_MS || '15000'))
 const CONCURRENCY = Math.max(1, Math.min(64, Number(process.env.SEO_CONCURRENCY || '12')))
 const URL_RETRY_ATTEMPTS = Math.max(0, Number(process.env.SEO_URL_RETRY_ATTEMPTS || '2'))
@@ -720,6 +725,11 @@ async function collectSitemapBuckets(rootUrl: string): Promise<SitemapCollection
           return
         }
 
+        if (ALLOW_EMPTY_SITEMAP) {
+          console.log(`[seo:validate] tolerating empty sitemap index (SEO_ALLOW_EMPTY_SITEMAP=1): ${url}`)
+          return
+        }
+
         structureFailures.push(
           buildFailure(
             'empty_sitemap',
@@ -746,7 +756,7 @@ async function collectSitemapBuckets(rootUrl: string): Promise<SitemapCollection
         // in lib/seo/indexingPhase.ts; we detect it here so the validator
         // doesn't fail the gate on a silencing-by-design empty payload.
         const phaseSilenced = /silenced by INDEXING_PHASE=/.test(xml)
-        if (!phaseSilenced) {
+        if (!phaseSilenced && !ALLOW_EMPTY_SITEMAP) {
           structureFailures.push(
             buildFailure(
               'empty_sitemap',
