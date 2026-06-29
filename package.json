@@ -24,6 +24,7 @@
     "backfill:locations": "tsx scripts/backfillLocations.ts",
     "audit:ci": "tsx scripts/audit-v2.9.ts",
     "audit:data-quality": "tsx scripts/audit-data-quality.ts",
+    "remediate:data-quality": "tsx scripts/remediate-data-quality.ts",
     "seed:ci": "tsx scripts/seed-ci.ts",
     "scraper:smoke": "node --import tsx scripts/smokeScrapers.ts",
     "scraper:audit": "node --import tsx scripts/auditScrapers.ts",
