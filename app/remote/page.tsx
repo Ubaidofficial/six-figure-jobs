@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { unstable_rethrow } from 'next/navigation'
 import { cache } from 'react'
 import { queryJobs, buildWhere, type JobWithCompany } from '../../lib/jobs/queryJobs'
 import { prisma } from '../../lib/prisma'
@@ -709,6 +710,7 @@ export default async function RemoteJobsPage({
       </main>
     )
   } catch (error) {
+    unstable_rethrow(error)
     logRuntimeFallback('remote.page', error)
     return <RemoteJobsFallback activeRemoteRegion={activeRemoteRegion} />
   }

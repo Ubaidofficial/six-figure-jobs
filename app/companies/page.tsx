@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { unstable_rethrow } from 'next/navigation'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
 import {
@@ -348,6 +349,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
       </main>
     )
   } catch (error) {
+    unstable_rethrow(error)
     logRuntimeFallback('companies.page', error)
     return (
       <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">

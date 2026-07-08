@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { unstable_rethrow } from 'next/navigation'
 import { JobCard } from '@/components/jobs/JobCard'
 import { InfiniteJobsList } from './_components/InfiniteJobsList'
 
@@ -780,6 +781,7 @@ export default async function JobsIndexPage({
       </main>
     )
   } catch (error) {
+    unstable_rethrow(error)
     logRuntimeFallback('jobs.page', error)
     return <JobsIndexFallback techFilter={techFilter} />
   }

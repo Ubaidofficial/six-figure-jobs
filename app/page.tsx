@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { unstable_rethrow } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import {
@@ -905,6 +906,7 @@ export default async function HomePage() {
     </>
     )
   } catch (error) {
+    unstable_rethrow(error)
     logRuntimeFallback('home.page', error)
     return <HomePageFallback />
   }

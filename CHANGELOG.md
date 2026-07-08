@@ -1,5 +1,7 @@
 # Unreleased
 
+- Resolved Next.js dynamic-server usage fallback warnings and errors (caused by catch-all statements swallowing control-flow exceptions) on the homepage, jobs, remote, and companies routes by importing and calling `unstable_rethrow` at the beginning of all page-level Server Component catch blocks.
+
 - Made the daily Data Quality Guard workflow self-heal too (runs `remediate:data-quality` before the audit), matching the scrape workflow — so the daily monitor no longer emails a failure for the same recurring duplicate/aggregator churn. It still fails (alerts) on anything remediation can't auto-fix.
 
 - Made the scrape workflow self-healing so it stops failing on naturally-recurring data noise. The Data Quality Guard was failing every scrape because each run re-introduces a few duplicate apply URLs (same posting from two sources) and the occasional aggregator/redirect link — real but expected churn, not build-breaking. Added `scripts/remediate-data-quality.ts` (`npm run remediate:data-quality`, idempotent) that runs after ingest and before the guard: sanitizes aggregator/ad-redirect apply URLs (unwrap → real, or clear), dedupes exact-apply-URL rows (keep the most complete, expire the rest), and drops 401k/inverted salary noise. The guard still runs afterward, so a genuinely new invariant violation it can't auto-heal still fails the run (real alert). Ran the remediation once against production (sanitized 1, deduped 29) — guard now green.

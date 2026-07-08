@@ -60,6 +60,7 @@
     "changelog:check": "node scripts/checkChangelogUpdated.js"
   },
   "dependencies": {
+    "@next/swc-darwin-arm64": "^16.2.10",
     "@prisma/client": "^5.16.1",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-checkbox": "^1.3.3",
