@@ -1,5 +1,8 @@
 # Unreleased
 
+- Decoupled `npx prisma migrate deploy` from `npm run build` in `package.json` so Next.js static asset compilation succeeds cleanly in CI test environments (e.g. `seo-gates.yml`). Database migrations remain explicit release steps.
+- Updated `scripts/checkChangelogUpdated.js` to prioritize `origin/main` as the default target branch for CI changelog validation.
+
 - Removed platform-specific `@next/swc-darwin-arm64` from `package.json` and `package-lock.json`. Explicitly pinning a macOS ARM64 binary caused Railway's Linux `x64` build container to fail `npm install` with `EBADPLATFORM (Unsupported platform for @next/swc-darwin-arm64)`.
 
 - Fixed Railway production deployment start command (`npm start` in `package.json`) from `next start -p 3000` to `node .next/standalone/server.js`. In Next.js standalone mode (`output: 'standalone'`), `next start` does not serve the standalone bundle, causing Railway containers to exit and edge routers to return 404 "Application not found".

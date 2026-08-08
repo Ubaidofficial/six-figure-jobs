@@ -6,8 +6,15 @@ function sh(cmd) {
 
 try {
   // Compare against main/develop if available; fallback to HEAD~1 for local runs
-  let base = 'origin/develop';
-  try { sh(`git rev-parse --verify ${base}`); } catch { base = 'HEAD~1'; }
+  let base = 'origin/main';
+  try { sh(`git rev-parse --verify ${base}`); } catch {
+    try {
+      base = 'origin/develop';
+      sh(`git rev-parse --verify ${base}`);
+    } catch {
+      base = 'HEAD~1';
+    }
+  }
 
   // Prefer staged changes (commit-time gate). If nothing is staged, fall back to branch diff (CI/PR gate).
   const changed = sh(`git diff --cached --name-only`) || sh(`git diff --name-only ${base}...HEAD`);
