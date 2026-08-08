@@ -61,7 +61,7 @@ jobs:
         run: npm test
 
       - name: Build
-        run: npx prisma generate && npx next build --webpack
+        run: npm run build
 
       - name: Start app
         run: |

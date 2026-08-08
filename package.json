@@ -7,7 +7,7 @@
     "dev:staging": "dotenv -e .env.staging.local -- next dev -p 3001",
     "dev:prod": "dotenv -e .env.production.local -- next dev -p 3000",
     "build": "npx prisma migrate deploy && npx prisma generate && next build --webpack && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/public",
-    "start": "node .next/standalone/server.js",
+    "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:push:staging": "dotenv -e .env.staging.local -- npx prisma db push",
@@ -60,7 +60,6 @@
     "changelog:check": "node scripts/checkChangelogUpdated.js"
   },
   "dependencies": {
-    "@next/swc-darwin-arm64": "^16.2.10",
     "@prisma/client": "^5.16.1",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-checkbox": "^1.3.3",
