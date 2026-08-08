@@ -29,19 +29,34 @@ export async function checkJobAvailability(slug: string): Promise<JobAvailabilit
 
   const where = ors.length === 1 ? ors[0] : { OR: ors }
 
-  const job = await prisma.job.findFirst({
-    where,
-    select: {
-      id: true,
-      isExpired: true,
-      lastSeenAt: true,
-      postedAt: true,
-      createdAt: true,
-    },
-  })
+  try {
+    const queryPromise = prisma.job.findFirst({
+      where,
+      select: {
+        id: true,
+        isExpired: true,
+        lastSeenAt: true,
+        postedAt: true,
+        createdAt: true,
+      },
+    })
 
-  if (!job) return 'missing'
-  if (job.isExpired === true) return 'expired'
-  if (!isJobFresh(job)) return 'stale'
-  return 'available'
+    const timeoutPromise = new Promise<'timeout'>((resolve) => {
+      const timer = setTimeout(() => resolve('timeout'), 2500)
+      if (typeof timer === 'object' && timer && 'unref' in timer) {
+        ;(timer as any).unref()
+      }
+    })
+
+    const result = await Promise.race([queryPromise, timeoutPromise])
+    if (result === 'timeout') return 'available'
+    const job = result
+
+    if (!job) return 'missing'
+    if (job.isExpired === true) return 'expired'
+    if (!isJobFresh(job)) return 'stale'
+    return 'available'
+  } catch {
+    return 'available'
+  }
 }

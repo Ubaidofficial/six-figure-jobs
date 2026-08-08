@@ -42,7 +42,33 @@ function normalizeLegacyRoleQuery(request: NextRequest): NextResponse | null {
   return NextResponse.redirect(url, { status: 308 })
 }
 
-const ALLOWED_PUBLIC_QUERY_PARAMS = new Set(['page', 'q', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'gclid', 'fbclid'])
+const ALLOWED_PUBLIC_QUERY_PARAMS = new Set([
+  'page',
+  'q',
+  'tech',
+  'country',
+  'remoteMode',
+  'sort',
+  'view',
+  'minSalary',
+  'maxSalary',
+  'remoteRegion',
+  'level',
+  'skill',
+  'industry',
+  'company',
+  'state',
+  'city',
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_term',
+  'utm_content',
+  'ref',
+  'gclid',
+  'fbclid',
+  'msclkid',
+])
 
 function enforceQueryAllowlist(request: NextRequest): NextResponse | null {
   const url = request.nextUrl.clone()

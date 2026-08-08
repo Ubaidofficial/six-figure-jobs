@@ -21,9 +21,13 @@ const baseUrl = preferDatabaseUrl
   : process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL || ''
 
 const pooledUrl = addUrlParam(
-  addUrlParam(baseUrl, 'connection_limit', process.env.PRISMA_CONNECTION_LIMIT ?? '3'),
+  addUrlParam(
+    baseUrl,
+    'connection_limit',
+    process.env.PRISMA_CONNECTION_LIMIT ?? (isProductionRuntime ? '15' : '5'),
+  ),
   'pool_timeout',
-  process.env.PRISMA_POOL_TIMEOUT ?? '30',
+  process.env.PRISMA_POOL_TIMEOUT ?? '10',
 )
 
 export const prisma =
