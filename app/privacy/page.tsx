@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy',
+  title: 'Privacy Policy | Six Figure Jobs',
   description:
     'Privacy Policy for Six Figure Jobs. Learn what data we collect, how we use it, and the choices you have.',
   alternates: {

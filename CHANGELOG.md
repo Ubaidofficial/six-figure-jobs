@@ -1,5 +1,7 @@
 # Unreleased
 
+- Standardized static and legal page metadata titles (`Privacy Policy | Six Figure Jobs`, `Terms of Service | Six Figure Jobs`) to enforce consistent site branding and keyword optimization across all trust pages.
+
 - Expanded production Prisma connection limit (`PRISMA_CONNECTION_LIMIT=15`), added a 2.5s timeout safeguard in `checkJobAvailability` (`lib/jobs/jobAvailabilityCheck.ts`), and expanded the public query parameter allowlist in `proxy.ts` to include filtering parameters (`tech`, `country`, `remoteMode`, `sort`, `view`, `minSalary`, `maxSalary`, `remoteRegion`, `level`, `skill`, `industry`, `company`, `state`, `city`). This prevents database connection pool exhaustion (HTTP 5xx) under heavy crawler load and eliminates unintended 301 query-stripping redirects.
 
 - Resolved Next.js dynamic-server usage fallback warnings and errors (caused by catch-all statements swallowing control-flow exceptions) on the homepage, jobs, remote, and companies routes by importing and calling `unstable_rethrow` at the beginning of all page-level Server Component catch blocks.

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service',
+  title: 'Terms of Service | Six Figure Jobs',
   description:
     'Terms of Service for Six Figure Jobs. Rules for using the site, disclaimers, and limitations of liability.',
   alternates: {
