@@ -26,6 +26,7 @@ export const BOARD_SOURCES = {
   REMOTEROCKETSHIP: 'board:remoterocketship',
   REMOTEOK: 'board:remoteok',
   REMOTIVE: 'board:remotive',
+  FREEHIRE: 'board:freehire',
   REMOTEAI: 'board:remoteai',
   WEWORKREMOTELY: 'board:weworkremotely',
   BUILTIN: 'board:builtin',
@@ -57,6 +58,7 @@ export const SOURCE_PRIORITY: Record<string, number> = {
   // Standard job boards
   [BOARD_SOURCES.REMOTEOK]: 40,
   [BOARD_SOURCES.REMOTIVE]: 40,
+  [BOARD_SOURCES.FREEHIRE]: 40,
   [BOARD_SOURCES.REMOTEAI]: 40,
 
   // Lower-quality / less reliable boards
