@@ -121,21 +121,14 @@ function getSalaryGateRejection(
   salaryData: ReturnType<typeof processSalary>,
   input: ScrapedJobInput,
 ): string | null {
-  const reason = getMinimumSalaryRejection({
+  const gateInput = {
     salaryMin: salaryData.salaryMin,
+    salaryCurrency: salaryData.salaryCurrency,
     title: input.title,
     source: input.source,
-  })
-  if (reason) {
-    warnMinimumSalaryRejected(
-      {
-        salaryMin: salaryData.salaryMin,
-        title: input.title,
-        source: input.source,
-      },
-      reason,
-    )
   }
+  const reason = getMinimumSalaryRejection(gateInput)
+  if (reason) warnMinimumSalaryRejected(gateInput, reason)
   return reason
 }
 

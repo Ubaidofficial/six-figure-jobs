@@ -1,10 +1,12 @@
 // lib/scrapers/freehire.ts
-// Pulls $100k+ USD yearly jobs from the freehire.me public API (https://freehire.me/docs/api).
-// Auth is optional: set FREEHIRE_API_KEY for the higher per-account rate limit.
+// Pulls six-figure jobs from the freehire.me public API (https://freehire.me/docs/api) for the
+// US (any location, USD), UK, EU, Canada and Australia. The minimum salary per currency comes from
+// lib/currency/thresholds.ts. Auth is optional: set FREEHIRE_API_KEY for the higher account limit.
 import axios from 'axios'
 
+import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
 import { ingestBoardJob, type BoardJobInput } from '../jobs/ingestBoardJob'
-import { MIN_PUBLISHED_SALARY } from '../jobs/salaryPublicationGate'
+import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 
 const BOARD = 'freehire'
@@ -15,6 +17,15 @@ const MAX_OFFSET = 10_000
 const LOOKBACK_DAYS = Number(process.env.FREEHIRE_LOOKBACK_DAYS) || 30
 // Public limit is 120 requests/minute without a key; stay well under it.
 const PAGE_DELAY_MS = 700
+
+/** One query per currency. `geo` narrows by freehire's region/country facets (unset = anywhere). */
+export const FREEHIRE_MARKETS: ReadonlyArray<{ currency: string; geo: Record<string, string> }> = [
+  { currency: 'USD', geo: {} },
+  { currency: 'GBP', geo: { regions: 'uk' } },
+  { currency: 'EUR', geo: { regions: 'eu' } },
+  { currency: 'CAD', geo: { countries: 'ca' } },
+  { currency: 'AUD', geo: { countries: 'au' } },
+]
 
 export type FreehireJob = {
   public_slug: string
@@ -40,6 +51,24 @@ export type FreehireJob = {
 type FreehireResponse = {
   data: FreehireJob[]
   meta: { total: number; limit: number; offset: number; ignored_params?: unknown }
+}
+
+export type FreehireMarketReport = {
+  currency: string
+  available: number
+  fetched: number
+  mappable: number
+  gateRejected: number
+  oldest: string | null
+  newest: string | null
+  sample: string[]
+}
+
+export type FreehireSyncOptions = {
+  /** Fetch and map, but write nothing. */
+  dryRun?: boolean
+  /** Stop each market after this many pages (default: until lookback or freehire's paging cap). */
+  maxPagesPerMarket?: number
 }
 
 /** freehire tags outbound links with utm_source=freehire.me; drop only that tag. */
@@ -69,8 +98,11 @@ export function assertFiltersApplied(meta: FreehireResponse['meta']): void {
 export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
   const e = job.enrichment ?? {}
   if (job.closed_at) return null
-  if (e.salary_currency !== 'USD' || e.salary_period !== 'year') return null
-  if (typeof e.salary_min !== 'number' || e.salary_min < MIN_PUBLISHED_SALARY) return null
+  if (e.salary_period !== 'year') return null
+  const currency = e.salary_currency?.toUpperCase()
+  if (!currency || !FREEHIRE_MARKETS.some((m) => m.currency === currency)) return null
+  const threshold = getHighSalaryThresholdAnnual(currency)
+  if (threshold == null || typeof e.salary_min !== 'number' || e.salary_min < threshold) return null
   if (!job.title || !job.url) return null
 
   const url = stripFreehireUtm(job.url)
@@ -85,7 +117,7 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     employmentType: e.employment_type ?? null,
     salaryMin: e.salary_min,
     salaryMax: e.salary_max ?? null,
-    salaryCurrency: 'USD',
+    salaryCurrency: currency,
     salaryInterval: 'year',
     postedAt: job.posted_at ? new Date(job.posted_at) : null,
     updatedAt: job.updated_at ? new Date(job.updated_at) : null,
@@ -93,7 +125,7 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
   }
 }
 
-async function fetchPage(offset: number): Promise<FreehireResponse> {
+async function fetchPage(market: (typeof FREEHIRE_MARKETS)[number], offset: number): Promise<FreehireResponse> {
   const headers: Record<string, string> = { 'User-Agent': '6FigJobs/1.0 (+https://www.6figjobs.com)' }
   if (process.env.FREEHIRE_API_KEY) headers.Authorization = `Bearer ${process.env.FREEHIRE_API_KEY}`
 
@@ -101,13 +133,14 @@ async function fetchPage(offset: number): Promise<FreehireResponse> {
     headers,
     timeout: 30_000,
     params: {
-      salary_currency: 'USD',
+      salary_currency: market.currency,
       salary_period: 'year',
-      salary_min: MIN_PUBLISHED_SALARY,
+      salary_min: getHighSalaryThresholdAnnual(market.currency),
       sort: 'posted_at',
       order: 'desc',
       limit: PAGE_SIZE,
       offset,
+      ...market.geo,
     },
   })
   return res.data
@@ -115,41 +148,84 @@ async function fetchPage(offset: number): Promise<FreehireResponse> {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export default async function scrapeFreehire(): Promise<ScraperStats> {
-  console.log('[freehire] Starting sync...')
+export async function syncFreehire(
+  options: FreehireSyncOptions = {},
+): Promise<{ stats: ScraperStats; markets: FreehireMarketReport[] }> {
   const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
+  const reports: FreehireMarketReport[] = []
+  const errors: string[] = []
   const cutoff = Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
-  try {
-    // Newest first: stop once a page reaches jobs older than the lookback window.
-    for (let offset = 0; offset < MAX_OFFSET; offset += PAGE_SIZE) {
-      const page = await fetchPage(offset)
-      assertFiltersApplied(page.meta)
-      if (page.data.length === 0) break
-
-      let reachedCutoff = false
-      for (const job of page.data) {
-        if (job.posted_at && new Date(job.posted_at).getTime() < cutoff) {
-          reachedCutoff = true
-          continue
-        }
-        const input = mapFreehireJob(job)
-        if (!input) {
-          stats.skipped++
-          continue
-        }
-        addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
-      }
-
-      if (reachedCutoff || page.data.length < PAGE_SIZE) break
-      await sleep(PAGE_DELAY_MS)
+  for (const market of FREEHIRE_MARKETS) {
+    const report: FreehireMarketReport = {
+      currency: market.currency,
+      available: 0,
+      fetched: 0,
+      mappable: 0,
+      gateRejected: 0,
+      oldest: null,
+      newest: null,
+      sample: [],
     }
+    reports.push(report)
 
-    console.log(`[freehire] ✓ created=${stats.created} updated=${stats.updated} skipped=${stats.skipped}`)
-    return stats
-  } catch (error) {
-    console.error('[freehire] ❌ Sync failed:', error)
-    // Keep the counts of jobs already ingested before the failure.
-    return { ...stats, error: error instanceof Error ? error.message : String(error) }
+    try {
+      // Newest first: stop once a page reaches jobs older than the lookback window.
+      let pages = 0
+      for (let offset = 0; offset < MAX_OFFSET; offset += PAGE_SIZE) {
+        if (options.maxPagesPerMarket && pages >= options.maxPagesPerMarket) break
+        const page = await fetchPage(market, offset)
+        assertFiltersApplied(page.meta)
+        report.available = page.meta.total
+        pages++
+        if (page.data.length === 0) break
+
+        let reachedCutoff = false
+        for (const job of page.data) {
+          if (job.posted_at && new Date(job.posted_at).getTime() < cutoff) {
+            reachedCutoff = true
+            continue
+          }
+          report.fetched++
+          if (job.posted_at) {
+            report.newest = report.newest && report.newest > job.posted_at ? report.newest : job.posted_at
+            report.oldest = report.oldest && report.oldest < job.posted_at ? report.oldest : job.posted_at
+          }
+
+          const input = mapFreehireJob(job)
+          if (!input) {
+            stats.skipped++
+            continue
+          }
+          report.mappable++
+          if (report.sample.length < 3) report.sample.push(`${input.title} — ${input.rawCompanyName}`)
+
+          if (options.dryRun) {
+            // Mirror the ingest salary gate so the report shows what would really be published.
+            if (getMinimumSalaryRejection({ salaryMin: input.salaryMin, salaryCurrency: input.salaryCurrency })) {
+              report.gateRejected++
+            }
+            continue
+          }
+          addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
+        }
+
+        if (reachedCutoff || page.data.length < PAGE_SIZE) break
+        await sleep(PAGE_DELAY_MS)
+      }
+    } catch (error) {
+      console.error(`[freehire] ❌ ${market.currency} sync failed:`, error)
+      errors.push(`${market.currency}: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
+
+  if (errors.length > 0) stats.error = errors.join('; ')
+  return { stats, markets: reports }
+}
+
+export default async function scrapeFreehire(): Promise<ScraperStats> {
+  console.log('[freehire] Starting sync...')
+  const { stats } = await syncFreehire({ dryRun: process.env.FREEHIRE_DRY_RUN === '1' })
+  console.log(`[freehire] ✓ created=${stats.created} updated=${stats.updated} skipped=${stats.skipped}`)
+  return stats
 }

@@ -67,12 +67,34 @@ describe('mapFreehireJob', () => {
     expect(mapFreehireJob({ ...job, closed_at: '2026-11-05T00:00:00Z' })).toBeNull()
   })
 
-  it('skips salaries below $100k, non-USD and non-yearly', () => {
+  it('skips non-yearly salaries and jobs with no enrichment', () => {
     const enrichment = job.enrichment!
-    expect(mapFreehireJob({ ...job, enrichment: { ...enrichment, salary_min: 99999 } })).toBeNull()
-    expect(mapFreehireJob({ ...job, enrichment: { ...enrichment, salary_currency: 'EUR' } })).toBeNull()
     expect(mapFreehireJob({ ...job, enrichment: { ...enrichment, salary_period: 'hour' } })).toBeNull()
     expect(mapFreehireJob({ ...job, enrichment: null })).toBeNull()
+  })
+
+  it.each([
+    ['USD', 99_999, 100_000],
+    ['GBP', 74_999, 75_000],
+    ['EUR', 79_999, 80_000],
+    ['CAD', 119_999, 120_000],
+    ['AUD', 139_999, 140_000],
+  ])('applies the %s threshold from lib/currency/thresholds.ts', (currency, below, atThreshold) => {
+    const enrichment = job.enrichment!
+    const at = { ...enrichment, salary_currency: currency, salary_min: atThreshold, salary_max: atThreshold * 1.2 }
+    expect(mapFreehireJob({ ...job, enrichment: { ...at, salary_min: below } })).toBeNull()
+    expect(mapFreehireJob({ ...job, enrichment: at })).toMatchObject({
+      salaryCurrency: currency,
+      salaryMin: atThreshold,
+      salaryInterval: 'year',
+    })
+  })
+
+  it('skips currencies outside the five target markets', () => {
+    const enrichment = job.enrichment!
+    for (const currency of ['CHF', 'RUB', 'INR']) {
+      expect(mapFreehireJob({ ...job, enrichment: { ...enrichment, salary_currency: currency } })).toBeNull()
+    }
   })
 
   it('falls back to public_slug when external_id is missing', () => {
