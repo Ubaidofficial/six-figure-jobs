@@ -34,7 +34,6 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   const description = buildStructuredDescription(job, companyName)
   const baseSalary = buildBaseSalary(job)
   const validThrough = buildValidThrough(job)
-  const directApply = isValidPublicUrl((job as any).applyUrl)
 
   const physicalJobLocation = buildJobLocation(job)
   const isRemote = isRemoteJob(job)
@@ -46,7 +45,8 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   const jobLocation = jobLocationRaw
   const jobLocationType = isRemote || isHybrid ? 'TELECOMMUTE' : undefined
 
-  const employmentType = normalizeEmploymentType(job.type || job.employmentType) || 'FULL_TIME'
+  // Only emit a value we actually recognised — an unknown type is omitted, never guessed.
+  const employmentType = normalizeEmploymentType(job.type || job.employmentType)
 
   const jsonLd: any = {
     '@context': 'https://schema.org',
@@ -65,10 +65,10 @@ export function buildJobJsonLd(job: JobWithCompany): any {
       ...(logo ? { logo } : {}),
     },
 
-    employmentType,
+    ...(employmentType ? { employmentType } : {}),
 
     ...(validThrough ? { validThrough } : {}),
-    directApply,
+    // directApply is intentionally omitted: candidates apply on the employer's site, not here.
     ...(jobLocationType ? { jobLocationType } : {}),
     ...(jobLocation ? { jobLocation } : {}),
     ...(baseSalary ? { baseSalary } : {}),
@@ -397,7 +397,7 @@ function normalizeEmploymentType(value: unknown): string | undefined {
   if (normalized === 'volunteer') return 'VOLUNTEER'
   if (normalized === 'per diem') return 'PER_DIEM'
 
-  return raw
+  return undefined
 }
 
 function sanitizeDescriptionHtmlForJsonLd(input: string): string {
@@ -684,16 +684,6 @@ const US_STATE_NAMES = new Set([
   'wisconsin',
   'wyoming',
 ])
-
-function isValidPublicUrl(value: unknown): boolean {
-  if (typeof value !== 'string') return false
-  try {
-    const url = new URL(value)
-    return url.protocol === 'https:' || url.protocol === 'http:'
-  } catch {
-    return false
-  }
-}
 
 function toNumberSafe(v: any): number | null {
   if (v == null) return null

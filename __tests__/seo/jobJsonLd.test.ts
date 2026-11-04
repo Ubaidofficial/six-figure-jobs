@@ -440,4 +440,45 @@ describe('buildJobJsonLd', () => {
     expect(jsonLd.baseSalary.value.maxValue).toBe(75)
     expect(jsonLd.baseSalary.value.unitText).toBe('HOUR')
   })
+
+  it('never claims directApply — candidates apply on the employer site', () => {
+    const jsonLd = buildJobJsonLd({
+      id: 'ats:test:9',
+      title: 'Staff Engineer',
+      applyUrl: 'https://jobs.example.com/apply',
+    } as any)
+
+    expect(jsonLd).not.toHaveProperty('directApply')
+  })
+
+  it('omits employmentType when it is unknown instead of guessing FULL_TIME', () => {
+    const jsonLd = buildJobJsonLd({
+      id: 'ats:test:10',
+      title: 'Staff Engineer',
+      type: null,
+      employmentType: null,
+    } as any)
+
+    expect(jsonLd).not.toHaveProperty('employmentType')
+  })
+
+  it('omits employmentType when the value is not a recognised schema.org enum', () => {
+    const jsonLd = buildJobJsonLd({
+      id: 'ats:test:11',
+      title: 'Staff Engineer',
+      type: 'Regular',
+    } as any)
+
+    expect(jsonLd).not.toHaveProperty('employmentType')
+  })
+
+  it('maps recognised employment types to schema.org enums', () => {
+    const jsonLd = buildJobJsonLd({
+      id: 'ats:test:12',
+      title: 'Staff Engineer',
+      type: 'Contract',
+    } as any)
+
+    expect(jsonLd.employmentType).toBe('CONTRACTOR')
+  })
 })
