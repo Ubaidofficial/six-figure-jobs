@@ -1,6 +1,6 @@
 # Unreleased
 
-- Fixed two Google Jobs structured-data inaccuracies in `buildJobJsonLd` (`lib/seo/jobJsonLd.ts`). `directApply` was set to `true` for almost every job (any valid apply URL), but candidates apply on the employer's site, not on 6figjobs — the field is now omitted. `employmentType` previously defaulted to `FULL_TIME` when unknown and passed unrecognised raw strings through; it is now emitted only when it maps to a schema.org enum, and omitted otherwise. Added regression tests in `__tests__/seo/jobJsonLd.test.ts`.
+- Fixed two Google Jobs structured-data inaccuracies in `buildJobJsonLd` (`lib/seo/jobJsonLd.ts`). `directApply` was set to `true` for almost every job (any valid apply URL), but candidates apply on the employer's site, not on 6figjobs — the field is now omitted. `employmentType` previously defaulted to `FULL_TIME` when unknown and passed unrecognised raw strings through; it is now emitted only when it maps to a schema.org enum (spellings like `FullTime`, `Full-time` and `full_time` all map to `FULL_TIME`; the live site was emitting the invalid value `FullTime`), and omitted otherwise. Added regression tests in `__tests__/seo/jobJsonLd.test.ts`.
 
 - Decoupled `npx prisma migrate deploy` from `npm run build` in `package.json` so Next.js static asset compilation succeeds cleanly in CI test environments (e.g. `seo-gates.yml`). Database migrations remain explicit release steps.
 - Updated `scripts/checkChangelogUpdated.js` to prioritize `origin/main` as the default target branch for CI changelog validation.

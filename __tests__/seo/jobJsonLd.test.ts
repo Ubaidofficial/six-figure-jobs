@@ -472,6 +472,14 @@ describe('buildJobJsonLd', () => {
     expect(jsonLd).not.toHaveProperty('employmentType')
   })
 
+  it.each(['FullTime', 'Full-time', 'full_time', 'FULL_TIME'])(
+    'maps the %s spelling to FULL_TIME',
+    (type) => {
+      const jsonLd = buildJobJsonLd({ id: 'ats:test:13', title: 'Staff Engineer', type } as any)
+      expect(jsonLd.employmentType).toBe('FULL_TIME')
+    },
+  )
+
   it('maps recognised employment types to schema.org enums', () => {
     const jsonLd = buildJobJsonLd({
       id: 'ats:test:12',

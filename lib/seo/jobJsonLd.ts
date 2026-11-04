@@ -385,8 +385,10 @@ function normalizeEmploymentType(value: unknown): string | undefined {
     .trim()
 
   if (!normalized) return undefined
-  if (normalized === 'full time') return 'FULL_TIME'
-  if (normalized === 'part time') return 'PART_TIME'
+  // Collapse separators so "Full-time", "full_time" and "FullTime" all match.
+  const compact = normalized.replace(/ /g, '')
+  if (compact === 'fulltime') return 'FULL_TIME'
+  if (compact === 'parttime') return 'PART_TIME'
   if (normalized === 'contract' || normalized === 'contractor' || normalized === 'freelance') {
     return 'CONTRACTOR'
   }
@@ -395,7 +397,7 @@ function normalizeEmploymentType(value: unknown): string | undefined {
   }
   if (normalized === 'intern' || normalized === 'internship') return 'INTERN'
   if (normalized === 'volunteer') return 'VOLUNTEER'
-  if (normalized === 'per diem') return 'PER_DIEM'
+  if (compact === 'perdiem') return 'PER_DIEM'
 
   return undefined
 }
