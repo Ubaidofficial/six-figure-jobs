@@ -35,6 +35,17 @@ function appendLogoDevOptimization(url: string): string {
   }
 }
 
+/**
+ * The brand part of a company name, for a logo lookup. Recruiters and boards often append a description
+ * ("Paragon Alpha - Hedge Fund Talent Business", "Acme | Careers", "Globex (UK) Ltd"); searching the full string
+ * matches some other company, so only the part before the first separator is used.
+ */
+export function logoLookupName(name: string): string {
+  const full = name.trim()
+  const head = full.split(/\s[-\u2013\u2014|:]\s|\s\(/)[0].trim()
+  return head.length >= 2 ? head : full
+}
+
 /** Same-origin logo URL, safe to build on the server and in the browser (no key). */
 export function logoProxyUrl(kind: 'domain' | 'name', value: string): string {
   return `/logo/${kind}/${encodeURIComponent(value)}`
@@ -70,7 +81,7 @@ export function buildLogoUrl(
 
   if (storedOther) return storedOther
 
-  const cleanName = String(name ?? '').trim()
+  const cleanName = logoLookupName(String(name ?? ''))
   if (cleanName && cleanName.length <= MAX_NAME_LENGTH) return logoProxyUrl('name', cleanName)
 
   return null

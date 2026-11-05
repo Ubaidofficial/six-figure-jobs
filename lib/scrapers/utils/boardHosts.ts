@@ -1,4 +1,26 @@
 export const KNOWN_BOARD_HOSTS = new Set([
+  // General job boards and aggregators. freehire collects from many of these, so a freehire job's apply link
+  // usually points at one of them, never at the employer's own site.
+  'whatjobs.com',
+  'indeed.com',
+  'glassdoor.com',
+  'ziprecruiter.com',
+  'jooble.org',
+  'adzuna.com',
+  'talent.com',
+  'careerjet.com',
+  'jobrapido.com',
+  'monster.com',
+  'simplyhired.com',
+  'reed.co.uk',
+  'totaljobs.com',
+  'cv-library.co.uk',
+  'workopolis.com',
+  'jobbank.gc.ca',
+  'freehire.me',
+  'europa.eu',
+  'mycareersfuture.gov.sg',
+  'catho.com.br',
   '4dayweek.io',
   'builtin.com',
   'dice.com',
@@ -62,7 +84,11 @@ export function isKnownBoardHost(hostOrUrl: string | null | undefined): boolean 
 
   const normalized = host.includes('://') ? hostOf(host) : normalizeHost(host)
   if (!normalized) return false
-  return KNOWN_BOARD_HOSTS.has(normalized)
+  // The host itself or any subdomain of it (uk.whatjobs.com, ca.indeed.com), never a look-alike (indeedsoftware.dev).
+  for (const known of KNOWN_BOARD_HOSTS) {
+    if (normalized === known || normalized.endsWith(`.${known}`)) return true
+  }
+  return false
 }
 
 export function boardSourceToHost(source: string | null | undefined): string | null {

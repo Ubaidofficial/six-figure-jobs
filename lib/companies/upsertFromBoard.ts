@@ -165,9 +165,7 @@ export async function upsertCompanyFromBoard(
 ): Promise<any | null> {
   const dryRun = isScrapeDryRun()
   const websiteAts = input.websiteUrl ? detectAtsFromUrl(input.websiteUrl) : null
-  const inferredWebsite =
-    normalizePublicCompanyWebsite(input.websiteUrl) ??
-    (input.applyUrl ? inferWebsiteFromUrl(input.applyUrl) : null)
+  const inferredWebsite = resolveCompanyWebsite(input)
 
   const cleanedFromNormalizer = cleanCompanyName(input.rawName ?? null)
   const cleanedName = sanitizeBoardCompanyName(
@@ -230,9 +228,13 @@ export async function upsertCompanyFromBoard(
       updateData.atsUrl = atsUrl
     }
 
-    // Map websiteUrl → website (real Prisma field)
-    if (inferredWebsite && !existing.website) {
+    // Map websiteUrl → website (real Prisma field). Fill it when missing, and also replace a stored value that is not
+    // a company website (a job board's own address, an ATS host): that value shows the board's logo as the employer's.
+    const storedWebsiteIsValid = existing.website ? normalizePublicCompanyWebsite(existing.website) !== null : false
+    if (inferredWebsite && (!existing.website || !storedWebsiteIsValid)) {
       updateData.website = inferredWebsite
+    } else if (existing.website && !storedWebsiteIsValid && !inferredWebsite) {
+      updateData.website = null
     }
 
     if (input.linkedinUrl && !existing.linkedinUrl) {
@@ -284,6 +286,25 @@ export async function upsertCompanyFromBoard(
   } as any)
 
   return created
+}
+
+/** Sources whose apply links point at other job boards or ATS pages, never at the employer's own site. */
+const SOURCES_WITH_THIRD_PARTY_APPLY_URLS = ['freehire']
+
+/**
+ * The company's website: the one the source states if it is a real company site, otherwise (for sources whose
+ * apply links do go to the employer) the host of the apply link. Never a job board's address.
+ */
+export function resolveCompanyWebsite(input: {
+  websiteUrl?: string | null
+  applyUrl?: string | null
+  source?: string | null
+}): string | null {
+  const stated = normalizePublicCompanyWebsite(input.websiteUrl)
+  if (stated) return stated
+  const source = String(input.source ?? '').toLowerCase()
+  if (SOURCES_WITH_THIRD_PARTY_APPLY_URLS.some((s) => source.includes(s))) return null
+  return input.applyUrl ? inferWebsiteFromUrl(input.applyUrl) : null
 }
 
 function inferWebsiteFromUrl(applyUrl: string): string | null {

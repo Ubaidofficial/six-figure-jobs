@@ -29,3 +29,24 @@ describe('job boards are not company websites', () => {
     expect(buildLogoUrl(null, 'https://stripe.com', 'Stripe')).toBe('/logo/domain/stripe.com')
   })
 })
+
+describe('logoLookupName', () => {
+  const { logoLookupName } = require('../../lib/companies/logo')
+  it('keeps the brand and drops a descriptive suffix', () => {
+    expect(logoLookupName('Paragon Alpha - Hedge Fund Talent Business')).toBe('Paragon Alpha')
+    expect(logoLookupName('Acme | Careers')).toBe('Acme')
+    expect(logoLookupName('Globex (UK) Ltd')).toBe('Globex')
+    expect(logoLookupName('Foo \u2013 Bar')).toBe('Foo')
+  })
+
+  it('leaves ordinary names, hyphenated names and short results alone', () => {
+    expect(logoLookupName('Genomics England')).toBe('Genomics England')
+    expect(logoLookupName('Coca-Cola')).toBe('Coca-Cola')
+    expect(logoLookupName('Rolls-Royce Holdings')).toBe('Rolls-Royce Holdings')
+    expect(logoLookupName('X - Y Corp')).toBe('X - Y Corp')
+  })
+
+  it('is used for the name-based logo URL', () => {
+    expect(buildLogoUrl(null, null, 'Paragon Alpha - Hedge Fund Talent Business')).toBe('/logo/name/Paragon%20Alpha')
+  })
+})

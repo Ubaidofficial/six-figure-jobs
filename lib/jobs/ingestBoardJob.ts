@@ -37,6 +37,9 @@ export interface BoardJobInput {
   /** Optional website */
   companyWebsiteUrl?: string | null
 
+  /** The board's own handle for the company (freehire: its company slug), used to look the company up */
+  companyRef?: string | null
+
   /** Optional "best guess" location text ("Remote – US", "London, UK", etc.) */
   locationText?: string | null
 

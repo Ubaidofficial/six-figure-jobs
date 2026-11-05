@@ -1,4 +1,5 @@
 import { detectAtsFromUrl } from '../normalizers/ats'
+import { isKnownBoardHost } from '../scrapers/utils/boardHosts'
 
 const INVALID_COMPANY_WEBSITE_HOSTS = [
   'linkedin.com',
@@ -6,26 +7,6 @@ const INVALID_COMPANY_WEBSITE_HOSTS = [
   'x.com',
   'facebook.com',
   'instagram.com',
-  // Job boards and aggregators. Some jobs arrive with the board's own address as the "company website"; using it
-  // shows the BOARD's logo as the employer's (WhatJobs' red tile on London recruiter jobs) and links to the board.
-  'whatjobs.com',
-  'indeed.com',
-  'glassdoor.com',
-  'ziprecruiter.com',
-  'jooble.org',
-  'adzuna.com',
-  'talent.com',
-  'careerjet.com',
-  'jobrapido.com',
-  'monster.com',
-  'simplyhired.com',
-  'reed.co.uk',
-  'totaljobs.com',
-  'cv-library.co.uk',
-  'dice.com',
-  'workopolis.com',
-  'jobbank.gc.ca',
-  'freehire.me',
 ]
 
 function hostMatches(hostname: string, blockedHost: string): boolean {
@@ -63,6 +44,8 @@ export function normalizePublicCompanyWebsite(rawUrl?: string | null): string | 
   if (!['http:', 'https:'].includes(parsed.protocol)) return null
   const hostname = parsed.hostname.toLowerCase()
   if (INVALID_COMPANY_WEBSITE_HOSTS.some((host) => hostMatches(hostname, host))) return null
+  // A job board's own address is never the employer's website (it would show the board's logo and link).
+  if (isKnownBoardHost(hostname)) return null
   if (detectAtsFromUrl(parsed.toString())) return null
   if (isGenericAtsHost(hostname)) return null
 

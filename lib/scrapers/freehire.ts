@@ -6,6 +6,7 @@ import axios from 'axios'
 
 import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
 import { ingestBoardJob, type BoardJobInput } from '../jobs/ingestBoardJob'
+import { normalizePublicCompanyWebsite } from '../companies/website'
 import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 
@@ -33,6 +34,7 @@ export type FreehireJob = {
   url: string
   title: string
   company?: string | null
+  company_slug?: string | null
   location?: string | null
   description?: string | null
   work_mode?: string | null
@@ -137,6 +139,7 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     url,
     applyUrl: url,
     rawCompanyName: job.company ?? null,
+    companyRef: job.company_slug || null,
     locationText: job.location ?? null,
     isRemote: job.work_mode === 'remote',
     employmentType: e.employment_type ?? null,
@@ -287,9 +290,70 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
   return { inputs: [...inputs.values()], markets, errors, unmappable }
 }
 
+const COMPANY_URL = 'https://freehire.me/api/v1/companies'
+
+/**
+ * freehire's company records carry the employer's website for roughly a third of companies (the job records carry no
+ * company website at all). Returns slug -> website for the ones that have a real company site; a company that is not
+ * found, has none, or whose lookup fails is simply absent, so ingestion never depends on it. Paced (3 workers) and
+ * honours Retry-After on 429.
+ */
+export async function loadFreehireCompanyWebsites(
+  slugs: string[],
+  fetchFn: typeof fetch = fetch,
+  pauseMs = 150,
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>()
+  const queue = [...new Set(slugs.filter(Boolean))]
+  async function lookup(slug: string): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetchFn(`${COMPANY_URL}/${encodeURIComponent(slug)}`, {
+          headers: freehireHeaders(),
+          signal: AbortSignal.timeout(15_000),
+        })
+        if (res.status === 429) {
+          const retryAfter = res.headers.get('retry-after')
+          const wait = retryAfter !== null && Number.isFinite(Number(retryAfter)) ? Number(retryAfter) : 2
+          await sleep(Math.min(10_000, wait * 1000))
+          continue
+        }
+        if (!res.ok) return
+        const json = (await res.json()) as { data?: { company?: { company_info?: { website?: unknown } | null } } }
+        const raw = json?.data?.company?.company_info?.website
+        const site = typeof raw === 'string' ? normalizePublicCompanyWebsite(raw) : null
+        if (site) out.set(slug, site)
+        return
+      } catch {
+        return
+      }
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(3, queue.length) }, async () => {
+      while (queue.length > 0) {
+        const slug = queue.shift()!
+        await lookup(slug)
+        if (pauseMs > 0) await sleep(pauseMs)
+      }
+    }),
+  )
+  return out
+}
+
 /** Write already-collected jobs through the normal board ingest (dedupe, priority, salary gate). */
 export async function ingestFreehireJobs(inputs: BoardJobInput[]): Promise<ScraperStats> {
   const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
+  // Give each job its employer's website (when freehire has one) so its logo comes from a real domain, not a name guess.
+  try {
+    const sites = await loadFreehireCompanyWebsites(inputs.filter((i) => !i.companyWebsiteUrl).map((i) => i.companyRef ?? ''))
+    for (const input of inputs) {
+      const site = input.companyRef ? sites.get(input.companyRef) : undefined
+      if (site && !input.companyWebsiteUrl) input.companyWebsiteUrl = site
+    }
+  } catch (error) {
+    console.warn('[freehire] company website lookup skipped:', error instanceof Error ? error.message : error)
+  }
   for (const input of inputs) addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
   return stats
 }
