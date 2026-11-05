@@ -66,18 +66,6 @@ function humanizeLocationText(value: string): string {
   return trimmed
 }
 
-function formatApplyByDate(input: Date | string | number | null | undefined): string | null {
-  if (!input) return null
-  const date = input instanceof Date ? input : new Date(input)
-  if (!Number.isFinite(date.getTime())) return null
-  if (date.getTime() <= Date.now()) return null
-
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-  }).format(date)
-}
-
 function getWorkType(job: JobWithCompany): { label: string; Icon: React.ComponentType<any> } | null {
   const mode = (job.remoteMode ?? job.workArrangementNormalized ?? '').toString().toLowerCase()
   if (job.remote === true || mode === 'remote') return { label: 'Remote', Icon: Globe }
@@ -373,7 +361,6 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
   }
 
   const postedLabel = formatRelativeTime(job.postedAt ?? job.updatedAt ?? job.createdAt ?? null)
-  const applyByLabel = formatApplyByDate((job as any).expiresAt ?? (job as any).validThrough ?? null)
   const jobHref = buildJobSlugHref(job as any)
 
   // "NEW" badge: show for jobs posted within the last 3 days
@@ -391,19 +378,11 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
     <article
       className={cn(styles.card, isHomepage && styles.homepageCard, isGrid && styles.gridCard, className)}
       onClick={(e) => {
+        // Whole-card click is a mouse convenience; the title link is the keyboard/AT target.
         const el = e.target as HTMLElement | null
         if (el?.closest('a')) return
         navigateToJob()
       }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          navigateToJob()
-        }
-      }}
-      role="link"
-      tabIndex={0}
-      aria-label={`View job: ${job.title} at ${companyName}`}
     >
       {isNew ? (
         <div className={styles.newBadge} aria-label="New posting">
@@ -503,12 +482,6 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
             </span>
           ) : null}
 
-          {applyByLabel ? (
-            <span className={styles.metaPill}>
-              <Clock className={styles.metaIcon} aria-hidden="true" />
-              Apply by {applyByLabel}
-            </span>
-          ) : null}
         </div>
 
         {truncatedSnippet ? (

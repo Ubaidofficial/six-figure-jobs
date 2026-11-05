@@ -29,6 +29,16 @@
   box-shadow: 0 8px 28px rgba(16, 185, 129, 0.45), 0 2px 8px rgba(0,0,0,0.3);
 }
 
+.toggleAboveBar {
+  /* clear the sticky mobile Apply bar (~108px tall) */
+}
+
+@media (max-width: 767px) {
+  .toggle.toggleAboveBar {
+    bottom: 124px;
+  }
+}
+
 .toggleHidden {
   opacity: 0;
   pointer-events: none;

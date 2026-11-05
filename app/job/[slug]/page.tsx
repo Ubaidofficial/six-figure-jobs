@@ -352,12 +352,21 @@ export default async function JobPage({
 
   return (
     <main className={styles.page}>
-      <div className={styles.bgGlow} />
-
       <div className={styles.container}>
-        <NextLink href="/jobs" className={styles.backLink}>
-          <span aria-hidden="true">←</span> Back to jobs
-        </NextLink>
+        {/* Same three names as the BreadcrumbList JSON-LD, so markup matches what users see. */}
+        <nav aria-label="Breadcrumb" className={styles.breadcrumb}>
+          <ol>
+            <li>
+              <NextLink href="/">Home</NextLink>
+            </li>
+            <li>
+              <NextLink href="/jobs">Jobs</NextLink>
+            </li>
+            <li aria-current="page">
+              {typedJob.title} at {companyName}
+            </li>
+          </ol>
+        </nav>
 
         <header className={styles.header}>
           <div className={styles.headerMain}>
@@ -453,6 +462,7 @@ export default async function JobPage({
           <aside className={styles.sidebar}>
             {(() => {
               const highlights = [
+                { label: 'Work mode', value: isRemoteRole ? 'Remote' : workTypeLabel, Icon: MapPin },
                 { label: 'Seniority', value: seniority, Icon: Sparkles },
                 { label: 'Team size', value: teamSize, Icon: Users },
                 { label: 'Employment type', value: employmentType, Icon: Briefcase },
@@ -462,7 +472,7 @@ export default async function JobPage({
 
               return (
                 <section className={styles.card}>
-                  <div className={styles.cardTitle}>Job Highlights</div>
+                  <h2 className={styles.cardTitle}>Job Highlights</h2>
                   <div className={styles.highlightGrid}>
                     {highlights.map(({ label, value, Icon }) => (
                       <div key={label} className={styles.highlightRow}>
@@ -483,19 +493,19 @@ export default async function JobPage({
             })()}
 
             <section className={styles.card}>
-              <div className={styles.cardTitle}>Verification</div>
+              <h2 className={styles.cardTitle}>Salary &amp; company</h2>
               <div className={styles.checkList}>
                 <div className={styles.checkItem}>
                   <span className={styles.checkCircle} aria-hidden="true">
                     <Check />
                   </span>
-                  <span>{isSalaryVerified ? 'Salary verified from ATS' : 'Salary listed in the job posting'}</span>
+                  <span>{isSalaryVerified ? 'Salary taken from the employer’s posting' : 'Salary listed in the job posting'}</span>
                 </div>
                 <div className={styles.checkItem}>
                   <span className={styles.checkCircle} aria-hidden="true">
                     <Check />
                   </span>
-                  <span>{companyProfileVerified ? 'Company profile verified' : 'Company profile available'}</span>
+                  <span>{companyProfileVerified ? 'Company page available' : 'Company details limited'}</span>
                 </div>
                 <div className={styles.checkItem}>
                   <span className={styles.checkCircle} aria-hidden="true">
@@ -761,7 +771,7 @@ export default async function JobPage({
             {/* Internal Links */}
             {internalLinks.length > 0 ? (
               <section className={styles.card}>
-                <div className={styles.cardTitle}>Explore related pages</div>
+                <h2 className={styles.cardTitle}>Explore related pages</h2>
                 <div className={styles.checkList}>
                   {internalLinks.slice(0, 8).map((link) => (
                     <div key={link.href} className={styles.checkItem}>
@@ -783,7 +793,7 @@ export default async function JobPage({
           <section className={styles.similarGrid}>
             <div className={styles.similarHeader}>
               <div>
-                <div className={styles.similarTitle}>Similar Six Figure Opportunities</div>
+                <h2 className={styles.similarTitle}>Similar Six Figure Opportunities</h2>
                 <div className={styles.similarSub}>Based on role, country and salary band</div>
               </div>
               {canonicalRoleSlug ? (

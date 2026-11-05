@@ -25,7 +25,6 @@ import {
   type FeaturedCompany,
 } from '@/components/home/FeaturedCompaniesCarousel'
 import { LatestOpportunities } from '@/components/home/LatestOpportunities'
-import { BrowseByRole } from '@/components/home/BrowseByRole'
 import { BrowseBySalaryTier, type SalaryTier } from '@/components/home/BrowseBySalaryTier'
 import {
   ExplorePremiumRoles,
@@ -35,8 +34,6 @@ import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { getThresholdLabelForCountry } from '@/lib/seo/salaryLabels'
 import { getSiteUrl } from '@/lib/seo/site'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
-import { WhySixFigureJobs } from '@/components/home/WhySixFigureJobs'
-import { Testimonials } from '@/components/home/Testimonials'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
 import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
 import { getPriorityPublishedCompanyCandidates } from '@/lib/seo/companyPublishing'
@@ -46,7 +43,7 @@ export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dy
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const stats = await loadPublicSiteStats()
-    const description = `${stats.totalJobs.toLocaleString()}+ verified $100k+ jobs — salary shown upfront, apply direct. No recruiters, no entry-level noise. Six-figure remote and on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies, updated daily.`
+    const description = `${stats.totalJobs.toLocaleString()}+ verified $100k+ jobs — salary shown upfront, apply direct. No recruiters, no entry-level noise. Six-figure remote and on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
     const ogDescription =
       `${stats.totalJobs.toLocaleString()}+ verified six-figure jobs with salary shown upfront. ` +
       `Apply direct — no recruiters, no guesswork. $100k+ remote & on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
@@ -96,7 +93,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
       description:
-        'Find verified $100k+ jobs with published salary ranges. Premium roles from verified companies. Updated daily.',
+        'Find verified $100k+ jobs with published salary ranges. Premium roles from verified companies.',
       alternates: {
         canonical: getSiteUrl(),
       },
@@ -288,7 +285,6 @@ export default async function HomePage() {
       locationCounts,
       locationCityCounts,
       premiumRoleRows,
-      topRoles,
     ] = await Promise.all([
       queryJobs({
         isHundredKLocal: true,
@@ -411,25 +407,7 @@ export default async function HomePage() {
         GROUP BY "slug";
       `
       })()),
-      prisma.job.groupBy({
-        by: ['roleSlug'],
-        where: {
-          ...publicJobWhere,
-          roleSlug: { not: null },
-        },
-        _count: { _all: true },
-        orderBy: { _count: { roleSlug: 'desc' } },
-        take: 12,
-      }),
     ])
-
-  const roleCards = topRoles
-    .filter((r) => r.roleSlug)
-    .map((r) => ({
-      slug: r.roleSlug!,
-      name: roleSlugToName(r.roleSlug!),
-      count: r._count._all,
-    }))
 
     const featuredCompanyIds = featuredCompanyGroups
       .map((g) => g.companyId)
@@ -496,6 +474,7 @@ export default async function HomePage() {
   })
 
   const jobs = jobsData.jobs as JobWithCompany[]
+  const newestPostedAt = jobs[0]?.postedAt ?? jobs[0]?.createdAt ?? null
 
   // Honest activity ticker: the most recent indexable postings the homepage
   // already pulled. No "Someone applied from X" synthesis — just the actual
@@ -521,25 +500,21 @@ export default async function HomePage() {
       slug: '100k-plus',
       label: '$100k+',
       count: salaryBandCounts.find((b) => b.slug === '100k-plus')?.count ?? 0,
-      icon: '💰',
     },
     {
       slug: '200k-plus',
       label: '$200k+',
       count: salaryBandCounts.find((b) => b.slug === '200k-plus')?.count ?? 0,
-      icon: '💎',
     },
     {
       slug: '300k-plus',
       label: '$300k+',
       count: salaryBandCounts.find((b) => b.slug === '300k-plus')?.count ?? 0,
-      icon: '🏆',
     },
     {
       slug: '400k-plus',
       label: '$400k+',
       count: salaryBandCounts.find((b) => b.slug === '400k-plus')?.count ?? 0,
-      icon: '👑',
     },
   ]
 
@@ -558,7 +533,6 @@ export default async function HomePage() {
     return {
       slug: def.slug,
       name: def.name,
-      emoji: def.emoji,
       count: totalCount,
       avgUsdAnnual: avgUsd && Number.isFinite(avgUsd) ? avgUsd : null,
       trending,
@@ -603,15 +577,10 @@ export default async function HomePage() {
       <Hero
         jobCount={stats.totalJobs}
         companyCount={stats.totalCompanies}
-        countryCount={TARGET_COUNTRIES.length}
         newThisWeek={stats.newThisWeek}
-        companyLogos={featuredCompanies.slice(0, 8).map((c) => ({
-          slug: c.slug,
-          name: c.name,
-          logoUrl: c.logoUrl,
-        }))}
+        newestPostedAtISO={newestPostedAt ? newestPostedAt.toISOString() : null}
       >
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <div>
             <label
               htmlFor="role"
@@ -628,7 +597,7 @@ export default async function HomePage() {
               <option value="">All roles</option>
               {ROLE_OPTIONS.map((opt) => (
                 <option key={opt.slug} value={opt.slug}>
-                  {opt.emoji ? `${opt.emoji} ${opt.label}` : opt.label}
+                  {opt.label}
                 </option>
               ))}
             </select>
@@ -649,7 +618,7 @@ export default async function HomePage() {
               <option value="">All locations</option>
               {LOCATIONS.map((loc) => (
                 <option key={loc.code} value={loc.code}>
-                  {loc.flag} {loc.label}
+                  {loc.label}
                 </option>
               ))}
             </select>
@@ -714,26 +683,9 @@ export default async function HomePage() {
             </select>
           </div>
         </div>
-
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
-            type="submit"
-            className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-emerald-700/60 bg-emerald-600/20 px-6 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-600/30 sm:w-auto"
-          >
-            Apply filters →
-          </button>
-          <Link
-            href="/jobs"
-            className="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-6 py-3 text-sm font-semibold text-slate-300 transition hover:bg-white/5 sm:w-auto"
-          >
-            Browse all $100k+ jobs
-          </Link>
-        </div>
-
-        <div className="mt-2 text-xs text-slate-400">
-          Filter by role, location, and work type — all listings show verified salary ranges.
-        </div>
       </Hero>
+
+      <LatestOpportunities jobs={jobs} totalJobs={stats.totalJobs} />
 
       <FeaturedCompaniesCarousel companies={featuredCompanies} />
 
@@ -743,9 +695,8 @@ export default async function HomePage() {
             Priority company pages
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
-            These company hubs are refreshed from live ATS feeds and kept stable for
-            repeat crawling. Start with the employers that consistently show transparent
-            high-salary demand.
+            Each company hub lists that employer&apos;s current $100k+ openings. Start with
+            the employers that consistently show transparent high-salary demand.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {priorityFeaturedCompanies.map((company) => (
@@ -772,7 +723,6 @@ export default async function HomePage() {
                 href={role.href}
                 className="group inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-emerald-700/60 hover:bg-slate-900"
               >
-                {role.emoji ? <span aria-hidden="true">{role.emoji}</span> : null}
                 <span className="text-slate-200 group-hover:text-white">
                   {role.name}
                 </span>
@@ -782,18 +732,16 @@ export default async function HomePage() {
             href="/companies"
             className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-300 transition-colors hover:border-slate-500"
           >
-            🏢 Explore companies →
+            Explore companies →
           </Link>
           <Link
             href="/remote"
             className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500"
           >
-            🌍 Remote $100k+ roles
+            Remote $100k+ roles
           </Link>
         </div>
       </section>
-
-      <LatestOpportunities jobs={jobs} totalJobs={stats.totalJobs} />
 
       <TopLocations locations={topLocations} />
 
@@ -802,12 +750,6 @@ export default async function HomePage() {
       </section>
 
       <ExplorePremiumRoles roles={premiumRoles} />
-
-      <WhySixFigureJobs />
-
-      <Testimonials />
-
-      <BrowseByRole roles={roleCards} />
 
       <HomeFAQ />
 

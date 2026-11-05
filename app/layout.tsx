@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: '%s',
   },
   description:
-    'Find verified $100k+ jobs with clear salary ranges and trusted employers. Premium roles across engineering, product, data, and design. Updated daily.',
+    'Find verified $100k+ jobs with clear salary ranges and trusted employers. Premium roles across engineering, product, data, and design.',
   robots: process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')
     ? { index: false, follow: false }
     : undefined,

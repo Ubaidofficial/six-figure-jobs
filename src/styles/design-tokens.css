@@ -23,7 +23,7 @@
   /* Text hierarchy */
   --color-text-0: #ffffff; /* primary text */
   --color-text-1: #a3a3a3; /* secondary text */
-  --color-text-2: #737373; /* tertiary text */
+  --color-text-2: #8f8f8f; /* tertiary text — >=4.5:1 on bg-0..bg-2 (was #737373, ~4:1) */
   --color-text-3: #525252; /* muted/disabled */
 
   /* Semantic colors */
