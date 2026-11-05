@@ -24,23 +24,49 @@
   padding: var(--space-32) var(--space-16) var(--space-64);
 }
 
-.backLink {
-  display: inline-flex;
+.breadcrumb ol {
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   font-size: var(--text-sm);
   color: var(--color-text-1);
-  text-decoration: none;
-  border-radius: var(--radius-lg);
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(20, 20, 20, 0.5);
 }
 
-.backLink:hover {
-  border-color: rgba(132, 204, 22, 0.35);
-  box-shadow: var(--shadow-sm-glow);
+.breadcrumb li {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+.breadcrumb li + li::before {
+  content: "›";
+  margin: 0 8px;
+  color: var(--color-text-2);
+}
+
+.breadcrumb a {
+  color: var(--color-text-1);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
   color: var(--color-text-0);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.breadcrumb li[aria-current="page"] {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--color-text-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header {

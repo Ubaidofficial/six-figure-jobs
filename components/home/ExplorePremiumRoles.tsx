@@ -6,7 +6,6 @@ import styles from './ExplorePremiumRoles.module.css'
 export type PremiumRoleCard = {
   slug: string
   name: string
-  emoji: string
   count: number
   avgUsdAnnual: number | null
   trending: boolean
@@ -31,15 +30,11 @@ export function ExplorePremiumRoles({ roles }: { roles: PremiumRoleCard[] }) {
       <div className={styles.grid}>
         {roles.map((role) => (
           <Link key={role.slug} href={`/jobs/${role.slug}`} className={styles.card}>
-            <div className={styles.topRow}>
-              <span className={styles.emoji} aria-hidden="true">
-                {role.emoji}
-              </span>
-              {role.trending ? <span className={styles.trending}>Trending</span> : null}
-            </div>
-
             <div className={styles.content}>
-              <div className={styles.roleName}>{role.name}</div>
+              <div className={styles.roleName}>
+                {role.name}
+                {role.trending ? <span className={styles.trending}>Trending</span> : null}
+              </div>
               <div className={styles.count}>{role.count.toLocaleString()} jobs</div>
               <div className={styles.avg}>{formatUsdAvg(role.avgUsdAnnual)}</div>
             </div>

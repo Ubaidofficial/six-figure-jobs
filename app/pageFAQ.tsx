@@ -13,7 +13,7 @@ export function HomeFAQ() {
     },
     {
       q: 'How fresh is the job data?',
-      a: 'We refresh twice daily, expire stale roles, and prioritize the newest high-paying openings.',
+      a: 'Every listing shows when it was posted, and the newest high-paying openings are listed first.',
     },
     {
       q: 'Can I find six-figure jobs without a degree?',

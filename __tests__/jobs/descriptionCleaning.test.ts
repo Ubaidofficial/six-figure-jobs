@@ -48,3 +48,18 @@ describe('descriptionCleaning', () => {
     expect(result.descriptionText).toBe('Build systems.')
   })
 })
+
+describe('stripBreaksInsideLists', () => {
+  const { stripBreaksInsideLists } = require('../../lib/jobs/descriptionCleaning')
+
+  it('removes <br> placed directly inside a list', () => {
+    expect(stripBreaksInsideLists('<ul><br><li>One</li><br><li>Two</li><br></ul>')).toBe(
+      '<ul><li>One</li><li>Two</li></ul>',
+    )
+  })
+
+  it('keeps <br> inside list items and paragraphs', () => {
+    const html = '<p>Line<br>break</p><ul><li>One<br>two</li></ul>'
+    expect(stripBreaksInsideLists(html)).toBe(html)
+  })
+})

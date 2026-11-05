@@ -84,7 +84,7 @@ export function FeaturedCompaniesCarousel({ companies }: { companies: FeaturedCo
     <section className={styles.section} aria-label="Featured companies">
       <div className={styles.header}>
         <h2 className={styles.title}>Top Companies Hiring Now</h2>
-        <p className={styles.subtitle}>$100k+ roles at leading tech companies, updated daily</p>
+        <p className={styles.subtitle}>$100k+ roles at the companies hiring most</p>
       </div>
 
       <div className={styles.card}>

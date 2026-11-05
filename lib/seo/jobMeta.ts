@@ -19,9 +19,7 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
       ? buildLocation(job) || 'Remote'
       : buildLocation(job) || 'Location not specified'
 
-  const title = salary
-    ? `${job.title} at ${companyName} — ${salary} | ${SITE_NAME}`
-    : `${job.title} at ${companyName} | ${SITE_NAME}`
+  const title = fitTitle(job.title, companyName, salary)
 
   const bits: string[] = []
   bits.push(`Apply for ${job.title} at ${companyName}.`)
@@ -54,7 +52,7 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
     if (snippet) bits.push(snippet)
   }
 
-  const description = bits.join(' ')
+  const description = capDescription(bits.join(' '))
 
   const path = buildJobSlugHref(job)
   const url = `${SITE_URL}${path}`
@@ -82,6 +80,33 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
+
+// Search results cut titles at roughly 60 characters and descriptions at roughly 160. These are
+// conventions, not hard limits — they keep the salary (the click reason) inside the visible part.
+const MAX_TITLE_LENGTH = 65
+const MAX_DESCRIPTION_LENGTH = 160
+
+/** Longest of: full title, without brand suffix, without company, then a hard cut — first that fits. */
+export function fitTitle(role: string, company: string, salary: string | null): string {
+  const candidates = salary
+    ? [
+        `${role} at ${company} — ${salary} | ${SITE_NAME}`,
+        `${role} at ${company} — ${salary}`,
+        `${role} — ${salary}`,
+      ]
+    : [`${role} at ${company} | ${SITE_NAME}`, `${role} at ${company}`, role]
+  const fits = candidates.find((c) => c.length <= MAX_TITLE_LENGTH)
+  if (fits) return fits
+  const last = candidates[candidates.length - 1]
+  return `${last.slice(0, MAX_TITLE_LENGTH - 1).trimEnd()}…`
+}
+
+export function capDescription(text: string): string {
+  if (text.length <= MAX_DESCRIPTION_LENGTH) return text
+  const cut = text.slice(0, MAX_DESCRIPTION_LENGTH - 1)
+  const lastSpace = cut.lastIndexOf(' ')
+  return `${(lastSpace > 100 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`
+}
 
 function getCurrencySymbol(code?: string | null): string {
   if (!code) return '$'

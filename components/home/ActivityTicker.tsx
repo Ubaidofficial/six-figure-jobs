@@ -73,6 +73,8 @@ export function ActivityTicker({ events, rotateMs = 4500 }: Props) {
 
   const event = validEvents[index] ?? validEvents[0]
   const relative = formatRelative(event.postedAtISO, now)
+  // Only claim "LIVE" while the newest posting really is recent; otherwise say what it is.
+  const isLive = now - new Date(event.postedAtISO).getTime() < 48 * 60 * 60 * 1000
 
   return (
     <div
@@ -83,8 +85,8 @@ export function ActivityTicker({ events, rotateMs = 4500 }: Props) {
     >
       <div className={styles.tickerInner}>
         <span className={styles.livePill} aria-hidden="true">
-          <span className={styles.liveDot} />
-          LIVE
+          {isLive ? <span className={styles.liveDot} /> : null}
+          {isLive ? 'LIVE' : 'LATEST'}
         </span>
         <Link href={event.href} className={styles.tickerEvent}>
           <span className={styles.eventCompany}>{event.company}</span>

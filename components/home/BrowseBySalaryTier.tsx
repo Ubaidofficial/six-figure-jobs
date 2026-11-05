@@ -7,7 +7,6 @@ export type SalaryTier = {
   slug: '100k-plus' | '200k-plus' | '300k-plus' | '400k-plus'
   label: string
   count: number
-  icon: string
 }
 
 const ROUTES: Record<SalaryTier['slug'], string> = {
@@ -34,10 +33,6 @@ export function BrowseBySalaryTier({ tiers }: { tiers: SalaryTier[] }) {
             href={ROUTES[tier.slug]}
             className={`${styles.card} ${styles[`tier_${tier.slug}`]}`}
           >
-            <div className={styles.icon} aria-hidden="true">
-              {tier.icon}
-            </div>
-
             <div className={styles.content}>
               <div className={styles.tierLabel}>{tier.label} Jobs</div>
               <div className={styles.count}>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { MessageSquare, X, Send, Paperclip, CheckCircle, AlertCircle } from 'lucide-react'
 import styles from './FeedbackWidget.module.css'
 
@@ -16,6 +17,8 @@ const ISSUE_TYPES = [
 ]
 
 export function FeedbackWidget() {
+  // Job pages show a sticky Apply bar on mobile; lift the button above it instead of covering it.
+  const aboveApplyBar = usePathname()?.startsWith('/job/') ?? false
   const [open, setOpen] = useState(false)
   const [type, setType] = useState('bug')
   const [message, setMessage] = useState('')
@@ -74,7 +77,7 @@ export function FeedbackWidget() {
       {/* Floating toggle button */}
       <button
         type="button"
-        className={`${styles.toggle} ${open ? styles.toggleHidden : ''}`}
+        className={`${styles.toggle} ${open ? styles.toggleHidden : ''} ${aboveApplyBar ? styles.toggleAboveBar : ''}`}
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
       >

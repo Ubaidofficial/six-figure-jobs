@@ -91,7 +91,14 @@ export function cleanJobDescriptionHtml(input: string): string {
     return ''
   }
 
+  return stripBreaksInsideLists(html)
+}
+
+/** `<br>` is not allowed as a direct child of `<ul>`/`<ol>`; ATS exports leave them between items. */
+export function stripBreaksInsideLists(html: string): string {
   return html
+    .replace(/(<(?:ul|ol)\b[^>]*>)(?:\s*<br\s*\/?>)+/gi, '$1')
+    .replace(/(<\/li>)(?:\s*<br\s*\/?>)+(?=\s*(?:<li\b|<\/(?:ul|ol)>))/gi, '$1')
 }
 
 export function findJobDescriptionNoiseMatches(input: string): JobDescriptionNoiseId[] {
