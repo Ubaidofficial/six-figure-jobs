@@ -9,6 +9,7 @@ import {
   type JobQueryInput,
   type JobWithCompany,
 } from '../../lib/jobs/queryJobs'
+import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { prisma } from '../../lib/prisma'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
 import { resolveSliceCanonicalPath } from '../../lib/seo/canonical'
@@ -363,7 +364,7 @@ export default async function JobsIndexPage({
   }
 
     const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] =
-      await Promise.all([
+      await memoAsync(stableKey('jobs-hub-facets', { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
         prisma.job.groupBy({
           by: ['roleSlug'],
           where: {
@@ -393,7 +394,7 @@ export default async function JobsIndexPage({
         prisma.job.count({
           where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
         }),
-      ])
+      ]))
 
   const vocabulary = await getSearchVocabulary().catch(() => null)
 

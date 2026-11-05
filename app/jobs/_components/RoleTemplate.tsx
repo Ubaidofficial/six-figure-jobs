@@ -14,6 +14,7 @@ import {
 import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'
+import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
@@ -325,7 +326,7 @@ export async function RoleTemplate({
     pageSize: 1,
   }
 
-  const [countryRows, remoteCount, hybridCount, onsiteCount] = await Promise.all([
+  const [countryRows, remoteCount, hybridCount, onsiteCount] = await memoAsync(stableKey('role-facets', roleSlug, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
     (prisma.job.groupBy as any)({
       by: ['countryCode'],
       where: {
@@ -345,7 +346,7 @@ export async function RoleTemplate({
     prisma.job.count({
       where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
     }),
-  ])
+  ]))
 
   const facets: JobsFacets = {
     roles: [],
@@ -361,7 +362,7 @@ export async function RoleTemplate({
   // Insights are computed for the role overall (USD-only where needed), independent of sidebar filters.
   const insightsWhere = buildWhere({ roleSlugs: [roleSlug], page: 1, pageSize: 1 })
 
-  const [avgAggUsd, topCityRows] = await Promise.all([
+  const [avgAggUsd, topCityRows] = await memoAsync(stableKey('role-insights', roleSlug), DEFAULT_TTL_MS, () => Promise.all([
     prisma.job.aggregate({
       where: {
         ...insightsWhere,
@@ -383,7 +384,7 @@ export async function RoleTemplate({
       orderBy: [{ _avg: { maxAnnual: 'desc' } }, { _avg: { minAnnual: 'desc' } }],
       take: 6,
     }),
-  ])
+  ]))
 
   const avgMaxUsd = asNumber((avgAggUsd as any)?._avg?.maxAnnual)
   const avgMinUsd = asNumber((avgAggUsd as any)?._avg?.minAnnual)

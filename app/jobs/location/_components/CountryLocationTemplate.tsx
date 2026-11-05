@@ -23,6 +23,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from '../../_components/JobsFilters'
 import { JobsToolbar } from '../../_components/JobsToolbar'
+import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 
 const PAGE_SIZE = 24
 const SITE_URL = getSiteUrl()
@@ -307,7 +308,7 @@ export async function CountryLocationTemplate({
     pageSize: 1,
   })
 
-  const [companyGroups, avgAgg, topCityGroups, topCompanyGroups] = await Promise.all([
+  const [companyGroups, avgAgg, topCityGroups, topCompanyGroups] = await memoAsync(stableKey('country-stats', countryCode, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
     prisma.job.groupBy({
       by: ['companyId'],
       where: { ...statsWhere, companyId: { not: null } },
@@ -335,7 +336,7 @@ export async function CountryLocationTemplate({
       orderBy: { _count: { companyId: 'desc' } } as any,
       take: 12,
     }),
-  ])
+  ]))
 
   const companyCount = companyGroups.length
 
@@ -385,7 +386,7 @@ export async function CountryLocationTemplate({
     pageSize: 1,
   }
 
-  const [roleRows, remoteCount, hybridCount, onsiteCount] = await Promise.all([
+  const [roleRows, remoteCount, hybridCount, onsiteCount] = await memoAsync(stableKey('country-facets', countryCode, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
     (prisma.job.groupBy as any)({
       by: ['roleSlug'],
       where: {
@@ -405,7 +406,7 @@ export async function CountryLocationTemplate({
     prisma.job.count({
       where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
     }),
-  ])
+  ]))
 
   const facets: JobsFacets = {
     roles: roleRows

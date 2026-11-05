@@ -24,6 +24,7 @@ import {
 } from '@/components/listing/ListingParts'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { formatRelativeTime } from '@/lib/utils/time'
+import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 
 
 const REMOTE_REGION_CHIPS: Array<{ label: string; region: string | null }> = [
@@ -294,7 +295,7 @@ const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null): Pr
   })
 
   const [remoteJobCount, companyGroups, countryGroups, avg, roleRows, newThisWeek, recentData] =
-    await Promise.all([
+    await memoAsync(stableKey('remote-snapshot', activeRemoteRegion), DEFAULT_TTL_MS, () => Promise.all([
       prisma.job.count({ where }),
       prisma.job.groupBy({
         by: ['companyId'],
@@ -323,7 +324,7 @@ const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null): Pr
         page: 1,
         pageSize: 12,
       }),
-    ])
+    ]))
 
   const topCompanyGroups = companyGroups
     .filter((group) => Boolean(group.companyId))

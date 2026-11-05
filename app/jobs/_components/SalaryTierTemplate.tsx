@@ -11,6 +11,7 @@ import {
 } from '@/components/listing/ListingParts'
 
 import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
+import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
@@ -219,7 +220,7 @@ export async function SalaryTierTemplate({
     pageSize: 1,
   }
 
-  const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] = await Promise.all([
+  const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] = await memoAsync(stableKey('tier-facets', tierId, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
     (prisma.job.groupBy as any)({
       by: ['roleSlug'],
       where: {
@@ -249,7 +250,7 @@ export async function SalaryTierTemplate({
     prisma.job.count({
       where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
     }),
-  ])
+  ]))
 
   const facets: JobsFacets = {
     roles: roleRows
@@ -271,13 +272,15 @@ export async function SalaryTierTemplate({
     },
   }
 
-  const avgAgg = await prisma.job.aggregate({
+  const avgAgg = await memoAsync(stableKey('tier-avg', tierId, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () =>
+    prisma.job.aggregate({
     where: {
       ...buildWhere(baseFacetInput),
       OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
     },
     _avg: { maxAnnual: true, minAnnual: true },
-  })
+  }),
+  )
 
   const avgMax = asNumber((avgAgg as any)?._avg?.maxAnnual)
   const avgMin = asNumber((avgAgg as any)?._avg?.minAnnual)
