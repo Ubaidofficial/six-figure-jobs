@@ -5,6 +5,10 @@
 // went 7 days without an update. This pass re-collects everything freehire still lists for the last WINDOW_DAYS and
 // expires our active freehire jobs, posted within JUDGE_DAYS, that are missing from that set.
 //
+// WARNING: NOT RELIABLE, run report-only. A production dry run (2026-11-05) flagged 442 jobs and 4 of 6 spot-checked
+// ones were still open at freehire: offset paging over near-identical posted_at values skips rows, which `complete`
+// cannot detect. Do not apply it unless confirmed per job (see CHANGELOG).
+//
 // It deliberately refuses to act when the picture could be incomplete: a market that failed or hit the paging cap
 // (`complete` is false), or a result that would expire an implausible share of what it judged.
 
