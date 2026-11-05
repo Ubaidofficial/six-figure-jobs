@@ -149,7 +149,7 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
   const reportedClosed: ActiveJob[] = []
   await pool(toCheck, concurrency, paceMs, async (j) => {
     const r = await lookup(slugOf.get(j.id) as string)
-    if (r.state === 'closed') reportedClosed.push(j)
+    if (r.state === 'closed') reportedClosed.push({ ...j, sourceRef: slugOf.get(j.id) ?? null })
     else if (r.state === 'open') counts.open++
     else if (r.state === 'gone') counts.gone++
     else counts.errors++
