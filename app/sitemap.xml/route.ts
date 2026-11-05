@@ -2,12 +2,14 @@
 
 import { BLOG_POSTS } from '../../lib/blog/posts'
 import { getSiteUrl } from '../../lib/seo/site'
+import { getLatestBlogUpdate, getLatestJobUpdate } from '../../lib/seo/evergreenSitemap'
 import { shouldAdvertiseSitemapFamily } from '../../lib/seo/sitemapPolicy'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
 
-export const revalidate = 43200 // 12h
+// Request-time: `lastmod` is read from the database (newest job update), which a deploy-time build cannot reach.
+export const dynamic = 'force-dynamic'
 
 function escapeXml(value: string) {
   return value
@@ -37,7 +39,14 @@ function buildAdvertisedSitemaps(): string[] {
 }
 
 export async function GET() {
-  const lastmod = new Date().toISOString()
+  // `lastmod` must be the time the child's content last changed, not the time of this request: Google stops
+  // trusting lastmod on sites where every entry always says "now". When the date is unknown it is omitted.
+  const latestJob = await getLatestJobUpdate()
+  const latestBlog = getLatestBlogUpdate()
+  const lastmodFor = (path: string): string | null => {
+    const d = path === 'sitemap-blog.xml' ? latestBlog : latestJob
+    return d ? d.toISOString() : null
+  }
   const sitemaps = buildAdvertisedSitemaps()
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -45,9 +54,9 @@ export async function GET() {
 ${sitemaps
   .map((path) => {
     const loc = escapeXml(`${SITE_URL}/${path}`)
+    const lastmod = lastmodFor(path)
     return `  <sitemap>
-    <loc>${loc}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
   </sitemap>`
   })
   .join('\n')}
@@ -57,6 +66,7 @@ ${sitemaps
   return new Response(xml, {
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
       ...buildSitemapMetaHeaders('sitemap'),
     },
   })

@@ -26,8 +26,10 @@ describe('robots route sitemap declarations', () => {
     expect(response.status).toBe(200)
     expect(body).toMatch(/Sitemap: .*\/sitemap\.xml/)
     expect(body).toMatch(/Sitemap: .*\/sitemap-jobs\.xml/)
-    expect(body).toMatch(/Sitemap: .*\/sitemap-company\.xml/)
-    expect(body).toMatch(/Sitemap: .*\/sitemap-salary\.xml/)
+    // Child sitemaps are discovered through the index; only sitemap.xml and sitemap-jobs.xml are declared.
+    expect(body).not.toContain('sitemap-company.xml')
+    expect(body).not.toContain('sitemap-salary.xml')
+    expect((body.match(/^Sitemap:/gm) || []).length).toBe(2)
     expect(body).not.toContain('sitemap-blog.xml')
     expect(body).not.toContain('fallback_used=1')
   })
