@@ -28,6 +28,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
@@ -559,7 +560,7 @@ export async function RoleTemplate({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <ListingHeader
-        aside={<ListingSalaryAside input={queryInput} />}
+        aside={<ListingSalaryAside input={queryInput} scope={`${roleTitle} roles`} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: roleTitle }]}
         accent={roleTitle}
         title="Jobs — $100k+"
@@ -634,6 +635,8 @@ export async function RoleTemplate({
           />
         </ListingSection>
       ) : null}
+
+      <SalaryByLevel input={{ roleSlugs: [roleSlug] }} label={roleTitle} />
 
       <ListingSection title="Other levels">
         <LinkChips

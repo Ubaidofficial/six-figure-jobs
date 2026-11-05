@@ -40,3 +40,53 @@ export function resolveIndexableRoleSlug(raw?: string | null): string | null {
 
   return null
 }
+
+const SENIORITY_WORDS = new Set(['senior', 'sr', 'staff', 'principal', 'lead', 'junior', 'jr', 'mid', 'i', 'ii', 'iii', 'iv'])
+const NOISE_WORDS = new Set(['and', 'of', 'the', 'for'])
+
+function titleWords(title: string): string[] {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+}
+
+/** The job title without its team/qualifier tail ("Engineering Manager, Maps" -> "Engineering Manager"). */
+function titleHead(title: string): string {
+  return title.split(/[,(|–—]|\s-\s/)[0].trim()
+}
+
+/** The role's own words, without seniority, that must all show up in the title for a title-based match to be believed. */
+function roleWords(slug: string): string[] {
+  return slug.split('-').filter((w) => w && !SENIORITY_WORDS.has(w))
+}
+
+/**
+ * The indexable role a job belongs to. Uses the stored role slug; when that is `other` (the ingest only keeps slugs
+ * that are canonical as written, so "Senior Staff Software Engineer, Ads Content Safety" is stored as `other`) it
+ * reads the role from the title instead. The title match is fuzzy, so it is only trusted when every word of the role
+ * appears in the title, next to each other: "UX Writer" never becomes "ux-researcher", "Product Marketing Manager" never "product-manager".
+ */
+export function resolveJobRoleSlug(job: { roleSlug?: string | null; title?: string | null }): string | null {
+  const stored = resolveIndexableRoleSlug(job.roleSlug)
+  if (stored) return stored
+
+  const title = String(job.title || '')
+  const head = titleHead(title)
+  if (!head) return null
+  const words = titleWords(head)
+  const fromTitle = resolveIndexableRoleSlug(words.join('-'))
+  if (!fromTitle) return null
+
+  const wanted = roleWords(fromTitle)
+  const same = (a: string, b: string) => a === b || a.startsWith(b) || b.startsWith(a)
+  const contiguous = words.some((_, i) => wanted.length > 0 && wanted.every((w, k) => i + k < words.length && same(words[i + k], w)))
+  return contiguous ? fromTitle : null
+}
+
+/** Search words for "similar jobs" when no role could be resolved: the title head without seniority. */
+export function similarJobsKeyword(title: string | null | undefined): string | null {
+  const words = titleWords(titleHead(String(title || ''))).filter((w) => !SENIORITY_WORDS.has(w) && !NOISE_WORDS.has(w))
+  return words.length >= 2 ? words.join(' ') : null
+}

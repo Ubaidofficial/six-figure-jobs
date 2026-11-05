@@ -13,6 +13,7 @@ checkClosedFreehireJobs({ dryRun, deadlineMs: 15 * 60 * 1000, onProgress: (m) =>
     console.log(`freehire closed-job check ${dryRun ? '(DRY RUN — no job is expired)' : ''}`)
     console.log(`active: ${r.active}  slugs found for older jobs: ${r.resolved}  without a slug: ${r.unresolved}`)
     console.log(`checked: ${r.checked}  open: ${r.open}  closed (confirmed): ${r.closed.length}  reported closed but still listed (kept): ${r.conflicts.length}  not found (404, ignored): ${r.gone}  lookup errors: ${r.errors}`)
+    console.log(`kept alive (confirmed open, updatedAt refreshed): ${r.refreshed}  full descriptions replacing truncated ones: ${r.descriptionsUpgraded}`)
     console.log(`expired: ${r.expired}`)
     for (const j of r.conflicts.slice(0, 10)) console.log(`   kept (still listed): ${j.title}  [${j.externalId}]  https://freehire.me/api/v1/jobs/${j.sourceRef}`)
     for (const j of r.closed.slice(0, 15)) console.log(`   closed: ${j.title}  [${j.externalId}]  https://freehire.me/api/v1/jobs/${j.sourceRef}`)

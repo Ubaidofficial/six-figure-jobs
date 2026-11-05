@@ -360,7 +360,7 @@ export async function SalaryTierTemplate({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
       <ListingHeader
-        aside={<ListingSalaryAside input={queryInput} />}
+        aside={<ListingSalaryAside input={queryInput} scope={`${tier.rangeLabel} roles`} compare={false} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: tier.rangeLabel }]}
         accent={tier.rangeLabel}
         title="Jobs"

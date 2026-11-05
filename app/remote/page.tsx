@@ -487,6 +487,7 @@ export default async function RemoteJobsPage({
           aside={
             <ListingSalaryAside
               input={{ remoteOnly: true, remoteRegion: activeRemoteRegion || undefined, excludeInternships: true }}
+              scope={regionPill ? `remote roles in ${regionPill.replace(' Jobs', '')}` : 'remote roles'}
             />
           }
           breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Remote Jobs' }]}

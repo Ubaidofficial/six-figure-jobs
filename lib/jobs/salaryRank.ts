@@ -27,11 +27,11 @@ export function rankSalary(value: number, peers: number[]): SalaryRank | null {
   return { percent: Math.round(((below + equal / 2) / clean.length) * 100), peers: clean.length, median }
 }
 
-/** Midpoints of the live listings for a role in one currency, cached 10 minutes per role and currency. */
-export function loadPeerSalaries(roleSlug: string, currency: string): Promise<number[]> {
-  return memoAsync(`peer-salaries:${roleSlug}:${currency}`, 10 * 60 * 1000, async () => {
+/** Midpoints of the live listings for a role (or every listing when `roleSlug` is null) in one currency, cached 10 minutes. */
+export function loadPeerSalaries(roleSlug: string | null, currency: string): Promise<number[]> {
+  return memoAsync(`peer-salaries:${roleSlug ?? '*'}:${currency}`, 10 * 60 * 1000, async () => {
     const rows = await prisma.job.findMany({
-      where: { AND: [buildWhere({ roleSlugs: [roleSlug], page: 1, pageSize: 1 }), { currency }] },
+      where: { AND: [buildWhere({ roleSlugs: roleSlug ? [roleSlug] : undefined, page: 1, pageSize: 1 }), { currency }] },
       select: { minAnnual: true, maxAnnual: true },
       take: 3000,
     })

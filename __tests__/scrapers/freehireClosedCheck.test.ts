@@ -4,6 +4,7 @@ import {
   checkClosedFreehireJobs,
   lookupFreehireJob,
   resolveFreehireSlug,
+  upgradedDescription,
   type ActiveJob,
   type Lookup,
 } from '../../lib/scrapers/freehireClosedCheck'
@@ -22,9 +23,12 @@ const job = (n: number, sourceRef: string | null = `slug-${n}`): ActiveJob => ({
   sourceRef,
 })
 
+const applyRefresh = jest.fn()
+
 const run = (active: ActiveJob[], lookups: Record<string, Lookup>, extra: object = {}) =>
   checkClosedFreehireJobs({
     paceMs: 0,
+    applyRefresh,
     loadActive: async () => active,
     lookup: async (slug) => lookups[slug] ?? { state: 'open' },
     resolve: async () => null,
@@ -47,7 +51,7 @@ describe('lookupFreehireJob', () => {
     get.mockResolvedValueOnce({ data: { data: { closed_at: '2026-11-04T10:00:00Z' } } })
     expect(await lookupFreehireJob('a')).toEqual({ state: 'closed', closedAt: '2026-11-04T10:00:00Z' })
     get.mockResolvedValueOnce({ data: { data: { closed_at: null } } })
-    expect(await lookupFreehireJob('b')).toEqual({ state: 'open' })
+    expect(await lookupFreehireJob('b')).toEqual({ state: 'open', description: null, reality: null })
   })
 
   it('treats 404 as "gone" (never as a closure) and other failures as errors', async () => {
@@ -191,5 +195,56 @@ describe('time budget and progress', () => {
     const r = await run([job(1), job(2), job(3), job(4), job(5)], { 'slug-1': { state: 'closed', closedAt: 'x' } }, { dryRun: true })
     expect(r.status).toBe('ok')
     expect(r.closed.map((j) => j.id)).toEqual(['job-1'])
+  })
+})
+
+describe('keeping open jobs alive and upgrading truncated descriptions', () => {
+  const full = `<p>${'Full description with the qualifications. '.repeat(40)}</p>`
+  const preview = '<p>Short preview cut at about a thousand characters. The team are seeking an</p>'
+  const fresh = { class: 'fresh', age_days: 3, fake_freshness: false }
+
+  beforeEach(() => applyRefresh.mockReset())
+
+  it('refreshes jobs freehire still lists as fresh, and replaces a truncated description with the full one', async () => {
+    const active = [{ ...job(1), descriptionHtml: preview }, { ...job(2), descriptionHtml: full }]
+    const r = await run(active, {
+      'slug-1': { state: 'open', description: full, reality: fresh },
+      'slug-2': { state: 'open', description: full, reality: fresh },
+    })
+    expect(applyRefresh).toHaveBeenCalledTimes(1)
+    const arg = applyRefresh.mock.calls[0][0]
+    expect(arg.keepAliveIds).toEqual(['job-1', 'job-2'])
+    expect(arg.descriptions).toHaveLength(1) // job 2 already has the full text
+    expect(arg.descriptions[0].id).toBe('job-1')
+    expect(r).toMatchObject({ refreshed: 2, descriptionsUpgraded: 1, status: 'ok' })
+  })
+
+  it('lets jobs freehire flags as re-stamped, or stale beyond 30 days, run into the 7-day expiry', async () => {
+    const r = await run([job(1), job(2), job(3), job(4)], {
+      'slug-1': { state: 'open', reality: { class: 'stale', age_days: 120, fake_freshness: true } },
+      'slug-2': { state: 'open', reality: { class: 'stale', age_days: 45, fake_freshness: false } },
+      'slug-3': { state: 'open', reality: { class: 'stale', age_days: 20, fake_freshness: false } },
+      'slug-4': { state: 'open', reality: null },
+    })
+    expect(applyRefresh.mock.calls[0][0].keepAliveIds).toEqual(['job-3', 'job-4'])
+    expect(r.refreshed).toBe(2)
+  })
+
+  it('does not refresh closed or unreadable jobs', async () => {
+    await run([job(1), job(2)], { 'slug-1': { state: 'closed', closedAt: '2026-11-04T00:00:00Z' }, 'slug-2': { state: 'error', message: 'x' } })
+    expect(applyRefresh.mock.calls[0][0].keepAliveIds).toEqual([])
+  })
+
+  it('writes nothing in a dry run', async () => {
+    const r = await run([{ ...job(1), descriptionHtml: preview }], { 'slug-1': { state: 'open', description: full, reality: fresh } }, { dryRun: true })
+    expect(applyRefresh).not.toHaveBeenCalled()
+    expect(r).toMatchObject({ refreshed: 0, descriptionsUpgraded: 0 })
+  })
+
+  it('upgradedDescription only accepts a clearly fuller, clean text', () => {
+    expect(upgradedDescription(preview, full)).toContain('Full description')
+    expect(upgradedDescription(full, preview)).toBeNull()
+    expect(upgradedDescription(preview, null)).toBeNull()
+    expect(upgradedDescription(preview, '<p>Meet JobCopilot. Stop applying. ' + 'x'.repeat(600) + '</p>')).toBeNull()
   })
 })

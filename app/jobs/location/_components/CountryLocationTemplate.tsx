@@ -453,7 +453,7 @@ export async function CountryLocationTemplate({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
       <ListingHeader
-        aside={<ListingSalaryAside input={queryInput} />}
+        aside={<ListingSalaryAside input={queryInput} scope={`roles in ${loc.label}`} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: loc.label }]}
         accent="$100k+"
         title={`Jobs in ${loc.label}`}

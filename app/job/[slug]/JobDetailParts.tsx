@@ -131,6 +131,7 @@ export function PayCard({
   salaryText: string | null
   salaryIsFromEmployer: boolean
   rank: SalaryRank | null
+  /** Who the rank is among: "software engineer", or "six-figure" when it is every listing. */
   roleLabel: string | null
   currency: string | null
   applyHref: string | null
@@ -157,7 +158,7 @@ export function PayCard({
             <span className={styles.rankMarker} style={{ left: `${Math.min(97, Math.max(3, rank.percent))}%` }} />
           </div>
           <p className={styles.insightNote}>
-            Typical for this role: {formatCurrencyShort(Math.round(rank.median / 1000) * 1000, currency)}
+            Typical for {roleLabel === 'six-figure' ? 'six-figure listings' : 'this role'}: {formatCurrencyShort(Math.round(rank.median / 1000) * 1000, currency)}
           </p>
         </div>
       ) : null}

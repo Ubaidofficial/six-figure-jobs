@@ -489,4 +489,45 @@ describe('buildJobJsonLd', () => {
 
     expect(jsonLd.employmentType).toBe('CONTRACTOR')
   })
+
+  describe('jobLocation', () => {
+    const base = {
+      id: 'board:freehire:1',
+      title: 'Senior Staff Software Engineer, Ads Content Safety AI/ML',
+      company: 'Google',
+      companyRef: null,
+      remote: false,
+      remoteMode: null,
+      city: null,
+      countryCode: 'US',
+      stateCode: null,
+      descriptionHtml: '<p>Build things.</p>',
+      salaryValidated: false,
+      source: 'board:freehire',
+      applyUrl: 'https://careers.example.com/1',
+      postedAt: new Date('2026-11-02T00:00:00.000Z'),
+      createdAt: new Date('2026-11-02T00:00:00.000Z'),
+      lastSeenAt: new Date('2026-11-04T00:00:00.000Z'),
+    }
+
+    it('emits one Place per workplace when the location lists several, separated by semicolons', () => {
+      const ld = buildJobJsonLd({ ...base, locationRaw: 'Los Angeles, CA, USA; Mountain View, CA, USA' } as any)
+      expect(ld.jobLocation).toEqual([
+        { '@type': 'Place', address: { '@type': 'PostalAddress', addressLocality: 'Los Angeles', addressRegion: 'CA', addressCountry: 'US' } },
+        { '@type': 'Place', address: { '@type': 'PostalAddress', addressLocality: 'Mountain View', addressRegion: 'CA', addressCountry: 'US' } },
+      ])
+    })
+
+    it('reads each place\'s own country, falling back to the job\'s', () => {
+      const ld = buildJobJsonLd({ ...base, locationRaw: 'Toronto, ON, Canada; Austin, TX' } as any)
+      expect(ld.jobLocation.map((p: any) => p.address.addressCountry)).toEqual(['CA', 'US'])
+    })
+
+    it('keeps a single Place for a single location, and for a job with a city', () => {
+      const one = buildJobJsonLd({ ...base, locationRaw: 'Austin, TX, USA' } as any)
+      expect(Array.isArray(one.jobLocation)).toBe(false)
+      const withCity = buildJobJsonLd({ ...base, city: 'Austin', locationRaw: 'Austin, TX; Remote' } as any)
+      expect(Array.isArray(withCity.jobLocation)).toBe(false)
+    })
+  })
 })
