@@ -76,12 +76,23 @@ export function buildLogoUrl(
   return null
 }
 
-/** The logo.dev URL the /logo route redirects to, or null if the request is not valid. Needs the key. */
-export function buildLogoDevUrl(kind: string, value: string, token: string): string | null {
+/** Free fallback when logo.dev has no logo (or no key is set): icon.horse returns a site's best icon, or a letter icon. */
+export function buildFallbackLogoUrl(kind: string, value: string): string | null {
+  if (kind !== 'domain') return null
+  const domain = value.trim().toLowerCase()
+  return DOMAIN_PATTERN.test(domain) ? `https://icon.horse/icon/${domain}` : null
+}
+
+/**
+ * The logo.dev URL the /logo route redirects to, or null if the request is not valid. Needs the key.
+ * `strict` makes logo.dev answer 404 when it has no logo, instead of drawing a generic letter, so the
+ * route can fall through to the next source.
+ */
+export function buildLogoDevUrl(kind: string, value: string, token: string, strict = false): string | null {
   const key = token.trim()
   if (!key) return null
 
-  const query = `token=${encodeURIComponent(key)}&size=${LOGO_SIZE}&format=webp`
+  const query = `token=${encodeURIComponent(key)}&size=${LOGO_SIZE}&format=webp${strict ? '&fallback=404' : ''}`
 
   if (kind === 'domain') {
     const domain = value.trim().toLowerCase()

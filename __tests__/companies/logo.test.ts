@@ -73,33 +73,78 @@ describe('buildLogoDevUrl', () => {
 })
 
 describe('GET /logo/[kind]/[value]', () => {
-  const original = process.env.LOGODEV_API_KEY
+  const originalKey = process.env.LOGODEV_API_KEY
+  const originalFetch = global.fetch
   afterEach(() => {
-    if (original === undefined) delete process.env.LOGODEV_API_KEY
-    else process.env.LOGODEV_API_KEY = original
+    if (originalKey === undefined) delete process.env.LOGODEV_API_KEY
+    else process.env.LOGODEV_API_KEY = originalKey
+    global.fetch = originalFetch
   })
+
+  const image = (ok: boolean) =>
+    ({ ok, headers: new Headers({ 'content-type': ok ? 'image/webp' : 'text/plain' }), body: null }) as unknown as Response
+  const mockFetch = (...answers: boolean[]) => {
+    const fn = jest.fn()
+    answers.forEach((ok) => fn.mockResolvedValueOnce(image(ok)))
+    global.fetch = fn as unknown as typeof fetch
+    return fn
+  }
+  // Each test uses its own domain: the route remembers answers in memory.
   const call = (kind: string, value: string) =>
     GET(new Request('http://localhost/logo'), { params: Promise.resolve({ kind, value }) })
 
-  it('redirects to logo.dev with the server key and caches the redirect', async () => {
+  it('redirects to logo.dev (strict) when it has the logo, and caches the redirect', async () => {
     process.env.LOGODEV_API_KEY = 'pk_server'
-    const res = await call('domain', 'stripe.com')
+    mockFetch(true)
+    const res = await call('domain', 'has-logo.com')
     expect(res.status).toBe(302)
-    expect(res.headers.get('location')).toBe('https://img.logo.dev/stripe.com?token=pk_server&size=128&format=webp')
+    expect(res.headers.get('location')).toBe(
+      'https://img.logo.dev/has-logo.com?token=pk_server&size=128&format=webp&fallback=404',
+    )
     expect(res.headers.get('cache-control')).toContain('s-maxage')
   })
 
-  it('decodes names and can only ever redirect to img.logo.dev', async () => {
+  it('falls back to the free icon.horse when logo.dev has no logo', async () => {
+    process.env.LOGODEV_API_KEY = 'pk_server'
+    mockFetch(false)
+    const res = await call('domain', 'no-logodev.com')
+    expect(res.headers.get('location')).toBe('https://icon.horse/icon/no-logodev.com')
+  })
+
+  it('works with no logo.dev key at all, using icon.horse without probing', async () => {
+    delete process.env.LOGODEV_API_KEY
+    const fn = mockFetch()
+    const res = await call('domain', 'free-only.com')
+    expect(res.status).toBe(302)
+    expect(res.headers.get('location')).toBe('https://icon.horse/icon/free-only.com')
+    expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('probes once per domain and remembers the answer', async () => {
+    process.env.LOGODEV_API_KEY = 'pk_server'
+    const fn = mockFetch(true)
+    await call('domain', 'remembered.com')
+    await call('domain', 'remembered.com')
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats a probe that throws (timeout, network) as "no logo here" and moves on', async () => {
+    process.env.LOGODEV_API_KEY = 'pk_server'
+    global.fetch = jest.fn().mockRejectedValue(new Error('timeout')) as unknown as typeof fetch
+    const res = await call('domain', 'times-out.com')
+    expect(res.headers.get('location')).toBe('https://icon.horse/icon/times-out.com')
+  })
+
+  it('decodes names and can only ever redirect to a fixed logo host', async () => {
     process.env.LOGODEV_API_KEY = 'pk_server'
     const res = await call('name', 'Acme%20Labs')
     expect(new URL(res.headers.get('location')!).host).toBe('img.logo.dev')
-    const evil = await call('domain', 'evil.com%2F..%2F@x.com')
-    expect(evil.status).toBe(404)
+    expect((await call('domain', 'evil.com%2F..%2F@x.com')).status).toBe(404)
   })
 
-  it('returns 404 when no key is configured or the kind is unknown', async () => {
+  it('returns 404 for names without a key and for unknown kinds', async () => {
     delete process.env.LOGODEV_API_KEY
-    expect((await call('domain', 'stripe.com')).status).toBe(404)
+    expect((await call('name', 'No Key Inc')).status).toBe(404)
     process.env.LOGODEV_API_KEY = 'pk_server'
     expect((await call('ticker', 'SHOP')).status).toBe(404)
   })
