@@ -8,6 +8,10 @@
 // freehire documents that closed roles are kept and marked closed, never silently deleted, so a 404 is NOT treated as
 // closed: it is counted and reported, and nothing is expired because of it.
 //
+// A single `closed_at` is not enough either: in the first production dry run the one job reported closed was open
+// again (and listed in freehire's open search) minutes later. So a job is expired only if freehire says closed AND its
+// open search no longer lists the posting; any conflict keeps the job.
+//
 // Safety: a run is skipped if too many lookups failed, and aborted if it would expire an implausible share.
 
 import axios from 'axios'
@@ -91,6 +95,8 @@ export type ClosedCheckResult = {
   gone: number
   errors: number
   closed: ActiveJob[]
+  /** Reported closed, but freehire's open search still lists the posting, so they are kept. */
+  conflicts: ActiveJob[]
   expired: number
 }
 
@@ -140,13 +146,22 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
 
   const toCheck = active.filter((j) => slugOf.has(j.id))
   const counts = { open: 0, gone: 0, errors: 0 }
-  const closed: ActiveJob[] = []
+  const reportedClosed: ActiveJob[] = []
   await pool(toCheck, concurrency, paceMs, async (j) => {
     const r = await lookup(slugOf.get(j.id) as string)
-    if (r.state === 'closed') closed.push(j)
+    if (r.state === 'closed') reportedClosed.push(j)
     else if (r.state === 'open') counts.open++
     else if (r.state === 'gone') counts.gone++
     else counts.errors++
+  })
+
+  // Second opinion: freehire's open search must no longer list a posting we are about to expire.
+  const closed: ActiveJob[] = []
+  const conflicts: ActiveJob[] = []
+  await pool(reportedClosed, concurrency, paceMs, async (j) => {
+    const stillListed = await resolve(j.title, j.externalId as string)
+    if (stillListed) conflicts.push(j)
+    else closed.push(j)
   })
 
   const base = {
@@ -156,6 +171,7 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     checked: toCheck.length,
     ...counts,
     closed,
+    conflicts,
     expired: 0,
   }
 

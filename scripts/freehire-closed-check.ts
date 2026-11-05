@@ -12,7 +12,7 @@ checkClosedFreehireJobs({ dryRun })
   .then((r) => {
     console.log(`freehire closed-job check ${dryRun ? '(DRY RUN — no job is expired)' : ''}`)
     console.log(`active: ${r.active}  slugs found for older jobs: ${r.resolved}  without a slug: ${r.unresolved}`)
-    console.log(`checked: ${r.checked}  open: ${r.open}  closed: ${r.closed.length}  not found (404, ignored): ${r.gone}  lookup errors: ${r.errors}`)
+    console.log(`checked: ${r.checked}  open: ${r.open}  closed (confirmed): ${r.closed.length}  reported closed but still listed (kept): ${r.conflicts.length}  not found (404, ignored): ${r.gone}  lookup errors: ${r.errors}`)
     console.log(`expired: ${r.expired}`)
     for (const j of r.closed.slice(0, 15)) console.log(`   closed: ${j.title}  [${j.externalId}]`)
     if (r.status === 'skipped') console.log(`::warning::closed-job check skipped: ${r.reason}`)

@@ -84,6 +84,15 @@ describe('checkClosedFreehireJobs', () => {
     expect(r.open).toBe(19)
   })
 
+  it('keeps a job freehire reports closed if the open search still lists it', async () => {
+    const r = await run(many, { 'slug-3': { state: 'closed', closedAt: 'x' }, 'slug-4': { state: 'closed', closedAt: 'x' } }, {
+      resolve: async (_t: string, ext: string) => (ext === 'ext-3' ? 'slug-3-open' : null),
+    })
+    expect(r.conflicts.map((j) => j.id)).toEqual(['job-3'])
+    expect(r.closed.map((j) => j.id)).toEqual(['job-4'])
+    expect(expireJobsByIds).toHaveBeenCalledWith(['job-4'])
+  })
+
   it('a dry run reports but expires nothing', async () => {
     const r = await run(many, { 'slug-3': { state: 'closed', closedAt: 'x' } }, { dryRun: true })
     expect(r.closed).toHaveLength(1)
@@ -118,8 +127,10 @@ describe('checkClosedFreehireJobs', () => {
   it('looks up slugs for jobs imported before slugs were stored, saves them, and checks them', async () => {
     const saved: Array<[string, string]> = []
     const old = [job(1, null), job(2, null)]
+    // First lookup (finding the slug) matches job-1 in the open search; the later "is it still listed?" check does not.
+    let calls = 0
     const r = await run(old, { 'found-1': { state: 'closed', closedAt: 'x' } }, {
-      resolve: async (_t: string, ext: string) => (ext === 'ext-1' ? 'found-1' : null),
+      resolve: async (_t: string, ext: string) => (ext === 'ext-1' && calls++ === 0 ? 'found-1' : null),
       saveSlug: async (id: string, slug: string) => void saved.push([id, slug]),
     })
     expect(saved).toEqual([['job-1', 'found-1']])
