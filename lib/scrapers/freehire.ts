@@ -302,8 +302,12 @@ export async function loadFreehireCompanyWebsites(
   slugs: string[],
   fetchFn: typeof fetch = fetch,
   pauseMs = 150,
+  budgetMs = 4 * 60_000,
 ): Promise<Map<string, string>> {
   const out = new Map<string, string>()
+  // Overall time budget: this is a nice-to-have, so when freehire is slow or rate-limiting we stop looking up more
+  // companies (the rest keep their name-based logo) instead of holding up the job ingest behind it.
+  const deadline = Date.now() + budgetMs
   const queue = [...new Set(slugs.filter(Boolean))]
   async function lookup(slug: string): Promise<void> {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -331,7 +335,7 @@ export async function loadFreehireCompanyWebsites(
   }
   await Promise.all(
     Array.from({ length: Math.min(3, queue.length) }, async () => {
-      while (queue.length > 0) {
+      while (queue.length > 0 && Date.now() < deadline) {
         const slug = queue.shift()!
         await lookup(slug)
         if (pauseMs > 0) await sleep(pauseMs)
@@ -346,7 +350,10 @@ export async function ingestFreehireJobs(inputs: BoardJobInput[]): Promise<Scrap
   const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
   // Give each job its employer's website (when freehire has one) so its logo comes from a real domain, not a name guess.
   try {
-    const sites = await loadFreehireCompanyWebsites(inputs.filter((i) => !i.companyWebsiteUrl).map((i) => i.companyRef ?? ''))
+    const wanted = [...new Set(inputs.filter((i) => !i.companyWebsiteUrl).map((i) => i.companyRef ?? '').filter(Boolean))]
+    const t0 = Date.now()
+    const sites = await loadFreehireCompanyWebsites(wanted)
+    console.log(`[freehire] company websites: ${sites.size} found for ${wanted.length} companies in ${Math.round((Date.now() - t0) / 1000)}s`)
     for (const input of inputs) {
       const site = input.companyRef ? sites.get(input.companyRef) : undefined
       if (site && !input.companyWebsiteUrl) input.companyWebsiteUrl = site

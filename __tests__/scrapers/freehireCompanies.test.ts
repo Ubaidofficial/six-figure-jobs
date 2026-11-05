@@ -37,6 +37,18 @@ describe('loadFreehireCompanyWebsites', () => {
     expect(calls).toBe(2)
   })
 
+  it('stops looking up more companies once the time budget is used up, returning what it has', async () => {
+    const fetchFn = jest.fn(async () => {
+      await new Promise((r) => setTimeout(r, 15))
+      return company('https://acme.io')
+    }) as unknown as typeof fetch
+    const slugs = Array.from({ length: 40 }, (_, i) => `c${i}`)
+    const out = await loadFreehireCompanyWebsites(slugs, fetchFn, 0, 40)
+    expect(out.size).toBeGreaterThan(0)
+    expect(out.size).toBeLessThan(40)
+    expect((fetchFn as unknown as jest.Mock).mock.calls.length).toBeLessThan(40)
+  })
+
   it('sends a User-Agent and encodes the slug', async () => {
     const fetchFn = jest.fn(async () => company(null)) as unknown as typeof fetch
     await loadFreehireCompanyWebsites(['a b/c'], fetchFn, 0)
