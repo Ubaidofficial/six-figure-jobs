@@ -145,3 +145,43 @@ describe('checkClosedFreehireJobs', () => {
     expect(r.closed).toHaveLength(0)
   })
 })
+
+describe('time budget and progress', () => {
+  beforeEach(() => expireJobsByIds.mockReset())
+  const slow = (ms: number) => async () => {
+    await new Promise((r) => setTimeout(r, ms))
+    return { state: 'closed', closedAt: '2026-11-04T10:00:00Z' } as Lookup
+  }
+
+  it('stops when the budget is exceeded and expires nothing, even if jobs were reported closed', async () => {
+    const active = Array.from({ length: 6 }, (_, i) => job(i + 1))
+    const r = await checkClosedFreehireJobs({
+      paceMs: 0,
+      concurrency: 1,
+      deadlineMs: 15,
+      loadActive: async () => active,
+      lookup: slow(10),
+      resolve: async () => null,
+      saveSlug: async () => {},
+    })
+    expect(r.status).toBe('skipped')
+    expect(r.reason).toMatch(/time budget/)
+    expect(r.expired).toBe(0)
+    expect(expireJobsByIds).not.toHaveBeenCalled()
+    expect(r.checked).toBe(6) // the whole list was due, but not all of it was looked at
+  })
+
+  it('reports progress so a stall is visible', async () => {
+    const lines: string[] = []
+    await run([job(1), job(2)], {}, { onProgress: (m: string) => lines.push(m) })
+    expect(lines[0]).toMatch(/loaded 2 active freehire jobs/)
+    expect(lines.some((l) => /checking 2 jobs/.test(l))).toBe(true)
+    expect(lines.at(-1)).toMatch(/done: open 2/)
+  })
+
+  it('still runs normally with no budget', async () => {
+    const r = await run([job(1), job(2), job(3), job(4), job(5)], { 'slug-1': { state: 'closed', closedAt: 'x' } }, { dryRun: true })
+    expect(r.status).toBe('ok')
+    expect(r.closed.map((j) => j.id)).toEqual(['job-1'])
+  })
+})

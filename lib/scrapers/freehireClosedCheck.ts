@@ -77,6 +77,10 @@ export type ClosedCheckOptions = {
   paceMs?: number
   maxErrorFraction?: number
   maxCloseFraction?: number
+  /** Total time the check may take. When exceeded it stops and expires NOTHING (status `skipped`). */
+  deadlineMs?: number
+  /** Progress lines (phase and counts), so a stalled run is visible in the log. */
+  onProgress?: (message: string) => void
   /** Injected in tests. */
   lookup?: (slug: string) => Promise<Lookup>
   resolve?: (title: string, externalId: string) => Promise<string | null>
@@ -100,13 +104,22 @@ export type ClosedCheckResult = {
   expired: number
 }
 
-async function pool<T>(items: T[], concurrency: number, paceMs: number, work: (item: T) => Promise<void>) {
+async function pool<T>(
+  items: T[],
+  concurrency: number,
+  paceMs: number,
+  work: (item: T) => Promise<void>,
+  opts: { stop?: () => boolean; onProgress?: (done: number, total: number) => void } = {},
+) {
   let next = 0
+  let done = 0
   await Promise.all(
     Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-      while (next < items.length) {
+      while (next < items.length && !opts.stop?.()) {
         const item = items[next++]
         await work(item)
+        done++
+        if (opts.onProgress && done % 250 === 0) opts.onProgress(done, items.length)
         if (paceMs) await sleep(paceMs)
       }
     }),
@@ -127,8 +140,13 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
       }))
   const concurrency = options.concurrency ?? 3
   const paceMs = options.paceMs ?? 350
+  const started = Date.now()
+  const deadline = options.deadlineMs ? started + options.deadlineMs : Number.POSITIVE_INFINITY
+  const timedOut = () => Date.now() > deadline
+  const say = (message: string) => options.onProgress?.(`[${Math.round((Date.now() - started) / 1000)}s] ${message}`)
 
   const active = await loadActive()
+  say(`loaded ${active.length} active freehire jobs`)
   const slugOf = new Map<string, string>()
   for (const j of active) if (j.sourceRef) slugOf.set(j.id, j.sourceRef)
 
@@ -136,33 +154,56 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
   // is done in dry runs too.
   const missing = active.filter((j) => !j.sourceRef && j.externalId)
   let resolved = 0
-  await pool(missing, concurrency, paceMs, async (j) => {
-    const slug = await resolve(j.title, j.externalId as string)
-    if (!slug) return
-    slugOf.set(j.id, slug)
-    resolved++
-    await saveSlug(j.id, slug).catch(() => {})
-  })
+  say(`finding slugs for ${missing.length} older jobs`)
+  await pool(
+    missing,
+    concurrency,
+    paceMs,
+    async (j) => {
+      const slug = await resolve(j.title, j.externalId as string)
+      if (!slug) return
+      slugOf.set(j.id, slug)
+      resolved++
+      await saveSlug(j.id, slug).catch(() => {})
+    },
+    { stop: timedOut },
+  )
 
   const toCheck = active.filter((j) => slugOf.has(j.id))
   const counts = { open: 0, gone: 0, errors: 0 }
   const reportedClosed: ActiveJob[] = []
-  await pool(toCheck, concurrency, paceMs, async (j) => {
-    const r = await lookup(slugOf.get(j.id) as string)
-    if (r.state === 'closed') reportedClosed.push({ ...j, sourceRef: slugOf.get(j.id) ?? null })
-    else if (r.state === 'open') counts.open++
-    else if (r.state === 'gone') counts.gone++
-    else counts.errors++
-  })
+  say(`checking ${toCheck.length} jobs`)
+  await pool(
+    toCheck,
+    concurrency,
+    paceMs,
+    async (j) => {
+      const r = await lookup(slugOf.get(j.id) as string)
+      if (r.state === 'closed') reportedClosed.push({ ...j, sourceRef: slugOf.get(j.id) ?? null })
+      else if (r.state === 'open') counts.open++
+      else if (r.state === 'gone') counts.gone++
+      else counts.errors++
+    },
+    {
+      stop: timedOut,
+      onProgress: (done, total) => say(`checked ${done}/${total} (open ${counts.open}, errors ${counts.errors}, reported closed ${reportedClosed.length})`),
+    },
+  )
 
   // Second opinion: freehire's open search must no longer list a posting we are about to expire.
   const closed: ActiveJob[] = []
   const conflicts: ActiveJob[] = []
-  await pool(reportedClosed, concurrency, paceMs, async (j) => {
-    const stillListed = await resolve(j.title, j.externalId as string)
-    if (stillListed) conflicts.push(j)
-    else closed.push(j)
-  })
+  await pool(
+    reportedClosed,
+    concurrency,
+    paceMs,
+    async (j) => {
+      const stillListed = await resolve(j.title, j.externalId as string)
+      if (stillListed) conflicts.push(j)
+      else closed.push(j)
+    },
+    { stop: timedOut },
+  )
 
   const base = {
     active: active.length,
@@ -173,6 +214,12 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     closed,
     conflicts,
     expired: 0,
+  }
+
+  say(`done: open ${counts.open}, gone ${counts.gone}, errors ${counts.errors}, confirmed closed ${closed.length}`)
+  // Out of time: whatever was not looked at is unknown, so nothing is expired. The next run starts again.
+  if (timedOut()) {
+    return { ...base, status: 'skipped', reason: `time budget of ${Math.round((options.deadlineMs ?? 0) / 60000)} minutes exceeded; nothing was expired` }
   }
 
   const maxErr = options.maxErrorFraction ?? MAX_ERROR_FRACTION

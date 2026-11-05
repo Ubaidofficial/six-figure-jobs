@@ -8,7 +8,7 @@ import { checkClosedFreehireJobs } from '../lib/scrapers/freehireClosedCheck'
 
 const dryRun = process.argv.includes('--dry-run')
 
-checkClosedFreehireJobs({ dryRun })
+checkClosedFreehireJobs({ dryRun, deadlineMs: 15 * 60 * 1000, onProgress: (m) => console.log(m) })
   .then((r) => {
     console.log(`freehire closed-job check ${dryRun ? '(DRY RUN — no job is expired)' : ''}`)
     console.log(`active: ${r.active}  slugs found for older jobs: ${r.resolved}  without a slug: ${r.unresolved}`)

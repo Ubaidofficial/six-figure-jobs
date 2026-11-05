@@ -56,6 +56,7 @@ jobs:
         run: npm run scrape:db-target
 
       - name: Sync freehire jobs
+        id: sync
         run: npm run sync:freehire
 
       # Asks freehire about each active job individually and expires those it reports as closed AND that its open
@@ -63,14 +64,20 @@ jobs:
       # report-only unless closed_apply is ticked. The check skips itself with a warning if more than 5% of lookups
       # fail, and aborts (failing the run, so the owner is emailed) if it would expire more than 40% of what it
       # checked. To switch it off, change the schedule condition below to report-only.
+      # Both closed-check steps stop themselves after 15 minutes (nothing is expired) and the step timeout is a second
+      # guard, so a stall here can no longer eat the whole job (on 2026-11-05 the scheduled run sat 42 minutes in this
+      # step with no output, hit the job timeout and never reached the 7-day expiry below).
       - name: Closed-job check (report only)
         if: ${{ success() && github.event_name != 'schedule' && !inputs.closed_apply }}
+        timeout-minutes: 20
         run: npm run check-closed:freehire -- --dry-run
 
       - name: Expire jobs freehire has closed
         if: ${{ success() && (github.event_name == 'schedule' || inputs.closed_apply) }}
+        timeout-minutes: 20
         run: npm run check-closed:freehire
 
+      # Runs whenever the sync itself succeeded, even if the closed-job check above failed or timed out.
       - name: Expire jobs not refreshed in 7 days
-        if: success()
+        if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
         run: npx tsx scripts/run-expiry.ts
