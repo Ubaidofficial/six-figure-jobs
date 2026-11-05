@@ -6,6 +6,9 @@ import { getLatestBlogUpdate, getLatestJobUpdate } from '../../lib/seo/evergreen
 import { shouldAdvertiseSitemapFamily } from '../../lib/seo/sitemapPolicy'
 import { getReleasedBatchNumbers } from '../../lib/seo/pseoBatches'
 import { isPseoUnlockEnabled } from '../../lib/seo/pseoUnlock'
+import { GET as getJobsIndex } from '../sitemap-jobs.xml/route'
+import { GET as getCompanyIndex } from '../sitemap-company.xml/route'
+import { GET as getSlicesIndex } from '../sitemap-slices.xml/route'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
@@ -22,13 +25,32 @@ function escapeXml(value: string) {
     .replace(/'/g, '&apos;')
 }
 
+type Entry = { path: string; lastmod: string | null }
+
+// A sitemap index may not list another index (sitemaps.org / Google), so the jobs, company and slices indexes are
+// expanded here into the urlset files they point to. An index with no children (e.g. no published companies yet)
+// is dropped instead of being advertised as an empty file.
+async function expandChildIndex(getIndex: () => Promise<Response>): Promise<Entry[]> {
+  try {
+    const res = await getIndex()
+    if (res.status !== 200) return []
+    const xml = await res.text()
+    const out: Entry[] = []
+    for (const m of xml.matchAll(/<sitemap>\s*<loc>([^<]+)<\/loc>(?:\s*<lastmod>([^<]+)<\/lastmod>)?/g)) {
+      const loc = m[1].replace(/&amp;/g, '&')
+      out.push({ path: loc.startsWith(SITE_URL) ? loc.slice(SITE_URL.length + 1) : loc, lastmod: m[2] ?? null })
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
 function buildAdvertisedSitemaps(): string[] {
   return [
     'sitemap-hubs.xml',
     // Released pSEO batches only (each is its own file so Search Console reports coverage per batch).
     ...(isPseoUnlockEnabled() ? getReleasedBatchNumbers().map((n) => `sitemap-batch/${n}.xml`) : []),
-    ...(shouldAdvertiseSitemapFamily('jobs') ? ['sitemap-jobs.xml'] : []),
-    ...(shouldAdvertiseSitemapFamily('company') ? ['sitemap-company.xml'] : []),
     ...(shouldAdvertiseSitemapFamily('salary') ? ['sitemap-salary.xml'] : []),
     ...(shouldAdvertiseSitemapFamily('city') ? ['sitemap-city.xml'] : []),
     ...(shouldAdvertiseSitemapFamily('remote') ? ['sitemap-remote.xml'] : []),
@@ -36,7 +58,6 @@ function buildAdvertisedSitemaps(): string[] {
     ...(shouldAdvertiseSitemapFamily('category') ? ['sitemap-category.xml'] : []),
     ...(shouldAdvertiseSitemapFamily('level') ? ['sitemap-level.xml'] : []),
     ...(shouldAdvertiseSitemapFamily('browse') ? ['sitemap-browse.xml'] : []),
-    ...(shouldAdvertiseSitemapFamily('slices') ? ['sitemap-slices.xml'] : []),
     ...(BLOG_POSTS.length > 0 && shouldAdvertiseSitemapFamily('blog') ? ['sitemap-blog.xml'] : []),
     ...(shouldAdvertiseSitemapFamily('skills') ? ['sitemap-skills.xml'] : []),
   ]
@@ -51,14 +72,19 @@ export async function GET() {
     const d = path === 'sitemap-blog.xml' ? latestBlog : latestJob
     return d ? d.toISOString() : null
   }
-  const sitemaps = buildAdvertisedSitemaps()
+  const direct: Entry[] = buildAdvertisedSitemaps().map((path) => ({ path, lastmod: lastmodFor(path) }))
+  const [jobs, company, slices] = await Promise.all([
+    shouldAdvertiseSitemapFamily('jobs') ? expandChildIndex(getJobsIndex) : [],
+    shouldAdvertiseSitemapFamily('company') ? expandChildIndex(getCompanyIndex) : [],
+    shouldAdvertiseSitemapFamily('slices') ? expandChildIndex(getSlicesIndex) : [],
+  ])
+  const sitemaps: Entry[] = [...direct, ...jobs, ...company, ...slices]
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${sitemaps
-  .map((path) => {
+  .map(({ path, lastmod }) => {
     const loc = escapeXml(`${SITE_URL}/${path}`)
-    const lastmod = lastmodFor(path)
     return `  <sitemap>
     <loc>${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
   </sitemap>`
