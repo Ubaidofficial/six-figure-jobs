@@ -13,13 +13,20 @@
 // open search no longer lists the posting; any conflict keeps the job.
 //
 // Safety: a run is skipped if too many lookups failed, and aborted if it would expire an implausible share.
+//
+// The same lookups also keep the site complete (they cost nothing extra, one request per job either way):
+//  - A job freehire confirms is open (and still listable, see isListableByReality) gets its `updatedAt` refreshed.
+//    The daily sync only re-reads the newest ~36 hours, so without this every job reached the 7-day expiry whether or
+//    not it was still open, and company pages only ever showed the last week's jobs.
+//  - Jobs imported from freehire's search preview (cut at ~1,000 characters) get their full description.
 
 import axios from 'axios'
 
 import { prisma } from '../prisma'
 import { expireJobsByIds } from '../jobs/expiry'
+import { isFullerDescription, sanitizeJobDescriptionFields } from '../jobs/descriptionCleaning'
 import { makeBoardSource } from '../ingest/sourcePriority'
-import { decideRateLimitWait, freehireHeaders, type FreehireJob } from './freehire'
+import { decideRateLimitWait, freehireHeaders, isListableByReality, type FreehireJob } from './freehire'
 
 const JOB_URL = 'https://freehire.me/api/v1/jobs'
 const SEARCH_URL = 'https://freehire.me/api/v1/jobs/search'
@@ -27,7 +34,9 @@ const SEARCH_URL = 'https://freehire.me/api/v1/jobs/search'
 export const MAX_ERROR_FRACTION = 0.05
 export const MAX_CLOSE_FRACTION = 0.4
 
-export type Lookup = { state: 'open' } | { state: 'closed'; closedAt: string } | { state: 'gone' } | { state: 'error'; message: string }
+export type Lookup =
+  | { state: 'open'; description?: string | null; reality?: FreehireJob['reality'] }
+  | { state: 'closed'; closedAt: string } | { state: 'gone' } | { state: 'error'; message: string }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -39,8 +48,9 @@ export async function lookupFreehireJob(slug: string): Promise<Lookup> {
         headers: freehireHeaders(),
         timeout: 30_000,
       })
-      const closedAt = res.data?.data?.closed_at
-      return closedAt ? { state: 'closed', closedAt } : { state: 'open' }
+      const data = res.data?.data
+      const closedAt = data?.closed_at
+      return closedAt ? { state: 'closed', closedAt } : { state: 'open', description: data?.description ?? null, reality: data?.reality ?? null }
     } catch (error) {
       const response = (error as { response?: { status?: number; headers?: Record<string, string> } }).response
       if (response?.status === 404) return { state: 'gone' }
@@ -73,7 +83,7 @@ export async function resolveFreehireSlug(title: string, externalId: string): Pr
   }
 }
 
-export type ActiveJob = { id: string; title: string; externalId: string | null; sourceRef: string | null }
+export type ActiveJob = { id: string; title: string; externalId: string | null; sourceRef: string | null; descriptionHtml?: string | null }
 
 export type ClosedCheckOptions = {
   dryRun?: boolean
@@ -90,6 +100,8 @@ export type ClosedCheckOptions = {
   lookup?: (slug: string) => Promise<Lookup>
   resolve?: (title: string, externalId: string) => Promise<string | null>
   saveSlug?: (jobId: string, slug: string) => Promise<void>
+  /** Writes the outcome for jobs freehire confirmed open: refresh these, replace these descriptions. Injected in tests. */
+  applyRefresh?: (refresh: { keepAliveIds: string[]; descriptions: Array<{ id: string; html: string }> }) => Promise<void>
   loadActive?: () => Promise<ActiveJob[]>
 }
 
@@ -106,7 +118,32 @@ export type ClosedCheckResult = {
   closed: ActiveJob[]
   /** Reported closed, but freehire's open search still lists the posting, so they are kept. */
   conflicts: ActiveJob[]
+  /** Open jobs whose `updatedAt` was refreshed so the 7-day expiry leaves them alone. */
+  refreshed: number
+  /** Jobs whose truncated description was replaced with the full one. */
+  descriptionsUpgraded: number
   expired: number
+}
+
+/** The cleaned full description when it is a clear upgrade over what is stored, else null. */
+export function upgradedDescription(stored: string | null | undefined, fetched: string | null | undefined): string | null {
+  if (!fetched) return null
+  const clean = sanitizeJobDescriptionFields(fetched, null)
+  if (clean.polluted || !clean.descriptionHtml) return null
+  return isFullerDescription(stored, clean.descriptionHtml) ? clean.descriptionHtml : null
+}
+
+async function applyRefreshToDatabase({ keepAliveIds, descriptions }: { keepAliveIds: string[]; descriptions: Array<{ id: string; html: string }> }) {
+  const now = new Date()
+  for (let i = 0; i < keepAliveIds.length; i += 500) {
+    await prisma.job.updateMany({
+      where: { id: { in: keepAliveIds.slice(i, i + 500) }, isExpired: false },
+      data: { lastSeenAt: now, updatedAt: now },
+    })
+  }
+  for (const { id, html } of descriptions) {
+    await prisma.job.update({ where: { id }, data: { descriptionHtml: html } })
+  }
 }
 
 async function pool<T>(
@@ -141,8 +178,9 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     (() =>
       prisma.job.findMany({
         where: { source: makeBoardSource('freehire'), isExpired: false },
-        select: { id: true, title: true, externalId: true, sourceRef: true },
+        select: { id: true, title: true, externalId: true, sourceRef: true, descriptionHtml: true },
       }))
+  const applyRefresh = options.applyRefresh ?? applyRefreshToDatabase
   const concurrency = options.concurrency ?? 3
   const paceMs = options.paceMs ?? 350
   const started = Date.now()
@@ -177,6 +215,8 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
   const toCheck = active.filter((j) => slugOf.has(j.id))
   const counts = { open: 0, gone: 0, errors: 0 }
   const reportedClosed: ActiveJob[] = []
+  const keepAliveIds: string[] = []
+  const descriptions: Array<{ id: string; html: string }> = []
   say(`checking ${toCheck.length} jobs`)
   await pool(
     toCheck,
@@ -185,8 +225,12 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     async (j) => {
       const r = await lookup(slugOf.get(j.id) as string)
       if (r.state === 'closed') reportedClosed.push({ ...j, sourceRef: slugOf.get(j.id) ?? null })
-      else if (r.state === 'open') counts.open++
-      else if (r.state === 'gone') counts.gone++
+      else if (r.state === 'open') {
+        counts.open++
+        if (isListableByReality(r.reality)) keepAliveIds.push(j.id)
+        const html = upgradedDescription(j.descriptionHtml, r.description)
+        if (html) descriptions.push({ id: j.id, html })
+      } else if (r.state === 'gone') counts.gone++
       else counts.errors++
     },
     {
@@ -210,7 +254,14 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     { stop: timedOut },
   )
 
+  // Confirmed-open jobs are refreshed even when the run is later skipped or aborted: that says nothing about them.
+  // A dry run reports only.
+  if (!options.dryRun) await applyRefresh({ keepAliveIds, descriptions })
+  say(`${options.dryRun ? 'would refresh' : 'refreshed'} ${keepAliveIds.length} open jobs, ${descriptions.length} descriptions upgraded`)
+
   const base = {
+    refreshed: options.dryRun ? 0 : keepAliveIds.length,
+    descriptionsUpgraded: options.dryRun ? 0 : descriptions.length,
     active: active.length,
     resolved,
     unresolved: active.length - toCheck.length,

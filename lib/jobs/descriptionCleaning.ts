@@ -149,3 +149,16 @@ function isLeadingPrivacyLine(line: string): boolean {
   if (!normalized) return true
   return LEADING_PRIVACY_PATTERNS.some((pattern) => pattern.test(normalized))
 }
+
+/**
+ * True when `incoming` is a clearly fuller version of `existing`: some boards first gave us a preview cut at about
+ * 1,000 characters, and the same job later arrives in full. Requires both a real gain (200+ characters, 20%+) so
+ * ordinary re-wording or whitespace changes never replace a stored description.
+ */
+export function isFullerDescription(existing: string | null | undefined, incoming: string | null | undefined): boolean {
+  const have = String(existing || '').trim().length
+  const next = String(incoming || '').trim().length
+  if (next === 0) return false
+  if (have === 0) return true
+  return next >= have + 200 && next >= have * 1.2
+}

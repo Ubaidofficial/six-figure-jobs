@@ -11,8 +11,12 @@ import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 
 const BOARD = 'freehire'
-const API_URL = 'https://freehire.me/api/v1/jobs/search'
+// The /agent/ variant takes the same filters and returns the same jobs, but each carries its description in full.
+// Plain /jobs/search only returns a preview cut at ~1,000 characters (the qualifications never reached our pages).
+const API_URL = 'https://freehire.me/api/v1/agent/jobs/search'
 const PAGE_SIZE = 100
+/** Oldest a posting may be and still be listed, when freehire has not flagged it as a re-stamped old job. */
+export const MAX_LISTED_AGE_DAYS = 30
 // freehire refuses offset + limit > 10000, so one query can reach at most this many newest jobs.
 const MAX_OFFSET = 10_000
 const LOOKBACK_DAYS = Number(process.env.FREEHIRE_LOOKBACK_DAYS) || 30
@@ -119,12 +123,25 @@ export function normalizeFreehireSkills(raw: unknown): string[] {
   return out
 }
 
+/**
+ * Whether freehire's `reality` verdict allows listing a job. Bulk refreshes re-stamp old postings with a new
+ * posted_at, so we trust this verdict, not the date. `fresh` means up to 14 days old; `stale` also covers ordinary
+ * 15-60 day old postings that are still open (measured on 300 live USD jobs on 2026-11-05: 30 were 15-30 days old
+ * and not flagged), while the re-stamped ones carry `fake_freshness` (91-146 days old). So: never a flagged job, and
+ * `stale` only while it is within MAX_LISTED_AGE_DAYS. No verdict at all keeps the job.
+ */
+export function isListableByReality(reality: FreehireJob['reality']): boolean {
+  if (!reality) return true
+  if (reality.fake_freshness) return false
+  if (reality.class === 'fresh') return true
+  return reality.class === 'stale' && typeof reality.age_days === 'number' && reality.age_days <= MAX_LISTED_AGE_DAYS
+}
+
 /** Map a freehire record to the board ingest input, or null if it must not be published. */
 export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
   const e = job.enrichment ?? {}
   if (job.closed_at) return null
-  // Bulk refreshes re-stamp old postings with a new posted_at; trust freehire's reality check, not the date.
-  if (job.reality && (job.reality.class !== 'fresh' || job.reality.fake_freshness)) return null
+  if (!isListableByReality(job.reality)) return null
   if (e.salary_period !== 'year') return null
   const currency = e.salary_currency?.toUpperCase()
   if (!currency || !FREEHIRE_MARKETS.some((m) => m.currency === currency)) return null

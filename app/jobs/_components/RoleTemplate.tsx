@@ -559,7 +559,7 @@ export async function RoleTemplate({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <ListingHeader
-        aside={<ListingSalaryAside input={queryInput} />}
+        aside={<ListingSalaryAside input={queryInput} scope={`${roleTitle} roles`} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: roleTitle }]}
         accent={roleTitle}
         title="Jobs — $100k+"

@@ -154,7 +154,7 @@ export default async function LevelPage({
   return (
     <ListingPage>
       <ListingHeader
-        aside={<ListingSalaryAside input={{ experienceLevel: level, isHundredKLocal: true }} />}
+        aside={<ListingSalaryAside input={{ experienceLevel: level, isHundredKLocal: true }} scope={`${info.label} roles`} />}
         breadcrumb={[
           { label: 'Home', href: '/' },
           { label: 'Jobs', href: '/jobs/100k-plus' },

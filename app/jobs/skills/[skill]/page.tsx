@@ -151,7 +151,7 @@ export default async function SkillPage({ params }: { params: Params }) {
   return (
     <ListingPage>
       <ListingHeader
-        aside={<ListingSalaryAside input={{ skillSlugs: [resolved.slug], isHundredKLocal: true }} />}
+        aside={<ListingSalaryAside input={{ skillSlugs: [resolved.slug], isHundredKLocal: true }} scope={`${resolved.label} roles`} />}
         breadcrumb={[
           { label: 'Home', href: '/' },
           { label: 'Jobs', href: '/jobs/100k-plus' },

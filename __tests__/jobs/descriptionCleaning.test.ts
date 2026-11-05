@@ -3,6 +3,7 @@ import {
   cleanJobDescriptionText,
   findJobDescriptionNoiseMatches,
   hasJobDescriptionNoise,
+  isFullerDescription,
   sanitizeJobDescriptionFields,
 } from '../../lib/jobs/descriptionCleaning'
 
@@ -61,5 +62,22 @@ describe('stripBreaksInsideLists', () => {
   it('keeps <br> inside list items and paragraphs', () => {
     const html = '<p>Line<br>break</p><ul><li>One<br>two</li></ul>'
     expect(stripBreaksInsideLists(html)).toBe(html)
+  })
+})
+
+describe('isFullerDescription', () => {
+  const preview = `<p>${'a'.repeat(990)}`
+
+  it('accepts a full text over a ~1,000 character preview, or over nothing', () => {
+    expect(isFullerDescription(preview, `<p>${'a'.repeat(4000)}</p>`)).toBe(true)
+    expect(isFullerDescription(null, '<p>Something</p>')).toBe(true)
+  })
+
+  it('does not replace a description with a shorter, equal or merely re-worded one', () => {
+    expect(isFullerDescription(`<p>${'a'.repeat(4000)}</p>`, preview)).toBe(false)
+    expect(isFullerDescription(preview, preview)).toBe(false)
+    expect(isFullerDescription(preview, `<p>${'a'.repeat(1050)}`)).toBe(false) // +60 chars: not a real gain
+    expect(isFullerDescription(preview, '')).toBe(false)
+    expect(isFullerDescription(preview, null)).toBe(false)
   })
 })

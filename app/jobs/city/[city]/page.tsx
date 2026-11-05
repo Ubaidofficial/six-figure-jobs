@@ -168,6 +168,7 @@ export default async function CityPage({ params }: { params: Params }) {
         aside={
           <ListingSalaryAside
             input={{ citySlug: resolved.slug, countryCode: resolved.countryCode, isHundredKLocal: true }}
+            scope={`roles in ${resolved.label}`}
           />
         }
         breadcrumb={[

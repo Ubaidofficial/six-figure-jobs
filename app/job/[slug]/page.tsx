@@ -966,6 +966,10 @@ function sanitizeDescriptionHtml(html: string): string {
     .replace(/\r\n|\r/g, '\n')
     .replace(/\n/g, '<br />')
     .replace(/(<br\s*\/?>\s*){2,}/gi, '</p><p>')
+    // The newlines between block elements (ATS exports put one between every <li>) became <br /> above: invalid
+    // inside <ul>, and a stray gap between bullets and paragraphs. Blocks space themselves, so drop those breaks.
+    .replace(/(?:<br\s*\/?>\s*)+(<\/?(?:p|ul|ol|li|h3)\b[^>]*>)/gi, '$1')
+    .replace(/(<\/?(?:p|ul|ol|li|h3)\b[^>]*>)(?:\s*<br\s*\/?>)+/gi, '$1')
 
   const trimmed = withBreaks.trim()
   if (!trimmed) return ''

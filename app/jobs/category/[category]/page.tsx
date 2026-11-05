@@ -175,7 +175,7 @@ export default async function CategoryPage({
   return (
     <ListingPage>
       <ListingHeader
-        aside={<ListingSalaryAside input={{ roleSlugs: cfg.roleSlugs, isHundredKLocal: true }} />}
+        aside={<ListingSalaryAside input={{ roleSlugs: cfg.roleSlugs, isHundredKLocal: true }} scope={`${cfg.label} roles`} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: cfg.label }]}
         accent={cfg.label}
         title="jobs paying $100k+"

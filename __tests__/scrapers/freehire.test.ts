@@ -71,6 +71,14 @@ describe('mapFreehireJob', () => {
     expect(mapFreehireJob({ ...job, reality: { class: 'fresh', age_days: 1, fake_freshness: true } })).toBeNull()
   })
 
+  it('keeps ordinary open postings freehire calls stale (15-30 days old, not flagged), but not older ones', () => {
+    expect(mapFreehireJob({ ...job, reality: { class: 'stale', age_days: 20, fake_freshness: false } })).not.toBeNull()
+    expect(mapFreehireJob({ ...job, reality: { class: 'stale', age_days: 30, fake_freshness: false } })).not.toBeNull()
+    expect(mapFreehireJob({ ...job, reality: { class: 'stale', age_days: 31, fake_freshness: false } })).toBeNull()
+    expect(mapFreehireJob({ ...job, reality: { class: 'stale', age_days: 20, fake_freshness: true } })).toBeNull()
+    expect(mapFreehireJob({ ...job, reality: { class: 'stale', fake_freshness: false } })).toBeNull() // no age: cannot tell
+  })
+
   it('keeps a job when freehire gives no reality verdict', () => {
     expect(mapFreehireJob({ ...job, reality: null })).not.toBeNull()
   })

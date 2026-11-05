@@ -39,6 +39,7 @@ import { notifyJobInsertedForIndexing } from '../jobs/indexingNotifications'
 import { enqueueJobIndexingUpdate } from '../jobs/indexingQueue'
 import {
   hasJobDescriptionNoise,
+  isFullerDescription,
   sanitizeJobDescriptionFields,
 } from '../jobs/descriptionCleaning'
 
@@ -636,10 +637,12 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
     shortId: getShortStableIdForJobId(existing.id),
   }
 
-  // Fill in missing description
+  // Fill in a missing description, or replace a truncated preview with the full text
   if (
     input.descriptionHtml &&
-    (!existing.descriptionHtml || hasJobDescriptionNoise(String(existing.descriptionHtml || '')))
+    (!existing.descriptionHtml ||
+      hasJobDescriptionNoise(String(existing.descriptionHtml || '')) ||
+      isFullerDescription(existing.descriptionHtml, input.descriptionHtml))
   ) {
     updateData.descriptionHtml = input.descriptionHtml
   }
