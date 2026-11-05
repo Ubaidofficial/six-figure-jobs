@@ -46,6 +46,9 @@ export interface BoardJobInput {
   salaryCurrency?: string | null
   salaryInterval?: string | null
 
+  /** The board's own handle for the posting, for re-checking it later */
+  sourceRef?: string | null
+
   /** Skills / technologies the board lists for the job (lowercase slugs) */
   skills?: string[] | null
 
@@ -123,6 +126,7 @@ export async function ingestBoardJob(
     url: job.url,
     applyUrl: job.applyUrl ?? job.url,
 
+    sourceRef: job.sourceRef ?? null,
     skills: job.skills ?? null,
     visaSponsorship: job.visaSponsorship ?? null,
 

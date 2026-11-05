@@ -11,8 +11,8 @@ on:
     - cron: "17 5 * * *" # 05:17 UTC daily
   workflow_dispatch:
     inputs:
-      reconcile_apply:
-        description: "Actually expire jobs the closed-job check flags. LEAVE OFF: the check is not reliable yet (see CHANGELOG)."
+      closed_apply:
+        description: "Expire jobs freehire reports as closed (off = report only)"
         type: boolean
         default: false
       lookback_days:
@@ -58,16 +58,17 @@ jobs:
       - name: Sync freehire jobs
         run: npm run sync:freehire
 
-      # Closed-job check. DRY RUN ONLY until it is made reliable: a production dry run on 2026-11-05 flagged 442 jobs,
-      # and 4 of 6 spot-checked ones were still open at freehire (offset paging over many near-identical posted_at
-      # values skips rows, so "missing from the fetched set" does not mean closed). It reports and changes nothing.
+      # Asks freehire about each active job individually and expires those it reports as closed
+      # (lib/scrapers/freehireClosedCheck.ts). Report-only unless closed_apply is ticked (or the schedule step below
+      # is switched on once a production dry run has been checked). Skips itself with a warning if too many lookups
+      # fail, and aborts if it would expire more than 40% of what it checked.
       - name: Closed-job check (report only)
-        if: ${{ success() && !inputs.reconcile_apply }}
-        run: npm run reconcile:freehire -- --dry-run
+        if: ${{ success() && !inputs.closed_apply }}
+        run: npm run check-closed:freehire -- --dry-run
 
-      - name: Expire jobs freehire has closed (manual override only)
-        if: ${{ success() && inputs.reconcile_apply }}
-        run: npm run reconcile:freehire
+      - name: Expire jobs freehire has closed
+        if: ${{ success() && inputs.closed_apply }}
+        run: npm run check-closed:freehire
 
       - name: Expire jobs not refreshed in 7 days
         if: success()

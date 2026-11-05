@@ -153,3 +153,9 @@ describe('skills and visa sponsorship', () => {
     expect(withVisa(undefined)).toBe(false)
   })
 })
+
+describe('sourceRef', () => {
+  it('keeps freehire\'s public_slug so the job can be re-checked at the source', () => {
+    expect(mapFreehireJob(job)?.sourceRef).toBe('financial-analyst-marketing-and-commercial-zoox-n43jspaa')
+  })
+})

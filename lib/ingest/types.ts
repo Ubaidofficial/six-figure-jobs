@@ -87,6 +87,9 @@ export interface ScrapedJobInput {
   /** Canonical job URL (detail page) */
   url: string | null
   
+  /** The source's own handle for this posting (freehire: public_slug), for re-checking it at the source later. */
+  sourceRef?: string | null
+
   /** Skills / technologies listed for the role (lowercase slugs), when the source provides them. */
   skills?: string[] | null
 

@@ -147,17 +147,22 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     postedAt: job.posted_at ? new Date(job.posted_at) : null,
     updatedAt: job.updated_at ? new Date(job.updated_at) : null,
     descriptionHtml: job.description ?? null,
+    sourceRef: job.public_slug || null,
     skills: normalizeFreehireSkills(job.skills),
     visaSponsorship: e.visa_sponsorship === true,
   }
 }
 
-async function fetchPage(market: (typeof FREEHIRE_MARKETS)[number], offset: number): Promise<FreehireResponse> {
+/** Request headers for the freehire API (the key is optional; it only raises the rate limit). */
+export function freehireHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'User-Agent': '6FigJobs/1.0 (+https://www.6figjobs.com)' }
   if (process.env.FREEHIRE_API_KEY) headers.Authorization = `Bearer ${process.env.FREEHIRE_API_KEY}`
+  return headers
+}
 
+async function fetchPage(market: (typeof FREEHIRE_MARKETS)[number], offset: number): Promise<FreehireResponse> {
   const res = await axios.get<FreehireResponse>(API_URL, {
-    headers,
+    headers: freehireHeaders(),
     timeout: 30_000,
     params: {
       salary_currency: market.currency,

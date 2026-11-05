@@ -39,6 +39,9 @@ model Job {
   requirementsJson          String?
   benefitsJson              String?
   externalId                String?
+  /// The source's own handle for the posting, when it differs from externalId (freehire: its public_slug). Used to
+  /// re-check one posting at the source, e.g. whether it has been closed.
+  sourceRef                 String?
   isExpired                 Boolean        @default(false)
   lastSeenAt                DateTime?
   postedAt                  DateTime?
