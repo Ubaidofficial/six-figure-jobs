@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 import { JobActions } from './JobActions'
+import { ReportJob } from './ReportJob'
 
 type Fact = { label: string; value: string }
 
@@ -108,6 +109,9 @@ export function ApplyCard({
       <Separator className="my-5" />
       <div className="flex items-center gap-2">
         <JobActions jobId={jobId} shareUrl={shareUrl} />
+      </div>
+      <div className="mt-4">
+        <ReportJob jobId={jobId} />
       </div>
     </Card>
   )

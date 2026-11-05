@@ -6,6 +6,9 @@ const TYPE_LABELS: Record<string, string> = {
   'broken-link': '🔗 Broken link',
   'wrong-salary': '💰 Wrong salary',
   'wrong-logo': '🖼 Wrong logo',
+  'recruiter-posting': '🧑‍💼 Recruiter posting',
+  'fake-job': '⚠️ Fake / scam job',
+  'job-other': '📝 Job report (other)',
   suggestion: '💡 Suggestion',
   other: '📝 Other',
 }
