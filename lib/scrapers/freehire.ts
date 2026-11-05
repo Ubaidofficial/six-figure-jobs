@@ -154,12 +154,39 @@ async function fetchPage(market: (typeof FREEHIRE_MARKETS)[number], offset: numb
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export async function syncFreehire(
-  options: FreehireSyncOptions = {},
-): Promise<{ stats: ScraperStats; markets: FreehireMarketReport[] }> {
-  const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
-  const reports: FreehireMarketReport[] = []
+/** fetchPage that waits out freehire's 429 rate limit (Retry-After) instead of aborting the market. */
+async function fetchPageWithRetry(market: (typeof FREEHIRE_MARKETS)[number], offset: number): Promise<FreehireResponse> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetchPage(market, offset)
+    } catch (error) {
+      const response = (error as { response?: { status?: number; headers?: Record<string, string> } }).response
+      if (response?.status === 429 && attempt < 4) {
+        const wait = Number(response.headers?.['retry-after']) || 20
+        console.warn(`[freehire] 429 rate limited; waiting ${wait}s (attempt ${attempt + 1})`)
+        await sleep(wait * 1000)
+        continue
+      }
+      throw error
+    }
+  }
+}
+
+export type FreehireCollected = {
+  inputs: BoardJobInput[]
+  markets: FreehireMarketReport[]
+  /** Per-market failures. Non-empty means the collection is incomplete. */
+  errors: string[]
+  /** Records fetched in the window that were not publishable (closed, stale, wrong currency, below threshold). */
+  unmappable: number
+}
+
+/** Fetch and map every market without writing anything. */
+export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Promise<FreehireCollected> {
+  const inputs = new Map<string, BoardJobInput>() // paging over posted_at ties can repeat rows
+  const markets: FreehireMarketReport[] = []
   const errors: string[] = []
+  let unmappable = 0
   const cutoff = options.since?.getTime() ?? Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
   for (const market of FREEHIRE_MARKETS) {
@@ -173,7 +200,7 @@ export async function syncFreehire(
       newest: null,
       sample: [],
     }
-    reports.push(report)
+    markets.push(report)
 
     try {
       // Newest first. posted_at ties and bulk refreshes leave the order slightly uneven, so stop only
@@ -182,7 +209,7 @@ export async function syncFreehire(
       let oldPages = 0
       for (let offset = 0; offset < MAX_OFFSET; offset += PAGE_SIZE) {
         if (options.maxPagesPerMarket && pages >= options.maxPagesPerMarket) break
-        const page = await fetchPage(market, offset)
+        const page = await fetchPageWithRetry(market, offset)
         assertFiltersApplied(page.meta)
         report.available = page.meta.total
         pages++
@@ -202,20 +229,16 @@ export async function syncFreehire(
 
           const input = mapFreehireJob(job)
           if (!input) {
-            stats.skipped++
+            unmappable++
             continue
           }
           report.mappable++
           if (report.sample.length < 3) report.sample.push(`${input.title} — ${input.rawCompanyName}`)
-
-          if (options.dryRun) {
-            // Mirror the ingest salary gate so the report shows what would really be published.
-            if (getMinimumSalaryRejection({ salaryMin: input.salaryMin, salaryCurrency: input.salaryCurrency })) {
-              report.gateRejected++
-            }
-            continue
+          // Mirror the ingest salary gate so the report shows what would really be published.
+          if (getMinimumSalaryRejection({ salaryMin: input.salaryMin, salaryCurrency: input.salaryCurrency })) {
+            report.gateRejected++
           }
-          addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
+          inputs.set(input.externalId, input)
         }
 
         oldPages = oldOnPage === page.data.length ? oldPages + 1 : 0
@@ -223,13 +246,29 @@ export async function syncFreehire(
         await sleep(PAGE_DELAY_MS)
       }
     } catch (error) {
-      console.error(`[freehire] ❌ ${market.currency} sync failed:`, error)
+      console.error(`[freehire] ❌ ${market.currency} fetch failed:`, error)
       errors.push(`${market.currency}: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
-  if (errors.length > 0) stats.error = errors.join('; ')
-  return { stats, markets: reports }
+  return { inputs: [...inputs.values()], markets, errors, unmappable }
+}
+
+/** Write already-collected jobs through the normal board ingest (dedupe, priority, salary gate). */
+export async function ingestFreehireJobs(inputs: BoardJobInput[]): Promise<ScraperStats> {
+  const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
+  for (const input of inputs) addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
+  return stats
+}
+
+export async function syncFreehire(
+  options: FreehireSyncOptions = {},
+): Promise<{ stats: ScraperStats; markets: FreehireMarketReport[] }> {
+  const collected = await collectFreehireJobs(options)
+  const stats = options.dryRun ? { created: 0, updated: 0, skipped: 0 } : await ingestFreehireJobs(collected.inputs)
+  stats.skipped += collected.unmappable
+  if (collected.errors.length > 0) stats.error = collected.errors.join('; ')
+  return { stats, markets: collected.markets }
 }
 
 export default async function scrapeFreehire(): Promise<ScraperStats> {

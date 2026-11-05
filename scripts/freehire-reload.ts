@@ -10,7 +10,7 @@
 import { readFile, writeFile } from 'node:fs/promises'
 
 import { prisma } from '../lib/prisma'
-import { syncFreehire } from '../lib/scrapers/freehire'
+import { collectFreehireJobs, ingestFreehireJobs } from '../lib/scrapers/freehire'
 
 const BATCH = 5000
 
@@ -44,9 +44,14 @@ async function plan(since: Date) {
   console.log(`jobs total=${total} active=${active}`)
   for (const s of bySource.sort((a, b) => b._count - a._count)) console.log(`  ${s.source}: ${s._count}`)
 
-  const { markets } = await syncFreehire({ dryRun: true, since })
+  const { markets, inputs, errors, unmappable } = await collectFreehireJobs({ since })
   console.log(`\nfreehire jobs posted since ${since.toISOString()} that would be loaded (dry run):`)
-  for (const m of markets) console.log(`  ${m.currency}: available=${m.available} mappable=${m.mappable} gateRejected=${m.gateRejected}`)
+  for (const m of markets) console.log(`  ${m.currency}: available=${m.available} fetched=${m.fetched} mappable=${m.mappable} gateRejected=${m.gateRejected}`)
+  console.log(`  total unique publishable jobs=${inputs.length} (unpublishable/stale skipped=${unmappable})`)
+  if (errors.length > 0) {
+    console.error(`INCOMPLETE — freehire errors: ${errors.join('; ')}`)
+    process.exitCode = 1
+  }
 }
 
 async function restore(file: string) {
@@ -56,15 +61,25 @@ async function restore(file: string) {
 }
 
 async function reload(since: Date, file: string) {
+  // 1. Collect everything from freehire FIRST. If that is incomplete, nothing has been touched yet.
+  const { inputs, markets, errors } = await collectFreehireJobs({ since })
+  for (const m of markets) console.log(`  ${m.currency}: available=${m.available} fetched=${m.fetched} mappable=${m.mappable}`)
+  if (errors.length > 0 || inputs.length === 0) {
+    console.error(`Aborting BEFORE changing any job: ${errors.length > 0 ? errors.join('; ') : 'freehire returned no publishable jobs'}`)
+    process.exitCode = 1
+    return
+  }
+  console.log(`collected ${inputs.length} unique publishable freehire jobs`)
+
+  // 2. Save the ids, then expire.
   const ids = (await prisma.job.findMany({ where: { isExpired: false }, select: { id: true } })).map((j) => j.id)
   await writeFile(file, JSON.stringify(ids)) // saved BEFORE anything changes
   console.log(`expiring ${ids.length} active jobs (ids saved to ${file})`)
   await setExpired(ids, true)
 
-  const { stats, markets } = await syncFreehire({ since })
-  for (const m of markets) console.log(`  ${m.currency}: available=${m.available} fetched=${m.fetched} mappable=${m.mappable}`)
+  // 3. Load from memory (no further freehire requests).
+  const stats = await ingestFreehireJobs(inputs)
   console.log(`freehire load: created=${stats.created} updated=${stats.updated} skipped=${stats.skipped}`)
-  if (stats.error) console.error(`errors: ${stats.error}`)
 
   // Safety net: never leave the site empty because the load failed.
   if (stats.created + stats.updated === 0) {
