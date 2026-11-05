@@ -287,3 +287,92 @@
   letter-spacing: -0.02em;
   color: var(--color-text-0);
 }
+
+/* ------------------------------------------------------------------ */
+/* Description: labelled sections, jump list, folded boilerplate        */
+/* ------------------------------------------------------------------ */
+
+.jumpNav {
+  margin: 4px 0 8px;
+}
+
+.jumpNav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jumpNav a {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-0);
+  text-decoration: none;
+}
+
+.jumpNav a:hover {
+  background: var(--color-bg-2, rgba(0, 0, 0, 0.04));
+}
+
+.descSection {
+  scroll-margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.descSection:first-of-type {
+  padding-top: 8px;
+  border-top: 0;
+}
+
+.descHeading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text-0);
+}
+
+.foldedSection {
+  scroll-margin-top: 24px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.foldedSection summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.foldedSection summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.foldedSection[open] summary {
+  margin-bottom: 4px;
+}
+
+.descApply {
+  display: grid;
+  gap: 8px;
+  max-width: 24rem;
+  padding: 4px 4px 0;
+}
+
+.descApply p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-1);
+}

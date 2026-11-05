@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import type { SalaryRank } from '@/lib/jobs/salaryRank'
+import type { DescriptionSection } from '@/lib/jobs/descriptionStructure'
 import type { ApplySurface } from '@/lib/analytics/applyClick'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 
@@ -51,6 +52,57 @@ export function JobSection({ title, children }: { title: string; children: React
       <h2 className={styles.sectionTitle}>{title}</h2>
       {children}
     </section>
+  )
+}
+
+/**
+ * The posting's description as labelled sections. A jump list appears once there are three or more, so a long posting
+ * can be scanned and the reader can go straight to "Minimum qualifications"; boilerplate (equal opportunity, privacy)
+ * is folded into a <details> so it does not sit between the reader and the apply button. The text itself is already
+ * sanitized by the page.
+ */
+export function DescriptionSections({ sections }: { sections: DescriptionSection[] }) {
+  const jumpable = sections.filter((s) => !s.folded)
+  return (
+    <div className="space-y-2">
+      {jumpable.length >= 3 ? (
+        <nav aria-label="In this description" className={styles.jumpNav}>
+          <ul>
+            {jumpable.map((s) => (
+              <li key={s.id}>
+                <a href={`#${s.id}`}>{s.title}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
+      {sections.map((s) =>
+        s.folded ? (
+          <details key={s.id} id={s.id} className={styles.foldedSection}>
+            <summary>{s.title}</summary>
+            <div className={`prose max-w-none ${styles.richText}`} dangerouslySetInnerHTML={{ __html: s.html }} />
+          </details>
+        ) : (
+          <section key={s.id} id={s.id} aria-labelledby={`${s.id}-title`} className={styles.descSection}>
+            <h3 id={`${s.id}-title`} className={styles.descHeading}>
+              {s.title}
+            </h3>
+            <div className={`prose max-w-none ${styles.richText}`} dangerouslySetInnerHTML={{ __html: s.html }} />
+          </section>
+        ),
+      )}
+    </div>
+  )
+}
+
+/** Apply button after the description: the reader who has just finished it should not have to scroll back up. */
+export function DescriptionApply({ applyHref, companyName, jobId }: { applyHref: string | null; companyName: string; jobId: string }) {
+  if (!applyHref) return null
+  return (
+    <div className={styles.descApply}>
+      <ApplyButton href={applyHref} label="Apply on company site" jobId={jobId} surface="description-end" />
+      <p>Opens {companyName}&rsquo;s own application page in a new tab.</p>
+    </div>
   )
 }
 
