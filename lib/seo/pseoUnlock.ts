@@ -13,6 +13,9 @@
 //   PSEO_HUB_MIN_JOBS=<n>      min live jobs for skill / city / level hubs (default 25)
 //   PSEO_ROLE_MIN_JOBS=<n>     min live jobs for roles outside the Phase 1 list, e.g. senior-software-engineer (default 10)
 
+import { isPhase2OrLater } from './indexingPhase'
+import { isPseoBatchReleased } from './pseoBatches'
+
 export const PSEO_DEFAULT_HUB_MIN_JOBS = 25
 export const PSEO_DEFAULT_ROLE_MIN_JOBS = 10
 
@@ -43,12 +46,29 @@ function toCount(value: number | null | undefined): number {
   return Number.isFinite(n) ? n : 0
 }
 
-/** Skill, city and level hubs: indexable once they list a substantial number of live $100k+ jobs. */
-export function isPseoHubUnlocked(liveJobCount: number | null | undefined): boolean {
+/** Count floor only (no release check): used by the sitemap, which applies the batch release itself. */
+export function meetsPseoHubFloor(liveJobCount: number | null | undefined): boolean {
   return isPseoUnlockEnabled() && toCount(liveJobCount) >= getPseoHubMinJobs()
 }
 
-/** Tier-1 role pages that are not in the Phase 1 list (senior/staff variants, SRE, solutions architect…). */
-export function isPseoRoleUnlocked(liveJobCount: number | null | undefined): boolean {
+export function meetsPseoRoleFloor(liveJobCount: number | null | undefined): boolean {
   return isPseoUnlockEnabled() && toCount(liveJobCount) >= getPseoRoleMinJobs()
+}
+
+/**
+ * Skill, city and level hubs: indexable once they list a substantial number of live $100k+ jobs AND their batch
+ * has been released (lib/seo/pseoBatches.ts). `path` is the page's own pathname, e.g. `/jobs/skills/python`.
+ */
+export function isPseoHubUnlocked(liveJobCount: number | null | undefined, path: string): boolean {
+  return meetsPseoHubFloor(liveJobCount) && isPseoBatchReleased(path)
+}
+
+/** Tier-1 role pages that are not in the Phase 1 list (senior/staff variants, SRE, solutions architect…). */
+export function isPseoRoleUnlocked(liveJobCount: number | null | undefined, path: string): boolean {
+  return meetsPseoRoleFloor(liveJobCount) && isPseoBatchReleased(path)
+}
+
+/** Role × skill / role × city pages: a few jobs to stand alone, and (before phase 2) their batch released. */
+export function isPseoComboIndexable(liveJobCount: number | null | undefined, path: string): boolean {
+  return toCount(liveJobCount) >= PSEO_COMBO_MIN_JOBS && (isPhase2OrLater() || isPseoBatchReleased(path))
 }

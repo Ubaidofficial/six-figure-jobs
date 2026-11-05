@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   // Skill pages aren't in the Phase 1 allowlist: they noindex until phase 2, unless the hub is clearly substantial.
   const allowIndex =
     total >= 5 &&
-    (isPhaseIndexable({ pathname: `/jobs/skills/${resolved.slug}` }) || isPseoHubUnlocked(total))
+    (isPhaseIndexable({ pathname: `/jobs/skills/${resolved.slug}` }) || isPseoHubUnlocked(total, `/jobs/skills/${resolved.slug}`))
   const titleBase = `$100k+ ${resolved.label} jobs`
   const title =
     total > 0

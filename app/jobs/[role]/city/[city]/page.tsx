@@ -7,6 +7,7 @@ import JobList from '../../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
+import { isPseoComboIndexable } from '../../../../../lib/seo/pseoUnlock'
 
 export const revalidate = 600
 
@@ -54,7 +55,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     twitter: { card: 'summary_large_image', title, description },
     // Phase-aware: role × city deep combos aren't in the Phase 1 allowlist.
     robots:
-      total >= 5 &&
+      isPseoComboIndexable(total, `/jobs/${role}/city/${cityInfo.slug}`) &&
       isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}/city/${cityInfo.slug}` })
         ? { index: true, follow: true }
         : { index: false, follow: true },

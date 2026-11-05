@@ -1,4 +1,8 @@
-import { __resetEvergreenSitemapCacheForTests, collectEvergreenEntries } from '../../lib/seo/evergreenSitemap'
+import {
+  __resetEvergreenSitemapCacheForTests,
+  collectEvergreenEntries,
+  collectPseoBatchEntries,
+} from '../../lib/seo/evergreenSitemap'
 
 const aggregate = jest.fn()
 const groupBy = jest.fn()
@@ -127,7 +131,7 @@ describe('collectEvergreenEntries (phase 1)', () => {
   })
 })
 
-describe('collectEvergreenEntries: pSEO unlock (phase 1)', () => {
+describe('collectPseoBatchEntries (phase 1)', () => {
   beforeEach(() => {
     __resetEvergreenSitemapCacheForTests()
     aggregate.mockReset()
@@ -137,19 +141,30 @@ describe('collectEvergreenEntries: pSEO unlock (phase 1)', () => {
     delete process.env.PSEO_UNLOCK
     delete process.env.PSEO_HUB_MIN_JOBS
     delete process.env.PSEO_ROLE_MIN_JOBS
+    delete process.env.PSEO_BATCH_SCHEDULE
+    process.env.PSEO_RELEASED_BATCH = '4'
+  })
+  afterAll(() => {
+    delete process.env.PSEO_RELEASED_BATCH
   })
 
-  it('lists skill, city and level hubs only from the hub threshold (25)', async () => {
+  const batchPaths = async (n: number) => paths(await collectPseoBatchEntries(n, 1))
+
+  it('puts hubs in their batch and applies the 25-job floor', async () => {
     mockDb({}, {
-      skills: { python: 279, rust: 24, kubernetes: 25 },
-      cities: { 'new-york': 135, seattle: 24 },
-      levels: { senior: 708, entry: 4 },
+      skills: { python: 279, rust: 24, kubernetes: 25, nextjs: 30 },
+      cities: { 'new-york': 135, seattle: 24, denver: 40 },
+      levels: { senior: 708, entry: 4, mid: 90 },
     })
-    const p = paths(await collectEvergreenEntries(1))
-    expect(p).toEqual(expect.arrayContaining(['/jobs/skills/python', '/jobs/skills/kubernetes', '/jobs/city/new-york', '/jobs/level/senior']))
-    expect(p).not.toContain('/jobs/skills/rust')
-    expect(p).not.toContain('/jobs/city/seattle')
-    expect(p).not.toContain('/jobs/level/entry')
+    const b1 = await batchPaths(1)
+    expect(b1).toEqual(expect.arrayContaining(['/jobs/skills/python', '/jobs/skills/kubernetes', '/jobs/city/new-york', '/jobs/level/senior']))
+    expect(b1).not.toContain('/jobs/skills/rust') // below the floor
+    expect(b1).not.toContain('/jobs/skills/nextjs') // batch 2
+    const b2 = await batchPaths(2)
+    expect(b2).toEqual(expect.arrayContaining(['/jobs/skills/nextjs', '/jobs/city/denver', '/jobs/level/mid']))
+    expect(b2).not.toContain('/jobs/skills/python')
+    expect(b2).not.toContain('/jobs/city/seattle')
+    expect(b2).not.toContain('/jobs/level/entry')
   })
 
   it('lists tier-1 roles outside the phase 1 list from 10 jobs, counting roleSlug equal or containing', async () => {
@@ -161,14 +176,13 @@ describe('collectEvergreenEntries: pSEO unlock (phase 1)', () => {
         { roleSlug: null, count: 500 },
       ],
     })
-    const p = paths(await collectEvergreenEntries(1))
-    expect(p).toContain('/jobs/senior-software-engineer')
-    expect(p).not.toContain('/jobs/staff-software-engineer')
+    expect(await batchPaths(1)).toContain('/jobs/senior-software-engineer')
+    expect((await batchPaths(2)).concat(await batchPaths(1))).not.toContain('/jobs/staff-software-engineer')
   })
 
-  it('lists role x skill and role x city combos only from 10 jobs and only for unlocked skills / cities', async () => {
+  it('lists combos from 10 jobs: priority roles over batch 1 skills in batch 3, the rest in batch 4', async () => {
     mockDb({}, {
-      skills: { python: 279, rust: 3 },
+      skills: { python: 279, rust: 3, nextjs: 40 },
       cities: { 'new-york': 135 },
       combos: {
         'software-engineer/python': 13,
@@ -176,29 +190,46 @@ describe('collectEvergreenEntries: pSEO unlock (phase 1)', () => {
         'backend-engineer/python': 9, // indexable (>= 5) but below the sitemap bar
         'software-engineer/new-york': 10,
         'data-engineer/new-york': 5,
+        'product-manager/python': 12, // not a priority role: batch 4
+        'software-engineer/nextjs': 11, // batch 2 skill: batch 4
       },
     })
-    const p = paths(await collectEvergreenEntries(1))
-    expect(p).toContain('/jobs/software-engineer/skills/python')
-    expect(p).toContain('/jobs/software-engineer/city/new-york')
-    expect(p).not.toContain('/jobs/backend-engineer/skills/python')
-    expect(p).not.toContain('/jobs/software-engineer/skills/rust')
-    expect(p).not.toContain('/jobs/data-engineer/city/new-york')
+    const b3 = await batchPaths(3)
+    expect(b3).toEqual(expect.arrayContaining(['/jobs/software-engineer/skills/python', '/jobs/software-engineer/city/new-york']))
+    expect(b3).not.toContain('/jobs/product-manager/skills/python')
+    const b4 = await batchPaths(4)
+    expect(b4).toEqual(expect.arrayContaining(['/jobs/product-manager/skills/python', '/jobs/software-engineer/skills/nextjs']))
+    const all = [...b3, ...b4]
+    expect(all).not.toContain('/jobs/backend-engineer/skills/python')
+    expect(all).not.toContain('/jobs/software-engineer/skills/rust')
+    expect(all).not.toContain('/jobs/data-engineer/city/new-york')
+  })
+
+  it('returns nothing for a batch that has not been released', async () => {
+    process.env.PSEO_RELEASED_BATCH = '1'
+    mockDb({}, { skills: { python: 279, nextjs: 40 } })
+    expect(await batchPaths(1)).toContain('/jobs/skills/python')
+    expect(await batchPaths(2)).toEqual([])
+    expect(await batchPaths(3)).toEqual([])
   })
 
   it('adds nothing when PSEO_UNLOCK=0', async () => {
     process.env.PSEO_UNLOCK = '0'
     mockDb({}, { skills: { python: 279 }, cities: { 'new-york': 135 }, levels: { senior: 708 } })
-    const p = paths(await collectEvergreenEntries(1))
-    expect(p.some((x) => x.startsWith('/jobs/skills/') || x.startsWith('/jobs/city/') || x.startsWith('/jobs/level/'))).toBe(false)
+    expect(await batchPaths(1)).toEqual([])
   })
 
   it('leaves the hubs to their own sitemap families in phase 2', async () => {
     process.env.INDEXING_PHASE = '2'
     mockDb({}, { skills: { python: 279 }, cities: { 'new-york': 135 }, levels: { senior: 708 } })
-    const p = paths(await collectEvergreenEntries(1))
-    expect(p).not.toContain('/jobs/skills/python')
-    expect(p).not.toContain('/jobs/city/new-york')
-    expect(p).not.toContain('/jobs/level/senior')
+    const b1 = await batchPaths(1)
+    expect(b1).not.toContain('/jobs/skills/python')
+    expect(b1).not.toContain('/jobs/city/new-york')
+    expect(b1).not.toContain('/jobs/level/senior')
+  })
+
+  it('never puts pSEO pages in the hubs sitemap', async () => {
+    mockDb({}, { skills: { python: 279 } })
+    expect(paths(await collectEvergreenEntries(1)).some((x) => x.startsWith('/jobs/skills/'))).toBe(false)
   })
 })

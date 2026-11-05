@@ -18,30 +18,30 @@ describe('pseoUnlock', () => {
   it('unlocks hubs at 25 and roles at 10 by default', () => {
     expect(getPseoHubMinJobs()).toBe(25)
     expect(getPseoRoleMinJobs()).toBe(10)
-    expect(isPseoHubUnlocked(24)).toBe(false)
-    expect(isPseoHubUnlocked(25)).toBe(true)
-    expect(isPseoRoleUnlocked(9)).toBe(false)
-    expect(isPseoRoleUnlocked(10)).toBe(true)
+    expect(isPseoHubUnlocked(24, '/jobs/skills/python')).toBe(false)
+    expect(isPseoHubUnlocked(25, '/jobs/skills/python')).toBe(true)
+    expect(isPseoRoleUnlocked(9, '/jobs/senior-software-engineer')).toBe(false)
+    expect(isPseoRoleUnlocked(10, '/jobs/senior-software-engineer')).toBe(true)
   })
 
   it('treats missing or invalid counts as zero', () => {
-    expect(isPseoHubUnlocked(null)).toBe(false)
-    expect(isPseoHubUnlocked(undefined)).toBe(false)
-    expect(isPseoHubUnlocked(Number.NaN)).toBe(false)
+    expect(isPseoHubUnlocked(null, '/jobs/skills/python')).toBe(false)
+    expect(isPseoHubUnlocked(undefined, '/jobs/skills/python')).toBe(false)
+    expect(isPseoHubUnlocked(Number.NaN, '/jobs/skills/python')).toBe(false)
   })
 
   it('reads thresholds from env and ignores junk values', () => {
     process.env.PSEO_HUB_MIN_JOBS = '40'
     process.env.PSEO_ROLE_MIN_JOBS = 'abc'
-    expect(isPseoHubUnlocked(39)).toBe(false)
-    expect(isPseoHubUnlocked(40)).toBe(true)
+    expect(isPseoHubUnlocked(39, '/jobs/skills/python')).toBe(false)
+    expect(isPseoHubUnlocked(40, '/jobs/skills/python')).toBe(true)
     expect(getPseoRoleMinJobs()).toBe(10)
   })
 
   it('PSEO_UNLOCK=0 switches the unlock off', () => {
     process.env.PSEO_UNLOCK = '0'
-    expect(isPseoHubUnlocked(1000)).toBe(false)
-    expect(isPseoRoleUnlocked(1000)).toBe(false)
+    expect(isPseoHubUnlocked(1000, '/jobs/skills/python')).toBe(false)
+    expect(isPseoRoleUnlocked(1000, '/jobs/senior-software-engineer')).toBe(false)
   })
 
   it('keeps the sitemap bar for combos above the page bar', () => {

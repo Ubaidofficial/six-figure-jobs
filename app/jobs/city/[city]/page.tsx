@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       countryCode: resolved.countryCode ?? null,
       pathname: `/jobs/city/${resolved.slug}`,
     }) ||
-      isPseoHubUnlocked(total))
+      isPseoHubUnlocked(total, `/jobs/city/${resolved.slug}`))
   const titleBase = `${salaryLabel} jobs in ${resolved.label}`
   const title =
     total > 0

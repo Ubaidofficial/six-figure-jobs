@@ -4,6 +4,8 @@ import { BLOG_POSTS } from '../../lib/blog/posts'
 import { getSiteUrl } from '../../lib/seo/site'
 import { getLatestBlogUpdate, getLatestJobUpdate } from '../../lib/seo/evergreenSitemap'
 import { shouldAdvertiseSitemapFamily } from '../../lib/seo/sitemapPolicy'
+import { getReleasedBatchNumbers } from '../../lib/seo/pseoBatches'
+import { isPseoUnlockEnabled } from '../../lib/seo/pseoUnlock'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
@@ -23,6 +25,8 @@ function escapeXml(value: string) {
 function buildAdvertisedSitemaps(): string[] {
   return [
     'sitemap-hubs.xml',
+    // Released pSEO batches only (each is its own file so Search Console reports coverage per batch).
+    ...(isPseoUnlockEnabled() ? getReleasedBatchNumbers().map((n) => `sitemap-batch/${n}.xml`) : []),
     ...(shouldAdvertiseSitemapFamily('jobs') ? ['sitemap-jobs.xml'] : []),
     ...(shouldAdvertiseSitemapFamily('company') ? ['sitemap-company.xml'] : []),
     ...(shouldAdvertiseSitemapFamily('salary') ? ['sitemap-salary.xml'] : []),

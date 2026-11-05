@@ -99,7 +99,7 @@ export async function generateMetadata({
       const shouldIndex =
         isTier1Role(role) &&
         total >= 3 &&
-        (isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}` }) || isPseoRoleUnlocked(total))
+        (isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}` }) || isPseoRoleUnlocked(total, `/jobs/${role}`))
       const avgMax = asNumber((avgAgg as any)?._avg?.maxAnnual)
       const avgMin = asNumber((avgAgg as any)?._avg?.minAnnual)
       const avgUsd = avgMax != null && avgMin != null ? (avgMax + avgMin) / 2 : (avgMax ?? avgMin)

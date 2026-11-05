@@ -6,7 +6,7 @@ export const revalidate = 600
 
 import { SKILL_TARGETS } from '../../../../../lib/seo/pseoTargets'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
-import { PSEO_COMBO_MIN_JOBS } from '../../../../../lib/seo/pseoUnlock'
+import { isPseoComboIndexable } from '../../../../../lib/seo/pseoUnlock'
 import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJobs'
 import JobList from '../../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../../lib/seo/site'
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     // Phase-aware: role × skill deep combos aren't in the Phase 1 allowlist. Needs a few jobs to stand alone
     // (it was >= 1, which indexed one-job pages).
     robots:
-      total >= PSEO_COMBO_MIN_JOBS &&
+      isPseoComboIndexable(total, `/jobs/${role}/skills/${skillInfo.slug}`) &&
       isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}/skills/${skillInfo.slug}` })
         ? { index: true, follow: true }
         : { index: false, follow: true },

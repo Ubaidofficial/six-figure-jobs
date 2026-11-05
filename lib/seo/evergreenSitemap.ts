@@ -1,5 +1,5 @@
 // Evergreen sitemap entries: pillar hubs, the Phase 1 role pages, salary guides, remote role pages, the blog and the
-// pSEO pages unlocked by job count (skill / city / level hubs, senior-style role pages, role x skill / city combos).
+// (the pSEO pages unlocked by job count are served in released batches, see collectPseoBatchEntries).
 //
 // A sitemap should list exactly the pages that are indexable and canonical. Each page type below applies the SAME
 // rule its own generateMetadata() uses, so a URL is advertised if and only if the page serves `index, follow`:
@@ -18,10 +18,11 @@ import { PHASE_1_ROLE_SLUGS, isPhaseIndexable, isPhase2OrLater } from './indexin
 import { CITY_TARGETS, LEVEL_TARGETS, SKILL_TARGETS } from './pseoTargets'
 import {
   PSEO_COMBO_SITEMAP_MIN_JOBS,
-  isPseoHubUnlocked,
-  isPseoRoleUnlocked,
   isPseoUnlockEnabled,
+  meetsPseoHubFloor,
+  meetsPseoRoleFloor,
 } from './pseoUnlock'
+import { getPseoBatch, getReleasedBatchNumbers, isPseoBatchReleased } from './pseoBatches'
 import { shouldAdvertiseSitemapFamily } from './sitemapPolicy'
 
 export type SitemapEntry = { path: string; lastmod: Date | null }
@@ -106,11 +107,12 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
 const QUERY_CONCURRENCY = 6
 
 /**
- * pSEO pages that clear their job-count threshold while Phase 1 still silences their sitemap family.
+ * Every pSEO page that clears its job-count threshold while Phase 1 still silences its sitemap family, whether or not
+ * its batch is released yet (the batch filter is applied in collectPseoBatchEntries).
  * Every count uses the same buildWhere() input as the page, so the sitemap and the page's robots tag agree.
  * In phase 2+ the dedicated families (skills / city / level / browse) own these URLs, so nothing is listed twice.
  */
-async function collectPseoEntries(): Promise<SitemapEntry[]> {
+async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
   if (!isPseoUnlockEnabled()) return []
   const entries: SitemapEntry[] = []
   const listSkills = !shouldAdvertiseSitemapFamily('skills')
@@ -126,7 +128,7 @@ async function collectPseoEntries(): Promise<SitemapEntry[]> {
       countAndLatest(buildWhere({ skillSlugs: [skill.slug], isHundredKLocal: true, page: 1, pageSize: 1 })),
     )
     SKILL_TARGETS.forEach((skill, i) => {
-      if (counts[i].count >= 5 && isPseoHubUnlocked(counts[i].count)) {
+      if (counts[i].count >= 5 && meetsPseoHubFloor(counts[i].count)) {
         unlockedSkills.push(skill.slug)
         if (listSkills) entries.push({ path: `/jobs/skills/${skill.slug}`, lastmod: counts[i].latest })
       }
@@ -140,7 +142,7 @@ async function collectPseoEntries(): Promise<SitemapEntry[]> {
       ),
     )
     CITY_TARGETS.forEach((city, i) => {
-      if (isCityPageIndexable(counts[i].count) && isPseoHubUnlocked(counts[i].count)) {
+      if (isCityPageIndexable(counts[i].count) && meetsPseoHubFloor(counts[i].count)) {
         unlockedCities.push({ slug: city.slug, countryCode: city.countryCode })
         if (listCities) entries.push({ path: `/jobs/city/${city.slug}`, lastmod: counts[i].latest })
       }
@@ -153,7 +155,7 @@ async function collectPseoEntries(): Promise<SitemapEntry[]> {
       countAndLatest(buildWhere({ experienceLevel: level, isHundredKLocal: true, page: 1, pageSize: 1 })),
     )
     levels.forEach((level, i) => {
-      if (counts[i].count >= 5 && isPseoHubUnlocked(counts[i].count)) {
+      if (counts[i].count >= 5 && meetsPseoHubFloor(counts[i].count)) {
         entries.push({ path: `/jobs/level/${level}`, lastmod: counts[i].latest })
       }
     })
@@ -177,7 +179,7 @@ async function collectPseoEntries(): Promise<SitemapEntry[]> {
         const at = g._max.updatedAt
         if (at && (!latest || at > latest)) latest = at
       }
-      if (count >= 3 && isPseoRoleUnlocked(count)) entries.push({ path: `/jobs/${role}`, lastmod: latest })
+      if (count >= 3 && meetsPseoRoleFloor(count)) entries.push({ path: `/jobs/${role}`, lastmod: latest })
     }
 
     // Role x skill and role x city combos for the Phase 1 roles, limited to unlocked skills / cities.
@@ -219,23 +221,36 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
   }
 
   let roleEntries: SitemapEntry[] = []
-  let pseoEntries: SitemapEntry[] = []
   let complete = latestJob !== null
   if (complete) {
     try {
       roleEntries = (await Promise.all([...PHASE_1_ROLE_SLUGS].map(collectRoleEntries))).flat()
-      pseoEntries = await collectPseoEntries()
     } catch {
       complete = false
     }
   }
-  const result = [...entries, ...roleEntries, ...pseoEntries]
+  const result = [...entries, ...roleEntries]
 
   // Only cache a complete result; a database blip must not freeze a thin sitemap for an hour.
   if (complete) cache = { at: now, entries: result }
   return result
 }
 
+let pseoCache: { at: number; entries: SitemapEntry[] } | null = null
+
+/**
+ * URLs for one released pSEO batch (served at /sitemap-batch/<n>.xml). Empty when the batch is not released yet, so
+ * an unreleased batch is never advertised. The full candidate list is cached for an hour and only when complete.
+ */
+export async function collectPseoBatchEntries(batch: number, now: number = Date.now()): Promise<SitemapEntry[]> {
+  if (!getReleasedBatchNumbers(now).includes(batch)) return []
+  if (!pseoCache || now - pseoCache.at >= CACHE_TTL_MS) {
+    pseoCache = { at: now, entries: await collectAllPseoEntries() }
+  }
+  return pseoCache.entries.filter((e) => getPseoBatch(e.path) === batch && isPseoBatchReleased(e.path, now))
+}
+
 export function __resetEvergreenSitemapCacheForTests() {
   cache = null
+  pseoCache = null
 }

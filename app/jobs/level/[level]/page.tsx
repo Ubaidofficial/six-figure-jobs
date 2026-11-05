@@ -84,7 +84,7 @@ export async function generateMetadata({
   // Level pages aren't in the Phase 1 allowlist: noindex until phase 2, unless the hub is clearly substantial.
   const allowIndex =
     total >= 5 &&
-    (isPhaseIndexable({ pathname: `/jobs/level/${level}` }) || isPseoHubUnlocked(total))
+    (isPhaseIndexable({ pathname: `/jobs/level/${level}` }) || isPseoHubUnlocked(total, `/jobs/level/${level}`))
   const canonical = `${SITE_URL}/jobs/level/${level}`
 
   const title =
