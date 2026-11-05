@@ -8,8 +8,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
-import JobList from '../../../components/JobList'
-import { formatRelativeTime } from '../../../../lib/utils/time'
+import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Pagination, Prose } from '@/components/listing/ListingParts'
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
@@ -26,7 +25,7 @@ function faqItems(label: string) {
   return [
     {
       q: `What qualifies as a high-paying ${lower} job?`,
-      a: 'We only list roles with validated high-salary compensation signals from ATS feeds and trusted boards.',
+      a: 'We only list roles with validated high-salary compensation signals from company career pages and job boards.',
     },
     {
       q: `Do you include remote and hybrid ${lower} jobs?`,
@@ -34,7 +33,7 @@ function faqItems(label: string) {
     },
     {
       q: `How fresh are these ${lower} roles?`,
-      a: 'We refresh ATS and board sources frequently, expire stale jobs, and prioritize the newest $100k+ openings.',
+      a: 'We refresh company career pages and job boards frequently, expire stale jobs, and prioritize the newest $100k+ openings.',
     },
     {
       q: `Why use this ${lower} category page instead of a generic job board?`,
@@ -113,8 +112,8 @@ export async function generateMetadata({
       : `${cfg.label} jobs paying $100k+ | ${SITE_NAME}`
   const description =
     total > 0
-      ? `${total.toLocaleString()} verified $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, apply direct. No recruiters, no entry-level clutter. Remote, hybrid, and on-site roles refreshed daily from company ATS feeds.`
-      : `Verified $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, apply direct. No recruiters, no entry-level clutter. Remote, hybrid, and on-site roles from top companies.`
+      ? `${total.toLocaleString()} $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, with links to apply. No entry-level clutter. Remote, hybrid, and on-site roles refreshed daily from company career pages.`
+      : `Verified $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, with links to apply. No entry-level clutter. Remote, hybrid, and on-site roles from top companies.`
 
   return {
     title,
@@ -173,195 +172,91 @@ export default async function CategoryPage({
   const avgSalaryLabel = formatSalary(insights.avgAnnual)
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      <header className="mb-6 space-y-2">
-        <h1 className="text-2xl font-semibold text-neutral-50">
-          {cfg.label} jobs paying $100k+
-        </h1>
-        <p className="text-sm text-neutral-300">
-          Remote, hybrid, and on-site high-paying {cfg.label.toLowerCase()} roles from top companies.
-        </p>
-        <p className="text-xs text-neutral-400">
-          Updated {formatRelativeTime(new Date())} — {total.toLocaleString()} open roles.
-        </p>
-      </header>
+    <ListingPage>
+      <ListingHeader
+        breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: cfg.label }]}
+        accent={cfg.label}
+        title="jobs paying $100k+"
+        summary={
+          <>
+            <strong>{total.toLocaleString()}</strong> open {total === 1 ? 'role' : 'roles'}
+            {insights.avgAnnual ? <> · average listed pay <strong>{avgSalaryLabel}</strong></> : null}
+            {insights.newThisWeek ? <> · {insights.newThisWeek.toLocaleString()} new this week</> : null}
+            {insights.remoteCount ? <> · {insights.remoteCount.toLocaleString()} remote</> : null}
+          </>
+        }
+        chips={[
+          ...['100k-plus', '200k-plus', '300k-plus', '400k-plus'].map((band) => ({
+            label: `${band.replace('-plus', '')}+`,
+            href: buildJobsPath({ salaryMin: Number(band.replace('k-plus', '000')), roleSlug: primaryRoleSlug }),
+          })),
+          {
+            label: 'Remote $100k+',
+            href: buildJobsPath({ salaryMin: 100_000, roleSlug: primaryRoleSlug, remoteOnly: true }),
+          },
+        ]}
+      />
 
-      <section className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Open six-figure roles" value={total.toLocaleString()} detail="Fresh, non-expired listings" />
-        <MetricCard label="New this week" value={insights.newThisWeek.toLocaleString()} detail="Recently seen or posted" />
-        <MetricCard label="Remote eligible" value={insights.remoteCount.toLocaleString()} detail="Remote-first listings" />
-        <MetricCard label="Average listed pay" value={avgSalaryLabel} detail="From visible salary ranges" />
-      </section>
+      <JobRows
+        jobs={jobs as JobWithCompany[]}
+        empty={{
+          title: `No ${cfg.label.toLowerCase()} roles meet the $100k+ filter yet.`,
+          body: 'Check back soon, or browse every $100k+ job.',
+          href: '/jobs',
+          hrefLabel: 'Browse all jobs',
+        }}
+      />
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        hrefFor={(n) => (n <= 1 ? `/jobs/category/${category}` : `/jobs/category/${category}?page=${n}`)}
+      />
 
-      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
-        <h2 className="text-sm font-semibold text-neutral-50">
-          Why this {cfg.label.toLowerCase()} category is built for Google and job seekers
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-neutral-300">
-          This page combines adjacent {cfg.label.toLowerCase()} role titles into one canonical category,
-          filters to compensation-backed $100k+ opportunities, and keeps only fresh listings that pass
-          salary and content quality gates. Unlike broad job boards, the feed emphasizes salary evidence,
-          direct company/ATS sources, remote eligibility, and related salary-band paths.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-neutral-200">
-          <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
-            {insights.atsSalaryCount.toLocaleString()} ATS salary-backed
-          </span>
-          <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
-            {insights.topCompanies.length.toLocaleString()} top companies surfaced
-          </span>
-          <span className="rounded-full bg-neutral-900 px-3 py-1 ring-1 ring-neutral-800">
-            No JobPosting schema on listing pages
-          </span>
-        </div>
-      </section>
-
-      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
-          Explore salary bands
-        </h2>
-        <div className="flex flex-wrap gap-2 text-xs">
-          {['100k-plus', '200k-plus', '300k-plus', '400k-plus'].map((band) => (
-            <Link
-              key={band}
-              href={buildJobsPath({
-                salaryMin: Number(band.replace('k-plus', '000')),
-                roleSlug: primaryRoleSlug,
-              })}
-              className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-neutral-200 hover:border-neutral-600"
-            >
-              💵 {band.replace('-plus', 'k+')}
-            </Link>
-          ))}
-          <Link
-            href={buildJobsPath({ salaryMin: 100_000, roleSlug: primaryRoleSlug, remoteOnly: true })}
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-3 py-1.5 text-emerald-200 hover:border-emerald-500"
-          >
-            🌍 Remote $100k+
-          </Link>
-        </div>
-      </section>
-
-      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
-          Popular slices
-        </h2>
-        <div className="flex flex-wrap gap-2 text-xs">
-          {LOCATIONS.map((loc) => (
-            <Link
-              key={loc.code}
-              href={
+      <ListingSection title={`${cfg.label} jobs by location`}>
+        <LinkChips
+          label="Locations"
+          items={[
+            ...LOCATIONS.map((loc) => ({
+              label: loc.code === 'remote' ? 'Remote' : loc.label,
+              href:
                 loc.code === 'remote'
                   ? `/remote/${primaryRoleSlug}`
                   : buildJobsPath({
                       salaryMin: 100_000,
                       roleSlug: primaryRoleSlug,
                       countryCode: countrySlugToCode(loc.code) ?? undefined,
-                    })
-              }
-              className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-neutral-200 hover:border-neutral-600"
-            >
-              <span>{loc.flag}</span>
-              <span>{loc.code === 'remote' ? 'Remote' : loc.label}</span>
-            </Link>
-          ))}
-          <Link
-            href={buildJobsPath({ salaryMin: 200_000, roleSlug: primaryRoleSlug, remoteOnly: true })}
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-3 py-1.5 text-emerald-200 hover:border-emerald-500"
-          >
-            $200k+ Remote
-          </Link>
-        </div>
-      </section>
+                    }),
+            })),
+            {
+              label: '$200k+ Remote',
+              href: buildJobsPath({ salaryMin: 200_000, roleSlug: primaryRoleSlug, remoteOnly: true }),
+            },
+          ]}
+        />
+      </ListingSection>
 
-      {(insights.topCompanies.length > 0 || insights.topSkills.length > 0) && (
-        <section className="mb-6 grid gap-4 lg:grid-cols-2">
-          {insights.topCompanies.length > 0 && (
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                Top companies hiring {cfg.label.toLowerCase()} talent
-              </h2>
-              <div className="flex flex-wrap gap-2 text-xs">
-                {insights.topCompanies.map((company) => (
-                  <span
-                    key={company.name}
-                    className="rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-neutral-200"
-                  >
-                    {company.name} · {company.count}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+      {insights.topCompanies.length > 0 || insights.topSkills.length > 0 ? (
+        <ListingSection title={`What ${cfg.label.toLowerCase()} employers are hiring for`}>
+          <Prose>
+            {insights.topCompanies.length > 0 ? (
+              <p>
+                <strong>Companies hiring:</strong>{' '}
+                {insights.topCompanies.map((c) => `${c.name} (${c.count})`).join(', ')}.
+              </p>
+            ) : null}
+            {insights.topSkills.length > 0 ? (
+              <p>
+                <strong>Skills in current listings:</strong>{' '}
+                {insights.topSkills.map((sk) => `${sk.name} (${sk.count})`).join(', ')}.
+              </p>
+            ) : null}
+          </Prose>
+        </ListingSection>
+      ) : null}
 
-          {insights.topSkills.length > 0 && (
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                In-demand skills in current listings
-              </h2>
-              <div className="flex flex-wrap gap-2 text-xs">
-                {insights.topSkills.map((skill) => (
-                  <span
-                    key={skill.name}
-                    className="rounded-full border border-emerald-900 bg-emerald-950/50 px-3 py-1.5 text-emerald-100"
-                  >
-                    {skill.name} · {skill.count}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {jobs.length === 0 ? (
-        <p className="text-sm text-neutral-400">
-          No {cfg.label.toLowerCase()} roles meet the $100k+ filter yet. Check back soon.
-        </p>
-      ) : (
-        <>
-          <JobList jobs={jobs as JobWithCompany[]} />
-          {totalPages > 1 && (
-            <nav className="mt-6 flex items-center justify-between text-xs text-neutral-300">
-              <Link
-                href={page > 1 ? `?page=${page - 1}` : '#'}
-                className={`rounded-full px-3 py-2 ${
-                  page > 1 ? 'bg-neutral-800 hover:bg-neutral-700' : 'cursor-not-allowed bg-neutral-900 text-neutral-600'
-                }`}
-                aria-disabled={page <= 1}
-              >
-                Previous
-              </Link>
-              <span>
-                Page {page} of {totalPages}
-              </span>
-              <Link
-                href={page < totalPages ? `?page=${page + 1}` : '#'}
-                className={`rounded-full px-3 py-2 ${
-                  page < totalPages ? 'bg-neutral-800 hover:bg-neutral-700' : 'cursor-not-allowed bg-neutral-900 text-neutral-600'
-                }`}
-                aria-disabled={page >= totalPages}
-              >
-                Next
-              </Link>
-            </nav>
-          )}
-        </>
-      )}
-
-      <section className="mt-10 space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
-        <h2 className="text-sm font-semibold text-neutral-50">
-          FAQs about high-paying {cfg.label.toLowerCase()} jobs
-        </h2>
-        <div className="space-y-3 text-sm text-neutral-300">
-          {faqs.map((item) => (
-            <div key={item.q}>
-              <p className="font-semibold text-neutral-100">{item.q}</p>
-              <p className="text-neutral-300">{item.a}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <ListingSection title={`FAQs about high-paying ${cfg.label.toLowerCase()} jobs`}>
+        <Faq items={faqs.map((item) => ({ question: item.q, answer: item.a }))} />
+      </ListingSection>
 
       <script
         type="application/ld+json"
@@ -375,21 +270,10 @@ export default async function CategoryPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-    </main>
+    </ListingPage>
   )
 }
 
-function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
-        {label}
-      </div>
-      <div className="mt-2 text-2xl font-semibold text-neutral-50">{value}</div>
-      <div className="mt-1 text-xs text-neutral-400">{detail}</div>
-    </div>
-  )
-}
 
 type CategoryInsights = {
   remoteCount: number

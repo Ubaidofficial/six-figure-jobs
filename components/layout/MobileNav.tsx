@@ -19,16 +19,16 @@ export function MobileNav() {
           size="md"
           icon={<Menu className="h-5 w-5" aria-hidden="true" />}
           aria-label="Open menu"
-          className="focus-ring h-11 w-11 rounded-full border border-slate-800/70 bg-slate-950/40 text-slate-200 hover:bg-slate-900/60"
+          className="focus-ring h-11 w-11 rounded-full border border-border bg-card text-foreground hover:bg-card"
         >
           <span className="sr-only">Open menu</span>
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="right" className="glass border-slate-800/60">
+      <SheetContent side="right" className="glass border-border">
         <SheetHeader className="space-y-2 text-left">
-          <SheetTitle className="text-slate-50">Six Figure Jobs</SheetTitle>
-          <p className="text-sm text-slate-400">
+          <SheetTitle className="text-foreground">Six Figure Jobs</SheetTitle>
+          <p className="text-sm text-muted-foreground">
             Premium six-figure roles with verified salary ranges.
           </p>
         </SheetHeader>
@@ -38,13 +38,13 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="focus-ring block rounded-xl border border-slate-800/70 bg-slate-950/40 px-4 py-3 text-sm font-medium text-slate-100 hover:bg-slate-900/60"
+              className="focus-ring block rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground hover:bg-card"
             >
               {item.label}
             </Link>
           ))}
         </nav>
-        <p className="mt-6 text-xs text-slate-500">
+        <p className="mt-6 text-xs text-muted-foreground">
           Source-linked listings. Apply directly on the company site.
         </p>
       </SheetContent>

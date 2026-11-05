@@ -1,7 +1,14 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { JobCard } from '@/components/jobs/JobCard'
-import type { CSSProperties } from 'react'
+import {
+  Faq,
+  JobRows,
+  ListingHeader,
+  ListingLayout,
+  ListingPage,
+  ListingSection,
+  Pagination,
+  Prose,
+} from '@/components/listing/ListingParts'
 
 import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '@/lib/prisma'
@@ -14,7 +21,6 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
-import styles from './SalaryTierTemplate.module.css'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
@@ -53,12 +59,6 @@ function buildPageHref(basePath: string, sp: SearchParams, page: number): string
   return qs ? `${basePath}?${qs}` : basePath
 }
 
-function toTitleCase(slug: string): string {
-  return slug
-    .split('-')
-    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
-    .join(' ')
-}
 
 function asNumber(value: unknown): number | null {
   if (value == null) return null
@@ -88,9 +88,6 @@ function formatUsdK(amount: number | null): string {
   return `$${k.toLocaleString()}k`
 }
 
-function coalesceAnnual(job: { maxAnnual?: any; minAnnual?: any }): number | null {
-  return asNumber(job.maxAnnual ?? job.minAnnual)
-}
 
 function buildTierQueryInput(tierId: SalaryTierId): Pick<JobQueryInput, 'currency' | 'minAnnual' | 'maxAnnual'> {
   const tier = SALARY_TIERS[tierId]
@@ -115,15 +112,7 @@ function dedupeJobs(jobs: JobWithCompany[]): JobWithCompany[] {
   })
 }
 
-function cssVarStyle(vars: Record<string, string>): CSSProperties {
-  return vars as unknown as CSSProperties
-}
 
-function svgPathFromPoints(points: Array<{ x: number; y: number }>): string {
-  if (points.length === 0) return ''
-  const [first, ...rest] = points
-  return `M ${first.x.toFixed(2)} ${first.y.toFixed(2)} ` + rest.map((p) => `L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ')
-}
 
 export function buildSalaryTierMetadata(
   tierId: SalaryTierId,
@@ -134,8 +123,8 @@ export function buildSalaryTierMetadata(
   const title = `Top ${tier.rangeLabel} Jobs | ${SITE_NAME}`
   const description =
     total > 0
-      ? `Browse ${total.toLocaleString()} verified ${tier.rangeLabel} jobs with published salary ranges, direct apply links, and fresh listings by role, location, and work type.`
-      : `Browse verified ${tier.rangeLabel} jobs with published salary ranges, direct apply links, and no entry-level clutter.`
+      ? `Browse ${total.toLocaleString()} verified ${tier.rangeLabel} jobs with published salary ranges, and fresh listings by role, location, and work type.`
+      : `Browse verified ${tier.rangeLabel} jobs with published salary ranges, and no entry-level clutter.`
 
   const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${tierId}`
   return {
@@ -282,222 +271,18 @@ export async function SalaryTierTemplate({
     },
   }
 
-  const [avgAgg, topCityRows, topRoleAvgRows, topRolesForChart, countriesForPie] =
-    await Promise.all([
-      prisma.job.aggregate({
-        where: {
-          ...buildWhere(baseFacetInput),
-          OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
-        },
-        _avg: { maxAnnual: true, minAnnual: true },
-      }),
-      prisma.job.groupBy({
-        by: ['city', 'countryCode'],
-        where: {
-          ...buildWhere(baseFacetInput),
-          city: { not: null },
-        },
-        _count: { _all: true },
-        _avg: { maxAnnual: true, minAnnual: true },
-        orderBy: [{ _avg: { maxAnnual: 'desc' } }, { _avg: { minAnnual: 'desc' } }],
-        take: 10,
-      }),
-      prisma.job.groupBy({
-        by: ['roleSlug'],
-        where: {
-          ...buildWhere(baseFacetInput),
-          roleSlug: { not: null },
-        },
-        _count: { _all: true },
-        _avg: { maxAnnual: true, minAnnual: true },
-        orderBy: [{ _avg: { maxAnnual: 'desc' } }, { _avg: { minAnnual: 'desc' } }],
-        take: 10,
-      }),
-      (prisma.job.groupBy as any)({
-        by: ['roleSlug'],
-        where: {
-          ...buildWhere({ ...baseFacetInput, roleSlugs: undefined }),
-          roleSlug: { not: null },
-        },
-        _count: { _all: true },
-        orderBy: { _count: { roleSlug: 'desc' } } as any,
-        take: 5,
-      }),
-      (prisma.job.groupBy as any)({
-        by: ['countryCode'],
-        where: {
-          ...buildWhere({ ...baseFacetInput, countryCode: undefined }),
-          countryCode: { not: null },
-        },
-        _count: { _all: true },
-        orderBy: { _count: { countryCode: 'desc' } } as any,
-        take: 5,
-      }),
-    ])
+  const avgAgg = await prisma.job.aggregate({
+    where: {
+      ...buildWhere(baseFacetInput),
+      OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
+    },
+    _avg: { maxAnnual: true, minAnnual: true },
+  })
 
   const avgMax = asNumber((avgAgg as any)?._avg?.maxAnnual)
   const avgMin = asNumber((avgAgg as any)?._avg?.minAnnual)
   const avgSalary =
     avgMax != null && avgMin != null ? (avgMax + avgMin) / 2 : (avgMax ?? avgMin)
-
-  const topCity = (() => {
-    const row = (topCityRows as any[]).find((r) => {
-      const avg = asNumber(r?._avg?.maxAnnual ?? r?._avg?.minAnnual)
-      const count = Number(r?._count?._all ?? 0)
-      return avg != null && count >= 3
-    }) as any
-    if (!row) return null
-    const city = String(row.city || '').trim()
-    const cc = String(row.countryCode || '').trim().toUpperCase()
-    if (!city) return null
-    return `${city}${cc ? ` · ${cc}` : ''}`
-  })()
-
-  const topRole = (() => {
-    const row = (topRoleAvgRows as any[]).find((r) => {
-      const slug = String(r.roleSlug || '').trim()
-      const avg = asNumber(r?._avg?.maxAnnual ?? r?._avg?.minAnnual)
-      const count = Number(r?._count?._all ?? 0)
-      return Boolean(slug) && avg != null && count >= 3
-    }) as any
-    if (!row) return null
-    return toTitleCase(String(row.roleSlug))
-  })()
-
-  const maxRoleCount = Math.max(1, ...topRolesForChart.map((r: any) => Number(r?._count?._all ?? 0)))
-  const roleBars = topRolesForChart
-    .map((r: any) => {
-      const slug = String(r.roleSlug || '')
-      const count = Number(r?._count?._all ?? 0)
-      return { slug, label: toTitleCase(slug), count, pct: (count / maxRoleCount) * 100 }
-    })
-    .filter((r: any) => Boolean(r.slug))
-
-  const totalForPie = await prisma.job.count({
-    where: buildWhere({ ...baseFacetInput, countryCode: undefined }),
-  })
-
-  const pieEntriesBase = countriesForPie
-    .map((r: any) => ({
-      code: String(r.countryCode || '').toUpperCase(),
-      count: Number(r?._count?._all ?? 0),
-    }))
-    .filter((r: any) => r.code)
-
-  const pieTopSum = pieEntriesBase.reduce((sum: number, e: any) => sum + e.count, 0)
-  const pieOther = Math.max(0, totalForPie - pieTopSum)
-  const pieEntries = pieOther > 0 ? [...pieEntriesBase, { code: 'Other', count: pieOther }] : pieEntriesBase
-
-  const palette = [
-    tier.theme.accentA,
-    tier.theme.accentB,
-    tier.theme.goldA ?? '#A3E635',
-    tier.theme.goldB ?? '#F59E0B',
-    '#22C55E',
-    '#60A5FA',
-    '#A78BFA',
-    '#F97316',
-  ]
-
-  let pieStart = 0
-  const pieStops: Array<{ color: string; from: number; to: number; label: string; pct: number }> = pieEntries.map(
-    (e: any, i: number) => {
-      const pct = totalForPie > 0 ? (e.count / totalForPie) * 100 : 0
-      const from = pieStart
-      const to = pieStart + pct
-      pieStart = to
-      return {
-        color: palette[i % palette.length],
-        from,
-        to,
-        label: e.code,
-        pct,
-      }
-    }
-  )
-
-  const pieGradient =
-    pieStops.length > 0
-      ? `conic-gradient(${pieStops
-          .map((s) => `${s.color} ${s.from.toFixed(1)}% ${s.to.toFixed(1)}%`)
-          .join(', ')})`
-      : 'conic-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08))'
-
-  const trendWhere = buildWhere({ ...baseFacetInput, page: 1, pageSize: 1 })
-  const trendRows = await prisma.job.findMany({
-    where: trendWhere,
-    select: { postedAt: true, createdAt: true, maxAnnual: true, minAnnual: true },
-    orderBy: [{ postedAt: 'desc' }, { createdAt: 'desc' }],
-    take: 5000,
-  })
-
-  const DAYS = 21
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const dayKeys: string[] = []
-  for (let i = DAYS - 1; i >= 0; i -= 1) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - i)
-    dayKeys.push(d.toISOString().slice(0, 10))
-  }
-
-  const dayBuckets = new Map<string, { sum: number; count: number }>()
-  for (const key of dayKeys) dayBuckets.set(key, { sum: 0, count: 0 })
-
-  for (const row of trendRows) {
-    const dt = (row.postedAt ?? row.createdAt) as Date
-    const day = new Date(dt)
-    day.setHours(0, 0, 0, 0)
-    const key = day.toISOString().slice(0, 10)
-    if (!dayBuckets.has(key)) continue
-    const v = coalesceAnnual(row)
-    if (v == null) continue
-    const bucket = dayBuckets.get(key)!
-    bucket.sum += v
-    bucket.count += 1
-  }
-
-  const trendValues = dayKeys.map((k) => {
-    const b = dayBuckets.get(k)!
-    return b.count > 0 ? b.sum / b.count : null
-  })
-
-  const trendNonNull = trendValues.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
-  const hasTrend = trendNonNull.length >= 3
-  const trendMin = hasTrend ? Math.min(...trendNonNull) : 0
-  const trendMax = hasTrend ? Math.max(...trendNonNull) : 0
-
-  const svgPoints = (() => {
-    if (!hasTrend) return []
-    const W = 520
-    const H = 140
-    const padX = 4
-    const padY = 10
-    const spanX = W - padX * 2
-    const spanY = H - padY * 2
-    const denom = trendMax - trendMin || 1
-    const pts: Array<{ x: number; y: number } | null> = trendValues.map((v, idx) => {
-      if (v == null) return null
-      const x = padX + (idx / Math.max(1, trendValues.length - 1)) * spanX
-      const t = (v - trendMin) / denom
-      const y = padY + (1 - t) * spanY
-      return { x, y }
-    })
-
-    const segments: Array<Array<{ x: number; y: number }>> = []
-    let current: Array<{ x: number; y: number }> = []
-    for (const p of pts) {
-      if (!p) {
-        if (current.length) segments.push(current)
-        current = []
-      } else {
-        current.push(p)
-      }
-    }
-    if (current.length) segments.push(current)
-
-    return segments.map(svgPathFromPoints).filter(Boolean)
-  })()
 
   const jsonLd = buildItemListJsonLd({
     name: `${tier.title} on ${SITE_NAME}`,
@@ -547,7 +332,7 @@ export async function SalaryTierTemplate({
         name: `How often are ${tier.rangeLabel} job listings updated?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Listings in the ${tier.rangeLabel} tier are refreshed continuously from company ATS feeds and verified job boards. Each listing shows a direct apply link and salary data sourced from the employer — no estimated or scraped ranges.`,
+          text: `New ${tier.rangeLabel} listings are added every day and jobs that are no longer open are removed. Each listing shows the salary from the employer’s posting and links to the company’s own application page.`,
         },
       },
       {
@@ -564,247 +349,58 @@ export async function SalaryTierTemplate({
   const basePath = `/jobs/${tierId}`
 
   return (
-    <main className={styles.page}>
+    <ListingPage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(salaryPageJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link href="/">Home</Link>
-        <span aria-hidden="true">/</span>
-        <Link href="/jobs">Jobs</Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">{tier.rangeLabel}</span>
-      </nav>
+      <ListingHeader
+        breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: tier.rangeLabel }]}
+        accent={tier.rangeLabel}
+        title="Jobs"
+        summary={
+          <>
+            <strong>{data.total.toLocaleString()}</strong> {data.total === 1 ? 'job' : 'jobs'} with a published salary
+            {avgSalary ? <> · average <strong>{formatUsdK(avgSalary)}</strong></> : null}
+            {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
+          </>
+        }
+        toolbar={<JobsToolbar facets={facets} salaryPresetLabel={tier.rangeLabel} />}
+      />
 
-      <header
-        className={styles.hero}
-        style={cssVarStyle({
-          '--tier-a': tier.theme.accentA,
-          '--tier-b': tier.theme.accentB,
-        })}
-      >
-        <div className={styles.heroInner}>
-          <div className={styles.heroTop}>
-            <div>
-              <div className={styles.badge}>
-                <span className={styles.badgeEmoji} aria-hidden="true">
-                  {tier.emoji}
-                </span>
-                <span className={styles.badgeText}>SALARY TIER</span>
-              </div>
-              <h1 className={styles.heroTitle}>
-                <span className={styles.heroTitleAccent}>{tier.rangeLabel}</span> Jobs
-              </h1>
-              <p className={styles.heroSub}>
-                {data.total.toLocaleString()} premium opportunities in this range. Filter by role, location, and
-                work type — verified salaries only.
-              </p>
-            </div>
-            <div className={styles.toolbarWrap}>
-              <JobsToolbar facets={facets} salaryPresetLabel={tier.rangeLabel} />
-            </div>
-          </div>
+      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />}>
+        <JobRows
+          jobs={jobs}
+          empty={{
+            title: 'No jobs match these filters.',
+            body: 'Clear the filters to see every job in this salary range.',
+            href: basePath,
+          }}
+        />
+        <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} />
+      </ListingLayout>
 
-          <div className={styles.heroStats} aria-label="Salary tier stats">
-            <div className={styles.statCard}>
-              <div className={`${styles.statValue} ${styles.statValueAccent}`}>{data.total.toLocaleString()}</div>
-              <div className={styles.statLabel}>Total jobs in tier</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>{formatUsdK(avgSalary)}</div>
-              <div className={styles.statLabel}>Average salary (USD)</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>{topCity ?? '—'}</div>
-              <div className={styles.statLabel}>Top paying city</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>{topRole ?? '—'}</div>
-              <div className={styles.statLabel}>Top paying role</div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <ListingSection title={`About ${tier.rangeLabel} jobs`}>
+        <Prose>
+          <p>
+            <strong>{tier.rangeLabel} jobs</strong> on Six Figure Jobs: {data.total.toLocaleString()} roles with a
+            published salary range.{avgSalary ? ` Average salary: ${formatUsdK(avgSalary)} USD.` : ''} Salaries come
+            from the employer&rsquo;s own posting, and every listing links to the company&rsquo;s application page.
+            Filter by role, country or work type to narrow the list.
+          </p>
+        </Prose>
+      </ListingSection>
 
-      <section className={styles.insights} aria-label="Insights">
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>
-            <span>Top roles</span>
-            <span className={styles.cardSub}>By job count</span>
-          </div>
-          <div className={styles.bars}>
-            {roleBars.length === 0 ? (
-              <div className={styles.cardSub}>Not enough data yet.</div>
-            ) : (
-              roleBars.map((r: any) => (
-                <div key={r.slug} className={styles.barRow}>
-                  <div>
-                    <div className={styles.barLabel}>{r.label}</div>
-                    <div className={styles.barCount}>{r.count.toLocaleString()} jobs</div>
-                  </div>
-                  <div className={styles.barTrack}>
-                    <div className={styles.barFill} style={cssVarStyle({ '--w': `${r.pct}%` })} />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>
-            <span>Geography</span>
-            <span className={styles.cardSub}>Share of jobs by country</span>
-          </div>
-          <div className={styles.pieWrap}>
-            <div className={styles.pie} style={{ background: pieGradient }} aria-hidden="true" />
-            <div className={styles.legend}>
-              {pieStops.length === 0 ? (
-                <div className={styles.cardSub}>Not enough data yet.</div>
-              ) : (
-                pieStops.map((s) => (
-                  <div key={s.label} className={styles.legendItem}>
-                    <span className={styles.legendLeft}>
-                      <span className={styles.swatch} style={cssVarStyle({ '--c': s.color })} />
-                      <span className={styles.legendName}>{s.label}</span>
-                    </span>
-                    <span className={styles.legendPct}>{s.pct.toFixed(0)}%</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>
-            <span>Salary trend</span>
-            <span className={styles.cardSub}>Last {DAYS} days (avg)</span>
-          </div>
-          <div className={styles.lineChart}>
-            {hasTrend ? (
-              <svg className={styles.lineSvg} viewBox="0 0 520 140" role="img" aria-label="Salary trend chart">
-                <defs>
-                  <linearGradient id="tierGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor={tier.theme.accentA} />
-                    <stop offset="100%" stopColor={tier.theme.accentB} />
-                  </linearGradient>
-                </defs>
-
-                {[0.25, 0.5, 0.75].map((t) => (
-                  <line
-                    key={t}
-                    className={styles.lineGrid}
-                    x1={0}
-                    x2={520}
-                    y1={140 * t}
-                    y2={140 * t}
-                  />
-                ))}
-
-                {svgPoints.map((d, i) => (
-                  <path key={i} className={styles.linePath} d={d} />
-                ))}
-              </svg>
-            ) : (
-              <div className={styles.cardSub} style={{ padding: 10 }}>
-                Not enough data to chart a trend yet.
-              </div>
-            )}
-          </div>
-          <div className={styles.lineHint}>
-            Range: {formatUsdK(trendMin)}–{formatUsdK(trendMax)} (USD)
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-10">
-        <p className="mb-2 text-neutral-300 leading-relaxed">
-          <strong>{tier.rangeLabel} jobs</strong> on Six Figure Jobs include {data.total.toLocaleString()} verified roles across engineering, product, data, design, and sales.
-          {avgSalary ? ` Average salary: ${formatUsdK(avgSalary)} USD.` : ''}{' '}
-          Every listing shows the salary range upfront — sourced directly from company ATS feeds. Filter by role, location, or work type to find the right fit.
-        </p>
-      </section>
-
-      <section className={styles.listSection} aria-label="Job listings">
-        <div className={styles.listHeader}>
-          <h2 className={styles.listTitle}>Jobs in this tier</h2>
-          <Link href="/jobs" className={styles.pageLink}>
-            Explore all opportunities →
-          </Link>
-        </div>
-
-        <div className={styles.layout}>
-          <aside className={styles.sidebar} aria-label="Filters">
-            <JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />
-          </aside>
-
-          <div className={styles.results}>
-            <div className={styles.resultsHeader}>
-              <div className={styles.resultsCount}>
-                Showing page {data.page} of {totalPages} • {data.total.toLocaleString()} total
-                {lastUpdatedLabel ? ` • Updated ${lastUpdatedLabel}` : ''}
-              </div>
-              <div />
-            </div>
-
-            {jobs.length === 0 ? (
-              <div className={styles.empty} role="status">
-                <div className={styles.emptyTitle}>No jobs found.</div>
-                <div className={styles.emptyBody}>
-                  Try adjusting your filters, or clear them to explore all $100k+ opportunities.
-                </div>
-                <div className={styles.pagination}>
-                  <Link className={styles.pageLink} href={basePath}>
-                    Clear filters
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className={view === 'list' ? styles.list : styles.grid}>
-                {jobs.map((job) => (
-                  <JobCard key={job.id} job={job as JobWithCompany} />
-                ))}
-              </div>
-            )}
-
-            {totalPages > 1 && (
-              <nav className={styles.pagination} aria-label="Pagination">
-                <div className={styles.pageMeta}>
-                  Page <strong>{page}</strong> of <strong>{totalPages}</strong>
-                </div>
-                <div className={styles.pageLinks}>
-                  {page > 1 && (
-                    <Link className={styles.pageLink} href={buildPageHref(basePath, sp, page - 1)} scroll={false}>
-                      Previous
-                    </Link>
-                  )}
-                  {page < totalPages && (
-                    <Link className={styles.pageLink} href={buildPageHref(basePath, sp, page + 1)} scroll={false}>
-                      Next
-                    </Link>
-                  )}
-                </div>
-              </nav>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-16" aria-label="Frequently asked questions">
-        <h2 className="mb-6 text-xl font-semibold text-neutral-50">Frequently Asked Questions</h2>
-        <dl className="space-y-6">
-          {faqJsonLd.mainEntity.map((item: { name: string; acceptedAnswer: { text: string } }, i: number) => (
-            <div key={i} className="border-t border-neutral-700 pt-5">
-              <dt className="mb-2 font-medium text-neutral-100">{item.name}</dt>
-              <dd className="text-neutral-400 leading-relaxed">{item.acceptedAnswer.text}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-    </main>
+      <ListingSection title="Frequently asked questions">
+        <Faq
+          items={faqJsonLd.mainEntity.map((item: { name: string; acceptedAnswer: { text: string } }) => ({
+            question: item.name,
+            answer: item.acceptedAnswer.text,
+          }))}
+        />
+      </ListingSection>
+    </ListingPage>
   )
     },
     () => (

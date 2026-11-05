@@ -1,0 +1,235 @@
+/* Shared layout for every listing page (salary tiers, roles, locations, remote, companies).
+   Flat and left-aligned like the homepage: heading, one summary line, filters on the left, compact rows.
+   Theme tokens only — no hard-coded white/black — so the pages follow the light/dark theme. */
+
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 20px 16px 72px;
+}
+
+.header {
+  padding: 20px 0 24px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
+}
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.75rem, 3.6vw, 2.5rem);
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-text-0);
+}
+
+.accent {
+  color: var(--color-primary-text);
+}
+
+.summary {
+  margin: 10px 0 0;
+  max-width: 46rem;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--color-text-1);
+}
+
+.summary strong {
+  color: var(--color-text-0);
+  font-weight: 600;
+}
+
+.toolbar {
+  flex: none;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-1);
+  color: var(--color-text-1);
+  font-size: 0.8125rem;
+  text-decoration: none;
+  transition: border-color 120ms, color 120ms;
+}
+
+.chip:hover,
+.chip[aria-current='true'] {
+  border-color: var(--color-primary-text);
+  color: var(--color-text-0);
+}
+
+/* ---- results area ---- */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+}
+
+.sidebar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    display: block;
+    position: sticky;
+    top: 80px;
+    align-self: start;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+  }
+}
+
+.results {
+  min-width: 0;
+}
+
+.count {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  color: var(--color-text-1);
+}
+
+.rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.empty {
+  padding: 32px 20px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  color: var(--color-text-1);
+}
+
+.emptyTitle {
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: var(--color-text-0);
+}
+
+/* ---- pagination ---- */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  font-size: 0.875rem;
+  color: var(--color-text-1);
+}
+
+.pageLinks {
+  display: flex;
+  gap: 8px;
+}
+
+.pageLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-1);
+  color: var(--color-text-0);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.pageLink:hover {
+  border-color: var(--color-primary-text);
+}
+
+/* ---- prose + FAQ (SEO copy; plain text under the list) ---- */
+
+.section {
+  margin-top: 56px;
+}
+
+.sectionTitle {
+  margin: 0 0 16px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--color-text-0);
+}
+
+.prose {
+  max-width: 46rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-text-1);
+}
+
+.prose strong {
+  color: var(--color-text-0);
+  font-weight: 600;
+}
+
+.faq {
+  max-width: 46rem;
+  margin: 0;
+}
+
+.faqItem {
+  padding: 16px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.faqQuestion {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: var(--color-text-0);
+}
+
+.faqAnswer {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--color-text-1);
+}
+
+.linkList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.chipCount {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-2);
+}

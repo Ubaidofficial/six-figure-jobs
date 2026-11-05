@@ -36,9 +36,9 @@ import { SKILL_TARGETS } from '../../../lib/seo/pseoTargets'
 import { Badge, badgeVariants } from '@/components/ui/badge'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { cn } from '@/lib/utils'
+import { Breadcrumb } from '@/components/layout/Breadcrumb'
 import {
   ApplyCard,
-  Breadcrumb,
   BulletList,
   CompanyCard,
   JobSection,

@@ -185,7 +185,7 @@ export async function generateMetadata({
   })
 
   let description =
-    `${roleName} salary data from verified ${salaryBand} tech jobs — real pay ranges from company ATS feeds, no surveys. ` +
+    `${roleName} salary data from ${salaryBand} tech jobs — real pay ranges from live job listings, no surveys. ` +
     `See what ${roleName} roles actually pay in 2026.`
 
   if (raw.length > 0) {
@@ -200,7 +200,7 @@ export async function generateMetadata({
       const max = values[values.length - 1]
       const mid = values[Math.floor(values.length / 2)]
       description =
-        `${roleName} salary guide — verified ${salaryBand} pay ranges from live job listings. ` +
+        `${roleName} salary guide — ${salaryBand} pay ranges from live job listings. ` +
         `Base salary from ${formatMoney(min)} to ${formatMoney(max)} / year, ` +
         `median ${formatMoney(mid)} (${raw.length} real postings, updated daily).`
     }
@@ -475,28 +475,28 @@ export default async function SalaryRolePage(props: PageProps) {
       {/* Breadcrumb */}
       <nav
         aria-label="Breadcrumb"
-        className="mb-4 text-xs text-neutral-400"
+        className="mb-4 text-xs text-muted-foreground"
       >
         <ol className="flex flex-wrap items-center gap-1">
           <li>
             <Link
               href="/"
-              className="hover:text-neutral-200 hover:underline"
+              className="hover:text-foreground hover:underline"
             >
               Home
             </Link>
           </li>
-          <li className="px-1 text-neutral-600">/</li>
+          <li className="px-1 text-muted-foreground">/</li>
           <li>
             <Link
               href="/jobs/100k-plus"
-              className="hover:text-neutral-200 hover:underline"
+              className="hover:text-foreground hover:underline"
             >
               $100k+ jobs
             </Link>
           </li>
-          <li className="px-1 text-neutral-600">/</li>
-          <li aria-current="page" className="text-neutral-200">
+          <li className="px-1 text-muted-foreground">/</li>
+          <li aria-current="page" className="text-foreground">
             {roleName} salary
           </li>
         </ol>
@@ -509,12 +509,12 @@ export default async function SalaryRolePage(props: PageProps) {
           description={
             <span data-speakable="summary">
               Live six-figure salary ranges for {roleName.toLowerCase()} roles, based on
-              verified $100k+ job listings from top tech and SaaS companies. Remote,
+              $100k+ job listings from top tech and SaaS companies. Remote,
               hybrid, and on-site pay data across USD and local currencies updates
               regularly.
             </span>
           }
-          helper="Data freshness: updated from live $100k+ listings; thin pages stay noindex until more roles are available."
+          helper="Based on live $100k+ job listings, updated daily."
           actions={
             <>
               {[100_000, 200_000, 300_000, 400_000].map((band) => {
@@ -527,8 +527,8 @@ export default async function SalaryRolePage(props: PageProps) {
                     href={href}
                     className={`rounded-full border px-3 py-1.5 text-xs ${
                       minAnnual === band
-                        ? 'border-blue-500/50 bg-blue-500/10 text-blue-100'
-                        : 'border-neutral-700 bg-neutral-900 text-neutral-200 hover:border-neutral-500'
+                        ? 'border-primary/50 bg-primary/10 text-foreground'
+                        : 'border-border bg-card text-foreground hover:border-foreground/40'
                     }`}
                   >
                     {label} band
@@ -537,21 +537,21 @@ export default async function SalaryRolePage(props: PageProps) {
               })}
               <Link
                 href={`/jobs/${roleSlug}`}
-                className="rounded-full border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-200 hover:border-neutral-500"
+                className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:border-foreground/40"
               >
                 Browse live {roleName} jobs
               </Link>
             </>
           }
         >
-          <ul className="grid gap-2 text-xs text-neutral-300 sm:grid-cols-3">
-            <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
-              Salary-first: {getBandLabel(minAnnual)} compensation sourced from ATS feeds.
+          <ul className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+            <li className="rounded-lg border border-border bg-card px-3 py-2">
+              Salary-first: {getBandLabel(minAnnual)} compensation taken from the employer’s posting.
             </li>
-            <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+            <li className="rounded-lg border border-border bg-card px-3 py-2">
               Remote eligibility noted; local currency kept where provided for transparency.
             </li>
-            <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+            <li className="rounded-lg border border-border bg-card px-3 py-2">
               Seniority focus: mid-to-senior and leadership roles; junior only when six-figure.
             </li>
           </ul>
@@ -603,16 +603,16 @@ export default async function SalaryRolePage(props: PageProps) {
               return (
                 <div
                   key={cc}
-                  className="rounded-xl border border-neutral-800 bg-neutral-950/80 px-3 py-2"
+                  className="rounded-xl border border-border bg-card px-3 py-2"
                 >
-                  <p className="font-semibold text-neutral-100">
+                  <p className="font-semibold text-foreground">
                     {cc === 'GLOBAL' ? 'Global / unknown' : cc}
                   </p>
-                  <p className="text-neutral-300">
+                  <p className="text-muted-foreground">
                     {formatMoney(cMed)} median ·{' '}
                     {formatMoney(cMin)}–{formatMoney(cMax)} range
                   </p>
-                  <p className="text-[11px] text-neutral-500">
+                  <p className="text-[11px] text-muted-foreground">
                     {arr.length} datapoints
                   </p>
                 </div>
@@ -626,7 +626,7 @@ export default async function SalaryRolePage(props: PageProps) {
         title="Explore related high-paying pages"
         description="Move from pay benchmarking into live openings, remote filters, and more specific role/location views."
       >
-        <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
+        <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
           <li>
             <Link
               href={`/jobs/${roleSlug}`}
@@ -663,7 +663,7 @@ export default async function SalaryRolePage(props: PageProps) {
 
       {/* Job list */}
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-neutral-50">
+        <h2 className="text-sm font-semibold text-foreground">
           {roleName} job openings ({bandLabel})
         </h2>
         {!allowIndex && (
@@ -673,7 +673,7 @@ export default async function SalaryRolePage(props: PageProps) {
         )}
 
         {jobs.length === 0 ? (
-          <p className="text-sm text-neutral-400">
+          <p className="text-sm text-muted-foreground">
             No live $100k+ jobs for this role yet. Check back soon — new
             roles are imported from ATS job boards regularly.
           </p>
@@ -686,13 +686,13 @@ export default async function SalaryRolePage(props: PageProps) {
                 aria-label="Pagination"
                 className="mt-6 flex items-center justify-between gap-3 text-xs"
               >
-                <div className="text-neutral-400">
+                <div className="text-muted-foreground">
                   Page{' '}
-                  <span className="font-semibold text-neutral-100">
+                  <span className="font-semibold text-foreground">
                     {page}
                   </span>{' '}
                   of{' '}
-                  <span className="font-semibold text-neutral-100">
+                  <span className="font-semibold text-foreground">
                     {totalPages}
                   </span>
                 </div>
@@ -705,7 +705,7 @@ export default async function SalaryRolePage(props: PageProps) {
                         sp,
                         page - 1,
                       )}
-                      className="rounded-lg border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900"
+                      className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
                     >
                       Previous
                     </Link>
@@ -718,7 +718,7 @@ export default async function SalaryRolePage(props: PageProps) {
                         sp,
                         page + 1,
                       )}
-                      className="rounded-lg border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900"
+                      className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
                     >
                       Next
                     </Link>
@@ -732,19 +732,19 @@ export default async function SalaryRolePage(props: PageProps) {
 
       <PageSection
         title={`How this ${roleName.toLowerCase()} salary guide is built`}
-        description={`We source only verified $100k+ ${roleName.toLowerCase()} roles directly from ATS-powered company job boards. Every listing is normalized for salary, role slug, country, and remote mode, then deduped and expired when it goes stale. The medians and ranges on this page are computed from live openings rather than historical surveys, so the data reflects current hiring demand. When a company publishes a new ${roleName.toLowerCase()} job with a clear range, it feeds into the stats; when the job is filled or closed, it disappears from the sample. Remote and hybrid roles are labeled, and local currencies are preserved wherever possible. This approach keeps the guide aligned with what hiring managers are paying today, not last year. Use the band toggles to see how compensation shifts at $200k, $300k, and $400k, then scroll the job list to apply to the exact roles behind the numbers.`}
+        description={`We source only $100k+ ${roleName.toLowerCase()} roles directly from company career pages. Every listing is normalized for salary, role slug, country, and remote mode, then deduped and expired when it goes stale. The medians and ranges on this page are computed from live openings rather than historical surveys, so the data reflects current hiring demand. When a company publishes a new ${roleName.toLowerCase()} job with a clear range, it feeds into the stats; when the job is filled or closed, it disappears from the sample. Remote and hybrid roles are labeled, and local currencies are preserved wherever possible. This approach keeps the guide aligned with what hiring managers are paying today, not last year. Use the band toggles to see how compensation shifts at $200k, $300k, and $400k, then scroll the job list to apply to the exact roles behind the numbers.`}
       >
-        <div className="grid gap-3 text-xs text-neutral-300 md:grid-cols-3">
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-3">
-            <div className="font-semibold text-neutral-100">Source quality</div>
+        <div className="grid gap-3 text-xs text-muted-foreground md:grid-cols-3">
+          <div className="rounded-lg border border-border bg-card px-3 py-3">
+            <div className="font-semibold text-foreground">Source quality</div>
             <div className="mt-1">Direct ATS and company-careers feeds, not self-reported surveys.</div>
           </div>
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-3">
-            <div className="font-semibold text-neutral-100">Normalization</div>
+          <div className="rounded-lg border border-border bg-card px-3 py-3">
+            <div className="font-semibold text-foreground">Normalization</div>
             <div className="mt-1">Role slugs, currency, seniority, and work mode are standardized before analysis.</div>
           </div>
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-3">
-            <div className="font-semibold text-neutral-100">Freshness</div>
+          <div className="rounded-lg border border-border bg-card px-3 py-3">
+            <div className="font-semibold text-foreground">Freshness</div>
             <div className="mt-1">Expired jobs are removed so salary stats reflect the current market, not stale demand.</div>
           </div>
         </div>

@@ -43,10 +43,10 @@ export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dy
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const stats = await loadPublicSiteStats()
-    const description = `${stats.totalJobs.toLocaleString()}+ verified $100k+ jobs — salary shown upfront, apply direct. No recruiters, no entry-level noise. Six-figure remote and on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
+    const description = `${stats.totalJobs.toLocaleString()}+ $100k+ jobs — salary shown upfront, no entry-level noise. Six-figure remote and on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
     const ogDescription =
-      `${stats.totalJobs.toLocaleString()}+ verified six-figure jobs with salary shown upfront. ` +
-      `Apply direct — no recruiters, no guesswork. $100k+ remote & on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
+      `${stats.totalJobs.toLocaleString()}+ six-figure jobs with salary shown upfront. ` +
+      `Apply on the employer’s own page. $100k+ remote & on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
 
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
@@ -74,7 +74,7 @@ export async function generateMetadata(): Promise<Metadata> {
       twitter: {
         card: 'summary_large_image',
         title: 'Six Figure Jobs | High Paying $100k+ Positions',
-        description: `Find six-figure jobs with verified salaries. Explore ${stats.totalJobs.toLocaleString()}+ high-paying opportunities.`,
+        description: `Find six-figure jobs with salaries. Explore ${stats.totalJobs.toLocaleString()}+ high-paying opportunities.`,
         images: [`${getSiteUrl()}/og-image.png`],
       },
       robots: {
@@ -93,7 +93,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
       description:
-        'Find verified $100k+ jobs with published salary ranges. Premium roles from verified companies.',
+        'Find $100k+ jobs with published salary ranges. Premium roles from verified companies.',
       alternates: {
         canonical: getSiteUrl(),
       },
@@ -170,7 +170,7 @@ function HomepageSchemas({
     url: siteUrl,
     description:
       'The exclusive job board for six figure jobs and high paying $100k+ positions. ' +
-      'Find lucrative careers with verified salaries.',
+      'Find lucrative careers with salaries.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -223,14 +223,14 @@ function HomePageFallback() {
     <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
       <HomepageSchemas jobCount={0} companyCount={0} />
 
-      <section className="rounded-3xl border border-slate-800 bg-slate-950/80 p-8 shadow-2xl shadow-slate-950/40">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+      <section className="rounded-3xl border border-border bg-card p-8 shadow-2xl shadow-slate-950/40">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
           Live data temporarily unavailable
         </p>
-        <h1 className="mt-3 text-3xl font-semibold text-slate-50">
+        <h1 className="mt-3 text-3xl font-semibold text-foreground">
           Six Figure Jobs
         </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           The job feed is temporarily unavailable while the production database reconnects.
           Static pages remain live, and the next scrape will continue updating data once connectivity
           is restored.
@@ -238,25 +238,25 @@ function HomePageFallback() {
         <div className="mt-6 flex flex-wrap gap-3 text-sm">
           <Link
             href="/jobs"
-            className="rounded-full bg-emerald-400 px-5 py-2 font-semibold text-slate-950"
+            className="rounded-full bg-primary px-5 py-2 font-semibold text-primary-foreground"
           >
             Browse jobs
           </Link>
           <Link
             href="/remote"
-            className="rounded-full border border-slate-700 px-5 py-2 text-slate-100"
+            className="rounded-full border border-border px-5 py-2 text-foreground"
           >
             Remote jobs
           </Link>
           <Link
             href="/salary"
-            className="rounded-full border border-slate-700 px-5 py-2 text-slate-100"
+            className="rounded-full border border-border px-5 py-2 text-foreground"
           >
             Salary guides
           </Link>
           <Link
             href="/companies"
-            className="rounded-full border border-slate-700 px-5 py-2 text-slate-100"
+            className="rounded-full border border-border px-5 py-2 text-foreground"
           >
             Companies
           </Link>
@@ -586,14 +586,14 @@ export default async function HomePage() {
           <div>
             <label
               htmlFor="role"
-              className="mb-1.5 block text-[11px] font-medium text-slate-400"
+              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
             >
               Role
             </label>
             <select
               id="role"
               name="role"
-              className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
+              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
               defaultValue=""
             >
               <option value="">All roles</option>
@@ -608,14 +608,14 @@ export default async function HomePage() {
           <div>
             <label
               htmlFor="country"
-              className="mb-1.5 block text-[11px] font-medium text-slate-400"
+              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
             >
               Location
             </label>
             <select
               id="country"
               name="country"
-              className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
+              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
             >
               <option value="">All locations</option>
               {LOCATIONS.map((loc) => (
@@ -629,14 +629,14 @@ export default async function HomePage() {
           <div>
             <label
               htmlFor="remoteMode"
-              className="mb-1.5 block text-[11px] font-medium text-slate-400"
+              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
             >
               Work arrangement
             </label>
             <select
               id="remoteMode"
               name="remoteMode"
-              className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
+              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
             >
               <option value="">Any</option>
               <option value="remote">Remote</option>
@@ -648,14 +648,14 @@ export default async function HomePage() {
           <div>
             <label
               htmlFor="remoteRegion"
-              className="mb-1.5 block text-[11px] font-medium text-slate-400"
+              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
             >
               Remote region
             </label>
             <select
               id="remoteRegion"
               name="remoteRegion"
-              className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
+              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
             >
               {REMOTE_REGIONS.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -668,14 +668,14 @@ export default async function HomePage() {
           <div>
             <label
               htmlFor="salary"
-              className="mb-1.5 block text-[11px] font-medium text-slate-400"
+              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
             >
               Minimum Salary
             </label>
             <select
               id="salary"
               name="minSalary"
-              className="focus-ring w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
+              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
               defaultValue="100000"
             >
               <option value="100000">$100k+</option>
@@ -692,11 +692,11 @@ export default async function HomePage() {
       <FeaturedCompaniesCarousel companies={featuredCompanies} />
 
       {priorityFeaturedCompanies.length > 0 && (
-        <section className="mb-8 rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
-          <h2 className="text-sm font-semibold text-slate-50">
+        <section className="mb-8 rounded-2xl border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-foreground">
             Priority company pages
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Each company hub lists that employer&apos;s current $100k+ openings. Start with
             the employers that consistently show transparent high-salary demand.
           </p>
@@ -705,7 +705,7 @@ export default async function HomePage() {
               <Link
                 key={company.id}
                 href={`/company/${company.slug}`}
-                className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200 transition-colors hover:border-slate-500"
+                className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-foreground transition-colors hover:border-foreground/40"
               >
                 {company.name} ({company.activeHighPayingJobs.toLocaleString()})
               </Link>
@@ -715,7 +715,7 @@ export default async function HomePage() {
       )}
 
       <section className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold text-slate-50">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">
           Explore Six Figure Jobs by Role
         </h2>
           <div className="flex flex-wrap gap-2">
@@ -723,22 +723,22 @@ export default async function HomePage() {
               <Link
                 key={role.href}
                 href={role.href}
-                className="group inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm transition-colors hover:border-emerald-700/60 hover:bg-slate-900"
+                className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm transition-colors hover:border-primary hover:bg-card"
               >
-                <span className="text-slate-200 group-hover:text-white">
+                <span className="text-foreground group-hover:text-foreground">
                   {role.name}
                 </span>
               </Link>
             ))}
           <Link
             href="/companies"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-300 transition-colors hover:border-slate-500"
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/40"
           >
             Explore companies →
           </Link>
           <Link
             href="/remote"
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500"
+            className="inline-flex items-center gap-2 rounded-full border border-primary bg-primary/10 px-4 py-2 text-sm text-foreground transition-colors hover:border-primary"
           >
             Remote $100k+ roles
           </Link>
@@ -755,92 +755,92 @@ export default async function HomePage() {
 
       <HomeFAQ />
 
-      <section className="mt-16 border-t border-slate-800 pt-8">
-        <h2 className="mb-4 text-sm font-semibold text-slate-300">
+      <section className="mt-16 border-t border-border pt-8">
+        <h2 className="mb-4 text-sm font-semibold text-muted-foreground">
           Popular Six Figure Job Searches
         </h2>
-        <div className="grid gap-x-8 gap-y-2 text-xs text-slate-300 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid gap-x-8 gap-y-2 text-xs text-muted-foreground sm:grid-cols-2 md:grid-cols-4">
 	          <div className="space-y-2">
-	            <p className="font-medium text-slate-200">By Role</p>
+	            <p className="font-medium text-foreground">By Role</p>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['software-engineer'] })}
-	              className="block hover:text-white"
+	              className="block hover:text-foreground"
 	            >
 	              Software Engineer Jobs ($100k+)
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['senior-software-engineer'] })}
-	              className="block hover:text-white"
+	              className="block hover:text-foreground"
 	            >
 	              Senior Engineer Jobs ($100k+)
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['product-manager'] })}
-	              className="block hover:text-white"
+	              className="block hover:text-foreground"
 	            >
 	              Product Manager Jobs ($100k+)
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, roleSlugs: ['data-engineer'] })}
-	              className="block hover:text-white"
+	              className="block hover:text-foreground"
 	            >
 	              Data Engineer Jobs ($100k+)
 	            </Link>
 	          </div>
 	          <div className="space-y-2">
-	            <p className="font-medium text-slate-200">By Location</p>
+	            <p className="font-medium text-foreground">By Location</p>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'US' })}
-	              className="block hover:text-white"
+	              className="block hover:text-foreground"
 	            >
 	              $100k+ Jobs in USA
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'GB' })}
-	              className="block hover:text-white"
+	              className="block hover:text-foreground"
 	            >
 	              £75k+/£100k+ Jobs in UK
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, countryCode: 'CA' })}
-	              className="block hover:text-white"
+	              className="block hover:text-foreground"
 	            >
 	              $100k+/CA$ Jobs in Canada
 	            </Link>
 	            <Link
 	              href={buildSliceCanonicalPath({ isHundredKLocal: true, remoteOnly: true })}
-	              className="block hover:text-white"
+	              className="block hover:text-foreground"
 	            >
 	              Remote $100k+ Jobs
 	            </Link>
 	          </div>
           <div className="space-y-2">
-            <p className="font-medium text-slate-200">By Salary Band</p>
-            <Link href="/jobs/100k-plus" className="block hover:text-white">
+            <p className="font-medium text-foreground">By Salary Band</p>
+            <Link href="/jobs/100k-plus" className="block hover:text-foreground">
               $100k+ Jobs
             </Link>
-            <Link href="/jobs/200k-plus" className="block hover:text-white">
+            <Link href="/jobs/200k-plus" className="block hover:text-foreground">
               $200k+ Jobs
             </Link>
-            <Link href="/jobs/300k-plus" className="block hover:text-white">
+            <Link href="/jobs/300k-plus" className="block hover:text-foreground">
               $300k+ Jobs
             </Link>
-            <Link href="/jobs/400k-plus" className="block hover:text-white">
+            <Link href="/jobs/400k-plus" className="block hover:text-foreground">
               $400k+ Jobs
             </Link>
           </div>
           <div className="space-y-2">
-            <p className="font-medium text-slate-200">Top Companies</p>
-            <Link href="/company/stripe" className="block hover:text-white">
+            <p className="font-medium text-foreground">Top Companies</p>
+            <Link href="/company/stripe" className="block hover:text-foreground">
               Stripe Jobs
             </Link>
-            <Link href="/company/anthropic" className="block hover:text-white">
+            <Link href="/company/anthropic" className="block hover:text-foreground">
               Anthropic Jobs
             </Link>
-            <Link href="/company/airbnb" className="block hover:text-white">
+            <Link href="/company/airbnb" className="block hover:text-foreground">
               Airbnb Jobs
             </Link>
-            <Link href="/company/mongodb" className="block hover:text-white">
+            <Link href="/company/mongodb" className="block hover:text-foreground">
               MongoDB Jobs
             </Link>
           </div>

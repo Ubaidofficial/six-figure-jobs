@@ -4,8 +4,8 @@
    ========================================================================== */
 
 .footer {
-  background: #0f0f0f;
-  border-top: 1px solid #2a2a2a;
+  background: var(--color-bg-1);
+  border-top: 1px solid var(--color-bg-3);
 }
 
 .inner {
@@ -16,8 +16,8 @@
 
 .newsletter {
   border-radius: var(--radius-2xl);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(20, 20, 20, 0.65);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
+  background: color-mix(in srgb, var(--color-bg-1) 65%, transparent);
   box-shadow: var(--shadow-sm);
   padding: var(--space-24);
   display: flex;
@@ -66,7 +66,7 @@
 }
 
 .logoAccent {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 .tagline {
@@ -86,9 +86,9 @@
   width: 44px;
   height: 44px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(20, 20, 20, 0.55);
-  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
+  background: color-mix(in srgb, var(--color-bg-1) 55%, transparent);
+  color: color-mix(in srgb, var(--color-fg) 55%, transparent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -97,7 +97,7 @@
 
 .social:hover {
   transform: translateY(-1px);
-  color: rgba(132, 204, 22, 0.95);
+  color: var(--color-primary-text);
   border-color: rgba(132, 204, 22, 0.35);
   box-shadow: var(--shadow-sm-glow);
 }
@@ -122,7 +122,7 @@
 }
 
 .link {
-  color: rgba(255, 255, 255, 0.70);
+  color: color-mix(in srgb, var(--color-fg) 70%, transparent);
   text-decoration: none;
   font-size: 14px;
   transition: color 150ms ease, text-decoration-color 150ms ease;
@@ -132,7 +132,7 @@
 .link:hover {
   color: var(--color-text-0);
   text-decoration: underline;
-  text-decoration-color: rgba(132, 204, 22, 0.55);
+  text-decoration-color: color-mix(in srgb, var(--color-primary-text) 55%, transparent);
   text-underline-offset: 4px;
 }
 
@@ -149,8 +149,8 @@
 
 .accordion {
   border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(20, 20, 20, 0.55);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
+  background: color-mix(in srgb, var(--color-bg-1) 55%, transparent);
   overflow: hidden;
 }
 
@@ -181,8 +181,8 @@
 }
 
 .bottomBar {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 10, 10, 0.7);
+  border-top: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
+  background: color-mix(in srgb, var(--color-bg-0) 70%, transparent);
 }
 
 .bottomInner {
@@ -205,7 +205,7 @@
 }
 
 .dot {
-  color: rgba(255, 255, 255, 0.25);
+  color: color-mix(in srgb, var(--color-fg) 25%, transparent);
 }
 
 .made {

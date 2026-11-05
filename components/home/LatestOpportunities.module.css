@@ -23,14 +23,14 @@
 }
 
 .headerLink {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-semibold);
   text-decoration: none;
 }
 
 .headerLink:hover {
-  color: var(--color-primary-light);
+  color: var(--color-primary-text);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -44,8 +44,8 @@
 .empty {
   border-radius: var(--radius-xl);
   padding: var(--space-24);
-  background: rgba(20, 20, 20, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-bg-1) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
   color: var(--color-text-1);
   text-align: center;
 }

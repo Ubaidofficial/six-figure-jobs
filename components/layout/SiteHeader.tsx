@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Menu, Search, X } from 'lucide-react'
 
+import { ThemeToggle } from './ThemeToggle'
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 
@@ -63,7 +65,7 @@ export function SiteHeader() {
             Six <span className={styles.logoAccent}>Figure</span> Jobs
           </Link>
           <span className={styles.kicker} aria-hidden="true">
-            <span className={styles.kickerStrong}>$100k+</span> verified only
+            <span className={styles.kickerStrong}>$100k+</span> salaries shown
           </span>
 
           <nav className={styles.nav} aria-label="Primary">
@@ -76,6 +78,7 @@ export function SiteHeader() {
         </div>
 
         <div className={styles.right}>
+          <ThemeToggle className={styles.searchBtn} iconClassName={styles.searchIcon} />
           <button
             type="button"
             className={styles.searchBtn}

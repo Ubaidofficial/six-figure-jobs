@@ -3,7 +3,7 @@
 
 .richText {
   margin-top: var(--space-16);
-  color: rgba(255, 255, 255, 0.80);
+  color: color-mix(in srgb, var(--color-fg) 80%, transparent);
   font-size: 15px;
   line-height: 1.75;
   max-width: 72ch;
@@ -43,7 +43,7 @@
 }
 
 .richText li::marker {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 .richText strong,
@@ -63,7 +63,7 @@
 }
 
 .richText a {
-  color: var(--color-primary-light);
+  color: var(--color-primary-text);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

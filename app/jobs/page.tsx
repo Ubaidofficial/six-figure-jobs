@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
-import { JobCard } from '@/components/jobs/JobCard'
 import { InfiniteJobsList } from './_components/InfiniteJobsList'
 
 import {
@@ -21,8 +20,17 @@ import { logRuntimeFallback } from '@/lib/runtime/fallback'
 
 import { JobsFiltersPanel, type JobsFacets } from './_components/JobsFilters'
 import { JobsToolbar } from './_components/JobsToolbar'
-import styles from './JobsPage.module.css'
-import { PageStatGrid } from '@/components/seo/PageChrome'
+import {
+  Accent,
+  Faq,
+  JobRows,
+  LinkChips,
+  ListingHeader,
+  ListingLayout,
+  ListingPage,
+  ListingSection,
+  Pagination,
+} from '@/components/listing/ListingParts'
 
 export const revalidate = 600
 
@@ -42,7 +50,7 @@ const BANDS: BandConfig[] = [
     id: '100k',
     label: '$100k+ tech jobs from top companies',
     blurb:
-      'Curated $100k+ tech and software roles from ATS-powered company boards.',
+      'Tech and software roles with a published salary of $100k or more.',
     href: '/jobs/100k-plus',
     slugPrefix: 'jobs/100k-plus',
   },
@@ -91,7 +99,7 @@ export async function generateMetadata({
   return {
     title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
     description:
-      'Browse thousands of verified $100k+ tech jobs with published salaries, direct apply links, and real-time ATS listings. Filter by role, location, remote work, seniority, and company size.',
+      'Browse thousands of $100k+ tech jobs with published salaries and links to the employer’s application page. Filter by role, location, remote work, seniority, and company size.',
     alternates: {
       canonical,
     },
@@ -99,7 +107,7 @@ export async function generateMetadata({
     openGraph: {
       title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
       description:
-        'Thousands of verified $100k+ tech jobs with salary ranges, direct apply links, and fresh listings by role, location, and work type.',
+        'Thousands of $100k+ tech jobs with salary ranges, and fresh listings by role, location, and work type.',
       url: canonical,
       siteName: SITE_NAME,
       type: 'website',
@@ -108,7 +116,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
       description:
-        'Thousands of verified $100k+ tech jobs with published salaries, direct apply links, and fresh ATS listings.',
+        'Thousands of $100k+ tech jobs with published salaries and direct links to apply.',
     },
   }
 }
@@ -192,10 +200,10 @@ function buildJobsCollectionPageJsonLd(totalJobs: number) {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: 'All $100k+ jobs',
-    description: `Browse ${totalJobs.toLocaleString()} verified $100k+ jobs from company ATS feeds and trusted sources.`,
+    description: `Browse ${totalJobs.toLocaleString()} jobs with a published salary of $100k or more, with new jobs added daily.`,
     url: `${SITE_URL}/jobs`,
     about: [
-      'verified $100k+ jobs',
+      '$100k+ jobs',
       'six figure jobs',
       'high paying jobs',
       'remote jobs',
@@ -216,10 +224,10 @@ function buildJobsFaqJsonLd() {
     mainEntity: [
       {
         '@type': 'Question',
-        name: 'Are these six-figure jobs verified?',
+        name: 'How are these six-figure jobs selected?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. The jobs index prioritizes live roles from company ATS feeds and trusted sources, then filters to verified six-figure compensation.',
+          text: 'Every job on this page has a published salary at or above the six-figure threshold for its currency, was posted recently, and links to the employer’s application page. Jobs that are no longer open are removed.',
         },
       },
       {
@@ -235,7 +243,7 @@ function buildJobsFaqJsonLd() {
         name: 'How often is the jobs feed refreshed?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Listings are refreshed frequently and stale jobs are removed so the main jobs index stays current and useful for applicants and search engines.',
+          text: 'New jobs are added every day and listings that are no longer open are removed.',
         },
       },
     ],
@@ -245,12 +253,12 @@ function buildJobsFaqJsonLd() {
 function JobsIndexFallback({ techFilter }: { techFilter?: string }) {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
-      <div className="rounded-3xl border border-neutral-800 bg-neutral-950/80 p-8 shadow-2xl shadow-neutral-950/40">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+      <div className="rounded-3xl border border-border bg-card p-8 shadow-2xl shadow-neutral-950/40">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
           Live job data temporarily unavailable
         </p>
-        <h1 className="mt-3 text-3xl font-semibold text-neutral-50">All $100k+ Jobs</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-neutral-300">
+        <h1 className="mt-3 text-3xl font-semibold text-foreground">All $100k+ Jobs</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           The production database is reconnecting. Search metadata is still live, but the full job
           feed is temporarily unavailable.
           {techFilter ? ` Active filter: ${techFilter}.` : ''}
@@ -261,10 +269,10 @@ function JobsIndexFallback({ techFilter }: { techFilter?: string }) {
             <Link
               key={band.id}
               href={band.href}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-4 text-sm text-neutral-100 transition hover:border-neutral-600"
+              className="rounded-2xl border border-border bg-card p-4 text-sm text-foreground transition hover:border-foreground/40"
             >
               <div className="font-semibold">{band.label}</div>
-              <p className="mt-2 text-xs text-neutral-400">{band.blurb}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{band.blurb}</p>
             </Link>
           ))}
         </div>
@@ -299,8 +307,6 @@ export default async function JobsIndexPage({
   const rawSort = (firstParam(sp, 'sort') || 'recent').trim()
   const sort = rawSort === 'recent' || rawSort === 'salary' || rawSort === 'relevant' ? rawSort : 'recent'
 
-  const rawView = (firstParam(sp, 'view') || 'grid').trim()
-  const view: 'grid' | 'list' = rawView === 'list' ? 'list' : 'grid'
 
   const roles = allParams(sp, 'role')
   const seniority = allParams(sp, 'seniority')
@@ -487,298 +493,91 @@ export default async function JobsIndexPage({
   const faqJsonLd = buildJobsFaqJsonLd()
 
     return (
-      <main className={styles.page}>
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link href="/">Home</Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">Jobs</span>
-      </nav>
+      <ListingPage>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
-      <header className={styles.top}>
-        <div className={styles.titleBlock}>
-          <div className={styles.kicker}>PREMIUM JOB FEED</div>
-          <h1 className={styles.title}>All $100k+ Jobs</h1>
-          <p className={styles.subtitle}>
-            {data.total.toLocaleString()} opportunities found. Verified salaries only — no
-            entry-level noise.
-          </p>
-        </div>
-        <JobsToolbar facets={facets} />
-      </header>
-
-      <div className="mb-8">
-        <PageStatGrid
-          items={[
-            {
-              label: 'Live opportunities',
-              value: data.total.toLocaleString(),
-              hint: 'Verified six-figure openings in the current result set',
-            },
-            {
-              label: 'Page freshness',
-              value: lastUpdatedLabel ? `Updated ${lastUpdatedLabel}` : 'Live feed',
-              hint: 'ATS-driven listings are refreshed and deduped regularly',
-            },
-            {
-              label: 'Active filters',
-              value: activeFilterCount.toLocaleString(),
-              hint: activeFilterCount > 0 ? 'Current query is narrowed from the full jobs hub' : 'Showing the broadest jobs hub view',
-            },
-            {
-              label: 'Pay floor',
-              value: minSalary ? `$${Math.round(minSalary / 1000)}k+` : '$100k+',
-              hint: salaryCurrency ? `Applied in ${salaryCurrency}` : 'Default high-salary threshold',
-            },
-          ]}
+        <ListingHeader
+          breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs' }]}
+          title={
+            <>
+              All <Accent>$100k+</Accent> Jobs
+            </>
+          }
+          summary={
+            <>
+              <strong>{data.total.toLocaleString()}</strong> {data.total === 1 ? 'job' : 'jobs'} with a published
+              salary
+              {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
+            </>
+          }
+          toolbar={<JobsToolbar facets={facets} />}
         />
-      </div>
 
-      <div className={styles.layout}>
-        <aside className={styles.sidebar} aria-label="Filters">
-          {/* Collapsible on mobile, always-open on desktop via CSS that
-              hides the summary at md+. <details> gives us a free, no-JS
-              drawer that respects keyboard / screen readers. */}
-          <details
-            className="group rounded-2xl border border-neutral-800/80 bg-neutral-950/60 md:border-0 md:bg-transparent md:p-0 md:[&>div]:!block"
-          >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-neutral-100 transition hover:bg-neutral-900/60 md:hidden [&::-webkit-details-marker]:hidden">
-              <span className="inline-flex items-center gap-2">
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4 text-emerald-400"
-                >
-                  <line x1="4" y1="6" x2="20" y2="6" />
-                  <line x1="7" y1="12" x2="17" y2="12" />
-                  <line x1="10" y1="18" x2="14" y2="18" />
-                </svg>
-                Filters
-              </span>
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4 text-neutral-400 transition-transform group-open:rotate-180"
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </summary>
-            <div className="md:block">
-              <JobsFiltersPanel facets={facets} />
-            </div>
-          </details>
-        </aside>
-
-        <section className={styles.results} aria-label="Job results">
+        <ListingLayout sidebar={<JobsFiltersPanel facets={facets} />}>
           {techFilter ? (
-            <div className="mb-6 flex flex-wrap items-center gap-3">
-              <span className="text-sm text-neutral-400">Filtering by technology:</span>
-              <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2">
-                <span className="font-semibold text-emerald-400">{techFilter}</span>
-                <Link
-                  href="/jobs"
-                  className="ml-1 text-neutral-400 transition-colors hover:text-white"
-                  aria-label="Clear tech filter"
-                >
-                  <span className="text-lg">✕</span>
-                </Link>
-              </div>
-              <span className="text-sm text-neutral-500">
-                ({data.total} {data.total === 1 ? 'job' : 'jobs'} found)
-              </span>
-            </div>
+            <LinkChips
+              label="Active technology filter"
+              items={[{ label: `Technology: ${techFilter} ✕`, href: '/jobs', active: true }]}
+            />
           ) : null}
 
-          <div className={styles.resultsHeader}>
-            <div className={styles.resultsCount}>
-              Showing page {data.page} of {totalPages} • {data.total.toLocaleString()} total
-              {lastUpdatedLabel ? ` • Updated ${lastUpdatedLabel}` : ''}
-            </div>
-            <div />
-          </div>
-
           {dedupedJobs.length === 0 ? (
-            <div className={styles.empty} role="status">
-              <div className={styles.emptyTitle}>No jobs found.</div>
-              <div className={styles.emptyBody}>
-                Try adjusting your filters, or clear them to explore all $100k+ opportunities.
-              </div>
-              <div className={styles.emptyActions}>
-                <Link className={`${styles.pageLink} ${styles.clearFiltersLink}`} href="/jobs">
-                  Clear filters
-                </Link>
-              </div>
-            </div>
+            <JobRows
+              jobs={[]}
+              empty={{
+                title: 'No jobs match these filters.',
+                body: 'Clear the filters to see every $100k+ job.',
+                href: '/jobs',
+              }}
+            />
           ) : (
             <>
-              <InfiniteJobsList
-                initialJobs={dedupedJobs}
-                initialPage={page}
-                totalPages={totalPages}
-                view={view}
-              />
-              {totalPages > 1 ? (
-                <nav
-                  className={styles.pagination}
-                  aria-label="Jobs pagination"
-                  // SSR pagination links so Google can crawl pages beyond 1.
-                  // The client-side InfiniteJobsList above appends pages for
-                  // human users; these anchor tags are the discoverable index.
-                >
-                  {page > 1 ? (
-                    <Link
-                      className={styles.pageLink}
-                      href={buildPageHref(basePath, sp, page - 1)}
-                      rel="prev"
-                    >
-                      ← Previous page
-                    </Link>
-                  ) : null}
-                  {page < totalPages ? (
-                    <Link
-                      className={styles.pageLink}
-                      href={buildPageHref(basePath, sp, page + 1)}
-                      rel="next"
-                    >
-                      Next page →
-                    </Link>
-                  ) : null}
-                </nav>
-              ) : null}
+              <InfiniteJobsList initialJobs={dedupedJobs} initialPage={page} totalPages={totalPages} />
+              {/* Server-rendered pagination links so Google can crawl pages beyond 1; the client list above
+                  appends pages for people. */}
+              <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} />
             </>
           )}
-        </section>
-      </div>
-        <section className={styles.below} aria-label="Why use this jobs hub">
-        <div className={styles.belowHeader}>
-          <h2 className={styles.belowTitle}>Why this page is the main $100k+ jobs hub</h2>
-          <p className={styles.belowBlurb}>
-            This crawlable jobs index combines verified salary ranges, fresh ATS listings, and
-            canonical links into role, salary, remote, and location pages for high-intent searches.
-          </p>
-        </div>
+        </ListingLayout>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/80 p-4 text-sm text-neutral-300">
-            <h3 className="text-sm font-semibold text-neutral-50">Verified pay floor</h3>
-            <p className="mt-2">
-              Jobs shown here pass validated salary checks and highlight published compensation
-              ranges, keeping the main index aligned with $100k+ job search intent.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/80 p-4 text-sm text-neutral-300">
-            <h3 className="text-sm font-semibold text-neutral-50">Fresh live inventory</h3>
-            <p className="mt-2">
-              ATS-driven listings are refreshed frequently, and stale jobs are removed to reduce dead
-              clicks and keep the hub trustworthy.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-950/80 p-4 text-sm text-neutral-300">
-            <h3 className="text-sm font-semibold text-neutral-50">Clean internal routing</h3>
-            <p className="mt-2">
-              Salary-band pages, countries, categories, and role hubs sit one click away so Google can
-              discover narrower high-intent pages from the main jobs index.
-            </p>
-          </div>
-        </div>
-      </section>
-        <section className={styles.below} aria-label="Browse salary bands">
-        <div className={styles.belowHeader}>
-          <h2 className={styles.belowTitle}>Browse by salary band</h2>
-          <p className={styles.belowBlurb}>
-            Explore dedicated pages for $100k+, $200k+, $300k+, and $400k+ roles, plus popular role
-            and country slices.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          {BANDS.map((band) => (
-            <Link
-              key={band.id}
-              href={band.href}
-              className="group flex flex-col justify-between rounded-2xl border border-neutral-800 bg-neutral-950/80 p-4 transition hover:border-neutral-600 hover:bg-neutral-900"
-            >
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-400">
-                  {band.id === '100k'
-                    ? 'Core band'
-                    : band.id === '200k'
-                    ? 'Senior band'
-                    : band.id === '300k'
-                    ? 'Principal band'
-                    : 'Executive band'}
-                </p>
-                <h3 className="mt-2 text-sm font-semibold text-neutral-50">{band.label}</h3>
-                <p className="mt-2 text-xs text-neutral-300">{band.blurb}</p>
-              </div>
-              <p className="mt-3 text-[11px] text-neutral-400">View all {band.id}+ jobs →</p>
-            </Link>
-          ))}
-        </div>
-
-        {BANDS.map((band, idx) => {
-          const slices = bandCanonicalLinks[idx]
-
-          if (!slices || slices.length === 0) {
-            return null
-          }
-
-          return (
-            <section key={band.id} className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-neutral-50">
+        <ListingSection title="Browse by salary band">
+          <LinkChips
+            label="Salary bands"
+            items={BANDS.map((band) => ({ label: `${band.id.toUpperCase()}+ jobs`, href: band.href }))}
+          />
+          {BANDS.map((band, idx) => {
+            const slices = bandCanonicalLinks[idx]
+            if (!slices || slices.length === 0) return null
+            return (
+              <div key={band.id} style={{ marginTop: 24 }}>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
                   Popular {band.id}+ jobs by role &amp; country
                 </h3>
-                <Link href={band.href} className="text-[11px] text-blue-400 hover:underline">
-                  View all {band.id}+ jobs →
-                </Link>
+                <LinkChips
+                  label={`Popular ${band.id}+ slices`}
+                  items={slices.map((slice) => ({
+                    label: slice.title || slice.h1 || prettyRoleAndCountryFromSlug(slice.slug),
+                    href: slice.href,
+                    count: slice.jobCount,
+                  }))}
+                />
               </div>
+            )
+          })}
+        </ListingSection>
 
-              <ul className="flex flex-wrap gap-2 text-[11px]">
-                {slices.map((slice) => (
-                  <li key={slice.slug}>
-                    <Link
-                      href={slice.href}
-                      className="inline-flex items-center rounded-full border border-neutral-800 bg-neutral-950 px-3 py-1 text-neutral-200 hover:border-neutral-600 hover:bg-neutral-900"
-                    >
-                      <span className="truncate">
-                        {slice.title || slice.h1 || prettyRoleAndCountryFromSlug(slice.slug)}
-                      </span>
-                      <span className="ml-1 text-neutral-500">({slice.jobCount})</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )
-        })}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-        />
-      </section>
-      </main>
+        <ListingSection title="Frequently asked questions">
+          <Faq
+            items={faqJsonLd.mainEntity.map((item) => ({
+              question: item.name,
+              answer: item.acceptedAnswer.text,
+            }))}
+          />
+        </ListingSection>
+      </ListingPage>
     )
   } catch (error) {
     unstable_rethrow(error)

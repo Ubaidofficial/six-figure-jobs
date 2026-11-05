@@ -5,7 +5,7 @@ export function HomeFAQ() {
   const items = [
     {
       q: 'How do you ensure roles are $100k+?',
-      a: 'We ingest ATS feeds and vetted boards, parse salary data, and prioritize roles with validated high-salary signals, published compensation, seniority fit, and direct apply links before publishing.',
+      a: 'We ingest company career pages and job boards, parse salary data, and prioritize roles with validated high-salary signals, published compensation, seniority fit, and direct apply links before publishing.',
     },
     {
       q: 'Do you include remote and hybrid jobs?',
@@ -26,15 +26,15 @@ export function HomeFAQ() {
   ]
 
   return (
-    <section className="mt-10 rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
-      <h2 className="mb-3 text-sm font-semibold text-slate-50">
+    <section className="mt-10 rounded-2xl border border-border bg-card p-5">
+      <h2 className="mb-3 text-sm font-semibold text-foreground">
         FAQs about Six Figure Jobs
       </h2>
-      <div className="space-y-3 text-sm text-slate-300">
+      <div className="space-y-3 text-sm text-muted-foreground">
         {items.map((item) => (
           <div key={item.q}>
-            <p className="font-semibold text-slate-100">{item.q}</p>
-            <p className="text-slate-300">{item.a}</p>
+            <p className="font-semibold text-foreground">{item.q}</p>
+            <p className="text-muted-foreground">{item.a}</p>
           </div>
         ))}
       </div>

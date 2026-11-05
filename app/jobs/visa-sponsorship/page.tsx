@@ -175,7 +175,7 @@ export default async function VisaSponsorshipPage({
         </h1>
         <p style={{ fontSize: 18, color: '#a3a3a3', margin: 0 }}>
           {total.toLocaleString()} verified roles at companies actively sponsoring work visas.
-          Salary ranges published upfront. Direct apply — no recruiter middleman.
+          Salary ranges published upfront. Direct apply.
         </p>
       </header>
 

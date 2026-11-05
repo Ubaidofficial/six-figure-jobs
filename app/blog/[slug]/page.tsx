@@ -174,7 +174,7 @@ export default async function BlogPostPage({ params }: Props) {
           Ready to find your <span style={{ color: '#84cc16' }}>six-figure job?</span>
         </h2>
         <p style={{ color: '#a3a3a3', margin: '0 0 20px', fontSize: 15 }}>
-          Browse verified $100k+ positions with salaries published upfront. Apply directly — no recruiter middleman.
+          Browse $100k+ positions with salaries published upfront. Apply directly.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Link

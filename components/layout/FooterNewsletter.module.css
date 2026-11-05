@@ -23,15 +23,15 @@
   width: min(520px, 70vw);
   min-height: 44px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(10, 10, 10, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 12%, transparent);
+  background: color-mix(in srgb, var(--color-bg-0) 35%, transparent);
   color: var(--color-text-0);
   padding: 12px 14px;
   font-size: 14px;
 }
 
 .input::placeholder {
-  color: rgba(255, 255, 255, 0.40);
+  color: color-mix(in srgb, var(--color-fg) 40%, transparent);
 }
 
 .input[aria-invalid="true"] {

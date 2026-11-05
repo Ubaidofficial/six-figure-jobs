@@ -45,21 +45,18 @@ export function JobsToolbar({
   const searchParams = useSearchParams()
 
   const sort = searchParams.get('sort') || 'recent'
-  const view = searchParams.get('view') || 'grid'
 
   return (
     <div className={styles.toolbar}>
       <Sheet>
         <SheetTrigger asChild>
-          <span className={styles.mobileOnly}>
-            <Button type="button" variant="secondary" size="sm">
-              Filters
-            </Button>
-          </span>
+          <Button type="button" variant="secondary" size="sm" className={styles.mobileOnly}>
+            Filters
+          </Button>
         </SheetTrigger>
         <SheetContent side="bottom" className={filterStyles.drawerContent}>
           <SheetHeader>
-            <SheetTitle className="text-neutral-50">Filters</SheetTitle>
+            <SheetTitle className="text-foreground">Filters</SheetTitle>
           </SheetHeader>
           <div style={{ marginTop: 12 }}>
             <JobsFiltersPanel
@@ -87,22 +84,6 @@ export function JobsToolbar({
         <option value="relevant">Most Relevant</option>
       </select>
 
-      <div className={styles.segmented} role="group" aria-label="View toggle">
-        <button
-          type="button"
-          className={`${styles.segButton} ${view === 'grid' ? styles.segActive : ''}`}
-          onClick={() => replaceParam(pathname, searchParams, router, 'view', 'grid')}
-        >
-          Grid
-        </button>
-        <button
-          type="button"
-          className={`${styles.segButton} ${view === 'list' ? styles.segActive : ''}`}
-          onClick={() => replaceParam(pathname, searchParams, router, 'view', 'list')}
-        >
-          List
-        </button>
-      </div>
     </div>
   )
 }

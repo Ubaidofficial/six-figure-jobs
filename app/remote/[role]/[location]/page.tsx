@@ -383,7 +383,7 @@ export default async function RemoteRoleCityPage({
         name: `Are these ${prettyRole(roleSlug)} jobs really $100k+?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. We only include remote roles with validated high-salary compensation signals from ATS feeds and trusted boards.',
+          text: 'Yes. We only include remote roles with validated high-salary compensation signals from company career pages and job boards.',
         },
       },
       {
@@ -417,37 +417,37 @@ export default async function RemoteRoleCityPage({
       {/* -------------------------------- Breadcrumbs -------------------------------- */}
       <nav
         aria-label="Breadcrumb"
-        className="mb-4 text-xs text-neutral-400"
+        className="mb-4 text-xs text-muted-foreground"
       >
         <ol className="flex flex-wrap items-center gap-1">
           <li>
             <Link
               href="/"
-              className="hover:text-neutral-200 hover:underline"
+              className="hover:text-foreground hover:underline"
             >
               Home
             </Link>
           </li>
-          <li className="px-1 text-neutral-600">/</li>
+          <li className="px-1 text-muted-foreground">/</li>
           <li>
             <Link
               href="/jobs/100k-plus"
-              className="hover:text-neutral-200 hover:underline"
+              className="hover:text-foreground hover:underline"
             >
               $100k+ jobs
             </Link>
           </li>
-          <li className="px-1 text-neutral-600">/</li>
+          <li className="px-1 text-muted-foreground">/</li>
           <li>
             <Link
               href={`/remote/${roleSlug}`}
-              className="hover:text-neutral-200 hover:underline"
+              className="hover:text-foreground hover:underline"
             >
               Remote {prettyRole(roleSlug)}
             </Link>
           </li>
-          <li className="px-1 text-neutral-600">/</li>
-          <li aria-current="page" className="text-neutral-200">
+          <li className="px-1 text-muted-foreground">/</li>
+          <li aria-current="page" className="text-foreground">
             {cityName}
           </li>
         </ol>
@@ -455,33 +455,33 @@ export default async function RemoteRoleCityPage({
 
       {/* --------------------------------- Header ---------------------------------- */}
       <header className="mb-6 space-y-3">
-        <h1 className="text-2xl font-semibold text-neutral-50">
+        <h1 className="text-2xl font-semibold text-foreground">
           Remote {prettyRole(roleSlug)} jobs in {cityName} paying $100k+ ({totalJobs.toLocaleString()})
         </h1>
-        <p className="text-sm text-neutral-300" data-speakable="summary">
+        <p className="text-sm text-muted-foreground" data-speakable="summary">
           Browse high-paying remote {prettyRole(
             roleSlug
           )} roles based in {cityName}. All jobs are filtered for
           at least $100k local total compensation.
         </p>
-        <ul className="grid gap-2 text-xs text-neutral-300 sm:grid-cols-3">
-          <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+        <ul className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+          <li className="rounded-lg border border-border bg-card px-3 py-2">
             Salary-first: $100k+ roles only, pulled from ATS and vetted boards.
           </li>
-          <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+          <li className="rounded-lg border border-border bg-card px-3 py-2">
             Eligibility clarity: remote/hybrid flagged; local currency kept when provided.
           </li>
-          <li className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+          <li className="rounded-lg border border-border bg-card px-3 py-2">
             Freshness: stale roles expire automatically to avoid dead applies.
           </li>
         </ul>
       </header>
 
       {/* --------------------------------- Filters --------------------------------- */}
-      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/80 px-4 py-3 text-xs text-neutral-200">
+      <section className="mb-6 rounded-2xl border border-border bg-card px-4 py-3 text-xs text-foreground">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-neutral-400">Min salary:</span>
+            <span className="text-muted-foreground">Min salary:</span>
             {salaryOptions.map((s) => (
               <Link
                 key={s}
@@ -490,8 +490,8 @@ export default async function RemoteRoleCityPage({
                 })}
                 className={`rounded-full px-2 py-1 ${
                   minAnnual === s
-                    ? 'bg-neutral-200 text-neutral-900'
-                    : 'bg-neutral-900 text-neutral-200'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card text-foreground'
                 }`}
               >
                 ${Math.round(s / 1000)}k+
@@ -499,18 +499,18 @@ export default async function RemoteRoleCityPage({
             ))}
           </div>
 
-          <p className="text-neutral-500">
+          <p className="text-muted-foreground">
             Showing roles tagged with {cityName} and estimated $100k+
             compensation.
           </p>
         </div>
       </section>
 
-      <section className="mb-6 space-y-2 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
-        <h2 className="text-sm font-semibold text-neutral-50">
+      <section className="mb-6 space-y-2 rounded-2xl border border-border bg-card p-4">
+        <h2 className="text-sm font-semibold text-foreground">
           Explore related high-paying pages
         </h2>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
+        <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
           <li>
             <Link href={`/jobs/${roleSlug}`} className="hover:underline">
               $100k+ {prettyRole(roleSlug)} jobs →
@@ -536,7 +536,7 @@ export default async function RemoteRoleCityPage({
 
       {/* -------------------------------- Job list -------------------------------- */}
       {jobs.length === 0 ? (
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-muted-foreground">
           No remote {prettyRole(roleSlug)} roles in {cityName} match
           your current filters. Try lowering the salary filter or
           check back soon.
@@ -551,13 +551,13 @@ export default async function RemoteRoleCityPage({
               aria-label="Pagination"
               className="mt-6 flex items-center justify-between gap-3 text-xs"
             >
-              <div className="text-neutral-400">
+              <div className="text-muted-foreground">
                 Page{' '}
-                <span className="font-semibold text-neutral-100">
+                <span className="font-semibold text-foreground">
                   {page}
                 </span>{' '}
                 of{' '}
-                <span className="font-semibold text-neutral-100">
+                <span className="font-semibold text-foreground">
                   {totalPages}
                 </span>
               </div>
@@ -570,7 +570,7 @@ export default async function RemoteRoleCityPage({
                       sp,
                       page - 1
                     )}
-                    className="rounded-lg border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900"
+                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
                   >
                     Previous
                   </Link>
@@ -583,7 +583,7 @@ export default async function RemoteRoleCityPage({
                       sp,
                       page + 1
                     )}
-                    className="rounded-lg border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900"
+                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
                   >
                     Next
                   </Link>

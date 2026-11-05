@@ -11,31 +11,31 @@ export const metadata: Metadata = {
 export default function CookiesPage() {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-50">
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground">
         Cookie Policy
       </h1>
 
-      <p className="mt-5 text-slate-300">
+      <p className="mt-5 text-muted-foreground">
         This Cookie Policy explains how Six Figure Jobs uses cookies and similar
         technologies. For broader information, see our{' '}
-        <Link className="text-emerald-300 underline" href="/privacy">
+        <Link className="text-primary underline" href="/privacy">
           Privacy Policy
         </Link>
         .
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold text-slate-50">
+      <h2 className="mt-10 text-xl font-semibold text-foreground">
         What are cookies?
       </h2>
-      <p className="mt-4 text-slate-300">
+      <p className="mt-4 text-muted-foreground">
         Cookies are small text files stored on your device. They help websites
         function and provide analytics about usage.
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold text-slate-50">
+      <h2 className="mt-10 text-xl font-semibold text-foreground">
         Cookies we use
       </h2>
-      <ul className="mt-4 list-disc space-y-3 pl-6 text-slate-300">
+      <ul className="mt-4 list-disc space-y-3 pl-6 text-muted-foreground">
         <li>
           <strong>Essential cookies:</strong> required for core site functionality.
         </li>
@@ -48,26 +48,26 @@ export default function CookiesPage() {
         </li>
       </ul>
 
-      <h2 className="mt-10 text-xl font-semibold text-slate-50">
+      <h2 className="mt-10 text-xl font-semibold text-foreground">
         How to control cookies
       </h2>
-      <p className="mt-4 text-slate-300">
+      <p className="mt-4 text-muted-foreground">
         You can disable cookies in your browser settings. Some features may not
         work as intended if cookies are disabled.
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold text-slate-50">
+      <h2 className="mt-10 text-xl font-semibold text-foreground">
         Contact
       </h2>
-      <p className="mt-4 text-slate-300">
+      <p className="mt-4 text-muted-foreground">
         Questions? Email{' '}
-        <a className="text-emerald-300 underline" href="mailto:privacy@6figjobs.com">
+        <a className="text-primary underline" href="mailto:privacy@6figjobs.com">
           privacy@6figjobs.com
         </a>
         .
       </p>
 
-      <p className="mt-10 text-sm text-slate-500">
+      <p className="mt-10 text-sm text-muted-foreground">
         Last updated: {new Date().toISOString().slice(0, 10)}
       </p>
     </main>

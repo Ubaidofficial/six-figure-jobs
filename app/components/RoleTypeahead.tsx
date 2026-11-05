@@ -93,7 +93,7 @@ export default function RoleTypeahead({
     
     return parts.map((part, i) => 
       regex.test(part) ? (
-        <mark key={i} className="bg-cyan-500/20 text-cyan-300 font-semibold">
+        <mark key={i} className="bg-cyan-500/20 text-primary font-semibold">
           {part}
         </mark>
       ) : (
@@ -107,7 +107,7 @@ export default function RoleTypeahead({
       <input
         ref={inputRef}
         type="text"
-        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all"
+        className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
         placeholder={placeholder}
         value={query}
         onFocus={() => setOpen(true)}
@@ -125,19 +125,19 @@ export default function RoleTypeahead({
       
       {/* Synonym hint */}
       {matchedSynonym && query && (
-        <div className="absolute left-0 right-0 -bottom-5 text-[10px] text-slate-500">
-          Showing results for: <span className="text-cyan-400">{matchedSynonym}</span>
+        <div className="absolute left-0 right-0 -bottom-5 text-[10px] text-muted-foreground">
+          Showing results for: <span className="text-primary">{matchedSynonym}</span>
         </div>
       )}
 
       {open && filtered.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-800 bg-slate-950 shadow-2xl backdrop-blur-xl"
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-border bg-card shadow-2xl backdrop-blur-xl"
           role="listbox"
         >
           {!query && (
-            <li className="px-3 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-800">
+            <li className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
               Popular $100k+ Roles
             </li>
           )}
@@ -148,8 +148,8 @@ export default function RoleTypeahead({
               aria-selected={idx === highlightIndex}
               className={`flex items-center gap-2 px-3 py-2.5 text-sm cursor-pointer transition-colors ${
                 idx === highlightIndex 
-                  ? 'bg-gradient-to-r from-cyan-900/40 to-slate-900 border-l-2 border-cyan-500' 
-                  : 'hover:bg-slate-900/80'
+                  ? 'bg-gradient-to-r from-cyan-900/40 to-slate-900 border-l-2 border-primary' 
+                  : 'hover:bg-card'
               }`}
               onMouseDown={(e) => {
                 e.preventDefault()
@@ -159,17 +159,17 @@ export default function RoleTypeahead({
             >
               <span className="text-lg">{opt.emoji}</span>
               <div className="flex-1 min-w-0">
-                <div className="text-slate-100 truncate">
+                <div className="text-foreground truncate">
                   {highlightMatch(opt.label, query)}
                 </div>
                 {opt.category && (
-                  <div className="text-[10px] text-slate-500 mt-0.5">
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
                     {opt.category}
                   </div>
                 )}
               </div>
               {opt.salaryRange && (
-                <span className="text-[10px] text-cyan-400 font-mono whitespace-nowrap">
+                <span className="text-[10px] text-primary font-mono whitespace-nowrap">
                   {opt.salaryRange}
                 </span>
               )}

@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
 
   const title = `Remote ${skillInfo.label} $100k jobs | ${total.toLocaleString()} roles | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} verified remote ${skillInfo.label} $100k+ jobs — salary shown upfront, apply direct. Work-from-anywhere ${skillInfo.label} roles at top tech companies, refreshed daily from company ATS feeds.`
+  const description = `${total.toLocaleString()} remote ${skillInfo.label} $100k+ jobs — salary shown upfront. Work-from-anywhere ${skillInfo.label} roles at top tech companies, refreshed daily from company career pages.`
   const canonical = `${SITE_URL}/jobs/skills/${skillInfo.slug}/remote`
 
   return {
@@ -100,7 +100,7 @@ export default async function SkillRemotePage({ params }: { params: Params }) {
         name: `How many $100k+ remote ${skillInfo.label} jobs are available?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `${total.toLocaleString()} remote ${skillInfo.label} roles meet the $100k+ criteria right now, refreshed frequently from company ATS feeds.`,
+          text: `${total.toLocaleString()} remote ${skillInfo.label} roles meet the $100k+ criteria right now, from company career pages.`,
         },
       },
       {
@@ -129,7 +129,7 @@ export default async function SkillRemotePage({ params }: { params: Params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-400">
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
         <ol className="flex items-center gap-1">
           <li><Link href="/">Home</Link></li>
           <li className="px-1">/</li>
@@ -139,17 +139,17 @@ export default async function SkillRemotePage({ params }: { params: Params }) {
         </ol>
       </nav>
 
-      <h1 className="mb-3 text-2xl font-semibold text-neutral-50">
+      <h1 className="mb-3 text-2xl font-semibold text-foreground">
         {total.toLocaleString()} Remote {skillInfo.label} $100k+ Jobs
       </h1>
-      <p className="mb-6 text-sm text-neutral-300">
+      <p className="mb-6 text-sm text-muted-foreground">
         Remote {skillInfo.label} $100k jobs • $100k remote {skillInfo.label} jobs • high paying remote {skillInfo.label} jobs • six figure {skillInfo.label} roles with verified compensation and flexible locations.
       </p>
 
       <JobList jobs={jobs as JobWithCompany[]} />
 
       {totalPages > 1 && (
-        <nav className="mt-6 flex items-center justify-between text-xs text-neutral-300">
+        <nav className="mt-6 flex items-center justify-between text-xs text-muted-foreground">
           <span>
             Page {page} of {totalPages}
           </span>

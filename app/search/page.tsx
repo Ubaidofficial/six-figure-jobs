@@ -344,7 +344,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <div className="grid gap-4 md:grid-cols-6">
             {/* Search Query */}
             <div className="md:col-span-2">
-              <label htmlFor="q" className="mb-1.5 block text-xs font-medium text-slate-400">
+              <label htmlFor="q" className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Find your next six-figure job
               </label>
               <input
@@ -353,20 +353,20 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 name="q"
                 defaultValue={q}
                 placeholder="Role, company, or skill…"
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
             {/* Location */}
             <div>
-              <label htmlFor="location" className="mb-1.5 block text-xs font-medium text-slate-400">
+              <label htmlFor="location" className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Location
               </label>
               <select
                 id="location"
                 name="location"
                 defaultValue={resolvedLocation}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="">All locations</option>
                 <option value="remote">Remote Only</option>
@@ -384,14 +384,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
             {/* Work arrangement */}
             <div>
-              <label htmlFor="remoteMode" className="mb-1.5 block text-xs font-medium text-slate-400">
+              <label htmlFor="remoteMode" className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Work arrangement
               </label>
               <select
                 id="remoteMode"
                 name="remoteMode"
                 defaultValue={resolvedRemoteMode}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="">Any</option>
                 <option value="remote">Remote</option>
@@ -402,14 +402,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
             {/* Min Salary */}
             <div>
-              <label htmlFor="minSalary" className="mb-1.5 block text-xs font-medium text-slate-400">
+              <label htmlFor="minSalary" className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Minimum Salary
               </label>
               <select
                 id="minSalary"
                 name="minSalary"
                 defaultValue={minSalaryRaw}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="100000">$100k+</option>
               <option value="200000">$200k+</option>
@@ -420,14 +420,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
             {/* Remote region */}
             <div>
-              <label htmlFor="remoteRegion" className="mb-1.5 block text-xs font-medium text-slate-400">
+              <label htmlFor="remoteRegion" className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Remote region
               </label>
               <select
                 id="remoteRegion"
                 name="remoteRegion"
                 defaultValue={resolvedRemoteRegion}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="">Any</option>
                 <option value="global">Global</option>
@@ -441,14 +441,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
             {/* Seniority */}
             <div>
-              <label htmlFor="seniority" className="mb-1.5 block text-xs font-medium text-slate-400">
+              <label htmlFor="seniority" className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Seniority
               </label>
               <select
                 id="seniority"
                 name="seniority"
                 defaultValue={resolvedSeniority}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="">Any</option>
                 <option value="entry">Entry</option>
@@ -464,14 +464,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <div className="flex items-center justify-between">
             <button
               type="submit"
-              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-emerald-400 px-6 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300"
+              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-primary"
             >
               Find $100k+ roles
             </button>
             {(q || role || location || minSalaryRaw > 100000) && (
               <Link
                 href="/search"
-                className="focus-ring rounded-md text-xs text-slate-400 underline-offset-4 hover:text-slate-200 hover:underline"
+                className="focus-ring rounded-md text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
                 Clear filters
               </Link>
@@ -484,11 +484,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
       <header className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-50 md:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
               {q ? `Results for "${q}"` : 'All $100k+ Jobs'}
             </h1>
-            <p className="mt-2 text-sm text-slate-400">
-              <span className="font-semibold text-slate-100">
+            <p className="mt-2 text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">
                 {data.total.toLocaleString()}
               </span>{' '}
               opportunities found
@@ -503,22 +503,22 @@ export default async function SearchPage({ searchParams }: PageProps) {
       {/* Results */}
       {jobs.length === 0 ? (
         <div className="surface p-10 text-center">
-          <p className="text-base font-semibold text-slate-100">
+          <p className="text-base font-semibold text-foreground">
             No jobs found.
           </p>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-muted-foreground">
             Try adjusting your filters, or clear them to explore all $100k+ opportunities.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/search"
-              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-6 text-sm font-semibold text-slate-100 transition hover:bg-white/5"
+              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl border border-border bg-card px-6 text-sm font-semibold text-foreground transition hover:bg-foreground/5"
             >
               Clear filters
             </Link>
             <Link
               href="/"
-              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-emerald-400 px-6 text-sm font-semibold text-slate-950 shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-emerald-300"
+              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-primary"
             >
               Explore newest opportunities
             </Link>
@@ -529,10 +529,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <JobList jobs={jobs} />
 
           {/* Pagination */}
-          <div className="mt-8 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3">
-            <span className="text-sm text-slate-400">
-              Page <span className="font-semibold text-slate-200">{page}</span> of{' '}
-              <span className="font-semibold text-slate-200">
+          <div className="mt-8 flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
+            <span className="text-sm text-muted-foreground">
+              Page <span className="font-semibold text-foreground">{page}</span> of{' '}
+              <span className="font-semibold text-foreground">
                 {data.totalPages}
               </span>
             </span>
@@ -541,7 +541,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               {hasPrevPage && (
                 <Link
                   href={buildSearchHref(paginationState, page - 1)}
-                  className="focus-ring inline-flex h-11 items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-sm font-semibold text-slate-100 transition hover:bg-white/5"
+                  className="focus-ring inline-flex h-11 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:bg-foreground/5"
                 >
                   ← Previous
                 </Link>
@@ -549,7 +549,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               {hasNextPage && (
                 <Link
                   href={buildSearchHref(paginationState, page + 1)}
-                  className="focus-ring inline-flex h-11 items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/40 px-4 text-sm font-semibold text-slate-100 transition hover:bg-white/5"
+                  className="focus-ring inline-flex h-11 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:bg-foreground/5"
                 >
                   Next →
                 </Link>

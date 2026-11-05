@@ -13,7 +13,7 @@ export function buildCompanyTitle(company: Company): string {
 }
 
 export function buildCompanyDescription(company: Company, jobCount: number): string {
-  return `${company.name} has ${jobCount}+ verified $100k+ job openings. Explore high-paying roles, company info, and how to apply.`;
+  return `${company.name} has ${jobCount}+ $100k+ job openings. Explore high-paying roles, company info, and how to apply.`;
 }
 
 export function buildCompanyMetadata(params: {

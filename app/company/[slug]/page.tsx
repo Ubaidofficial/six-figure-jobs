@@ -9,8 +9,11 @@ import { prisma } from '../../../lib/prisma'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
-import { formatRelativeTime } from '../../../lib/utils/time'
+import { Briefcase, Globe } from 'lucide-react'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
+import { Breadcrumb } from '@/components/layout/Breadcrumb'
+import { Faq, JobRows, LinkChips, ListingPage, ListingSection } from '@/components/listing/ListingParts'
+import type { JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { normalizePublicCompanyWebsite } from '../../../lib/companies/website'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
@@ -110,7 +113,7 @@ export async function generateMetadata({
         ? ` Highest visible compensation reaches ${stats.highestSalaryLabel}.`
         : ''
 
-      const description = `Browse ${jobCount} verified $100k+ jobs at ${company.name} with published salary ranges where available, direct apply links, and fresh six figure roles.${rolePhrase}${salaryPhrase} ${companyDesc}`
+      const description = `Browse ${jobCount} $100k+ jobs at ${company.name} with published salary ranges and links to apply.${rolePhrase}${salaryPhrase} ${companyDesc}`
 
       const canonicalUrl = `${SITE_URL}/company/${slug}`
 
@@ -182,356 +185,7 @@ export default async function CompanyPage({
       const heroLogo = buildLogoUrl(company.logoUrl ?? null, company.website ?? null, company.name)
 
       return (
-        <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      {/* Company Header */}
-      <header className="mb-8 rounded-2xl border border-neutral-800 bg-neutral-950/80 p-6">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-          {/* Logo */}
-          <CompanyLogo name={company.name} src={heroLogo} size="xl" priority className="size-20 flex-shrink-0 rounded-xl text-2xl" />
-
-          {/* Company Info */}
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-neutral-50">{company.name}</h1>
-
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-400">
-              {company.industry && (
-                <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs">
-                  {company.industry}
-                </span>
-              )}
-              {company.sizeBucket && (
-                <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs">
-                  {company.sizeBucket} employees
-                </span>
-              )}
-              {company.headquarters && (
-                <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs">
-                  📍 {company.headquarters}
-                </span>
-              )}
-              {company.countryCode && !company.headquarters && (
-                <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs">
-                  📍 {company.countryCode}
-                </span>
-              )}
-            </div>
-
-            {company.description ? (
-              <p className="mt-4 text-sm leading-relaxed text-neutral-300">
-                {truncateText(toPlainText(company.description), 400)}
-              </p>
-            ) : (
-              <p className="mt-4 text-sm leading-relaxed text-neutral-300">
-                {company.name} is hiring $100k+ talent across{' '}
-                {company.industry ?? 'multiple teams'}. Explore roles in{' '}
-                {qualifiedJobs.length > 0 ? 'high-compensation' : 'their latest'}{' '}
-                postings and discover remote and on-site opportunities.
-              </p>
-            )}
-
-            {tags.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {tags.slice(0, 10).map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Links */}
-            <div className="mt-4 flex flex-wrap gap-3">
-              {isValidCompanyWebsite(company.website) && (
-                <a
-                  href={cleanUrl(company.website!)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs font-medium text-neutral-100 hover:border-neutral-500"
-                >
-                  🌐 Website
-                </a>
-              )}
-              {company.atsUrl && (
-                <a
-                  href={cleanUrl(company.atsUrl)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs font-medium text-neutral-100 hover:border-neutral-500"
-                >
-                  💼 Careers Page
-                </a>
-              )}
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="flex gap-4 sm:flex-col sm:items-end sm:gap-2">
-            <div className="text-center sm:text-right">
-              <div className="text-2xl font-bold text-neutral-50">{jobs.length}</div>
-              <div className="text-xs text-neutral-400">$100k+ Jobs</div>
-            </div>
-            {qualifiedJobs.length > 0 && (
-              <div className="text-center sm:text-right">
-                <div className="text-2xl font-bold text-emerald-400">
-                  {qualifiedJobs.filter((job) => job.salarySource === 'ats').length}
-                </div>
-                <div className="text-xs text-neutral-400">ATS salary-backed</div>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* SEO body copy */}
-      <section className="mb-8 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-5">
-        <h2 className="text-sm font-semibold text-neutral-50">
-          Why $100k+ roles at {company.name}?
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-neutral-300">
-          {company.name} is actively hiring experienced talent for $100k+ roles across{' '}
-          {stats.topRoles.length
-            ? formatList(stats.topRoles.slice(0, 3).map((role) => role.label))
-            : tags.length
-              ? tags.slice(0, 3).join(', ')
-              : 'multiple teams'}. These
-          positions include high-impact remote, hybrid, and on-site opportunities,
-          with published salary ranges shown up front where available and direct
-          apply links for faster applications.
-          {stats.highestSalaryLabel
-            ? ` The highest visible salary in the current ${company.name} feed reaches ${stats.highestSalaryLabel}.`
-            : ''}{' '}
-          {stats.topLocations.length
-            ? `Popular hiring locations include ${formatList(stats.topLocations.slice(0, 3).map((location) => location.label))}.`
-            : 'Browse remote, hybrid, and on-site openings as new locations are normalized.'}{' '}
-          We refresh this page frequently as new jobs are added from the company’s ATS
-          and careers feeds.
-        </p>
-      </section>
-
-      <section className="mb-8">
-        <h2 className="mb-4 text-sm font-semibold text-neutral-50">
-          {company.name} hiring snapshot
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <CompanySignalPanel title="Top roles & pay">
-            {stats.topRoles.length > 0 ? (
-              <ul className="space-y-3 text-sm text-neutral-300">
-                {stats.topRoles.slice(0, 5).map((role) => {
-                  // Format the salary range when we have at least one bound.
-                  // Median-of-mins / median-of-maxes avoids smearing outliers;
-                  // currency comes from the first sample with disclosed pay.
-                  const salaryText = (() => {
-                    const s = role.salary
-                    if (!s) return null
-                    const sym = s.currency === 'USD' || !s.currency ? '$' : `${s.currency} `
-                    const fmt = (n: number) =>
-                      n >= 1000 ? `${sym}${Math.round(n / 1000)}k` : `${sym}${n.toLocaleString('en-US')}`
-                    if (s.minMedian != null && s.maxMedian != null) {
-                      return `${fmt(s.minMedian)}–${fmt(s.maxMedian)}`
-                    }
-                    return fmt((s.minMedian ?? s.maxMedian) as number)
-                  })()
-                  return (
-                    <li key={role.key}>
-                      <div className="flex items-baseline justify-between gap-3">
-                        <Link href={`/jobs/${role.key}`} className="text-blue-300 hover:underline">
-                          {role.label}
-                        </Link>
-                        <span className="font-mono text-xs text-neutral-500">
-                          {role.count} {role.count === 1 ? 'role' : 'roles'}
-                        </span>
-                      </div>
-                      {salaryText ? (
-                        <div className="mt-0.5 text-xs text-emerald-300">
-                          {salaryText}
-                          <span className="text-neutral-500"> · median range</span>
-                        </div>
-                      ) : (
-                        <div className="mt-0.5 text-xs text-neutral-500">
-                          Salary not disclosed
-                        </div>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            ) : (
-              <p className="text-sm text-neutral-400">Role mix is still being normalized for this company.</p>
-            )}
-          </CompanySignalPanel>
-
-          <CompanySignalPanel title="Salary bands">
-            {stats.salaryBands.some((band) => band.count > 0) ? (
-              <ul className="space-y-2 text-sm text-neutral-300">
-                {stats.salaryBands.filter((band) => band.count > 0).map((band) => (
-                  <li key={band.href} className="flex items-center justify-between gap-3">
-                    <Link href={band.href} className="text-blue-300 hover:underline">
-                      {band.label}
-                    </Link>
-                    <span className="font-mono text-xs text-neutral-500">{band.count}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-neutral-400">Published salary bands are limited in the current feed.</p>
-            )}
-          </CompanySignalPanel>
-
-          <CompanySignalPanel title="Work setup">
-            <ul className="space-y-2 text-sm text-neutral-300">
-              {stats.workModes.map((mode) => (
-                <li key={mode.key} className="flex items-center justify-between gap-3">
-                  <span>{mode.label}</span>
-                  <span className="font-mono text-xs text-neutral-500">{mode.count}</span>
-                </li>
-              ))}
-            </ul>
-          </CompanySignalPanel>
-
-          <CompanySignalPanel title="Top locations">
-            {stats.topLocations.length > 0 ? (
-              <ul className="space-y-2 text-sm text-neutral-300">
-                {stats.topLocations.slice(0, 5).map((location) => (
-                  <li key={location.key} className="flex items-center justify-between gap-3">
-                    {location.href ? (
-                      <Link href={location.href} className="text-blue-300 hover:underline">
-                        {location.label}
-                      </Link>
-                    ) : (
-                      <span>{location.label}</span>
-                    )}
-                    <span className="font-mono text-xs text-neutral-500">{location.count}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-neutral-400">Location signals are still being normalized for this feed.</p>
-            )}
-          </CompanySignalPanel>
-        </div>
-      </section>
-
-      <section className="mb-8 space-y-2 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
-        <h2 className="text-sm font-semibold text-neutral-50">
-          Explore related high-paying pages
-        </h2>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-blue-300">
-          {countrySlug && (
-            <li>
-              <Link href={`/jobs/location/${countrySlug}`} className="hover:underline">
-                $100k+ jobs in {company.countryCode}
-              </Link>
-            </li>
-          )}
-          <li>
-            <Link href="/jobs/200k-plus" className="hover:underline">
-              $200k+ tech jobs →
-            </Link>
-          </li>
-          <li>
-            <Link href="/remote" className="hover:underline">
-              Remote $100k+ roles →
-            </Link>
-          </li>
-          <li>
-            <Link href="/salary/software-engineer" className="hover:underline">
-              Software Engineer salary guide →
-            </Link>
-          </li>
-        </ul>
-      </section>
-
-      <section className="mb-8 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-5">
-        <h2 className="text-sm font-semibold text-neutral-50">
-          {company.name} jobs FAQ
-        </h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {buildCompanyFaqItems(company, qualifiedJobs).map((item) => (
-            <article key={item.q} className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-              <h3 className="text-sm font-semibold text-neutral-100">{item.q}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-400">{item.a}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Job Listings */}
-      <section>
-        <h2 className="mb-4 text-lg font-semibold text-neutral-50">
-          Open Positions at {company.name}
-        </h2>
-
-        {jobs.length === 0 ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-8 text-center">
-            <p className="text-neutral-400">No live $100k+ positions at the moment.</p>
-            <p className="mt-2 text-sm text-neutral-500">
-              Check back later or visit their{' '}
-              {company.atsUrl ? (
-                <a
-                  href={cleanUrl(company.atsUrl)}
-                  className="text-blue-400 hover:underline"
-                >
-                  careers page
-                </a>
-              ) : (
-                'careers page'
-              )}{' '}
-              directly.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div>
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-emerald-400">
-                <span>💰</span> Verified $100k+ Positions
-              </h3>
-              <div className="space-y-3">
-                {qualifiedJobs.map((job) => (
-                  <JobListItem key={job.id} job={job} />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Related Links */}
-      <section className="mt-10">
-        <h2 className="mb-3 text-sm font-semibold text-neutral-50">
-          Explore More Six Figure Jobs
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/jobs/100k-plus"
-            className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-300 hover:border-neutral-500"
-          >
-            All $100k+ Jobs
-          </Link>
-          <Link
-            href="/jobs/software-engineer"
-            className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-300 hover:border-neutral-500"
-          >
-            Software Engineer Jobs
-          </Link>
-          <Link
-            href="/jobs/product-manager"
-            className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-300 hover:border-neutral-500"
-          >
-            Product Manager Jobs
-          </Link>
-          <Link
-            href="/jobs/data-engineer"
-            className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-300 hover:border-neutral-500"
-          >
-            Data Engineer Jobs
-          </Link>
-        </div>
-      </section>
-
-      {/* JSON-LD */}
+        <ListingPage>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
@@ -559,7 +213,201 @@ export default async function CompanyPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       ))}
-        </main>
+
+          <header className="flex flex-col gap-5 border-b border-border pb-8 sm:flex-row sm:items-start">
+            <CompanyLogo name={company.name} src={heroLogo} size="xl" priority className="size-20 flex-shrink-0 rounded-xl text-2xl" />
+            <div className="min-w-0 flex-1">
+              <Breadcrumb
+                items={[
+                  { label: 'Home', href: '/' },
+                  { label: 'Companies', href: '/companies' },
+                  { label: company.name },
+                ]}
+              />
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{company.name}</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                <strong className="font-semibold text-foreground">{jobs.length}</strong> open $100k+{' '}
+                {jobs.length === 1 ? 'job' : 'jobs'}
+                {[company.industry, company.sizeBucket ? `${company.sizeBucket} employees` : null, company.headquarters ?? company.countryCode]
+                  .filter(Boolean)
+                  .map((v) => ` · ${v}`)
+                  .join('')}
+              </p>
+
+              {company.description ? (
+                <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-foreground/80">
+                  {truncateText(toPlainText(company.description), 400)}
+                </p>
+              ) : null}
+
+              {tags.length > 0 ? (
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {tags.slice(0, 10).map((tag) => (
+                    <li
+                      key={tag}
+                      className="rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground"
+                    >
+                      {tag}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                {isValidCompanyWebsite(company.website) && (
+                  <a
+                    href={cleanUrl(company.website!)}
+                    target="_blank"
+                    rel="nofollow noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline"
+                  >
+                    <Globe className="size-4" aria-hidden="true" /> Website
+                  </a>
+                )}
+                {company.atsUrl && (
+                  <a
+                    href={cleanUrl(company.atsUrl)}
+                    target="_blank"
+                    rel="nofollow noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline"
+                  >
+                    <Briefcase className="size-4" aria-hidden="true" /> Careers page
+                  </a>
+                )}
+              </div>
+            </div>
+          </header>
+
+          <ListingSection title={`Open positions at ${company.name}`}>
+            <JobRows
+              jobs={qualifiedJobs as unknown as JobWithCompany[]}
+              empty={{
+                title: 'No open $100k+ positions right now.',
+                body: `Check back soon, or browse every $100k+ job.`,
+                href: '/jobs',
+                hrefLabel: 'Browse all jobs',
+              }}
+            />
+          </ListingSection>
+
+          {stats.topRoles.length > 0 || stats.topLocations.length > 0 || stats.salaryBands.some((b) => b.count > 0) ? (
+            <ListingSection title={`Hiring at ${company.name}`}>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <SnapshotPanel title="Top roles">
+                  {stats.topRoles.length > 0 ? (
+                    <ul className="space-y-3 text-sm">
+                      {stats.topRoles.slice(0, 5).map((role) => {
+                        // Median-of-mins / median-of-maxes avoids smearing outliers; currency comes from the first
+                        // sample with disclosed pay.
+                        const salaryText = (() => {
+                          const s = role.salary
+                          if (!s) return null
+                          const sym = s.currency === 'USD' || !s.currency ? '$' : `${s.currency} `
+                          const fmt = (n: number) =>
+                            n >= 1000 ? `${sym}${Math.round(n / 1000)}k` : `${sym}${n.toLocaleString('en-US')}`
+                          if (s.minMedian != null && s.maxMedian != null) {
+                            return `${fmt(s.minMedian)}–${fmt(s.maxMedian)}`
+                          }
+                          return fmt((s.minMedian ?? s.maxMedian) as number)
+                        })()
+                        return (
+                          <li key={role.key}>
+                            <div className="flex items-baseline justify-between gap-3">
+                              <Link href={`/jobs/${role.key}`} className="text-primary hover:underline underline-offset-4">
+                                {role.label}
+                              </Link>
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {role.count} {role.count === 1 ? 'role' : 'roles'}
+                              </span>
+                            </div>
+                            {salaryText ? (
+                              <div className="mt-0.5 font-mono text-xs text-muted-foreground">{salaryText}</div>
+                            ) : null}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Not enough roles to summarise yet.</p>
+                  )}
+                </SnapshotPanel>
+
+                <SnapshotPanel title="Salary bands">
+                  {stats.salaryBands.some((band) => band.count > 0) ? (
+                    <ul className="space-y-2 text-sm">
+                      {stats.salaryBands.filter((band) => band.count > 0).map((band) => (
+                        <li key={band.href} className="flex items-center justify-between gap-3">
+                          <Link href={band.href} className="text-primary hover:underline underline-offset-4">
+                            {band.label}
+                          </Link>
+                          <span className="font-mono text-xs text-muted-foreground">{band.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No published salary bands yet.</p>
+                  )}
+                </SnapshotPanel>
+
+                <SnapshotPanel title="Work setup">
+                  <ul className="space-y-2 text-sm">
+                    {stats.workModes.map((mode) => (
+                      <li key={mode.key} className="flex items-center justify-between gap-3">
+                        <span className="text-foreground">{mode.label}</span>
+                        <span className="font-mono text-xs text-muted-foreground">{mode.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </SnapshotPanel>
+
+                <SnapshotPanel title="Top locations">
+                  {stats.topLocations.length > 0 ? (
+                    <ul className="space-y-2 text-sm">
+                      {stats.topLocations.slice(0, 5).map((location) => (
+                        <li key={location.key} className="flex items-center justify-between gap-3">
+                          {location.href ? (
+                            <Link href={location.href} className="text-primary hover:underline underline-offset-4">
+                              {location.label}
+                            </Link>
+                          ) : (
+                            <span className="text-foreground">{location.label}</span>
+                          )}
+                          <span className="font-mono text-xs text-muted-foreground">{location.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No location data yet.</p>
+                  )}
+                </SnapshotPanel>
+              </div>
+            </ListingSection>
+          ) : null}
+
+          <ListingSection title="Related pages">
+            <LinkChips
+              label="Related pages"
+              items={[
+                ...(countrySlug
+                  ? [{ label: `$100k+ jobs in ${company.countryCode}`, href: `/jobs/location/${countrySlug}` }]
+                  : []),
+                { label: 'All $100k+ jobs', href: '/jobs/100k-plus' },
+                { label: '$200k+ jobs', href: '/jobs/200k-plus' },
+                { label: 'Remote $100k+ jobs', href: '/remote' },
+                { label: 'Software Engineer jobs', href: '/jobs/software-engineer' },
+                { label: 'Product Manager jobs', href: '/jobs/product-manager' },
+                { label: 'Data Engineer jobs', href: '/jobs/data-engineer' },
+                { label: 'Software Engineer salaries', href: '/salary/software-engineer' },
+              ]}
+            />
+          </ListingSection>
+
+          <ListingSection title={`${company.name} jobs FAQ`}>
+            <Faq
+              items={buildCompanyFaqItems(company, qualifiedJobs).map((item) => ({ question: item.q, answer: item.a }))}
+            />
+          </ListingSection>
+        </ListingPage>
       )
     },
     () => (
@@ -577,92 +425,11 @@ export default async function CompanyPage({
 /* Components                                                                 */
 /* -------------------------------------------------------------------------- */
 
-function JobListItem({ job }: { job: JobWithFlags }) {
-  const salaryText = buildSalaryText(job)
-  const locationText = buildLocationText(job)
-  const isHighSalary = job.isHighSalary
 
-  const snippet = buildJobPreviewSnippet(job)
-
+function SnapshotPanel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="group rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 transition-colors hover:border-neutral-700">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex-1">
-          <Link
-            href={buildJobSlugHref(job)}
-            className="text-base font-medium text-neutral-100 group-hover:text-blue-400"
-          >
-            {job.title}
-          </Link>
-
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
-            {locationText && <span>📍 {locationText}</span>}
-            {job.type && <span>· {job.type}</span>}
-            {job.postedAt && <span>· Posted {formatRelativeTime(job.postedAt) ?? ''}</span>}
-          </div>
-
-          {snippet && snippet.length > 20 && (
-            <p className="mt-2 text-sm text-neutral-300">{snippet}</p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {salaryText && (
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                isHighSalary
-                  ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40'
-                  : 'bg-neutral-800 text-neutral-300'
-              }`}
-            >
-              {salaryText}
-            </span>
-          )}
-
-          {job.applyUrl && (
-            <a
-              href={cleanUrl(job.applyUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
-            >
-              Apply now
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function buildJobPreviewSnippet(job: JobWithFlags): string | null {
-  const aiSnippet = typeof job.aiSnippet === 'string' ? job.aiSnippet.trim() : ''
-  if (aiSnippet.length >= 80) {
-    return truncateText(aiSnippet, 180)
-  }
-
-  const aiOneLiner = typeof job.aiOneLiner === 'string' ? job.aiOneLiner.trim() : ''
-  if (aiOneLiner.length >= 32) {
-    return truncateText(aiOneLiner, 160)
-  }
-
-  const rawSnippet =
-    (job as any).descriptionHtml ?? (job as any).description ?? (job as any).body ?? null
-  if (!rawSnippet) return null
-
-  return truncateText(toPlainText(String(rawSnippet)), 140)
-}
-
-function CompanySignalPanel({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
-  return (
-    <article className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4">
-      <h3 className="mb-3 text-sm font-semibold text-neutral-100">{title}</h3>
+    <article className="rounded-lg border border-border bg-card p-4">
+      <h3 className="mb-3 text-sm font-semibold text-foreground">{title}</h3>
       {children}
     </article>
   )
@@ -672,14 +439,6 @@ function CompanySignalPanel({
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
-function buildLocationText(job: JobWithFlags): string {
-  const isRemote = job.remote === true || job.remoteMode === 'remote'
-  if (isRemote) return job.countryCode ? `Remote (${job.countryCode})` : 'Remote'
-  if (job.city && job.countryCode) return `${job.city}, ${job.countryCode}`
-  if (job.countryCode) return job.countryCode
-  if (job.locationRaw) return job.locationRaw
-  return ''
-}
 
 function parseTags(raw?: string | null): string[] {
   if (!raw) return []
@@ -1025,14 +784,14 @@ function buildCompanyCollectionPageJsonLd(
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: `${company.name} $100k+ jobs`,
-    description: `Browse verified $100k+ jobs at ${company.name} with published salary ranges where available, direct apply links, and fresh six figure roles.`,
+    description: `Browse $100k+ jobs at ${company.name} with published salary ranges and links to apply.`,
     url: `${SITE_URL}/company/${company.slug}`,
     about: [
       `${company.name} jobs`,
       `${company.name} careers`,
       ...stats.topRoles.slice(0, 5).map((role) => `${company.name} ${role.label} jobs`),
       ...stats.topLocations.slice(0, 3).map((location) => `${company.name} jobs in ${location.label}`),
-      'verified $100k+ jobs',
+      '$100k+ jobs',
       'six figure jobs',
       'high paying jobs',
       'published salary ranges',
@@ -1069,14 +828,14 @@ function buildCompanyFaqItems(company: CompanyWithJobs['company'], jobs: JobWith
   return [
     {
       q: `How many $100k+ jobs does ${company.name} have?`,
-      a: `${company.name} currently has ${jobCount.toLocaleString()} live $100k+ jobs on Six Figure Jobs. Listings are refreshed frequently as company ATS and careers feeds change.`,
+      a: `${company.name} currently has ${jobCount.toLocaleString()} live $100k+ jobs on Six Figure Jobs. New jobs are added every day and jobs that are no longer open are removed.`,
     },
     {
-      q: `Are ${company.name} salaries verified?`,
+      q: `Where do the ${company.name} salaries come from?`,
       a:
         salaryBackedCount > 0
-          ? `${salaryBackedCount.toLocaleString()} ${company.name} roles include ATS salary-backed compensation signals. We prioritize published salary ranges, seniority, freshness, and direct apply links.`
-          : `We prioritize ${company.name} roles with high-salary signals, seniority fit, freshness, and direct apply links, with published salary ranges shown whenever available.`,
+          ? `${salaryBackedCount.toLocaleString()} ${company.name} roles take their salary from the employer’s applicant-tracking system. Every listing shows the salary range published in the posting and links to ${company.name}’s own application page.`
+          : `Every ${company.name} listing shows the salary range published in the posting and links to ${company.name}’s own application page.`,
     },
     {
       q: `Does ${company.name} hire remote six figure roles?`,

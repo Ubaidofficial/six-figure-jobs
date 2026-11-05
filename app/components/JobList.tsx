@@ -8,7 +8,7 @@ export type JobListProps = {
 export default function JobList({ jobs }: JobListProps) {
   if (!jobs || jobs.length === 0) {
     return (
-      <p className="py-6 text-sm text-slate-400">
+      <p className="py-6 text-sm text-muted-foreground">
         No jobs found. Try adjusting your filters or explore all $100k+ opportunities.
       </p>
     )
@@ -28,9 +28,9 @@ export default function JobList({ jobs }: JobListProps) {
   })
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {dedupedJobs.map((job) => (
-        <JobCard key={job.id} job={job as JobWithCompany} />
+        <JobCard key={job.id} job={job as JobWithCompany} variant="homepage" />
       ))}
     </div>
   )

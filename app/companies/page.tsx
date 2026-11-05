@@ -10,7 +10,7 @@ import {
 import { CompanySearch } from '@/components/companies/CompanySearch'
 import { getCompanyPublishingManifest } from '@/lib/seo/companyPublishing'
 import { getPriorityCompanyRank } from '@/lib/seo/priorityCompanies'
-import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
+import { JobRows, ListingHeader, ListingPage, Pagination } from '@/components/listing/ListingParts'
 
 export const revalidate = 600 // 10m ISR
 const SITE_URL = getSiteUrl()
@@ -34,10 +34,10 @@ function buildCompaniesPageHref(page: number): string {
 
 function buildCompaniesDescription(totalCompanies: number, totalEligibleJobs: number) {
   if (totalCompanies > 0) {
-    return `Browse ${totalCompanies.toLocaleString()} companies actively hiring for ${totalEligibleJobs.toLocaleString()} verified $100k+ tech jobs. Find six-figure roles at top startups, FAANG, and high-growth companies with direct apply links.`
+    return `Browse ${totalCompanies.toLocaleString()} companies actively hiring for ${totalEligibleJobs.toLocaleString()} $100k+ tech jobs. Find six-figure roles at top startups and high-growth companies, with links to apply.`
   }
 
-  return 'Browse companies actively hiring for verified $100k+ tech jobs. Find six-figure roles at top startups, FAANG, and high-growth companies with direct apply links.'
+  return 'Browse companies actively hiring for $100k+ tech jobs. Find six-figure roles at top startups and high-growth companies, with links to apply.'
 }
 
 function buildBreadcrumbJsonLd() {
@@ -165,13 +165,6 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
       return (a.name ?? '').localeCompare(b.name ?? '')
     })
 
-    const featuredCompanies = orderedCompanies
-      .filter((company) => {
-        const candidate = company.slug ? manifestBySlug.get(company.slug) : null
-        return Boolean(candidate?.unlocked)
-      })
-      .slice(0, 12)
-
     // Pagination — clamp the requested page to a real one, then slice the
     // ordered directory so each page renders a distinct 48-company window.
     const totalPages = Math.max(1, Math.ceil(orderedCompanies.length / COMPANIES_PAGE_SIZE))
@@ -189,164 +182,47 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     )
 
     return (
-      <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
-        <div className="mb-8">
-          <PageHero
-            eyebrow="Company directory"
-            title="Companies hiring $100k+ roles"
-            description={
-              companies.length > 0
-                ? `Browse ${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} live $100k+ jobs, six figure roles, remote jobs, and high paying positions with direct apply links.`
-                : 'Only companies with live high-paying roles, verified salary signals, and direct apply links.'
-            }
-            helper={
-              totalCompanies > orderedCompanies.length
-                ? `Showing the first ${orderedCompanies.length.toLocaleString()} companies with priority company hubs first.`
-                : 'Open a company page first, then narrow into salary bands, roles, and locations.'
-            }
-            actions={
+      <ListingPage>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }} />
+
+        <ListingHeader
+          breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Companies' }]}
+          title="Companies hiring $100k+ roles"
+          summary={
+            companies.length > 0 ? (
               <>
-                <Link
-                  href="/jobs"
-                  className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
-                >
-                  Browse all jobs
-                </Link>
-                <Link
-                  href="/salary"
-                  className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
-                >
-                  Salary guides
-                </Link>
+                <strong>{totalCompanies.toLocaleString()}</strong> companies with{' '}
+                <strong>{totalEligibleJobs.toLocaleString()}</strong> open $100k+ jobs
               </>
-            }
-          >
-            <PageStatGrid
-              items={[
-                {
-                  label: 'Companies',
-                  value: totalCompanies.toLocaleString(),
-                  hint: 'Employers with live eligible six-figure roles',
-                },
-                {
-                  label: 'Live $100k+ jobs',
-                  value: totalEligibleJobs.toLocaleString(),
-                  hint: 'Current inventory across the company directory',
-                },
-                {
-                  label: 'Priority hubs',
-                  value: featuredCompanies.length.toLocaleString(),
-                  hint: 'Highest-quality company pages surfaced first',
-                },
-                {
-                  label: 'Primary workflow',
-                  value: 'Company → role',
-                  hint: 'Open a company, then narrow by role and location',
-                },
-              ]}
-            />
-          </PageHero>
-        </div>
+            ) : (
+              'Companies with open $100k+ jobs will appear here.'
+            )
+          }
+        />
 
         {orderedCompanies.length === 0 ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-8 text-center">
-            <p className="text-neutral-400">No companies found yet. Try again soon — listings update frequently.</p>
-          </div>
+          <JobRows
+            jobs={[]}
+            empty={{
+              title: 'No companies yet.',
+              body: 'Companies appear here once they have an open job above the six-figure threshold.',
+              href: '/jobs',
+              hrefLabel: 'Browse all jobs',
+            }}
+          />
         ) : (
           <>
-            {featuredCompanies.length > 0 && (
-              <PageSection
-                title="Priority company pages to start with"
-                description="These company pages have enough live jobs, salary support, and content depth to be worth crawling repeatedly. They are the main company hubs we are deliberately pushing first."
-              >
-                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {featuredCompanies.map((company) => {
-                    const candidate = company.slug ? manifestBySlug.get(company.slug) : null
-                    if (!company.slug || !candidate) return null
-                    return (
-                      <Link
-                        key={company.id}
-                        href={`/company/${company.slug}`}
-                        className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 transition-colors hover:border-neutral-600"
-                      >
-                        <div className="text-sm font-semibold text-neutral-100">{company.name}</div>
-                        <div className="mt-2 text-xs text-neutral-400">
-                          {candidate.liveJobs.toLocaleString()} live jobs •{' '}
-                          {candidate.salaryBackedJobs.toLocaleString()} salary-backed •{' '}
-                          {candidate.roleDiversity.toLocaleString()} role groups
-                        </div>
-                      </Link>
-                    )
-                  })}
-                </div>
-              </PageSection>
-            )}
-
-            <PageSection
-              title="Find companies with verified six figure jobs"
-              description="This company directory groups employers with live $100k+ job openings, published salary ranges where available, and direct apply paths to company career pages. Use it to compare companies hiring for remote, hybrid, and on-site six figure jobs across engineering, product, data, sales, finance, marketing, operations, and leadership roles."
-            >
-              <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                <Link href="/jobs" className="rounded-full border border-neutral-700 px-3 py-1.5 text-neutral-200 hover:border-neutral-500">
-                  Browse all jobs
-                </Link>
-                <Link href="/remote" className="rounded-full border border-neutral-700 px-3 py-1.5 text-neutral-200 hover:border-neutral-500">
-                  Remote jobs
-                </Link>
-                <Link href="/salary" className="rounded-full border border-neutral-700 px-3 py-1.5 text-neutral-200 hover:border-neutral-500">
-                  Salary guides
-                </Link>
-              </div>
-            </PageSection>
-
             <CompanySearch companies={pagedCompanies} />
-
-            {totalPages > 1 ? (
-              <nav
-                aria-label="Companies pagination"
-                className="mt-10 flex items-center justify-between gap-3 border-t border-neutral-800 pt-6 text-sm"
-              >
-                <div className="text-xs text-neutral-400">
-                  Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()} • Showing {pagedCompanies.length} of {orderedCompanies.length.toLocaleString()} companies
-                </div>
-                <div className="flex items-center gap-2">
-                  {currentPage > 1 ? (
-                    <Link
-                      href={buildCompaniesPageHref(currentPage - 1)}
-                      rel="prev"
-                      className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
-                    >
-                      ← Previous
-                    </Link>
-                  ) : null}
-                  {currentPage < totalPages ? (
-                    <Link
-                      href={buildCompaniesPageHref(currentPage + 1)}
-                      rel="next"
-                      className="rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-xs text-neutral-200 hover:border-neutral-500"
-                    >
-                      Next →
-                    </Link>
-                  ) : null}
-                </div>
-              </nav>
-            ) : null}
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              hrefFor={(n) => buildCompaniesPageHref(n)}
+            />
           </>
         )}
-
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
-        />
-      </main>
+      </ListingPage>
     )
   } catch (error) {
     unstable_rethrow(error)
@@ -354,23 +230,23 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     return (
       <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
         <header className="mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-neutral-50">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
             Companies hiring $100k+ roles
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-400">
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Company profiles are temporarily unavailable while the production database reconnects.
           </p>
         </header>
 
-        <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-8 text-center">
-          <p className="text-neutral-300">
+        <div className="rounded-xl border border-border bg-card p-8 text-center">
+          <p className="text-muted-foreground">
             Browse the live job hubs while company data comes back online.
           </p>
           <div className="mt-4 flex justify-center gap-3 text-sm">
-            <Link href="/jobs" className="rounded-full border border-neutral-700 px-4 py-2 text-neutral-100">
+            <Link href="/jobs" className="rounded-full border border-border px-4 py-2 text-foreground">
               Browse jobs
             </Link>
-            <Link href="/salary" className="rounded-full border border-neutral-700 px-4 py-2 text-neutral-100">
+            <Link href="/salary" className="rounded-full border border-border px-4 py-2 text-foreground">
               Salary guides
             </Link>
           </div>

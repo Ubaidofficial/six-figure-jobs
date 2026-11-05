@@ -11,7 +11,7 @@ export function Footer() {
         <section className={styles.newsletter} aria-label="Newsletter signup">
           <div>
             <div className={styles.newsletterTitle}>Get weekly six-figure jobs in your inbox</div>
-            <div className={styles.newsletterSub}>Premium roles, verified salaries, no noise.</div>
+            <div className={styles.newsletterSub}>New six-figure jobs each week, pay ranges included.</div>
           </div>
           <FooterNewsletter />
         </section>

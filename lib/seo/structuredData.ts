@@ -176,7 +176,7 @@ export function buildSliceFaqJsonLd(
         name: `What kinds of jobs are on this page?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Curated ${band} ${role ? `${role} ` : ''}${locationPhrase} sourced directly from company ATS feeds with verified salary bands.`,
+          text: `Curated ${band} ${role ? `${role} ` : ''}${locationPhrase} sourced directly from company career pages with verified salary bands.`,
         },
       },
       {

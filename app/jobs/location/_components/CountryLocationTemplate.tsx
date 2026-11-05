@@ -1,5 +1,17 @@
 import Link from 'next/link'
-import { JobCard } from '@/components/jobs/JobCard'
+import { CompanyLogo } from '@/components/companies/CompanyLogo'
+import { buildLogoUrl } from '@/lib/companies/logo'
+import {
+  Faq,
+  JobRows,
+  LinkChips,
+  ListingHeader,
+  ListingLayout,
+  ListingPage,
+  ListingSection,
+  Pagination,
+  Prose,
+} from '@/components/listing/ListingParts'
 
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
@@ -11,7 +23,6 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from '../../_components/JobsFilters'
 import { JobsToolbar } from '../../_components/JobsToolbar'
-import styles from './CountryLocationTemplate.module.css'
 
 const PAGE_SIZE = 24
 const SITE_URL = getSiteUrl()
@@ -184,7 +195,7 @@ function buildCountryCollectionPageJsonLd(input: {
     },
     mainEntity: {
       '@type': 'ItemList',
-      name: `${input.loc.label} verified salary job feed`,
+      name: `${input.loc.label} salary job feed`,
       numberOfItems: input.total,
     },
   }
@@ -199,8 +210,8 @@ function buildCountryFaqItems(input: {
 }) {
   return [
     {
-      q: `Are these ${input.loc.label} jobs verified?`,
-      a: `Yes. This page focuses on ${input.total.toLocaleString()} live high paying jobs in ${input.loc.label} from ${input.companyCount.toLocaleString()} companies, with salary quality, seniority, freshness, and direct apply paths screened before listings appear.`,
+      q: `How are these ${input.loc.label} jobs selected?`,
+      a: `This page lists ${input.total.toLocaleString()} jobs in ${input.loc.label} from ${input.companyCount.toLocaleString()} companies. Each one has a published salary above the ${input.loc.label} threshold and was posted recently; jobs that are no longer open are removed.`,
     },
     {
       q: `What salary threshold is used for ${input.loc.label}?`,
@@ -208,7 +219,7 @@ function buildCountryFaqItems(input: {
     },
     {
       q: `Can I find remote jobs in ${input.loc.label}?`,
-      a: `Yes. Use the work type filter to compare remote, hybrid, and on-site six figure jobs in ${input.loc.label}, then apply through the direct company or ATS link on each listing.`,
+      a: `Yes. Use the work type filter to compare remote, hybrid, and on-site six figure jobs in ${input.loc.label}, then apply through the employer’s application page linked on each listing.`,
     },
   ]
 }
@@ -253,8 +264,6 @@ export async function CountryLocationTemplate({
   const rawSort = (firstParam(sp, 'sort') || 'recent').trim()
   const sort = rawSort === 'recent' || rawSort === 'salary' || rawSort === 'relevant' ? rawSort : 'recent'
 
-  const rawView = (firstParam(sp, 'view') || 'grid').trim()
-  const view: 'grid' | 'list' = rawView === 'list' ? 'list' : 'grid'
 
   const roles = allParams(sp, 'role')
   const seniority = allParams(sp, 'seniority')
@@ -344,36 +353,13 @@ export async function CountryLocationTemplate({
     .filter((r) => r.slug && r.name && CITY_TARGET_SLUG_SET.has(r.slug))
     .slice(0, 6)
 
-  const cityAvgRows =
-    topCityListBase.length > 0
-      ? await prisma.job.groupBy({
-          by: ['citySlug'],
-          where: {
-            ...statsWhere,
-            currency: countryCurrency,
-            citySlug: { in: topCityListBase.map((c) => c.slug) },
-            OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
-          },
-          _avg: { maxAnnual: true, minAnnual: true },
-        })
-      : []
-
-  const cityAvgBySlug = new Map<string, number | null>()
-  for (const row of cityAvgRows as any[]) {
-    const slug = String(row.citySlug || '')
-    const max = asNumber(row?._avg?.maxAnnual)
-    const min = asNumber(row?._avg?.minAnnual)
-    const v = max != null && min != null ? (max + min) / 2 : (max ?? min)
-    if (slug) cityAvgBySlug.set(slug, v)
-  }
-
   const companyIds = Array.from(
     new Set((topCompanyGroups as any[]).map((r) => String(r.companyId)).filter(Boolean))
   )
   const companies = companyIds.length
     ? await prisma.company.findMany({
         where: { id: { in: companyIds } },
-        select: { id: true, name: true, slug: true },
+        select: { id: true, name: true, slug: true, logoUrl: true, website: true },
       })
     : []
   const companyById = new Map(companies.map((c) => [c.id, c]))
@@ -386,6 +372,7 @@ export async function CountryLocationTemplate({
         id,
         name: info?.name ?? null,
         slug: info?.slug ?? null,
+        logoUrl: buildLogoUrl(info?.logoUrl ?? null, info?.website ?? null, info?.name ?? null),
         count: Number(r?._count?._all ?? 0),
       }
     })
@@ -457,230 +444,82 @@ export async function CountryLocationTemplate({
   const faqItems = buildCountryFaqItems(countrySeoInput)
 
   return (
-    <main className={styles.page}>
+    <ListingPage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link href="/">Home</Link>
-        <span aria-hidden="true">/</span>
-        <Link href="/jobs">Jobs</Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">{loc.label}</span>
-      </nav>
+      <ListingHeader
+        breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: loc.label }]}
+        accent="$100k+"
+        title={`Jobs in ${loc.label}`}
+        summary={
+          <>
+            <strong>{data.total.toLocaleString()}</strong> {data.total === 1 ? 'job' : 'jobs'} from{' '}
+            <strong>{companyCount.toLocaleString()}</strong> {companyCount === 1 ? 'company' : 'companies'}
+            {avgLocal ? <> · average <strong>{formatCurrencyCompact(avgLocal, countryCurrency)}</strong></> : null}
+            {' '}· minimum {thresholdLabel}
+            {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
+          </>
+        }
+        toolbar={
+          <JobsToolbar facets={facets} locationPreset={{ label: loc.label, emoji: flag }} hideSalaryFilter />
+        }
+      />
 
-      <header className={styles.hero}>
-        <div className={styles.heroInner}>
-          <div className={styles.heroTop}>
-            <div>
-              <div className={styles.flag} aria-hidden="true">
-                {flag}
-              </div>
-              <h1 className={styles.heroTitle}>
-                <span className={styles.heroAccent}>$100k+</span> Jobs in {loc.label}
-              </h1>
-              <p className={styles.heroSub}>
-                {data.total.toLocaleString()} opportunities from {companyCount.toLocaleString()} companies. Verified
-                compensation only — no entry-level clutter.
-              </p>
+      <ListingLayout
+        sidebar={<JobsFiltersPanel facets={facets} locationPreset={{ label: loc.label, emoji: flag }} hideSalaryFilter />}
+      >
+        <JobRows
+          jobs={jobs}
+          empty={{
+            title: 'No jobs match these filters.',
+            body: `Clear the filters to see every job in ${loc.label}.`,
+            href: basePath,
+          }}
+        />
+        <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} />
+      </ListingLayout>
 
-              <div className={styles.pillRow}>
-                <div className={styles.pill}>
-                  <span className={styles.pillLabel}>Minimum</span>
-                  <span className={styles.pillValue}>{thresholdLabel}</span>
-                </div>
-                <div className={styles.pill}>
-                  <span className={styles.pillLabel}>Currency</span>
-                  <span className={styles.pillValue}>{countryCurrency}</span>
-                </div>
-              </div>
-            </div>
+      {topCityListBase.length > 0 ? (
+        <ListingSection title={`Top cities in ${loc.label}`}>
+          <LinkChips
+            label="Top cities"
+            items={topCityListBase.map((c) => ({ label: c.name, href: `/jobs/city/${c.slug}`, count: c.count }))}
+          />
+        </ListingSection>
+      ) : null}
 
-            <JobsToolbar
-              facets={facets}
-              locationPreset={{ label: loc.label, emoji: flag }}
-              hideSalaryFilter
-            />
-          </div>
+      {topCompanies.length > 0 ? (
+        <ListingSection title={`Companies hiring in ${loc.label}`}>
+          <LinkChips
+            label="Top companies"
+            items={topCompanies
+              .filter((c) => c.slug && c.name)
+              .map((c) => ({
+                label: String(c.name),
+                href: `/company/${c.slug}`,
+                count: c.count,
+                logo: <CompanyLogo name={String(c.name)} src={c.logoUrl} size="sm" />,
+              }))}
+          />
+        </ListingSection>
+      ) : null}
 
-          <div className={styles.heroStats} aria-label="Country stats">
-            <div className={styles.statCard}>
-              <div className={`${styles.statValue} ${styles.statValueAccent}`}>{data.total.toLocaleString()}</div>
-              <div className={styles.statLabel}>Total jobs in country</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>{formatCurrencyCompact(avgLocal, countryCurrency)}</div>
-              <div className={styles.statLabel}>Average salary (local)</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>Top cities</div>
-              <div className={styles.miniList} aria-label="Top cities list">
-                {topCityListBase.slice(0, 3).map((c) => (
-                  <div key={c.slug} className={styles.miniRow}>
-                    <span>{c.name}</span>
-                    <span className={styles.miniRight}>{c.count.toLocaleString()}</span>
-                  </div>
-                ))}
-                {topCityListBase.length === 0 ? (
-                  <div className={styles.miniRow}>
-                    <span>—</span>
-                    <span className={styles.miniRight}>—</span>
-                  </div>
-                ) : null}
-              </div>
-              <div className={styles.statLabel}>By job count</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>Top companies</div>
-              <div className={styles.miniList} aria-label="Top companies list">
-                {topCompanies.slice(0, 3).map((c) => (
-                  <div key={c.id} className={styles.miniRow}>
-                    <span>{c.name}</span>
-                    <span className={styles.miniRight}>{c.count.toLocaleString()}</span>
-                  </div>
-                ))}
-                {topCompanies.length === 0 ? (
-                  <div className={styles.miniRow}>
-                    <span>—</span>
-                    <span className={styles.miniRight}>—</span>
-                  </div>
-                ) : null}
-              </div>
-              <div className={styles.statLabel}>Hiring right now</div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <ListingSection title={`About ${countryCurrency} salaries in ${loc.label}`}>
+        <Prose>
+          <p>
+            This page lists roles with a published salary of at least <strong>{thresholdLabel}</strong>, the
+            six-figure threshold for {countryCurrency}. Salaries are taken from each employer&rsquo;s posting, and every
+            listing links to the company&rsquo;s own application page.
+          </p>
+        </Prose>
+      </ListingSection>
 
-      <section className={styles.ppp} aria-label="Salary context">
-        <div className={styles.pppTitle}>Understanding verified {countryCurrency} salary ranges</div>
-        <p className={styles.pppBody}>
-          In {loc.label}, this page focuses on roles with published compensation and a
-          currency-specific high-salary floor of approximately{' '}
-          <strong className={styles.pillValue}>{thresholdLabel}</strong>. Listings are screened
-          for salary quality, seniority, freshness, and direct apply paths.
-        </p>
-      </section>
-
-      <section className={styles.faq} aria-label={`${loc.label} jobs FAQ`}>
-        <header className={styles.sectionHeader}>
-          <div>
-            <div className={styles.sectionTitle}>{loc.label} jobs FAQ</div>
-            <div className={styles.sectionSub}>
-              Quick answers for salary, freshness, and remote-work search intent.
-            </div>
-          </div>
-        </header>
-        <div className={styles.faqGrid}>
-          {faqItems.map((item) => (
-            <article key={item.q} className={styles.faqCard}>
-              <h2 className={styles.faqQuestion}>{item.q}</h2>
-              <p className={styles.faqAnswer}>{item.a}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.citiesSection} aria-label="Top cities">
-        <header className={styles.sectionHeader}>
-          <div>
-            <div className={styles.sectionTitle}>Top cities</div>
-            <div className={styles.sectionSub}>
-              Browse the busiest hiring markets in {loc.label}.
-            </div>
-          </div>
-        </header>
-
-        <div className={styles.citiesGrid}>
-          {topCityListBase.length === 0 ? (
-            <div className={styles.empty} role="status">
-              <div className={styles.emptyTitle}>No city data yet.</div>
-              <div className={styles.emptyBody}>Check back soon as more roles are ingested and normalized.</div>
-            </div>
-          ) : (
-            topCityListBase.map((c) => (
-              <Link key={c.slug} href={`/jobs/city/${c.slug}`} className={styles.cityCard}>
-                <div className={styles.cityTop}>
-                  <div className={styles.cityName}>{c.name}</div>
-                  <div className={styles.cityCount}>{c.count.toLocaleString()} jobs</div>
-                </div>
-                <div className={styles.cityMeta}>
-                  <div className={styles.cityAvg}>
-                    {formatCurrencyCompact(cityAvgBySlug.get(c.slug) ?? null, countryCurrency)} avg
-                  </div>
-                  <div className={styles.arrow} aria-hidden="true">
-                    →
-                  </div>
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className={styles.listSection} aria-label="Job listings">
-        <div className={styles.layout}>
-          <aside className={styles.sidebar} aria-label="Filters">
-            <JobsFiltersPanel
-              facets={facets}
-              locationPreset={{ label: loc.label, emoji: flag }}
-              hideSalaryFilter
-            />
-          </aside>
-
-          <div className={styles.results}>
-            <div className={styles.resultsHeader}>
-              <div className={styles.resultsCount}>
-                Showing page {data.page} of {totalPages} • {data.total.toLocaleString()} total
-                {lastUpdatedLabel ? ` • Updated ${lastUpdatedLabel}` : ''}
-              </div>
-              <div />
-            </div>
-
-            {jobs.length === 0 ? (
-              <div className={styles.empty} role="status">
-                <div className={styles.emptyTitle}>No jobs found.</div>
-                <div className={styles.emptyBody}>
-                  Try adjusting your filters, or clear them to explore all $100k+ opportunities.
-                </div>
-                <div className={styles.pagination}>
-                  <Link className={styles.pageLink} href={basePath}>
-                    Clear filters
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className={view === 'list' ? styles.list : styles.grid}>
-                {jobs.map((job) => (
-                  <JobCard key={job.id} job={job as JobWithCompany} />
-                ))}
-              </div>
-            )}
-
-            {totalPages > 1 && (
-              <nav className={styles.pagination} aria-label="Pagination">
-                <div className={styles.pageMeta}>
-                  Page <strong>{page}</strong> of <strong>{totalPages}</strong>
-                </div>
-                <div className={styles.pageLinks}>
-                  {page > 1 && (
-                    <Link className={styles.pageLink} href={buildPageHref(basePath, sp, page - 1)} scroll={false}>
-                      Previous
-                    </Link>
-                  )}
-                  {page < totalPages && (
-                    <Link className={styles.pageLink} href={buildPageHref(basePath, sp, page + 1)} scroll={false}>
-                      Next
-                    </Link>
-                  )}
-                </div>
-              </nav>
-            )}
-          </div>
-        </div>
-      </section>
-    </main>
+      <ListingSection title={`${loc.label} jobs FAQ`}>
+        <Faq items={faqItems.map((item) => ({ question: item.q, answer: item.a }))} />
+      </ListingSection>
+    </ListingPage>
   )
 }

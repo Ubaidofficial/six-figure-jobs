@@ -41,10 +41,10 @@
 .message {
   margin-top: 20px;
   padding: 16px 20px;
-  background: rgba(30, 41, 59, 0.45);
+  background: color-mix(in srgb, var(--color-bg-2) 70%, transparent);
   border-radius: 12px;
-  border-left: 4px solid #3b82f6;
-  color: #e2e8f0;
+  border-left: 4px solid var(--color-primary-text);
+  color: var(--color-text-0);
   font-weight: 500;
   animation: slideIn 0.3s ease-out;
 }
@@ -121,11 +121,11 @@
   display: flex;
   gap: 32px;
   align-items: start;
-  background: rgba(18, 24, 38, 0.7);
+  background: var(--color-bg-1);
   backdrop-filter: blur(10px);
   padding: 40px;
   border-radius: 20px;
-  border: 1px solid rgba(31, 42, 61, 0.8);
+  border: 1px solid var(--color-border);
 }
 
 .company-logo-large {
@@ -145,7 +145,7 @@
 
 .company-description {
   font-size: 18px;
-  color: #94a3b8;
+  color: var(--color-text-1);
 }
 
 .company-meta {
@@ -153,11 +153,11 @@
   gap: 24px;
   flex-wrap: wrap;
   font-size: 15px;
-  color: #cbd5e1;
+  color: var(--color-text-1);
 }
 
 .company-meta a {
-  color: #60a5fa;
+  color: var(--color-primary-text);
 }
 
 .company-meta a:hover {
@@ -222,6 +222,10 @@
     line-height: var(--leading-normal);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2 {
+    font-family: var(--font-display);
   }
 }
 
@@ -323,15 +327,15 @@
     /* Align shadcn/tailwind tokens with src/styles/design-tokens.css palette */
     --background: 0 0% 4%; /* #0a0a0a */
     --foreground: 0 0% 100%; /* #ffffff */
-    --card: 0 0% 8%; /* #141414 */
+    --card: 0 0% 8%; /* var(--color-bg-1) */
     --card-foreground: 0 0% 100%;
     --popover: 0 0% 8%;
     --popover-foreground: 0 0% 100%;
-    --secondary: 0 0% 12%; /* #1f1f1f */
+    --secondary: 0 0% 12%; /* var(--color-bg-2) */
     --secondary-foreground: 0 0% 100%;
     --muted: 0 0% 12%;
     --muted-foreground: 0 0% 64%; /* #a3a3a3 */
-    --border: 0 0% 16%; /* #2a2a2a */
+    --border: 0 0% 16%; /* var(--color-bg-3) */
     --input: 0 0% 16%;
 
     /* Brand primary (RemoteYeah green #84cc16 -> hsl(83.7 80.5% 44.3%)) */
@@ -350,6 +354,7 @@
   .dark {
     /* New brand green: rgb(171, 251, 83) = hsl(83, 95%, 65%) */
     --primary: 83 95% 65%;
+    --primary-foreground: 0 0% 4%; /* dark text on the lime brand colour */
     --accent: 83 95% 65%;
     --ring: 83 95% 65%;
     --chart-1: 83 95% 65%;
@@ -368,5 +373,32 @@
     --accent: 83 95% 65%;
     --ring: 83 95% 65%;
     --chart-1: 83 95% 65%;
+  }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* LIGHT THEME (shadcn tokens). Dark remains the default; see design-tokens.css */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  html.light {
+    --background: 60 17% 96%;
+    --foreground: 90 12% 5%;
+    --card: 0 0% 100%;
+    --card-foreground: 90 12% 5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 90 12% 5%;
+    --primary: 85 79% 27%; /* #4d7c0f: safe as text and as a button fill with white text */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 60 9% 93%;
+    --secondary-foreground: 90 12% 5%;
+    --muted: 60 9% 93%;
+    --muted-foreground: 60 4% 35%;
+    --accent: 60 9% 93%;
+    --accent-foreground: 90 12% 5%;
+    --border: 60 6% 87%;
+    --input: 60 6% 87%;
+    --ring: 85 79% 27%;
   }
 }

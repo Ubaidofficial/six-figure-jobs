@@ -237,7 +237,7 @@ export function JobsFiltersPanel({
                   placeholder="Search countries…"
                   aria-label="Search countries"
                 />
-                <div className={styles.list} role="list">
+                <div className={styles.list} role="group">
                   {filteredCountries.map((c) => {
                     const active = selectedCountry.toUpperCase() === c.value.toUpperCase()
                     const code = c.value.toUpperCase()
@@ -343,7 +343,7 @@ export function JobsFiltersPanel({
                     placeholder="Search roles…"
                     aria-label="Search roles"
                   />
-                  <div className={styles.list} role="list">
+                  <div className={styles.list} role="group">
                     {filteredRoles.map((r) => {
                       const active = selectedRoles.includes(r.value)
                       return (
@@ -385,7 +385,7 @@ export function JobsFiltersPanel({
             Seniority <span className={styles.chev}>⌄</span>
           </summary>
           <div className={styles.content}>
-            <div className={styles.list} role="list">
+            <div className={styles.list} role="group">
               {(
                 [
                   { value: 'mid', label: 'Mid-level' },
@@ -432,7 +432,7 @@ export function JobsFiltersPanel({
             Company Size <span className={styles.chev}>⌄</span>
           </summary>
           <div className={styles.content}>
-            <div className={styles.list} role="list">
+            <div className={styles.list} role="group">
               {(
                 [
                   { value: '1-10', label: '1–10' },

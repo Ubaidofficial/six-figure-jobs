@@ -424,7 +424,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
 
               <span className={styles.verified} aria-label="Salary verified">
                 <BadgeCheck className={styles.verifiedIcon} aria-hidden="true" />
-                Verified salary
+                Salary shown
               </span>
             </div>
           ) : null}

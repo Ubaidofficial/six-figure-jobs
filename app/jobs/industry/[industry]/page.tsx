@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} verified $100k+ ${resolved.label} jobs with salary shown upfront — apply direct, no recruiter middlemen. Six-figure ${resolved.label.toLowerCase()} roles refreshed daily from company ATS feeds.`
+  const description = `${total.toLocaleString()} $100k+ ${resolved.label} jobs with salary shown upfront. Six-figure ${resolved.label.toLowerCase()} roles refreshed daily from company career pages.`
   const canonical = `${SITE_URL}/jobs/industry/${resolved.slug}`
 
   return {
@@ -111,7 +111,7 @@ export default async function IndustryPage({ params }: { params: Params }) {
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-400">
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
         <ol className="flex items-center gap-1">
           <li><Link href="/">Home</Link></li>
           <li className="px-1">/</li>
@@ -121,25 +121,25 @@ export default async function IndustryPage({ params }: { params: Params }) {
         </ol>
       </nav>
 
-      <h1 className="mb-3 text-2xl font-semibold text-neutral-50">
+      <h1 className="mb-3 text-2xl font-semibold text-foreground">
         {resolved.label} $100k+ jobs ({total.toLocaleString()})
       </h1>
-      <p className="mb-4 text-sm text-neutral-300">
-        Browse <strong className="text-white">{total.toLocaleString()}</strong>{' '}
-        <strong className="text-white">high paying</strong>{' '}
-        <strong className="text-green-500">$100k</strong> jobs in {resolved.label}{' '}
+      <p className="mb-4 text-sm text-muted-foreground">
+        Browse <strong className="text-foreground">{total.toLocaleString()}</strong>{' '}
+        <strong className="text-foreground">high paying</strong>{' '}
+        <strong className="text-primary">$100k</strong> jobs in {resolved.label}{' '}
         with verified{' '}
-        <strong className="text-green-500">six figure salaries</strong>. Explore{' '}
-        <strong className="text-green-500">$100k+</strong> roles from $
+        <strong className="text-primary">six figure salaries</strong>. Explore{' '}
+        <strong className="text-primary">$100k+</strong> roles from $
         {salaryMin.toLocaleString()} to ${salaryMax.toLocaleString()} across
         remote, hybrid, and on-site teams.
       </p>
-      <p className="mb-6 text-xs text-neutral-400">
+      <p className="mb-6 text-xs text-muted-foreground">
         Showing page {page} of {totalPages}. Only verified compensation and senior-friendly roles surface here.
       </p>
 
       {jobs.length === 0 ? (
-        <p className="text-sm text-neutral-400">No $100k+ {resolved.label} roles yet. Check back soon.</p>
+        <p className="text-sm text-muted-foreground">No $100k+ {resolved.label} roles yet. Check back soon.</p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}

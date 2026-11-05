@@ -7,14 +7,14 @@ const SITE_URL = getSiteUrl()
 export const metadata: Metadata = {
   title: `About ${SITE_NAME}`,
   description:
-    'Six Figure Jobs is a curated job board for verified $100k+ roles across remote, hybrid, and on-site opportunities worldwide.',
+    'Six Figure Jobs is a curated job board for $100k+ roles across remote, hybrid, and on-site opportunities worldwide.',
   alternates: {
     canonical: `${SITE_URL}/about`,
   },
   openGraph: {
     title: `About ${SITE_NAME}`,
     description:
-      'Learn how Six Figure Jobs curates verified $100k+ roles, salary-first discovery pages, and direct-apply job listings.',
+      'Learn how Six Figure Jobs curates $100k+ roles, salary-first discovery pages, and direct-apply job listings.',
     url: `${SITE_URL}/about`,
     siteName: SITE_NAME,
     type: 'website',
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: `About ${SITE_NAME}`,
     description:
-      'Learn how Six Figure Jobs curates verified $100k+ roles, salary-first discovery pages, and direct-apply job listings.',
+      'Learn how Six Figure Jobs curates $100k+ roles, salary-first discovery pages, and direct-apply job listings.',
     images: [`${SITE_URL}/og-image.png`],
   },
 }
@@ -34,7 +34,7 @@ export default function AboutPage() {
     '@type': 'AboutPage',
     name: `About ${SITE_NAME}`,
     description:
-      'Learn how Six Figure Jobs curates verified $100k+ roles, salary-first discovery pages, and direct-apply job listings.',
+      'Learn how Six Figure Jobs curates $100k+ roles, salary-first discovery pages, and direct-apply job listings.',
     url: `${SITE_URL}/about`,
     isPartOf: {
       '@type': 'WebSite',
@@ -77,21 +77,21 @@ export default function AboutPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-50">
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground">
         About Six Figure Jobs
       </h1>
 
-      <p className="mt-5 text-base leading-7 text-slate-300">
+      <p className="mt-5 text-base leading-7 text-muted-foreground">
         Six Figure Jobs helps job seekers find high-paying roles faster.
         We focus on verified <strong>$100k+</strong> roles with strong salary
         signals across <strong>remote</strong>, <strong>hybrid</strong>, and{' '}
         <strong>on-site</strong> work.
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold text-slate-50">
+      <h2 className="mt-10 text-xl font-semibold text-foreground">
         What makes us different
       </h2>
-      <ul className="mt-4 list-disc space-y-3 pl-6 text-slate-300">
+      <ul className="mt-4 list-disc space-y-3 pl-6 text-muted-foreground">
         <li>
           <strong>Source-linked listings:</strong> we link to the original job
           post so you can apply direct.
@@ -110,24 +110,24 @@ export default function AboutPage() {
         </li>
       </ul>
 
-      <h2 className="mt-10 text-xl font-semibold text-slate-50">
+      <h2 className="mt-10 text-xl font-semibold text-foreground">
         For job seekers
       </h2>
-      <p className="mt-4 text-slate-300">
-        Start here: <Link className="text-emerald-300 underline" href="/jobs">browse $100k+ jobs</Link>{' '}
-        or explore <Link className="text-emerald-300 underline" href="/remote">remote roles</Link>.
+      <p className="mt-4 text-muted-foreground">
+        Start here: <Link className="text-primary underline" href="/jobs">browse $100k+ jobs</Link>{' '}
+        or explore <Link className="text-primary underline" href="/remote">remote roles</Link>.
       </p>
 
-      <h2 className="mt-10 text-xl font-semibold text-slate-50">Contact</h2>
-      <p className="mt-4 text-slate-300">
+      <h2 className="mt-10 text-xl font-semibold text-foreground">Contact</h2>
+      <p className="mt-4 text-muted-foreground">
         For support or feedback, reach us at{' '}
-        <a className="text-emerald-300 underline" href="mailto:support@6figjobs.com">
+        <a className="text-primary underline" href="mailto:support@6figjobs.com">
           support@6figjobs.com
         </a>
         .
       </p>
 
-      <p className="mt-10 text-sm text-slate-500">
+      <p className="mt-10 text-sm text-muted-foreground">
         Last updated: {new Date().toISOString().slice(0, 10)}
       </p>
     </main>

@@ -7,6 +7,10 @@ module.exports = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-body)'],
+  			mono: ['var(--font-mono)'],
+  		},
   		boxShadow: {
   			xs: '0 1px 2px 0 rgba(0, 0, 0, 0.25)',
   			sm: '0 1px 3px 0 rgba(0, 0, 0, 0.3)',

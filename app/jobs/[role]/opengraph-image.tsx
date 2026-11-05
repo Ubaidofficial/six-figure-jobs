@@ -129,7 +129,7 @@ export default async function Image({ params }: { params: Promise<{ role: string
                 {roleTitle}
               </div>
               <div style={{ color: TEXT_MUTED, fontSize: 20 }}>
-                $100k+ jobs with verified salary ranges
+                $100k+ jobs with published salary ranges
               </div>
             </div>
           </div>

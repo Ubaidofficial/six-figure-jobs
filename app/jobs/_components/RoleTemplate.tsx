@@ -1,8 +1,16 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import type { CSSProperties } from 'react'
 
-import { JobCard } from '@/components/jobs/JobCard'
+import {
+  Faq,
+  JobRows,
+  LinkChips,
+  ListingHeader,
+  ListingLayout,
+  ListingPage,
+  ListingSection,
+  Pagination,
+  Prose,
+} from '@/components/listing/ListingParts'
 import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'
@@ -18,27 +26,11 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
-import styles from './RoleTemplate.module.css'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
 
 type SearchParams = Record<string, string | string[] | undefined>
-
-type Accent = { a: string; b: string }
-
-const ROLE_ACCENTS: Record<string, Accent> = {
-  'software-engineer': { a: '#84CC16', b: '#22C55E' },
-  'backend-engineer': { a: '#84CC16', b: '#0EA5E9' },
-  'frontend-engineer': { a: '#84CC16', b: '#A78BFA' },
-  'full-stack-engineer': { a: '#84CC16', b: '#60A5FA' },
-  'devops-engineer': { a: '#84CC16', b: '#F59E0B' },
-  'data-scientist': { a: '#84CC16', b: '#A78BFA' },
-  'data-engineer': { a: '#84CC16', b: '#38BDF8' },
-  'product-manager': { a: '#84CC16', b: '#60A5FA' },
-  'product-designer': { a: '#84CC16', b: '#FB7185' },
-  'engineering-manager': { a: '#84CC16', b: '#F97316' },
-} as const
 
 function firstParam(sp: SearchParams, key: string): string | undefined {
   const value = sp[key]
@@ -161,10 +153,6 @@ function formatUsdK(amount: number | null): string {
   return `$${k.toLocaleString()}k`
 }
 
-function cssVarStyle(vars: Record<string, string>): CSSProperties {
-  return vars as unknown as CSSProperties
-}
-
 function parseStringArray(raw?: string | null): string[] {
   if (!raw) return []
   try {
@@ -241,8 +229,8 @@ export function buildRoleMetadata(
   const title = `${roleTitle} Jobs - $100k+ | ${SITE_NAME}`
   const description =
     total > 0
-      ? `Browse ${total.toLocaleString()} verified ${roleTitle} jobs with published salary ranges, direct apply links, and no entry-level clutter.${avgUsd ? ` ~$${Math.round(avgUsd / 1000)}k average USD salary where available.` : ''}`
-      : `Browse verified ${roleTitle} jobs with published salary ranges, direct apply links, and no entry-level clutter.`
+      ? `Browse ${total.toLocaleString()} verified ${roleTitle} jobs with published salary ranges, and no entry-level clutter.${avgUsd ? ` ~$${Math.round(avgUsd / 1000)}k average USD salary where available.` : ''}`
+      : `Browse verified ${roleTitle} jobs with published salary ranges, and no entry-level clutter.`
 
   const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${roleSlug}`
   return {
@@ -282,8 +270,6 @@ export async function RoleTemplate({
   const rawSort = (firstParam(sp, 'sort') || 'recent').trim()
   const sort = rawSort === 'recent' || rawSort === 'salary' || rawSort === 'relevant' ? rawSort : 'recent'
 
-  const rawView = (firstParam(sp, 'view') || 'grid').trim()
-  const view: 'grid' | 'list' = rawView === 'list' ? 'list' : 'grid'
 
   const seniority = allParams(sp, 'seniority')
   const companySizes = allParams(sp, 'companySize')
@@ -375,7 +361,7 @@ export async function RoleTemplate({
   // Insights are computed for the role overall (USD-only where needed), independent of sidebar filters.
   const insightsWhere = buildWhere({ roleSlugs: [roleSlug], page: 1, pageSize: 1 })
 
-  const [avgAggUsd, dist100_150, dist150_200, dist200Plus, topCityRows] = await Promise.all([
+  const [avgAggUsd, topCityRows] = await Promise.all([
     prisma.job.aggregate({
       where: {
         ...insightsWhere,
@@ -383,33 +369,6 @@ export async function RoleTemplate({
         OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
       },
       _avg: { maxAnnual: true, minAnnual: true },
-    }),
-    prisma.job.count({
-      where: {
-        ...insightsWhere,
-        currency: 'USD',
-        OR: [
-          { minAnnual: { gte: BigInt(100_000), lt: BigInt(150_000) } },
-          { minAnnual: null, maxAnnual: { gte: BigInt(100_000), lt: BigInt(150_000) } },
-        ],
-      },
-    }),
-    prisma.job.count({
-      where: {
-        ...insightsWhere,
-        currency: 'USD',
-        OR: [
-          { minAnnual: { gte: BigInt(150_000), lt: BigInt(200_000) } },
-          { minAnnual: null, maxAnnual: { gte: BigInt(150_000), lt: BigInt(200_000) } },
-        ],
-      },
-    }),
-    prisma.job.count({
-      where: {
-        ...insightsWhere,
-        currency: 'USD',
-        OR: [{ minAnnual: { gte: BigInt(200_000) } }, { maxAnnual: { gte: BigInt(200_000) } }],
-      },
     }),
     prisma.job.groupBy({
       by: ['citySlug', 'city', 'countryCode'],
@@ -430,13 +389,6 @@ export async function RoleTemplate({
   const avgMinUsd = asNumber((avgAggUsd as any)?._avg?.minAnnual)
   const avgUsd = avgMaxUsd != null && avgMinUsd != null ? (avgMaxUsd + avgMinUsd) / 2 : (avgMaxUsd ?? avgMinUsd)
 
-  const dist = [
-    { label: '$100k–$150k', count: dist100_150 },
-    { label: '$150k–$200k', count: dist150_200 },
-    { label: '$200k+', count: dist200Plus },
-  ]
-  const distMax = Math.max(1, ...dist.map((d) => d.count))
-
   const cities = (topCityRows as any[])
     .map((r) => {
       const slug = String(r.citySlug || '')
@@ -450,54 +402,6 @@ export async function RoleTemplate({
     })
     .filter((c) => c.slug && CITY_TARGET_SLUG_SET.has(c.slug))
     .filter((c) => c.slug && c.city)
-
-  const now = new Date()
-  const startLast7 = new Date(now)
-  startLast7.setDate(startLast7.getDate() - 7)
-  const startPrev7 = new Date(now)
-  startPrev7.setDate(startPrev7.getDate() - 14)
-
-  const [avgLast7, avgPrev7] = await Promise.all([
-    prisma.job.aggregate({
-      where: {
-        AND: [
-          insightsWhere,
-          { currency: 'USD' },
-          { OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }] },
-          { OR: [{ postedAt: { gte: startLast7 } }, { postedAt: null, createdAt: { gte: startLast7 } }] },
-        ],
-      } as any,
-      _avg: { maxAnnual: true, minAnnual: true },
-    }),
-    prisma.job.aggregate({
-      where: {
-        AND: [
-          insightsWhere,
-          { currency: 'USD' },
-          { OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }] },
-          {
-            OR: [
-              { postedAt: { gte: startPrev7, lt: startLast7 } },
-              { postedAt: null, createdAt: { gte: startPrev7, lt: startLast7 } },
-            ],
-          },
-        ],
-      } as any,
-      _avg: { maxAnnual: true, minAnnual: true },
-    }),
-  ])
-
-  const last7 = asNumber((avgLast7 as any)?._avg?.maxAnnual ?? (avgLast7 as any)?._avg?.minAnnual)
-  const prev7 = asNumber((avgPrev7 as any)?._avg?.maxAnnual ?? (avgPrev7 as any)?._avg?.minAnnual)
-  const deltaPct = last7 && prev7 && prev7 > 0 ? ((last7 - prev7) / prev7) * 100 : null
-  const trend =
-    deltaPct == null
-      ? { label: 'Stable', kind: 'stable' as const }
-      : deltaPct > 2
-        ? { label: 'Growing', kind: 'up' as const }
-        : deltaPct < -2
-          ? { label: 'Declining', kind: 'down' as const }
-          : { label: 'Stable', kind: 'stable' as const }
 
   const skillSample = await prisma.job.findMany({
     where: insightsWhere,
@@ -574,7 +478,6 @@ export async function RoleTemplate({
   const roleOpt = SEARCH_ROLE_OPTIONS.find((r) => r.slug === roleSlug)
   const roleTitle = roleOpt?.label ?? toTitleCase(roleSlug)
   const emoji = roleOpt?.emoji ?? '💼'
-  const accent = ROLE_ACCENTS[roleSlug] ?? { a: '#84CC16', b: '#65A30D' }
 
   const basePath = `/jobs/${roleSlug}`
   const selectedSeniority = new Set(seniority)
@@ -631,7 +534,7 @@ export async function RoleTemplate({
         name: `How do I find $100k+ ${roleTitle} jobs?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Every listing on ${SITE_NAME} is filtered to $100k+ with a published salary range. Browse ${data.total.toLocaleString()} ${roleTitle} jobs, filter by seniority, location, or remote preference, and apply directly via each listing's link — no recruiter middleman.`,
+          text: `Every listing on ${SITE_NAME} is filtered to $100k+ with a published salary range. Browse ${data.total.toLocaleString()} ${roleTitle} jobs, filter by seniority, location, or remote preference, and apply directly via each listing's link.`,
         },
       },
     ],
@@ -648,321 +551,120 @@ export async function RoleTemplate({
   }
 
   return (
-    <main
-      className={styles.page}
-      style={cssVarStyle({ '--role-a': accent.a, '--role-b': accent.b })}
-    >
+    <ListingPage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link href="/">Home</Link>
-        <span aria-hidden="true">/</span>
-        <Link href="/jobs">Jobs</Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">{roleTitle}</span>
-      </nav>
+      <ListingHeader
+        breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: roleTitle }]}
+        accent={roleTitle}
+        title="Jobs — $100k+"
+        summary={
+          <>
+            <strong>{data.total.toLocaleString()}</strong> {data.total === 1 ? 'job' : 'jobs'} with a published salary
+            {avgUsd ? <> · average <strong>{formatUsdK(avgUsd)}</strong></> : null}
+            {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
+          </>
+        }
+        chips={seniorityChips.map((chip) => ({
+          label: chip.label,
+          href: buildToggleMultiHref(basePath, sp, 'seniority', chip.value),
+          active: selectedSeniority.has(chip.value),
+          nofollow: true,
+        }))}
+        toolbar={<JobsToolbar facets={facets} rolePreset={{ label: roleTitle, emoji }} />}
+      />
 
-      <header className={styles.hero}>
-        <div className={styles.heroTop}>
-          <div>
-            <div className={styles.badge}>
-              <span className={styles.emoji} aria-hidden="true">
-                {emoji}
-              </span>
-              <span className={styles.badgeText}>PREMIUM ROLE FEED</span>
-            </div>
-            <h1 className={styles.heroTitle}>
-              <span className={styles.heroAccent}>{roleTitle}</span> Jobs — $100k+
-            </h1>
-            <p className={styles.heroSub}>
-              {data.total.toLocaleString()} opportunities • {avgUsd ? `${formatUsdK(avgUsd)} average (USD)` : 'Verified salaries'}
-            </p>
+      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />}>
+        <JobRows
+          jobs={jobs}
+          empty={{
+            title: 'No jobs match these filters.',
+            body: `Clear the filters to see every ${roleTitle} job.`,
+            href: basePath,
+          }}
+        />
+        <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} />
+      </ListingLayout>
 
-            <div className={styles.quickFilters} aria-label="Quick seniority filters">
-              {seniorityChips.map((chip) => {
-                const active = selectedSeniority.has(chip.value)
-                const href = buildToggleMultiHref(basePath, sp, 'seniority', chip.value)
-                return (
-                  <Link
-                    key={chip.value}
-                    href={href}
-                    scroll={false}
-                    rel="nofollow"
-                    className={`${styles.chip} ${active ? styles.chipActive : ''}`}
-                  >
-                    {chip.label}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
+      {cities.length > 0 ? (
+        <ListingSection title={`Top-paying cities for ${roleTitle}`}>
+          <LinkChips
+            label="Top paying cities"
+            items={cities.slice(0, 6).map((c) => ({
+              label: `${c.city}${c.cc ? ` · ${c.cc}` : ''}`,
+              href: `${basePath}/city/${c.slug}`,
+            }))}
+          />
+        </ListingSection>
+      ) : null}
 
-          <div className={styles.toolbarWrap}>
-            <JobsToolbar facets={facets} rolePreset={{ label: roleTitle, emoji }} />
-          </div>
-        </div>
-      </header>
+      {topCompanies.length > 0 ? (
+        <ListingSection title={`Companies hiring ${roleTitle}s`}>
+          <LinkChips
+            label="Top companies"
+            items={topCompanies
+              .filter((c) => c.slug && c.name)
+              .slice(0, 12)
+              .map((c) => ({
+                label: String(c.name),
+                href: `/company/${c.slug}`,
+                count: c.count,
+                logo: <CompanyLogo name={String(c.name)} src={c.logoUrl} size="sm" />,
+              }))}
+          />
+        </ListingSection>
+      ) : null}
 
-      <section className={styles.grid3} aria-label="Role insights">
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>
-            <span>Salary insights</span>
-            <span
-              className={`${styles.trendBadge} ${
-                trend.kind === 'up' ? styles.trendUp : trend.kind === 'down' ? styles.trendDown : ''
-              }`}
-            >
-              {trend.label}
-              {deltaPct != null ? <span className={styles.miniRight}>{deltaPct.toFixed(1)}%</span> : null}
-            </span>
-          </div>
-          <div className={styles.cardSub}>Distribution and averages use USD salaries where available.</div>
+      {skills.length > 0 ? (
+        <ListingSection title={`In-demand skills for ${roleTitle}`}>
+          <LinkChips
+            label="Skills"
+            items={skills.slice(0, 16).map((sk) => ({
+              label: sk.name,
+              href: buildToggleMultiHref(basePath, sp, 'skill', sk.name),
+              active: selectedSkills.includes(sk.name),
+              count: sk.count,
+              nofollow: true,
+            }))}
+          />
+        </ListingSection>
+      ) : null}
 
-          <div className={styles.statRow}>
-            <div className={styles.stat}>
-              <div className={`${styles.statValue} ${styles.statValueAccent}`}>{formatUsdK(avgUsd)}</div>
-              <div className={styles.statLabel}>Average salary</div>
-            </div>
-            <div className={styles.stat}>
-              <div className={styles.statValue}>{data.total.toLocaleString()}</div>
-              <div className={styles.statLabel}>Total jobs</div>
-            </div>
-            <div className={styles.stat}>
-              <div className={styles.statValue}>{selectedSkills.length ? selectedSkills.length : '—'}</div>
-              <div className={styles.statLabel}>Active skill filters</div>
-            </div>
-          </div>
+      <ListingSection title="Other levels">
+        <LinkChips
+          label="Career path"
+          items={career
+            .map((step) => {
+              const linkSlug = (step as typeof step & { baseSlug?: string | null }).baseSlug ?? step.slug
+              return linkSlug
+                ? { label: step.label, href: `/jobs/${linkSlug}`, active: step.slug === roleSlug }
+                : null
+            })
+            .filter((x): x is { label: string; href: string; active: boolean } => x !== null)}
+        />
+      </ListingSection>
 
-          <div className={styles.bars} aria-label="Salary distribution">
-            {dist.map((d) => (
-              <div key={d.label} className={styles.barRow}>
-                <div>
-                  <div className={styles.barLabel}>{d.label}</div>
-                  <div className={styles.barCount}>{d.count.toLocaleString()} jobs</div>
-                </div>
-                <div className={styles.barTrack}>
-                  <div className={styles.barFill} style={cssVarStyle({ '--w': `${(d.count / distMax) * 100}%` })} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.miniList} aria-label="Top paying cities">
-            {cities.length ? (
-              cities.slice(0, 3).map((c) => (
-                <Link key={c.slug} href={`${basePath}/city/${c.slug}`} className={styles.miniItem}>
-                  <span>
-                    {c.city} {c.cc ? `· ${c.cc}` : ''}
-                  </span>
-                  <span className={styles.miniRight}>{formatUsdK(c.avg)}</span>
-                </Link>
-              ))
-            ) : (
-              <div className={styles.cardSub}>Not enough salary data to rank cities yet.</div>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>
-            <span>Skills in demand</span>
-            {selectedSkills.length ? (
-              <Link href={buildSetMultiHref(basePath, sp, 'skill', [])} className={styles.pageLink}>
-                Clear skills
-              </Link>
-            ) : (
-              <span className={styles.cardSub}>Click to filter</span>
-            )}
-          </div>
-          <div className={styles.cardSub}>
-            Tag size reflects frequency (sampled from recent postings for this role).
-          </div>
-
-          <div className={styles.skillsCloud} aria-label="Skills cloud">
-            {skills.length === 0 ? (
-              <div className={styles.cardSub}>No skills extracted yet.</div>
-            ) : (
-              skills.map((s) => {
-                const active = selectedSkills.includes(s.name)
-                return (
-                  <Link
-                    key={s.name}
-                    href={buildToggleMultiHref(basePath, sp, 'skill', s.name)}
-                    scroll={false}
-                    rel="nofollow"
-                    className={`${styles.skill} ${active ? styles.skillActive : ''}`}
-                    style={cssVarStyle({ '--s': String(s.w) })}
-                    title={`${s.count.toLocaleString()} jobs`}
-                  >
-                    {s.name}
-                    {s.hot ? (
-                      <span className={styles.hot} aria-label="Trending skill">
-                        🔥
-                      </span>
-                    ) : null}
-                  </Link>
-                )
-              })
-            )}
-          </div>
-        </div>
-
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>
-            <span>Career path</span>
-            <span className={styles.cardSub}>Common progression</span>
-          </div>
-          <div className={styles.cardSub}>
-            Explore seniority variants where available.
-          </div>
-
-          <div className={styles.path}>
-            <div className={styles.pathRow}>
-              {career.map((step) => {
-                const s = step as typeof step & { baseSlug?: string | null }
-                const linkSlug = s.baseSlug ?? step.slug
-                const href = linkSlug ? `/jobs/${linkSlug}` : '#'
-                const isActive = step.slug === roleSlug
-                return (
-                  <Link
-                    key={step.stage}
-                    href={href}
-                    className={`${styles.pathStep} ${!linkSlug ? styles.pathStepDisabled : ''}`}
-                    aria-current={isActive ? 'page' : undefined}
-                  >
-                    <div className={styles.pathLabel}>{step.stage}</div>
-                    <div className={styles.pathValue}>{linkSlug ? step.label : '—'}</div>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className={styles.cardTitle} style={{ marginTop: 16 }}>
-            <span>Top companies hiring</span>
-            <span className={styles.cardSub}>Open roles right now</span>
-          </div>
-
-          <div className={styles.companyGrid} aria-label="Top companies">
-            {topCompanies.length === 0 ? (
-              <div className={styles.cardSub}>No company breakdown yet.</div>
-            ) : (
-              topCompanies.slice(0, 12).map((c) => {
-                const href = c.slug ? `/company/${c.slug}` : '#'
-                return (
-                  <Link key={c.id} href={href} className={styles.companyCard}>
-                    <span className={styles.companyHead}>
-                      <span className={styles.companyLeft}>
-                        <span className={styles.logoWrap}>
-                          <CompanyLogo name={String(c.name || '')} src={c.logoUrl} size="fill" />
-                        </span>
-                        <span className={styles.companyTitleBlock}>
-                          <span className={styles.companyName}>{c.name}</span>
-                          <span className={styles.companyMetaLine}>
-                            {[c.industry, c.sizeBucket, c.headquarters].filter(Boolean).slice(0, 2).join(' · ') || 'Hiring now'}
-                          </span>
-                        </span>
-                      </span>
-                      <span className={styles.companyCount}>{c.count.toLocaleString()} jobs</span>
-                    </span>
-                    {c.description ? <span className={styles.companyDescription}>{c.description}</span> : null}
-                  </Link>
-                )
-              })
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-10">
-        <p className="mb-4 text-neutral-300 leading-relaxed">
-          {data.total.toLocaleString()} verified <strong>{roleTitle}</strong> jobs paying $100k+ are live on Six Figure Jobs.
-          {avgUsd ? ` The average salary is ${formatUsdK(avgUsd)} USD.` : ''}{' '}
-          All listings show the salary range upfront — no hidden compensation. Use the filters to narrow by seniority, location, tech stack, or work type.
-        </p>
-        {skills.length > 0 && (
-          <p className="text-neutral-400 text-sm leading-relaxed">
-            Top skills for {roleTitle} roles: {skills.slice(0, 8).map((s) => s.name).join(', ')}.
+      <ListingSection title={`About ${roleTitle} jobs`}>
+        <Prose>
+          <p>
+            {data.total.toLocaleString()} <strong>{roleTitle}</strong> jobs paying $100k+ are listed on Six Figure Jobs.
+            {avgUsd ? ` The average salary is ${formatUsdK(avgUsd)} USD.` : ''} Every listing shows its salary range
+            from the employer&rsquo;s posting. Use the filters to narrow by seniority, location, skills or work type.
           </p>
-        )}
-      </section>
+        </Prose>
+      </ListingSection>
 
-      <section className={styles.listSection} aria-label="Job listings">
-        <div className={styles.layout}>
-          <aside className={styles.sidebar} aria-label="Filters">
-            <JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />
-          </aside>
-
-          <div className={styles.results}>
-            <div className={styles.resultsHeader}>
-              <div className={styles.resultsCount}>
-                Showing page {data.page} of {totalPages} • {data.total.toLocaleString()} total
-                {lastUpdatedLabel ? ` • Updated ${lastUpdatedLabel}` : ''}
-              </div>
-              <div />
-            </div>
-
-            {jobs.length === 0 ? (
-              <div className={styles.empty} role="status">
-                <div className={styles.emptyTitle}>No jobs found.</div>
-                <div className={styles.emptyBody}>
-                  Try adjusting your filters, or clear them to explore all $100k+ opportunities.
-                </div>
-                <div className={styles.pagination}>
-                  <Link className={styles.pageLink} href={basePath}>
-                    Clear filters
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className={view === 'list' ? styles.list : styles.grid}>
-                {jobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job as JobWithCompany}
-                    variant={view === 'grid' ? 'grid' : 'listing'}
-                  />
-                ))}
-              </div>
-            )}
-
-            {totalPages > 1 && (
-              <nav className={styles.pagination} aria-label="Pagination">
-                <div className={styles.pageMeta}>
-                  Page <strong>{page}</strong> of <strong>{totalPages}</strong>
-                </div>
-                <div className={styles.pageLinks}>
-                  {page > 1 && (
-                    <Link className={styles.pageLink} href={buildPageHref(basePath, sp, page - 1)} scroll={false}>
-                      Previous
-                    </Link>
-                  )}
-                  {page < totalPages && (
-                    <Link className={styles.pageLink} href={buildPageHref(basePath, sp, page + 1)} scroll={false}>
-                      Next
-                    </Link>
-                  )}
-                </div>
-              </nav>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-16" aria-label="Frequently asked questions">
-        <h2 className="mb-6 text-xl font-semibold text-neutral-50">Frequently Asked Questions</h2>
-        <dl className="space-y-6">
-          {faqJsonLd.mainEntity.map((item: { name: string; acceptedAnswer: { text: string } }, i: number) => (
-            <div key={i} className="border-t border-neutral-700 pt-5">
-              <dt className="mb-2 font-medium text-neutral-100">{item.name}</dt>
-              <dd className="text-neutral-400 leading-relaxed">{item.acceptedAnswer.text}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-    </main>
+      <ListingSection title="Frequently asked questions">
+        <Faq
+          items={faqJsonLd.mainEntity.map((item: { name: string; acceptedAnswer: { text: string } }) => ({
+            question: item.name,
+            answer: item.acceptedAnswer.text,
+          }))}
+        />
+      </ListingSection>
+    </ListingPage>
   )
     },
     () => (

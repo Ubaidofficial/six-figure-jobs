@@ -1,8 +1,10 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import type { Viewport } from 'next'
+import localFont from 'next/font/local'
 
 import { Footer } from '@/components/layout/Footer'
+import { ThemeProvider } from '@/components/theme-provider'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
 import ErrorTracker from '@/components/ErrorTracker'
@@ -11,6 +13,28 @@ import { PreloadResources } from './preload-resources'
 
 const SITE_URL = getSiteUrl()
 
+// Self-hosted variable fonts (Latin subset): no third-party request, and next/font generates size-adjusted
+// fallbacks so swapping in the web font does not shift the layout.
+const bodyFont = localFont({
+  src: './fonts/InstrumentSans.woff2',
+  variable: '--font-instrument',
+  weight: '400 700',
+  display: 'swap',
+})
+const displayFont = localFont({
+  src: './fonts/BricolageGrotesque.woff2',
+  variable: '--font-bricolage',
+  weight: '200 800',
+  display: 'swap',
+})
+const monoFont = localFont({
+  src: './fonts/JetBrainsMono.woff2',
+  variable: '--font-jetbrains',
+  weight: '400 800',
+  display: 'swap',
+  preload: false, // only salary figures use it; fetched when first needed
+})
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -18,7 +42,7 @@ export const metadata: Metadata = {
     template: '%s',
   },
   description:
-    'Find verified $100k+ jobs with clear salary ranges and trusted employers. Premium roles across engineering, product, data, and design.',
+    'Find $100k+ jobs with clear salary ranges and trusted employers. Premium roles across engineering, product, data, and design.',
   robots: process.env.NEXT_PUBLIC_SITE_URL?.includes('staging')
     ? { index: false, follow: false }
     : undefined,
@@ -64,20 +88,26 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className="h-full">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`h-full ${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}
+    >
       <body className="min-h-full bg-background text-foreground">
-        <PreloadResources />
-        <div className="flex min-h-screen flex-col">
-          <SiteHeader />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          <PreloadResources />
+          <div className="flex min-h-screen flex-col">
+            <SiteHeader />
 
-          <div id="main-content" className="flex-1">
-            {children}
+            <div id="main-content" className="flex-1">
+              {children}
+            </div>
+
+            <Footer />
           </div>
-
-          <Footer />
-        </div>
-        <FeedbackWidget />
-        <ErrorTracker />
+          <FeedbackWidget />
+          <ErrorTracker />
+        </ThemeProvider>
       </body>
     </html>
   )

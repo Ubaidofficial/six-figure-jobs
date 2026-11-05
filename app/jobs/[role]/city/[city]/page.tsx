@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
 
   const title = `Remote/on-site ${roleName} $100k jobs in ${cityInfo.label} | ${total.toLocaleString()} roles | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} verified $100k+ ${roleName} jobs in ${cityInfo.label} — salary shown upfront, apply direct. Six-figure ${roleName} roles with remote and hybrid options, refreshed daily from company ATS feeds.`
+  const description = `${total.toLocaleString()} $100k+ ${roleName} jobs in ${cityInfo.label} — salary shown upfront. Six-figure ${roleName} roles with remote and hybrid options, refreshed daily from company career pages.`
   const canonical = `${SITE_URL}/jobs/${role}/city/${cityInfo.slug}`
 
   return {
@@ -104,7 +104,7 @@ export default async function RoleCityPage({ params }: { params: Params }) {
         name: `How many $100k+ ${roleName} jobs are in ${cityInfo.label}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `${total.toLocaleString()} ${roleName} roles meet the $100k+ bar in ${cityInfo.label} right now, refreshed frequently from company ATS feeds.`,
+          text: `${total.toLocaleString()} ${roleName} roles meet the $100k+ bar in ${cityInfo.label} right now, from company career pages.`,
         },
       },
       {
@@ -141,7 +141,7 @@ export default async function RoleCityPage({ params }: { params: Params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-400">
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
         <ol className="flex items-center gap-1">
           <li><Link href="/">Home</Link></li>
           <li className="px-1">/</li>
@@ -151,17 +151,17 @@ export default async function RoleCityPage({ params }: { params: Params }) {
         </ol>
       </nav>
 
-      <h1 className="mb-3 text-2xl font-semibold text-neutral-50">
+      <h1 className="mb-3 text-2xl font-semibold text-foreground">
         {total.toLocaleString()} {roleName} $100k+ Jobs in {cityInfo.label}
       </h1>
-      <p className="mb-6 text-sm text-neutral-300">
+      <p className="mb-6 text-sm text-muted-foreground">
         {cityInfo.label} {roleName} $100k jobs • $100k {roleName} jobs in {cityInfo.label} • high paying {roleName} jobs {cityInfo.label} • six figure {roleName} roles with remote and hybrid options when available.
       </p>
 
       <JobList jobs={jobs as JobWithCompany[]} />
 
       {totalPages > 1 && (
-        <nav className="mt-6 flex items-center justify-between text-xs text-neutral-300">
+        <nav className="mt-6 flex items-center justify-between text-xs text-muted-foreground">
           <span>
             Page {page} of {totalPages}
           </span>

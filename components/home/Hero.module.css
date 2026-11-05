@@ -27,7 +27,7 @@
 
 .accent {
   display: block; /* the two halves of the headline each get their own line */
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 .subheadline {
@@ -49,12 +49,12 @@
   gap: 10px;
   padding: 6px 6px 6px 14px;
   background: var(--color-bg-1);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 16%, transparent);
   border-radius: var(--radius-md);
 }
 
 .searchBar:focus-within {
-  border-color: var(--color-primary);
+  border-color: var(--color-primary-text);
 }
 
 .searchIcon {
@@ -103,12 +103,12 @@
 .quickLink {
   color: var(--color-text-0);
   text-decoration: underline;
-  text-decoration-color: rgba(255, 255, 255, 0.3);
+  text-decoration-color: color-mix(in srgb, var(--color-fg) 30%, transparent);
   text-underline-offset: 3px;
 }
 
 .quickLink:hover {
-  text-decoration-color: var(--color-primary);
+  text-decoration-color: var(--color-primary-text);
 }
 
 .freshness {

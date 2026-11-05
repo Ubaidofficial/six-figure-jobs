@@ -54,7 +54,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const avgSalaryK = data?.avgSalary ? Math.round(data.avgSalary / 1000) : null
   const description = data?.company.description
     ? truncate(data.company.description, 120)
-    : `${jobCount} verified $100k+ jobs with published salary ranges.`
+    : `${jobCount} $100k+ jobs with published salary ranges.`
 
   const initials = name
     .split(/\s+/)
@@ -191,7 +191,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ color: TEXT_MUTED, fontSize: 16 }}>sixfigurejobs.com</div>
-          <div style={{ color: TEXT_MUTED, fontSize: 16 }}>Verified salaries · Direct apply</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 16 }}>Published salaries · Apply on the employer’s site</div>
         </div>
       </div>
     ),

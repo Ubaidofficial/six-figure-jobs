@@ -4,12 +4,8 @@
 
 .tickerWrap {
   width: 100%;
-  background: linear-gradient(
-    90deg,
-    rgba(20, 20, 20, 0.85),
-    rgba(15, 25, 18, 0.85)
-  );
-  border-bottom: 1px solid rgba(16, 185, 129, 0.15);
+  background: var(--color-bg-1);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .tickerInner {
@@ -33,7 +29,7 @@
   font-size: 11px;
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.1em;
-  color: rgb(16, 185, 129);
+  color: var(--color-success-text);
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(16, 185, 129, 0.12);

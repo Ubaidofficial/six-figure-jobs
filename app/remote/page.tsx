@@ -11,11 +11,28 @@ import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../lib/jobs/salary'
 import { countryCodeToName, countryCodeToSlug } from '../../lib/seo/countrySlug'
-import { RemoteHero } from '@/components/remote/RemoteHero'
+import { CompanyLogo } from '@/components/companies/CompanyLogo'
+import { buildLogoUrl } from '@/lib/companies/logo'
+import listingStyles from '@/components/listing/Listing.module.css'
+import {
+  Faq,
+  JobRows,
+  LinkChips,
+  ListingHeader,
+  ListingPage,
+  ListingSection,
+} from '@/components/listing/ListingParts'
 import { logRuntimeFallback } from '@/lib/runtime/fallback'
 import { formatRelativeTime } from '@/lib/utils/time'
 
-import styles from './RemotePage.module.css'
+
+const REMOTE_REGION_CHIPS: Array<{ label: string; region: string | null }> = [
+  { label: 'All remote', region: null },
+  { label: 'Worldwide', region: 'global' },
+  { label: 'US', region: 'us-only' },
+  { label: 'Europe & Middle East', region: 'emea' },
+  { label: 'Asia-Pacific', region: 'apac' },
+]
 
 const SITE_URL = getSiteUrl()
 
@@ -28,6 +45,7 @@ type RemoteHubCompany = {
   name: string
   slug: string
   logoUrl: string | null
+  website: string | null
   jobCount: number
 }
 
@@ -53,15 +71,15 @@ type RemoteHubSnapshot = {
 const REMOTE_FAQ = [
   {
     q: 'Are these remote jobs really six figures?',
-    a: 'Yes. The remote hub only includes jobs with validated high-salary signals, published compensation, and seniority filters that remove entry-level noise.',
+    a: 'Every job here has a published salary at or above the six-figure threshold for its currency. Salaries come from the employer’s posting.',
   },
   {
-    q: 'Do these jobs come from company career pages?',
-    a: 'Many do. We prioritize ATS-powered company feeds and then supplement with trusted boards when the apply path and compensation quality are strong enough.',
+    q: 'Where do these jobs come from?',
+    a: 'Jobs are collected from company career pages and job boards. Each listing links to the employer’s own application page.',
   },
   {
     q: 'How often is the remote jobs hub refreshed?',
-    a: 'Remote listings are refreshed frequently, and expired jobs are removed so the page stays current for both applicants and search engines.',
+    a: 'New remote jobs are added every day, and jobs that are no longer open are removed.',
   },
 ] as const
 
@@ -88,8 +106,8 @@ export async function generateMetadata({
     ? `${regionLabel} Remote $100k+ Jobs (${total.toLocaleString()} Open Roles) | ${SITE_NAME}`
     : `Remote $100k+ Jobs — ${total.toLocaleString()} Six-Figure Openings | ${SITE_NAME}`
   const description = regionLabel
-    ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs in engineering, product, data, and more. Verified salaries, direct apply links, and fresh listings.`
-    : `Browse ${total.toLocaleString()} remote six-figure jobs with verified salaries and direct apply links. Software engineering, product, data, and more — $100k+ remote roles updated daily.`
+    ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs in engineering, product, data, and more. Verified salaries, and fresh listings.`
+    : `Browse ${total.toLocaleString()} remote six-figure jobs with published salaries and links to apply. Software engineering, product, data, and more — $100k+ remote roles, new jobs added daily.`
 
   return {
     title,
@@ -233,7 +251,7 @@ function buildRemoteCollectionPageJsonLd(totalJobs: number, canonicalPath: strin
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: 'Remote $100k+ jobs',
-    description: `Browse ${totalJobs.toLocaleString()} remote six-figure jobs from verified companies and trusted sources.`,
+    description: `Browse ${totalJobs.toLocaleString()} remote six-figure jobs with published salaries, new jobs added daily.`,
     url: `${SITE_URL}${canonicalPath}`,
     isPartOf: {
       '@type': 'WebSite',
@@ -318,7 +336,7 @@ const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null): Pr
   const companyRows = topCompanyGroups.length
     ? await prisma.company.findMany({
         where: { id: { in: topCompanyGroups.map((group) => group.companyId) } },
-        select: { id: true, name: true, slug: true, logoUrl: true },
+        select: { id: true, name: true, slug: true, logoUrl: true, website: true },
       })
     : []
 
@@ -332,6 +350,7 @@ const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null): Pr
         name: company.name,
         slug: company.slug,
         logoUrl: company.logoUrl,
+        website: company.website,
         jobCount: group.jobCount,
       }
     })
@@ -370,7 +389,7 @@ const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null): Pr
       count: row.total,
       title: toTitleCase(row.roleSlug),
     })),
-    recentJobs: dedupeJobs(recentData.jobs as JobWithCompany[]).slice(0, 9),
+    recentJobs: dedupeJobs(recentData.jobs as JobWithCompany[]).slice(0, 12),
     topCompanies,
     topCountries,
   }
@@ -387,52 +406,25 @@ function RemoteJobsFallback({ activeRemoteRegion }: { activeRemoteRegion: string
   ]
 
   return (
-    <main className={styles.page}>
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link href="/">Home</Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">Remote Jobs</span>
-      </nav>
-
-      <RemoteHero
-        remoteJobCount={0}
-        companyCount={0}
-        countryCount={0}
-        avgSalaryUsd={100000}
-        activeRemoteRegion={activeRemoteRegion}
+    <ListingPage>
+      <ListingHeader
+        breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Remote Jobs' }]}
+        accent="Remote"
+        title="$100k+ Jobs"
+        summary="Live remote job counts are temporarily unavailable. Browse by role below."
+        chips={REMOTE_REGION_CHIPS.map((c) => ({
+          label: c.label,
+          href: c.region ? `/remote?remoteRegion=${encodeURIComponent(c.region)}` : '/remote',
+          active: (activeRemoteRegion || null) === c.region,
+        }))}
       />
-
-      <section className={styles.section} aria-label="Remote roles fallback">
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2 className={styles.sectionTitle}>Remote roles are temporarily unavailable</h2>
-            <p className={styles.sectionSub}>
-              The production database is reconnecting. Hub pages remain online while live remote
-              counts recover.
-            </p>
-          </div>
-        </div>
-
-        <div className={styles.roleGrid}>
-          {fallbackRoles.map((slug) => (
-            <Link key={slug} href={`/remote/${slug}`} className={styles.roleCard}>
-              <div className={styles.roleLeft}>
-                <div className={styles.roleName}>{toTitleCase(slug)}</div>
-                <div className={styles.roleMeta}>
-                  <span className={styles.pill}>Role hub</span>
-                  {activeRemoteRegion ? (
-                    <span className={styles.pill}>{activeRemoteRegion}</span>
-                  ) : null}
-                </div>
-              </div>
-              <div className={styles.arrow} aria-hidden="true">
-                →
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-    </main>
+      <ListingSection title="Remote roles">
+        <LinkChips
+          label="Remote roles"
+          items={fallbackRoles.map((slug) => ({ label: toTitleCase(slug), href: `/remote/${slug}` }))}
+        />
+      </ListingSection>
+    </ListingPage>
   )
 }
 
@@ -470,227 +462,7 @@ export default async function RemoteJobsPage({
     const regionPill = prettyRemoteRegion(activeRemoteRegion)
 
     return (
-      <main className={styles.page}>
-        <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-          <Link href="/">Home</Link>
-          <span aria-hidden="true">/</span>
-          <span aria-current="page">Remote Jobs</span>
-        </nav>
-
-        <RemoteHero
-          remoteJobCount={remoteJobCount}
-          companyCount={companyCount}
-          countryCount={countryCount}
-          avgSalaryUsd={avgSalaryUsd}
-          activeRemoteRegion={activeRemoteRegion}
-        />
-
-        <section className={styles.section} aria-label="Latest remote jobs">
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Latest remote six-figure jobs</h2>
-              <p className={styles.sectionSub}>
-                Search-friendly hub content starts with real inventory. These are live remote jobs
-                surfaced from the latest verified feed.
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.signalGrid}>
-            <div className={styles.signalCard}>
-              <div className={styles.signalValue}>{newThisWeek.toLocaleString()}</div>
-              <div className={styles.signalLabel}>New or refreshed this week</div>
-            </div>
-            <div className={styles.signalCard}>
-              <div className={styles.signalValue}>{roleList.length.toLocaleString()}</div>
-              <div className={styles.signalLabel}>Remote role hubs linked from this page</div>
-            </div>
-            <div className={styles.signalCard}>
-              <div className={styles.signalValue}>
-                {regionPill ? regionPill.replace(' Remote Jobs', '') : 'Global'}
-              </div>
-              <div className={styles.signalLabel}>Current remote market focus</div>
-            </div>
-          </div>
-
-          {recentJobs.length === 0 ? (
-            <div className={styles.empty}>
-              No remote jobs found. Try adjusting your filters or clear them to explore all remote
-              opportunities.
-            </div>
-          ) : (
-            <div className={styles.jobGrid}>
-              {recentJobs.map((job) => {
-                const salary = buildSalaryText(job)
-                const location = describeRemoteLocation(job)
-                const updatedLabel = formatRelativeTime(latestJobTimestamp(job))
-                const companyName = job.companyRef?.name ?? job.company ?? 'Company'
-
-                return (
-                  <Link
-                    key={job.id}
-                    href={buildJobSlugHref(job)}
-                    className={styles.jobCard}
-                  >
-                    <div className={styles.jobTop}>
-                      <span className={styles.jobCompany}>{companyName}</span>
-                      <span className={styles.jobAge}>{updatedLabel}</span>
-                    </div>
-                    <h3 className={styles.jobTitle}>{job.title}</h3>
-                    <div className={styles.jobMeta}>
-                      <span>{location}</span>
-                      <span>{workTypeLabel(job)}</span>
-                      {salary ? <span>{salary}</span> : <span>Salary verified</span>}
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </section>
-
-        <section className={styles.section} aria-label="Remote roles">
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Explore remote roles</h2>
-              <p className={styles.sectionSub}>
-                High-paying remote opportunities by role, refreshed frequently from verified sources.
-              </p>
-            </div>
-          </div>
-
-          {roleList.length === 0 ? (
-            <div className={styles.empty}>
-              No roles found. Try adjusting your filters or clear them to explore all remote
-              opportunities.
-            </div>
-          ) : (
-            <div className={styles.roleGrid}>
-              {roleList.map((role) => (
-                <Link key={role.slug} href={`/remote/${role.slug}`} className={styles.roleCard}>
-                  <div className={styles.roleLeft}>
-                    <div className={styles.roleName}>{role.title}</div>
-                    <div className={styles.roleMeta}>
-                      <span className={styles.pill}>{role.count.toLocaleString()} jobs</span>
-                      {activeRemoteRegion ? (
-                        <span className={styles.pill}>{activeRemoteRegion}</span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className={styles.arrow} aria-hidden="true">
-                    →
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className={styles.section} aria-label="Remote companies and markets">
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Top remote companies and markets</h2>
-              <p className={styles.sectionSub}>
-                These company and country links turn the remote hub into a stronger internal-link
-                source for the rest of the site.
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.twoColumnGrid}>
-            <div className={styles.panel}>
-              <h3 className={styles.panelTitle}>Remote-friendly companies</h3>
-              <div className={styles.companyGrid}>
-                {topCompanies.map((company) => (
-                  <Link
-                    key={company.id}
-                    href={`/company/${company.slug}`}
-                    className={styles.companyCard}
-                  >
-                    <span className={styles.companyName}>{company.name}</span>
-                    <span className={styles.companyCount}>
-                      {company.jobCount.toLocaleString()} remote jobs
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.panel}>
-              <h3 className={styles.panelTitle}>Popular remote countries</h3>
-              <div className={styles.countryList}>
-                {topCountries.map((country) => (
-                  <Link
-                    key={country.code}
-                    href={`/jobs/location/${country.slug}`}
-                    className={styles.countryCard}
-                  >
-                    <span className={styles.countryName}>{country.name}</span>
-                    <span className={styles.countryCount}>
-                      {country.jobCount.toLocaleString()} jobs
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className={styles.section} aria-label="Remote hub guidance">
-          <div className={styles.why}>
-            <h3 className={styles.whyTitle}>Why Choose Remote $100k+ Jobs?</h3>
-            <div className={styles.whyList}>
-              {[
-                'Work from anywhere in the world',
-                'Verified $100k+ salary ranges with compensation shown up front',
-                'Premium roles from top tech companies',
-                'No location restrictions or relocation required',
-                'Refreshed daily with new verified opportunities',
-              ].map((item) => (
-                <div key={item} className={styles.checkItem}>
-                  <span className={styles.checkDot} aria-hidden="true">
-                    ✓
-                  </span>
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.faqGrid}>
-            {REMOTE_FAQ.map((item) => (
-              <article key={item.q} className={styles.faqCard}>
-                <h3 className={styles.faqQuestion}>{item.q}</h3>
-                <p className={styles.faqAnswer}>{item.a}</p>
-              </article>
-            ))}
-          </div>
-
-          <div className={styles.panel}>
-            <h3 className={styles.panelTitle}>Explore adjacent six-figure hubs</h3>
-            <div className={styles.linkHub}>
-              <Link href="/jobs" className={styles.linkPill}>
-                Browse all $100k+ jobs
-              </Link>
-              <Link href="/companies" className={styles.linkPill}>
-                Explore hiring companies
-              </Link>
-              <Link href="/jobs/200k-plus" className={styles.linkPill}>
-                Browse $200k+ jobs
-              </Link>
-              <Link href="/jobs/300k-plus" className={styles.linkPill}>
-                Browse $300k+ jobs
-              </Link>
-              <Link href="/jobs/location/united-states" className={styles.linkPill}>
-                United States jobs
-              </Link>
-              <Link href="/jobs/location/canada" className={styles.linkPill}>
-                Canada jobs
-              </Link>
-            </div>
-          </div>
-        </section>
-
+      <ListingPage>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
@@ -707,7 +479,89 @@ export default async function RemoteJobsPage({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
-      </main>
+
+        <ListingHeader
+          breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Remote Jobs' }]}
+          accent={regionPill ? regionPill.replace(' Jobs', '') : 'Remote'}
+          title="$100k+ Jobs"
+          summary={
+            <>
+              <strong>{remoteJobCount.toLocaleString()}</strong> remote {remoteJobCount === 1 ? 'job' : 'jobs'} from{' '}
+              <strong>{companyCount.toLocaleString()}</strong> {companyCount === 1 ? 'company' : 'companies'}
+              {avgSalaryUsd ? <> · average <strong>${Math.round(avgSalaryUsd / 1000)}k</strong></> : null}
+              {newThisWeek ? <> · {newThisWeek.toLocaleString()} new this week</> : null}
+            </>
+          }
+          chips={REMOTE_REGION_CHIPS.map((c) => ({
+            label: c.label,
+            href: c.region ? `/remote?remoteRegion=${encodeURIComponent(c.region)}` : '/remote',
+            active: (activeRemoteRegion || null) === c.region,
+          }))}
+        />
+
+        <JobRows
+          jobs={recentJobs}
+          empty={{
+            title: 'No remote jobs found.',
+            body: 'Try another region, or browse every $100k+ job.',
+            href: '/jobs',
+            hrefLabel: 'Browse all jobs',
+          }}
+        />
+        {remoteJobCount > recentJobs.length ? (
+          <p style={{ marginTop: 16 }}>
+            <Link href="/jobs?remoteMode=remote" className={listingStyles.pageLink}>
+              See all {remoteJobCount.toLocaleString()} remote jobs →
+            </Link>
+          </p>
+        ) : null}
+
+        {roleList.length > 0 ? (
+          <ListingSection title="Remote jobs by role">
+            <LinkChips
+              label="Remote roles"
+              items={roleList.map((role) => ({
+                label: role.title,
+                href: `/remote/${role.slug}`,
+                count: role.count,
+              }))}
+            />
+          </ListingSection>
+        ) : null}
+
+        {topCompanies.length > 0 ? (
+          <ListingSection title="Companies hiring remotely">
+            <LinkChips
+              label="Remote-friendly companies"
+              items={topCompanies
+                .filter((c) => c.slug)
+                .map((c) => ({
+                  label: c.name,
+                  href: `/company/${c.slug}`,
+                  count: c.jobCount,
+                  logo: <CompanyLogo name={c.name} src={buildLogoUrl(c.logoUrl, c.website, c.name)} size="sm" />,
+                }))}
+            />
+          </ListingSection>
+        ) : null}
+
+        {topCountries.length > 0 ? (
+          <ListingSection title="Remote jobs by country">
+            <LinkChips
+              label="Remote countries"
+              items={topCountries.map((c) => ({
+                label: c.name,
+                href: `/jobs/location/${c.slug}`,
+                count: c.jobCount,
+              }))}
+            />
+          </ListingSection>
+        ) : null}
+
+        <ListingSection title="Frequently asked questions">
+          <Faq items={REMOTE_FAQ.map((item) => ({ question: item.q, answer: item.a }))} />
+        </ListingSection>
+      </ListingPage>
     )
   } catch (error) {
     unstable_rethrow(error)

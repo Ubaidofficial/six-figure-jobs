@@ -164,7 +164,7 @@ export default async function NoDegreeJobsPage({
           <span style={{ color: '#fff' }}>Without a Degree</span>
         </h1>
         <p style={{ fontSize: 18, color: '#a3a3a3', margin: '0 0 20px' }}>
-          {total.toLocaleString()} verified six-figure jobs at companies that hire based on skills,
+          {total.toLocaleString()} six-figure jobs at companies that hire based on skills,
           not diplomas. Software engineering, DevOps, sales, and data roles paying $100k–$300k+.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

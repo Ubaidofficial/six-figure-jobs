@@ -91,13 +91,13 @@ export function buildSliceDescription(
   let desc: string
 
   if (role && country) {
-    desc = `Browse ${count ? `${count} ` : ''}verified ${band} ${role} jobs in ${country} with salary shown upfront. Apply direct — no recruiters, no entry-level clutter. Refreshed daily from company ATS feeds.`
+    desc = `Browse ${count ? `${count} ` : ''}verified ${band} ${role} jobs in ${country} with salary shown upfront. No entry-level clutter. Refreshed daily from company career pages.`
   } else if (role) {
     desc = `${count ? `${count} ` : ''}verified ${band} ${role} jobs with transparent pay ranges. Skip the guesswork — every listing shows compensation upfront. Apply direct to top tech companies, updated daily.`
   } else if (country) {
-    desc = `Find ${count ? `${count} ` : ''}verified ${band} tech jobs in ${country} with published salary ranges. No entry-level noise, no recruiter middlemen — direct apply links from company ATS feeds, updated daily.`
+    desc = `Find ${count ? `${count} ` : ''}verified ${band} tech jobs in ${country} with published salary ranges. No entry-level noise, no recruiter middlemen — direct apply links from company career pages, updated daily.`
   } else {
-    desc = `Browse ${count ? `${count} ` : ''}verified ${band} high-paying tech jobs with salary shown upfront. Apply direct to top companies — no recruiters, no guesswork. Roles updated daily from real company ATS feeds.`
+    desc = `Browse ${count ? `${count} ` : ''}verified ${band} high-paying tech jobs with salary shown upfront. Apply on the employer’s own page. Roles updated daily from company career pages.`
   }
 
   return desc

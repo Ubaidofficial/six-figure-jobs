@@ -154,7 +154,7 @@ export default async function LevelPage({
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-400">
+      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
         <ol className="flex items-center gap-1">
           <li>
             <Link href="/">Home</Link>
@@ -168,40 +168,40 @@ export default async function LevelPage({
         </ol>
       </nav>
 
-      <h1 className="mb-4 text-2xl font-semibold text-neutral-50">
+      <h1 className="mb-4 text-2xl font-semibold text-foreground">
         {info.label} $100k+ Jobs ({total.toLocaleString()})
       </h1>
-      <p className="mb-6 text-sm text-neutral-300">{info.description}</p>
+      <p className="mb-6 text-sm text-muted-foreground">{info.description}</p>
 
       {jobs.length === 0 ? (
-        <p className="text-neutral-400">No jobs found. Try exploring all $100k+ opportunities.</p>
+        <p className="text-muted-foreground">No jobs found. Try exploring all $100k+ opportunities.</p>
       ) : (
         <JobList jobs={jobs as JobWithCompany[]} />
       )}
 
-      <section className="mt-12 rounded-xl border border-neutral-800 bg-neutral-950/50 p-6">
-        <h2 className="mb-3 text-sm font-semibold text-neutral-50">Related Searches</h2>
+      <section className="mt-12 rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Related Searches</h2>
         <div className="grid gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
-          <Link href="/jobs/category/engineering" className="text-blue-400 hover:underline">
+          <Link href="/jobs/category/engineering" className="text-primary hover:underline">
             {info.label} Engineering Jobs
           </Link>
-          <Link href="/jobs/category/product" className="text-blue-400 hover:underline">
+          <Link href="/jobs/category/product" className="text-primary hover:underline">
             {info.label} Product Jobs
           </Link>
-          <Link href="/jobs/location/united-states" className="text-blue-400 hover:underline">
+          <Link href="/jobs/location/united-states" className="text-primary hover:underline">
             {info.label} Jobs in USA
           </Link>
-          <Link href="/jobs/200k-plus" className="text-blue-400 hover:underline">
+          <Link href="/jobs/200k-plus" className="text-primary hover:underline">
             $200k+ {info.label} Jobs
           </Link>
-          <Link href="/jobs/100k-plus" className="text-blue-400 hover:underline">
+          <Link href="/jobs/100k-plus" className="text-primary hover:underline">
             All $100k+ Jobs
           </Link>
           {Object.entries(LEVELS)
             .filter(([l]) => l !== level)
             .slice(0, 3)
             .map(([l, lv]) => (
-              <Link key={l} href={`/jobs/level/${l}`} className="text-blue-400 hover:underline">
+              <Link key={l} href={`/jobs/level/${l}`} className="text-primary hover:underline">
                 {lv.label} Jobs
               </Link>
             ))}

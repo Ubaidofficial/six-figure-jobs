@@ -291,37 +291,37 @@ export default async function RemoteRoleCountryPage({
       {/* -------------------------------- Breadcrumbs -------------------------------- */}
       <nav
         aria-label="Breadcrumb"
-        className="mb-4 text-xs text-neutral-400"
+        className="mb-4 text-xs text-muted-foreground"
       >
         <ol className="flex flex-wrap items-center gap-1">
           <li>
             <Link
               href="/"
-              className="hover:text-neutral-200 hover:underline"
+              className="hover:text-foreground hover:underline"
             >
               Home
             </Link>
           </li>
-          <li className="px-1 text-neutral-600">/</li>
+          <li className="px-1 text-muted-foreground">/</li>
           <li>
             <Link
               href="/jobs/100k-plus"
-              className="hover:text-neutral-200 hover:underline"
+              className="hover:text-foreground hover:underline"
             >
               $100k+ jobs
             </Link>
           </li>
-          <li className="px-1 text-neutral-600">/</li>
+          <li className="px-1 text-muted-foreground">/</li>
           <li>
             <Link
               href={`/remote/${roleSlug}`}
-              className="hover:text-neutral-200 hover:underline"
+              className="hover:text-foreground hover:underline"
             >
               Remote {roleName}
             </Link>
           </li>
-          <li className="px-1 text-neutral-600">/</li>
-          <li aria-current="page" className="text-neutral-200">
+          <li className="px-1 text-muted-foreground">/</li>
+          <li aria-current="page" className="text-foreground">
             {countryCode}
           </li>
         </ol>
@@ -329,10 +329,10 @@ export default async function RemoteRoleCountryPage({
 
       {/* --------------------------------- Header ---------------------------------- */}
       <header className="mb-6 space-y-3">
-        <h1 className="text-2xl font-semibold text-neutral-50">
+        <h1 className="text-2xl font-semibold text-foreground">
           Remote {roleName} jobs in {countryCode} paying $100k+ ({data.total.toLocaleString()})
         </h1>
-        <p className="text-sm text-neutral-300">
+        <p className="text-sm text-muted-foreground">
           Browse high-paying remote {roleName} roles based in{' '}
           {countryCode}. All jobs are filtered for at least $100k
           local total compensation.
@@ -340,10 +340,10 @@ export default async function RemoteRoleCountryPage({
       </header>
 
       {/* --------------------------------- Filters --------------------------------- */}
-      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/80 px-4 py-3 text-xs text-neutral-200">
+      <section className="mb-6 rounded-2xl border border-border bg-card px-4 py-3 text-xs text-foreground">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-neutral-400">Min salary:</span>
+            <span className="text-muted-foreground">Min salary:</span>
             {salaryOptions.map((s) => (
               <Link
                 key={s}
@@ -352,8 +352,8 @@ export default async function RemoteRoleCountryPage({
                 })}
                 className={`rounded-full px-2 py-1 ${
                   minAnnual === s
-                    ? 'bg-neutral-200 text-neutral-900'
-                    : 'bg-neutral-900 text-neutral-200'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card text-foreground'
                 }`}
               >
                 ${Math.round(s / 1000)}k+
@@ -361,7 +361,7 @@ export default async function RemoteRoleCountryPage({
             ))}
           </div>
 
-          <p className="text-neutral-500">
+          <p className="text-muted-foreground">
             Showing roles tagged with {countryCode} and estimated
             $100k+ compensation.
           </p>
@@ -370,7 +370,7 @@ export default async function RemoteRoleCountryPage({
 
       {/* -------------------------------- Job list -------------------------------- */}
       {jobs.length === 0 ? (
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-muted-foreground">
           No remote {roleName} roles in {countryCode} match your
           current filters. Try lowering the salary filter or check
           back soon.
@@ -385,13 +385,13 @@ export default async function RemoteRoleCountryPage({
               aria-label="Pagination"
               className="mt-6 flex items-center justify-between gap-3 text-xs"
             >
-              <div className="text-neutral-400">
+              <div className="text-muted-foreground">
                 Page{' '}
-                <span className="font-semibold text-neutral-100">
+                <span className="font-semibold text-foreground">
                   {page}
                 </span>{' '}
                 of{' '}
-                <span className="font-semibold text-neutral-100">
+                <span className="font-semibold text-foreground">
                   {totalPages}
                 </span>
               </div>
@@ -404,7 +404,7 @@ export default async function RemoteRoleCountryPage({
                       sp,
                       page - 1
                     )}
-                    className="rounded-lg border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900"
+                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
                   >
                     Previous
                   </Link>
@@ -417,7 +417,7 @@ export default async function RemoteRoleCountryPage({
                       sp,
                       page + 1
                     )}
-                    className="rounded-lg border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900"
+                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
                   >
                     Next
                   </Link>

@@ -167,7 +167,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ color: TEXT_MUTED, fontSize: 16 }}>sixfigurejobs.com</div>
-          <div style={{ color: TEXT_MUTED, fontSize: 16 }}>Direct apply · Verified salary · No recruiter spam</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 16 }}>Salary shown · Apply on the employer’s site</div>
         </div>
       </div>
     ),
