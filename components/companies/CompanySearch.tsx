@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Search, X } from 'lucide-react'
+import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import type { PublicCompanyDirectoryEntry } from '@/lib/jobs/publicStats'
 
@@ -104,27 +105,7 @@ export function CompanySearch({ companies }: { companies: PublicCompanyDirectory
                 href={c.slug ? `/company/${c.slug}` : '/companies'}
                 className="group flex flex-col items-center rounded-2xl border border-slate-800 bg-slate-950/40 p-6 shadow-sm transition hover:border-emerald-700/50 hover:bg-slate-950/60 hover:shadow-lg"
               >
-                <div className="mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-lg font-bold text-slate-200">
-                  {logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={logoUrl}
-                      alt={`${c.name} logo`}
-                      className="h-full w-full object-contain"
-                      loading="lazy"
-                      onError={(e) => {
-                        const el = e.currentTarget as HTMLImageElement
-                        el.style.display = 'none'
-                        const parent = el.parentElement
-                        if (parent) {
-                          parent.textContent = (c.name?.[0] || 'C').toUpperCase()
-                        }
-                      }}
-                    />
-                  ) : (
-                    (c.name?.[0] || 'C').toUpperCase()
-                  )}
-                </div>
+                <CompanyLogo name={c.name ?? ''} src={logoUrl} size="xl" className="mb-4 rounded-xl" />
 
                 <div className="w-full text-center">
                   <div className="mb-1 line-clamp-2 text-sm font-semibold text-slate-100 group-hover:text-white">

@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react'
 
 import { JobCard } from '@/components/jobs/JobCard'
 import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
+import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
@@ -850,24 +851,12 @@ export async function RoleTemplate({
             ) : (
               topCompanies.slice(0, 12).map((c) => {
                 const href = c.slug ? `/company/${c.slug}` : '#'
-                const initials = String(c.name || '')
-                  .split(/\s+/)
-                  .filter(Boolean)
-                  .map((w) => w[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toUpperCase()
                 return (
                   <Link key={c.id} href={href} className={styles.companyCard}>
                     <span className={styles.companyHead}>
                       <span className={styles.companyLeft}>
-                        <span className={styles.logoWrap} aria-hidden="true">
-                          {c.logoUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={c.logoUrl} alt={`${c.name} logo`} className={styles.logoImg} loading="lazy" />
-                          ) : (
-                            <span className={styles.logoFallback}>{initials || 'C'}</span>
-                          )}
+                        <span className={styles.logoWrap}>
+                          <CompanyLogo name={String(c.name || '')} src={c.logoUrl} size="fill" />
                         </span>
                         <span className={styles.companyTitleBlock}>
                           <span className={styles.companyName}>{c.name}</span>

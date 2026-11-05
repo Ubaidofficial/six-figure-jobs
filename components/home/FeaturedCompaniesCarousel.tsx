@@ -1,6 +1,6 @@
-import Image from 'next/image'
 import Link from 'next/link'
 
+import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import styles from './FeaturedCompaniesCarousel.module.css'
 
@@ -9,33 +9,8 @@ export type FeaturedCompany = {
   name: string
   slug: string
   logoUrl: string | null
+  website: string | null
   activeHighPayingJobs: number
-}
-
-function CompanyLogo({ company, index }: { company: FeaturedCompany; index: number }) {
-  const logoUrl = buildLogoUrl(company.logoUrl, null)
-
-  if (!logoUrl) {
-    return (
-      <div className={styles.fallback} aria-hidden="true">
-        {(company.name?.[0] || 'C').toUpperCase()}
-      </div>
-    )
-  }
-
-  return (
-    <Image
-      src={logoUrl}
-      alt={`${company.name} logo`}
-      width={64}
-      height={64}
-      loading={index < 4 ? 'eager' : 'lazy'}
-      placeholder="blur"
-      blurDataURL="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%23334155'/%3E%3C/svg%3E"
-      unoptimized
-      className={styles.logoImg}
-    />
-  )
 }
 
 function LogoItem({ company, index }: { company: FeaturedCompany; index: number }) {
@@ -46,7 +21,12 @@ function LogoItem({ company, index }: { company: FeaturedCompany; index: number 
     <li className={styles.item}>
       <Link href={href} className={styles.logoLink} aria-label={tooltip} title={tooltip}>
         <div className={styles.logoBox}>
-          <CompanyLogo company={company} index={index} />
+          <CompanyLogo
+            name={company.name}
+            src={buildLogoUrl(company.logoUrl, company.website)}
+            size="fill"
+            priority={index < 4}
+          />
         </div>
         <span className={styles.tooltip} role="tooltip">
           {company.name}

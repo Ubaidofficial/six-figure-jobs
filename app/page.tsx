@@ -423,7 +423,7 @@ export default async function HomePage() {
               ...(priorityCompanySlugs.length ? [{ slug: { in: priorityCompanySlugs } }] : []),
             ],
           },
-          select: { id: true, name: true, slug: true, logoUrl: true },
+          select: { id: true, name: true, slug: true, logoUrl: true, website: true },
         })
       : []
 
@@ -443,6 +443,7 @@ export default async function HomePage() {
         name: company.name,
         slug: company.slug,
         logoUrl: company.logoUrl ?? null,
+        website: company.website ?? null,
         activeHighPayingJobs: candidate.liveJobs,
       }
     })
@@ -458,6 +459,7 @@ export default async function HomePage() {
         name: company.name,
         slug: company.slug,
         logoUrl: company.logoUrl ?? null,
+        website: company.website ?? null,
         activeHighPayingJobs: g._count._all,
       }
     })

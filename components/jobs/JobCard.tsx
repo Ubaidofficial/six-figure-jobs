@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -309,13 +309,6 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
     job.companyRef?.logoUrl ?? (job as any)?.companyLogo ?? null,
     job.companyRef?.website ?? null,
   )
-  const initials = companyName
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
 
   const size = job.companyRef?.sizeBucket ?? null
   const industry = job.companyRef?.industry ?? job.industry ?? null
@@ -392,30 +385,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
 
       <header className={styles.header}>
         <div className={styles.logoWrap}>
-          {companyLogo ? (
-            <Image
-              src={companyLogo}
-              alt={`${companyName} logo`}
-              width={48}
-              height={48}
-              className={styles.logoImg}
-              loading="lazy"
-              unoptimized
-              onError={(e) => {
-                const el = e.currentTarget as HTMLImageElement
-                el.style.display = 'none'
-                const fallback = el.parentElement?.querySelector('[data-fallback]') as HTMLElement | null
-                if (fallback) fallback.style.display = 'flex'
-              }}
-            />
-          ) : null}
-          <span
-            className={styles.logoFallback}
-            data-fallback=""
-            style={companyLogo ? { display: 'none' } : undefined}
-          >
-            {initials || 'C'}
-          </span>
+          <CompanyLogo name={companyName} src={companyLogo} size="fill" />
         </div>
 
         <div className={styles.company}>

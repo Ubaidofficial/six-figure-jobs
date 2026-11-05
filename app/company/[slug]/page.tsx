@@ -10,6 +10,7 @@ import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { formatRelativeTime } from '../../../lib/utils/time'
+import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { normalizePublicCompanyWebsite } from '../../../lib/companies/website'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
@@ -186,20 +187,7 @@ export default async function CompanyPage({
       <header className="mb-8 rounded-2xl border border-neutral-800 bg-neutral-950/80 p-6">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
           {/* Logo */}
-          <div className="flex-shrink-0">
-            {heroLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={heroLogo}
-                alt={company.name}
-                className="h-20 w-20 rounded-xl bg-white object-contain p-2"
-              />
-            ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-neutral-800 text-2xl font-bold text-neutral-100">
-                {company.name.charAt(0).toUpperCase()}
-              </div>
-            )}
-          </div>
+          <CompanyLogo name={company.name} src={heroLogo} size="xl" priority className="size-20 flex-shrink-0 rounded-xl text-2xl" />
 
           {/* Company Info */}
           <div className="flex-1">

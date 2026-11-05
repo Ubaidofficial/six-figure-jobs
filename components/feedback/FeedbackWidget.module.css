@@ -35,7 +35,7 @@
 
 @media (max-width: 767px) {
   .toggle.toggleAboveBar {
-    bottom: 124px;
+    bottom: 96px; /* clear the ~76px sticky mobile Apply bar */
   }
 }
 

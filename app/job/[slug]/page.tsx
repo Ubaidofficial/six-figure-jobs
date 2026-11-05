@@ -30,20 +30,20 @@ import {
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
 import { JobCard } from '@/components/jobs/JobCard'
-import {
-  BadgeCheck,
-  Briefcase,
-  Check,
-  Clock,
-  ExternalLink,
-  MapPin,
-  ShieldCheck,
-  Sparkles,
-  Users,
-} from 'lucide-react'
+import { Clock, Laptop, MapPin } from 'lucide-react'
 
 import { SKILL_TARGETS } from '../../../lib/seo/pseoTargets'
-import { JobActions } from './JobActions'
+import { Badge, badgeVariants } from '@/components/ui/badge'
+import { CompanyLogo } from '@/components/companies/CompanyLogo'
+import { cn } from '@/lib/utils'
+import {
+  ApplyCard,
+  Breadcrumb,
+  BulletList,
+  CompanyCard,
+  JobSection,
+  MobileApplyBar,
+} from './JobDetailParts'
 import styles from './JobDetail.module.css'
 
 const SKILL_SLUG_SET = new Set(SKILL_TARGETS.map((s) => s.slug))
@@ -315,12 +315,6 @@ export default async function JobPage({
     hasSalary &&
     typedJob.salaryValidated === true &&
     typedJob.salarySource === 'ats'
-  const salaryBadgeLabel = hasSalary
-    ? isSalaryVerified
-      ? 'Salary verified'
-      : 'Salary listed'
-    : 'Verified listing'
-  const companyProfileVerified = Boolean(company?.slug)
   const lastUpdatedDays = daysSince(typedJob.updatedAt ?? typedJob.lastSeenAt ?? null)
 
   const isRemoteRole = typedJob.remote === true || (typedJob as any).remoteMode === 'remote'
@@ -350,476 +344,248 @@ export default async function JobPage({
 
   /* ------------------------------ Render ----------------------------------- */
 
+  const metaItems = [
+    { Icon: MapPin, label: locationText },
+    { Icon: Laptop, label: isRemoteRole ? 'Remote' : workTypeLabel },
+    { Icon: Clock, label: postedLabel ? `Posted ${postedLabel}` : null },
+  ].filter((m): m is { Icon: typeof MapPin; label: string } => Boolean(m.label))
+
+  const jobFacts = [
+    { label: 'Type', value: employmentType },
+    { label: 'Level', value: seniority },
+    { label: 'Team size', value: teamSize },
+    {
+      label: 'Updated',
+      value: lastUpdatedDays == null ? null : lastUpdatedDays === 0 ? 'Today' : `${lastUpdatedDays} days ago`,
+    },
+  ].filter((f): f is { label: string; value: string } => Boolean(f.value))
+
+  const companyFacts = [
+    { label: 'Country', value: companyCountry },
+    { label: 'Employees', value: company?.sizeBucket || (company as any)?.employeeCount || null },
+    { label: 'Founded', value: company?.foundedYear ? String(company.foundedYear) : null },
+  ].filter((f): f is { label: string; value: string } => Boolean(f.value))
+
+  const applyHref = showApply ? cleanUrl(typedJob.applyUrl!) : null
+  const websiteHref = normalizePublicCompanyWebsite(company?.website ?? null)
+  const companyBlurb = company?.description
+    ? truncateText(stripTags(decodeHtmlEntities(company.description)), 220)
+    : null
+
   return (
-    <main className={styles.page}>
-      <div className={styles.container}>
-        {/* Same three names as the BreadcrumbList JSON-LD, so markup matches what users see. */}
-        <nav aria-label="Breadcrumb" className={styles.breadcrumb}>
-          <ol>
-            <li>
-              <NextLink href="/">Home</NextLink>
-            </li>
-            <li>
-              <NextLink href="/jobs">Jobs</NextLink>
-            </li>
-            <li aria-current="page">
-              {typedJob.title} at {companyName}
-            </li>
-          </ol>
-        </nav>
-
-        <header className={styles.header}>
-          <div className={styles.headerMain}>
-            <div className={styles.logoWrap}>
-              {logoUrl ? (
-                <NextImage
-                  src={logoUrl}
-                  alt={`${companyName} logo`}
-                  width={96}
-                  height={96}
-                  className={styles.logoImg}
-                  priority
-                  unoptimized={logoUrl.includes('clearbit.com') || logoUrl.includes('logo.dev')}
-                />
-              ) : (
-                <div className={styles.logoFallback} aria-hidden="true">
-                  {companyName.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <h1 className={styles.title}>{typedJob.title}</h1>
-
-              {aiOneLiner ? <p className={styles.oneLiner}>{aiOneLiner}</p> : null}
-
-              <div className={styles.companyRow}>
-                {company?.slug ? (
-                  <NextLink href={`/company/${company.slug}`} className={styles.companyLink}>
-                    {companyName}
-                  </NextLink>
-                ) : (
-                  <span className={styles.companyLink}>{companyName}</span>
-                )}
-
-                <span className={styles.verifiedBadge}>
-                  <BadgeCheck className={styles.metaIcon} aria-hidden="true" />
-                  {salaryBadgeLabel}
-                </span>
-              </div>
-
-              <div className={styles.metaBadges}>
-                {locationText ? (
-                  <span className={styles.metaBadge}>
-                    <MapPin className={styles.metaIcon} aria-hidden="true" />
-                    {locationText}
-                  </span>
-                ) : null}
-                {workTypeLabel ? (
-                  <span className={styles.metaBadge}>
-                    <Briefcase className={styles.metaIcon} aria-hidden="true" />
-                    {workTypeLabel}
-                  </span>
-                ) : null}
-                {postedLabel ? (
-                  <span className={styles.metaBadge}>
-                    <Clock className={styles.metaIcon} aria-hidden="true" />
-                    Posted {postedLabel}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className={styles.actionBarOuter} aria-label="Action bar">
-          <div className={styles.actionBar}>
-            <div className={styles.salaryBox}>
-              <div className={styles.salaryLabel}>Salary Range</div>
-              <div className={styles.salaryValue}>{salaryText || 'Not disclosed'}</div>
-              <div className={styles.salaryPeriod}>per year</div>
-            </div>
-
-            <div className={styles.actions}>
-              {showApply ? (
-                <a
-                  href={cleanUrl(typedJob.applyUrl!)}
-                  target="_blank"
-                  rel="nofollow sponsored noopener noreferrer"
-                  className={styles.applyButton}
-                >
-                  Apply Now <ExternalLink aria-hidden="true" />
-                </a>
-              ) : null}
-
-              <JobActions jobId={typedJob.id} shareUrl={`${SITE_URL}/job/${canonicalSlug}`} />
-            </div>
-          </div>
-        </div>
-
-        {/* Two-column layout */}
-        <div className={styles.layout}>
-          <aside className={styles.sidebar}>
-            {(() => {
-              const highlights = [
-                { label: 'Work mode', value: isRemoteRole ? 'Remote' : workTypeLabel, Icon: MapPin },
-                { label: 'Seniority', value: seniority, Icon: Sparkles },
-                { label: 'Team size', value: teamSize, Icon: Users },
-                { label: 'Employment type', value: employmentType, Icon: Briefcase },
-              ].filter((h) => h.value)
-
-              if (highlights.length === 0) return null
-
-              return (
-                <section className={styles.card}>
-                  <h2 className={styles.cardTitle}>Job Highlights</h2>
-                  <div className={styles.highlightGrid}>
-                    {highlights.map(({ label, value, Icon }) => (
-                      <div key={label} className={styles.highlightRow}>
-                        <div className={styles.highlightLeft}>
-                          <div className={styles.iconChip} aria-hidden="true">
-                            <Icon />
-                          </div>
-                          <div>
-                            <div className={styles.hlLabel}>{label}</div>
-                            <div className={styles.hlValue}>{value}</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )
-            })()}
-
-            <section className={styles.card}>
-              <h2 className={styles.cardTitle}>Salary &amp; company</h2>
-              <div className={styles.checkList}>
-                <div className={styles.checkItem}>
-                  <span className={styles.checkCircle} aria-hidden="true">
-                    <Check />
-                  </span>
-                  <span>{isSalaryVerified ? 'Salary taken from the employer’s posting' : 'Salary listed in the job posting'}</span>
-                </div>
-                <div className={styles.checkItem}>
-                  <span className={styles.checkCircle} aria-hidden="true">
-                    <Check />
-                  </span>
-                  <span>{companyProfileVerified ? 'Company page available' : 'Company details limited'}</span>
-                </div>
-                <div className={styles.checkItem}>
-                  <span className={styles.checkCircle} aria-hidden="true">
-                    <Check />
-                  </span>
-                  <span>
-                    Last updated {lastUpdatedDays != null ? `${lastUpdatedDays} days ago` : 'recently'}
-                  </span>
-                </div>
-              </div>
-            </section>
-
-            <section className={styles.card}>
-              <div className={styles.cardTitle}>About Company</div>
-              <p className={styles.cardSubtitle}>
-                {company?.description
-                  ? truncateText(stripTags(decodeHtmlEntities(company.description)), 200)
-                  : `${companyName} is hiring six-figure talent across multiple teams.`}
-              </p>
-
-              <div className={styles.aboutCompanyMeta}>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaKey}>Country</span>
-                  <span>{companyCountry}</span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaKey}>Employees</span>
-                  <span>{company?.sizeBucket || (company as any)?.employeeCount || '—'}</span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaKey}>Founded</span>
-                  <span>{company?.foundedYear || '—'}</span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaKey}>Website</span>
-                  {normalizePublicCompanyWebsite(company?.website) ? (
-                    <a
-                      href={normalizePublicCompanyWebsite(company!.website!)!}
-                      target="_blank"
-                      rel="nofollow noreferrer"
-                    >
-                      Visit <ExternalLink aria-hidden="true" style={{ width: 14, height: 14 }} />
-                    </a>
-                  ) : (
-                    <span>—</span>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            <section className={styles.card}>
-              <div className={styles.cardTitle}>Required Skills</div>
-              {requiredSkills.length > 0 ? (
-                <>
-                  <div className={styles.skillsWrap}>
-                    {requiredSkills.map((s) => (
-                      <span key={s} className={`${styles.skillPill} ${styles.skillRequired}`}>
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-
-                  {niceSkills.length > 0 ? (
-                    <>
-                      <div className={styles.dividerLabel}>Nice to have</div>
-                      <div className={styles.skillsWrap}>
-                        {niceSkills.map((s) => (
-                          <span key={s} className={`${styles.skillPill} ${styles.skillNice}`}>
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </>
-                  ) : null}
-                </>
-              ) : (
-                <p className={styles.cardSubtitle}>Skills not listed on the ATS page.</p>
-              )}
-            </section>
-          </aside>
-
-          {/* --------------------------- Job Content --------------------------- */}
-          <section className={styles.content}>
-
-            {/* AI-Structured Content */}
-            {(aiStructured.bullets.length > 0 ||
-              aiStructured.description.length > 0 ||
-              aiStructured.requirements.length > 0 ||
-              aiStructured.benefits.length > 0 ||
-              aiSnippet) && (
-              <>
-                {/* Old-style bullets fallback (backwards compatibility) */}
-                {aiStructured.bullets.length > 0 && !hasStructuredSections ? (
-                  <section className={styles.card}>
-                    <div className={styles.cardTitle}>
-                      <span>✨ Role Highlights</span>
-                      {AI_UI_ENABLED && aiQualityScore != null ? (
-                        <span className={styles.verifiedBadge}>AI score: {aiQualityScore}/3</span>
-                      ) : null}
-                    </div>
-
-                    {aiSnippet ? <p className={styles.cardSubtitle}>{aiSnippet}</p> : null}
-
-                    <div className={styles.checkList}>
-                      {aiStructured.bullets.map((line, idx) => (
-                        <div key={idx} className={styles.checkItem}>
-                          <span className={styles.checkCircle} aria-hidden="true">
-                            <Check />
-                          </span>
-                          <span>{line}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-
-                {aiStructured.description.length > 0 ? (
-                  <section className={styles.card}>
-                    <div className={styles.cardTitle}>
-                      <span>📋 About the Role</span>
-                    </div>
-                    <div className={styles.descriptionProse}>
-                      {aiStructured.description.map((line, idx) => (
-                        <p key={idx} className={styles.descriptionParagraph}>{line}</p>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-
-                {aiStructured.requirements.length > 0 ? (
-                  <section className={styles.card}>
-                    <div className={styles.cardTitle}>
-                      <span>🎯 Requirements</span>
-                    </div>
-                    <div className={styles.checkList}>
-                      {aiStructured.requirements.map((line, idx) => (
-                        <div key={idx} className={styles.checkItem}>
-                          <span className={styles.checkCircle} aria-hidden="true">
-                            <Check />
-                          </span>
-                          <span>{line}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-
-                {aiStructured.benefits.length > 0 ? (
-                  <section className={styles.card}>
-                    <div className={styles.cardTitle}>
-                      <span>💎 Benefits &amp; Perks</span>
-                    </div>
-                    <div className={styles.checkList}>
-                      {aiStructured.benefits.map((line, idx) => (
-                        <div key={idx} className={styles.checkItem}>
-                          <span className={styles.checkCircle} aria-hidden="true">
-                            <Check />
-                          </span>
-                          <span>{line}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-              </>
-            )}
-
-            {/* Fallback sections — only shown when AI structured content is absent */}
-            {!hasStructuredSections && (
-              <>
-                {responsibilities.length > 0 ? (
-                  <section className={styles.card}>
-                    <div className={styles.cardTitle}>Responsibilities</div>
-                    <div className={styles.checkList}>
-                      {responsibilities.slice(0, 5).map((r, i) => (
-                        <div key={i} className={styles.checkItem}>
-                          <span className={styles.checkCircle} aria-hidden="true">
-                            <Check />
-                          </span>
-                          <span>{r}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-
-                {resolvedRequirements.length > 0 ? (
-                  <section className={styles.card}>
-                    <div className={styles.cardTitle}>Requirements</div>
-                    <div className={styles.checkList}>
-                      {resolvedRequirements.slice(0, 6).map((r, i) => (
-                        <div key={i} className={styles.checkItem}>
-                          <span className={styles.checkCircle} aria-hidden="true">
-                            <Check />
-                          </span>
-                          <span>{r}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-
-                {benefitItems.length > 0 ? (
-                  <section className={styles.card}>
-                    <div className={styles.cardTitle}>Benefits</div>
-                    <div className={styles.benefitsGrid}>
-                      {benefitItems.slice(0, 4).map((b, i) => (
-                        <div key={i} className={styles.benefitCard}>
-                          <div className={styles.benefitIcon} aria-hidden="true">
-                            <ShieldCheck />
-                          </div>
-                          <div className={styles.benefitText}>{formatBenefitPill(b)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-              </>
-            )}
-
-            {/* Full posting — open by default */}
-            {(hasDescription || isOversizedDescription) && (
-              <details className={styles.fullPostingDetails} open>
-                <summary className={styles.fullPostingSummary}>
-                  📄 Full job posting
-                </summary>
-                <div className={styles.card} style={{ marginTop: '0.75rem' }}>
-                  {isOversizedDescription ? (
-                    <p className={styles.cardSubtitle}>
-                      Job description is too large to display safely. View the posting on the company site using the Apply Now button.
-                    </p>
-                  ) : (
-                    <div
-                      className={`prose prose-invert max-w-none ${styles.richText}`}
-                      dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
-                    />
-                  )}
-                </div>
-              </details>
-            )}
-
-            {showApply ? (
-              <section className={styles.card}>
-                <div className={styles.applyCta}>
-                  <div>
-                    <div className={styles.cardTitle}>Apply on the company site</div>
-                    <p className={styles.cardSubtitle}>
-                      Opens in a new tab. Six Figure Jobs doesn&apos;t track your application.
-                    </p>
-                  </div>
-                  <a
-                    href={cleanUrl(typedJob.applyUrl!)}
-                    target="_blank"
-                    rel="nofollow sponsored noopener noreferrer"
-                    className={styles.applyButton}
-                  >
-                    Apply Now <ExternalLink aria-hidden="true" />
-                  </a>
-                </div>
-              </section>
-            ) : null}
-
-            {/* Internal Links */}
-            {internalLinks.length > 0 ? (
-              <section className={styles.card}>
-                <h2 className={styles.cardTitle}>Explore related pages</h2>
-                <div className={styles.checkList}>
-                  {internalLinks.slice(0, 8).map((link) => (
-                    <div key={link.href} className={styles.checkItem}>
-                      <span className={styles.checkCircle} aria-hidden="true">
-                        <Check />
-                      </span>
-                      <NextLink href={link.href} className={styles.companyLink}>
-                        {link.label}
-                      </NextLink>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-          </section>
-        </div>
-
-        {similarJobs.length > 0 ? (
-          <section className={styles.similarGrid}>
-            <div className={styles.similarHeader}>
-              <div>
-                <h2 className={styles.similarTitle}>Similar Six Figure Opportunities</h2>
-                <div className={styles.similarSub}>Based on role, country and salary band</div>
-              </div>
-              {canonicalRoleSlug ? (
-                <NextLink
-                  href={`/jobs/${canonicalRoleSlug}`}
-                  className={styles.browseAllLink}
-                >
-                  Browse all {prettyRole(canonicalRoleSlug)} jobs →
-                </NextLink>
-              ) : null}
-            </div>
-            <div className={styles.similarCards}>
-              {similarJobs.map((sj) => (
-                <JobCard key={sj.id} job={sj as JobWithCompany} />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {/* JSON-LD (keep existing schema) */}
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+    <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 lg:pb-14 lg:pt-8">
+      {/* Same three names as the BreadcrumbList JSON-LD, so the markup matches what users see. */}
+      <div className="mb-6">
+        <Breadcrumb
+          items={[
+            { label: 'Home', href: '/' },
+            { label: 'Jobs', href: '/jobs' },
+            { label: `${typedJob.title} at ${companyName}` },
+          ]}
         />
       </div>
+
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
+        <article className="min-w-0 space-y-10">
+          <header>
+            <div className="flex items-start gap-4">
+              <CompanyLogo name={companyName} src={logoUrl} size="xl" priority />
+              <div className="min-w-0">
+                <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+                  {typedJob.title}
+                </h1>
+                <p className="mt-1 text-base text-muted-foreground">
+                  {company?.slug ? (
+                    <NextLink href={`/company/${company.slug}`} className="text-foreground hover:underline underline-offset-4">
+                      {companyName}
+                    </NextLink>
+                  ) : (
+                    <span className="text-foreground">{companyName}</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {metaItems.length > 0 ? (
+              <ul className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                {metaItems.map(({ Icon, label }) => (
+                  <li key={label} className="flex items-center gap-1.5">
+                    <Icon className="size-4" aria-hidden="true" />
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {/* On phones the salary leads the page; on desktop it lives in the sticky card. */}
+            <p className="mt-4 font-mono text-xl font-semibold text-foreground lg:hidden">
+              {salaryText || 'Salary not disclosed'}
+            </p>
+
+            {aiOneLiner ? (
+              <p className="mt-5 max-w-[68ch] text-lg leading-relaxed text-foreground/90">{aiOneLiner}</p>
+            ) : null}
+          </header>
+
+          {hasStructuredSections ? (
+            <>
+              {aiStructured.description.length > 0 ? (
+                <JobSection title="About the role">
+                  <div className="max-w-[68ch] space-y-3 text-[15px] leading-relaxed text-foreground/90">
+                    {aiSnippet ? <p>{aiSnippet}</p> : null}
+                    {aiStructured.description.map((line, idx) => (
+                      <p key={idx}>{line}</p>
+                    ))}
+                  </div>
+                </JobSection>
+              ) : null}
+              {aiStructured.requirements.length > 0 ? (
+                <JobSection title="Requirements">
+                  <BulletList items={aiStructured.requirements} />
+                </JobSection>
+              ) : null}
+              {aiStructured.benefits.length > 0 ? (
+                <JobSection title="Benefits and perks">
+                  <BulletList items={aiStructured.benefits} />
+                </JobSection>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {aiStructured.bullets.length > 0 ? (
+                <JobSection title="Role highlights">
+                  <BulletList items={aiStructured.bullets} />
+                </JobSection>
+              ) : null}
+              {responsibilities.length > 0 ? (
+                <JobSection title="Responsibilities">
+                  <BulletList items={responsibilities.slice(0, 5)} />
+                </JobSection>
+              ) : null}
+              {resolvedRequirements.length > 0 ? (
+                <JobSection title="Requirements">
+                  <BulletList items={resolvedRequirements.slice(0, 6)} />
+                </JobSection>
+              ) : null}
+              {benefitItems.length > 0 ? (
+                <JobSection title="Benefits">
+                  <BulletList items={benefitItems.slice(0, 4).map(formatBenefitPill)} />
+                </JobSection>
+              ) : null}
+            </>
+          )}
+
+          {requiredSkills.length > 0 ? (
+            <JobSection title="Skills">
+              <div className="flex flex-wrap gap-2">
+                {requiredSkills.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="rounded-md px-2.5 py-1 font-medium">
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+              {niceSkills.length > 0 ? (
+                <>
+                  <p className="pt-2 text-sm text-muted-foreground">Nice to have</p>
+                  <div className="flex flex-wrap gap-2">
+                    {niceSkills.map((skill) => (
+                      <Badge key={skill} variant="outline" className="rounded-md px-2.5 py-1 font-normal">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </JobSection>
+          ) : null}
+
+          {hasDescription || isOversizedDescription ? (
+            <JobSection title="Full job description">
+              {isOversizedDescription ? (
+                <p className="text-sm text-muted-foreground">
+                  This description is too large to display safely. Use Apply to read the full posting on the company site.
+                </p>
+              ) : (
+                <div
+                  className={`prose prose-invert max-w-none ${styles.richText}`}
+                  dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
+                />
+              )}
+            </JobSection>
+          ) : null}
+        </article>
+
+        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <ApplyCard
+            salaryText={salaryText || null}
+            salaryIsFromEmployer={isSalaryVerified}
+            applyHref={applyHref}
+            companyName={companyName}
+            facts={jobFacts}
+            jobId={typedJob.id}
+            shareUrl={`${SITE_URL}/job/${canonicalSlug}`}
+          />
+          <CompanyCard
+            name={companyName}
+            slug={company?.slug ?? null}
+            logoSrc={logoUrl}
+            description={companyBlurb}
+            facts={companyFacts}
+            websiteHref={websiteHref}
+          />
+        </aside>
+      </div>
+
+      {similarJobs.length > 0 ? (
+        <section className="mt-14 space-y-4" aria-labelledby="similar-roles">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="similar-roles" className="text-lg font-semibold tracking-tight text-foreground">
+              Similar six-figure roles
+            </h2>
+            {canonicalRoleSlug ? (
+              <NextLink
+                href={`/jobs/${canonicalRoleSlug}`}
+                className="text-sm text-primary underline-offset-4 hover:underline"
+              >
+                Browse all {prettyRole(canonicalRoleSlug)} jobs →
+              </NextLink>
+            ) : null}
+          </div>
+          <div className="grid gap-2">
+            {similarJobs.map((sj) => (
+              <JobCard key={sj.id} job={sj as JobWithCompany} variant="homepage" />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {internalLinks.length > 0 ? (
+        <section className="mt-10" aria-labelledby="explore-more">
+          <h2 id="explore-more" className="mb-3 text-sm font-medium text-muted-foreground">
+            Explore more
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {internalLinks.slice(0, 8).map((link) => (
+              <NextLink
+                key={link.href}
+                href={link.href}
+                className={cn(badgeVariants({ variant: 'outline' }), 'px-3 py-1.5 text-sm font-normal hover:bg-muted')}
+              >
+                {link.label}
+              </NextLink>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <MobileApplyBar salaryText={salaryText || null} applyHref={applyHref} />
+
+      {/* JSON-LD (keep existing schema) */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
     </main>
   )
 }
@@ -1165,9 +931,10 @@ function sanitizeDescriptionHtml(html: string): string {
     /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi,
     (match, tag) => {
       const lower = String(tag).toLowerCase()
-      if (allowedTags.includes(lower)) {
-        return `<${match.startsWith('</') ? '/' : ''}${lower}>`
-      }
+      const closing = match.startsWith('</') ? '/' : ''
+      // Keep section headings from the posting, as <h3> under the page's own "Full job description" <h2>.
+      if (/^h[1-6]$/.test(lower)) return `<${closing}h3>`
+      if (allowedTags.includes(lower)) return `<${closing}${lower}>`
       return ''
     },
   )
