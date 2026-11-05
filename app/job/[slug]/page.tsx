@@ -370,7 +370,9 @@ export default async function JobPage({
                   height={96}
                   className={styles.logoImg}
                   priority
-                  unoptimized={logoUrl.includes('clearbit.com') || logoUrl.includes('logo.dev')}
+                  unoptimized={
+                    logoUrl.startsWith('/logo/') || logoUrl.includes('clearbit.com') || logoUrl.includes('logo.dev')
+                  }
                 />
               ) : (
                 <div className={styles.logoFallback} aria-hidden="true">

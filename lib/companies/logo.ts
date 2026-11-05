@@ -1,7 +1,16 @@
 // lib/companies/logo.ts
-// Build a logo URL. Prefer stored logo.dev URLs and avoid Clearbit fallbacks
-// because failed Clearbit requests are reported as console errors by Lighthouse.
+// Company logo URLs. Logos come from logo.dev, which needs a publishable key (LOGODEV_API_KEY).
+//
+// That key only exists on the server, but logos are also built inside client components (job cards, the
+// company directory). A URL built with the key on the server and without it in the browser makes React drop
+// the logo during hydration. So logos derived from a website or a name use same-origin URLs that carry no
+// key (`/logo/domain/stripe.com`); the /logo route adds the key server-side and redirects to logo.dev.
 import { normalizePublicCompanyWebsite } from './website'
+
+const LOGO_DEV_HOST = 'img.logo.dev'
+const LOGO_SIZE = '128' // the largest logo we draw is 72px, so this covers 2x screens
+const DOMAIN_PATTERN = /^(?=.{4,253}$)([a-z0-9-]{1,63}\.)+[a-z]{2,}$/i
+const MAX_NAME_LENGTH = 80
 
 function extractDomain(url?: string | null): string | null {
   if (!url) return null
@@ -17,7 +26,7 @@ function extractDomain(url?: string | null): string | null {
 function appendLogoDevOptimization(url: string): string {
   try {
     const parsed = new URL(url)
-    if (parsed.hostname !== 'img.logo.dev') return url
+    if (parsed.hostname !== LOGO_DEV_HOST) return url
     if (!parsed.searchParams.has('size')) parsed.searchParams.set('size', '64')
     if (!parsed.searchParams.has('format')) parsed.searchParams.set('format', 'webp')
     return parsed.toString()
@@ -26,30 +35,64 @@ function appendLogoDevOptimization(url: string): string {
   }
 }
 
+/** Same-origin logo URL, safe to build on the server and in the browser (no key). */
+export function logoProxyUrl(kind: 'domain' | 'name', value: string): string {
+  return `/logo/${kind}/${encodeURIComponent(value)}`
+}
+
+/**
+ * Best logo URL for a company, or null.
+ * Order: stored logo.dev URL, then logo.dev by website domain, then any other stored logo (for example a
+ * BuiltIn CDN image), then logo.dev by company name. A stored Clearbit URL is replaced by logo.dev for its
+ * domain, because Clearbit's logo API is no longer reliable.
+ */
 export function buildLogoUrl(
   logoUrl?: string | null,
   website?: string | null,
+  name?: string | null,
 ): string | null {
+  let storedOther: string | null = null
+
   if (logoUrl) {
     if (logoUrl.includes('logo.clearbit.com')) {
-      const clearbitDomain = extractDomain(logoUrl)
-      const logoDevKey = process.env.LOGODEV_API_KEY
-      return clearbitDomain && logoDevKey
-        ? appendLogoDevOptimization(`https://img.logo.dev/${clearbitDomain}?token=${logoDevKey}`)
-        : null
+      // https://logo.clearbit.com/<company domain> — the company is in the path, not the host.
+      const clearbitDomain = extractDomain(logoUrl.split('logo.clearbit.com/')[1]?.split(/[/?#]/)[0])
+      if (clearbitDomain) return logoProxyUrl('domain', clearbitDomain)
+    } else if (extractDomain(logoUrl) === LOGO_DEV_HOST) {
+      return appendLogoDevOptimization(logoUrl)
+    } else {
+      storedOther = logoUrl
     }
-
-    return appendLogoDevOptimization(logoUrl)
   }
 
-  const publicWebsite = normalizePublicCompanyWebsite(website ?? null)
-  const domain = extractDomain(publicWebsite)
-  if (!domain) return null
+  const domain = extractDomain(normalizePublicCompanyWebsite(website ?? null))
+  if (domain) return logoProxyUrl('domain', domain)
 
-  // Prefer logo.dev when configured. Otherwise use the initials fallback.
-  const logoDevKey = process.env.LOGODEV_API_KEY
-  if (logoDevKey) {
-    return appendLogoDevOptimization(`https://img.logo.dev/${domain}?token=${logoDevKey}`)
+  if (storedOther) return storedOther
+
+  const cleanName = String(name ?? '').trim()
+  if (cleanName && cleanName.length <= MAX_NAME_LENGTH) return logoProxyUrl('name', cleanName)
+
+  return null
+}
+
+/** The logo.dev URL the /logo route redirects to, or null if the request is not valid. Needs the key. */
+export function buildLogoDevUrl(kind: string, value: string, token: string): string | null {
+  const key = token.trim()
+  if (!key) return null
+
+  const query = `token=${encodeURIComponent(key)}&size=${LOGO_SIZE}&format=webp`
+
+  if (kind === 'domain') {
+    const domain = value.trim().toLowerCase()
+    return DOMAIN_PATTERN.test(domain) ? `https://${LOGO_DEV_HOST}/${domain}?${query}` : null
+  }
+
+  if (kind === 'name') {
+    const name = value.trim()
+    return name && name.length <= MAX_NAME_LENGTH
+      ? `https://${LOGO_DEV_HOST}/name/${encodeURIComponent(name)}?${query}`
+      : null
   }
 
   return null
