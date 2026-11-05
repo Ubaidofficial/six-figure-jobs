@@ -6,6 +6,26 @@ const INVALID_COMPANY_WEBSITE_HOSTS = [
   'x.com',
   'facebook.com',
   'instagram.com',
+  // Job boards and aggregators. Some jobs arrive with the board's own address as the "company website"; using it
+  // shows the BOARD's logo as the employer's (WhatJobs' red tile on London recruiter jobs) and links to the board.
+  'whatjobs.com',
+  'indeed.com',
+  'glassdoor.com',
+  'ziprecruiter.com',
+  'jooble.org',
+  'adzuna.com',
+  'talent.com',
+  'careerjet.com',
+  'jobrapido.com',
+  'monster.com',
+  'simplyhired.com',
+  'reed.co.uk',
+  'totaljobs.com',
+  'cv-library.co.uk',
+  'dice.com',
+  'workopolis.com',
+  'jobbank.gc.ca',
+  'freehire.me',
 ]
 
 function hostMatches(hostname: string, blockedHost: string): boolean {
