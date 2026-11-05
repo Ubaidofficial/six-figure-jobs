@@ -1,0 +1,54 @@
+name: freehire daily sync
+
+# Pulls the last ~36 hours of fresh six-figure jobs from freehire (US, UK, EU, Canada, Australia) through
+# the normal ingest path, then expires jobs not refreshed in 7 days. Runs daily; can also be started by hand.
+# GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON is deliberately not passed: new/removed URLs are queued in the
+# database (JobIndexingQueue) instead of being sent to the Google Indexing API in a burst.
+# Note: GitHub disables scheduled workflows after 60 days with no repository activity.
+
+on:
+  schedule:
+    - cron: "17 5 * * *" # 05:17 UTC daily
+  workflow_dispatch:
+
+# Shares a group with the manual reload so the two never write to the database at the same time.
+concurrency:
+  group: freehire-reload
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      FREEHIRE_API_KEY: ${{ secrets.FREEHIRE_API_KEY }}
+      FREEHIRE_LOOKBACK_DAYS: "1.5"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Sync freehire jobs
+        run: npm run sync:freehire
+
+      - name: Expire jobs not refreshed in 7 days
+        if: success()
+        run: npx tsx scripts/run-expiry.ts
