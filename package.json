@@ -26,6 +26,7 @@
     "audit:data-quality": "tsx scripts/audit-data-quality.ts",
     "remediate:data-quality": "tsx scripts/remediate-data-quality.ts",
     "seed:ci": "tsx scripts/seed-ci.ts",
+    "reconcile:freehire": "tsx scripts/freehire-reconcile.ts",
     "sync:freehire": "tsx scripts/freehire-sync.ts",
     "scraper:smoke": "node --import tsx scripts/smokeScrapers.ts",
     "scraper:audit": "node --import tsx scripts/auditScrapers.ts",

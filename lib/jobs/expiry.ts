@@ -52,6 +52,23 @@ export async function runExpiryCycle(): Promise<{ expired: number }> {
   return { expired: result.count }
 }
 
+/** Expire specific jobs (closed at the source). Same side effects as the other expiry paths. */
+export async function expireJobsByIds(ids: string[]): Promise<{ expired: number }> {
+  if (ids.length === 0) return { expired: 0 }
+  const today = new Date()
+  const jobs = await prisma.job.findMany({
+    where: { id: { in: ids }, isExpired: false },
+    select: { id: true, title: true, externalId: true, source: true },
+  })
+  const result = await prisma.job.updateMany({
+    where: { id: { in: jobs.map((j) => j.id) }, isExpired: false },
+    data: { isExpired: true, validThrough: today, expiresAt: today },
+  })
+  await Promise.all(jobs.map((job) => notifyJobDeletedForIndexing(job)))
+  if (result.count > 0) await guardedSitemapRevalidate()
+  return { expired: result.count }
+}
+
 export async function markJobExpired(jobId: string): Promise<void> {
   const today = new Date()
   const job = await prisma.job.findUnique({

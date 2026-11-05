@@ -10,6 +10,11 @@ on:
   schedule:
     - cron: "17 5 * * *" # 05:17 UTC daily
   workflow_dispatch:
+    inputs:
+      reconcile_dry_run:
+        description: "Report closed jobs without expiring them"
+        type: boolean
+        default: false
 
 # Shares a group with the manual reload so the two never write to the database at the same time.
 concurrency:
@@ -48,6 +53,12 @@ jobs:
 
       - name: Sync freehire jobs
         run: npm run sync:freehire
+
+      # Expires freehire jobs that freehire no longer lists as open (closed postings). Skips itself, with a
+      # warning, when it cannot see the whole window; aborts if it would expire an implausible share.
+      - name: Expire jobs freehire has closed
+        if: success()
+        run: npm run reconcile:freehire -- ${{ inputs.reconcile_dry_run && '--dry-run' || '' }}
 
       - name: Expire jobs not refreshed in 7 days
         if: success()

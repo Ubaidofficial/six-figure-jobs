@@ -64,6 +64,8 @@ export type FreehireMarketReport = {
   oldest: string | null
   newest: string | null
   sample: string[]
+  /** True only if paging ended because the window (or the result list) was exhausted, not because a cap was hit or a request failed. */
+  complete: boolean
 }
 
 export type FreehireSyncOptions = {
@@ -199,6 +201,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
       oldest: null,
       newest: null,
       sample: [],
+      complete: false,
     }
     markets.push(report)
 
@@ -213,7 +216,10 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
         assertFiltersApplied(page.meta)
         report.available = page.meta.total
         pages++
-        if (page.data.length === 0) break
+        if (page.data.length === 0) {
+          report.complete = true
+          break
+        }
 
         let oldOnPage = 0
         for (const job of page.data) {
@@ -242,7 +248,10 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
         }
 
         oldPages = oldOnPage === page.data.length ? oldPages + 1 : 0
-        if (oldPages >= 2 || page.data.length < PAGE_SIZE) break
+        if (oldPages >= 2 || page.data.length < PAGE_SIZE) {
+          report.complete = true
+          break
+        }
         await sleep(PAGE_DELAY_MS)
       }
     } catch (error) {
