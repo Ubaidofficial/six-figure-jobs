@@ -3,7 +3,7 @@
 import type { JobQueryInput } from './queryJobs'
 import { findMatchingRoles } from '../roles/synonyms'
 
-const COUNTRY_KEYWORDS: Record<string, string[]> = {
+export const COUNTRY_KEYWORDS: Record<string, string[]> = {
   us: ['us', 'usa', 'united states', 'america'],
   gb: ['uk', 'gb', 'united kingdom', 'britain', 'england'],
   ca: ['canada', 'ca'],
@@ -16,12 +16,18 @@ const COUNTRY_KEYWORDS: Record<string, string[]> = {
 }
 
 
-const SENIORITY_KEYWORDS: Record<string, string[]> = {
+export const SENIORITY_KEYWORDS: Record<string, string[]> = {
   entry: ['entry', 'junior', 'jr', 'associate'],
   mid: ['mid', 'midlevel', 'mid-level'],
   senior: ['senior', 'sr'],
   lead: ['lead', 'staff', 'principal', 'staff+'],
   executive: ['director', 'vp', 'c-suite', 'cto', 'chief', 'head of'],
+}
+
+/** Whole-word match, so the country code "de" is not found inside "developer" or "sr" inside "sre". */
+function hasWord(text: string, keyword: string): boolean {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`).test(text)
 }
 
 export function parseSearchQuery(
@@ -59,7 +65,7 @@ export function parseSearchQuery(
 
   // Countries
   for (const [code, keywords] of Object.entries(COUNTRY_KEYWORDS)) {
-    if (keywords.some((kw) => text.includes(kw))) {
+    if (keywords.some((kw) => hasWord(text, kw))) {
       filters.countryCode = code.toUpperCase()
       break
     }
@@ -73,7 +79,7 @@ export function parseSearchQuery(
 
   // Seniority
   for (const [level, keywords] of Object.entries(SENIORITY_KEYWORDS)) {
-    if (keywords.some((kw) => text.includes(kw))) {
+    if (keywords.some((kw) => hasWord(text, kw))) {
       filters.experienceLevel = level
       break
     }

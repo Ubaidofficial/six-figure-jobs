@@ -87,6 +87,12 @@ export interface ScrapedJobInput {
   /** Canonical job URL (detail page) */
   url: string | null
   
+  /** Skills / technologies listed for the role (lowercase slugs), when the source provides them. */
+  skills?: string[] | null
+
+  /** Whether the posting says visa sponsorship is available, when the source states it. */
+  visaSponsorship?: boolean | null
+
   /** Application URL (may be same as url) */
   applyUrl?: string | null
 

@@ -1,6 +1,7 @@
 import {
   assertFiltersApplied,
   mapFreehireJob,
+  normalizeFreehireSkills,
   stripFreehireUtm,
   type FreehireJob,
 } from '../../lib/scrapers/freehire'
@@ -122,5 +123,33 @@ describe('assertFiltersApplied', () => {
     expect(() =>
       assertFiltersApplied({ total: 4_700_000, limit: 100, offset: 0, ignored_params: ['salary_min'] }),
     ).toThrow(/ignored request params/)
+  })
+})
+
+describe('skills and visa sponsorship', () => {
+  it('passes freehire skills through, cleaned', () => {
+    const mapped = mapFreehireJob({ ...job, skills: ['Python', 'react', 'python', ' Terraform ', 'x', ''] })
+    expect(mapped?.skills).toEqual(['python', 'react', 'terraform'])
+  })
+
+  it('maps no skills to an empty list', () => {
+    expect(mapFreehireJob({ ...job, skills: null })?.skills).toEqual([])
+    expect(mapFreehireJob(job)?.skills).toEqual([])
+  })
+
+  it('caps the list at 12 and drops very long or non-string entries', () => {
+    const many = Array.from({ length: 20 }, (_, i) => `skill-${i}`)
+    expect(normalizeFreehireSkills(many)).toHaveLength(12)
+    expect(normalizeFreehireSkills(['a'.repeat(41), 42, null, 'ok'])).toEqual(['ok'])
+    expect(normalizeFreehireSkills('python')).toEqual([])
+  })
+
+  it('maps visa_sponsorship only when freehire says true', () => {
+    const withVisa = (v: boolean | null | undefined) =>
+      mapFreehireJob({ ...job, enrichment: { ...job.enrichment, visa_sponsorship: v } })?.visaSponsorship
+    expect(withVisa(true)).toBe(true)
+    expect(withVisa(false)).toBe(false)
+    expect(withVisa(null)).toBe(false)
+    expect(withVisa(undefined)).toBe(false)
   })
 })

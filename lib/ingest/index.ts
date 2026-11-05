@@ -406,6 +406,8 @@ async function createNewJob(
     applyUrl: cleanApplyUrl(input.applyUrl, input.url),
     url: input.url ?? null,
     descriptionHtml: input.descriptionHtml ?? null,
+    skillsJson: input.skills?.length ? JSON.stringify(input.skills) : null,
+    visaSponsorship: input.visaSponsorship === true,
 
     // v2.7+: never write NULL roleSlug (breaks routing/sitemaps); fallback to "other"
     roleSlug: roleData.roleSlug || 'other',
@@ -571,6 +573,9 @@ async function upgradeJob(
     salaryRejectedReason: salaryData.salaryRejectedReason,
     needsReview: salaryData.needsReview,
 
+    skillsJson: input.skills?.length ? JSON.stringify(input.skills) : existing.skillsJson,
+    visaSponsorship: input.visaSponsorship === true ? true : existing.visaSponsorship,
+
     // ✅ Force type fields to update (prevents old “Contract” from lingering)
     type: input.employmentType ?? existing.type,
     employmentType: input.employmentType ?? existing.employmentType,
@@ -664,6 +669,10 @@ async function refreshJob(existing: any, input: ScrapedJobInput): Promise<Ingest
       updateData.needsReview = salaryData.needsReview
     }
   }
+
+  // The source is the authority for skills; visa is only ever turned on (never off) so an earlier detection survives.
+  if (input.skills?.length) updateData.skillsJson = JSON.stringify(input.skills)
+  if (input.visaSponsorship === true) updateData.visaSponsorship = true
 
   // Fill in missing logo
   if (!existing.companyLogo && input.companyLogoUrl) {

@@ -46,6 +46,8 @@ const ALLOWED_PUBLIC_QUERY_PARAMS = new Set([
   'page',
   'q',
   'tech',
+  'visa',
+  'exact',
   'country',
   'remoteMode',
   'sort',

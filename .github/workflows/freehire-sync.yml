@@ -15,6 +15,10 @@ on:
         description: "Report closed jobs without expiring them"
         type: boolean
         default: false
+      lookback_days:
+        description: "How many days of freehire jobs to re-read (default 1.5). Use 8 to backfill skills/visa on existing jobs."
+        type: string
+        default: "1.5"
 
 # Shares a group with the manual reload so the two never write to the database at the same time.
 concurrency:
@@ -30,7 +34,7 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       FREEHIRE_API_KEY: ${{ secrets.FREEHIRE_API_KEY }}
-      FREEHIRE_LOOKBACK_DAYS: "1.5"
+      FREEHIRE_LOOKBACK_DAYS: ${{ inputs.lookback_days || '1.5' }}
 
     steps:
       - uses: actions/checkout@v6

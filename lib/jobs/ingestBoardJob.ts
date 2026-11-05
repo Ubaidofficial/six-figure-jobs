@@ -46,6 +46,12 @@ export interface BoardJobInput {
   salaryCurrency?: string | null
   salaryInterval?: string | null
 
+  /** Skills / technologies the board lists for the job (lowercase slugs) */
+  skills?: string[] | null
+
+  /** Visa sponsorship, when the board states it */
+  visaSponsorship?: boolean | null
+
   /** Remote / type hints */
   isRemote?: boolean | null
   employmentType?: string | null
@@ -116,6 +122,9 @@ export async function ingestBoardJob(
     // URLs
     url: job.url,
     applyUrl: job.applyUrl ?? job.url,
+
+    skills: job.skills ?? null,
+    visaSponsorship: job.visaSponsorship ?? null,
 
     // Location
     locationText: job.locationText ?? null,

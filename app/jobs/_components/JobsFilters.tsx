@@ -12,6 +12,10 @@ export type JobsFacets = {
   roles: JobsFacetItem[]
   countries: JobsFacetItem[]
   workTypes: { remote: number; hybrid: number; onsite: number }
+  /** Most common skills in current jobs. When present, the panel shows a Technology filter. */
+  techs?: JobsFacetItem[]
+  /** When true, the panel shows the Visa sponsorship toggle (the page must apply the `visa` param). */
+  visaFilter?: boolean
 }
 
 export type LocationPreset = {
@@ -473,6 +477,81 @@ export function JobsFiltersPanel({
             </div>
           </div>
         </details>
+
+        {facets.techs && facets.techs.length > 0 ? (
+          <details className={styles.section} open>
+            <summary className={styles.summary}>
+              Technology <span className={styles.chev}>⌄</span>
+            </summary>
+            <div className={styles.content}>
+              <div className={styles.list} role="group" aria-label="Technology">
+                {facets.techs.map((t) => {
+                  const active = (searchParams.get('tech') || '').toLowerCase() === t.value.toLowerCase()
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      className={styles.option}
+                      aria-pressed={active}
+                      onClick={() => {
+                        replaceSearchParams(pathname, searchParams, router, (next) => {
+                          if (active) next.delete('tech')
+                          else next.set('tech', t.value)
+                          next.delete('page')
+                        })
+                      }}
+                    >
+                      <span className={styles.left}>
+                        <span className={`${styles.check} ${active ? styles.checked : ''}`}>
+                          {active ? <span className={styles.checkMark}>✓</span> : null}
+                        </span>
+                        <span className={styles.name}>{t.value}</span>
+                      </span>
+                      <span className={styles.count}>{t.count.toLocaleString()}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </details>
+        ) : null}
+
+        {facets.visaFilter ? (
+          <details className={styles.section} open>
+            <summary className={styles.summary}>
+              Visa <span className={styles.chev}>⌄</span>
+            </summary>
+            <div className={styles.content}>
+              <div className={styles.list} role="group" aria-label="Visa">
+                {(() => {
+                  const active = searchParams.get('visa') === '1'
+                  return (
+                    <button
+                      type="button"
+                      className={styles.option}
+                      aria-pressed={active}
+                      onClick={() => {
+                        replaceSearchParams(pathname, searchParams, router, (next) => {
+                          if (active) next.delete('visa')
+                          else next.set('visa', '1')
+                          next.delete('page')
+                        })
+                      }}
+                    >
+                      <span className={styles.left}>
+                        <span className={`${styles.check} ${active ? styles.checked : ''}`}>
+                          {active ? <span className={styles.checkMark}>✓</span> : null}
+                        </span>
+                        <span className={styles.name}>Offers visa sponsorship</span>
+                      </span>
+                      <span className={styles.count} />
+                    </button>
+                  )
+                })()}
+              </div>
+            </div>
+          </details>
+        ) : null}
       </div>
     </div>
   )

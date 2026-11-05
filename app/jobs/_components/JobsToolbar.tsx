@@ -44,7 +44,8 @@ export function JobsToolbar({
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const sort = searchParams.get('sort') || 'recent'
+  // A keyword search is ranked by relevance unless the visitor picked another order.
+  const sort = searchParams.get('sort') || (searchParams.get('q') ? 'relevant' : 'recent')
 
   return (
     <div className={styles.toolbar}>

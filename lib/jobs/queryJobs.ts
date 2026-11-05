@@ -7,6 +7,8 @@ import { HIGH_SALARY_THRESHOLDS } from '../currency/thresholds'
 import { inferCurrencyFromCountryCode } from '../normalizers/salary'
 import { getMinSalaryForCountry } from './salaryThresholds'
 import { buildFreshJobWhere } from './freshness'
+import { buildKeywordPlan, scoreJob, tokenize, type KeywordPlan } from '../search/keywordPlan'
+import { getSearchVocabulary } from '../search/vocabulary'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -44,7 +46,8 @@ export type JobQueryInput = {
   workArrangement?: string
 
   // Control ordering and internship leakage
-  sortBy?: 'salary' | 'date'
+  /** 'relevant' ranks keyword matches (title > company > skills); without a keyword it behaves like 'salary'. */
+  sortBy?: 'salary' | 'date' | 'relevant'
   excludeInternships?: boolean
 
   // Specialty filters
@@ -52,6 +55,8 @@ export type JobQueryInput = {
 
   // Keyword search (title / company name contains)
   keyword?: string
+  /** Set by queryJobs from `keyword` (aliases + typo corrections); callers normally leave it unset. */
+  keywordPlan?: KeywordPlan
 }
 
 export type JobQueryResult = {
@@ -60,6 +65,8 @@ export type JobQueryResult = {
   page: number
   pageSize: number
   totalPages: number
+  /** Present when a keyword search was corrected, so the page can say what was actually searched. */
+  search?: { corrections: Array<{ from: string; to: string }> }
 }
 
 const jobListingSelect = {
@@ -135,6 +142,51 @@ const jobFullSelect = {
   roleInference: true,
 } satisfies Prisma.JobSelect
 
+/** Most matches ranked per search; beyond this, results are ordered by recency instead of score. */
+const RELEVANCE_CANDIDATE_CAP = 1500
+
+/**
+ * Keyword results ordered by relevance. Prisma cannot order by a computed score, so the matching rows' searchable
+ * fields are scored here (cheap: only a few short columns, capped at RELEVANCE_CANDIDATE_CAP newest matches), the
+ * requested page is cut from the ranking, and just those jobs are loaded in full.
+ */
+async function queryByRelevance(args: {
+  where: Prisma.JobWhereInput
+  select: typeof jobListingSelect | typeof jobFullSelect
+  keywordPlan: KeywordPlan
+  page: number
+  pageSize: number
+}): Promise<JobQueryResult> {
+  const { where, select, keywordPlan, page, pageSize } = args
+  const [total, candidates] = await Promise.all([
+    prisma.job.count({ where }),
+    prisma.job.findMany({
+      where,
+      select: { id: true, title: true, company: true, locationRaw: true, techStack: true, skillsJson: true, createdAt: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      take: RELEVANCE_CANDIDATE_CAP,
+    }),
+  ])
+
+  const ranked = candidates
+    .map((c) => ({ id: c.id, created: c.createdAt.getTime(), score: scoreJob(keywordPlan, c) }))
+    .sort((a, b) => b.score - a.score || b.created - a.created)
+  const pageIds = ranked.slice((page - 1) * pageSize, page * pageSize).map((r) => r.id)
+
+  const rows = pageIds.length ? await prisma.job.findMany({ where: { id: { in: pageIds } }, select }) : []
+  const byId = new Map(rows.map((r) => [r.id, r]))
+  const jobs = pageIds.map((id) => byId.get(id)).filter(Boolean)
+
+  return {
+    jobs: jobs as unknown as JobWithCompany[],
+    total,
+    page,
+    pageSize,
+    totalPages: total === 0 ? 1 : Math.ceil(total / pageSize),
+    ...(keywordPlan.corrections.length > 0 ? { search: { corrections: keywordPlan.corrections } } : {}),
+  }
+}
+
 export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   const debugTiming =
     process.env.DEBUG_DB_TIMING === '1' ||
@@ -151,12 +203,27 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
     excludeInternships: input.excludeInternships ?? true,
   }
 
-  const where = buildWhere(normalizedInput)
+  // Aliases and typo corrections for a keyword search. A failure here (e.g. the vocabulary query) must never break
+  // the search itself, so it falls back to the plain keyword.
+  let keywordPlan = input.keywordPlan
+  if (!keywordPlan && input.keyword?.trim()) {
+    try {
+      keywordPlan = buildKeywordPlan(input.keyword, await getSearchVocabulary())
+    } catch {
+      keywordPlan = buildKeywordPlan(input.keyword, null)
+    }
+  }
+
+  const where = buildWhere({ ...normalizedInput, keywordPlan })
   const sortBy = normalizedInput.sortBy ?? 'salary'
   const select =
     normalizedInput.selectMode === 'full' ? jobFullSelect : jobListingSelect
 
   let orderBy: Prisma.JobOrderByWithRelationInput[]
+
+  if (sortBy === 'relevant' && keywordPlan) {
+    return queryByRelevance({ where, select, keywordPlan, page, pageSize })
+  }
 
   if (sortBy === 'date') {
     // ✅ Date-first ranking - prioritize when WE scraped it (createdAt)
@@ -232,6 +299,7 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
     page,
     pageSize,
     totalPages: total === 0 ? 1 : Math.ceil(total / pageSize),
+    ...(keywordPlan && keywordPlan.corrections.length > 0 ? { search: { corrections: keywordPlan.corrections } } : {}),
   }
 }
 
@@ -449,29 +517,22 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   if (filters.keyword) {
     const kw = filters.keyword.trim()
     if (kw) {
-      // Match each meaningful word independently (AND) across the searchable
-      // fields, so multi-word queries like "senior backend python" match by
-      // intent regardless of word order — not only when the exact phrase
-      // appears in a single field. Stopwords + 1-char tokens are dropped.
-      const STOPWORDS = new Set([
-        'the', 'and', 'or', 'for', 'of', 'to', 'in', 'at', 'an', 'with',
-        'jobs', 'job', 'remote', 'role', 'roles', 'hiring',
-      ])
-      const tokens = kw
-        .toLowerCase()
-        .split(/[^a-z0-9+#.]+/i)
-        .filter((t) => t.length >= 2 && !STOPWORDS.has(t))
-        .slice(0, 6)
-      const terms = tokens.length > 0 ? tokens : [kw]
-      for (const term of terms) {
+      // Match each meaningful word independently (AND) across the searchable fields, so multi-word queries like
+      // "senior backend python" match by intent regardless of word order. Each word can also be satisfied by an
+      // alias ("frontend" / "front-end") or a typo correction when queryJobs supplied a plan.
+      const plan = filters.keywordPlan
+      const terms = plan
+        ? plan.terms.map((t) => t.variants)
+        : tokenize(kw).map((t) => [t])
+      for (const variants of terms) {
         addAnd({
-          OR: [
-            { title: { contains: term, mode: 'insensitive' } },
-            { company: { contains: term, mode: 'insensitive' } },
-            { locationRaw: { contains: term, mode: 'insensitive' } },
-            { techStack: { contains: term, mode: 'insensitive' } },
-            { skillsJson: { contains: term, mode: 'insensitive' } },
-          ],
+          OR: variants.flatMap((term) => [
+            { title: { contains: term, mode: 'insensitive' as const } },
+            { company: { contains: term, mode: 'insensitive' as const } },
+            { locationRaw: { contains: term, mode: 'insensitive' as const } },
+            { techStack: { contains: term, mode: 'insensitive' as const } },
+            { skillsJson: { contains: term, mode: 'insensitive' as const } },
+          ]),
         })
       }
     }

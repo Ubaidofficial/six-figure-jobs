@@ -39,6 +39,8 @@ export type FreehireJob = {
   posted_at?: string | null
   updated_at?: string | null
   closed_at?: string | null
+  /** Skill / technology slugs, e.g. ['python', 'react', 'terraform']. */
+  skills?: string[] | null
   /** freehire's own freshness verdict; `stale`/`fake_freshness` are old postings with a bumped date. */
   reality?: { class?: string | null; age_days?: number | null; fake_freshness?: boolean | null } | null
   enrichment?: {
@@ -47,6 +49,7 @@ export type FreehireJob = {
     salary_max?: number | null
     salary_currency?: string | null
     salary_period?: string | null
+    visa_sponsorship?: boolean | null
   } | null
 }
 
@@ -100,6 +103,20 @@ export function assertFiltersApplied(meta: FreehireResponse['meta']): void {
   }
 }
 
+/** Clean freehire's skill list: lowercase slugs, de-duplicated, at most 12, junk (empty / very long) dropped. */
+export function normalizeFreehireSkills(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  for (const item of raw) {
+    if (typeof item !== 'string') continue
+    const skill = item.trim().toLowerCase()
+    if (skill.length < 2 || skill.length > 40 || out.includes(skill)) continue
+    out.push(skill)
+    if (out.length === 12) break
+  }
+  return out
+}
+
 /** Map a freehire record to the board ingest input, or null if it must not be published. */
 export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
   const e = job.enrichment ?? {}
@@ -130,6 +147,8 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     postedAt: job.posted_at ? new Date(job.posted_at) : null,
     updatedAt: job.updated_at ? new Date(job.updated_at) : null,
     descriptionHtml: job.description ?? null,
+    skills: normalizeFreehireSkills(job.skills),
+    visaSponsorship: e.visa_sponsorship === true,
   }
 }
 

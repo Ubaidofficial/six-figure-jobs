@@ -11,6 +11,8 @@ import {
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../components/JobList'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
+import { knownLeftover, leftoverTokens } from '../../lib/search/leftover'
+import { getSearchVocabulary } from '../../lib/search/vocabulary'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 
 // CDN-cacheable per-query. /search is noindex by design (X-Robots-Tag header in
@@ -303,21 +305,31 @@ export default async function SearchPage({ searchParams }: PageProps) {
   return withRuntimeFallback(
     'search.page',
     async () => {
+      // Words the structured filters did not consume ("python" in "python developer") still narrow the results,
+      // but only when they are real words in our jobs.
+      let keyword: string | undefined = aiFilters.roleSlugs?.length ? undefined : q || undefined
+      if (aiFilters.roleSlugs?.length) {
+        const left = leftoverTokens(q, aiFilters.roleSlugs)
+        if (left.length > 0) {
+          const vocab = await getSearchVocabulary().catch(() => null)
+          keyword = knownLeftover(left, vocab).join(' ') || undefined
+        }
+      }
+
       const data = await queryJobs({
         page,
         pageSize: PAGE_SIZE,
-        sortBy: 'salary',
+        sortBy: keyword ? 'relevant' : 'salary',
         roleSlugs: roleSlugs.length ? roleSlugs : undefined,
         countryCode: resolvedCountryCode,
         remoteOnly: remoteOnly || undefined,
         remoteMode: resolvedRemoteMode,
         remoteRegion: resolvedRemoteRegion || undefined,
         seniorityLevels,
-        // If the query already resolved to a structured role (e.g. "ML engineer"
-        // → machine-learning-engineer), don't also AND the raw phrase — it would
-        // require the literal text in the title and wipe out valid matches. Only
-        // fall back to free-text keyword when nothing structured matched.
-        keyword: aiFilters.roleSlugs?.length ? undefined : q || undefined,
+        // If the query already resolved to a structured role (e.g. "ML engineer" → machine-learning-engineer), the
+        // raw phrase is not ANDed (it would require the literal text in the title and wipe out valid matches); only
+        // the leftover words above are. With no structured match the whole query is the keyword.
+        keyword,
         ...(hasUserMinSalary ? { minAnnual } : {}),
       })
 

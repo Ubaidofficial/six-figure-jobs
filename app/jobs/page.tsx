@@ -16,6 +16,8 @@ import { buildCleanJobsCanonicalPath, shouldNoindexListingPage, hasNonPagination
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 import { parseSliceFilters } from '../../lib/slices/types'
 import { formatRelativeTime } from '@/lib/utils/time'
+import { buildKeywordPlan } from '@/lib/search/keywordPlan'
+import { getSearchVocabulary } from '@/lib/search/vocabulary'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 
 import { JobsFiltersPanel, type JobsFacets } from './_components/JobsFilters'
@@ -294,6 +296,9 @@ export default async function JobsIndexPage({
   const page = parsePage(sp)
   const techFilter = (firstParam(sp, 'tech') || '').trim() || undefined
   const keyword = (firstParam(sp, 'q') || '').trim() || undefined
+  const visa = firstParam(sp, 'visa') === '1'
+  // exact=1: the visitor chose to search for the words as typed, without typo correction.
+  const exact = firstParam(sp, 'exact') === '1'
 
   const rawCountry = (firstParam(sp, 'country') || '').trim().toUpperCase()
   const country = rawCountry.length === 2 ? rawCountry : undefined
@@ -304,8 +309,10 @@ export default async function JobsIndexPage({
       ? rawRemoteMode
       : ''
 
-  const rawSort = (firstParam(sp, 'sort') || 'recent').trim()
-  const sort = rawSort === 'recent' || rawSort === 'salary' || rawSort === 'relevant' ? rawSort : 'recent'
+  const rawSort = (firstParam(sp, 'sort') || '').trim()
+  // A keyword search is ranked by relevance unless the visitor picked another order.
+  const sort =
+    rawSort === 'recent' || rawSort === 'salary' || rawSort === 'relevant' ? rawSort : keyword ? 'relevant' : 'recent'
 
 
   const roles = allParams(sp, 'role')
@@ -325,13 +332,14 @@ export default async function JobsIndexPage({
     (country ? 1 : 0) +
     (remoteMode ? 1 : 0) +
     (techFilter ? 1 : 0) +
+    (visa ? 1 : 0) +
     (keyword ? 1 : 0) +
     (minSalary ? 1 : 0)
 
   const queryInput: JobQueryInput = {
     page,
     pageSize: PAGE_SIZE,
-    sortBy: sort === 'recent' ? 'date' : 'salary',
+    sortBy: sort === 'recent' ? 'date' : sort === 'relevant' && keyword ? 'relevant' : 'salary',
     roleSlugs: roles.length ? roles : undefined,
     countryCode: country || undefined,
     remoteMode: remoteMode || undefined,
@@ -339,6 +347,8 @@ export default async function JobsIndexPage({
     companySizeBuckets: companySizes.length ? companySizes : undefined,
     tech: techFilter,
     keyword,
+    ...(visa ? { visaSponsorship: true } : {}),
+    ...(keyword && exact ? { keywordPlan: buildKeywordPlan(keyword, null) } : {}),
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
   }
 
@@ -385,6 +395,8 @@ export default async function JobsIndexPage({
         }),
       ])
 
+  const vocabulary = await getSearchVocabulary().catch(() => null)
+
   const facets: JobsFacets = {
     roles: roleRows
       .map((r) => ({
@@ -403,6 +415,8 @@ export default async function JobsIndexPage({
       hybrid: hybridCount,
       onsite: onsiteCount,
     },
+    techs: vocabulary?.topSkills.map((t) => ({ value: t.term, count: t.count })),
+    visaFilter: true,
   }
 
   // ✅ UI dedupe: collapse identical ATS duplicates (same company + title + comp)
@@ -522,6 +536,23 @@ export default async function JobsIndexPage({
               label="Active technology filter"
               items={[{ label: `Technology: ${techFilter} ✕`, href: '/jobs', active: true }]}
             />
+          ) : null}
+
+          {data.search?.corrections.length && keyword ? (
+            <p className="mb-3 text-sm text-muted-foreground" role="status">
+              Showing results for{' '}
+              <strong className="text-foreground">
+                {data.search.corrections.reduce((q, c) => q.replace(new RegExp(c.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), c.to), keyword)}
+              </strong>
+              .{' '}
+              <Link
+                href={`/jobs?${new URLSearchParams({ q: keyword, exact: '1' }).toString()}`}
+                className="text-primary underline underline-offset-4"
+                rel="nofollow"
+              >
+                Search for &ldquo;{keyword}&rdquo; instead
+              </Link>
+            </p>
           ) : null}
 
           {dedupedJobs.length === 0 ? (
