@@ -3,7 +3,7 @@ import { Linkedin, MessageCircle, Twitter } from 'lucide-react'
 
 import { FooterNewsletter } from './FooterNewsletter'
 import styles from './Footer.module.css'
-import { BrandMark } from './BrandMark'
+import { Wordmark } from './Wordmark'
 
 export function Footer() {
   return (
@@ -20,8 +20,7 @@ export function Footer() {
         <div className={styles.columnsDesktop} aria-label="Footer links">
           <div className={styles.brand}>
             <Link href="/" className={styles.logo}>
-              <BrandMark className={styles.logoMark} />
-            <span>Six <span className={styles.logoAccent}>Figure</span> Jobs</span>
+              <Wordmark />
             </Link>
             <div className={styles.tagline}>Premium jobs for high earners.</div>
             <div className={styles.socialRow} aria-label="Social links">
@@ -125,8 +124,7 @@ export function Footer() {
         <div className={styles.columnsMobile} aria-label="Footer links (mobile)">
           <div className={styles.brand}>
             <Link href="/" className={styles.logo}>
-              <BrandMark className={styles.logoMark} />
-            <span>Six <span className={styles.logoAccent}>Figure</span> Jobs</span>
+              <Wordmark />
             </Link>
             <div className={styles.tagline}>Premium jobs for high earners.</div>
             <div className={styles.socialRow} aria-label="Social links">

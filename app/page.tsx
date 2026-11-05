@@ -222,7 +222,7 @@ function HomepageSchemas({
 
 function HomePageFallback() {
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
       <HomepageSchemas jobCount={0} companyCount={0} />
 
       <section className="rounded-3xl border border-border bg-card p-8 shadow-2xl shadow-slate-950/40">
@@ -576,7 +576,7 @@ export default async function HomePage() {
     return (
     <>
       {tickerEvents.length > 0 ? <ActivityTicker events={tickerEvents} /> : null}
-      <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+      <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
         <HomepageSchemas
           jobCount={stats.totalJobs}
           companyCount={stats.totalCompanies}

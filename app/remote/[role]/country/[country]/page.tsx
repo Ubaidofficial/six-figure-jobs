@@ -287,7 +287,7 @@ export default async function RemoteRoleCountryPage({
   const salaryOptions = [100_000, 200_000, 300_000, 400_000]
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
       {/* -------------------------------- Breadcrumbs -------------------------------- */}
       <nav
         aria-label="Breadcrumb"

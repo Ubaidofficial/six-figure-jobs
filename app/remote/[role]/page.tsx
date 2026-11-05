@@ -363,7 +363,7 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
         .slice(0, 6)
 
       return (
-        <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+        <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
       {/* -------------------------------- Breadcrumbs -------------------------------- */}
       <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
         <ol className="flex flex-wrap items-center gap-1">

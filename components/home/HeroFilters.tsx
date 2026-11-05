@@ -96,6 +96,14 @@ export function HeroFilters({ roles, locations, remoteRegions }: HeroFiltersProp
   const regions = remoteRegions.filter((r) => r.value !== '')
   return (
     <div className={styles.filters}>
+      {/* Phones: the filters sit behind this toggle so the first screen shows search and jobs, not seven fields.
+          A real checkbox + label: no JavaScript, keyboard operable. Desktop ignores it and shows everything. */}
+      <input id="hero-filters-toggle" type="checkbox" className={styles.toggleInput} />
+      <label htmlFor="hero-filters-toggle" className={styles.toggleButton}>
+        <span>Filters</span>
+        <span className={styles.toggleHint}>role, location, work type, salary</span>
+      </label>
+      <div className={styles.panel}>
       <div className={styles.selects}>
         <SelectField id="role" name="role" label="Role" allLabel="All roles" options={roles} />
         <SelectField id="country" name="country" label="Location" allLabel="All locations" options={locations} />
@@ -110,6 +118,7 @@ export function HeroFilters({ roles, locations, remoteRegions }: HeroFiltersProp
       <div className={styles.pillGroups}>
         <Pills legend="Work arrangement" name="remoteMode" options={WORK} defaultValue="" />
         <Pills legend="Minimum salary" name="minSalary" options={SALARY} defaultValue="100000" />
+      </div>
       </div>
     </div>
   )

@@ -28,7 +28,7 @@ export function DataUnavailablePage({
   cards = [],
 }: DataUnavailablePageProps) {
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
       <section className="rounded-3xl border border-border bg-card p-8 shadow-2xl shadow-slate-950/40">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
           {eyebrow}

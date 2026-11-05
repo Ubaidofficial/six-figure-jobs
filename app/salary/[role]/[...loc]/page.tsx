@@ -463,7 +463,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
       : null
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-8 space-y-8">
+    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-8 space-y-8">
       <StructuredData jobs={jobsResult.jobs} roleName={roleName} locationLabel={locationLabel} />
       <script
         type="application/ld+json"

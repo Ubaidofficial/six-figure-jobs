@@ -144,3 +144,94 @@
     gap: 14px;
   }
 }
+
+
+/* Phone toggle. Hidden on desktop, where the panel is always open. */
+.toggleInput {
+  display: none; /* not in the accessibility tree or tab order on desktop, where the panel is always open */
+}
+
+.toggleButton {
+  display: none;
+}
+
+.panel {
+  display: grid;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .toggleInput {
+    display: block;
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+
+  .toggleButton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 14px;
+    background: var(--color-bg-1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-text-0);
+    cursor: pointer;
+  }
+
+  .toggleButton::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin-left: auto;
+    border-right: 2px solid var(--color-text-1);
+    border-bottom: 2px solid var(--color-text-1);
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 150ms ease;
+  }
+
+  .toggleInput:checked + .toggleButton::after {
+    transform: translateY(2px) rotate(-135deg);
+  }
+
+  .toggleInput:focus-visible + .toggleButton {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .toggleHint {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--color-text-1);
+  }
+
+  .panel {
+    display: none;
+  }
+
+  .toggleInput:checked ~ .panel {
+    display: grid;
+  }
+
+  /* 44 px touch targets */
+  .pillText {
+    height: 44px;
+    padding: 0 18px;
+  }
+
+  .select {
+    height: 48px;
+  }
+}

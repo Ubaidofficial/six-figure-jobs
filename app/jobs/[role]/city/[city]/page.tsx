@@ -128,7 +128,7 @@ export default async function RoleCityPage({ params }: { params: Params }) {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}

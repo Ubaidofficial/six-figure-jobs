@@ -150,7 +150,7 @@ export default async function LevelPage({
   const faqJsonLd = buildFaqJsonLd(info.label, info.description, total)
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
       <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
         <ol className="flex items-center gap-1">
           <li>

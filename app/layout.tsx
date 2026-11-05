@@ -26,6 +26,13 @@ const displayFont = localFont({
   weight: '200 800',
   display: 'swap',
 })
+// Outfit ExtraBold is used only for the "six fig jobs" wordmark; it is preloaded because the logo is above the fold.
+const logoFont = localFont({
+  src: './fonts/Outfit.woff2',
+  variable: '--font-logo',
+  weight: '100 900',
+  display: 'swap',
+})
 const monoFont = localFont({
   src: './fonts/JetBrainsMono.woff2',
   variable: '--font-jetbrains',
@@ -85,7 +92,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`light h-full ${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}
+      className={`light h-full ${bodyFont.variable} ${displayFont.variable} ${logoFont.variable} ${monoFont.variable}`}
     >
       <body className="min-h-full bg-background text-foreground">
         <PreloadResources />

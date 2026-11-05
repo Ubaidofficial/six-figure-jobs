@@ -139,7 +139,7 @@ export default async function SalaryIndexPage() {
   const dataScientistMedian = medians?.get('data-scientist')?.median ?? null
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-12 pt-10 space-y-8">
+    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10 space-y-8">
       {salaryJsonLd.map((ld) => (
         <script key={ld['@type']} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       ))}

@@ -30,7 +30,7 @@ import {
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
 import { JobCard } from '@/components/jobs/JobCard'
-import { Clock, Laptop, MapPin } from 'lucide-react'
+import { Briefcase, Clock, Laptop, MapPin, TrendingUp } from 'lucide-react'
 
 import { SKILL_TARGETS } from '../../../lib/seo/pseoTargets'
 import { Badge, badgeVariants } from '@/components/ui/badge'
@@ -39,12 +39,15 @@ import { cn } from '@/lib/utils'
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
 import {
   ApplyCard,
+  PayCard,
   BulletList,
   CompanyCard,
   JobSection,
   MobileApplyBar,
 } from './JobDetailParts'
 import styles from './JobDetail.module.css'
+import { loadPeerSalaries, rankSalary, type SalaryRank } from '@/lib/jobs/salaryRank'
+import { salaryMidpoint } from '@/lib/jobs/salarySnapshot'
 
 const SKILL_SLUG_SET = new Set(SKILL_TARGETS.map((s) => s.slug))
 const SKILL_LABEL_MAP = new Map(SKILL_TARGETS.map((s) => [s.slug, s.label]))
@@ -351,6 +354,23 @@ export default async function JobPage({
     { Icon: Clock, label: postedLabel ? `Posted ${postedLabel}` : null },
   ].filter((m): m is { Icon: typeof MapPin; label: string } => Boolean(m.label))
 
+  const heroChips = [
+    ...metaItems,
+    { Icon: Briefcase, label: employmentType ? String(employmentType) : null },
+    { Icon: TrendingUp, label: seniority ? String(seniority) : null },
+  ].filter((m): m is { Icon: typeof MapPin; label: string } => Boolean(m.label))
+
+  const salaryRank = await withRuntimeFallback<SalaryRank | null>(
+    `job.${typedJob.id}.salary-rank`,
+    async () => {
+      if (!hasSalary || !canonicalRoleSlug || !typedJob.currency) return null
+      const mine = salaryMidpoint(typedJob.minAnnual, typedJob.maxAnnual)
+      if (mine == null) return null
+      return rankSalary(mine, await loadPeerSalaries(canonicalRoleSlug, typedJob.currency))
+    },
+    () => null,
+  )
+
   const jobFacts = [
     { label: 'Type', value: employmentType },
     { label: 'Level', value: seniority },
@@ -374,7 +394,7 @@ export default async function JobPage({
     : null
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 lg:pb-14 lg:pt-8">
+    <main className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-28 pt-6 lg:pb-14 lg:pt-8">
       {/* Same three names as the BreadcrumbList JSON-LD, so the markup matches what users see. */}
       <div className="mb-6">
         <Breadcrumb
@@ -386,47 +406,51 @@ export default async function JobPage({
         />
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
-        <article className="min-w-0 space-y-10">
-          <header>
-            <div className="flex items-start gap-4">
-              <CompanyLogo name={companyName} src={logoUrl} size="xl" priority />
-              <div className="min-w-0">
-                <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-                  {typedJob.title}
-                </h1>
-                <p className="mt-1 text-base text-muted-foreground">
-                  {company?.slug ? (
-                    <NextLink href={`/company/${company.slug}`} className="text-foreground hover:underline underline-offset-4">
-                      {companyName}
-                    </NextLink>
-                  ) : (
-                    <span className="text-foreground">{companyName}</span>
-                  )}
-                </p>
-              </div>
+      <section className={styles.hero} aria-labelledby="job-title">
+        <div className="min-w-0">
+          <div className={styles.identity}>
+            <CompanyLogo name={companyName} src={logoUrl} size="xl" priority />
+            <div className="min-w-0">
+              <p className={styles.company}>
+                {company?.slug ? (
+                  <NextLink href={`/company/${company.slug}`}>{companyName}</NextLink>
+                ) : (
+                  companyName
+                )}
+              </p>
+              <h1 id="job-title" className={styles.title}>
+                {typedJob.title}
+              </h1>
             </div>
+          </div>
 
-            {metaItems.length > 0 ? (
-              <ul className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                {metaItems.map(({ Icon, label }) => (
-                  <li key={label} className="flex items-center gap-1.5">
-                    <Icon className="size-4" aria-hidden="true" />
-                    {label}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+          {heroChips.length > 0 ? (
+            <ul className={styles.chips}>
+              {heroChips.map(({ Icon, label }) => (
+                <li key={label} className={styles.chip}>
+                  <Icon aria-hidden="true" />
+                  {label}
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
-            {/* On phones the salary leads the page; on desktop it lives in the sticky card. */}
-            <p className="mt-4 font-mono text-xl font-semibold text-foreground lg:hidden">
-              {salaryText || 'Salary not disclosed'}
-            </p>
+          {aiOneLiner ? <p className={styles.oneLiner}>{aiOneLiner}</p> : null}
+        </div>
 
-            {aiOneLiner ? (
-              <p className="mt-5 max-w-[68ch] text-lg leading-relaxed text-foreground/90">{aiOneLiner}</p>
-            ) : null}
-          </header>
+        <PayCard
+          salaryText={salaryText || null}
+          salaryIsFromEmployer={isSalaryVerified}
+          rank={salaryRank}
+          roleLabel={canonicalRoleSlug ? prettyRole(canonicalRoleSlug).toLowerCase() : null}
+          currency={typedJob.currency || null}
+          applyHref={applyHref}
+          jobId={typedJob.id}
+        />
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
+        <article className={`${styles.bodyCard} min-w-0 space-y-10`}>
 
           {hasStructuredSections ? (
             <>
@@ -508,7 +532,7 @@ export default async function JobPage({
                 </p>
               ) : (
                 <div
-                  className={`prose prose-invert max-w-none ${styles.richText}`}
+                  className={`prose max-w-none ${styles.richText}`}
                   dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
                 />
               )}
@@ -518,8 +542,6 @@ export default async function JobPage({
 
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <ApplyCard
-            salaryText={salaryText || null}
-            salaryIsFromEmployer={isSalaryVerified}
             applyHref={applyHref}
             companyName={companyName}
             facts={jobFacts}

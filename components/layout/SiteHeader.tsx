@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Menu, Search, X } from 'lucide-react'
 
-import { BrandMark } from './BrandMark'
+import { Wordmark } from './Wordmark'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -63,9 +63,8 @@ export function SiteHeader() {
 
       <div className={styles.inner}>
         <div className={styles.left}>
-          <Link href="/" className={styles.logo} aria-label="Six Figure Jobs home">
-            <BrandMark className={styles.logoMark} />
-            <span>Six <span className={styles.logoAccent}>Figure</span> Jobs</span>
+          <Link href="/" className={styles.logo} aria-label="six fig jobs home">
+            <Wordmark />
           </Link>
           <span className={styles.kicker} aria-hidden="true">
             <span className={styles.kickerStrong}>$100k+</span> salaries shown
@@ -100,8 +99,7 @@ export function SiteHeader() {
               <SheetContent side="right" className={styles.mobileSheet} hideClose>
                 <div className={styles.mobileHeader}>
                   <Link href="/" className={styles.logo} onClick={() => setMobileOpen(false)}>
-                    <BrandMark className={styles.logoMark} />
-            <span>Six <span className={styles.logoAccent}>Figure</span> Jobs</span>
+                    <Wordmark />
                   </Link>
                   <SheetClose asChild>
                     <button type="button" className={styles.mobileClose} aria-label="Close menu">

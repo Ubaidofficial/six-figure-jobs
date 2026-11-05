@@ -1,0 +1,20 @@
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  font-family: var(--font-logo), var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1em;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--color-text-0);
+  white-space: nowrap;
+}
+
+.tile {
+  display: inline-block;
+  padding: 0.07em 0.2em 0.12em;
+  border-radius: 0.26em;
+  background: var(--color-primary);
+  color: #0a0a0a;
+}

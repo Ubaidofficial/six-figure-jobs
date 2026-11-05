@@ -229,7 +229,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     logRuntimeFallback('companies.page', error)
     await skipPrerenderWhileBuilding()
     return (
-      <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
+      <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
         <header className="mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
             Companies hiring $100k+ roles

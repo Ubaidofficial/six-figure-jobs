@@ -9,14 +9,27 @@
 }
 
 .tickerInner {
-  max-width: 1280px;
+  max-width: 1600px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   gap: var(--space-12);
-  padding: 8px var(--space-16);
+  padding: 8px 16px;
   overflow: hidden;
   white-space: nowrap;
+}
+
+/* Same side padding as the page container, so the ticker lines up with the content below it. */
+@media (min-width: 640px) {
+  .tickerInner {
+    padding-inline: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .tickerInner {
+    padding-inline: 40px;
+  }
 }
 
 /* LIVE pill with pulsing dot */

@@ -29,7 +29,7 @@
 .inner {
   width: 100%;
   margin: 0 auto;
-  max-width: 1200px;
+  max-width: 1600px;
   padding: 0 var(--space-40);
   display: flex;
   align-items: center;
@@ -67,25 +67,13 @@
 }
 
 .logo {
-  font-size: 20px;
-  font-weight: var(--font-weight-extrabold);
-  letter-spacing: -0.02em;
+  font-size: 27px;
   color: var(--color-text-0);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   white-space: nowrap;
-}
-
-.logoMark {
-  height: 1.3em;
-  width: auto;
-  flex: none;
-}
-
-.logoAccent {
-  color: var(--color-primary-text);
 }
 
 .kicker {
@@ -457,7 +445,7 @@
   }
 
   .logo {
-    font-size: 17px;
+    font-size: 23px;
   }
 
   .mobileSheet {

@@ -349,7 +349,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
       const title = buildTitle(sp)
 
       return (
-        <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">
+        <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
       {/* Search Form */}
       <div className="glass soft-shadow mb-10 rounded-2xl p-6 md:sticky md:top-24 md:z-30">
         <form action="/search" method="GET" className="space-y-4">

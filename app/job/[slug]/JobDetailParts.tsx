@@ -8,10 +8,16 @@ import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import type { SalaryRank } from '@/lib/jobs/salaryRank'
+import type { ApplySurface } from '@/lib/analytics/applyClick'
+import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
+
+import styles from './JobDetail.module.css'
 
 import { JobActions } from './JobActions'
 import { ApplyLink } from './ApplyLink'
 import { ReportJob } from './ReportJob'
+import { MobileBarShell } from './MobileBarShell'
 
 type Fact = { label: string; value: string }
 
@@ -29,7 +35,7 @@ export function ApplyButton({
   label: string
   className?: string
   jobId: string
-  surface: 'apply-card' | 'mobile-bar'
+  surface: ApplySurface
 }) {
   return (
     <ApplyLink href={href} jobId={jobId} surface={surface} className={cn(applyButtonClass, className)}>
@@ -42,7 +48,7 @@ export function ApplyButton({
 export function JobSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
+      <h2 className={styles.sectionTitle}>{title}</h2>
       {children}
     </section>
   )
@@ -60,16 +66,12 @@ export function BulletList({ items }: { items: string[] }) {
 
 /** Right-rail card: the numbers that decide whether to apply, and the one button to do it. */
 export function ApplyCard({
-  salaryText,
-  salaryIsFromEmployer,
   applyHref,
   companyName,
   facts,
   jobId,
   shareUrl,
 }: {
-  salaryText: string | null
-  salaryIsFromEmployer: boolean
   applyHref: string | null
   companyName: string
   facts: Fact[]
@@ -77,28 +79,19 @@ export function ApplyCard({
   shareUrl: string
 }) {
   return (
-    <Card className="p-5">
-      <h2 className="sr-only">Compensation and how to apply</h2>
-
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Salary</p>
-      <p className="mt-1 font-mono text-2xl font-semibold tracking-tight text-foreground">
-        {salaryText || 'Not disclosed'}
-      </p>
-      {salaryText ? (
-        <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-          <BadgeCheck className="size-4 text-primary" aria-hidden="true" />
-          {salaryIsFromEmployer ? 'From the employer’s posting' : 'Listed in the posting'}
-        </p>
-      ) : null}
+    <Card className="rounded-3xl p-6">
+      <h2 className={styles.sideTitle}>Ready to apply?</h2>
 
       {applyHref ? (
         <>
-          <ApplyButton href={applyHref} label="Apply on company site" className="mt-5 w-full" jobId={jobId} surface="apply-card" />
+          <ApplyButton href={applyHref} label="Apply on company site" className="mt-4 w-full" jobId={jobId} surface="apply-card" />
           <p className="mt-2 text-xs text-muted-foreground">
             Opens {companyName}&rsquo;s own application page in a new tab. We only count that the button was clicked (no cookies, nothing about you).
           </p>
         </>
-      ) : null}
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">This listing has no application link right now.</p>
+      )}
 
       {facts.length > 0 ? (
         <>
@@ -125,6 +118,57 @@ export function ApplyCard({
   )
 }
 
+/** The white card inside the hero: the salary, how it compares with similar roles, and the Apply button. */
+export function PayCard({
+  salaryText,
+  salaryIsFromEmployer,
+  rank,
+  roleLabel,
+  currency,
+  applyHref,
+  jobId,
+}: {
+  salaryText: string | null
+  salaryIsFromEmployer: boolean
+  rank: SalaryRank | null
+  roleLabel: string | null
+  currency: string | null
+  applyHref: string | null
+  jobId: string
+}) {
+  return (
+    <div id="job-pay-card" className={styles.payCard}>
+      <h2 className={styles.payLabel}>Salary</h2>
+      <p className={styles.payAmount}>{salaryText || 'Not disclosed'}</p>
+      {salaryText ? (
+        <p className={styles.payNote}>
+          <BadgeCheck className="size-4 text-primary" aria-hidden="true" />
+          {salaryIsFromEmployer ? 'From the employer’s posting' : 'Listed in the posting'}
+        </p>
+      ) : null}
+
+      {rank && roleLabel && currency ? (
+        <div className={styles.insight}>
+          <p className={styles.insightText}>
+            Pays more than <strong>{rank.percent}%</strong> of {rank.peers.toLocaleString()} {roleLabel} listings in {currency}.
+          </p>
+          <div className={styles.rankTrack} role="img" aria-label={`Higher than ${rank.percent} percent of comparable listings`}>
+            <span className={styles.rankFill} style={{ width: `${Math.max(3, rank.percent)}%` }} />
+            <span className={styles.rankMarker} style={{ left: `${Math.min(97, Math.max(3, rank.percent))}%` }} />
+          </div>
+          <p className={styles.insightNote}>
+            Typical for this role: {formatCurrencyShort(Math.round(rank.median / 1000) * 1000, currency)}
+          </p>
+        </div>
+      ) : null}
+
+      {applyHref ? (
+        <ApplyButton href={applyHref} label="Apply on company site" className="mt-5 w-full" jobId={jobId} surface="hero" />
+      ) : null}
+    </div>
+  )
+}
+
 export function CompanyCard({
   name,
   slug,
@@ -141,7 +185,7 @@ export function CompanyCard({
   websiteHref: string | null
 }) {
   return (
-    <Card className="p-5">
+    <Card className="rounded-3xl p-6">
       <div className="flex items-center gap-3">
         <CompanyLogo name={name} src={logoSrc} size="lg" />
         <div className="min-w-0">
@@ -183,7 +227,7 @@ export function CompanyCard({
   )
 }
 
-/** Sticky bar for phones: salary plus the Apply button, always reachable while reading. */
+/** Sticky bar for phones: salary plus the Apply button. Shown once the hero's own Apply button has scrolled away. */
 export function MobileApplyBar({
   salaryText,
   applyHref,
@@ -195,14 +239,14 @@ export function MobileApplyBar({
 }) {
   if (!applyHref) return null
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur lg:hidden">
-      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
+    <MobileBarShell>
+      <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Salary</p>
           <p className="truncate font-mono text-base font-semibold text-foreground">{salaryText || 'Not disclosed'}</p>
         </div>
         <ApplyButton href={applyHref} label="Apply" className="shrink-0 px-6" jobId={jobId} surface="mobile-bar" />
       </div>
-    </div>
+    </MobileBarShell>
   )
 }

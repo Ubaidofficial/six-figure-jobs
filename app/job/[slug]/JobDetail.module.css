@@ -67,3 +67,223 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Hero: the same rounded, brand-tinted block as the homepage          */
+/* ------------------------------------------------------------------ */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  padding: 24px 18px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--color-primary) 16%, var(--color-bg-1));
+  margin-bottom: 24px;
+}
+
+@media (min-width: 768px) {
+  .hero {
+    padding: 36px 36px;
+    border-radius: 28px;
+    margin-bottom: 28px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 48px;
+    align-items: center;
+  }
+}
+
+.identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.company {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.company a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-fg) 25%, transparent);
+  text-underline-offset: 3px;
+}
+
+.company a:hover {
+  color: var(--color-text-0);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.4vw, 2.9rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  color: var(--color-text-0);
+  text-wrap: balance;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--color-bg-1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-0);
+}
+
+.chip svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-1);
+}
+
+.oneLiner {
+  margin: 20px 0 0;
+  max-width: 62ch;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--color-text-1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Pay card (white, inside the hero)                                   */
+/* ------------------------------------------------------------------ */
+
+.payCard {
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--color-bg-1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.payLabel {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-1);
+}
+
+.payAmount {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--color-text-0);
+}
+
+.payNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-1);
+}
+
+.insight {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.insightText {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-text-0);
+}
+
+.rankTrack {
+  position: relative;
+  height: 8px;
+  margin: 12px 0 8px;
+  border-radius: 999px;
+  background: var(--color-bg-2);
+}
+
+.rankFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+.rankMarker {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--color-bg-1);
+  border: 3px solid var(--color-primary-text);
+}
+
+.insightNote {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Body: description in a white card, sidebar cards rounded to match   */
+/* ------------------------------------------------------------------ */
+
+.bodyCard {
+  padding: 24px 20px;
+  border-radius: 24px;
+  background: var(--color-bg-1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+@media (min-width: 768px) {
+  .bodyCard {
+    padding: 36px 40px;
+  }
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text-0);
+}
+
+.sideTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text-0);
+}
