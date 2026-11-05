@@ -10,7 +10,7 @@ import {
 
 const SITE_URL = getSiteUrl()
 
-export const revalidate = 43200 // 12h
+export const dynamic = 'force-dynamic' // built per request: the deploy-time build cannot reach the database
 
 function escapeXml(s: string) {
   return s

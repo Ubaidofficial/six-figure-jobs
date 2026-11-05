@@ -34,7 +34,7 @@ import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { getThresholdLabelForCountry } from '@/lib/seo/salaryLabels'
 import { getSiteUrl } from '@/lib/seo/site'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
-import { logRuntimeFallback } from '@/lib/runtime/fallback'
+import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
 import { getPriorityPublishedCompanyCandidates } from '@/lib/seo/companyPublishing'
 
@@ -852,6 +852,7 @@ export default async function HomePage() {
   } catch (error) {
     unstable_rethrow(error)
     logRuntimeFallback('home.page', error)
+    await skipPrerenderWhileBuilding()
     return <HomePageFallback />
   }
 }

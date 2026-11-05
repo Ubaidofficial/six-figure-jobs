@@ -22,7 +22,7 @@ import {
   ListingPage,
   ListingSection,
 } from '@/components/listing/ListingParts'
-import { logRuntimeFallback } from '@/lib/runtime/fallback'
+import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { formatRelativeTime } from '@/lib/utils/time'
 
 
@@ -96,6 +96,7 @@ export async function generateMetadata({
     total = (await getRemoteHubSnapshot(activeRemoteRegion)).remoteJobCount
   } catch (error) {
     logRuntimeFallback('remote.metadata', error)
+    await skipPrerenderWhileBuilding()
   }
 
   const canonicalPath = buildNormalizedListingPath('/remote', sp)
@@ -566,6 +567,7 @@ export default async function RemoteJobsPage({
   } catch (error) {
     unstable_rethrow(error)
     logRuntimeFallback('remote.page', error)
+    await skipPrerenderWhileBuilding()
     return <RemoteJobsFallback activeRemoteRegion={activeRemoteRegion} />
   }
 }

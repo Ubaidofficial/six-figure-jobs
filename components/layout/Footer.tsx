@@ -254,6 +254,8 @@ export function Footer() {
             <Link className={styles.link} href="/terms">Terms</Link>
             <span className={styles.dot} aria-hidden="true">•</span>
             <Link className={styles.link} href="/sitemap.xml">Sitemap</Link>
+            <span className={styles.dot} aria-hidden="true">•</span>
+            <a className={styles.link} href="https://logo.dev" target="_blank" rel="noopener">Logos provided by Logo.dev</a>
           </div>
           <div className={styles.made}>Made with 💚 for high earners</div>
         </div>

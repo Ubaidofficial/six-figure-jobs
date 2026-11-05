@@ -5,7 +5,7 @@ import {
   isSitemapFamilyEnabled,
 } from '../../lib/seo/indexingPhase'
 
-export const revalidate = 43200
+export const dynamic = 'force-dynamic' // built per request: the deploy-time build cannot reach the database
 
 export async function GET() {
   if (!isSitemapFamilyEnabled('sitemap-country')) {

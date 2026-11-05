@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
-import { buildRuntimeFallbackMetadata, logRuntimeFallback } from '@/lib/runtime/fallback'
+import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
 import {
   loadEligibleCompaniesDirectory,
@@ -227,6 +227,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
   } catch (error) {
     unstable_rethrow(error)
     logRuntimeFallback('companies.page', error)
+    await skipPrerenderWhileBuilding()
     return (
       <main className="mx-auto max-w-6xl px-4 pb-14 pt-10">
         <header className="mb-8">

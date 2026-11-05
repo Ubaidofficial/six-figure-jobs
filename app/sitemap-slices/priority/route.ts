@@ -9,7 +9,7 @@ import {
   isSitemapFamilyEnabled,
 } from '../../../lib/seo/indexingPhase'
 
-export const revalidate = 86400
+export const dynamic = 'force-dynamic' // built per request: the deploy-time build cannot reach the database
 
 function escapeXml(s: string) {
   return s

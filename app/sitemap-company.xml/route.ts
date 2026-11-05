@@ -14,7 +14,7 @@ import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = getMaxCompanyUrlsPerPage()
 
-export const revalidate = 43200 // 12h
+export const dynamic = 'force-dynamic' // built per request: the deploy-time build cannot reach the database
 
 async function getCompaniesLastmod(): Promise<string> {
   try {

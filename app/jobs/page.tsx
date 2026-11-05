@@ -16,7 +16,7 @@ import { buildCleanJobsCanonicalPath, shouldNoindexListingPage, hasNonPagination
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 import { parseSliceFilters } from '../../lib/slices/types'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { logRuntimeFallback } from '@/lib/runtime/fallback'
+import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 
 import { JobsFiltersPanel, type JobsFacets } from './_components/JobsFilters'
 import { JobsToolbar } from './_components/JobsToolbar'
@@ -582,6 +582,7 @@ export default async function JobsIndexPage({
   } catch (error) {
     unstable_rethrow(error)
     logRuntimeFallback('jobs.page', error)
+    await skipPrerenderWhileBuilding()
     return <JobsIndexFallback techFilter={techFilter} />
   }
 }
