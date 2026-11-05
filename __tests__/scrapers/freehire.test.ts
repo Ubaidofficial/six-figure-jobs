@@ -18,6 +18,7 @@ const job: FreehireJob = {
   posted_at: '2026-11-04T22:36:45Z',
   updated_at: '2026-11-04T22:55:21Z',
   closed_at: null,
+  reality: { class: 'fresh', age_days: 0, fake_freshness: false },
   enrichment: {
     employment_type: 'full_time',
     salary_min: 165000,
@@ -61,6 +62,16 @@ describe('mapFreehireJob', () => {
 
   it('marks remote work mode', () => {
     expect(mapFreehireJob({ ...job, work_mode: 'remote' })?.isRemote).toBe(true)
+  })
+
+  it('skips stale, evergreen and fake-fresh postings (old jobs with a bumped posted_at)', () => {
+    expect(mapFreehireJob({ ...job, reality: { class: 'stale', age_days: 95, fake_freshness: false } })).toBeNull()
+    expect(mapFreehireJob({ ...job, reality: { class: 'likely-evergreen', age_days: 40 } })).toBeNull()
+    expect(mapFreehireJob({ ...job, reality: { class: 'fresh', age_days: 1, fake_freshness: true } })).toBeNull()
+  })
+
+  it('keeps a job when freehire gives no reality verdict', () => {
+    expect(mapFreehireJob({ ...job, reality: null })).not.toBeNull()
   })
 
   it('skips closed jobs', () => {

@@ -1,0 +1,91 @@
+name: freehire reload (manual)
+
+# Replaces the site's jobs with freehire jobs. Manual only. Jobs table only; old jobs are expired,
+# never deleted, and their ids are saved as an artifact so the step can be undone with mode=restore.
+# GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON is deliberately not passed: bulk-submitting thousands of new
+# URLs to the Google Indexing API would burn its daily quota.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "plan = read-only counts + dry run | reload = expire all active jobs, then load freehire | restore = undo a reload"
+        type: choice
+        options: [plan, reload, restore]
+        default: plan
+      since:
+        description: "Load freehire jobs posted on/after this date (YYYY-MM-DD, UTC)"
+        required: false
+        default: "2026-11-01"
+      restore_run_id:
+        description: "restore only: run id of the reload run whose saved job ids to restore"
+        required: false
+
+concurrency:
+  group: freehire-reload
+  cancel-in-progress: false
+
+jobs:
+  freehire-reload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      IDS_FILE: ${{ github.workspace }}/expired-job-ids.json
+      FREEHIRE_API_KEY: ${{ secrets.FREEHIRE_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard (prints which database this run will touch)
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Plan (read-only)
+        if: inputs.mode == 'plan'
+        env:
+          SINCE: ${{ inputs.since }}
+        run: npx tsx scripts/freehire-reload.ts plan --since "$SINCE"
+
+      - name: Reload (expire active jobs, then load freehire)
+        if: inputs.mode == 'reload'
+        env:
+          SINCE: ${{ inputs.since }}
+        run: npx tsx scripts/freehire-reload.ts reload --since "$SINCE" --ids-file "$IDS_FILE"
+
+      - name: Save expired job ids (needed for restore)
+        if: always() && inputs.mode == 'reload'
+        uses: actions/upload-artifact@v4
+        with:
+          name: expired-job-ids
+          path: ${{ env.IDS_FILE }}
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - name: Fetch saved job ids
+        if: inputs.mode == 'restore'
+        uses: actions/download-artifact@v4
+        with:
+          name: expired-job-ids
+          path: ${{ github.workspace }}
+          run-id: ${{ inputs.restore_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Restore previously expired jobs
+        if: inputs.mode == 'restore'
+        run: npx tsx scripts/freehire-reload.ts restore --ids-file "$IDS_FILE"

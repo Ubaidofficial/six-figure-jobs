@@ -39,6 +39,8 @@ export type FreehireJob = {
   posted_at?: string | null
   updated_at?: string | null
   closed_at?: string | null
+  /** freehire's own freshness verdict; `stale`/`fake_freshness` are old postings with a bumped date. */
+  reality?: { class?: string | null; age_days?: number | null; fake_freshness?: boolean | null } | null
   enrichment?: {
     employment_type?: string | null
     salary_min?: number | null
@@ -69,6 +71,8 @@ export type FreehireSyncOptions = {
   dryRun?: boolean
   /** Stop each market after this many pages (default: until lookback or freehire's paging cap). */
   maxPagesPerMarket?: number
+  /** Only jobs posted at or after this moment (default: now minus FREEHIRE_LOOKBACK_DAYS). */
+  since?: Date
 }
 
 /** freehire tags outbound links with utm_source=freehire.me; drop only that tag. */
@@ -98,6 +102,8 @@ export function assertFiltersApplied(meta: FreehireResponse['meta']): void {
 export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
   const e = job.enrichment ?? {}
   if (job.closed_at) return null
+  // Bulk refreshes re-stamp old postings with a new posted_at; trust freehire's reality check, not the date.
+  if (job.reality && (job.reality.class !== 'fresh' || job.reality.fake_freshness)) return null
   if (e.salary_period !== 'year') return null
   const currency = e.salary_currency?.toUpperCase()
   if (!currency || !FREEHIRE_MARKETS.some((m) => m.currency === currency)) return null
@@ -154,7 +160,7 @@ export async function syncFreehire(
   const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
   const reports: FreehireMarketReport[] = []
   const errors: string[] = []
-  const cutoff = Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
+  const cutoff = options.since?.getTime() ?? Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
   for (const market of FREEHIRE_MARKETS) {
     const report: FreehireMarketReport = {
@@ -170,8 +176,10 @@ export async function syncFreehire(
     reports.push(report)
 
     try {
-      // Newest first: stop once a page reaches jobs older than the lookback window.
+      // Newest first. posted_at ties and bulk refreshes leave the order slightly uneven, so stop only
+      // after two consecutive pages made up entirely of jobs older than the window.
       let pages = 0
+      let oldPages = 0
       for (let offset = 0; offset < MAX_OFFSET; offset += PAGE_SIZE) {
         if (options.maxPagesPerMarket && pages >= options.maxPagesPerMarket) break
         const page = await fetchPage(market, offset)
@@ -180,10 +188,10 @@ export async function syncFreehire(
         pages++
         if (page.data.length === 0) break
 
-        let reachedCutoff = false
+        let oldOnPage = 0
         for (const job of page.data) {
           if (job.posted_at && new Date(job.posted_at).getTime() < cutoff) {
-            reachedCutoff = true
+            oldOnPage++
             continue
           }
           report.fetched++
@@ -210,7 +218,8 @@ export async function syncFreehire(
           addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
         }
 
-        if (reachedCutoff || page.data.length < PAGE_SIZE) break
+        oldPages = oldOnPage === page.data.length ? oldPages + 1 : 0
+        if (oldPages >= 2 || page.data.length < PAGE_SIZE) break
         await sleep(PAGE_DELAY_MS)
       }
     } catch (error) {
