@@ -89,7 +89,34 @@ export const SKILL_TARGETS: SkillTarget[] = [
   { slug: 'rails', label: 'Rails' },
   { slug: 'spring', label: 'Spring' },
   { slug: 'machine-learning', label: 'Machine Learning' },
+  { slug: 'csharp', label: 'C#' },
+  { slug: 'gcp', label: 'Google Cloud' },
 ]
+
+// Spellings freehire (and the enrichment step) actually store in Job.skillsJson when they differ from the page slug:
+// freehire writes "nodejs", "go" and "cpp", so `node-js`, `golang` and `c-plus-plus` matched nothing. Matching is on
+// the exact quoted token (case-insensitive), so `java` no longer matches "javascript" or `sql` "postgresql".
+const SKILL_STORED_TOKENS: Record<string, string[]> = {
+  'node-js': ['nodejs', 'node-js', 'node.js'],
+  golang: ['go', 'golang'],
+  'c-plus-plus': ['cpp', 'c++', 'c-plus-plus'],
+  nextjs: ['nextjs', 'next.js'],
+  vue: ['vue', 'vuejs', 'vue.js'],
+  csharp: ['csharp', 'c#'],
+  gcp: ['gcp', 'google-cloud'],
+}
+
+export function skillStoredTokens(slug: string): string[] {
+  return SKILL_STORED_TOKENS[slug] ?? [slug]
+}
+
+export const LEVEL_TARGETS: Record<string, { label: string; description: string }> = {
+  entry: { label: 'Entry Level', description: 'Early career and entry-level positions' },
+  mid: { label: 'Mid Level', description: 'Mid-level positions for experienced professionals' },
+  senior: { label: 'Senior', description: 'Senior-level positions requiring significant experience' },
+  lead: { label: 'Lead / Staff', description: 'Lead, staff, and principal positions' },
+  executive: { label: 'Executive', description: 'Executive and C-level positions' },
+}
 
 export const INDUSTRY_TARGETS: IndustryTarget[] = [
   { slug: 'fintech', label: 'Fintech' },

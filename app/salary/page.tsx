@@ -2,7 +2,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
-import { getSiteUrl } from '@/lib/seo/site'
+import { getSiteUrl, defaultOgImages } from '@/lib/seo/site'
 import { prisma } from '../../lib/prisma'
 import {
   buildGlobalExclusionsWhere,
@@ -40,16 +40,16 @@ const COUNTRIES: Array<{ code: string; label: string }> = [
 const SITE_URL = getSiteUrl()
 
 export const metadata: Metadata = {
-  title: 'Tech Salary Guides: $100k–$400k+ by Role & Country | Six Figure Jobs',
+  title: 'Tech Salary Guides by Role & Country | Six Figure Jobs',
   description:
-    'Real salary ranges for software engineers, product managers, data scientists, and 10+ more roles. Live data from $100k+ job listings filtered by seniority, country, and work type.',
+    'Real salary ranges for software engineers, product managers, data scientists and more, from live $100k+ job listings by seniority, country and work type.',
   alternates: {
     canonical: `${SITE_URL}/salary`,
   },
-  openGraph: {
-    title: 'Tech Salary Guides: $100k–$400k+ by Role & Country | Six Figure Jobs',
+  openGraph: { images: defaultOgImages(),
+    title: 'Tech Salary Guides by Role & Country | Six Figure Jobs',
     description:
-      'Real salary ranges for software engineers, product managers, data scientists, and 10+ more roles. Updated continuously from $100k+ job listings.',
+      'Real salary ranges for software engineers, product managers, data scientists and more, from live $100k+ job listings.',
     url: `${SITE_URL}/salary`,
     type: 'website',
   },
@@ -97,6 +97,33 @@ function formatMoneyShort(value: number | null): string {
   return `$${value.toLocaleString('en-US')}`
 }
 
+// JSON-LD: breadcrumb plus an ItemList of the guides that this page links to.
+const salaryJsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: 'Salary guides', item: `${SITE_URL}/salary` },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Tech salary guides by role & country',
+    url: `${SITE_URL}/salary`,
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: GUIDES.map((g, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: g.label,
+        url: `${SITE_URL}/salary/${g.slug}`,
+      })),
+    },
+  },
+]
+
 export default async function SalaryIndexPage() {
   let medians: Map<string, { median: number | null; count: number }> | null = null
   try {
@@ -113,6 +140,9 @@ export default async function SalaryIndexPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-12 pt-10 space-y-8">
+      {salaryJsonLd.map((ld) => (
+        <script key={ld['@type']} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      ))}
       <PageHero
         eyebrow="Salary guides"
         title="Tech salary guides: $100k–$400k+ by role, seniority & country"

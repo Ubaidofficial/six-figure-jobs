@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
-import { getSiteUrl } from '../../../../lib/seo/site'
+import { getSiteUrl, defaultOgImages } from '../../../../lib/seo/site'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { isRoleFilterPageIndexable } from '../../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
@@ -168,7 +168,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical: `${SITE_URL}/jobs/${role}/${filter}` },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: `${SITE_URL}/jobs/${role}/${filter}`,

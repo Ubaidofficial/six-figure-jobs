@@ -58,7 +58,7 @@ export const metadata: Metadata = {
         url: `${SITE_URL}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: 'Six Figure Jobs — $100k+ verified roles',
+        alt: 'Six Figure Jobs: jobs that pay $100k+',
       },
     ],
   },

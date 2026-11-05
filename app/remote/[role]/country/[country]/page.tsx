@@ -10,7 +10,7 @@ import {
 } from '../../../../../lib/jobs/queryJobs'
 import { buildJobSlugHref } from '../../../../../lib/jobs/jobSlug'
 import JobList from '../../../../components/JobList'
-import { SITE_NAME, getSiteUrl } from '../../../../../lib/seo/site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
 
@@ -207,7 +207,7 @@ export async function generateMetadata({
       })
         ? { index: true, follow: true }
         : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description: `Find remote ${roleName} roles in ${countryCode} with at least $100k total compensation.`,
       url: canonicalUrl,

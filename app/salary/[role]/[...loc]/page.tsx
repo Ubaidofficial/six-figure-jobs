@@ -15,7 +15,7 @@ import JobList from '../../../components/JobList'
 import { formatSalaryBandLabel } from '../../../../lib/utils/salaryLabels'
 import { formatNumberCompact } from '../../../../lib/utils/number'
 import type { Job } from '@prisma/client'
-import { SITE_NAME, getSiteUrl } from '../../../../lib/seo/site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { isCanonicalSlug } from '../../../../lib/roles/canonicalSlugs'
@@ -265,10 +265,10 @@ export async function generateMetadata({
 
   return {
     title,
-    description: `Live ${roleName} salary data in ${locationLabel} using live ${bandLabel} tech jobs. $100k+ ${roleName} salaries, high paying ${roleName} jobs, six figure ${roleName} roles with real pay ranges.`,
+    description: `Live ${roleName} salary data in ${locationLabel} from current ${bandLabel} jobs: pay ranges, median and top-of-band for six-figure ${roleName} roles.`,
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description: `Median and range for ${roleName} in ${locationLabel} using live ${bandLabel} job data.`,
       url: canonical,

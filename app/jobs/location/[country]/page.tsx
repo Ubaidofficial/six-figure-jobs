@@ -5,7 +5,7 @@ import type { Metadata } from 'next'
 import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
 import { countryCodeToSlug } from '../../../../lib/seo/countrySlug'
 import { notFound, redirect } from 'next/navigation'
-import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { queryJobs } from '../../../../lib/jobs/queryJobs'
 import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 
@@ -95,7 +95,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: canonical,

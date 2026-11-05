@@ -9,6 +9,7 @@ import { SITE_NAME } from '@/lib/seo/site'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 import { findBestMatchingRole } from '@/lib/roles/slugMatcher'
 import { isPhaseIndexable } from '@/lib/seo/indexingPhase'
+import { isPseoRoleUnlocked } from '@/lib/seo/pseoUnlock'
 
 import { RoleTemplate, buildRoleMetadata } from '../_components/RoleTemplate'
 
@@ -98,7 +99,7 @@ export async function generateMetadata({
       const shouldIndex =
         isTier1Role(role) &&
         total >= 3 &&
-        isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}` })
+        (isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}` }) || isPseoRoleUnlocked(total))
       const avgMax = asNumber((avgAgg as any)?._avg?.maxAnnual)
       const avgMin = asNumber((avgAgg as any)?._avg?.minAnnual)
       const avgUsd = avgMax != null && avgMin != null ? (avgMax + avgMin) / 2 : (avgMax ?? avgMin)

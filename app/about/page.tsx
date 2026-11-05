@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from '@/lib/seo/site'
 
 const SITE_URL = getSiteUrl()
 
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/about`,
   },
-  openGraph: {
+  openGraph: { images: defaultOgImages(),
     title: `About ${SITE_NAME}`,
     description:
       'Learn how Six Figure Jobs curates $100k+ roles, salary-first discovery pages, and direct-apply job listings.',

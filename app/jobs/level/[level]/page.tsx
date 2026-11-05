@@ -6,18 +6,14 @@ import JobList from '../../../components/JobList'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
+import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
+import { LEVEL_TARGETS } from '../../../../lib/seo/pseoTargets'
 
 export const revalidate = 3600
 
 const SITE_URL = getSiteUrl()
 
-const LEVELS: Record<string, { label: string; description: string }> = {
-  entry: { label: 'Entry Level', description: 'Early career and entry-level positions' },
-  mid: { label: 'Mid Level', description: 'Mid-level positions for experienced professionals' },
-  senior: { label: 'Senior', description: 'Senior-level positions requiring significant experience' },
-  lead: { label: 'Lead / Staff', description: 'Lead, staff, and principal positions' },
-  executive: { label: 'Executive', description: 'Executive and C-level positions' },
-}
+const LEVELS = LEVEL_TARGETS
 
 function buildBreadcrumbJsonLd(level: string, label: string) {
   return {
@@ -85,9 +81,10 @@ export async function generateMetadata({
     pageSize: 1,
   })
 
-  // Level pages aren't in the Phase 1 allowlist — noindex until phase 2.
+  // Level pages aren't in the Phase 1 allowlist: noindex until phase 2, unless the hub is clearly substantial.
   const allowIndex =
-    total >= 5 && isPhaseIndexable({ pathname: `/jobs/level/${level}` })
+    total >= 5 &&
+    (isPhaseIndexable({ pathname: `/jobs/level/${level}` }) || isPseoHubUnlocked(total))
   const canonical = `${SITE_URL}/jobs/level/${level}`
 
   const title =

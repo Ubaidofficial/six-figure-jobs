@@ -14,7 +14,7 @@ import { prisma } from '../../lib/prisma'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
 import { resolveSliceCanonicalPath } from '../../lib/seo/canonical'
 import { buildCleanJobsCanonicalPath, shouldNoindexListingPage, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
-import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
 import { parseSliceFilters } from '../../lib/slices/types'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
@@ -102,12 +102,12 @@ export async function generateMetadata({
   return {
     title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
     description:
-      'Browse thousands of $100k+ tech jobs with published salaries and links to the employer’s application page. Filter by role, location, remote work, seniority, and company size.',
+      'Browse $100k+ tech jobs with published salaries and links to the employer’s application page. Filter by role, location, remote work, seniority and company size.',
     alternates: {
       canonical,
     },
     robots: noindexUtilityState ? { index: false, follow: true } : { index: true, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
       description:
         'Thousands of $100k+ tech jobs with salary ranges, and fresh listings by role, location, and work type.',

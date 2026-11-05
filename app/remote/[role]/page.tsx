@@ -12,7 +12,7 @@ import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../../components/JobList'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../../lib/seo/listingSearchParams'
-import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
 import { isRemoteRolePageIndexable } from '../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
 
@@ -245,7 +245,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
           && !noindexUtilityState
           ? { index: true, follow: true }
           : { index: false, follow: true },
-        openGraph: {
+        openGraph: { images: defaultOgImages(),
           title: `Remote ${roleName} $100k+ Jobs`,
           description: `${jobCount.toLocaleString()} remote ${roleName} jobs with $100k+ salaries.`,
           url: `${SITE_URL}${canonicalPath}`,

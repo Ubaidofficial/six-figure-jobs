@@ -1,7 +1,7 @@
 // lib/seo/meta.ts
 import type { Metadata } from 'next'
 import type { JobSlice } from '../slices/types'
-import { SITE_NAME } from './site'
+import { SITE_NAME, defaultOgImages } from './site'
 import { buildSliceCanonicalUrl } from './canonical'
 
 type MetaContext = {
@@ -160,7 +160,7 @@ export function buildSliceMetadata(
     robots: allowIndex
       ? { index: true, follow: true, 'max-snippet': -1, 'max-image-preview': 'large' }
       : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: canonical,

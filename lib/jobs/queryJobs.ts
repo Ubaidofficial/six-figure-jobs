@@ -9,6 +9,7 @@ import { getMinSalaryForCountry } from './salaryThresholds'
 import { buildFreshJobWhere } from './freshness'
 import { buildKeywordPlan, scoreJob, tokenize, type KeywordPlan } from '../search/keywordPlan'
 import { getSearchVocabulary } from '../search/vocabulary'
+import { skillStoredTokens } from '../seo/pseoTargets'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -477,11 +478,15 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   }
 
   // Skills
+  // skillsJson is a JSON array of strings, so match the quoted token: a bare `contains: 'java'` also matched
+  // "javascript", and 'sql' matched "postgresql" / "mysql".
   if (filters.skillSlugs?.length) {
     addAnd({
-      OR: filters.skillSlugs.map((slug) => ({
-        skillsJson: { contains: slug },
-      })),
+      OR: filters.skillSlugs.flatMap((slug) =>
+        skillStoredTokens(slug).map((token) => ({
+          skillsJson: { contains: `"${token}"`, mode: 'insensitive' as const },
+        })),
+      ),
     })
   }
 

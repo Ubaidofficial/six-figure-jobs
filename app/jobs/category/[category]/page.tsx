@@ -11,7 +11,7 @@ import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '
 import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Pagination, Prose } from '@/components/listing/ListingParts'
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
-import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
 import { countrySlugToCode } from '../../../../lib/seo/countrySlug'
@@ -112,15 +112,15 @@ export async function generateMetadata({
       : `${cfg.label} jobs paying $100k+ | ${SITE_NAME}`
   const description =
     total > 0
-      ? `${total.toLocaleString()} $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, with links to apply. No entry-level clutter. Remote, hybrid, and on-site roles refreshed daily from company career pages.`
-      : `Verified $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, with links to apply. No entry-level clutter. Remote, hybrid, and on-site roles from top companies.`
+      ? `${total.toLocaleString()} $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, with links to apply. Remote, hybrid and on-site roles refreshed daily.`
+      : `$100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, with links to apply. Remote, hybrid and on-site roles from top companies.`
 
   return {
     title,
     description,
     alternates: { canonical },
     robots: shouldIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: canonical,

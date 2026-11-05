@@ -7,7 +7,7 @@ export const revalidate = 600
 import { INDUSTRY_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
-import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     description,
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: canonical,

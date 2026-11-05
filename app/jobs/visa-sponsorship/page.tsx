@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { prisma } from '../../../lib/prisma'
 import { queryJobs, buildWhere, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
-import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
 import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
@@ -70,7 +70,7 @@ export async function generateMetadata({
   }
 
   const title = `Visa Sponsorship Tech Jobs — $100k+ | ${SITE_NAME}`
-  const description = `${total > 0 ? `${total.toLocaleString()} ` : ''}H1B and visa-sponsored $100k+ tech jobs. Software engineer, data scientist, and engineering manager roles at companies actively sponsoring work visas. Verified salaries, direct apply.`
+  const description = `${total > 0 ? `${total.toLocaleString()} ` : ''}$100k+ tech jobs that offer visa sponsorship, with salary shown upfront. Software engineer, data scientist and engineering manager roles, with links to apply.`
 
   const canonical = page > 1 ? `${SITE_URL}/jobs/visa-sponsorship?page=${page}` : `${SITE_URL}/jobs/visa-sponsorship`
 
@@ -82,7 +82,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
+    openGraph: { images: defaultOgImages(), title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
   }
 }

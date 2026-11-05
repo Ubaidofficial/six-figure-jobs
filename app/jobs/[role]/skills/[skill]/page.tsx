@@ -6,9 +6,10 @@ export const revalidate = 600
 
 import { SKILL_TARGETS } from '../../../../../lib/seo/pseoTargets'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
+import { PSEO_COMBO_MIN_JOBS } from '../../../../../lib/seo/pseoUnlock'
 import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJobs'
 import JobList from '../../../../components/JobList'
-import { getSiteUrl, SITE_NAME } from '../../../../../lib/seo/site'
+import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 
 const SITE_URL = getSiteUrl()
@@ -50,11 +51,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title,
     description,
     alternates: { canonical },
-    openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
+    openGraph: { images: defaultOgImages(), title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
-    // Phase-aware: role × skill deep combos aren't in the Phase 1 allowlist.
+    // Phase-aware: role × skill deep combos aren't in the Phase 1 allowlist. Needs a few jobs to stand alone
+    // (it was >= 1, which indexed one-job pages).
     robots:
-      total >= 1 &&
+      total >= PSEO_COMBO_MIN_JOBS &&
       isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}/skills/${skillInfo.slug}` })
         ? { index: true, follow: true }
         : { index: false, follow: true },

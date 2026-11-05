@@ -5,7 +5,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getAllPosts } from '@/lib/blog/posts'
-import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from '@/lib/seo/site'
 
 export const revalidate = 86400
 
@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
       'Expert guides on six-figure salaries, tech career paths, visa sponsorship, remote work, and salary negotiation. Real data from live $100k+ job listings.',
     alternates: { canonical: `${SITE_URL}/blog` },
     robots: posts.length > 0 ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title: `Career Guides & Salary Insights | ${SITE_NAME}`,
       description: 'Expert guides on six-figure salaries, tech career paths, and salary negotiation.',
       url: `${SITE_URL}/blog`,

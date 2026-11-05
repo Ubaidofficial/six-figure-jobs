@@ -14,7 +14,8 @@ import {
 } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import type { Job } from '@prisma/client'
-import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
+import { capDescription } from '../../../lib/seo/jobMeta'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 import { isCanonicalSlug } from '../../../lib/roles/canonicalSlugs'
@@ -206,6 +207,7 @@ export async function generateMetadata({
     }
   }
 
+  description = capDescription(description)
   const allowIndex = raw.length >= 1
   const title = `${salaryBand} ${roleName} salary guide | Six Figure Jobs`
   // Canonical always points to the base salary page — band filter is a view
@@ -220,7 +222,7 @@ export async function generateMetadata({
     robots: allowIndex
       ? { index: true, follow: true }
       : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: canonical,

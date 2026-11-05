@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
-import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
+import { getSiteUrl, SITE_NAME, defaultOgImages } from '@/lib/seo/site'
 import {
   loadEligibleCompaniesDirectory,
   type PublicCompanyDirectoryEntry,
@@ -107,7 +107,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       alternates: { canonical: `${SITE_URL}/companies` },
       robots: { index: true, follow: true },
-      openGraph: {
+      openGraph: { images: defaultOgImages(),
         title,
         description,
         url: `${SITE_URL}/companies`,

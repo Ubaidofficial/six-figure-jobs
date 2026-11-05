@@ -4,7 +4,7 @@ import { permanentRedirect } from 'next/navigation'
 import { CITY_TARGETS } from '../../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJobs'
 import JobList from '../../../../components/JobList'
-import { getSiteUrl, SITE_NAME } from '../../../../../lib/seo/site'
+import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
 
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title,
     description,
     alternates: { canonical },
-    openGraph: { title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
+    openGraph: { images: defaultOgImages(), title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
     // Phase-aware: role × city deep combos aren't in the Phase 1 allowlist.
     robots:

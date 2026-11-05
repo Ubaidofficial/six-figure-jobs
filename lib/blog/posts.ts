@@ -5,6 +5,8 @@
 export type BlogPost = {
   slug: string
   title: string
+  /** Search-result title (<= ~60 chars incl. brand); falls back to `title`. */
+  metaTitle?: string
   excerpt: string
   publishedAt: string
   updatedAt: string
@@ -18,6 +20,7 @@ export type BlogPost = {
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'software-engineer-salary-2026',
+    metaTitle: 'Software Engineer Salary 2026: Guide by Level & Location',
     title: 'Software Engineer Salary in 2026: Complete Guide by Level & Location',
     excerpt:
       'Average software engineer salaries range from $120k to $300k+ in 2026. This guide breaks down compensation by level (junior to staff), tech stack, and location with real data.',
@@ -115,6 +118,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: 'six-figure-tech-job-no-degree',
+    metaTitle: 'Get a $100k+ Tech Job Without a Degree (2026 Guide)',
     title: 'How to Get a $100k+ Tech Job Without a College Degree in 2026',
     excerpt:
       'Landing a six-figure tech job without a degree is more achievable than ever. Here are the 4 proven paths — bootcamp, certifications, self-taught, and sales — with real salary data.',
@@ -199,6 +203,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: 'h1b-visa-sponsorship-tech-companies-2026',
+    metaTitle: 'Tech Companies Sponsoring H1B Visas in 2026',
     title: 'Top Tech Companies Sponsoring H1B Visas in 2026 (With Salary Ranges)',
     excerpt:
       'Which tech companies are actively sponsoring H1B visas in 2026? This guide covers the top sponsors, salary ranges, and how to maximize your chances of landing a sponsored role.',
@@ -275,6 +280,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: 'how-to-negotiate-salary-100k',
+    metaTitle: 'How to Negotiate Your Tech Salary to $100k+',
     title: 'How to Negotiate Your Tech Salary to $100k+ (Even as a Junior)',
     excerpt:
       'Most engineers accept the first offer. Here is the exact salary negotiation playbook for tech jobs — anchoring, competing offers, and what to say word for word.',
@@ -357,6 +363,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: '200k-tech-job-what-it-takes',
+    metaTitle: 'The $200k Tech Job: What It Takes to Earn $200,000',
     title: 'The $200k Tech Job: What It Actually Takes to Earn $200,000 in Tech',
     excerpt:
       'Only the top 10–15% of tech workers earn $200k+. Here is what separates them — the roles, companies, levels, and skills that clear the $200,000 threshold in 2026.',
@@ -436,6 +443,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: 'remote-tech-jobs-100k-complete-guide',
+    metaTitle: 'Remote Tech Jobs Paying $100k+: How to Land One',
     title: 'Remote Tech Jobs Paying $100k+: How to Find and Land Them in 2026',
     excerpt:
       'Remote $100k+ tech jobs are real — but they are concentrated at specific company types and roles. Here is how to find them, evaluate them, and actually get hired.',

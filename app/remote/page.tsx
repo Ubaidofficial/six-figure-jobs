@@ -4,7 +4,7 @@ import { unstable_rethrow } from 'next/navigation'
 import { cache } from 'react'
 import { queryJobs, buildWhere, type JobWithCompany } from '../../lib/jobs/queryJobs'
 import { prisma } from '../../lib/prisma'
-import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { collectRemoteRoleRows } from '../../lib/seo/remoteSitemap'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
@@ -108,8 +108,8 @@ export async function generateMetadata({
     ? `${regionLabel} Remote $100k+ Jobs (${total.toLocaleString()} Open Roles) | ${SITE_NAME}`
     : `Remote $100k+ Jobs — ${total.toLocaleString()} Six-Figure Openings | ${SITE_NAME}`
   const description = regionLabel
-    ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs in engineering, product, data, and more. Verified salaries, and fresh listings.`
-    : `Browse ${total.toLocaleString()} remote six-figure jobs with published salaries and links to apply. Software engineering, product, data, and more — $100k+ remote roles, new jobs added daily.`
+    ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs in engineering, product, data and more, with published salaries and fresh listings.`
+    : `Browse ${total.toLocaleString()} remote six-figure jobs with published salaries and links to apply. Engineering, product, data and more, new jobs added daily.`
 
   return {
     title,
@@ -120,7 +120,7 @@ export async function generateMetadata({
     robots: noindexUtilityState
       ? { index: false, follow: true }
       : { index: true, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: canonical,

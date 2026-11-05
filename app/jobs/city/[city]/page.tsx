@@ -4,12 +4,14 @@ import { permanentRedirect } from 'next/navigation'
 import { CITY_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
-import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getCurrencyForCountry } from '../../../../lib/jobs/salaryThresholds'
 import { formatCurrencyShort, getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 import { isCityPageIndexable } from '../../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
+import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
+import { capDescription } from '../../../../lib/seo/jobMeta'
 
 export const revalidate = 600
 
@@ -48,19 +50,22 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   })
 
   const salaryLabel = getThresholdLabelForCountry(resolved.countryCode ?? null)
-  // City pages aren't in the Phase 1 allowlist — noindex until phase 2.
+  // City pages aren't in the Phase 1 allowlist: noindex until phase 2, unless the hub is clearly substantial.
   const allowIndex =
     isCityPageIndexable(total) &&
-    isPhaseIndexable({
+    (isPhaseIndexable({
       countryCode: resolved.countryCode ?? null,
       pathname: `/jobs/city/${resolved.slug}`,
-    })
+    }) ||
+      isPseoHubUnlocked(total))
   const titleBase = `${salaryLabel} jobs in ${resolved.label}`
   const title =
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} ${salaryLabel} jobs in ${resolved.label} — salary shown upfront, with links to apply. No entry-level noise. Remote, hybrid, and on-site roles refreshed daily from company career pages.`
+  const description = capDescription(
+    `${total.toLocaleString()} ${salaryLabel} jobs in ${resolved.label} with salary shown upfront and links to apply. Remote, hybrid and on-site roles, refreshed daily.`,
+  )
   const canonical = `${SITE_URL}/jobs/city/${resolved.slug}`
 
   return {
@@ -68,7 +73,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     description,
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: canonical,

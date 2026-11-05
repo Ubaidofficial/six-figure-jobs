@@ -7,9 +7,11 @@ export const revalidate = 600
 import { SKILL_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
-import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
+import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
+import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
+import { capDescription } from '../../../../lib/seo/jobMeta'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -44,16 +46,18 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     pageSize: 1,
   })
 
-  // Skill pages aren't in the Phase 1 allowlist — they noindex until phase 2.
+  // Skill pages aren't in the Phase 1 allowlist: they noindex until phase 2, unless the hub is clearly substantial.
   const allowIndex =
     total >= 5 &&
-    isPhaseIndexable({ pathname: `/jobs/skills/${resolved.slug}` })
+    (isPhaseIndexable({ pathname: `/jobs/skills/${resolved.slug}` }) || isPseoHubUnlocked(total))
   const titleBase = `$100k+ ${resolved.label} jobs`
   const title =
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} $100k+ ${resolved.label} jobs with salary shown upfront — with links to apply. High-paying ${resolved.label} roles at top tech companies, updated daily from company career pages.`
+  const description = capDescription(
+    `${total.toLocaleString()} $100k+ ${resolved.label} jobs with salary shown upfront and links to apply. High-paying ${resolved.label} roles at top tech companies, updated daily.`,
+  )
   const canonical = `${SITE_URL}/jobs/skills/${resolved.slug}`
 
   return {
@@ -61,7 +65,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     description,
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: canonical,

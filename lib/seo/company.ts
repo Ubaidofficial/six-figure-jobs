@@ -1,7 +1,7 @@
 // lib/seo/company.ts
 import type { Metadata } from 'next'
 import type { Company } from '@prisma/client'
-import { SITE_NAME, getSiteUrl } from './site'
+import { SITE_NAME, getSiteUrl, defaultOgImages } from './site'
 
 const ORIGIN = getSiteUrl()
 
@@ -45,7 +45,7 @@ export function buildCompanyMetadata(
     alternates: {
       canonical,
     },
-    openGraph: {
+    openGraph: { images: defaultOgImages(),
       title,
       description,
       url: canonical,

@@ -34,3 +34,11 @@ export function getSiteUrl(): string {
 
   return DEFAULT_SITE_URL
 }
+
+/**
+ * Default social preview image. A page that sets its own `openGraph` replaces the layout's whole openGraph object
+ * (Next does not merge it), so every such page must pass `images` itself.
+ */
+export function defaultOgImages(alt = 'Six Figure Jobs: jobs that pay $100k+') {
+  return [{ url: `${getSiteUrl()}/og-image.png`, width: 1200, height: 630, alt }]
+}
