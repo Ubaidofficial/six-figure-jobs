@@ -28,17 +28,17 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
 
   return (
     <section className={styles.hero}>
-      <p className={styles.eyebrow}>Salary shown on every listing</p>
+      <p className={styles.eyebrow}>US · UK · EU · Canada · Australia</p>
 
       <h1 className={styles.headline}>
-        Every job lists its salary.
-        <span className={styles.accent}> $100k+ or it&rsquo;s not here.</span>
+        Six-figure jobs.
+        <span className={styles.accent}>No salary guessing.</span>
       </h1>
 
       <p className={styles.subheadline}>
-        {jobCount.toLocaleString()} six-figure roles
-        {companyCount > 0 ? ` at ${companyCount.toLocaleString()} companies` : ''} across the US, UK, EU,
-        Canada and Australia, with pay thresholds set per currency. Every apply button goes to the
+        {jobCount.toLocaleString()} roles
+        {companyCount > 0 ? ` at ${companyCount.toLocaleString()} companies` : ''}, every one with its pay
+        range on the listing. Pay thresholds are set per currency, and every apply button goes to the
         employer&rsquo;s own application page.
       </p>
 

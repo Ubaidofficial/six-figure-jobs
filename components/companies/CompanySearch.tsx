@@ -96,7 +96,7 @@ export function CompanySearch({ companies }: { companies: PublicCompanyDirectory
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {filtered.map((c) => {
-            const logoUrl = buildLogoUrl(c.logoUrl, c.website)
+            const logoUrl = buildLogoUrl(c.logoUrl, c.website, c.name)
             const hasValidWebsite = isValidCompanyWebsite(c.website)
 
             return (

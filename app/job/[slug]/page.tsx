@@ -208,6 +208,7 @@ export default async function JobPage({
   const logoUrl = buildLogoUrl(
     company?.logoUrl ?? typedJob.companyLogo ?? null,
     company?.website ?? null,
+    companyName,
   )
 
   /* ------------------------------ Derived UI data ------------------------------ */

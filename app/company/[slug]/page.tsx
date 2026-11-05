@@ -179,7 +179,7 @@ export default async function CompanyPage({
         .map((job) => buildJobJsonLd(job))
 
       const tags = parseTags(company.tagsJson)
-      const heroLogo = buildLogoUrl(company.logoUrl ?? null, company.website ?? null)
+      const heroLogo = buildLogoUrl(company.logoUrl ?? null, company.website ?? null, company.name)
 
       return (
         <main className="mx-auto max-w-6xl px-4 pb-12 pt-10">

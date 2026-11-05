@@ -23,7 +23,7 @@ function LogoItem({ company, index }: { company: FeaturedCompany; index: number 
         <div className={styles.logoBox}>
           <CompanyLogo
             name={company.name}
-            src={buildLogoUrl(company.logoUrl, company.website)}
+            src={buildLogoUrl(company.logoUrl, company.website, company.name)}
             size="fill"
             priority={index < 4}
           />

@@ -308,6 +308,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
   const companyLogo = buildLogoUrl(
     job.companyRef?.logoUrl ?? (job as any)?.companyLogo ?? null,
     job.companyRef?.website ?? null,
+    companyName,
   )
 
   const size = job.companyRef?.sizeBucket ?? null

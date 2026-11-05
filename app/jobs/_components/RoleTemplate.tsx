@@ -561,7 +561,7 @@ export async function RoleTemplate({
         id,
         name: info?.name ?? null,
         slug: info?.slug ?? null,
-        logoUrl: buildLogoUrl(info?.logoUrl ?? null, info?.website ?? null),
+        logoUrl: buildLogoUrl(info?.logoUrl ?? null, info?.website ?? null, info?.name ?? null),
         description: truncateText(info?.description ?? null),
         industry: info?.industry ?? null,
         sizeBucket: info?.sizeBucket ?? null,
