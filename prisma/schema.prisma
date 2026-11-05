@@ -365,3 +365,16 @@ model JobIndexingQueue {
   @@index([notBefore])
   @@index([createdAt])
 }
+
+/// One row per counted click on an Apply button. Deliberately holds nothing about the visitor: no IP, no user agent,
+/// no cookie or visitor id. See lib/analytics/applyClick.ts.
+model ApplyClick {
+  id        String   @id @default(cuid())
+  jobId     String
+  surface   String // "apply-card" | "mobile-bar"
+  device    String // "mobile" | "desktop"
+  createdAt DateTime @default(now())
+
+  @@index([jobId, createdAt])
+  @@index([createdAt])
+}

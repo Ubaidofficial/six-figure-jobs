@@ -579,7 +579,7 @@ export default async function JobPage({
         </section>
       ) : null}
 
-      <MobileApplyBar salaryText={salaryText || null} applyHref={applyHref} />
+      <MobileApplyBar salaryText={salaryText || null} applyHref={applyHref} jobId={typedJob.id} />
 
       {/* JSON-LD (keep existing schema) */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />

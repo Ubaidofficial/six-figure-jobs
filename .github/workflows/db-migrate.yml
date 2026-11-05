@@ -1,0 +1,55 @@
+name: database migrate
+
+# Manual only. Migrations are an explicit release step (they are not run by `npm run build`).
+# Default is a read-only status report: which migrations are applied and which are pending.
+# Tick "apply" to run `prisma migrate deploy` (applies pending migrations only; never resets or drops anything).
+# Uses the same production-database fingerprint guard as the freehire workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply pending migrations (leave off for a status report only)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: freehire-reload # never run while a sync or reload is writing
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Migration status (read-only)
+        run: npx prisma migrate status
+        continue-on-error: true
+
+      - name: Apply pending migrations
+        if: ${{ inputs.apply }}
+        run: npx prisma migrate deploy
+
+      - name: Migration status after
+        if: ${{ inputs.apply }}
+        run: npx prisma migrate status

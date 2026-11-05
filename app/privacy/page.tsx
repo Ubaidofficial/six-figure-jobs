@@ -30,6 +30,12 @@ export default function PrivacyPage() {
           device/browser type, and approximate location (e.g., country/city).
         </li>
         <li>
+          <strong>Apply clicks:</strong> when you click Apply on a job we count the click (which job, which
+          button, and whether you are on a phone or a computer). We do not store your IP address, user agent or any
+          cookie or ID with it, and we do not count clicks from visitors who send Do Not Track or Global Privacy
+          Control.
+        </li>
+        <li>
           <strong>Cookies:</strong> for essential site functionality and
           measurement. See{' '}
           <a className="text-primary underline" href="/cookies">

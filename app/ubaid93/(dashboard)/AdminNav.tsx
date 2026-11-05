@@ -7,6 +7,7 @@ const links = [
   { href: '/ubaid93/feedback', label: 'Feedback', icon: '💬' },
   { href: '/ubaid93/errors', label: 'Error Log', icon: '🔴' },
   { href: '/ubaid93/jobs', label: 'Jobs', icon: '💼' },
+  { href: '/ubaid93/clicks', label: 'Apply clicks', icon: '👆' },
   { href: '/ubaid93/config', label: 'Site Config', icon: '⚙️' },
 ]
 

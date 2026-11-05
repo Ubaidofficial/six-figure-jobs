@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 import { JobActions } from './JobActions'
+import { ApplyLink } from './ApplyLink'
 import { ReportJob } from './ReportJob'
 
 type Fact = { label: string; value: string }
@@ -17,16 +18,23 @@ type Fact = { label: string; value: string }
 const applyButtonClass =
   'inline-flex items-center justify-center gap-2 rounded-md bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-neutral-950 transition-colors hover:bg-[var(--color-primary-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
-export function ApplyButton({ href, label, className }: { href: string; label: string; className?: string }) {
+export function ApplyButton({
+  href,
+  label,
+  className,
+  jobId,
+  surface,
+}: {
+  href: string
+  label: string
+  className?: string
+  jobId: string
+  surface: 'apply-card' | 'mobile-bar'
+}) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="nofollow sponsored noopener noreferrer"
-      className={cn(applyButtonClass, className)}
-    >
+    <ApplyLink href={href} jobId={jobId} surface={surface} className={cn(applyButtonClass, className)}>
       {label} <ExternalLink className="size-4" aria-hidden="true" />
-    </a>
+    </ApplyLink>
   )
 }
 
@@ -85,9 +93,9 @@ export function ApplyCard({
 
       {applyHref ? (
         <>
-          <ApplyButton href={applyHref} label="Apply on company site" className="mt-5 w-full" />
+          <ApplyButton href={applyHref} label="Apply on company site" className="mt-5 w-full" jobId={jobId} surface="apply-card" />
           <p className="mt-2 text-xs text-muted-foreground">
-            Opens {companyName}&rsquo;s own application page in a new tab. Six Figure Jobs doesn&rsquo;t track it.
+            Opens {companyName}&rsquo;s own application page in a new tab. We only count that the button was clicked (no cookies, nothing about you).
           </p>
         </>
       ) : null}
@@ -176,7 +184,15 @@ export function CompanyCard({
 }
 
 /** Sticky bar for phones: salary plus the Apply button, always reachable while reading. */
-export function MobileApplyBar({ salaryText, applyHref }: { salaryText: string | null; applyHref: string | null }) {
+export function MobileApplyBar({
+  salaryText,
+  applyHref,
+  jobId,
+}: {
+  salaryText: string | null
+  applyHref: string | null
+  jobId: string
+}) {
   if (!applyHref) return null
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur lg:hidden">
@@ -185,7 +201,7 @@ export function MobileApplyBar({ salaryText, applyHref }: { salaryText: string |
           <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Salary</p>
           <p className="truncate font-mono text-base font-semibold text-foreground">{salaryText || 'Not disclosed'}</p>
         </div>
-        <ApplyButton href={applyHref} label="Apply" className="shrink-0 px-6" />
+        <ApplyButton href={applyHref} label="Apply" className="shrink-0 px-6" jobId={jobId} surface="mobile-bar" />
       </div>
     </div>
   )
