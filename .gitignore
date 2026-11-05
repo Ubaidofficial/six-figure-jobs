@@ -31,3 +31,8 @@ audit_*.counts.txt
 audit_prod_*.txt
 audit_seo.counts.txt
 audit_todos.counts.txt
+
+# Nested repos / worktrees that were once committed as broken submodule entries
+.claude/worktrees/
+.codex/github-profile/
+github-profile/
