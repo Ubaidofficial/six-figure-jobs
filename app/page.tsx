@@ -18,6 +18,7 @@ import { CATEGORY_LINKS } from '@/lib/constants/category-links'
 import { LOCATIONS, SALARY_BANDS } from '@/lib/constants/homepage'
 import { countryCodeToSlug } from '@/lib/seo/countrySlug'
 import { Hero } from '@/components/home/Hero'
+import { HeroFilters } from '@/components/home/HeroFilters'
 import { ActivityTicker, type ActivityEvent } from '@/components/home/ActivityTicker'
 import { buildJobSlugHref } from '../lib/jobs/jobSlug'
 import {
@@ -582,109 +583,11 @@ export default async function HomePage() {
         newThisWeek={stats.newThisWeek}
         newestPostedAtISO={newestPostedAt ? newestPostedAt.toISOString() : null}
       >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <div>
-            <label
-              htmlFor="role"
-              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
-            >
-              Role
-            </label>
-            <select
-              id="role"
-              name="role"
-              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
-              defaultValue=""
-            >
-              <option value="">All roles</option>
-              {ROLE_OPTIONS.map((opt) => (
-                <option key={opt.slug} value={opt.slug}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="country"
-              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
-            >
-              Location
-            </label>
-            <select
-              id="country"
-              name="country"
-              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
-            >
-              <option value="">All locations</option>
-              {LOCATIONS.map((loc) => (
-                <option key={loc.code} value={loc.code}>
-                  {loc.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="remoteMode"
-              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
-            >
-              Work arrangement
-            </label>
-            <select
-              id="remoteMode"
-              name="remoteMode"
-              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
-            >
-              <option value="">Any</option>
-              <option value="remote">Remote</option>
-              <option value="hybrid">Hybrid</option>
-              <option value="onsite">On-site</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="remoteRegion"
-              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
-            >
-              Remote region
-            </label>
-            <select
-              id="remoteRegion"
-              name="remoteRegion"
-              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
-            >
-              {REMOTE_REGIONS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="salary"
-              className="mb-1.5 block text-[11px] font-medium text-muted-foreground"
-            >
-              Minimum Salary
-            </label>
-            <select
-              id="salary"
-              name="minSalary"
-              className="focus-ring w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
-              defaultValue="100000"
-            >
-              <option value="100000">$100k+</option>
-              <option value="200000">$200k+</option>
-              <option value="300000">$300k+</option>
-              <option value="400000">$400k+</option>
-            </select>
-          </div>
-        </div>
+        <HeroFilters
+          roles={ROLE_OPTIONS.map((o) => ({ value: o.slug, label: o.label }))}
+          locations={LOCATIONS.map((l) => ({ value: l.code, label: l.label }))}
+          remoteRegions={REMOTE_REGIONS.map((r) => ({ value: r.value, label: r.label }))}
+        />
       </Hero>
 
       <LatestOpportunities jobs={jobs} totalJobs={stats.totalJobs} />

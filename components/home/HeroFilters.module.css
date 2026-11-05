@@ -1,0 +1,146 @@
+/* Homepage search filters: pill toggles for short lists, one consistent style for the native selects. */
+
+.filters {
+  display: grid;
+  gap: 16px;
+}
+
+.selects {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  min-width: 0;
+}
+
+.label {
+  display: block;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-1);
+}
+
+.selectWrap {
+  position: relative;
+}
+
+/* Chevron drawn with borders so it follows the theme colour. */
+.selectWrap::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--color-text-1);
+  border-bottom: 1.5px solid var(--color-text-1);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.select {
+  width: 100%;
+  height: 44px;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 38px 0 14px;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--color-text-0);
+  background: var(--color-bg-1);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 16%, transparent);
+  border-radius: 12px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  transition: border-color 120ms ease;
+}
+
+.select:hover {
+  border-color: color-mix(in srgb, var(--color-fg) 30%, transparent);
+}
+
+.select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.pillGroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+}
+
+.pills {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  position: relative;
+  cursor: pointer;
+}
+
+/* The real radio stays in the accessibility tree and keyboard order; only its look is hidden. */
+.pillInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pillText {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-0);
+  background: var(--color-bg-1);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 16%, transparent);
+  border-radius: 999px;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.pill:hover .pillText {
+  border-color: color-mix(in srgb, var(--color-fg) 32%, transparent);
+}
+
+.pillInput:checked + .pillText {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #0a0a0a;
+  font-weight: 600;
+}
+
+.pillInput:focus-visible + .pillText {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .selects {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pillGroups {
+    gap: 14px;
+  }
+}
