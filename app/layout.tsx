@@ -4,7 +4,6 @@ import type { Viewport } from 'next'
 import localFont from 'next/font/local'
 
 import { Footer } from '@/components/layout/Footer'
-import { ThemeProvider } from '@/components/theme-provider'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
 import ErrorTracker from '@/components/ErrorTracker'
@@ -73,6 +72,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Light only: no dark theme. colorScheme keeps native form controls and scrollbars light too.
+  colorScheme: 'light',
+  themeColor: '#f7f7f4',
 }
 
 export default function RootLayout({
@@ -83,24 +85,21 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      suppressHydrationWarning
-      className={`h-full ${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}
+      className={`light h-full ${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}
     >
       <body className="min-h-full bg-background text-foreground">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
-          <PreloadResources />
-          <div className="flex min-h-screen flex-col">
-            <SiteHeader />
+        <PreloadResources />
+        <div className="flex min-h-screen flex-col">
+          <SiteHeader />
 
-            <div id="main-content" className="flex-1">
-              {children}
-            </div>
-
-            <Footer />
+          <div id="main-content" className="flex-1">
+            {children}
           </div>
-          <FeedbackWidget />
-          <ErrorTracker />
-        </ThemeProvider>
+
+          <Footer />
+        </div>
+        <FeedbackWidget />
+        <ErrorTracker />
       </body>
     </html>
   )

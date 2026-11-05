@@ -154,26 +154,26 @@ export default async function VisaSponsorshipPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" style={{ fontSize: 14, color: '#a3a3a3', marginBottom: 24, display: 'flex', gap: 8, alignItems: 'center' }}>
-        <Link href="/" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Home</Link>
+      <nav aria-label="Breadcrumb" style={{ fontSize: 14, color: 'var(--color-text-1)', marginBottom: 24, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <Link href="/" style={{ color: 'var(--color-text-1)', textDecoration: 'none' }}>Home</Link>
         <span>/</span>
-        <Link href="/jobs" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Jobs</Link>
+        <Link href="/jobs" style={{ color: 'var(--color-text-1)', textDecoration: 'none' }}>Jobs</Link>
         <span>/</span>
-        <span style={{ color: '#fff' }}>Visa Sponsorship</span>
+        <span style={{ color: 'var(--color-text-0)' }}>Visa Sponsorship</span>
       </nav>
 
       {/* Hero */}
       <header style={{ marginBottom: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <span style={{ fontSize: 32 }}>🛂</span>
-          <span style={{ background: '#1a2e1a', border: '1px solid #84cc1640', borderRadius: 100, color: '#84cc16', fontSize: 12, fontWeight: 700, padding: '4px 12px' }}>
+          <span style={{ background: 'color-mix(in srgb, var(--color-primary) 18%, transparent)', border: '1px solid #84cc1640', borderRadius: 100, color: '#3f6212', fontSize: 12, fontWeight: 700, padding: '4px 12px' }}>
             VISA SPONSORSHIP
           </span>
         </div>
         <h1 style={{ fontSize: 42, fontWeight: 800, margin: '0 0 12px', lineHeight: 1.15 }}>
-          H1B &amp; Visa Sponsorship <span style={{ color: '#84cc16' }}>Tech Jobs</span> — $100k+
+          H1B &amp; Visa Sponsorship <span style={{ color: 'var(--color-primary-text)' }}>Tech Jobs</span> — $100k+
         </h1>
-        <p style={{ fontSize: 18, color: '#a3a3a3', margin: 0 }}>
+        <p style={{ fontSize: 18, color: 'var(--color-text-1)', margin: 0 }}>
           {total.toLocaleString()} verified roles at companies actively sponsoring work visas.
           Salary ranges published upfront. Direct apply.
         </p>
@@ -185,7 +185,7 @@ export default async function VisaSponsorshipPage({
           <Link
             key={r.slug}
             href={`/jobs/${r.slug}`}
-            style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: 100, color: '#a3a3a3', fontSize: 13, fontWeight: 500, padding: '6px 14px', textDecoration: 'none' }}
+            style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 100, color: 'var(--color-text-1)', fontSize: 13, fontWeight: 500, padding: '6px 14px', textDecoration: 'none' }}
           >
             {r.label}
           </Link>
@@ -195,8 +195,8 @@ export default async function VisaSponsorshipPage({
       {/* Job listings */}
       <section aria-label="Visa sponsorship job listings">
         {jobs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#a3a3a3' }}>
-            <p>No visa-sponsored listings found right now. <Link href="/jobs/100k-plus" style={{ color: '#84cc16' }}>Browse all $100k+ jobs</Link></p>
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-1)' }}>
+            <p>No visa-sponsored listings found right now. <Link href="/jobs/100k-plus" style={{ color: 'var(--color-primary-text)' }}>Browse all $100k+ jobs</Link></p>
           </div>
         ) : (
           <JobList jobs={jobs} />
@@ -207,22 +207,22 @@ export default async function VisaSponsorshipPage({
       {totalPages > 1 && (
         <nav aria-label="Pagination" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 40 }}>
           {page > 1 && (
-            <Link href={`/jobs/visa-sponsorship${page - 1 > 1 ? `?page=${page - 1}` : ''}`} style={{ color: '#84cc16' }}>← Previous</Link>
+            <Link href={`/jobs/visa-sponsorship${page - 1 > 1 ? `?page=${page - 1}` : ''}`} style={{ color: 'var(--color-primary-text)' }}>← Previous</Link>
           )}
-          <span style={{ color: '#a3a3a3' }}>Page {page} of {totalPages}</span>
+          <span style={{ color: 'var(--color-text-1)' }}>Page {page} of {totalPages}</span>
           {page < totalPages && (
-            <Link href={`/jobs/visa-sponsorship?page=${page + 1}`} style={{ color: '#84cc16' }}>Next →</Link>
+            <Link href={`/jobs/visa-sponsorship?page=${page + 1}`} style={{ color: 'var(--color-primary-text)' }}>Next →</Link>
           )}
         </nav>
       )}
 
       {/* Why section */}
-      <section style={{ marginTop: 64, padding: '40px', background: '#111', borderRadius: 16, border: '1px solid #1f1f1f' }}>
+      <section style={{ marginTop: 64, padding: '40px', background: 'var(--color-bg-1)', borderRadius: 16, border: '1px solid var(--color-border)' }}>
         <h2 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 16px' }}>
           Why use Six Figure Jobs for visa-sponsored roles?
         </h2>
-        <ul style={{ color: '#a3a3a3', fontSize: 16, lineHeight: 1.8, paddingLeft: 20 }}>
-          <li>Every job is <strong style={{ color: '#fff' }}>$100k+ with a published salary range</strong> — no guessing, no negotiation from zero</li>
+        <ul style={{ color: 'var(--color-text-1)', fontSize: 16, lineHeight: 1.8, paddingLeft: 20 }}>
+          <li>Every job is <strong style={{ color: 'var(--color-text-0)' }}>$100k+ with a published salary range</strong> — no guessing, no negotiation from zero</li>
           <li>Jobs are scraped directly from company ATS systems (Greenhouse, Lever, Ashby, Workday) so the apply link goes straight to the hiring company</li>
           <li>Listings are refreshed daily and expired jobs are removed automatically</li>
           <li>Filter by role, country, remote mode, and seniority to find the right H1B opportunities</li>
@@ -234,9 +234,9 @@ export default async function VisaSponsorshipPage({
         <h2 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 24px' }}>Frequently asked questions</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {FAQ.map(({ q, a }) => (
-            <div key={q} style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 12, padding: '20px 24px' }}>
+            <div key={q} style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '20px 24px' }}>
               <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>{q}</h3>
-              <p style={{ color: '#a3a3a3', margin: 0, lineHeight: 1.7 }}>{a}</p>
+              <p style={{ color: 'var(--color-text-1)', margin: 0, lineHeight: 1.7 }}>{a}</p>
             </div>
           ))}
         </div>
@@ -253,7 +253,7 @@ export default async function VisaSponsorshipPage({
             { href: '/jobs/100k-plus', label: 'All $100k+ jobs' },
             { href: '/jobs/200k-plus', label: '$200k+ jobs' },
           ].map((l) => (
-            <Link key={l.href} href={l.href} style={{ color: '#84cc16', fontSize: 14, textDecoration: 'none', border: '1px solid #84cc1640', borderRadius: 8, padding: '6px 14px' }}>
+            <Link key={l.href} href={l.href} style={{ color: 'var(--color-primary-text)', fontSize: 14, textDecoration: 'none', border: '1px solid #84cc1640', borderRadius: 8, padding: '6px 14px' }}>
               {l.label}
             </Link>
           ))}

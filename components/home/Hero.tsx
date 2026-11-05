@@ -5,6 +5,7 @@ import { Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
+import type { SalarySnapshot } from '@/lib/jobs/salarySnapshot'
 
 import styles from './Hero.module.css'
 
@@ -14,6 +15,8 @@ type HeroProps = {
   newThisWeek?: number
   /** Posting date of the newest listing. Shown as a date, never as "updated daily". */
   newestPostedAtISO?: string | null
+  /** Median and spread of USD listings; when missing the panel shows plain counts instead. */
+  salarySnapshot?: SalarySnapshot | null
   /** The role / location / work-mode / salary filters, rendered inside the search form. */
   children?: ReactNode
 }
@@ -34,7 +37,7 @@ function formatNewest(iso: string | null | undefined): string | null {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
-export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPostedAtISO, children }: HeroProps) {
+export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPostedAtISO, salarySnapshot, children }: HeroProps) {
   const newest = formatNewest(newestPostedAtISO)
 
   return (
@@ -104,25 +107,52 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
       ) : null}
       </div>
 
-      <aside className={styles.panel} aria-label="Site numbers and pay floors">
-        <dl className={styles.stats}>
-          <div className={styles.stat}>
-            <dt>Roles</dt>
-            <dd>{jobCount.toLocaleString()}</dd>
-          </div>
-          {companyCount > 0 ? (
+      <aside className={styles.panel} aria-label="Typical salary and pay floors">
+        {salarySnapshot ? (
+          <>
+            <h2 className={styles.panelTitle}>Typical salary</h2>
+            <p className={styles.bigNumber}>{formatCurrencyShort(Math.round(salarySnapshot.median / 1000) * 1000, 'USD')}</p>
+            <p className={styles.bigNote}>
+              Most roles pay {formatCurrencyShort(Math.round(salarySnapshot.p25 / 1000) * 1000, 'USD')}
+              {'\u2013'}
+              {formatCurrencyShort(Math.round(salarySnapshot.p75 / 1000) * 1000, 'USD')}. Median of{' '}
+              {salarySnapshot.count.toLocaleString()} listings paid in USD.
+            </p>
+            <ul className={styles.bars} aria-label="Listings by salary band">
+              {salarySnapshot.bands.map((band) => {
+                const max = Math.max(...salarySnapshot.bands.map((x) => x.count), 1)
+                return (
+                  <li key={band.label} className={styles.barRow}>
+                    <span className={styles.barLabel}>{band.label}</span>
+                    <span className={styles.barTrack} aria-hidden="true">
+                      <span className={styles.barFill} style={{ width: `${Math.max(4, (band.count / max) * 100)}%` }} />
+                    </span>
+                    <span className={styles.barCount}>{band.count.toLocaleString()}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        ) : (
+          <dl className={styles.stats}>
             <div className={styles.stat}>
-              <dt>Companies</dt>
-              <dd>{companyCount.toLocaleString()}</dd>
+              <dt>Roles</dt>
+              <dd>{jobCount.toLocaleString()}</dd>
             </div>
-          ) : null}
-          <div className={styles.stat}>
-            <dt>Markets</dt>
-            <dd>{FLOORS.length}</dd>
-          </div>
-        </dl>
+            {companyCount > 0 ? (
+              <div className={styles.stat}>
+                <dt>Companies</dt>
+                <dd>{companyCount.toLocaleString()}</dd>
+              </div>
+            ) : null}
+            <div className={styles.stat}>
+              <dt>Markets</dt>
+              <dd>{FLOORS.length}</dd>
+            </div>
+          </dl>
+        )}
 
-        <h2 className={styles.panelTitle}>Pay floor by market</h2>
+        <h2 className={`${styles.panelTitle} ${styles.panelTitleSpaced}`}>Pay floor by market</h2>
         <ul className={styles.floors}>
           {FLOORS.map(({ market, currency }) => (
             <li key={currency} className={styles.floor}>

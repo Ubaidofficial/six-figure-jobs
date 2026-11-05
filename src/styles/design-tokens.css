@@ -130,7 +130,7 @@
 
 
 /* ==========================================================================
-   Light theme. next-themes puts class="light" on <html>; dark stays the default.
+   Light theme, the only theme: <html> always carries class="light" (app/layout.tsx). The dark values above are unreachable.
    Contrast (WCAG): text-0 on bg-0 ~18:1, text-1 ~8:1, text-2 ~5.6:1, primary-text (#4d7c0f) on white ~5.4:1.
    ========================================================================== */
 html.light {

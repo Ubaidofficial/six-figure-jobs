@@ -19,6 +19,7 @@ import { LOCATIONS, SALARY_BANDS } from '@/lib/constants/homepage'
 import { countryCodeToSlug } from '@/lib/seo/countrySlug'
 import { Hero } from '@/components/home/Hero'
 import { HeroFilters } from '@/components/home/HeroFilters'
+import { loadSalarySnapshot } from '@/lib/jobs/salarySnapshot'
 import { ActivityTicker, type ActivityEvent } from '@/components/home/ActivityTicker'
 import { buildJobSlugHref } from '../lib/jobs/jobSlug'
 import {
@@ -286,6 +287,7 @@ export default async function HomePage() {
       locationCounts,
       locationCityCounts,
       premiumRoleRows,
+      salarySnapshot,
     ] = await Promise.all([
       queryJobs({
         isHundredKLocal: true,
@@ -408,6 +410,8 @@ export default async function HomePage() {
         GROUP BY "slug";
       `
       })()),
+      // A failure here only hides the salary card; the rest of the page still renders.
+      loadSalarySnapshot(publicJobWhere).catch(() => null),
     ])
 
     const featuredCompanyIds = featuredCompanyGroups
@@ -582,6 +586,7 @@ export default async function HomePage() {
         companyCount={stats.totalCompanies}
         newThisWeek={stats.newThisWeek}
         newestPostedAtISO={newestPostedAt ? newestPostedAt.toISOString() : null}
+        salarySnapshot={salarySnapshot}
       >
         <HeroFilters
           roles={ROLE_OPTIONS.map((o) => ({ value: o.slug, label: o.label }))}

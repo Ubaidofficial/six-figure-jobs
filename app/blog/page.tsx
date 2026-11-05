@@ -37,10 +37,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Salary Guides':    '#84cc16',
-  'Career Advice':    '#60a5fa',
-  'Remote Work':      '#a78bfa',
-  'Visa & Immigration': '#f59e0b',
+  'Salary Guides':    '#3f6212',
+  'Career Advice':    '#1e40af',
+  'Remote Work':      '#5b21b6',
+  'Visa & Immigration': '#92400e',
 }
 
 export default function BlogIndexPage() {
@@ -104,18 +104,18 @@ export default function BlogIndexPage() {
       />
 
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" style={{ fontSize: 14, color: '#a3a3a3', marginBottom: 24, display: 'flex', gap: 8 }}>
-        <Link href="/" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Home</Link>
+      <nav aria-label="Breadcrumb" style={{ fontSize: 14, color: 'var(--color-text-1)', marginBottom: 24, display: 'flex', gap: 8 }}>
+        <Link href="/" style={{ color: 'var(--color-text-1)', textDecoration: 'none' }}>Home</Link>
         <span>/</span>
-        <span style={{ color: '#fff' }}>Blog</span>
+        <span style={{ color: 'var(--color-text-0)' }}>Blog</span>
       </nav>
 
       {/* Header */}
       <header style={{ marginBottom: 48 }}>
         <h1 style={{ fontSize: 38, fontWeight: 800, margin: '0 0 12px', lineHeight: 1.2 }}>
-          Career Guides &amp; <span style={{ color: '#84cc16' }}>Salary Insights</span>
+          Career Guides &amp; <span style={{ color: 'var(--color-primary-text)' }}>Salary Insights</span>
         </h1>
-        <p style={{ fontSize: 17, color: '#a3a3a3', margin: 0, maxWidth: 600 }}>
+        <p style={{ fontSize: 17, color: 'var(--color-text-1)', margin: 0, maxWidth: 600 }}>
           Expert guides on six-figure tech salaries, career paths, visa sponsorship, and salary negotiation —
           backed by live data from {posts.length > 0 ? 'real' : ''} $100k+ job listings.
         </p>
@@ -124,11 +124,11 @@ export default function BlogIndexPage() {
       {/* Post grid */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {posts.map((post) => {
-          const color = CATEGORY_COLORS[post.category] || '#84cc16'
+          const color = CATEGORY_COLORS[post.category] || '#3f6212'
           return (
             <article
               key={post.slug}
-              style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 14, padding: '24px 28px' }}
+              style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 14, padding: '24px 28px' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <span
@@ -146,7 +146,7 @@ export default function BlogIndexPage() {
                 >
                   {post.category}
                 </span>
-                <span style={{ fontSize: 13, color: '#555' }}>
+                <span style={{ fontSize: 13, color: 'var(--color-text-2)' }}>
                   {new Date(post.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   {' · '}
                   {post.readingMinutes} min read
@@ -155,12 +155,12 @@ export default function BlogIndexPage() {
               <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px', lineHeight: 1.3 }}>
                 <Link
                   href={`/blog/${post.slug}`}
-                  style={{ color: '#fff', textDecoration: 'none' }}
+                  style={{ color: 'var(--color-text-0)', textDecoration: 'none' }}
                 >
                   {post.title}
                 </Link>
               </h2>
-              <p style={{ color: '#a3a3a3', fontSize: 15, margin: '0 0 16px', lineHeight: 1.6 }}>
+              <p style={{ color: 'var(--color-text-1)', fontSize: 15, margin: '0 0 16px', lineHeight: 1.6 }}>
                 {post.excerpt}
               </p>
               <Link
@@ -189,7 +189,7 @@ export default function BlogIndexPage() {
             <Link
               key={l.href}
               href={l.href}
-              style={{ color: '#84cc16', fontSize: 13, textDecoration: 'none', border: '1px solid #84cc1640', borderRadius: 8, padding: '6px 14px' }}
+              style={{ color: 'var(--color-primary-text)', fontSize: 13, textDecoration: 'none', border: '1px solid #84cc1640', borderRadius: 8, padding: '6px 14px' }}
             >
               {l.label}
             </Link>

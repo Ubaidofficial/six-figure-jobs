@@ -120,21 +120,21 @@ export default async function BlogPostPage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" style={{ fontSize: 14, color: '#a3a3a3', marginBottom: 28, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Link href="/" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Home</Link>
+      <nav aria-label="Breadcrumb" style={{ fontSize: 14, color: 'var(--color-text-1)', marginBottom: 28, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Link href="/" style={{ color: 'var(--color-text-1)', textDecoration: 'none' }}>Home</Link>
         <span>/</span>
-        <Link href="/blog" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Blog</Link>
+        <Link href="/blog" style={{ color: 'var(--color-text-1)', textDecoration: 'none' }}>Blog</Link>
         <span>/</span>
-        <span style={{ color: '#fff' }}>{post.category}</span>
+        <span style={{ color: 'var(--color-text-0)' }}>{post.category}</span>
       </nav>
 
       {/* Article header */}
       <header style={{ marginBottom: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#84cc16', background: '#84cc1618', border: '1px solid #84cc1640', borderRadius: 100, padding: '3px 10px' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#3f6212', background: '#84cc1618', border: '1px solid #84cc1640', borderRadius: 100, padding: '3px 10px' }}>
             {post.category}
           </span>
-          <span style={{ fontSize: 13, color: '#555' }}>
+          <span style={{ fontSize: 13, color: 'var(--color-text-2)' }}>
             {new Date(post.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             {' · '}
             {post.readingMinutes} min read
@@ -143,14 +143,14 @@ export default async function BlogPostPage({ params }: Props) {
         <h1 style={{ fontSize: 36, fontWeight: 800, margin: '0 0 16px', lineHeight: 1.2 }}>
           {post.title}
         </h1>
-        <p style={{ fontSize: 18, color: '#a3a3a3', margin: 0, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 18, color: 'var(--color-text-1)', margin: 0, lineHeight: 1.6 }}>
           {post.excerpt}
         </p>
       </header>
 
       {/* Article body */}
       <article
-        style={{ fontSize: 16, lineHeight: 1.8, color: '#d4d4d4' }}
+        style={{ fontSize: 16, lineHeight: 1.8, color: 'var(--color-text-0)' }}
         dangerouslySetInnerHTML={{ __html: styledContent(post.content) }}
       />
 
@@ -160,9 +160,9 @@ export default async function BlogPostPage({ params }: Props) {
           <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 20 }}>Frequently asked questions</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {post.faq.map(({ q, a }) => (
-              <div key={q} style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 12, padding: '20px 24px' }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>{q}</h3>
-                <p style={{ color: '#a3a3a3', margin: 0, lineHeight: 1.7, fontSize: 15 }}>{a}</p>
+              <div key={q} style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '20px 24px' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: 'var(--color-text-0)' }}>{q}</h3>
+                <p style={{ color: 'var(--color-text-1)', margin: 0, lineHeight: 1.7, fontSize: 15 }}>{a}</p>
               </div>
             ))}
           </div>
@@ -170,11 +170,11 @@ export default async function BlogPostPage({ params }: Props) {
       )}
 
       {/* CTA */}
-      <section style={{ marginTop: 48, background: '#0d1a0d', border: '1px solid #84cc1630', borderRadius: 16, padding: '32px' }}>
+      <section style={{ marginTop: 48, background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)', border: '1px solid #84cc1630', borderRadius: 16, padding: '32px' }}>
         <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 10px' }}>
-          Ready to find your <span style={{ color: '#84cc16' }}>six-figure job?</span>
+          Ready to find your <span style={{ color: '#3f6212' }}>six-figure job?</span>
         </h2>
-        <p style={{ color: '#a3a3a3', margin: '0 0 20px', fontSize: 15 }}>
+        <p style={{ color: 'var(--color-text-1)', margin: '0 0 20px', fontSize: 15 }}>
           Browse $100k+ positions with salaries published upfront. Apply directly.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -186,7 +186,7 @@ export default async function BlogPostPage({ params }: Props) {
           </Link>
           <Link
             href="/salary"
-            style={{ color: '#84cc16', fontWeight: 600, fontSize: 15, padding: '10px 24px', borderRadius: 8, border: '1px solid #84cc1640', textDecoration: 'none' }}
+            style={{ color: '#3f6212', fontWeight: 600, fontSize: 15, padding: '10px 24px', borderRadius: 8, border: '1px solid #84cc1640', textDecoration: 'none' }}
           >
             Salary Guides →
           </Link>
@@ -202,13 +202,13 @@ export default async function BlogPostPage({ params }: Props) {
               <Link
                 key={rel.slug}
                 href={`/blog/${rel.slug}`}
-                style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 12, padding: '16px 20px', textDecoration: 'none', display: 'block' }}
+                style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '16px 20px', textDecoration: 'none', display: 'block' }}
               >
-                <div style={{ fontSize: 11, color: '#84cc16', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div style={{ fontSize: 11, color: 'var(--color-primary-text)', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {rel.category}
                 </div>
-                <div style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>{rel.title}</div>
-                <div style={{ color: '#a3a3a3', fontSize: 13, marginTop: 4 }}>{rel.readingMinutes} min read</div>
+                <div style={{ color: 'var(--color-text-0)', fontWeight: 600, fontSize: 15 }}>{rel.title}</div>
+                <div style={{ color: 'var(--color-text-1)', fontSize: 13, marginTop: 4 }}>{rel.readingMinutes} min read</div>
               </Link>
             ))}
           </div>
@@ -224,14 +224,14 @@ export default async function BlogPostPage({ params }: Props) {
  */
 function styledContent(html: string): string {
   return html
-    .replace(/<h2>/g, '<h2 style="font-size:22px;font-weight:700;margin:2em 0 0.5em;color:#fff">')
-    .replace(/<h3>/g, '<h3 style="font-size:18px;font-weight:700;margin:1.5em 0 0.4em;color:#e5e5e5">')
-    .replace(/<p>/g, '<p style="margin:0 0 1.2em;color:#c4c4c4;line-height:1.8">')
-    .replace(/<ul>/g, '<ul style="margin:0 0 1.2em;padding-left:1.4em;color:#c4c4c4">')
-    .replace(/<ol>/g, '<ol style="margin:0 0 1.2em;padding-left:1.4em;color:#c4c4c4">')
+    .replace(/<h2>/g, '<h2 style="font-size:22px;font-weight:700;margin:2em 0 0.5em;color:var(--color-text-0)">')
+    .replace(/<h3>/g, '<h3 style="font-size:18px;font-weight:700;margin:1.5em 0 0.4em;color:var(--color-text-0)">')
+    .replace(/<p>/g, '<p style="margin:0 0 1.2em;color:var(--color-text-0);line-height:1.8">')
+    .replace(/<ul>/g, '<ul style="margin:0 0 1.2em;padding-left:1.4em;color:var(--color-text-0)">')
+    .replace(/<ol>/g, '<ol style="margin:0 0 1.2em;padding-left:1.4em;color:var(--color-text-0)">')
     .replace(/<li>/g, '<li style="margin-bottom:0.5em">')
-    .replace(/<strong>/g, '<strong style="color:#fff;font-weight:700">')
-    .replace(/<a href="/g, '<a style="color:#84cc16;text-decoration:none" href="')
+    .replace(/<strong>/g, '<strong style="color:var(--color-text-0);font-weight:700">')
+    .replace(/<a href="/g, '<a style="color:var(--color-primary-text);text-decoration:none" href="')
 }
 
 function stripHtml(html: string): string {

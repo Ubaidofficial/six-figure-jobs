@@ -143,38 +143,38 @@ export default async function NoDegreeJobsPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" style={{ fontSize: 14, color: '#a3a3a3', marginBottom: 24, display: 'flex', gap: 8, alignItems: 'center' }}>
-        <Link href="/" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Home</Link>
+      <nav aria-label="Breadcrumb" style={{ fontSize: 14, color: 'var(--color-text-1)', marginBottom: 24, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <Link href="/" style={{ color: 'var(--color-text-1)', textDecoration: 'none' }}>Home</Link>
         <span>/</span>
-        <Link href="/jobs" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Jobs</Link>
+        <Link href="/jobs" style={{ color: 'var(--color-text-1)', textDecoration: 'none' }}>Jobs</Link>
         <span>/</span>
-        <span style={{ color: '#fff' }}>No Degree Required</span>
+        <span style={{ color: 'var(--color-text-0)' }}>No Degree Required</span>
       </nav>
 
       {/* Hero */}
       <header style={{ marginBottom: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <span style={{ fontSize: 32 }}>🎓</span>
-          <span style={{ background: '#1a2e1a', border: '1px solid #84cc1640', borderRadius: 100, color: '#84cc16', fontSize: 12, fontWeight: 700, padding: '4px 12px' }}>
+          <span style={{ background: 'color-mix(in srgb, var(--color-primary) 18%, transparent)', border: '1px solid #84cc1640', borderRadius: 100, color: '#3f6212', fontSize: 12, fontWeight: 700, padding: '4px 12px' }}>
             SKILLS-FIRST HIRING
           </span>
         </div>
         <h1 style={{ fontSize: 42, fontWeight: 800, margin: '0 0 12px', lineHeight: 1.15 }}>
-          <span style={{ color: '#84cc16' }}>$100k+</span> Tech Jobs{' '}
-          <span style={{ color: '#fff' }}>Without a Degree</span>
+          <span style={{ color: 'var(--color-primary-text)' }}>$100k+</span> Tech Jobs{' '}
+          <span style={{ color: 'var(--color-text-0)' }}>Without a Degree</span>
         </h1>
-        <p style={{ fontSize: 18, color: '#a3a3a3', margin: '0 0 20px' }}>
+        <p style={{ fontSize: 18, color: 'var(--color-text-1)', margin: '0 0 20px' }}>
           {total.toLocaleString()} six-figure jobs at companies that hire based on skills,
           not diplomas. Software engineering, DevOps, sales, and data roles paying $100k–$300k+.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ background: '#84cc1618', border: '1px solid #84cc1640', borderRadius: 100, color: '#84cc16', fontSize: 14, fontWeight: 700, padding: '8px 18px' }}>
+          <span style={{ background: '#84cc1618', border: '1px solid #84cc1640', borderRadius: 100, color: '#3f6212', fontSize: 14, fontWeight: 700, padding: '8px 18px' }}>
             No degree filter required
           </span>
-          <span style={{ background: '#3b82f618', border: '1px solid #3b82f640', borderRadius: 100, color: '#60a5fa', fontSize: 14, fontWeight: 700, padding: '8px 18px' }}>
+          <span style={{ background: '#3b82f618', border: '1px solid #3b82f640', borderRadius: 100, color: '#1e40af', fontSize: 14, fontWeight: 700, padding: '8px 18px' }}>
             Verified salaries
           </span>
-          <span style={{ background: '#6366f118', border: '1px solid #6366f140', borderRadius: 100, color: '#818cf8', fontSize: 14, fontWeight: 700, padding: '8px 18px' }}>
+          <span style={{ background: '#6366f118', border: '1px solid #6366f140', borderRadius: 100, color: '#3730a3', fontSize: 14, fontWeight: 700, padding: '8px 18px' }}>
             Direct apply
           </span>
         </div>
@@ -188,10 +188,10 @@ export default async function NoDegreeJobsPage({
             <Link
               key={r.slug}
               href={`/jobs/${r.slug}`}
-              style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 12, padding: '16px 20px', textDecoration: 'none', display: 'block' }}
+              style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '16px 20px', textDecoration: 'none', display: 'block' }}
             >
-              <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{r.label}</div>
-              <div style={{ color: '#a3a3a3', fontSize: 13 }}>{r.note}</div>
+              <div style={{ color: 'var(--color-text-0)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{r.label}</div>
+              <div style={{ color: 'var(--color-text-1)', fontSize: 13 }}>{r.note}</div>
             </Link>
           ))}
         </div>
@@ -209,11 +209,11 @@ export default async function NoDegreeJobsPage({
       {totalPages > 1 && (
         <nav aria-label="Pagination" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 40 }}>
           {page > 1 && (
-            <Link href={`/jobs/no-degree${page - 1 > 1 ? `?page=${page - 1}` : ''}`} style={{ color: '#84cc16' }}>← Previous</Link>
+            <Link href={`/jobs/no-degree${page - 1 > 1 ? `?page=${page - 1}` : ''}`} style={{ color: 'var(--color-primary-text)' }}>← Previous</Link>
           )}
-          <span style={{ color: '#a3a3a3' }}>Page {page} of {totalPages}</span>
+          <span style={{ color: 'var(--color-text-1)' }}>Page {page} of {totalPages}</span>
           {page < totalPages && (
-            <Link href={`/jobs/no-degree?page=${page + 1}`} style={{ color: '#84cc16' }}>Next →</Link>
+            <Link href={`/jobs/no-degree?page=${page + 1}`} style={{ color: 'var(--color-primary-text)' }}>Next →</Link>
           )}
         </nav>
       )}
@@ -223,10 +223,10 @@ export default async function NoDegreeJobsPage({
         <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 24 }}>4 paths to $100k+ without a degree</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
           {PATHS.map((p) => (
-            <div key={p.title} style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 12, padding: '20px 24px' }}>
+            <div key={p.title} style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '20px 24px' }}>
               <div style={{ fontSize: 28, marginBottom: 10 }}>{p.icon}</div>
-              <div style={{ color: '#fff', fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{p.title}</div>
-              <div style={{ color: '#a3a3a3', fontSize: 14, lineHeight: 1.6 }}>{p.desc}</div>
+              <div style={{ color: 'var(--color-text-0)', fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{p.title}</div>
+              <div style={{ color: 'var(--color-text-1)', fontSize: 14, lineHeight: 1.6 }}>{p.desc}</div>
             </div>
           ))}
         </div>
@@ -237,9 +237,9 @@ export default async function NoDegreeJobsPage({
         <h2 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 24px' }}>Frequently asked questions</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {FAQ.map(({ q, a }) => (
-            <div key={q} style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 12, padding: '20px 24px' }}>
+            <div key={q} style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '20px 24px' }}>
               <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>{q}</h3>
-              <p style={{ color: '#a3a3a3', margin: 0, lineHeight: 1.7 }}>{a}</p>
+              <p style={{ color: 'var(--color-text-1)', margin: 0, lineHeight: 1.7 }}>{a}</p>
             </div>
           ))}
         </div>
@@ -256,7 +256,7 @@ export default async function NoDegreeJobsPage({
             { href: '/jobs/200k-plus', label: '$200k+ jobs' },
             { href: '/salary', label: 'Salary guides' },
           ].map((l) => (
-            <Link key={l.href} href={l.href} style={{ color: '#84cc16', fontSize: 14, textDecoration: 'none', border: '1px solid #84cc1640', borderRadius: 8, padding: '6px 14px' }}>
+            <Link key={l.href} href={l.href} style={{ color: 'var(--color-primary-text)', fontSize: 14, textDecoration: 'none', border: '1px solid #84cc1640', borderRadius: 8, padding: '6px 14px' }}>
               {l.label}
             </Link>
           ))}

@@ -134,6 +134,14 @@
   transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
+.navLink.navLinkActive,
+.navLink.navLinkActive:hover {
+  background: var(--color-bg-1);
+  border-color: var(--color-border);
+  color: var(--color-text-0);
+  font-weight: 600;
+}
+
 .navLink:hover,
 .navTrigger:hover {
   background: color-mix(in srgb, var(--color-fg) 4%, transparent);

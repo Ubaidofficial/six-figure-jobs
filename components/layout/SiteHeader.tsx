@@ -2,10 +2,9 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Menu, Search, X } from 'lucide-react'
 
-import { ThemeToggle } from './ThemeToggle'
 import { BrandMark } from './BrandMark'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -29,6 +28,8 @@ function useScrolled(thresholdPx: number = 10): boolean {
 }
 
 export function SiteHeader() {
+  const pathname = usePathname()
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
   const scrolled = useScrolled(8)
   const router = useRouter()
 
@@ -71,16 +72,15 @@ export function SiteHeader() {
           </span>
 
           <nav className={styles.nav} aria-label="Primary">
-            <Link href="/jobs" className={styles.navLink}>Jobs</Link>
-            <Link href="/remote" className={styles.navLink}>Remote</Link>
-            <Link href="/companies" className={styles.navLink}>Companies</Link>
-            <Link href="/salary" className={styles.navLink}>Salaries</Link>
-            <Link href="/blog" className={styles.navLink}>Blog</Link>
+            <Link href="/jobs" className={`${styles.navLink} ${isActive("/jobs") ? styles.navLinkActive : ''}`} aria-current={isActive("/jobs") ? 'page' : undefined}>Jobs</Link>
+            <Link href="/remote" className={`${styles.navLink} ${isActive("/remote") ? styles.navLinkActive : ''}`} aria-current={isActive("/remote") ? 'page' : undefined}>Remote</Link>
+            <Link href="/companies" className={`${styles.navLink} ${isActive("/companies") ? styles.navLinkActive : ''}`} aria-current={isActive("/companies") ? 'page' : undefined}>Companies</Link>
+            <Link href="/salary" className={`${styles.navLink} ${isActive("/salary") ? styles.navLinkActive : ''}`} aria-current={isActive("/salary") ? 'page' : undefined}>Salaries</Link>
+            <Link href="/blog" className={`${styles.navLink} ${isActive("/blog") ? styles.navLinkActive : ''}`} aria-current={isActive("/blog") ? 'page' : undefined}>Blog</Link>
           </nav>
         </div>
 
         <div className={styles.right}>
-          <ThemeToggle className={styles.searchBtn} iconClassName={styles.searchIcon} />
           <button
             type="button"
             className={styles.searchBtn}
