@@ -183,18 +183,45 @@ async function fetchPage(market: (typeof FREEHIRE_MARKETS)[number], offset: numb
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-/** fetchPage that waits out freehire's 429 rate limit (Retry-After) instead of aborting the market. */
+/** Longest rate-limit wait we will sit through. Anything longer means the quota is used up, not a short burst limit. */
+export const MAX_RATE_LIMIT_WAIT_S = 120
+
+/**
+ * What to do with a 429: wait the (short) time freehire asks for, or give up when it asks for longer than
+ * `capSeconds`. On 2026-11-05 freehire answered a sync with Retry-After 49611 (about 13.8 hours); the old code slept
+ * through all of it, so the job sat idle until the 45-minute job timeout killed it.
+ */
+export function decideRateLimitWait(
+  retryAfter: unknown,
+  capSeconds: number = MAX_RATE_LIMIT_WAIT_S,
+): { action: 'wait' | 'give-up'; seconds: number } {
+  const n = Number(retryAfter)
+  const seconds = Number.isFinite(n) && n >= 0 && retryAfter !== null && retryAfter !== undefined && retryAfter !== '' ? n : 20
+  return { action: seconds > capSeconds ? 'give-up' : 'wait', seconds }
+}
+
+/** fetchPage that waits out short 429 rate limits (Retry-After) and fails fast, with a clear message, on a long one. */
 async function fetchPageWithRetry(market: (typeof FREEHIRE_MARKETS)[number], offset: number): Promise<FreehireResponse> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fetchPage(market, offset)
     } catch (error) {
       const response = (error as { response?: { status?: number; headers?: Record<string, string> } }).response
-      if (response?.status === 429 && attempt < 4) {
-        const wait = Number(response.headers?.['retry-after']) || 20
-        console.warn(`[freehire] 429 rate limited; waiting ${wait}s (attempt ${attempt + 1})`)
-        await sleep(wait * 1000)
-        continue
+      if (response?.status === 429) {
+        const h = response.headers ?? {}
+        const decision = decideRateLimitWait(h['retry-after'])
+        console.warn(
+          `[freehire] 429 rate limited: retry-after=${h['retry-after'] ?? '-'} limit=${h['x-ratelimit-limit'] ?? '-'} remaining=${h['x-ratelimit-remaining'] ?? '-'} reset=${h['x-ratelimit-reset'] ?? '-'} (attempt ${attempt + 1})`,
+        )
+        if (decision.action === 'give-up') {
+          throw new Error(
+            `freehire rate limit: asked to wait ${decision.seconds}s (about ${Math.round(decision.seconds / 3600)}h), longer than the ${MAX_RATE_LIMIT_WAIT_S}s we will wait. The API key's quota looks used up: check its plan and usage with freehire.`,
+          )
+        }
+        if (attempt < 4) {
+          await sleep(decision.seconds * 1000)
+          continue
+        }
       }
       throw error
     }
@@ -308,6 +335,7 @@ export async function loadFreehireCompanyWebsites(
   // Overall time budget: this is a nice-to-have, so when freehire is slow or rate-limiting we stop looking up more
   // companies (the rest keep their name-based logo) instead of holding up the job ingest behind it.
   const deadline = Date.now() + budgetMs
+  let rateLimited = false // a long 429 means freehire is refusing us: stop asking, for every worker
   const queue = [...new Set(slugs.filter(Boolean))]
   async function lookup(slug: string): Promise<void> {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -317,9 +345,12 @@ export async function loadFreehireCompanyWebsites(
           signal: AbortSignal.timeout(15_000),
         })
         if (res.status === 429) {
-          const retryAfter = res.headers.get('retry-after')
-          const wait = retryAfter !== null && Number.isFinite(Number(retryAfter)) ? Number(retryAfter) : 2
-          await sleep(Math.min(10_000, wait * 1000))
+          const decision = decideRateLimitWait(res.headers.get('retry-after'), 30)
+          if (decision.action === 'give-up') {
+            rateLimited = true
+            return
+          }
+          await sleep(decision.seconds * 1000)
           continue
         }
         if (!res.ok) return
@@ -335,7 +366,7 @@ export async function loadFreehireCompanyWebsites(
   }
   await Promise.all(
     Array.from({ length: Math.min(3, queue.length) }, async () => {
-      while (queue.length > 0 && Date.now() < deadline) {
+      while (queue.length > 0 && Date.now() < deadline && !rateLimited) {
         const slug = queue.shift()!
         await lookup(slug)
         if (pauseMs > 0) await sleep(pauseMs)

@@ -19,7 +19,7 @@ import axios from 'axios'
 import { prisma } from '../prisma'
 import { expireJobsByIds } from '../jobs/expiry'
 import { makeBoardSource } from '../ingest/sourcePriority'
-import { freehireHeaders, type FreehireJob } from './freehire'
+import { decideRateLimitWait, freehireHeaders, type FreehireJob } from './freehire'
 
 const JOB_URL = 'https://freehire.me/api/v1/jobs'
 const SEARCH_URL = 'https://freehire.me/api/v1/jobs/search'
@@ -44,9 +44,14 @@ export async function lookupFreehireJob(slug: string): Promise<Lookup> {
     } catch (error) {
       const response = (error as { response?: { status?: number; headers?: Record<string, string> } }).response
       if (response?.status === 404) return { state: 'gone' }
-      if (response?.status === 429 && attempt < 3) {
-        await sleep(Math.min((Number(response.headers?.['retry-after']) || 5) * 1000, 60_000))
-        continue
+      if (response?.status === 429) {
+        const decision = decideRateLimitWait(response.headers?.['retry-after'])
+        // A long Retry-After means the quota is used up: report an error now instead of waiting hours per lookup.
+        if (decision.action === 'give-up') return { state: 'error', message: `rate limited for ${decision.seconds}s` }
+        if (attempt < 3) {
+          await sleep(decision.seconds * 1000)
+          continue
+        }
       }
       return { state: 'error', message: error instanceof Error ? error.message : String(error) }
     }

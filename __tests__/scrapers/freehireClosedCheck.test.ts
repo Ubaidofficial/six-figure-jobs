@@ -35,6 +35,14 @@ const run = (active: ActiveJob[], lookups: Record<string, Lookup>, extra: object
 describe('lookupFreehireJob', () => {
   beforeEach(() => get.mockReset())
 
+  it('reports an error at once on a long rate limit instead of waiting hours (once Retry-After was 49611 s)', async () => {
+    get.mockRejectedValue({ response: { status: 429, headers: { 'retry-after': '49611' } } })
+    const t0 = Date.now()
+    expect(await lookupFreehireJob('a')).toEqual({ state: 'error', message: 'rate limited for 49611s' })
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(Date.now() - t0).toBeLessThan(1000)
+  })
+
   it('is closed only when freehire sets closed_at', async () => {
     get.mockResolvedValueOnce({ data: { data: { closed_at: '2026-11-04T10:00:00Z' } } })
     expect(await lookupFreehireJob('a')).toEqual({ state: 'closed', closedAt: '2026-11-04T10:00:00Z' })

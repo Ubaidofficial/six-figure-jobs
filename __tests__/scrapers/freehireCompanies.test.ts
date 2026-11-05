@@ -68,3 +68,38 @@ describe('mapFreehireJob keeps the company handle', () => {
     expect(mapFreehireJob(job)?.companyRef).toBe('acme')
   })
 })
+
+import { decideRateLimitWait, MAX_RATE_LIMIT_WAIT_S } from '../../lib/scrapers/freehire'
+
+describe('decideRateLimitWait', () => {
+  it('waits out a short rate limit', () => {
+    expect(decideRateLimitWait('7')).toEqual({ action: 'wait', seconds: 7 })
+    expect(decideRateLimitWait(String(MAX_RATE_LIMIT_WAIT_S))).toEqual({ action: 'wait', seconds: MAX_RATE_LIMIT_WAIT_S })
+  })
+
+  it('gives up on a long one: freehire once asked for 49611 s (13.8 hours) and the sync slept through it', () => {
+    expect(decideRateLimitWait('49611')).toEqual({ action: 'give-up', seconds: 49611 })
+    expect(decideRateLimitWait(String(MAX_RATE_LIMIT_WAIT_S + 1)).action).toBe('give-up')
+  })
+
+  it('assumes 20 s when the header is missing or not a number, and treats 0 as 0', () => {
+    for (const bad of [undefined, null, '', 'soon']) expect(decideRateLimitWait(bad)).toEqual({ action: 'wait', seconds: 20 })
+    expect(decideRateLimitWait('0')).toEqual({ action: 'wait', seconds: 0 })
+  })
+
+  it('honours a custom cap', () => {
+    expect(decideRateLimitWait('45', 30).action).toBe('give-up')
+    expect(decideRateLimitWait('25', 30).action).toBe('wait')
+  })
+})
+
+describe('company lookup under a long rate limit', () => {
+  it('stops asking after a long 429 instead of hammering freehire or waiting hours', async () => {
+    const fetchFn = jest.fn(async () => res(429, undefined, { 'retry-after': '49611' })) as unknown as typeof fetch
+    const t0 = Date.now()
+    const out = await loadFreehireCompanyWebsites(Array.from({ length: 30 }, (_, i) => `c${i}`), fetchFn, 0)
+    expect(out.size).toBe(0)
+    expect((fetchFn as unknown as jest.Mock).mock.calls.length).toBeLessThanOrEqual(3) // one per worker, then everyone stops
+    expect(Date.now() - t0).toBeLessThan(2000)
+  })
+})
