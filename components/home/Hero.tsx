@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { Search } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
+import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 
 import styles from './Hero.module.css'
 
@@ -16,6 +18,15 @@ type HeroProps = {
   children?: ReactNode
 }
 
+// Pay floors shown in the panel come from the same table the site filters with, so they cannot drift.
+const FLOORS = [
+  { market: 'United States', currency: 'USD' },
+  { market: 'United Kingdom', currency: 'GBP' },
+  { market: 'Europe', currency: 'EUR' },
+  { market: 'Canada', currency: 'CAD' },
+  { market: 'Australia', currency: 'AUD' },
+] as const
+
 function formatNewest(iso: string | null | undefined): string | null {
   if (!iso) return null
   const date = new Date(iso)
@@ -28,6 +39,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
 
   return (
     <section className={styles.hero}>
+      <div className={styles.main}>
       <p className={styles.eyebrow}>US · UK · EU · Canada · Australia</p>
 
       <h1 className={styles.headline}>
@@ -90,6 +102,41 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
           {newest ? `Newest listing posted ${newest}` : null}
         </p>
       ) : null}
+      </div>
+
+      <aside className={styles.panel} aria-label="Site numbers and pay floors">
+        <dl className={styles.stats}>
+          <div className={styles.stat}>
+            <dt>Roles</dt>
+            <dd>{jobCount.toLocaleString()}</dd>
+          </div>
+          {companyCount > 0 ? (
+            <div className={styles.stat}>
+              <dt>Companies</dt>
+              <dd>{companyCount.toLocaleString()}</dd>
+            </div>
+          ) : null}
+          <div className={styles.stat}>
+            <dt>Markets</dt>
+            <dd>{FLOORS.length}</dd>
+          </div>
+        </dl>
+
+        <h2 className={styles.panelTitle}>Pay floor by market</h2>
+        <ul className={styles.floors}>
+          {FLOORS.map(({ market, currency }) => (
+            <li key={currency} className={styles.floor}>
+              <span>{market}</span>
+              <span className={styles.floorValue}>
+                {formatCurrencyShort(Number(HIGH_SALARY_THRESHOLDS[currency]), currency)}+
+              </span>
+            </li>
+          ))}
+        </ul>
+        <Link href="/salary" className={styles.panelLink}>
+          Salary guides by role <span aria-hidden="true">→</span>
+        </Link>
+      </aside>
     </section>
   )
 }

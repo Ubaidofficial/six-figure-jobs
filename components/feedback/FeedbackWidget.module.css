@@ -13,20 +13,20 @@
   gap: 8px;
   padding: 10px 16px;
   border-radius: 999px;
-  background: rgba(16, 185, 129, 0.90);
-  color: #052e1d;
+  background: rgba(132, 204, 22, 0.90);
+  color: #0a0a0a;
   border: none;
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(132, 204, 22, 0.35), 0 2px 8px rgba(0,0,0,0.3);
   transition: transform 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
   backdrop-filter: blur(8px);
 }
 
 .toggle:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.45), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 28px rgba(132, 204, 22, 0.45), 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .toggleAboveBar {
@@ -165,8 +165,8 @@
 
 .select:focus,
 .textarea:focus {
-  border-color: rgba(16, 185, 129, 0.50);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
+  border-color: rgba(132, 204, 22, 0.50);
+  box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.10);
 }
 
 .select option {
@@ -196,13 +196,13 @@
 
 .pasteArea:focus,
 .pasteArea:hover {
-  border-color: rgba(16, 185, 129, 0.40);
-  background: rgba(16, 185, 129, 0.04);
+  border-color: rgba(132, 204, 22, 0.40);
+  background: rgba(132, 204, 22, 0.04);
 }
 
 .pasteAreaFilled {
   border-style: solid;
-  border-color: rgba(16, 185, 129, 0.30);
+  border-color: rgba(132, 204, 22, 0.30);
   min-height: unset;
 }
 
@@ -281,7 +281,7 @@
   padding: 8px 16px;
   border-radius: 999px;
   border: none;
-  background: #10b981;
+  background: var(--color-primary);
   color: var(--color-text-0);
   font-size: 13px;
   font-weight: 600;
@@ -291,7 +291,7 @@
 }
 
 .submit:hover:not(:disabled) {
-  background: #059669;
+  background: var(--color-primary-dark);
 }
 
 .submit:disabled {

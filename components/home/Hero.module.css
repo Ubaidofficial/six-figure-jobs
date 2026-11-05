@@ -4,6 +4,109 @@
   padding: 24px 0 36px;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+}
+
+.main {
+  min-width: 0;
+}
+
+/* Right-hand panel: real numbers and the per-market pay floors. Desktop only; the copy already says the same. */
+.panel {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 56px;
+    align-items: start;
+  }
+
+  .panel {
+    display: block;
+    margin-top: 40px;
+    padding: 22px;
+    background: var(--color-bg-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, 16px);
+  }
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 22px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.stat dt {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-1);
+}
+
+.stat dd {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-0);
+}
+
+.panelTitle {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-1);
+}
+
+.floors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.floor {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 0;
+  font-size: 0.9375rem;
+  color: var(--color-text-0);
+  border-bottom: 1px dashed color-mix(in srgb, var(--color-fg) 12%, transparent);
+}
+
+.floor:last-child {
+  border-bottom: 0;
+}
+
+.floorValue {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-primary-text);
+}
+
+.panelLink {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary-text);
+  text-decoration: none;
+}
+
+.panelLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .eyebrow {

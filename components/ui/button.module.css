@@ -94,14 +94,12 @@
    -------------------------------------------------------------------------- */
 
 .primary {
-  color: var(--color-text-0);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  box-shadow: var(--shadow-sm);
+  color: #0a0a0a; /* dark on lime in both themes */
+  background: var(--color-primary);
 }
 
 .primary:hover:not(:disabled) {
-  box-shadow: var(--shadow-md-glow);
-  filter: brightness(1.03);
+  background: var(--color-primary-light);
 }
 
 .secondary {

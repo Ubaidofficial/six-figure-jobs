@@ -61,8 +61,14 @@
   color: var(--color-text-0);
   text-decoration: none;
   display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+}
+
+.logoMark {
+  height: 1.3em;
+  width: auto;
+  flex: none;
 }
 
 .logoAccent {

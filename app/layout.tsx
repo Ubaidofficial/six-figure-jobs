@@ -67,14 +67,7 @@ export const metadata: Metadata = {
     site: '@6figjobs',
     images: [`${SITE_URL}/og-image.png`],
   },
-  icons: {
-    icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/logo.png', type: 'image/png', sizes: '512x512' },
-    ],
-    apple: { url: '/logo.png', sizes: '512x512' },
-    shortcut: '/logo.png',
-  },
+  // Icons come from the file conventions in app/: icon.svg, favicon.ico and apple-icon.png.
 }
 
 export const viewport: Viewport = {
