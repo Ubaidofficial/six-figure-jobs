@@ -230,8 +230,8 @@ export function buildRoleMetadata(
   const title = `${roleTitle} Jobs - $100k+ | ${SITE_NAME}`
   const description =
     total > 0
-      ? `Browse ${total.toLocaleString()} verified ${roleTitle} jobs with published salary ranges, and no entry-level clutter.${avgUsd ? ` ~$${Math.round(avgUsd / 1000)}k average USD salary where available.` : ''}`
-      : `Browse verified ${roleTitle} jobs with published salary ranges, and no entry-level clutter.`
+      ? `Browse ${total.toLocaleString()} ${roleTitle} jobs with published salary ranges.${avgUsd ? ` ~$${Math.round(avgUsd / 1000)}k average USD salary where available.` : ''}`
+      : `Browse ${roleTitle} jobs with published salary ranges.`
 
   const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${roleSlug}`
   return {
