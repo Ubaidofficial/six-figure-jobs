@@ -24,6 +24,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 import { JobsFiltersPanel, type JobsFacets } from '../../_components/JobsFilters'
 import { JobsToolbar } from '../../_components/JobsToolbar'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
+import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 const PAGE_SIZE = 24
 const SITE_URL = getSiteUrl()
@@ -452,6 +453,7 @@ export async function CountryLocationTemplate({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
       <ListingHeader
+        aside={<ListingSalaryAside input={queryInput} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: loc.label }]}
         accent="$100k+"
         title={`Jobs in ${loc.label}`}

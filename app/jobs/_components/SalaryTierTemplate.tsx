@@ -22,6 +22,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
+import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
@@ -359,6 +360,7 @@ export async function SalaryTierTemplate({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
       <ListingHeader
+        aside={<ListingSalaryAside input={queryInput} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: tier.rangeLabel }]}
         accent={tier.rangeLabel}
         title="Jobs"

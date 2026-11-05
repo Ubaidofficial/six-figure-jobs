@@ -214,8 +214,8 @@ export default async function CompanyPage({
         />
       ))}
 
-          <header className="flex flex-col gap-5 border-b border-border pb-8 sm:flex-row sm:items-start">
-            <CompanyLogo name={company.name} src={heroLogo} size="xl" priority className="size-20 flex-shrink-0 rounded-xl text-2xl" />
+          <header className="flex flex-col gap-5 rounded-[22px] bg-[color-mix(in_srgb,var(--color-primary)_16%,var(--color-bg-1))] p-5 sm:flex-row sm:items-start sm:gap-7 sm:rounded-[28px] sm:p-9">
+            <CompanyLogo name={company.name} src={heroLogo} size="xl" priority className="size-20 flex-shrink-0 rounded-2xl text-2xl sm:size-24" />
             <div className="min-w-0 flex-1">
               <Breadcrumb
                 items={[
@@ -224,7 +224,7 @@ export default async function CompanyPage({
                   { label: company.name },
                 ]}
               />
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{company.name}</h1>
+              <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl">{company.name}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 <strong className="font-semibold text-foreground">{jobs.length}</strong> open $100k+{' '}
                 {jobs.length === 1 ? 'job' : 'jobs'}
@@ -245,7 +245,7 @@ export default async function CompanyPage({
                   {tags.slice(0, 10).map((tag) => (
                     <li
                       key={tag}
-                      className="rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground"
+                      className="rounded-full bg-card px-3.5 py-1.5 text-xs font-medium text-foreground shadow-sm"
                     >
                       {tag}
                     </li>

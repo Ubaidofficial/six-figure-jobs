@@ -59,6 +59,7 @@ export function ListingHeader({
   summary,
   chips,
   toolbar,
+  aside,
 }: {
   breadcrumb: Array<{ label: string; href?: string }>
   title: ReactNode
@@ -67,22 +68,27 @@ export function ListingHeader({
   summary?: ReactNode
   chips?: ListingChip[]
   toolbar?: ReactNode
+  /** A white card at the right of the header, e.g. <ListingSalaryAside />. Renders nothing when it has no data. */
+  aside?: ReactNode
 }) {
   return (
-    <header className={styles.header}>
-      <Breadcrumb items={breadcrumb} />
-      <div className={styles.headerTop}>
-        <div>
-          <h1 className={styles.title}>
-            {accent ? <span className={styles.accent}>{accent}</span> : null}
-            {accent ? ' ' : null}
-            {title}
-          </h1>
-          {summary ? <p className={styles.summary}>{summary}</p> : null}
+    <header className={`${styles.header} ${aside ? styles.headerWithAside : ''}`}>
+      <div className={styles.headerMain}>
+        <Breadcrumb items={breadcrumb} />
+        <div className={styles.headerTop}>
+          <div>
+            <h1 className={styles.title}>
+              {accent ? <span className={styles.accent}>{accent}</span> : null}
+              {accent ? ' ' : null}
+              {title}
+            </h1>
+            {summary ? <p className={styles.summary}>{summary}</p> : null}
+          </div>
+          {toolbar ? <div className={styles.toolbar}>{toolbar}</div> : null}
         </div>
-        {toolbar ? <div className={styles.toolbar}>{toolbar}</div> : null}
+        {chips ? <LinkChips items={chips} label="Related pages" /> : null}
       </div>
-      {chips ? <LinkChips items={chips} label="Related pages" /> : null}
+      {aside}
     </header>
   )
 }

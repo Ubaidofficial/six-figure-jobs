@@ -7,6 +7,7 @@
 import type { Prisma } from '@prisma/client'
 import { prisma } from '../prisma'
 import { memoAsync } from '../cache/memo'
+import { formatCurrencyShort } from '../seo/salaryLabels'
 
 export type SalaryBand = { label: string; count: number }
 
@@ -18,12 +19,20 @@ export type SalarySnapshot = {
   bands: SalaryBand[]
 }
 
-const BANDS: Array<{ label: string; min: number; max: number }> = [
-  { label: '$100k–$150k', min: 100_000, max: 150_000 },
-  { label: '$150k–$200k', min: 150_000, max: 200_000 },
-  { label: '$200k–$300k', min: 200_000, max: 300_000 },
-  { label: '$300k+', min: 300_000, max: Number.POSITIVE_INFINITY },
-]
+const DEFAULT_FLOOR = 100_000
+
+/** Band edges scale with the market's pay floor: 1x, 1.5x, 2x, 3x (rounded to 5k), so £ and € pages read naturally. */
+function bandsFor(floor: number, currency: string): Array<{ label: string; min: number; max: number }> {
+  const r5 = (n: number) => Math.round(n / 5000) * 5000
+  const edges = [floor, r5(floor * 1.5), floor * 2, floor * 3]
+  const f = (n: number) => formatCurrencyShort(n, currency)
+  return [
+    { label: `${f(edges[0])}\u2013${f(edges[1])}`, min: edges[0], max: edges[1] },
+    { label: `${f(edges[1])}\u2013${f(edges[2])}`, min: edges[1], max: edges[2] },
+    { label: `${f(edges[2])}\u2013${f(edges[3])}`, min: edges[2], max: edges[3] },
+    { label: `${f(edges[3])}+`, min: edges[3], max: Number.POSITIVE_INFINITY },
+  ]
+}
 
 const MIN_LISTINGS = 20 // below this a "typical" figure would be noise
 
@@ -35,7 +44,11 @@ function percentile(sorted: number[], p: number): number {
 }
 
 /** Pure: salaries (annual, one currency) to the snapshot, or null when there are too few to say anything. */
-export function summarizeSalaries(values: number[]): SalarySnapshot | null {
+export function summarizeSalaries(
+  values: number[],
+  opts: { floor?: number; currency?: string } = {},
+): SalarySnapshot | null {
+  const bands = bandsFor(opts.floor ?? DEFAULT_FLOOR, opts.currency ?? 'USD')
   const clean = values.filter((v) => Number.isFinite(v) && v > 0).sort((a, b) => a - b)
   if (clean.length < MIN_LISTINGS) return null
   return {
@@ -43,7 +56,7 @@ export function summarizeSalaries(values: number[]): SalarySnapshot | null {
     median: percentile(clean, 0.5),
     p25: percentile(clean, 0.25),
     p75: percentile(clean, 0.75),
-    bands: BANDS.map((b) => ({ label: b.label, count: clean.filter((v) => v >= b.min && v < b.max).length })),
+    bands: bands.map((b) => ({ label: b.label, count: clean.filter((v) => v >= b.min && v < b.max).length })),
   }
 }
 

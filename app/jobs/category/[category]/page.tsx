@@ -16,6 +16,7 @@ import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
 import { countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { resolveJobCategory } from '../../../../lib/seo/jobCategories'
+import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 const PAGE_SIZE = 40
 const SITE_URL = getSiteUrl()
@@ -174,6 +175,7 @@ export default async function CategoryPage({
   return (
     <ListingPage>
       <ListingHeader
+        aside={<ListingSalaryAside input={{ roleSlugs: cfg.roleSlugs, isHundredKLocal: true }} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: cfg.label }]}
         accent={cfg.label}
         title="jobs paying $100k+"

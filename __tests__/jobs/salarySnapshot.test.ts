@@ -44,3 +44,22 @@ describe('salaryMidpoint', () => {
     expect(salaryMidpoint(null, null)).toBeNull()
   })
 })
+
+describe('summarizeSalaries bands per market', () => {
+  const spread = (n: number, from: number, to: number) => Array.from({ length: n }, (_, i) => from + ((to - from) * i) / (n - 1))
+
+  it('scales the band edges with the pay floor and uses the currency symbol', () => {
+    const s = summarizeSalaries(spread(60, 75_000, 300_000), { floor: 75_000, currency: 'GBP' })!
+    expect(s.bands.map((b) => b.label)).toEqual(['£75k–£115k', '£115k–£150k', '£150k–£225k', '£225k+'])
+    expect(s.bands.reduce((a, b) => a + b.count, 0)).toBe(60)
+  })
+
+  it('keeps the USD labels unchanged when no options are given', () => {
+    expect(summarizeSalaries(spread(40, 100_000, 400_000))!.bands.map((b) => b.label)).toEqual([
+      '$100k–$150k',
+      '$150k–$200k',
+      '$200k–$300k',
+      '$300k+',
+    ])
+  })
+})

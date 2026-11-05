@@ -12,6 +12,8 @@ import { isCityPageIndexable } from '../../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
 import { capDescription } from '../../../../lib/seo/jobMeta'
+import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
+import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 export const revalidate = 600
 
@@ -158,53 +160,53 @@ export default async function CityPage({ params }: { params: Params }) {
     ],
   }
 
+  const relatedCities = CITY_TARGETS.filter((c) => c.slug !== resolved.slug && c.countryCode === resolved.countryCode).slice(0, 10)
+
   return (
-    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
-        <ol className="flex items-center gap-1">
-          <li><Link href="/">Home</Link></li>
-          <li className="px-1">/</li>
-          <li><Link href="/jobs/100k-plus">Jobs</Link></li>
-          <li className="px-1">/</li>
-          <li>{resolved.label}</li>
-        </ol>
-      </nav>
-
-      <h1 className="mb-3 text-2xl font-semibold text-foreground">
-        {salaryLabel} jobs in {resolved.label} ({total.toLocaleString()})
-      </h1>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Find <strong className="text-foreground">{total.toLocaleString()}</strong>{' '}
-        <strong className="text-foreground">high paying</strong>{' '}
-        <strong className="text-primary">{salaryLabel}</strong> jobs in {resolved.label}{' '}
-        with verified{' '}
-        <strong className="text-primary">six figure salaries</strong>. Browse{' '}
-        <strong className="text-primary">{salaryLabel}</strong> roles from{' '}
-        {salaryMinLabel} to {salaryMaxLabel} across
-        remote, hybrid, and on-site teams.
-      </p>
-      <p className="mb-6 text-xs text-muted-foreground">
-        Showing page {page} of {totalPages}. Only verified compensation and mid-to-senior roles are listed.
-      </p>
-
-      {jobs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No {salaryLabel} roles in {resolved.label} yet. New postings land daily.</p>
-      ) : (
-        <JobList jobs={jobs as JobWithCompany[]} />
-      )}
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+    <ListingPage>
+      <ListingHeader
+        aside={
+          <ListingSalaryAside
+            input={{ citySlug: resolved.slug, countryCode: resolved.countryCode, isHundredKLocal: true }}
+          />
+        }
+        breadcrumb={[
+          { label: 'Home', href: '/' },
+          { label: 'Jobs', href: '/jobs/100k-plus' },
+          { label: resolved.label },
+        ]}
+        accent={salaryLabel}
+        title={`jobs in ${resolved.label} (${total.toLocaleString()})`}
+        summary={
+          <>
+            <strong>{total.toLocaleString()}</strong> {total === 1 ? 'role' : 'roles'} in {resolved.label} paying{' '}
+            {salaryLabel}, from {salaryMinLabel} to {salaryMaxLabel} on the listings shown, across remote, hybrid and
+            on-site teams.
+          </>
+        }
+        chips={[
+          { label: 'All jobs', href: '/jobs/100k-plus' },
+          ...relatedCities.map((c) => ({ label: c.label, href: `/jobs/city/${c.slug}` })),
+        ]}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+
+      <JobRows
+        jobs={jobs as JobWithCompany[]}
+        empty={{
+          title: `No ${salaryLabel} roles in ${resolved.label} yet.`,
+          body: 'New postings land daily.',
+          href: '/jobs/100k-plus',
+          hrefLabel: 'Browse all jobs',
+        }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
-    </main>
+
+      <ListingSection title="Frequently asked questions">
+        <Faq items={faqJsonLd.mainEntity.map((q) => ({ question: q.name, answer: q.acceptedAnswer.text }))} />
+      </ListingSection>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+    </ListingPage>
   )
 }

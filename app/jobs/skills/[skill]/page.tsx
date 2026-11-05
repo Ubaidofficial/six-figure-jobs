@@ -12,6 +12,8 @@ import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
 import { capDescription } from '../../../../lib/seo/jobMeta'
+import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
+import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -144,55 +146,50 @@ export default async function SkillPage({ params }: { params: Params }) {
     ],
   }
 
+  const relatedSkills = SKILL_TARGETS.filter((s) => s.slug !== resolved.slug).slice(0, 10)
+
   return (
-    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
-        <ol className="flex items-center gap-1">
-          <li><Link href="/">Home</Link></li>
-          <li className="px-1">/</li>
-          <li><Link href="/jobs/100k-plus">Jobs</Link></li>
-          <li className="px-1">/</li>
-          <li>{resolved.label}</li>
-        </ol>
-      </nav>
-
-      <h1 className="mb-3 text-2xl font-semibold text-foreground">
-        {resolved.label} $100k+ jobs ({total.toLocaleString()})
-      </h1>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Explore <strong className="text-foreground">{total.toLocaleString()}</strong>{' '}
-        {resolved.label} <strong className="text-primary">$100k</strong> jobs
-        with verified{' '}
-        <strong className="text-primary">six figure salaries</strong>. Find{' '}
-        <strong className="text-foreground">high paying</strong> {resolved.label}{' '}
-        roles paying <strong className="text-primary">$100k+</strong> from $
-        {salaryMin.toLocaleString()} to ${salaryMax.toLocaleString()} across
-        remote, hybrid, and on-site teams.
-      </p>
-      <p className="mb-6 text-xs text-muted-foreground">
-        Showing page {page} of {totalPages}. Only verified compensation and mid-to-senior roles included.
-      </p>
-
-      {jobs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No jobs found. Try exploring all $100k+ opportunities.
-        </p>
-      ) : (
-        <JobList jobs={jobs as JobWithCompany[]} />
-      )}
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+    <ListingPage>
+      <ListingHeader
+        aside={<ListingSalaryAside input={{ skillSlugs: [resolved.slug], isHundredKLocal: true }} />}
+        breadcrumb={[
+          { label: 'Home', href: '/' },
+          { label: 'Jobs', href: '/jobs/100k-plus' },
+          { label: resolved.label },
+        ]}
+        accent={resolved.label}
+        title={`$100k+ jobs (${total.toLocaleString()})`}
+        summary={
+          <>
+            <strong>{total.toLocaleString()}</strong> {total === 1 ? 'role' : 'roles'} that list {resolved.label} and pay
+            $100k or more, with the salary shown on every listing and a link to the employer&rsquo;s own application
+            page.
+          </>
+        }
+        chips={[
+          { label: 'All $100k+ jobs', href: '/jobs/100k-plus' },
+          { label: 'Remote', href: '/remote' },
+          ...relatedSkills.map((s) => ({ label: s.label, href: `/jobs/skills/${s.slug}` })),
+        ]}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+
+      <JobRows
+        jobs={jobs as JobWithCompany[]}
+        empty={{
+          title: 'No jobs found.',
+          body: 'Try exploring all $100k+ opportunities.',
+          href: '/jobs/100k-plus',
+          hrefLabel: 'Browse all $100k+ jobs',
+        }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
-    </main>
+
+      <ListingSection title="Frequently asked questions">
+        <Faq items={faqJsonLd.mainEntity.map((q) => ({ question: q.name, answer: q.acceptedAnswer.text }))} />
+      </ListingSection>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+    </ListingPage>
   )
 }

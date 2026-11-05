@@ -34,6 +34,7 @@ import {
   ListingSection,
   Pagination,
 } from '@/components/listing/ListingParts'
+import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 export const revalidate = 600
 
@@ -515,6 +516,7 @@ export default async function JobsIndexPage({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
         <ListingHeader
+          aside={<ListingSalaryAside input={queryInput} />}
           breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs' }]}
           title={
             <>

@@ -8,6 +8,8 @@ import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
 import { LEVEL_TARGETS } from '../../../../lib/seo/pseoTargets'
+import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
+import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 export const revalidate = 3600
 
@@ -150,73 +152,50 @@ export default async function LevelPage({
   const faqJsonLd = buildFaqJsonLd(info.label, info.description, total)
 
   return (
-    <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
-        <ol className="flex items-center gap-1">
-          <li>
-            <Link href="/">Home</Link>
-          </li>
-          <li className="px-1">/</li>
-          <li>
-            <Link href="/jobs/100k-plus">Jobs</Link>
-          </li>
-          <li className="px-1">/</li>
-          <li>{info.label}</li>
-        </ol>
-      </nav>
-
-      <h1 className="mb-4 text-2xl font-semibold text-foreground">
-        {info.label} $100k+ Jobs ({total.toLocaleString()})
-      </h1>
-      <p className="mb-6 text-sm text-muted-foreground">{info.description}</p>
-
-      {jobs.length === 0 ? (
-        <p className="text-muted-foreground">No jobs found. Try exploring all $100k+ opportunities.</p>
-      ) : (
-        <JobList jobs={jobs as JobWithCompany[]} />
-      )}
-
-      <section className="mt-12 rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Related Searches</h2>
-        <div className="grid gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
-          <Link href="/jobs/category/engineering" className="text-primary hover:underline">
-            {info.label} Engineering Jobs
-          </Link>
-          <Link href="/jobs/category/product" className="text-primary hover:underline">
-            {info.label} Product Jobs
-          </Link>
-          <Link href="/jobs/location/united-states" className="text-primary hover:underline">
-            {info.label} Jobs in USA
-          </Link>
-          <Link href="/jobs/200k-plus" className="text-primary hover:underline">
-            $200k+ {info.label} Jobs
-          </Link>
-          <Link href="/jobs/100k-plus" className="text-primary hover:underline">
-            All $100k+ Jobs
-          </Link>
-          {Object.entries(LEVELS)
+    <ListingPage>
+      <ListingHeader
+        aside={<ListingSalaryAside input={{ experienceLevel: level, isHundredKLocal: true }} />}
+        breadcrumb={[
+          { label: 'Home', href: '/' },
+          { label: 'Jobs', href: '/jobs/100k-plus' },
+          { label: info.label },
+        ]}
+        accent={info.label}
+        title={`$100k+ jobs (${total.toLocaleString()})`}
+        summary={
+          <>
+            <strong>{total.toLocaleString()}</strong> {info.label.toLowerCase()} {total === 1 ? 'role' : 'roles'} paying
+            $100k or more. {info.description}.
+          </>
+        }
+        chips={[
+          { label: 'All $100k+ jobs', href: '/jobs/100k-plus' },
+          { label: 'Engineering', href: '/jobs/category/engineering' },
+          { label: 'Product', href: '/jobs/category/product' },
+          { label: '$200k+', href: '/jobs/200k-plus' },
+          ...Object.entries(LEVELS)
             .filter(([l]) => l !== level)
-            .slice(0, 3)
-            .map(([l, lv]) => (
-              <Link key={l} href={`/jobs/level/${l}`} className="text-primary hover:underline">
-                {lv.label} Jobs
-              </Link>
-            ))}
-        </div>
-      </section>
+            .map(([l, lv]) => ({ label: lv.label, href: `/jobs/level/${l}` })),
+        ]}
+      />
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      <JobRows
+        jobs={jobs as JobWithCompany[]}
+        empty={{
+          title: 'No jobs found.',
+          body: 'Try exploring all $100k+ opportunities.',
+          href: '/jobs/100k-plus',
+          hrefLabel: 'Browse all $100k+ jobs',
+        }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
-    </main>
+
+      <ListingSection title="Frequently asked questions">
+        <Faq items={faqJsonLd.mainEntity.map((q) => ({ question: q.name, answer: q.acceptedAnswer.text }))} />
+      </ListingSection>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+    </ListingPage>
   )
 }

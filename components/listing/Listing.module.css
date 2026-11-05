@@ -245,3 +245,108 @@
     margin-bottom: 20px;
   }
 }
+
+
+/* Header with the typical-salary card. The card column is `auto` and the spacing lives on the card, so when the
+   card renders nothing (too few listings) the main block takes the full width and no gap is left behind. */
+.headerMain {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  /* With the card on the right, the sort control sits under the summary instead of floating mid-header. */
+  .headerWithAside .headerTop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .headerWithAside {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+}
+
+.salaryAside {
+  margin-top: 20px;
+  padding: 22px;
+  background: var(--color-bg-1);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+@media (min-width: 1024px) {
+  .salaryAside {
+    margin: 0 0 0 40px;
+    width: clamp(300px, 24vw, 380px);
+  }
+}
+
+.asideTitle {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-1);
+}
+
+.asideBig {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--color-text-0);
+}
+
+.asideNote {
+  margin: 8px 0 16px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-text-1);
+}
+
+.asideBars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+}
+
+.asideBarRow {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8125rem;
+}
+
+.asideBarLabel {
+  color: var(--color-text-1);
+  white-space: nowrap;
+}
+
+.asideBarTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-bg-2);
+  overflow: hidden;
+}
+
+.asideBarFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+.asideBarCount {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text-0);
+}

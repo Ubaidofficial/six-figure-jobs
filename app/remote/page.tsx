@@ -25,6 +25,7 @@ import {
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
+import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 
 const REMOTE_REGION_CHIPS: Array<{ label: string; region: string | null }> = [
@@ -483,6 +484,11 @@ export default async function RemoteJobsPage({
         />
 
         <ListingHeader
+          aside={
+            <ListingSalaryAside
+              input={{ remoteOnly: true, remoteRegion: activeRemoteRegion || undefined, excludeInternships: true }}
+            />
+          }
           breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Remote Jobs' }]}
           accent={regionPill ? regionPill.replace(' Jobs', '') : 'Remote'}
           title="$100k+ Jobs"
