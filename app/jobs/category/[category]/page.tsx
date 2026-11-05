@@ -17,6 +17,7 @@ import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
 import { countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { resolveJobCategory } from '../../../../lib/seo/jobCategories'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
 
 const PAGE_SIZE = 40
 const SITE_URL = getSiteUrl()
@@ -213,6 +214,8 @@ export default async function CategoryPage({
         totalPages={totalPages}
         hrefFor={(n) => (n <= 1 ? `/jobs/category/${category}` : `/jobs/category/${category}?page=${n}`)}
       />
+
+      <SalaryByLevel input={{ roleSlugs: cfg.roleSlugs, isHundredKLocal: true }} label={cfg.label} />
 
       <ListingSection title={`${cfg.label} jobs by location`}>
         <LinkChips

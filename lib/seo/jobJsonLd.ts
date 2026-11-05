@@ -310,6 +310,11 @@ function buildJobLocation(job: any): any {
     return undefined
   }
 
+  // "Los Angeles, CA, USA; Mountain View, CA, USA" is two workplaces, not one place named with a semicolon: Google
+  // reads jobLocation as an array of places.
+  const places = !city ? splitMultiLocation(locationRaw, addressCountry) : null
+  if (places) return places
+
   return {
     '@type': 'Place',
     address: {
@@ -320,6 +325,25 @@ function buildJobLocation(job: any): any {
       ...(!city && locationRaw ? { addressLocality: locationRaw } : {}),
     },
   }
+}
+
+/** One Place per `;`-separated workplace (at most 10), or null when the text names a single place. */
+function splitMultiLocation(locationRaw: string, fallbackCountry: string): any[] | null {
+  const parts = Array.from(new Set(locationRaw.split(';').map((p) => p.trim()).filter(Boolean))).slice(0, 10)
+  if (parts.length < 2) return null
+  return parts.map((part) => {
+    const segments = part.split(',').map((x) => x.trim()).filter(Boolean)
+    const region = segments.length >= 2 && /^[A-Za-z]{2}$/.test(segments[1]) ? segments[1].toUpperCase() : undefined
+    return {
+      '@type': 'Place',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: segments[0] || part,
+        ...(region ? { addressRegion: region } : {}),
+        addressCountry: inferCountryFromLocationRaw(part) || fallbackCountry,
+      },
+    }
+  })
 }
 
 /** Last-resort location for non-remote jobs with no city/region/locationRaw — infer from currency or company country */

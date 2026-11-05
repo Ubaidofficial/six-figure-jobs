@@ -28,7 +28,7 @@ import {
   COUNTRY_CODE_TO_NAME,
 } from '../../../lib/seo/countrySlug'
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
-import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
+import { resolveJobRoleSlug, similarJobsKeyword } from '../../../lib/roles/indexableRole'
 import { JobCard } from '@/components/jobs/JobCard'
 import { Briefcase, Clock, Laptop, MapPin, TrendingUp } from 'lucide-react'
 
@@ -218,7 +218,7 @@ export default async function JobPage({
 
   const salaryText = buildSalaryText(typedJob)
   const locationText = buildLocationText(typedJob)
-  const canonicalRoleSlug = resolveIndexableRoleSlug(typedJob.roleSlug)
+  const canonicalRoleSlug = resolveJobRoleSlug(typedJob)
   const seniority = inferSeniorityFromTitle(typedJob.title)
   const postedLabel = formatRelativeTime(
     typedJob.postedAt ?? typedJob.createdAt ?? typedJob.updatedAt ?? null,
@@ -293,16 +293,23 @@ export default async function JobPage({
 
   /* --------------------------- Similar jobs -------------------------------- */
 
+  // Similar means the same role, or failing that the same title words. With neither there is nothing to match on,
+  // and an unfiltered query would list the newest jobs of any kind (a nurse practitioner "similar" to a Staff SWE).
+  const similarKeyword = canonicalRoleSlug ? null : similarJobsKeyword(typedJob.title)
   const similarResult = await withRuntimeFallback<JobQueryResult>(
     `job.${typedJob.id}.similar`,
     async () =>
-      queryJobs({
-        roleSlugs: canonicalRoleSlug ? [canonicalRoleSlug] : undefined,
-        countryCode: typedJob.countryCode || undefined,
-        isHundredKLocal: true,
-        page: 1,
-        pageSize: 7,
-      }),
+      canonicalRoleSlug || similarKeyword
+        ? queryJobs({
+            roleSlugs: canonicalRoleSlug ? [canonicalRoleSlug] : undefined,
+            keyword: similarKeyword ?? undefined,
+            sortBy: similarKeyword ? 'relevant' : undefined,
+            countryCode: typedJob.countryCode || undefined,
+            isHundredKLocal: true,
+            page: 1,
+            pageSize: 7,
+          })
+        : { jobs: [], total: 0, page: 1, pageSize: 7, totalPages: 1 },
     () => ({
       jobs: [],
       total: 0,
@@ -360,13 +367,19 @@ export default async function JobPage({
     { Icon: TrendingUp, label: seniority ? String(seniority) : null },
   ].filter((m): m is { Icon: typeof MapPin; label: string } => Boolean(m.label))
 
-  const salaryRank = await withRuntimeFallback<SalaryRank | null>(
+  const salaryRank = await withRuntimeFallback<(SalaryRank & { scope: 'role' | 'market' }) | null>(
     `job.${typedJob.id}.salary-rank`,
     async () => {
-      if (!hasSalary || !canonicalRoleSlug || !typedJob.currency) return null
+      if (!hasSalary || !typedJob.currency) return null
       const mine = salaryMidpoint(typedJob.minAnnual, typedJob.maxAnnual)
       if (mine == null) return null
-      return rankSalary(mine, await loadPeerSalaries(canonicalRoleSlug, typedJob.currency))
+      // Same role first; a role with too few listings (or none) falls back to every listing in the currency.
+      const byRole = canonicalRoleSlug
+        ? rankSalary(mine, await loadPeerSalaries(canonicalRoleSlug, typedJob.currency))
+        : null
+      if (byRole) return { ...byRole, scope: 'role' as const }
+      const overall = rankSalary(mine, await loadPeerSalaries(null, typedJob.currency))
+      return overall ? { ...overall, scope: 'market' as const } : null
     },
     () => null,
   )
@@ -442,7 +455,7 @@ export default async function JobPage({
           salaryText={salaryText || null}
           salaryIsFromEmployer={isSalaryVerified}
           rank={salaryRank}
-          roleLabel={canonicalRoleSlug ? prettyRole(canonicalRoleSlug).toLowerCase() : null}
+          roleLabel={salaryRank?.scope === 'role' && canonicalRoleSlug ? prettyRole(canonicalRoleSlug).toLowerCase() : 'six-figure'}
           currency={typedJob.currency || null}
           applyHref={applyHref}
           jobId={typedJob.id}
@@ -804,7 +817,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
     countryName && countryCode ? countryName.toUpperCase() !== countryCode : false
   const isCountryRecognized = hasCountryInfo && isCountryMismatch
   const countrySlug = isCountryRecognized && countryCode ? countryCodeToSlug(countryCode) : null
-  const roleSlug = resolveIndexableRoleSlug(job.roleSlug)
+  const roleSlug = resolveJobRoleSlug(job)
   const roleLabel = roleSlug ? prettyRole(roleSlug) : ''
 
   if (roleSlug && isCountryRecognized && countrySlug) {

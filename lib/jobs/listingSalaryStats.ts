@@ -51,3 +51,51 @@ export function loadListingSalaryStats(input: JobQueryInput): Promise<ListingSal
     return snapshot ? { snapshot, currency } : null
   })
 }
+
+/* ---------------- salary by experience level ---------------- */
+
+export type LevelSalary = { level: string; count: number; median: number }
+
+/** Order shown, and the only levels the job pipeline assigns (see inferExperienceLevelFromTitle). */
+export const LEVEL_ORDER = ['entry', 'mid', 'senior', 'lead', 'executive'] as const
+
+const MIN_LISTINGS_PER_LEVEL = 5 // fewer than this and a median is one or two listings talking
+
+/**
+ * Pure: rows to one median per experience level, in LEVEL_ORDER. Levels with fewer than five listings are left out,
+ * and null is returned unless at least two levels remain (one row is not a comparison).
+ */
+export function summarizeByLevel(rows: Array<{ level: string | null; value: number }>): LevelSalary[] | null {
+  const byLevel = new Map<string, number[]>()
+  for (const { level, value } of rows) {
+    if (!level || !(LEVEL_ORDER as readonly string[]).includes(level) || !Number.isFinite(value) || value <= 0) continue
+    byLevel.set(level, [...(byLevel.get(level) ?? []), value])
+  }
+  const out: LevelSalary[] = []
+  for (const level of LEVEL_ORDER) {
+    const values = (byLevel.get(level) ?? []).sort((a, b) => a - b)
+    if (values.length < MIN_LISTINGS_PER_LEVEL) continue
+    const mid = values.length / 2
+    out.push({ level, count: values.length, median: values.length % 2 ? values[Math.floor(mid)] : (values[mid - 1] + values[mid]) / 2 })
+  }
+  return out.length >= 2 ? out : null
+}
+
+export function loadSalaryByLevel(input: JobQueryInput): Promise<{ levels: LevelSalary[]; currency: string } | null> {
+  const currency = currencyForInput(input)
+  const key = stableKey('listing-salary-by-level', { ...input, page: undefined, pageSize: undefined, sortBy: undefined }, currency)
+  return memoAsync(key, 10 * 60 * 1000, async () => {
+    const rows = await prisma.job.findMany({
+      where: { AND: [buildWhere({ ...input, page: 1, pageSize: 1 }), { currency }] },
+      select: { minAnnual: true, maxAnnual: true, experienceLevel: true },
+      take: 5000,
+    })
+    const levels = summarizeByLevel(
+      rows.flatMap((r) => {
+        const value = salaryMidpoint(r.minAnnual, r.maxAnnual)
+        return value === null ? [] : [{ level: r.experienceLevel, value }]
+      }),
+    )
+    return levels ? { levels, currency } : null
+  })
+}
