@@ -1,10 +1,12 @@
 'use client'
 
 // components/home/HeroSearchInput.tsx
-// The homepage search box with live role suggestions ("seo" -> SEO Manager, SEO Specialist, each with its job count).
-// It is still a plain text input named `q` inside the hero's GET form: without JavaScript, or if the suggestion
-// request fails, the box searches exactly as before. Built as an ARIA combobox so keyboard and screen-reader users get
-// the same suggestions: arrow keys move, Enter opens the highlighted role, Escape closes.
+// The homepage search box with instant results: as you type, the best matching jobs (title, company, pay) and how many
+// match in all, from the same keyword search the Search button runs, using the salary and work arrangement chosen in the
+// form so the total is what the button would show. It is still a plain text input named `q` inside the hero's GET form:
+// without JavaScript, or if the request fails, the box searches as before. Built as an ARIA combobox: arrow keys move
+// (wrapping), Enter opens the highlighted job, Escape closes. When a role, location or remote region is chosen the
+// box shows no instant results (they are not filtered by those), and Search applies everything as usual.
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -12,10 +14,26 @@ import { useEffect, useId, useRef, useState } from 'react'
 
 import styles from './HeroSearchInput.module.css'
 
-type Suggestion = { slug: string; label: string; count: number }
+type Job = { title: string; company: string; pay: string | null; href: string }
+type Results = { query: string; total: number; jobs: Job[] }
 
 const MIN_CHARS = 2
 const DEBOUNCE_MS = 150
+// Form fields the instant results are not filtered by: with one of these set, the list would not match the search.
+const UNFILTERED_FIELDS = ['role', 'country', 'remoteRegion']
+
+/** What to send along with the typed text, or null when the form has a filter the instant results cannot apply. */
+function formParams(form: HTMLFormElement | null): URLSearchParams | null {
+  const params = new URLSearchParams()
+  if (!form) return params
+  const data = new FormData(form)
+  if (UNFILTERED_FIELDS.some((name) => String(data.get(name) ?? '') !== '')) return null
+  for (const name of ['minSalary', 'remoteMode']) {
+    const value = String(data.get(name) ?? '')
+    if (value) params.set(name, value)
+  }
+  return params
+}
 
 export function HeroSearchInput({
   id,
@@ -31,28 +49,46 @@ export function HeroSearchInput({
   const router = useRouter()
   const listId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const [value, setValue] = useState('')
-  const [items, setItems] = useState<Suggestion[]>([])
+  const [results, setResults] = useState<Results | null>(null)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
+  const [formVersion, setFormVersion] = useState(0)
+  const lastTyped = useRef('')
+
+  // A change to the salary or work arrangement pills (or a role/location choice) refreshes the results in the
+  // background; it never opens the list, which would cover the very controls being used.
+  useEffect(() => {
+    const form = inputRef.current?.form
+    if (!form) return
+    const onChange = (e: Event) => e.target !== inputRef.current && setFormVersion((v) => v + 1)
+    form.addEventListener('change', onChange)
+    return () => form.removeEventListener('change', onChange)
+  }, [])
 
   useEffect(() => {
     const q = value.trim()
-    if (q.length < MIN_CHARS) {
-      setItems([])
+    const typed = lastTyped.current !== value // false when only the form changed
+    lastTyped.current = value
+    const params = formParams(inputRef.current?.form ?? null)
+    if (q.length < MIN_CHARS || !params) {
+      setResults(null)
       setOpen(false)
       return
     }
+    params.set('q', q)
     const controller = new AbortController()
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/jobs/suggest?q=${encodeURIComponent(q)}`, { signal: controller.signal })
+        const res = await fetch(`/api/jobs/suggest?${params}`, { signal: controller.signal })
         if (!res.ok) return
-        const data = (await res.json()) as { suggestions?: Suggestion[] }
-        const next = Array.isArray(data.suggestions) ? data.suggestions : []
-        setItems(next)
+        const data = (await res.json()) as { total?: number; jobs?: Job[] }
+        const jobs = Array.isArray(data.jobs) ? data.jobs : []
+        setResults({ query: q, total: Number(data.total) || jobs.length, jobs })
         setActive(-1)
-        setOpen(next.length > 0)
+        if (typed) setOpen(jobs.length > 0)
+        else if (jobs.length === 0) setOpen(false)
       } catch {
         // aborted by the next keystroke, or offline: keep whatever the box showed, the search itself still works
       }
@@ -61,14 +97,14 @@ export function HeroSearchInput({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [value])
+  }, [value, formVersion])
 
-  const hrefFor = (s: Suggestion) => `/jobs?role=${encodeURIComponent(s.slug)}`
-  const rows = items.length + 1 // the roles, then "search all jobs for …"
+  const jobs = results?.jobs ?? []
+  const rows = jobs.length + 1 // the jobs, then "see all …"
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!open) {
-      if (e.key === 'ArrowDown' && items.length > 0) {
+      if (e.key === 'ArrowDown' && jobs.length > 0) {
         e.preventDefault()
         setOpen(true)
         setActive(0)
@@ -84,10 +120,10 @@ export function HeroSearchInput({
     } else if (e.key === 'Escape') {
       setOpen(false)
       setActive(-1)
-    } else if (e.key === 'Enter' && active >= 0 && active < items.length) {
-      e.preventDefault() // a highlighted role opens its jobs; with nothing highlighted Enter searches the text as usual
+    } else if (e.key === 'Enter' && active >= 0 && active < jobs.length) {
+      e.preventDefault() // a highlighted job opens; with nothing highlighted Enter searches the typed text as usual
       setOpen(false)
-      router.push(hrefFor(items[active]))
+      router.push(jobs[active].href)
     }
   }
 
@@ -100,6 +136,7 @@ export function HeroSearchInput({
       }}
     >
       <input
+        ref={inputRef}
         id={id}
         name={name}
         type="text"
@@ -109,7 +146,7 @@ export function HeroSearchInput({
         spellCheck={false}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onFocus={() => items.length > 0 && setOpen(true)}
+        onFocus={() => jobs.length > 0 && setOpen(true)}
         onKeyDown={onKeyDown}
         role="combobox"
         aria-expanded={open}
@@ -118,38 +155,39 @@ export function HeroSearchInput({
         aria-activedescendant={open && active >= 0 ? `${listId}-${active}` : undefined}
       />
       <span className={styles.srOnly} role="status">
-        {open ? `${items.length} role ${items.length === 1 ? 'suggestion' : 'suggestions'} available` : ''}
+        {open && results ? `${results.total} matching ${results.total === 1 ? 'job' : 'jobs'}, showing ${jobs.length}` : ''}
       </span>
-      {open ? (
-        <ul id={listId} role="listbox" aria-label="Role suggestions" className={styles.list}>
-          {items.map((s, i) => (
-            <li key={s.slug} id={`${listId}-${i}`} role="option" aria-selected={i === active} className={styles.option} data-active={i === active}>
+      {open && results ? (
+        <ul id={listId} role="listbox" aria-label="Matching jobs" className={styles.list}>
+          {jobs.map((job, i) => (
+            <li key={job.href} id={`${listId}-${i}`} role="option" aria-selected={i === active} className={styles.option} data-active={i === active}>
               <Link
-                href={hrefFor(s)}
+                href={job.href}
                 prefetch={false}
                 tabIndex={-1}
                 className={styles.link}
                 onMouseDown={(e) => e.preventDefault()} // keep focus in the input so blur does not close the list first
                 onClick={() => setOpen(false)}
               >
-                <span className={styles.label}>{s.label}</span>
-                <span className={styles.count}>
-                  {s.count.toLocaleString()} {s.count === 1 ? 'job' : 'jobs'}
+                <span className={styles.label}>{job.title}</span>
+                <span className={styles.meta}>
+                  {job.company}
+                  {job.pay ? ` · ${job.pay}` : ''}
                 </span>
               </Link>
             </li>
           ))}
           <li
-            id={`${listId}-${items.length}`}
+            id={`${listId}-${jobs.length}`}
             role="option"
-            aria-selected={active === items.length}
+            aria-selected={active === jobs.length}
             className={`${styles.option} ${styles.all}`}
-            data-active={active === items.length}
+            data-active={active === jobs.length}
           >
             {/* No onClick that closes the list: unmounting this button during the click would cancel the submit. The page navigates. */}
-            <button type="submit" tabIndex={-1} className={styles.link} onMouseDown={(e) => e.preventDefault()}>
-              <span className={styles.label}>
-                Search all jobs for &ldquo;{value.trim()}&rdquo;
+            <button type="submit" tabIndex={-1} className={`${styles.link} ${styles.allLink}`} onMouseDown={(e) => e.preventDefault()}>
+              <span className={styles.allLabel}>
+                See all {results.total.toLocaleString()} {results.total === 1 ? 'job' : 'jobs'} for &ldquo;{results.query}&rdquo;
               </span>
             </button>
           </li>
