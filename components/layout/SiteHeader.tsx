@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Menu, Search, X } from 'lucide-react'
 
+import { AuthNav } from './AuthNav'
 import { Wordmark } from './Wordmark'
 
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -67,6 +68,7 @@ export function SiteHeader() {
           <Link href="/companies" className={`${styles.navLink} ${isActive("/companies") ? styles.navLinkActive : ''}`} aria-current={isActive("/companies") ? 'page' : undefined}>Companies</Link>
           <Link href="/salary" className={`${styles.navLink} ${isActive("/salary") ? styles.navLinkActive : ''}`} aria-current={isActive("/salary") ? 'page' : undefined}>Salaries</Link>
           <Link href="/blog" className={`${styles.navLink} ${isActive("/blog") ? styles.navLinkActive : ''}`} aria-current={isActive("/blog") ? 'page' : undefined}>Blog</Link>
+          <AuthNav className={styles.navLink} />
         </nav>
 
         {/* Always-visible search. Same destination the old search dialog used: /search?q=... */}
@@ -101,6 +103,7 @@ export function SiteHeader() {
         </form>
 
         <div className={styles.right}>
+          <AuthNav className={styles.mobileAuth} />
           <span className={styles.mobileOnly}>
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
