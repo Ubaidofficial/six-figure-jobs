@@ -24,13 +24,13 @@
   .hero {
     grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 400px);
     gap: 56px;
-    align-items: start;
+    /* The panel is taller than the copy; centre the copy beside it so no empty block pools under it. */
+    align-items: center;
   }
 
   .panel {
     display: block;
-    margin-top: 8px;
-    padding: 24px;
+    padding: 20px 24px;
     background: var(--color-bg-1);
     border-radius: 20px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
@@ -81,14 +81,63 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 9px 0;
+  padding: 7px 0;
   font-size: 0.9375rem;
   color: var(--color-text-0);
+  text-decoration: none;
   border-bottom: 1px dashed color-mix(in srgb, var(--color-fg) 12%, transparent);
 }
 
-.floor:last-child {
+.floors > li:last-child .floor {
   border-bottom: 0;
+}
+
+.floor:hover > span:first-child,
+.barRow:hover .barLabel {
+  text-decoration: underline;
+}
+
+.floor:focus-visible,
+.barRow:focus-visible,
+.type:focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Job types: three small tiles in one row instead of three list rows. */
+.types {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.type {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  text-decoration: none;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.type:hover {
+  border-color: var(--color-primary-text);
+}
+
+.typeLabel {
+  font-size: 0.75rem;
+  color: var(--color-text-1);
+}
+
+.typeCount {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-primary-text);
 }
 
 .floorValue {
@@ -122,6 +171,16 @@
 .panelLink:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.eyebrow a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.eyebrow a:hover {
+  color: var(--color-primary-text);
+  text-decoration: underline;
 }
 
 .eyebrow {
@@ -294,7 +353,7 @@
 }
 
 .bigNote {
-  margin: 8px 0 18px;
+  margin: 8px 0 14px;
   font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--color-text-1);
@@ -302,7 +361,7 @@
 
 .bars {
   list-style: none;
-  margin: 0 0 22px;
+  margin: 0 0 14px;
   padding: 0;
   display: grid;
   gap: 9px;
@@ -314,6 +373,8 @@
   align-items: center;
   gap: 10px;
   font-size: 0.8125rem;
+  color: inherit;
+  text-decoration: none;
 }
 
 .barLabel {
@@ -343,6 +404,6 @@
 }
 
 .panelTitleSpaced {
-  padding-top: 18px;
+  padding-top: 14px;
   border-top: 1px solid var(--color-border);
 }

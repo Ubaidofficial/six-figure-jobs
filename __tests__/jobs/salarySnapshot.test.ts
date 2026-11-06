@@ -22,10 +22,10 @@ describe('summarizeSalaries', () => {
     const values = [...Array(10).fill(100_000), ...Array(10).fill(150_000), ...Array(5).fill(199_999), ...Array(3).fill(200_000), 300_000, 450_000]
     const s = summarizeSalaries(values)!
     expect(s.bands).toEqual([
-      { label: '$100k–$150k', count: 10 },
-      { label: '$150k–$200k', count: 15 },
-      { label: '$200k–$300k', count: 3 },
-      { label: '$300k+', count: 2 },
+      { label: '$100k–$150k', min: 100_000, count: 10 },
+      { label: '$150k–$200k', min: 150_000, count: 15 },
+      { label: '$200k–$300k', min: 200_000, count: 3 },
+      { label: '$300k+', min: 300_000, count: 2 },
     ])
     expect(s.bands.reduce((a, b) => a + b.count, 0)).toBe(values.length)
   })

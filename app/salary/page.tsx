@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
 import { getSiteUrl, defaultOgImages } from '@/lib/seo/site'
+import { countryCodeToSlug } from '@/lib/seo/countrySlug'
 import { prisma } from '../../lib/prisma'
 import { summarizeRoleMedians, type RoleMedian } from '../../lib/salary/indexMedians'
 import { pluralize } from '../../lib/utils/number'
@@ -217,7 +218,7 @@ export default async function SalaryIndexPage() {
           {COUNTRIES.map((c) => (
             <Link
               key={c.code}
-              href={`/salary/software-engineer/${c.code}`}
+              href={`/salary/software-engineer/${countryCodeToSlug(c.code) ?? c.code}`}
               className="max-md:inline-flex max-md:min-h-11 max-md:items-center rounded-full border border-border bg-card px-3 py-1.5 text-foreground hover:border-foreground/40"
             >
               {c.label} – Software Engineer
