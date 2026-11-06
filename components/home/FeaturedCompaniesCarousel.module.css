@@ -156,29 +156,6 @@
   font-weight: var(--font-weight-bold);
 }
 
-.tooltip {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 10px);
-  transform: translateX(-50%) translateY(-2px);
-  padding: 8px 10px;
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-bg-0) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
-  color: var(--color-text-0);
-  font-size: var(--text-xs);
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 150ms ease, transform 150ms ease;
-  z-index: 3;
-}
-
-.logoLink:hover .tooltip {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .marquee {
     overflow-x: auto;
