@@ -12,6 +12,7 @@ describe('countryFromText', () => {
     ['Seattle, Washington', 'US'],
     ['Belfast, Northern Ireland', 'GB'],
     ['Deutschland', 'DE'],
+    ['France, Auvergne-Rhône-Alpes, Savoie (73)', 'FR'],
   ])('%s -> %s', (text, code) => expect(countryFromText(text)).toBe(code))
 
   it.each([
@@ -95,8 +96,8 @@ describe('describeJobLocation', () => {
     expect(v.text.length).toBeLessThanOrEqual(92)
     expect(v.text.endsWith('…')).toBe(true)
   })
-  it('handles an unknown country code and missing data', () => {
-    expect(describeJobLocation({ city: 'Springfield', countryCode: 'ZZ', locationRaw: 'Springfield' }).text).toBe('Springfield, ZZ')
+  it('ignores a code that is not a country, and handles missing data', () => {
+    expect(describeJobLocation({ city: 'Springfield', countryCode: 'ZZ', locationRaw: 'Springfield' }).text).toBe('Springfield')
     expect(describeJobLocation({}).text).toBe('Location not specified')
     expect(describeJobLocation({ countryCode: 'None' }).text).toBe('Location not specified')
   })

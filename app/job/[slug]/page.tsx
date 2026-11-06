@@ -26,6 +26,8 @@ import { countryCodeToSlug, countryCodeToName } from '../../../lib/seo/countrySl
 import { CITY_TARGETS, CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { countryName, normalizeCountryCode } from '../../../lib/location/country'
 import { describeJobLocation } from '../../../lib/location/jobLocation'
+import { employmentTypeLabel } from '../../../lib/jobs/employmentTypeLabel'
+import { skillLabel } from '../../../lib/jobs/skillLabel'
 import { resolveJobRoleSlug, similarJobsKeyword } from '../../../lib/roles/indexableRole'
 import { JobCard } from '@/components/jobs/JobCard'
 import { Briefcase, Clock, Globe, Laptop, MapPin, TrendingUp } from 'lucide-react'
@@ -390,7 +392,7 @@ export default async function JobPage({
 
   const heroChips = ([
     ...metaItems,
-    { Icon: Briefcase, label: employmentType ? String(employmentType) : null },
+    { Icon: Briefcase, label: employmentTypeLabel(employmentType) },
     { Icon: TrendingUp, label: seniority ? String(seniority) : null },
   ] as HeroChipDraft[]).filter((m): m is HeroChip => Boolean(m.label))
 
@@ -560,7 +562,7 @@ export default async function JobPage({
               <div className="flex flex-wrap gap-2">
                 {requiredSkills.map((skill) => (
                   <Badge key={skill} variant="secondary" className="rounded-md px-2.5 py-1 font-medium">
-                    {skill}
+                    {skillLabel(skill)}
                   </Badge>
                 ))}
               </div>
@@ -570,7 +572,7 @@ export default async function JobPage({
                   <div className="flex flex-wrap gap-2">
                     {niceSkills.map((skill) => (
                       <Badge key={skill} variant="outline" className="rounded-md px-2.5 py-1 font-normal">
-                        {skill}
+                        {skillLabel(skill)}
                       </Badge>
                     ))}
                   </div>

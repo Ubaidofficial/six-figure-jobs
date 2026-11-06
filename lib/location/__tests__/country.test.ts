@@ -13,7 +13,7 @@ describe('normalizeCountryCode', () => {
     expect(normalizeCountryCode('GB')).toBe('GB')
   })
   it('rejects anything that is not two letters', () => {
-    for (const v of [null, undefined, '', 'None', 'USA', 'U1', 42, {}]) expect(normalizeCountryCode(v)).toBeNull()
+    for (const v of [null, undefined, '', 'None', 'USA', 'U1', 'HQ', 'SF', 'ZZ', 42, {}]) expect(normalizeCountryCode(v)).toBeNull()
   })
 })
 
@@ -31,8 +31,9 @@ describe('countryName', () => {
   it('falls back to Intl for a country outside the table', () => {
     expect(countryName('ZA')).toBe('South Africa')
   })
-  it('falls back to the code when nothing knows it, and to null for a non-code', () => {
-    expect(countryName('ZZ')).toBe('ZZ')
+  it('is null for anything that is not an ISO country code', () => {
+    expect(countryName('ZZ')).toBeNull()
+    expect(countryName('HQ')).toBeNull()
     expect(countryName(null)).toBeNull()
     expect(countryName('Global')).toBeNull()
   })

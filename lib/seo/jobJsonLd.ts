@@ -7,6 +7,8 @@ import { buildJobSlug } from '../jobs/jobSlug'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 import { resolveSalaryCurrency } from '../jobs/salary'
 import { buildJobValidThroughDate } from '../jobs/validThrough'
+import { countryName, normalizeCountryCode } from '../location/country'
+import { countryFromCity, countryFromText } from '../location/jobLocation'
 import {
   cleanJobDescriptionHtml,
   cleanJobDescriptionText,
@@ -162,8 +164,8 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
     if (regionRequirement) return regionRequirement
   }
 
-  const explicitCountry = job.countryCode ? String(job.countryCode).trim().toUpperCase() : ''
-  if (/^[A-Z]{2}$/.test(explicitCountry)) {
+  const explicitCountry = normalizeCountryCode(job.countryCode)
+  if (explicitCountry) {
     return buildCountryRequirement(explicitCountry)
   }
 
@@ -266,10 +268,10 @@ function parseApplicantLocationRequirement(raw: string): any | undefined {
     return { '@type': 'Country', name: 'United Kingdom' }
   }
 
-  // ISO-3166-1 alpha-2 country code
-  if (/^[A-Z]{2}$/.test(upper)) {
-    const name = countryNameFromCode(upper) || upper
-    return { '@type': 'Country', name }
+  // ISO-3166-1 alpha-2 country code (only a real one: "HQ" or "SF" is not a country)
+  const isoCode = normalizeCountryCode(upper)
+  if (isoCode) {
+    return { '@type': 'Country', name: countryNameFromCode(isoCode) || isoCode }
   }
 
   // State/region format
@@ -286,64 +288,94 @@ function parseApplicantLocationRequirement(raw: string): any | undefined {
 }
 
 function countryNameFromCode(code: string): string | null {
-  try {
-    const dn = new Intl.DisplayNames(['en'], { type: 'region' })
-    return dn.of(code) || null
-  } catch {
-    return null
-  }
+  return countryName(code)
+}
+
+/**
+ * A place name safe to publish as addressLocality, or undefined. Free text sometimes holds codes ("US-REMOTE", "HQ"),
+ * several places joined by a bullet ("San Francisco, CA • New York, NY • United States") or a sentence: Google reads
+ * the value as a place, so none of those may be passed on.
+ */
+export function cleanLocality(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const v = value.replace(/\s+/g, ' ').trim().replace(/\s+office$/i, '')
+  if (!v || v.length > 60) return undefined
+  if (/[•|;]/.test(v)) return undefined
+  if (/^[A-Za-z]{1,3}([-_ ][A-Za-z]+)?$/.test(v) && v === v.toUpperCase()) return undefined
+  if (/\b(remote|hq|headquarters|anywhere|worldwide|global|hybrid|on-?site|virtual|multiple locations)\b/i.test(v)) return undefined
+  if (v.split(' ').length > 8) return undefined // a sentence, not a place
+  return v
 }
 
 function buildJobLocation(job: any): any {
-  const city = job.city ? String(job.city) : undefined
+  const city = cleanLocality(job.city)
   const region = job.stateCode ? String(job.stateCode).toUpperCase() : undefined
-  const country = job.countryCode ? String(job.countryCode).toUpperCase() : undefined
+  // The stored country wins; the text is read only when it clearly names a country; then the company and the currency.
+  const country = normalizeCountryCode(job.countryCode) ?? undefined
   const locationRaw = job.locationRaw ? String(job.locationRaw).trim() : ''
 
   if (!country && !locationRaw && !city) {
     return undefined
   }
 
-  const addressCountry = country || inferCountryFromLocationRaw(locationRaw) || inferCountryFromJob(job)
+  const addressCountry = country || inferCountryFromLocationRaw(locationRaw) || inferCountryFromJob(job) || undefined
+
+  // "Los Angeles, CA, USA; Mountain View, CA, USA" is two workplaces, not one place named with a semicolon: Google
+  // reads jobLocation as an array of places. Each place gets its own country; one whose country is unknown is left out.
+  const places = !city ? splitMultiLocation(locationRaw, addressCountry) : null
+  if (places) return places.length > 0 ? places : undefined
 
   if (!addressCountry) {
     return undefined
   }
 
-  // "Los Angeles, CA, USA; Mountain View, CA, USA" is two workplaces, not one place named with a semicolon: Google
-  // reads jobLocation as an array of places.
-  const places = !city ? splitMultiLocation(locationRaw, addressCountry) : null
-  if (places) return places
-
+  const locality = city ?? (countryOnly(locationRaw) ? undefined : cleanLocality(locationRaw))
   return {
     '@type': 'Place',
     address: {
       '@type': 'PostalAddress',
-      ...(city ? { addressLocality: city } : {}),
+      ...(locality ? { addressLocality: locality } : {}),
       ...(region ? { addressRegion: region } : {}),
-      ...(addressCountry ? { addressCountry } : {}),
-      ...(!city && locationRaw ? { addressLocality: locationRaw } : {}),
+      addressCountry,
     },
   }
 }
 
-/** One Place per `;`-separated workplace (at most 10), or null when the text names a single place. */
-function splitMultiLocation(locationRaw: string, fallbackCountry: string): any[] | null {
-  const parts = Array.from(new Set(locationRaw.split(';').map((p) => p.trim()).filter(Boolean))).slice(0, 10)
+/** "United States" or "Germany" on its own is a country, not a locality (Singapore and Hong Kong are both). */
+function countryOnly(text: string): boolean {
+  const code = !text.includes(',') ? countryFromText(text) : null
+  return code !== null && code !== 'SG' && code !== 'HK'
+}
+
+const CA_PROVINCE_CODES = new Set(['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'ON', 'PE', 'QC', 'SK'])
+
+/** One Place per `;`, bullet or pipe separated workplace (at most 10), or null when the text names a single place. */
+function splitMultiLocation(locationRaw: string, fallbackCountry: string | undefined): any[] | null {
+  const parts = Array.from(new Set(locationRaw.split(/[;•|]/).map((p) => p.trim()).filter(Boolean))).slice(0, 10)
   if (parts.length < 2) return null
-  return parts.map((part) => {
+  const out: any[] = []
+  for (const part of parts) {
     const segments = part.split(',').map((x) => x.trim()).filter(Boolean)
-    const region = segments.length >= 2 && /^[A-Za-z]{2}$/.test(segments[1]) ? segments[1].toUpperCase() : undefined
-    return {
+    const addressCountry = inferCountryFromLocationRaw(part) || fallbackCountry
+    const code = segments.length >= 2 ? segments[1].toUpperCase() : ''
+    // A state or province code only when it fits the country ("CA" after a US place, "BC" after a Canadian one).
+    const region =
+      (addressCountry === 'US' && US_STATE_CODES.has(code)) || (addressCountry === 'CA' && CA_PROVINCE_CODES.has(code))
+        ? code
+        : undefined
+    const locality = countryOnly(part) ? undefined : cleanLocality(segments[0] || part)
+    if (!addressCountry) continue
+    out.push({
       '@type': 'Place',
       address: {
         '@type': 'PostalAddress',
-        addressLocality: segments[0] || part,
+        ...(locality ? { addressLocality: locality } : {}),
         ...(region ? { addressRegion: region } : {}),
-        addressCountry: inferCountryFromLocationRaw(part) || fallbackCountry,
+        addressCountry,
       },
-    }
-  })
+    })
+  }
+  return out
 }
 
 /** Last-resort location for non-remote jobs with no city/region/locationRaw — infer from currency or company country */
@@ -480,69 +512,26 @@ function wrapPlainTextAsHtml(input: string): string {
   return paragraphs.length > 0 ? paragraphs.join('') : `<p>${escaped}</p>`
 }
 
+/**
+ * The country a location text clearly names ("Winnipeg, Canada", "Remote - US", "Kleve, Nordrhein-Westfalen"), or null.
+ * A two-letter token is never lifted out of free text: "am" in "Frankfurt am Main" is Armenia, "WA" in "East Perth WA" is
+ * Western Australia, "HQ" and "SF" are not countries at all.
+ */
 function inferCountryFromLocationRaw(locationRaw: string): string | null {
   const raw = String(locationRaw || '').trim()
   if (!raw) return null
-
+  const fromText = countryFromText(raw)
+  if (fromText) return fromText
   const lower = raw.toLowerCase()
-  const regionNames = [
-    'United States',
-    'United Kingdom',
-    'Canada',
-    'Germany',
-    'Australia',
-    'India',
-    'Ireland',
-    'France',
-    'Netherlands',
-    'Spain',
-    'Italy',
-    'Sweden',
-    'Singapore',
-    'Japan',
-    'Mexico',
-    'Brazil',
-  ]
-
-  for (const name of regionNames) {
-    if (lower.includes(name.toLowerCase())) {
-      const match = regionCodeFromName(name)
-      if (match) return match
-    }
-  }
-
-  const upper = raw.toUpperCase()
-  const parentheticalCountry = upper.match(/\(([A-Z]{2})\)/)
-  if (parentheticalCountry?.[1]) {
-    if (US_STATE_CODES.has(parentheticalCountry[1])) return 'US'
-    return parentheticalCountry[1]
-  }
-  if (US_STATE_CODES.has(upper) || US_STATE_NAMES.has(lower)) return 'US'
-  if (/^[A-Z]{2}$/.test(upper)) return upper
-
-  const tokens = raw
-    .split(/[,\-/|()\s]+/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-
-  for (const token of tokens) {
-    const code = token.toUpperCase()
-    if (US_STATE_CODES.has(code) || US_STATE_NAMES.has(token.toLowerCase())) return 'US'
-    if (/^[A-Z]{2}$/.test(code)) return code
-  }
-
-  return null
+  return US_STATE_NAMES.has(lower) && lower !== 'georgia' ? 'US' : null
 }
 
 function inferCountryFromJob(job: any): string | null {
-  const explicitCountry = typeof job.countryCode === 'string' ? job.countryCode.trim().toUpperCase() : ''
-  if (/^[A-Z]{2}$/.test(explicitCountry)) return explicitCountry
+  const explicitCountry = normalizeCountryCode(job.countryCode)
+  if (explicitCountry) return explicitCountry
 
-  const companyCountry =
-    job.companyRef && typeof job.companyRef.countryCode === 'string'
-      ? job.companyRef.countryCode.trim().toUpperCase()
-      : ''
-  if (/^[A-Z]{2}$/.test(companyCountry)) return companyCountry
+  const companyCountry = normalizeCountryCode(job.companyRef?.countryCode)
+  if (companyCountry) return companyCountry
 
   const rawLocation = typeof job.locationRaw === 'string' ? job.locationRaw : ''
   const locationCountry = inferCountryFromLocationRaw(rawLocation)
@@ -567,40 +556,16 @@ function inferCountryFromJob(job: any): string | null {
     CAD: 'CA',
     GBP: 'GB',
     AUD: 'AU',
-    EUR: 'DE',
   }
 
-  return currencyCountryMap[currency] ?? null
-}
+  if (currencyCountryMap[currency]) return currencyCountryMap[currency]
 
-function regionCodeFromName(name: string): string | null {
-  try {
-    const regions = [
-      'US',
-      'GB',
-      'CA',
-      'DE',
-      'AU',
-      'IN',
-      'IE',
-      'FR',
-      'NL',
-      'ES',
-      'IT',
-      'SE',
-      'SG',
-      'JP',
-      'MX',
-      'BR',
-    ]
-    const dn = new Intl.DisplayNames(['en'], { type: 'region' })
-    for (const code of regions) {
-      if (dn.of(code)?.toLowerCase() === name.toLowerCase()) return code
-    }
-  } catch {
-    return null
-  }
-  return null
+  // A city we have a page for ("Amsterdam", "Zürich") says its country; the euro does not.
+  const byCity = countryFromCity(job.city ?? job.citySlug)
+  if (byCity) return byCity
+
+  // Last resort for euro pay with nothing else to go on: the euro area's largest country. Often right, not always.
+  return currency === 'EUR' ? 'DE' : null
 }
 
 const US_STATE_CODES = new Set([

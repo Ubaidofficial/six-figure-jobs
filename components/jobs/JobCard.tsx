@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { countryName, normalizeCountryCode } from '@/lib/location/country'
 import { describeJobLocation } from '@/lib/location/jobLocation'
+import { skillLabel } from '@/lib/jobs/skillLabel'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildSalaryText } from '@/lib/jobs/salary'
@@ -205,7 +206,8 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
   const name = cc ? countryName(cc, { short: true }) : null
 
   if (isRemote) {
-    return { label: name || 'Remote', countryCode: cc, hasMultiple: false, count: 1 }
+    // Without a country there is nothing to add: the work-type pill beside it already says "Remote".
+    return name ? { label: name, countryCode: cc, hasMultiple: false, count: 1 } : null
   }
 
   if (city && stored && name) {
@@ -396,8 +398,8 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
               const skillSlug = resolveSkillSlug(s)
               if (!skillSlug) {
                 return (
-                  <span key={s} className={styles.skill} title={s}>
-                    {s}
+                  <span key={s} className={styles.skill} title={skillLabel(s)}>
+                    {skillLabel(s)}
                   </span>
                 )
               }
@@ -410,9 +412,9 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
                   onClick={(e) => {
                     e.stopPropagation()
                   }}
-                  title={`Browse ${s} jobs`}
+                  title={`Browse ${skillLabel(s)} jobs`}
                 >
-                  {s}
+                  {skillLabel(s)}
                 </Link>
               )
             })}

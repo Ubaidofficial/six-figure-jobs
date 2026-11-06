@@ -4,7 +4,7 @@
 // them, and locationRaw is whatever the employer typed. So this reads the structured fields first and only then the
 // text of locationRaw, and only where the text is unambiguous (a country name, or a state/province/Land that belongs to
 // exactly one country). When unsure it says less instead of guessing.
-import { STATE_TARGETS } from '../seo/pseoTargets'
+import { CITY_TARGETS, STATE_TARGETS } from '../seo/pseoTargets'
 import { countryName, normalizeCountryCode, COUNTRY_NAMES } from './country'
 
 type Region = { name: string; codes?: string[] }
@@ -121,6 +121,11 @@ export function countryFromText(text: unknown): string | null {
     }
   }
   if (!code && parts.length >= 2) code = REGION_IMPLIES_COUNTRY.get(last) ?? null
+  if (!code) {
+    // "France, Auvergne-Rhône-Alpes, Savoie (73)": the country comes first. Fine when exactly one country is named.
+    const named = new Set(parts.map((p) => COUNTRY_ALIASES[p]).filter(Boolean))
+    if (named.size === 1) code = Array.from(named)[0]
+  }
   if (!code) return null
 
   const rest = lower.replace('northern ireland', '')
@@ -266,4 +271,23 @@ export function describeJobLocation(job: LocationFields): JobLocationView {
   }
   if (stored) return { ...none, text: countryName(stored) as string, countryCode: stored, remote: false }
   return { ...none, text: 'Location not specified', countryCode: null, remote: false }
+}
+
+const fold = (v: string) =>
+  v
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+
+const CITY_COUNTRY = new Map(
+  CITY_TARGETS.flatMap((c) =>
+    c.countryCode ? [[c.slug, c.countryCode] as const, [fold(c.label), c.countryCode] as const] : [],
+  ),
+)
+
+/** The country of a city we have a page for ("Amsterdam" -> NL, "Zürich" -> CH), else null. Ambiguous names (London, ON) are the caller's risk. */
+export function countryFromCity(city: unknown): string | null {
+  return typeof city === 'string' ? (CITY_COUNTRY.get(fold(city)) ?? null) : null
 }
