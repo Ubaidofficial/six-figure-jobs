@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { CheckoutButton, PortalButton } from './BillingButtons'
 import { SignOutButton } from './SignInForm'
 
@@ -58,6 +60,16 @@ export function AccountView({ email, balance, subscription, products, hasBilling
           <p className={styles.muted}>Credits are added after each successful payment.</p>
         </section>
       </div>
+
+      <section className={styles.card} aria-labelledby="applications-heading">
+        <h2 id="applications-heading" className={styles.cardTitle}>
+          Applications
+        </h2>
+        <p className={styles.muted}>Your résumé, cover letters for the jobs you pick, and a tracker for where you applied.</p>
+        <Link href="/account/applications" className={styles.link}>
+          Open your applications
+        </Link>
+      </section>
 
       <section className={styles.card} aria-labelledby="billing-heading">
         <h2 id="billing-heading" className={styles.cardTitle}>

@@ -400,6 +400,8 @@ model User {
   accounts         Account[]
   subscriptions    Subscription[]
   creditLedger     CreditLedger[]
+  resume           Resume?
+  applicationKits  ApplicationKit[]
 }
 
 // OAuth link (Google). Provider tokens are not stored: lib/auth/config.ts drops them before the adapter writes.
@@ -475,4 +477,40 @@ model StripeEvent {
   id          String   @id
   type        String
   processedAt DateTime @default(now())
+}
+
+// The user's résumé as plain text (one per user). Private: only ever read for its owner, deleted on request.
+model Resume {
+  userId    String   @id
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// A generated application kit for one job, doubling as the user's application tracker row. jobId has no foreign key
+// on purpose: the entry must outlive an expired or deleted job, so the title/company/apply link are copied here.
+model ApplicationKit {
+  id          String    @id @default(cuid())
+  userId      String
+  jobId       String
+  jobSlug     String
+  jobTitle    String
+  companyName String
+  applyUrl    String?
+  // Résumé version (Resume.updatedAt in ms) this kit was made from; a changed résumé is a new, separately charged kit.
+  resumeStamp String
+  coverLetter String    @db.Text
+  bullets     Json
+  keywordGaps Json
+  // 'saved' | 'applied' | 'interview' | 'offer' | 'rejected'
+  status      String    @default("saved")
+  notes       String?   @db.Text
+  appliedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId, updatedAt])
 }
