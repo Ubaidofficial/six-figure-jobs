@@ -5,7 +5,7 @@
 // company directory). A URL built with the key on the server and without it in the browser makes React drop
 // the logo during hydration. So logos derived from a website or a name use same-origin URLs that carry no
 // key (`/logo/domain/stripe.com`); the /logo route adds the key server-side and redirects to logo.dev.
-import { normalizePublicCompanyWebsite } from './website'
+import { isJobPortalHost, normalizePublicCompanyWebsite } from './website'
 
 const LOGO_DEV_HOST = 'img.logo.dev'
 const LOGO_SIZE = '128' // the largest logo we draw is 72px, so this covers 2x screens
@@ -20,6 +20,16 @@ function extractDomain(url?: string | null): string | null {
     return host || null
   } catch {
     return null
+  }
+}
+
+/** A stored logo.dev URL keyed to a job board or ATS host (img.logo.dev/xing.com) is that vendor's logo. */
+function isPortalLogoDevUrl(url: string): boolean {
+  try {
+    const first = decodeURIComponent(new URL(url).pathname.split('/')[1] ?? '')
+    return first !== 'name' && isJobPortalHost(first)
+  } catch {
+    return false
   }
 }
 
@@ -68,9 +78,9 @@ export function buildLogoUrl(
     if (logoUrl.includes('logo.clearbit.com')) {
       // https://logo.clearbit.com/<company domain> — the company is in the path, not the host.
       const clearbitDomain = extractDomain(logoUrl.split('logo.clearbit.com/')[1]?.split(/[/?#]/)[0])
-      if (clearbitDomain) return logoProxyUrl('domain', clearbitDomain)
+      if (clearbitDomain && !isJobPortalHost(clearbitDomain)) return logoProxyUrl('domain', clearbitDomain)
     } else if (extractDomain(logoUrl) === LOGO_DEV_HOST) {
-      return appendLogoDevOptimization(logoUrl)
+      if (!isPortalLogoDevUrl(logoUrl)) return appendLogoDevOptimization(logoUrl)
     } else {
       storedOther = logoUrl
     }

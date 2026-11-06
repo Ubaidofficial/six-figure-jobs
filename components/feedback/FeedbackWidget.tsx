@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
-import { usePathname } from 'next/navigation'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { MessageSquare, X, Send, Paperclip, CheckCircle, AlertCircle } from 'lucide-react'
 import styles from './FeedbackWidget.module.css'
 
@@ -17,14 +16,43 @@ const ISSUE_TYPES = [
 ]
 
 export function FeedbackWidget() {
-  // Job pages show a sticky Apply bar on mobile; lift the button above it instead of covering it.
-  const aboveApplyBar = usePathname()?.startsWith('/job/') ?? false
   const [open, setOpen] = useState(false)
+  // Phones: the button slides out of the way while the page scrolls down (reading) and comes back on scroll up or
+  // near the top, so it is never parked over the text being read. Desktop ignores this (see the CSS).
+  const [tucked, setTucked] = useState(false)
   const [type, setType] = useState('bug')
   const [message, setMessage] = useState('')
   const [screenshot, setScreenshot] = useState<string | null>(null)
   const [status, setStatus] = useState<Status>('idle')
   const pasteAreaRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let lastY = window.scrollY
+    let run = 0 // pixels scrolled in the current direction (positive = down)
+    let frame = 0
+    const update = () => {
+      frame = 0
+      const y = window.scrollY
+      const dy = y - lastY
+      lastY = y
+      if (y < 120) {
+        run = 0
+        setTucked(false)
+        return
+      }
+      run = Math.sign(dy) === Math.sign(run) ? run + dy : dy
+      if (run > 24) setTucked(true)
+      else if (run < -8) setTucked(false)
+    }
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [])
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData.items
@@ -77,7 +105,7 @@ export function FeedbackWidget() {
       {/* Floating toggle button */}
       <button
         type="button"
-        className={`${styles.toggle} ${open ? styles.toggleHidden : ''} ${aboveApplyBar ? styles.toggleAboveBar : ''}`}
+        className={`${styles.toggle} ${open ? styles.toggleHidden : ''} ${tucked ? styles.toggleTucked : ''}`}
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
       >

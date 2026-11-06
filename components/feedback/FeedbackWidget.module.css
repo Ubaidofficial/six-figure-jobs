@@ -29,21 +29,51 @@
   box-shadow: 0 8px 28px rgba(132, 204, 22, 0.45), 0 2px 8px rgba(0,0,0,0.3);
 }
 
-/* Job pages on phones: an icon-only button in the corner, lifted above the sticky Apply bar only while that bar is on
-   screen (MobileBarShell sets data-apply-bar on <html>). */
+/* Phones: a small icon-only button in the corner. It slides out of view while the page scrolls down (.toggleTucked,
+   set by FeedbackWidget.tsx) and returns on scroll up. On job pages it sits above the sticky Apply bar only while that
+   bar is on screen (MobileBarShell sets data-apply-bar on <html>). */
 @media (max-width: 767px) {
-  .toggle.toggleAboveBar {
-    bottom: 24px;
-    padding: 12px;
+  .toggle {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+    opacity: 0.92;
   }
 
-  .toggle.toggleAboveBar .toggleLabel {
+  .toggle .toggleLabel {
     display: none;
   }
 
-  :global(html[data-apply-bar='shown']) .toggle.toggleAboveBar {
-    bottom: 96px; /* clear the ~76px sticky mobile Apply bar */
+  :global(html[data-apply-bar='shown']) .toggle {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px)); /* clear the sticky mobile Apply bar */
   }
+
+  .toggle.toggleTucked {
+    transform: translateY(calc(100% + 96px));
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Keyboard users tabbing to it always get it back. */
+  .toggle.toggleTucked:focus-visible {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle {
+    transition: none;
+  }
+}
+
+/* Never float over a modal dialog or the mobile menu sheet (Radix marks the open one with data-state="open"). */
+:global(body:has([role='dialog'][data-state='open'])) .toggle {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .toggleHidden {
@@ -337,10 +367,5 @@
   .panel {
     width: 100%;
     max-width: 100%;
-  }
-
-  .toggle {
-    bottom: 16px;
-    right: 16px;
   }
 }

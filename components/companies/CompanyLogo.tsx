@@ -9,7 +9,7 @@
 import * as React from 'react'
 
 import { cn } from '@/lib/utils'
-import { fallbackHue, getInitials } from '@/lib/companies/logoFallback'
+import { fallbackHue, getInitials, needsDarkTile } from '@/lib/companies/logoFallback'
 
 const SIZES = {
   fill: 'size-full', // fills a wrapper that is already sized by its own CSS
@@ -56,7 +56,7 @@ export function CompanyLogo({
       className={cn(
         'inline-flex shrink-0 items-center justify-center overflow-hidden',
         size !== 'fill' && 'rounded-lg border border-border',
-        showImage ? 'bg-white' : '',
+        showImage ? (needsDarkTile(name) ? 'bg-slate-800' : 'bg-white') : '',
         SIZES[size],
         className,
       )}
