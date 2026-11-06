@@ -21,8 +21,8 @@ import { Hero } from '@/components/home/Hero'
 import { HeroFilters } from '@/components/home/HeroFilters'
 import { loadSalarySnapshot } from '@/lib/jobs/salarySnapshot'
 import { loadSiteCounts } from '@/lib/jobs/siteCounts'
-import { ActivityTicker, type ActivityEvent } from '@/components/home/ActivityTicker'
-import { buildJobSlugHref } from '../lib/jobs/jobSlug'
+import { LiveJobFeed } from '@/components/home/LiveJobFeed'
+import { buildFeedItems } from '@/lib/jobs/latestFeed'
 import {
   FeaturedCompaniesCarousel,
   type FeaturedCompany,
@@ -488,25 +488,8 @@ export default async function HomePage() {
   const jobs = jobsData.jobs as JobWithCompany[]
   const newestPostedAt = jobs[0]?.postedAt ?? jobs[0]?.createdAt ?? null
 
-  // Honest activity ticker: the most recent indexable postings the homepage
-  // already pulled. No "Someone applied from X" synthesis — just the actual
-  // newest jobs, served up rotating. Cap at 8 so the client component
-  // doesn't drag too much serialized payload across the wire.
-  const tickerEvents: ActivityEvent[] = jobs
-    .slice(0, 8)
-    .map((job) => {
-      const postedAt = job.postedAt ?? job.createdAt ?? job.updatedAt
-      if (!postedAt) return null
-      const companyName = job.companyRef?.name || job.company || 'A hiring company'
-      return {
-        id: job.id,
-        company: companyName,
-        title: job.title || 'a new role',
-        postedAtISO: postedAt.toISOString(),
-        href: buildJobSlugHref(job),
-      }
-    })
-    .filter((e): e is ActivityEvent => e !== null)
+  // Live feed: the newest jobs we added (real data), rendered here and refreshed in the browser once a minute.
+  const feedItems = buildFeedItems(jobs)
   const salaryTiers: SalaryTier[] = [
     {
       slug: '100k-plus',
@@ -580,7 +563,6 @@ export default async function HomePage() {
 
     return (
     <>
-      {tickerEvents.length > 0 ? <ActivityTicker events={tickerEvents} /> : null}
       <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
         <HomepageSchemas
           jobCount={stats.totalJobs}
@@ -600,6 +582,8 @@ export default async function HomePage() {
           remoteRegions={REMOTE_REGIONS.map((r) => ({ value: r.value, label: r.label }))}
         />
       </Hero>
+
+      <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} />
 
       <LatestOpportunities jobs={jobs} totalJobs={stats.totalJobs} />
 
