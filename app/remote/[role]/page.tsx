@@ -13,6 +13,7 @@ import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime
 import JobList from '../../components/JobList'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
+import { buildListingDescription, countPrefix, fitTitle } from '../../../lib/seo/metaText'
 import { isRemoteRolePageIndexable } from '../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
 
@@ -232,8 +233,15 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         isRemoteRolePageIndexable(jobCount) &&
         isPhaseIndexable({ roleSlug, pathname: `/remote/${roleSlug}` })
 
-      const title = `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs | ${SITE_NAME}`
-      const description = `Find ${jobCount.toLocaleString()} remote ${roleName} jobs paying $100k+. Browse high paying remote ${roleName.toLowerCase()} positions with verified six figure salaries.`
+      // Keeps the established "N Remote Role $100k+ Jobs | brand" wording whenever it fits; long role names drop the brand.
+      const title = fitTitle([
+        `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs | ${SITE_NAME}`,
+        `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs`,
+        `${jobCount.toLocaleString()} Remote ${roleName} Jobs`,
+      ])
+      const description = buildListingDescription(`${countPrefix(jobCount)}remote ${roleName} jobs paying $100k+.`, [
+        ['Verified six-figure salaries at top companies.'],
+      ])
 
       return {
         title,

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '@/lib/seo/site'
+import { buildCompaniesIndexDescription } from '@/lib/seo/metaText'
 import {
   loadEligibleCompaniesDirectory,
   type PublicCompanyDirectoryEntry,
@@ -101,7 +102,7 @@ export async function generateMetadata(): Promise<Metadata> {
       totalCompanies > 0
         ? `${totalCompanies.toLocaleString()} Companies Hiring $100k+ Roles | ${SITE_NAME}`
         : `Companies hiring $100k+ roles | ${SITE_NAME}`
-    const description = buildCompaniesDescription(totalCompanies, totalEligibleJobs)
+    const description = buildCompaniesIndexDescription(totalCompanies, totalEligibleJobs)
     return {
       title,
       description,

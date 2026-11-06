@@ -12,6 +12,7 @@ import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Pa
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
+import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
 import { countrySlugToCode } from '../../../../lib/seo/countrySlug'
@@ -112,10 +113,9 @@ export async function generateMetadata({
     total > 0
       ? `${cfg.label} jobs paying $100k+ (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${cfg.label} jobs paying $100k+ | ${SITE_NAME}`
-  const description =
-    total > 0
-      ? `${total.toLocaleString()} $100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, with links to apply. Remote, hybrid and on-site roles refreshed daily.`
-      : `$100k+ ${cfg.label.toLowerCase()} jobs — salary shown upfront, with links to apply. Remote, hybrid and on-site roles from top companies.`
+  const description = buildListingDescription(`${countPrefix(total)}$100k+ ${cfg.label.toLowerCase()} jobs.`, [
+    ['Remote, hybrid and on-site roles.'],
+  ])
 
   return {
     title,

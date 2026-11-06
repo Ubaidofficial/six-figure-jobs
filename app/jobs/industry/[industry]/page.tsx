@@ -8,6 +8,7 @@ import { INDUSTRY_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
+import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -52,7 +53,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} $100k+ ${resolved.label} jobs with salary shown upfront. Six-figure ${resolved.label.toLowerCase()} roles refreshed daily from company career pages.`
+  const description = buildListingDescription(`${countPrefix(total)}$100k+ ${resolved.label} jobs.`, [
+    ['Six-figure roles at top companies, with remote, hybrid and on-site options.', 'Six-figure roles at top companies.'],
+  ])
   const canonical = `${SITE_URL}/jobs/industry/${resolved.slug}`
 
   return {

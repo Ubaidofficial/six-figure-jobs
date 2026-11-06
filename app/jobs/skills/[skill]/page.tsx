@@ -11,7 +11,7 @@ import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
-import { capDescription } from '../../../../lib/seo/jobMeta'
+import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
 import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
@@ -57,8 +57,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = capDescription(
-    `${total.toLocaleString()} $100k+ ${resolved.label} jobs with salary shown upfront and links to apply. High-paying ${resolved.label} roles at top tech companies, updated daily.`,
+  const description = buildListingDescription(
+    `${countPrefix(total)}$100k+ ${resolved.label} jobs.`,
+    [['High-paying roles at top tech companies.']],
   )
   const canonical = `${SITE_URL}/jobs/skills/${resolved.slug}`
 

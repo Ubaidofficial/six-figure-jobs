@@ -11,7 +11,7 @@ import { formatCurrencyShort, getThresholdLabelForCountry } from '../../../../li
 import { isCityPageIndexable } from '../../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
-import { capDescription } from '../../../../lib/seo/jobMeta'
+import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
 import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
@@ -65,8 +65,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = capDescription(
-    `${total.toLocaleString()} ${salaryLabel} jobs in ${resolved.label} with salary shown upfront and links to apply. Remote, hybrid and on-site roles, refreshed daily.`,
+  const description = buildListingDescription(
+    `${countPrefix(total)}${salaryLabel} jobs in ${resolved.label}.`,
+    [['Remote, hybrid and on-site roles.']],
   )
   const canonical = `${SITE_URL}/jobs/city/${resolved.slug}`
 

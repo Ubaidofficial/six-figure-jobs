@@ -8,6 +8,7 @@ import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../../lib/seo/s
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
 import { isPseoComboIndexable } from '../../../../../lib/seo/pseoUnlock'
+import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../../lib/seo/metaText'
 
 export const revalidate = 600
 
@@ -43,8 +44,14 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     return { title: 'Jobs Not Found | Six Figure Jobs' }
   }
 
-  const title = `Remote/on-site ${roleName} $100k jobs in ${cityInfo.label} | ${total.toLocaleString()} roles | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} $100k+ ${roleName} jobs in ${cityInfo.label} — salary shown upfront. Six-figure ${roleName} roles with remote and hybrid options, refreshed daily from company career pages.`
+  const title = buildListingTitle({
+    topic: `${roleName} Jobs in ${cityInfo.label}`,
+    count: total,
+    qualifier: 'Paying $100k+',
+  })
+  const description = buildListingDescription(`${countPrefix(total)}$100k+ ${roleName} jobs in ${cityInfo.label}.`, [
+    ['Remote, hybrid and on-site roles.'],
+  ])
   const canonical = `${SITE_URL}/jobs/${role}/city/${cityInfo.slug}`
 
   return {
