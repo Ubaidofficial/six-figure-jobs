@@ -3,14 +3,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { permanentRedirect } from 'next/navigation'
-import { prisma } from '../../../lib/prisma'
 import {
   queryJobs,
   type JobWithCompany,
-} from '../../../lib/jobs/queryJobs'
-import {
-  buildGlobalExclusionsWhere,
-  buildHighSalaryEligibilityWhere,
 } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import type { Job } from '@prisma/client'
@@ -21,6 +16,16 @@ import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 import { isCanonicalSlug } from '../../../lib/roles/canonicalSlugs'
 import { findBestMatchingRole } from '../../../lib/roles/slugMatcher'
 import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
+import { RoleSalarySections } from '@/components/salary/RoleSalaryGuide'
+import { loadRoleSalaryGuide } from '../../../lib/salary/roleGuide'
+import {
+  buildFaqs,
+  buildGuideJsonLd,
+  buildMetaDescription,
+  buildTakeaways,
+  formatGuideDate,
+  formatPay,
+} from '../../../lib/salary/roleGuideContent'
 
 export const revalidate = 1800
 
@@ -114,16 +119,6 @@ function buildPageHref(
   return query ? `${basePath}?${query}` : basePath
 }
 
-function formatMoney(value: number, currency = 'USD'): string {
-  const sym = currency === 'USD' || !currency ? '$' : currency + ' '
-  return (
-    sym +
-    value.toLocaleString('en-US', {
-      maximumFractionDigits: 0,
-    })
-  )
-}
-
 function resolveCanonicalRoleOrRedirect(rawRole: string): string {
   const normalized = String(rawRole || '').trim().toLowerCase()
   if (!normalized) permanentRedirect('/salary/software-engineer')
@@ -162,53 +157,12 @@ export async function generateMetadata({
       ? '$200k+'
       : '$100k+'
 
-  // Pull some salary stats for SEO description
-  const raw = await prisma.job.findMany({
-    where: {
-      isExpired: false,
-      roleSlug: roleSlug,
-      AND: [
-        buildHighSalaryEligibilityWhere(),
-        buildGlobalExclusionsWhere(),
-        {
-          OR: [
-            { maxAnnual: { gte: BigInt(minAnnual) } },
-            { minAnnual: { gte: BigInt(minAnnual) } },
-          ],
-        },
-      ],
-    },
-    select: {
-      minAnnual: true,
-      maxAnnual: true,
-      currency: true,
-    },
-  })
-
-  let description =
-    `${roleName} salary data from ${salaryBand} tech jobs — real pay ranges from live job listings, no surveys. ` +
-    `See what ${roleName} roles actually pay in 2026.`
-
-  if (raw.length > 0) {
-    const values: number[] = []
-    for (const r of raw) {
-      if (r.minAnnual != null) values.push(Number(r.minAnnual))
-      if (r.maxAnnual != null) values.push(Number(r.maxAnnual))
-    }
-    if (values.length > 0) {
-      values.sort((a, b) => a - b)
-      const min = values[0]
-      const max = values[values.length - 1]
-      const mid = values[Math.floor(values.length / 2)]
-      description =
-        `${roleName} salary guide — ${salaryBand} pay ranges from live job listings. ` +
-        `Base salary from ${formatMoney(min)} to ${formatMoney(max)} / year, ` +
-        `median ${formatMoney(mid)} (${raw.length} real postings, updated daily).`
-    }
-  }
+  // Same filter and numbers as the page body (cached), so the snippet and the page never disagree.
+  const guide = await loadRoleSalaryGuide(roleSlug, minAnnual)
+  let description = buildMetaDescription({ roleName, bandLabel: salaryBand, guide })
 
   description = capDescription(description)
-  const allowIndex = raw.length >= 1
+  const allowIndex = guide.listings >= 1
   const title = `${salaryBand} ${roleName} salary guide | Six Figure Jobs`
   // Canonical always points to the base salary page — band filter is a view
   // variant, not a separate indexable page. Query params in canonicals confuse
@@ -295,58 +249,9 @@ export default async function SalaryRolePage(props: PageProps) {
       ? '$200k+'
       : '$100k+'
 
-  // Live salary data for this role
-  const raw = await prisma.job.findMany({
-    where: {
-      isExpired: false,
-      roleSlug: roleSlug,
-      AND: [
-        buildHighSalaryEligibilityWhere(),
-        buildGlobalExclusionsWhere(),
-        {
-          OR: [
-            { maxAnnual: { gte: BigInt(minAnnual) } },
-            { minAnnual: { gte: BigInt(minAnnual) } },
-          ],
-        },
-      ],
-    },
-    select: {
-      minAnnual: true,
-      maxAnnual: true,
-      currency: true,
-      countryCode: true,
-    },
-  })
-
-  const values: number[] = []
-  const byCountry: Record<string, number[]> = {}
-
-  for (const r of raw) {
-    const vMin = r.minAnnual != null ? Number(r.minAnnual) : null
-    const vMax = r.maxAnnual != null ? Number(r.maxAnnual) : null
-    const cc = r.countryCode || 'GLOBAL'
-
-    if (vMin != null) {
-      values.push(vMin)
-      ;(byCountry[cc] ||= []).push(vMin)
-    }
-    if (vMax != null) {
-      values.push(vMax)
-      ;(byCountry[cc] ||= []).push(vMax)
-    }
-  }
-
-  values.sort((a, b) => a - b)
-
-  const statCount = values.length
-  const statMin = statCount ? values[0] : null
-  const statMax = statCount ? values[statCount - 1] : null
-  const statMedian = statCount
-    ? values[Math.floor(statCount / 2)]
-    : null
-
-  const totalListings = raw.length
+  // Live salary data for this role: the same filter as the job list below, so the numbers and the list agree.
+  const guide = await loadRoleSalaryGuide(roleSlug, minAnnual)
+  const totalListings = guide.listings
   const allowIndex = totalListings >= 1
 
   // Jobs list for this role (live $100k+)
@@ -364,116 +269,21 @@ export default async function SalaryRolePage(props: PageProps) {
       : 1
 
   const siteUrl = SITE_URL
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: `${siteUrl}/` },
-      { '@type': 'ListItem', position: 2, name: '$100k+ jobs', item: `${siteUrl}/jobs/100k-plus` },
-      { '@type': 'ListItem', position: 3, name: `${roleName} salary`, item: `${siteUrl}/salary/${roleSlug}` },
-    ],
-  }
-
-  const faqJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: `How much does a ${roleName} make?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `Live six-figure salary data for ${roleName} roles based on $100k+ job listings. Typical ranges update as new jobs are published.`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `Are remote or hybrid ${roleName} jobs included?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Yes. Listings are tagged remote, hybrid, or on-site, and remote roles include region filters (US-only, EMEA, APAC, global).',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `Do you show local currencies?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'We normalize to USD for bands like $100k+, and display local currency when provided (e.g., CHF, GBP, EUR, CAD, AUD, SGD).',
-        },
-      },
-    ],
-  }
-
-  const onetCode = ONET_CODES[roleSlug]
-  const occupationJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Occupation',
-    name: roleName,
-    description: `${bandLabel} ${roleName} salary data from live $100k+ roles.`,
-    ...(onetCode ? { occupationalCategory: onetCode } : {}),
-    estimatedSalary: {
-      '@type': 'MonetaryAmountDistribution',
-      currency: 'USD',
-      median: statMedian ?? undefined,
-      percentile10: statMin ?? undefined,
-      percentile90: statMax ?? undefined,
-    },
-  }
-
-  // AggregateOffer is what Google actually uses to render the salary card on
-  // the SERP — Occupation alone doesn't trigger it. Glassdoor/Levels.fyi both
-  // emit this. We attach the underlying Occupation as `itemOffered` so the
-  // two schemas reinforce each other.
-  const aggregateOfferJsonLd =
-    totalListings > 0 && statMin != null && statMax != null
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'AggregateOffer',
-          priceCurrency: 'USD',
-          lowPrice: statMin,
-          highPrice: statMax,
-          offerCount: totalListings,
-          url: `${siteUrl}/salary/${roleSlug}`,
-          itemOffered: {
-            '@type': 'Occupation',
-            name: roleName,
-            ...(onetCode ? { occupationalCategory: onetCode } : {}),
-          },
-        }
-      : null
+  const guideArgs = { roleName, bandLabel, guide }
+  const takeaways = buildTakeaways(guideArgs)
+  const faqs = buildFaqs(guideArgs)
+  const jsonLd = buildGuideJsonLd({ ...guideArgs, siteUrl, roleSlug, onetCode: ONET_CODES[roleSlug], faqs })
 
   return (
     <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
       <StructuredData jobs={jobs} roleName={roleName} />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'SpeakableSpecification',
-            cssSelector: ['main h1', '[data-speakable="summary"]'],
-          }),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(occupationJsonLd) }}
-      />
-      {aggregateOfferJsonLd ? (
+      {jsonLd.map((obj, i) => (
         <script
+          key={String(obj['@type']) + i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }}
         />
-      ) : null}
+      ))}
       {/* Breadcrumb */}
       <nav
         aria-label="Breadcrumb"
@@ -508,15 +318,17 @@ export default async function SalaryRolePage(props: PageProps) {
         <PageHero
           eyebrow="Salary guide"
           title={`${roleName} salary guide`}
-          description={
-            <span data-speakable="summary">
-              Live six-figure salary ranges for {roleName.toLowerCase()} roles, based on
-              $100k+ job listings from top tech and SaaS companies. Remote,
-              hybrid, and on-site pay data across USD and local currencies updates
-              regularly.
-            </span>
+          description={`Salary data for ${roleName} roles paying ${bandLabel} or more, taken from the pay ranges employers publish in their own job listings.`}
+          helper={
+            guide.asOf ? (
+              <>
+                Updated <time dateTime={guide.asOf.toISOString()}>{formatGuideDate(guide.asOf)}</time> ·{' '}
+                {totalListings.toLocaleString('en-US')} live {bandLabel} listings
+              </>
+            ) : (
+              'Based on live job listings, updated daily.'
+            )
           }
-          helper="Based on live $100k+ job listings, updated daily."
           actions={
             <>
               {[100_000, 200_000, 300_000, 400_000].map((band) => {
@@ -545,84 +357,48 @@ export default async function SalaryRolePage(props: PageProps) {
               </Link>
             </>
           }
-        >
-          <ul className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-            <li className="rounded-lg border border-border bg-card px-3 py-2">
-              Salary-first: {getBandLabel(minAnnual)} compensation taken from the employer’s posting.
-            </li>
-            <li className="rounded-lg border border-border bg-card px-3 py-2">
-              Remote eligibility noted; local currency kept where provided for transparency.
-            </li>
-            <li className="rounded-lg border border-border bg-card px-3 py-2">
-              Seniority focus: mid-to-senior and leadership roles; junior only when six-figure.
-            </li>
+        />
+
+        <section data-speakable="summary" aria-labelledby="key-takeaways" className="mt-8">
+          <h2 id="key-takeaways" className="text-lg font-semibold tracking-tight text-foreground">
+            Key Takeaways
+          </h2>
+          <ul className="mt-3 max-w-3xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-foreground">
+            {takeaways.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
           </ul>
-          <div className="mt-4">
-            <PageStatGrid
-              items={[
-                {
-                  label: 'Median base salary',
-                  value: statMedian ? `${formatMoney(statMedian)}/yr` : 'Not enough data yet',
-                  hint: 'Calculated from live $100k+ job listings.',
-                },
-                {
-                  label: 'Typical range',
-                  value:
-                    statMin && statMax
-                      ? `${formatMoney(statMin)}–${formatMoney(statMax)}/yr`
-                      : 'Not enough data yet',
-                  hint: 'Based on min / max ranges across all roles.',
-                },
-                {
-                  label: 'Sample size',
-                  value: totalListings.toLocaleString(),
-                  hint: 'Live jobs with $100k+ local base compensation.',
-                },
-                {
-                  label: 'Country coverage',
-                  value: Object.keys(byCountry).length.toLocaleString(),
-                  hint: 'Distinct country buckets in the active sample.',
-                },
-              ]}
-            />
-          </div>
-        </PageHero>
+        </section>
+
+        <div className="mt-6">
+          <PageStatGrid
+            items={[
+              {
+                label: 'Median base salary',
+                value: guide.usd ? `${formatPay(guide.usd.median)}/yr` : 'Not enough data yet',
+                hint: 'Median of listing midpoints, USD listings only.',
+              },
+              {
+                label: 'Middle half of listings',
+                value: guide.usd ? `${formatPay(guide.usd.p25)} to ${formatPay(guide.usd.p75)}/yr` : 'Not enough data yet',
+                hint: '25th to 75th percentile.',
+              },
+              {
+                label: 'Listings counted',
+                value: (guide.usd?.count ?? 0).toLocaleString('en-US'),
+                hint: `Live USD listings paying ${bandLabel}.`,
+              },
+              {
+                label: 'Countries with data',
+                value: guide.countries.length.toLocaleString('en-US'),
+                hint: 'Countries with at least 5 listings.',
+              },
+            ]}
+          />
+        </div>
       </div>
 
-      {/* Country breakdown (simple) */}
-      {Object.keys(byCountry).length > 0 && (
-        <PageSection
-          title="Salary snapshot by country"
-          description="Country-level pay snapshots help separate local market effects from global blended salary ranges."
-        >
-          <div className="flex flex-wrap gap-2 text-xs">
-            {Object.entries(byCountry).map(([cc, arr]) => {
-              arr.sort((a, b) => a - b)
-              const cMin = arr[0]
-              const cMax = arr[arr.length - 1]
-              const cMed =
-                arr[Math.floor(arr.length / 2)]
-              return (
-                <div
-                  key={cc}
-                  className="rounded-xl border border-border bg-card px-3 py-2"
-                >
-                  <p className="font-semibold text-foreground">
-                    {cc === 'GLOBAL' ? 'Global / unknown' : cc}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {formatMoney(cMed)} median ·{' '}
-                    {formatMoney(cMin)}–{formatMoney(cMax)} range
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {arr.length} datapoints
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        </PageSection>
-      )}
+      <RoleSalarySections roleName={roleName} bandLabel={bandLabel} guide={guide} />
 
       <PageSection
         title="Explore related high-paying pages"
@@ -653,7 +429,7 @@ export default async function SalaryRolePage(props: PageProps) {
               All $100k+ {roleName} jobs →
             </Link>
           </li>
-          {Object.keys(byCountry).length > 0 ? (
+          {guide.countries.length > 0 ? (
             <li>
               <Link href={`/jobs/${roleSlug}`} className="hover:underline">
                 Browse live {roleName} jobs by location →
@@ -733,22 +509,37 @@ export default async function SalaryRolePage(props: PageProps) {
       </section>
 
       <PageSection
-        title={`How this ${roleName.toLowerCase()} salary guide is built`}
-        description={`We source only $100k+ ${roleName.toLowerCase()} roles directly from company career pages. Every listing is normalized for salary, role slug, country, and remote mode, then deduped and expired when it goes stale. The medians and ranges on this page are computed from live openings rather than historical surveys, so the data reflects current hiring demand. When a company publishes a new ${roleName.toLowerCase()} job with a clear range, it feeds into the stats; when the job is filled or closed, it disappears from the sample. Remote and hybrid roles are labeled, and local currencies are preserved wherever possible. This approach keeps the guide aligned with what hiring managers are paying today, not last year. Use the band toggles to see how compensation shifts at $200k, $300k, and $400k, then scroll the job list to apply to the exact roles behind the numbers.`}
+        title={`How is this ${roleName} salary data calculated?`}
+        description="The figures are computed from live job listings, not from surveys."
       >
-        <div className="grid gap-3 text-xs text-muted-foreground md:grid-cols-3">
-          <div className="rounded-lg border border-border bg-card px-3 py-3">
-            <div className="font-semibold text-foreground">Source quality</div>
-            <div className="mt-1">Direct ATS and company-careers feeds, not self-reported surveys.</div>
-          </div>
-          <div className="rounded-lg border border-border bg-card px-3 py-3">
-            <div className="font-semibold text-foreground">Normalization</div>
-            <div className="mt-1">Role slugs, currency, seniority, and work mode are standardized before analysis.</div>
-          </div>
-          <div className="rounded-lg border border-border bg-card px-3 py-3">
-            <div className="font-semibold text-foreground">Freshness</div>
-            <div className="mt-1">Expired jobs are removed so salary stats reflect the current market, not stale demand.</div>
-          </div>
+        <ul className="max-w-3xl list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-foreground">
+          <li>
+            <strong>Source:</strong> the salary ranges employers publish in their own job listings, collected from company
+            career pages and applicant-tracking systems.
+          </li>
+          <li>
+            <strong>Method:</strong> each listing counts once, at the midpoint of its range. Headline figures use USD
+            listings only, and the median is the middle value, not an average.
+          </li>
+          <li>
+            <strong>Coverage:</strong> only listings paying {bandLabel} or more are included, so the data does not
+            describe all {roleName} pay. Listings that publish no salary are not counted.
+          </li>
+          <li>
+            <strong>Freshness:</strong> closed and stale listings are removed, and the figures are recalculated as the
+            listings change.
+          </li>
+        </ul>
+      </PageSection>
+
+      <PageSection title="Frequently asked questions">
+        <div className="max-w-3xl space-y-5">
+          {faqs.map((f) => (
+            <div key={f.question}>
+              <h3 className="text-base font-semibold text-foreground">{f.question}</h3>
+              <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">{f.answer}</p>
+            </div>
+          ))}
         </div>
       </PageSection>
     </main>
