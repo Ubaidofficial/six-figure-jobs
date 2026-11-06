@@ -3,9 +3,12 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { connection } from 'next/server'
 
+import { AutoApplyStart } from '@/components/autoapply/AutoApplyStart'
 import { KitView } from '@/components/applykit/KitView'
 import { accountsEnabled } from '@/lib/accounts/enabled'
 import { findKitJob } from '@/lib/applykit/job'
+import { autoApplyEnabled } from '@/lib/autoapply/config'
+import { parseGreenhouseUrl } from '@/lib/autoapply/greenhouse'
 import { getKitCredits } from '@/lib/applykit/config'
 import { getSessionUser } from '@/lib/auth/session'
 import { getBalance } from '@/lib/billing/credits'
@@ -68,6 +71,17 @@ export default async function KitPage({ params }: { params: Promise<{ slug: stri
           cost={getKitCredits()}
         />
       </div>
+
+      {autoApplyEnabled() && job ? (
+        <div className={styles.card}>
+          <h2 className={styles.cardTitle}>Auto-apply</h2>
+          {parseGreenhouseUrl(job.applyUrl) ? (
+            <AutoApplyStart slug={slug} />
+          ) : (
+            <p className={styles.muted}>Auto-apply is not available for this employer yet. Use the employer link above.</p>
+          )}
+        </div>
+      ) : null}
     </main>
   )
 }

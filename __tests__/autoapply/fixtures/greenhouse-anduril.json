@@ -1,0 +1,534 @@
+{
+ "title": "Software Engineer, Space Special Programs",
+ "questions": [
+  {
+   "label": "First Name",
+   "required": true,
+   "fields": [
+    {
+     "name": "first_name",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Last Name",
+   "required": true,
+   "fields": [
+    {
+     "name": "last_name",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Email",
+   "required": true,
+   "fields": [
+    {
+     "name": "email",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Phone",
+   "required": true,
+   "fields": [
+    {
+     "name": "phone",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Resume/CV",
+   "required": true,
+   "fields": [
+    {
+     "name": "resume",
+     "type": "input_file",
+     "values": []
+    },
+    {
+     "name": "resume_text",
+     "type": "textarea",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Cover Letter",
+   "required": false,
+   "fields": [
+    {
+     "name": "cover_letter",
+     "type": "input_file",
+     "values": []
+    },
+    {
+     "name": "cover_letter_text",
+     "type": "textarea",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "LinkedIn Profile",
+   "required": false,
+   "fields": [
+    {
+     "name": "question_13279617007",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Website",
+   "required": false,
+   "fields": [
+    {
+     "name": "question_13279618007",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "CLEARANCE ELIGIBILITY - This position requires eligibility to obtain and maintain a U.S. security clearance.",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279619007",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes, I hold an active U.S. security clearance",
+       "value": 36094660007
+      },
+      {
+       "label": "Yes, I am eligible for a U.S. security clearance",
+       "value": 36094661007
+      },
+      {
+       "label": "No",
+       "value": 36094662007
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "If you have held a U.S. security clearance in the past, what clearance level have you held? ",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279620007",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "N/A - have never held U.S. security clearance",
+       "value": 36094663007
+      },
+      {
+       "label": "Confidential",
+       "value": 36094664007
+      },
+      {
+       "label": "Secret",
+       "value": 36094665007
+      },
+      {
+       "label": "Top Secret",
+       "value": 36094666007
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "EXPORT CONTROLS - This position requires access to information and technology that is subject to U.S. export controls. Your responses to the questions below will be used solely to determine your eligibility under U.S. law to receive information and materials subject to U.S. export controls.",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279621007",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "A United States citizen or national",
+       "value": 36094667007
+      },
+      {
+       "label": "A person lawfully admitted for permanent residence of the United States (i.e., \u201cGreen Card\u201d holder)",
+       "value": 36094668007
+      },
+      {
+       "label": "A person admitted as a refugee to the United States under 8 U.S.C. 1157",
+       "value": 36094669007
+      },
+      {
+       "label": "A person admitted as an asylee to the United States under 8 U.S.C. 1158",
+       "value": 36094670007
+      },
+      {
+       "label": "None of the above",
+       "value": 36094671007
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "U.S. WORK AUTHORIZATION",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279622007",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": 1
+      },
+      {
+       "label": "No",
+       "value": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "Will you require sponsorship from Anduril for employment now or in the future (e.g, H1B visa)?",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279623007",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": 1
+      },
+      {
+       "label": "No",
+       "value": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "HISTORY WITH ANDURIL",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279624007",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": 1
+      },
+      {
+       "label": "No",
+       "value": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "Have you ever been employed by Anduril or any company that Anduril has acquired?",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279625007",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": 1
+      },
+      {
+       "label": "No",
+       "value": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "CONFLICT OF INTEREST",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279626007",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": 1
+      },
+      {
+       "label": "No",
+       "value": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "How did you hear about Anduril?",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279627007",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Google job search",
+       "value": 36094672007
+      },
+      {
+       "label": "News coverage of Anduril",
+       "value": 36094673007
+      },
+      {
+       "label": "Don't Work at Anduril campaign",
+       "value": 36094674007
+      },
+      {
+       "label": "Friend/know someone at the company",
+       "value": 36094675007
+      },
+      {
+       "label": "Outreach from an Anduril recruiter",
+       "value": 36094676007
+      },
+      {
+       "label": "JobsOhio",
+       "value": 36094677007
+      },
+      {
+       "label": "BuiltIn",
+       "value": 36094678007
+      },
+      {
+       "label": "Indeed",
+       "value": 36094679007
+      },
+      {
+       "label": "Anduril social media",
+       "value": 36094680007
+      },
+      {
+       "label": "Anduril YouTube videos",
+       "value": 36094681007
+      },
+      {
+       "label": "Podcast featuring an Anduril leader",
+       "value": 36094682007
+      },
+      {
+       "label": "LinkedIn",
+       "value": 36094683007
+      },
+      {
+       "label": "GitHub",
+       "value": 36094684007
+      },
+      {
+       "label": "Handshake",
+       "value": 36094685007
+      },
+      {
+       "label": "Glassdoor",
+       "value": 36094686007
+      },
+      {
+       "label": "Simplify",
+       "value": 36094687007
+      },
+      {
+       "label": "Anduril Website",
+       "value": 36094688007
+      },
+      {
+       "label": "ClearanceJobs",
+       "value": 36094689007
+      },
+      {
+       "label": "University Career Fair",
+       "value": 36094690007
+      },
+      {
+       "label": "Networking Event",
+       "value": 36094691007
+      },
+      {
+       "label": "Hardware FYI",
+       "value": 36094692007
+      },
+      {
+       "label": "Other",
+       "value": 36094693007
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "If other, please specify",
+   "required": false,
+   "fields": [
+    {
+     "name": "question_13279628007",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Legal First Name",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279629007",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Legal Last Name",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_13279630007",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  }
+ ],
+ "compliance": [
+  {
+   "type": "eeoc",
+   "questions": [
+    {
+     "label": "VeteranStatus",
+     "required": false,
+     "fields": [
+      {
+       "name": "veteran_status",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I don't wish to answer",
+         "value": "3"
+        },
+        {
+         "label": "I identify as one or more of the classifications of a protected veteran",
+         "value": "2"
+        },
+        {
+         "label": "I am not a protected veteran",
+         "value": "1"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "eeoc",
+   "questions": [
+    {
+     "label": "Race",
+     "required": false,
+     "fields": [
+      {
+       "name": "race",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Decline To Self Identify",
+         "value": "8"
+        },
+        {
+         "label": "Two or More Races",
+         "value": "7"
+        },
+        {
+         "label": "Native Hawaiian or Other Pacific Islander",
+         "value": "6"
+        },
+        {
+         "label": "White",
+         "value": "5"
+        },
+        {
+         "label": "Hispanic or Latino",
+         "value": "4"
+        },
+        {
+         "label": "Black or African American",
+         "value": "3"
+        },
+        {
+         "label": "Asian",
+         "value": "2"
+        },
+        {
+         "label": "American Indian or Alaskan Native",
+         "value": "1"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "label": "Gender",
+     "required": false,
+     "fields": [
+      {
+       "name": "gender",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Decline To Self Identify",
+         "value": "3"
+        },
+        {
+         "label": "Female",
+         "value": "2"
+        },
+        {
+         "label": "Male",
+         "value": "1"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "data_compliance": [
+  {
+   "type": "gdpr",
+   "requires_consent": false,
+   "requires_processing_consent": false,
+   "requires_retention_consent": false,
+   "retention_period": null,
+   "demographic_data_consent_applies": false
+  }
+ ]
+}
