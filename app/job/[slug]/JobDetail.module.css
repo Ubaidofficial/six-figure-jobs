@@ -391,3 +391,66 @@
 .descSub:first-of-type .descSubheading {
   margin-top: 12px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Phones: a shorter hero, so the salary and Apply button are in view  */
+/* ------------------------------------------------------------------ */
+
+.chipCompact {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .hero {
+    padding: 20px 16px;
+    gap: 16px;
+  }
+
+  /* Logo and company name share a row; the title then gets the full width instead of the column beside the logo. */
+  .identity {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+  }
+
+  .identity .logo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .identityText {
+    display: contents;
+  }
+
+  .company {
+    margin: 0;
+  }
+
+  .title {
+    grid-column: 1 / -1;
+    font-size: 1.625rem;
+  }
+
+  .chips {
+    margin-top: 14px;
+    gap: 6px;
+  }
+
+  .chip {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+  }
+
+  .chipFull {
+    display: none;
+  }
+
+  .chipCompact {
+    display: inline;
+  }
+
+  .payCard {
+    padding: 20px;
+  }
+}

@@ -29,12 +29,19 @@
   box-shadow: 0 8px 28px rgba(132, 204, 22, 0.45), 0 2px 8px rgba(0,0,0,0.3);
 }
 
-.toggleAboveBar {
-  /* clear the sticky mobile Apply bar (~108px tall) */
-}
-
+/* Job pages on phones: an icon-only button in the corner, lifted above the sticky Apply bar only while that bar is on
+   screen (MobileBarShell sets data-apply-bar on <html>). */
 @media (max-width: 767px) {
   .toggle.toggleAboveBar {
+    bottom: 24px;
+    padding: 12px;
+  }
+
+  .toggle.toggleAboveBar .toggleLabel {
+    display: none;
+  }
+
+  :global(html[data-apply-bar='shown']) .toggle.toggleAboveBar {
     bottom: 96px; /* clear the ~76px sticky mobile Apply bar */
   }
 }
