@@ -129,6 +129,8 @@ const nextConfig = {
           { key: 'X-Robots-Tag', value: 'noindex, follow' },
         ],
       },
+      // Flag images (public/flags): tiny and unchanging, so browsers keep them for 30 days instead of re-checking each page.
+      { source: '/flags/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000' }] },
       { source: '/job/:path*', headers: pageCacheHeaders },
       { source: '/remote/:path*', headers: pageCacheHeaders },
       { source: '/jobs/:path*', headers: pageCacheHeaders },

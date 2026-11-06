@@ -118,13 +118,13 @@ const PREMIUM_ROLE_DEFS = [
 ] as const satisfies ReadonlyArray<{ slug: string; name: string; emoji: string }>
 
 const TOP_LOCATION_DEFS = [
-  { code: 'US', flag: '🇺🇸', thresholdLabel: getThresholdLabelForCountry('US') },
-  { code: 'GB', flag: '🇬🇧', thresholdLabel: getThresholdLabelForCountry('GB') },
-  { code: 'CA', flag: '🇨🇦', thresholdLabel: getThresholdLabelForCountry('CA') },
-  { code: 'DE', flag: '🇩🇪', thresholdLabel: getThresholdLabelForCountry('DE') },
-  { code: 'AU', flag: '🇦🇺', thresholdLabel: getThresholdLabelForCountry('AU') },
-  { code: 'NL', flag: '🇳🇱', thresholdLabel: getThresholdLabelForCountry('NL') },
-] as const satisfies ReadonlyArray<{ code: string; flag: string; thresholdLabel: string }>
+  { code: 'US', thresholdLabel: getThresholdLabelForCountry('US') },
+  { code: 'GB', thresholdLabel: getThresholdLabelForCountry('GB') },
+  { code: 'CA', thresholdLabel: getThresholdLabelForCountry('CA') },
+  { code: 'DE', thresholdLabel: getThresholdLabelForCountry('DE') },
+  { code: 'AU', thresholdLabel: getThresholdLabelForCountry('AU') },
+  { code: 'NL', thresholdLabel: getThresholdLabelForCountry('NL') },
+] as const satisfies ReadonlyArray<{ code: string; thresholdLabel: string }>
 
 // Deduped, extended role list for the search dropdown
 const ROLE_OPTIONS = (() => {
@@ -567,7 +567,7 @@ export default async function HomePage() {
     return {
       slug,
       name,
-      flag: def.flag,
+      countryCode: def.code,
       thresholdLabel: def.thresholdLabel,
       jobCount: locationCountsByCode.get(def.code) ?? 0,
       topCity: topCityByCode.get(def.code) ?? null,

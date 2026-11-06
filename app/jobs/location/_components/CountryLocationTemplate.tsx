@@ -126,16 +126,6 @@ function formatCurrencyCompact(amount: number | null, currency: string): string 
   return `${symbol}${k.toLocaleString()}k ${cur}`.trim()
 }
 
-function flagEmojiFromCountryCode(code: string): string {
-  const cc = (code || '').toUpperCase()
-  if (cc.length !== 2) return '🌍'
-  const A = 0x1f1e6
-  const base = 'A'.charCodeAt(0)
-  const first = A + (cc.charCodeAt(0) - base)
-  const second = A + (cc.charCodeAt(1) - base)
-  return String.fromCodePoint(first, second)
-}
-
 function dedupeJobs(jobs: JobWithCompany[]): JobWithCompany[] {
   const seen = new Set<string>()
   return jobs.filter((job: any) => {
@@ -432,7 +422,6 @@ export async function CountryLocationTemplate({
   })
 
   const basePath = `/jobs/location/${loc.slug}`
-  const flag = flagEmojiFromCountryCode(countryCode)
   const countrySeoInput = {
     loc,
     total: data.total,
@@ -467,12 +456,12 @@ export async function CountryLocationTemplate({
           </>
         }
         toolbar={
-          <JobsToolbar facets={facets} locationPreset={{ label: loc.label, emoji: flag }} hideSalaryFilter />
+          <JobsToolbar facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />
         }
       />
 
       <ListingLayout
-        sidebar={<JobsFiltersPanel facets={facets} locationPreset={{ label: loc.label, emoji: flag }} hideSalaryFilter />}
+        sidebar={<JobsFiltersPanel facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />}
       >
         <JobRows
           jobs={jobs}

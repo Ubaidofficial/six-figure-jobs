@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 
 import { PageSection } from '@/components/seo/PageChrome'
+import { CountryFlag } from '@/components/ui/CountryFlag'
+import { countryName } from '@/lib/location/country'
 import { formatPay, levelLabel } from '@/lib/salary/roleGuideContent'
 import type { RoleSalaryGuide } from '@/lib/salary/roleGuide'
 
@@ -40,14 +42,6 @@ function DataTable({ caption, head, rows }: { caption: string; head: string[]; r
       </table>
     </div>
   )
-}
-
-function countryName(code: string): string {
-  try {
-    return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) ?? code
-  } catch {
-    return code
-  }
 }
 
 /** The data sections of /salary/[role]: each is headed by the question it answers and holds one table. */
@@ -124,7 +118,10 @@ export function RoleSalarySections({
             caption={`${roleName} annual pay by country, in each country's currency`}
             head={['Country', 'Currency', 'Listings', 'Median pay', 'Middle half']}
             rows={guide.countries.map((c) => [
-              countryName(c.countryCode),
+              <span className="inline-flex items-center gap-2">
+                <CountryFlag code={c.countryCode} />
+                {countryName(c.countryCode) ?? c.countryCode}
+              </span>,
               c.currency,
               c.count.toLocaleString('en-US'),
               formatPay(c.median, c.currency),

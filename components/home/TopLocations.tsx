@@ -1,12 +1,15 @@
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 
+import { CountryFlag } from '@/components/ui/CountryFlag'
+
 import styles from './TopLocations.module.css'
 
 export type TopLocationCard = {
   slug: string
   name: string
-  flag: string
+  /** ISO code, for the flag. */
+  countryCode: string
   jobCount: number
   thresholdLabel: string
   topCity: string | null
@@ -26,7 +29,7 @@ export function TopLocations({ locations }: { locations: TopLocationCard[] }) {
         {locations.map((loc) => (
           <Link key={loc.slug} href={`/jobs/location/${loc.slug}`} className={styles.card}>
             <div className={styles.flag} aria-hidden="true">
-              {loc.flag}
+              <CountryFlag code={loc.countryCode} className="h-9" />
             </div>
 
             <div className={styles.name}>{loc.name}</div>
