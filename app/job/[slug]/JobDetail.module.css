@@ -376,3 +376,18 @@
   line-height: 1.45;
   color: var(--color-text-1);
 }
+
+.descSub {
+  scroll-margin-top: 24px;
+}
+
+.descSubheading {
+  margin: 20px 0 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-0);
+}
+
+.descSub:first-of-type .descSubheading {
+  margin-top: 12px;
+}
