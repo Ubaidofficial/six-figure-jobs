@@ -1,0 +1,15 @@
+/* Auto-apply review and status. Builds on the application kit styles (fields, rows, hints). */
+.q { margin-top: var(--space-16); }
+.qLabel { display: block; font-size: var(--text-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-0); }
+.req { color: var(--color-text-1); font-weight: var(--font-weight-normal); }
+.input { display: block; width: 100%; margin-top: var(--space-8); padding: var(--space-8) var(--space-12); font: inherit; font-size: var(--text-sm); color: var(--color-text-0); background: var(--color-bg-0); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.input[aria-invalid="true"] { border-color: #b42318; }
+.check { display: flex; align-items: flex-start; gap: var(--space-8); margin-top: var(--space-8); font-size: var(--text-sm); color: var(--color-text-0); }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12); }
+.sent { margin-top: var(--space-12); padding: var(--space-12) var(--space-16); background: var(--color-bg-0); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-text-0); }
+.sent dt { margin-top: var(--space-8); font-weight: var(--font-weight-semibold); }
+.sent dd { margin: 2px 0 0; color: var(--color-text-1); overflow-wrap: anywhere; white-space: pre-wrap; }
+.terms { margin-top: var(--space-16); padding: var(--space-12) var(--space-16); background: color-mix(in srgb, var(--color-primary) 12%, var(--color-bg-1)); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-text-0); }
+.err { margin-top: var(--space-4, 4px); font-size: var(--text-sm); color: #b42318; }
+.badge { display: inline-block; padding: 2px var(--space-12); font-size: var(--text-sm); font-weight: var(--font-weight-semibold); border-radius: 999px; background: var(--color-bg-0); border: 1px solid var(--color-border); }
+@media (max-width: 640px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }

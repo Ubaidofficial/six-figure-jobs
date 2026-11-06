@@ -402,6 +402,8 @@ model User {
   creditLedger     CreditLedger[]
   resume           Resume?
   applicationKits  ApplicationKit[]
+  applyProfile     ApplyProfile?
+  autoApplications AutoApplication[]
 }
 
 // OAuth link (Google). Provider tokens are not stored: lib/auth/config.ts drops them before the adapter writes.
@@ -513,4 +515,52 @@ model ApplicationKit {
 
   @@unique([userId, jobId])
   @@index([userId, updatedAt])
+}
+
+// What the user lets us put on application forms (the résumé is in Resume; the email is the account's). One per user.
+model ApplyProfile {
+  userId    String   @id
+  firstName String
+  lastName  String
+  phone     String
+  country   String?
+  city      String?
+  linkedin  String?
+  website   String?
+  github    String?
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// One hosted application the user reviewed and approved. `plan` is the exact set of answers that gets submitted;
+// `planHash` is its hash when the user approved it, so nothing can change between approval and submission.
+model AutoApplication {
+  id          String    @id @default(cuid())
+  userId      String
+  jobId       String
+  jobSlug     String
+  jobTitle    String
+  companyName String
+  applyUrl    String
+  board       String
+  ghJobId     String
+  // 'draft' | 'approved' | 'submitting' | 'submitted' | 'needs_user' | 'failed' | 'cancelled'
+  status      String    @default("draft")
+  plan        Json
+  planHash    String?
+  approvedAt  DateTime?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  // Why it stopped: 'captcha', 'security_code', 'login', 'unexpected_field', 'validation', 'resume_changed', ...
+  reason      String?
+  // A short piece of the employer's confirmation page, kept as proof of submission.
+  evidence    String?   @db.Text
+  // 'none' | 'charged' | 'unpaid' (submitted, but the credits could not be taken afterwards)
+  charge      String    @default("none")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
