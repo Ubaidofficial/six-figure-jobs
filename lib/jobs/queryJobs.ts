@@ -70,7 +70,7 @@ export type JobQueryResult = {
   search?: { corrections: Array<{ from: string; to: string }> }
 }
 
-const jobListingSelect = {
+export const jobListingSelect = {
   id: true,
   title: true,
   company: true,

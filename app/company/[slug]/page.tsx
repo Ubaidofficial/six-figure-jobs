@@ -3,7 +3,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { CompanyUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '../../../lib/prisma'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
@@ -20,7 +20,13 @@ import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 import { getCompanyPublishingDecision } from '../../../lib/seo/companyPublishing'
-import { buildWhere } from '../../../lib/jobs/queryJobs'
+import { COMPANY_JOBS_ORDER_BY, buildCompanyJobsWhere } from '../../../lib/companies/companyJobs'
+import {
+  companyJobsPagePath,
+  companyJobsWindow,
+  parseCompanyJobsPage,
+} from '../../../lib/companies/jobsPaging'
+import { CompanyJobsMore } from '@/components/companies/CompanyJobsMore'
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
@@ -42,10 +48,6 @@ const SITE_URL = getSiteUrl()
 type CompanyWithJobs = NonNullable<Awaited<ReturnType<typeof getCompanyWithJobs>>>
 type JobWithFlags = CompanyWithJobs['jobs'][number]
 
-function buildCompanyJobsWhere(slug: string) {
-  return buildWhere({ companySlug: slug })
-}
-
 /* -------------------------------------------------------------------------- */
 /* Data Fetching                                                              */
 /* -------------------------------------------------------------------------- */
@@ -61,11 +63,7 @@ async function getCompanyWithJobs(slug: string) {
       include: {
         companyRef: true,
       },
-      orderBy: [
-        { maxAnnual: 'desc' },
-        { minAnnual: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: COMPANY_JOBS_ORDER_BY,
     }),
   ])
 
@@ -81,9 +79,11 @@ async function getCompanyWithJobs(slug: string) {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string; n?: string }>
 }): Promise<Metadata> {
-  const { slug } = await params
+  const { slug, n } = await params
+  // /company/<slug>/page/N (N >= 2) is the no-JavaScript "Show more jobs" target: same content, never indexed.
+  const pageNumber = n === undefined ? 1 : (parseCompanyJobsPage(n) ?? 1)
   return withRuntimeFallback<Metadata>(
     `company.${slug}.metadata`,
     async () => {
@@ -97,11 +97,12 @@ export async function generateMetadata({
       const { company, jobs } = data
       const jobCount = jobs.length
       const allowIndex =
+        pageNumber === 1 &&
         isCompanyPageIndexable(jobCount) &&
         publishingDecision.ready &&
         publishingDecision.unlocked
 
-      const title = `${company.name} $100k+ Jobs - ${jobCount} Open Positions | ${SITE_NAME}`
+      const title = `${company.name} $100k+ Jobs - ${jobCount} Open Positions${pageNumber > 1 ? ` (page ${pageNumber})` : ''} | ${SITE_NAME}`
       const companyDesc = company.description
         ? truncateText(toPlainText(company.description), 120)
         : `Find your next role at ${company.name}.`
@@ -154,9 +155,17 @@ export async function generateMetadata({
 export default async function CompanyPage({
   params,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string; n?: string }>
 }) {
-  const { slug } = await params
+  const { slug, n } = await params
+  let requestedPage = 1
+  if (n !== undefined) {
+    const parsed = parseCompanyJobsPage(n)
+    if (parsed === null) notFound()
+    // Page 1 is the company page itself; it has one address.
+    if (parsed === 1) redirect(`/company/${slug}`)
+    requestedPage = parsed
+  }
   return withRuntimeFallback(
     `company.${slug}.page`,
     async () => {
@@ -167,14 +176,19 @@ export default async function CompanyPage({
       const { company, jobs } = data
       const qualifiedJobs: JobWithFlags[] = jobs
 
+      // Ten jobs at a time. Everything below that describes the company (stats, FAQ, counts) uses all of its jobs.
+      const jobsWindow = companyJobsWindow(qualifiedJobs.length, requestedPage)
+      if (n !== undefined && jobsWindow.page !== requestedPage) return notFound()
+      const pageJobs = qualifiedJobs.slice(jobsWindow.start, jobsWindow.end)
+
       const countrySlug =
         company.countryCode ? countryCodeToSlug(company.countryCode) : null
 
       const stats = buildCompanySeoStats(qualifiedJobs)
       const organizationJsonLd = buildOrganizationJsonLd(company)
       const breadcrumbJsonLd = buildBreadcrumbJsonLd(company)
-      const itemListJsonLd = buildCompanyJobsItemListJsonLd(company, qualifiedJobs)
-      const collectionPageJsonLd = buildCompanyCollectionPageJsonLd(company, qualifiedJobs, stats)
+      const itemListJsonLd = buildCompanyJobsItemListJsonLd(company, pageJobs, jobsWindow.start)
+      const collectionPageJsonLd = buildCompanyCollectionPageJsonLd(company, qualifiedJobs.length, pageJobs, jobsWindow.start, stats)
       const faqJsonLd = buildCompanyFaqJsonLd(company, qualifiedJobs)
       const jobPostingJsonLds = qualifiedJobs
         .filter((job) => evaluateJobIndexability(job).indexable)
@@ -279,14 +293,32 @@ export default async function CompanyPage({
           </header>
 
           <ListingSection title={`Open positions at ${company.name}`}>
+            {jobsWindow.page > 1 ? (
+              <nav aria-label="Previous jobs" className="mb-3 text-sm">
+                <Link
+                  href={companyJobsPagePath(slug, jobsWindow.page - 1)}
+                  rel="prev"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  ← Previous jobs
+                </Link>
+              </nav>
+            ) : null}
             <JobRows
-              jobs={qualifiedJobs as unknown as JobWithCompany[]}
+              jobs={pageJobs as unknown as JobWithCompany[]}
               empty={{
                 title: 'No open $100k+ positions right now.',
                 body: `Check back soon, or browse every $100k+ job.`,
                 href: '/jobs',
                 hrefLabel: 'Browse all jobs',
               }}
+            />
+            <CompanyJobsMore
+              slug={slug}
+              page={jobsWindow.page}
+              start={jobsWindow.start}
+              end={jobsWindow.end}
+              total={qualifiedJobs.length}
             />
           </ListingSection>
 
@@ -759,17 +791,19 @@ function buildBreadcrumbJsonLd(company: CompanyWithJobs['company']) {
   }
 }
 
+// Only the jobs listed on this page: markup has to match what a visitor (and a crawler) sees.
 function buildCompanyJobsItemListJsonLd(
   company: CompanyWithJobs['company'],
-  jobs: JobWithFlags[],
+  pageJobs: JobWithFlags[],
+  offset: number,
 ) {
   return {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: `${company.name} $100k+ jobs`,
-    itemListElement: jobs.slice(0, 50).map((job, index) => ({
+    itemListElement: pageJobs.map((job, index) => ({
       '@type': 'ListItem',
-      position: index + 1,
+      position: offset + index + 1,
       url: `${SITE_URL}${buildJobSlugHref(job)}`,
     })),
   }
@@ -777,7 +811,9 @@ function buildCompanyJobsItemListJsonLd(
 
 function buildCompanyCollectionPageJsonLd(
   company: CompanyWithJobs['company'],
-  jobs: JobWithFlags[],
+  totalJobs: number,
+  pageJobs: JobWithFlags[],
+  offset: number,
   stats: ReturnType<typeof buildCompanySeoStats>,
 ) {
   return {
@@ -805,10 +841,10 @@ function buildCompanyCollectionPageJsonLd(
     ],
     mainEntity: {
       '@type': 'ItemList',
-      numberOfItems: jobs.length,
-      itemListElement: jobs.slice(0, 24).map((job, index) => ({
+      numberOfItems: totalJobs,
+      itemListElement: pageJobs.map((job, index) => ({
         '@type': 'ListItem',
-        position: index + 1,
+        position: offset + index + 1,
         url: `${SITE_URL}${buildJobSlugHref(job)}`,
       })),
     },
