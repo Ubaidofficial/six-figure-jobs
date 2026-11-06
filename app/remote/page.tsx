@@ -28,17 +28,17 @@ import { formatRelativeTime } from '@/lib/utils/time'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import {
-  REMOTE_HUB_CHIP_SLUGS,
   countRemoteByRegion,
   normalizeRemoteRegionSlug,
   remoteRegionDef,
+  visibleHubRegionSlugs,
 } from '../../lib/jobs/remoteRegions'
 import { loadSiteCounts } from '../../lib/jobs/siteCounts'
 
 
 /**
- * Region chips for the hub. With counts (taken from the database at most every 6 hours) a region with no remote jobs
- * is shown muted and is not a link, instead of leading to an empty page.
+ * Region chips for the hub. With counts (taken from the database at most every 6 hours) a region that has no remote jobs
+ * right now is left out, so there is never a chip that opens an empty page; the region being viewed always stays.
  */
 function buildRegionChips(active: string | null, regionCounts?: Record<string, number> | null) {
   const all = {
@@ -46,17 +46,12 @@ function buildRegionChips(active: string | null, regionCounts?: Record<string, n
     href: '/remote',
     active: !active,
   }
-  const regions = REMOTE_HUB_CHIP_SLUGS.map((slug) => {
-    const def = remoteRegionDef(slug)!
-    const count = regionCounts ? (regionCounts[slug] ?? 0) : undefined
-    return {
-      label: def.label,
-      href: `/remote?remoteRegion=${encodeURIComponent(slug)}`,
-      active: active === slug,
-      count,
-      disabled: count === 0 && active !== slug,
-    }
-  })
+  const regions = visibleHubRegionSlugs(regionCounts, active).map((slug) => ({
+    label: remoteRegionDef(slug)!.label,
+    href: `/remote?remoteRegion=${encodeURIComponent(slug)}`,
+    active: active === slug,
+    count: regionCounts ? (regionCounts[slug] ?? 0) : undefined,
+  }))
   return [all, ...regions]
 }
 

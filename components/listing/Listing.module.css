@@ -86,14 +86,6 @@
   transition: border-color 120ms, color 120ms;
 }
 
-.chipDisabled {
-  color: var(--color-text-2);
-  box-shadow: none;
-  background: transparent;
-  border-color: var(--color-border, rgba(0, 0, 0, 0.1));
-  cursor: default;
-}
-
 .chip:hover,
 .chip[aria-current='true'] {
   border-color: var(--color-primary-text);

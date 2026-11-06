@@ -7,6 +7,7 @@ import {
   normalizeRemoteRegionSlug,
   remoteRegionDef,
   remoteRegionWhere,
+  visibleHubRegionSlugs,
 } from '../../lib/jobs/remoteRegions'
 
 // where-clauses carry BigInt salary thresholds, which JSON.stringify cannot print
@@ -100,5 +101,28 @@ describe('the region filter', () => {
     const withRegion = json(buildWhere({ remoteRegion: 'australia' }))
     expect(withRegion).toContain('"countryCode":{"in":["AU"]}')
     expect(json(buildWhere({}))).not.toContain('"in":["AU"]')
+  })
+})
+
+describe('hub chips', () => {
+  const counts = { global: 291, 'us-only': 537, canada: 90, australia: 2, europe: 48, 'middle-east': 0, apac: 5 }
+
+  it('leaves out a region with no remote jobs (never a chip that opens an empty page)', () => {
+    const shown = visibleHubRegionSlugs(counts, null)
+    expect(shown).not.toContain('middle-east')
+    expect(shown).toEqual(['global', 'us-only', 'canada', 'australia', 'europe', 'apac'])
+  })
+
+  it('keeps the region being viewed even when it is empty, so the page does not lose its own chip', () => {
+    expect(visibleHubRegionSlugs(counts, 'middle-east')).toContain('middle-east')
+  })
+
+  it('shows every region when the counts are not available', () => {
+    expect(visibleHubRegionSlugs(null, null)).toEqual([...REMOTE_HUB_CHIP_SLUGS])
+    expect(visibleHubRegionSlugs(undefined, null)).toEqual([...REMOTE_HUB_CHIP_SLUGS])
+  })
+
+  it('treats a missing count as none', () => {
+    expect(visibleHubRegionSlugs({ 'us-only': 3 }, null)).toEqual(['us-only'])
   })
 })
