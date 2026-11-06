@@ -36,7 +36,7 @@ function bandsFor(floor: number, currency: string): Array<{ label: string; min: 
 
 const MIN_LISTINGS = 20 // below this a "typical" figure would be noise
 
-function percentile(sorted: number[], p: number): number {
+export function percentile(sorted: number[], p: number): number {
   const idx = (sorted.length - 1) * p
   const lo = Math.floor(idx)
   const hi = Math.ceil(idx)
