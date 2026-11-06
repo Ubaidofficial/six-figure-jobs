@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import type { Job, Company } from '@prisma/client'
 import { buildJobSlugHref } from '../jobs/jobSlug'
 import { getSiteUrl, SITE_NAME } from './site'
+import { truncateAtWord } from './metaText'
 import { cleanJobDescriptionText } from '../jobs/descriptionCleaning'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
@@ -97,8 +98,7 @@ export function fitTitle(role: string, company: string, salary: string | null): 
     : [`${role} at ${company} | ${SITE_NAME}`, `${role} at ${company}`, role]
   const fits = candidates.find((c) => c.length <= MAX_TITLE_LENGTH)
   if (fits) return fits
-  const last = candidates[candidates.length - 1]
-  return `${last.slice(0, MAX_TITLE_LENGTH - 1).trimEnd()}…`
+  return truncateAtWord(candidates[candidates.length - 1], MAX_TITLE_LENGTH)
 }
 
 export function capDescription(text: string): string {

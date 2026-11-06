@@ -8,6 +8,7 @@ import { STATE_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
+import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -52,7 +53,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total > 0
       ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
       : `${titleBase} | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} $100k+ jobs in ${resolved.name} — salary shown upfront, with links to apply. No entry-level noise. Six-figure ${resolved.name.toLowerCase()} roles refreshed daily from company career pages.`
+  const description = buildListingDescription(`${countPrefix(total)}$100k+ jobs in ${resolved.name}.`, [
+    ['Remote, hybrid and on-site roles.'],
+  ])
   const canonical = `${SITE_URL}/jobs/state/${resolved.slug}`
 
   return {

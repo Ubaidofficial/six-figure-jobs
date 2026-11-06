@@ -12,6 +12,7 @@ import {
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import JobList from '../../../components/JobList'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../../lib/seo/site'
+import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -248,21 +249,20 @@ export async function generateMetadata({
 
   const cityName = prettyCity(sampleJob?.city || citySlug)
 
-  const baseTitle = `Remote ${prettyRole(
-    roleSlug
-  )} jobs in ${cityName} paying $100k+`
   const canonicalPath = buildCanonicalPath(roleSlug, cityParam, sp)
   const canonicalUrl = `${SITE_URL}${canonicalPath}`
-  const title =
-    totalJobs > 0
-      ? `${baseTitle} (${totalJobs.toLocaleString()} roles) | ${SITE_NAME}`
-      : `${baseTitle} | ${SITE_NAME}`
+  const title = buildListingTitle({
+    topic: `Remote ${prettyRole(roleSlug)} Jobs in ${cityName}`,
+    count: totalJobs,
+    qualifier: 'Paying $100k+',
+  })
 
   return {
     title,
-    description: `Search ${totalJobs.toLocaleString()} remote ${prettyRole(
-      roleSlug
-    )} jobs in ${cityName} paying $100k+ at leading tech and SaaS companies.`,
+    description: buildListingDescription(
+      `${countPrefix(totalJobs)}remote ${prettyRole(roleSlug)} jobs in ${cityName} paying $100k+.`,
+      [['Roles at leading tech and SaaS companies.']],
+    ),
     alternates: {
       canonical: canonicalUrl,
     },

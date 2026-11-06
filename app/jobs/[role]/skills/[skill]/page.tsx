@@ -11,6 +11,7 @@ import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJob
 import JobList from '../../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
+import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../../lib/seo/metaText'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -43,8 +44,15 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     return { title: 'Jobs Not Found | Six Figure Jobs' }
   }
 
-  const title = `${roleName} ${skillInfo.label} $100k jobs | ${total.toLocaleString()} roles | ${SITE_NAME}`
-  const description = `${total.toLocaleString()} $100k+ ${roleName} jobs requiring ${skillInfo.label} — salary upfront. Six-figure ${roleName} ${skillInfo.label} roles at top companies, refreshed daily from ATS feeds.`
+  const title = buildListingTitle({
+    topic: `${roleName} ${skillInfo.label} Jobs`,
+    count: total,
+    qualifier: 'Paying $100k+',
+  })
+  const description = buildListingDescription(
+    `${countPrefix(total)}$100k+ ${roleName} jobs requiring ${skillInfo.label}.`,
+    [['Roles at top companies.']],
+  )
   const canonical = `${SITE_URL}/jobs/${role}/skills/${skillInfo.slug}`
 
   return {

@@ -17,6 +17,7 @@ import type { JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { normalizePublicCompanyWebsite } from '../../../lib/companies/website'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
+import { buildCompanyPageDescription, buildCompanyPageTitle } from '../../../lib/seo/metaText'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 import { getCompanyPublishingDecision } from '../../../lib/seo/companyPublishing'
@@ -102,19 +103,16 @@ export async function generateMetadata({
         publishingDecision.ready &&
         publishingDecision.unlocked
 
-      const title = `${company.name} $100k+ Jobs - ${jobCount} Open Positions${pageNumber > 1 ? ` (page ${pageNumber})` : ''} | ${SITE_NAME}`
-      const companyDesc = company.description
-        ? truncateText(toPlainText(company.description), 120)
-        : `Find your next role at ${company.name}.`
+      const baseTitle = buildCompanyPageTitle(company.name, jobCount)
+      // Pages 2+ are noindex but still get a distinct title
+      const title = pageNumber > 1 ? `${baseTitle} (page ${pageNumber})` : baseTitle
       const stats = buildCompanySeoStats(jobs)
-      const rolePhrase = stats.topRoles.length
-        ? ` Top hiring areas include ${formatList(stats.topRoles.slice(0, 3).map((role) => role.label))}.`
-        : ''
-      const salaryPhrase = stats.highestSalaryLabel
-        ? ` Highest visible compensation reaches ${stats.highestSalaryLabel}.`
-        : ''
-
-      const description = `Browse ${jobCount} $100k+ jobs at ${company.name} with published salary ranges and links to apply.${rolePhrase}${salaryPhrase} ${companyDesc}`
+      const description = buildCompanyPageDescription(
+        company.name,
+        jobCount,
+        stats.topRoles.map((role) => role.label),
+        stats.highestSalaryLabel,
+      )
 
       const canonicalUrl = `${SITE_URL}/company/${slug}`
 
@@ -533,14 +531,6 @@ function toTitleCaseSlug(slug: string): string {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
-}
-
-function formatList(items: string[]): string {
-  const clean = items.map((item) => item.trim()).filter(Boolean)
-  if (clean.length === 0) return ''
-  if (clean.length === 1) return clean[0]
-  if (clean.length === 2) return `${clean[0]} and ${clean[1]}`
-  return `${clean.slice(0, -1).join(', ')}, and ${clean[clean.length - 1]}`
 }
 
 function asAnnualNumber(value: unknown): number | null {

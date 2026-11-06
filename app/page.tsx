@@ -35,6 +35,7 @@ import {
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { getThresholdLabelForCountry } from '@/lib/seo/salaryLabels'
 import { getSiteUrl } from '@/lib/seo/site'
+import { buildHomeDescription } from '@/lib/seo/metaText'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
@@ -45,7 +46,7 @@ export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dy
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const stats = await loadPublicSiteStats()
-    const description = `${stats.totalJobs.toLocaleString()}+ $100k+ jobs — salary shown upfront, no entry-level noise. Six-figure remote and on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
+    const description = buildHomeDescription(stats.totalJobs, stats.totalCompanies)
     const ogDescription =
       `${stats.totalJobs.toLocaleString()}+ six-figure jobs with salary shown upfront. ` +
       `Apply on the employer’s own page. $100k+ remote & on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`

@@ -20,6 +20,7 @@ import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
+import { buildListingTitle, buildRoleDescription } from '@/lib/seo/metaText'
 import { CITY_TARGET_SLUG_SET } from '@/lib/seo/pseoTargets'
 import { SEARCH_ROLE_OPTIONS } from '@/lib/roles/searchRoles'
 import { CANONICAL_ROLE_SET } from '@/lib/roles/canonicalSlugs'
@@ -229,11 +230,8 @@ export function buildRoleMetadata(
   const roleOpt = SEARCH_ROLE_OPTIONS.find((r) => r.slug === roleSlug)
   const roleTitle = roleOpt?.label ?? toTitleCase(roleSlug)
 
-  const title = `${roleTitle} Jobs - $100k+ | ${SITE_NAME}`
-  const description =
-    total > 0
-      ? `Browse ${total.toLocaleString()} ${roleTitle} jobs with published salary ranges.${avgUsd ? ` ~$${Math.round(avgUsd / 1000)}k average USD salary where available.` : ''}`
-      : `Browse ${roleTitle} jobs with published salary ranges.`
+  const title = buildListingTitle({ topic: `${roleTitle} Jobs`, count: total, qualifier: 'Paying $100k+' })
+  const description = buildRoleDescription(roleTitle, total, avgUsd)
 
   const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${roleSlug}`
   return {

@@ -5,6 +5,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, defaultOgImages } from '../../../../lib/seo/site'
+import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../lib/seo/metaText'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { isRoleFilterPageIndexable } from '../../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
@@ -160,8 +161,11 @@ export async function generateMetadata({
   const allowIndex =
     isRoleFilterPageIndexable(total) &&
     isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}/${filter}` })
-  const title = `${roleTitle} ${parsed.label} Jobs - ${total} Verified Positions`
-  const description = `${total} ${roleTitle.toLowerCase()} roles paying ${parsed.label} (${salaryRange}) with salary transparency and direct-apply links.`
+  const payFloor = `$${parsed.label.toLowerCase()}`
+  const title = buildListingTitle({ topic: `${roleTitle} Jobs`, count: total, qualifier: `Paying ${payFloor}` })
+  const description = buildListingDescription(`${countPrefix(total)}${roleTitle} jobs paying ${payFloor}.`, [
+    [`Listed minimum pay ranges ${salaryRange}.`],
+  ])
 
   return {
     title,
