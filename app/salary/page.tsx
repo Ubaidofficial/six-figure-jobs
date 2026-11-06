@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
 import { getSiteUrl, defaultOgImages } from '@/lib/seo/site'
 import { prisma } from '../../lib/prisma'
+import { summarizeRoleMedians, type RoleMedian } from '../../lib/salary/indexMedians'
+import { pluralize } from '../../lib/utils/number'
 import {
   buildGlobalExclusionsWhere,
   buildHighSalaryEligibilityWhere,
@@ -55,9 +57,9 @@ export const metadata: Metadata = {
   },
 }
 
-// Pulls USD min/max samples for the hub roles in a single DB roundtrip, then
-// computes per-role median + count in JS. Cached behind ISR.
-async function loadGuideMedians(): Promise<Map<string, { median: number | null; count: number }>> {
+// Pulls the USD listings for the hub roles in a single DB roundtrip, then computes per-role medians in JS (same
+// method as the role guides, see lib/salary/indexMedians.ts). Cached behind ISR.
+async function loadGuideMedians(): Promise<Map<string, RoleMedian>> {
   const slugs = GUIDES.map((g) => g.slug)
   const rows = await prisma.job.findMany({
     where: {
@@ -68,26 +70,7 @@ async function loadGuideMedians(): Promise<Map<string, { median: number | null; 
     },
     select: { roleSlug: true, minAnnual: true, maxAnnual: true },
   })
-
-  const byRole = new Map<string, number[]>()
-  for (const r of rows) {
-    if (!r.roleSlug) continue
-    const bucket = byRole.get(r.roleSlug) ?? []
-    if (r.minAnnual != null) bucket.push(Number(r.minAnnual))
-    if (r.maxAnnual != null) bucket.push(Number(r.maxAnnual))
-    byRole.set(r.roleSlug, bucket)
-  }
-
-  const result = new Map<string, { median: number | null; count: number }>()
-  for (const slug of slugs) {
-    const values = (byRole.get(slug) ?? []).slice().sort((a, b) => a - b)
-    const count = values.length
-    result.set(slug, {
-      count,
-      median: count > 0 ? values[Math.floor(count / 2)] : null,
-    })
-  }
-  return result
+  return summarizeRoleMedians(rows, slugs)
 }
 
 function formatMoneyShort(value: number | null): string {
@@ -95,6 +78,13 @@ function formatMoneyShort(value: number | null): string {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
   if (value >= 1_000) return `$${Math.round(value / 1_000)}k`
   return `$${value.toLocaleString('en-US')}`
+}
+
+// One line under a median: how many listings it rests on, or why there is no number.
+function medianHint(stats: RoleMedian | undefined): string {
+  if (!stats) return 'Open the role guide for pay ranges'
+  if (stats.median == null) return 'Not enough data yet'
+  return `Median of ${stats.listings.toLocaleString()} USD ${pluralize(stats.listings, 'listing')}`
 }
 
 // JSON-LD: breadcrumb plus an ItemList of the guides that this page links to.
@@ -125,7 +115,7 @@ const salaryJsonLd = [
 ]
 
 export default async function SalaryIndexPage() {
-  let medians: Map<string, { median: number | null; count: number }> | null = null
+  let medians: Map<string, RoleMedian> | null = null
   try {
     medians = await loadGuideMedians()
   } catch {
@@ -134,9 +124,11 @@ export default async function SalaryIndexPage() {
     medians = null
   }
 
-  const softwareEngineerMedian = medians?.get('software-engineer')?.median ?? null
-  const productManagerMedian = medians?.get('product-manager')?.median ?? null
-  const dataScientistMedian = medians?.get('data-scientist')?.median ?? null
+  const featured = [
+    { label: 'Software Engineer median', stats: medians?.get('software-engineer') },
+    { label: 'Product Manager median', stats: medians?.get('product-manager') },
+    { label: 'Data Scientist median', stats: medians?.get('data-scientist') },
+  ]
 
   return (
     <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10 space-y-8">
@@ -173,37 +165,16 @@ export default async function SalaryIndexPage() {
       >
         <PageStatGrid
           items={[
-            // Live median anchors so users see real $ figures above the fold —
-            // not just "12 role guides". Falls back to descriptive copy if
-            // the DB query failed.
-            {
-              label: 'Software Engineer median',
-              value: formatMoneyShort(softwareEngineerMedian),
-              hint:
-                softwareEngineerMedian != null
-                  ? 'Live USD median, $100k+ listings'
-                  : 'Open the role guide for the latest median',
-            },
-            {
-              label: 'Product Manager median',
-              value: formatMoneyShort(productManagerMedian),
-              hint:
-                productManagerMedian != null
-                  ? 'Live USD median, $100k+ listings'
-                  : 'Open the role guide for the latest median',
-            },
-            {
-              label: 'Data Scientist median',
-              value: formatMoneyShort(dataScientistMedian),
-              hint:
-                dataScientistMedian != null
-                  ? 'Live USD median, $100k+ listings'
-                  : 'Open the role guide for the latest median',
-            },
+            // Medians shown above the fold. A role with too few listings says "Not enough data yet" instead.
+            ...featured.map(({ label, stats }) => ({
+              label,
+              value: stats?.median != null ? formatMoneyShort(stats.median) : stats ? 'Not enough data yet' : 'See the guide',
+              hint: stats?.median == null && stats ? 'Too few listings to call it a median' : medianHint(stats),
+            })),
             {
               label: 'Source method',
-              value: 'ATS-backed',
-              hint: 'Built from live verified salary listings',
+              value: 'Live listings',
+              hint: 'Built from current job postings that show their pay',
             },
           ]}
         />
@@ -217,10 +188,6 @@ export default async function SalaryIndexPage() {
           {GUIDES.map((guide) => {
             const stats = medians?.get(guide.slug)
             const median = stats?.median ?? null
-            const sampleHint =
-              median != null
-                ? `${formatMoneyShort(median)} median USD${stats && stats.count > 0 ? ` · ${Math.floor(stats.count / 2)} data points` : ''}`
-                : 'Live median refreshes on each ISR window'
             return (
               <Link
                 key={guide.slug}
@@ -235,7 +202,7 @@ export default async function SalaryIndexPage() {
                     </span>
                   ) : null}
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">{sampleHint}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{medianHint(stats)}</div>
               </Link>
             )
           })}
