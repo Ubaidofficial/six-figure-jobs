@@ -149,6 +149,7 @@
 }
 
 .searchBar {
+  position: relative; /* the live role suggestions (HeroSearchInput) are positioned against the bar */
   display: flex;
   align-items: center;
   gap: 10px;

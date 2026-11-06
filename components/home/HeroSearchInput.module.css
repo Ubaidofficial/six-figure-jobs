@@ -1,0 +1,87 @@
+/* Live role suggestions under the homepage search bar. The list is positioned against the bar (.searchBar in
+   Hero.module.css is position: relative), so it spans the whole bar, not just the input. */
+
+.root {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.root > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 340px;
+  overflow-y: auto;
+  background: var(--color-bg-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+}
+
+.option {
+  border-radius: 8px;
+}
+
+.option[data-active='true'],
+.option:hover {
+  background: var(--color-bg-2);
+}
+
+.link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: var(--color-text-0);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.count {
+  flex: none;
+  font-size: 0.8125rem;
+  color: var(--color-text-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.all {
+  margin-top: 4px;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 8px 8px;
+}
+
+.all .label {
+  font-weight: 500;
+  color: var(--color-text-1);
+}
