@@ -1,5 +1,21 @@
-import { GET as getHubs } from '../../app/sitemap-hubs.xml/route'
-import { GET as getIndex } from '../../app/sitemap.xml/route'
+// The routes read getSiteUrl() once, when they are imported, and getSiteUrl() prefers SITE_URL, which CI sets to
+// http://localhost:3000 for its server step. So the URL is pinned before the routes are imported, not in a hook that
+// runs after them.
+const originalSiteUrl = process.env.SITE_URL
+let getHubs: typeof import('../../app/sitemap-hubs.xml/route').GET
+let getIndex: typeof import('../../app/sitemap.xml/route').GET
+
+beforeAll(async () => {
+  process.env.SITE_URL = 'https://www.6figjobs.com'
+  jest.resetModules()
+  ;({ GET: getHubs } = await import('../../app/sitemap-hubs.xml/route'))
+  ;({ GET: getIndex } = await import('../../app/sitemap.xml/route'))
+})
+
+afterAll(() => {
+  if (originalSiteUrl === undefined) delete process.env.SITE_URL
+  else process.env.SITE_URL = originalSiteUrl
+})
 
 const aggregate = jest.fn()
 jest.mock('../../lib/prisma', () => ({ prisma: { job: { aggregate: (...a: unknown[]) => aggregate(...a) } } }))

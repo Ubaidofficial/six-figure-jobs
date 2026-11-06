@@ -1,4 +1,19 @@
-import { GET } from '../../app/sitemap.xml/route'
+// The route reads getSiteUrl() once, when it is imported, and getSiteUrl() prefers SITE_URL, which CI sets to
+// http://localhost:3000 for its server step. So the URL is pinned before the route is imported, not in a hook that
+// runs after it.
+const originalSiteUrl = process.env.SITE_URL
+let GET: typeof import('../../app/sitemap.xml/route').GET
+
+beforeAll(async () => {
+  process.env.SITE_URL = 'https://www.6figjobs.com'
+  jest.resetModules()
+  ;({ GET } = await import('../../app/sitemap.xml/route'))
+})
+
+afterAll(() => {
+  if (originalSiteUrl === undefined) delete process.env.SITE_URL
+  else process.env.SITE_URL = originalSiteUrl
+})
 
 // The jobs / company / slices indexes need a database; stub them with what they return in production.
 jest.mock('../../app/sitemap-jobs.xml/route', () => ({
