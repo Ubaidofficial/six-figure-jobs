@@ -10,6 +10,7 @@ import { buildFreshJobWhere } from './freshness'
 import { buildKeywordPlan, scoreJob, tokenize, wordStartPatterns, type KeywordPlan } from '../search/keywordPlan'
 import { getSearchVocabulary } from '../search/vocabulary'
 import { skillStoredTokens } from '../seo/pseoTargets'
+import { remoteRegionWhere } from './remoteRegions'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -364,7 +365,9 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   }
 
   if (filters.remoteRegion) {
-    where.remoteRegion = filters.remoteRegion
+    // A region is a set of countries (lib/jobs/remoteRegions.ts): the stored region column is "Global" on every remote
+    // job, so comparing it to "us-only", "emea", ... matched nothing.
+    addAnd(remoteRegionWhere(filters.remoteRegion))
   }
 
   if (filters.remoteMode) {

@@ -97,6 +97,19 @@
   color: var(--color-primary-text);
 }
 
+.floorJobs {
+  margin-left: 4px;
+  font-size: 0.8125rem;
+  color: var(--color-text-1);
+}
+
+.panelNote {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text-1);
+}
+
 .panelLink {
   display: inline-block;
   margin-top: 14px;

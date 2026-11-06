@@ -15,6 +15,8 @@ export type ListingChip = {
   /** Filter toggles should not be crawled. */
   nofollow?: boolean
   count?: number
+  /** Shown but not a link (for example a region with no jobs right now). */
+  disabled?: boolean
   /** Small company logo shown before the label. */
   logo?: ReactNode
 }
@@ -24,21 +26,31 @@ export function LinkChips({ items, label }: { items: ListingChip[]; label: strin
   if (items.length === 0) return null
   return (
     <ul className={styles.chips} aria-label={label}>
-      {items.map((c) => (
-        <li key={c.href + c.label}>
-          <Link
-            href={c.href}
-            className={styles.chip}
-            aria-current={c.active ? 'true' : undefined}
-            rel={c.nofollow ? 'nofollow' : undefined}
-            scroll={c.nofollow ? false : undefined}
-          >
-            {c.logo}
-            {c.label}
-            {c.count != null ? <span className={styles.chipCount}>{c.count.toLocaleString()}</span> : null}
-          </Link>
-        </li>
-      ))}
+      {items.map((c) => {
+        const count = c.count != null ? <span className={styles.chipCount}>{c.count.toLocaleString()}</span> : null
+        return (
+          <li key={c.href + c.label}>
+            {c.disabled ? (
+              <span className={`${styles.chip} ${styles.chipDisabled}`} aria-disabled="true">
+                {c.label}
+                {count}
+              </span>
+            ) : (
+              <Link
+                href={c.href}
+                className={styles.chip}
+                aria-current={c.active ? 'true' : undefined}
+                rel={c.nofollow ? 'nofollow' : undefined}
+                scroll={c.nofollow ? false : undefined}
+              >
+                {c.logo}
+                {c.label}
+                {count}
+              </Link>
+            )}
+          </li>
+        )
+      })}
     </ul>
   )
 }

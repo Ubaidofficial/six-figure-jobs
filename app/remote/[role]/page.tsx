@@ -3,6 +3,7 @@ export const revalidate = 3600
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { remoteRegionDef } from '../../../lib/jobs/remoteRegions'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { RemoteUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
@@ -449,21 +450,8 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
           {/* Remote region filter */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-muted-foreground">Remote region:</span>
-            {['', 'global', 'us-only', 'canada', 'emea', 'apac', 'uk-ireland'].map((slug) => {
-              const label =
-                slug === ''
-                  ? 'Any'
-                  : slug === 'global'
-                    ? 'Global'
-                    : slug === 'us-only'
-                      ? 'US only'
-                      : slug === 'canada'
-                        ? 'Canada'
-                        : slug === 'emea'
-                          ? 'EMEA'
-                          : slug === 'apac'
-                            ? 'APAC'
-                            : 'UK & Ireland'
+            {['', 'global', 'us-only', 'canada', 'australia', 'uk-ireland', 'europe', 'middle-east', 'apac'].map((slug) => {
+              const label = slug === '' ? 'Any' : (remoteRegionDef(slug)?.label ?? slug)
               return (
                 <Link
                   key={slug || 'any'}
