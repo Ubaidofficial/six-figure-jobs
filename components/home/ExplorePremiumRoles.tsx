@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 
+import { RoleIllustration } from '@/components/roles/RoleIllustration'
+
 import styles from './ExplorePremiumRoles.module.css'
 
 export type PremiumRoleCard = {
@@ -38,6 +40,8 @@ export function ExplorePremiumRoles({ roles }: { roles: PremiumRoleCard[] }) {
               <div className={styles.count}>{role.count.toLocaleString()} jobs</div>
               <div className={styles.avg}>{formatUsdAvg(role.avgUsdAnnual)}</div>
             </div>
+
+            <RoleIllustration slug={role.slug} size={88} className={styles.art} />
 
             <span className={styles.arrow} aria-hidden="true">
               <ArrowUpRight className={styles.arrowIcon} />
