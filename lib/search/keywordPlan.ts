@@ -34,6 +34,33 @@ for (const group of ALIAS_GROUPS) {
   for (const word of group) ALIAS_INDEX.set(word, group.filter((w) => w !== word))
 }
 
+/**
+ * What "a word starts with the term" means, in one place so the database filter, the ranking and the typo check agree.
+ * A search for "seo" finds "SEO Manager", "Head of SEO", "SEO/AEO Lead" and "(SEO)", and no longer "Warehouse**seo**s"
+ * (a match inside a word); "pm" no longer finds "development" but still finds PM, PMO and PMP. Typing the start of a
+ * word still works ("engin" finds Engineer), which is why this is a word start, not a whole word.
+ */
+export const WORD_BOUNDARIES = [' ', '-', '/', '(', ',', '&', ':', '.', '|', '"'] as const
+
+/** The LIKE patterns that mean "a word of the text starts with `term`": the text starts with it, or it follows a boundary. */
+export function wordStartPatterns(term: string): Array<{ startsWith: string } | { contains: string }> {
+  return [{ startsWith: term }, ...WORD_BOUNDARIES.map((b) => ({ contains: `${b}${term}` }))]
+}
+
+/** The same test in JavaScript, with the same boundaries as the patterns above (case-insensitive). */
+export function startsAWord(haystack: string, term: string): boolean {
+  const h = haystack.toLowerCase()
+  const t = term.toLowerCase()
+  return h.startsWith(t) || WORD_BOUNDARIES.some((b) => h.includes(`${b}${t}`))
+}
+
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Is `term` a whole word of `haystack` (not just the start of a longer one)? "PM" is in "Technical PM", not in "PMH". */
+export function isWholeWord(haystack: string, term: string): boolean {
+  return new RegExp(`(^|[^a-z0-9])${escapeRegex(term)}($|[^a-z0-9])`, 'i').test(haystack)
+}
+
 export function tokenize(keyword: string): string[] {
   const tokens = keyword
     .toLowerCase()
@@ -88,7 +115,7 @@ export function levenshtein(a: string, b: string, max: number): number {
  */
 export function correctToken(token: string, vocab: Vocabulary): string | null {
   if (token.length < 4 || /\d/.test(token)) return null
-  if (vocab.counts.has(token) || vocab.terms.some((t) => t.includes(token))) return null // already matches something
+  if (vocab.counts.has(token) || vocab.terms.some((t) => t.startsWith(token))) return null // already matches something
 
   const maxDist = token.length <= 5 ? 1 : 2
   let best: { term: string; dist: number; count: number } | null = null
@@ -129,12 +156,10 @@ type Scorable = {
   skillsJson?: string | null
 }
 
-const wordBoundary = (haystack: string, needle: string) =>
-  new RegExp(`(^|[^a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i').test(haystack)
-
 /**
  * Relevance of one job to a plan: a match in the title counts most, then company, then skills, then location.
- * Exact words beat aliases beat typo corrections; matching every term in the title earns a bonus.
+ * In the title a whole word ("PM") beats a longer word that starts with it ("PMH"). Exact words beat aliases beat typo
+ * corrections; matching every term in the title earns a bonus.
  */
 export function scoreJob(plan: KeywordPlan, job: Scorable): number {
   const title = (job.title ?? '').toLowerCase()
@@ -147,17 +172,19 @@ export function scoreJob(plan: KeywordPlan, job: Scorable): number {
   for (const term of plan.terms) {
     let best = 0
     term.variants.forEach((variant, i) => {
-      const weight = i === 0 ? 1 : variant === term.corrected ? 0.7 : 0.9
+      // An abbreviation's full phrase is what the visitor means ("pm" = "product manager"), so it ranks level with the
+      // abbreviation itself; for a full word an alias ("frontend" = "front-end") is a notch below the exact word.
+      const weight = i === 0 ? 1 : variant === term.corrected ? 0.7 : term.token.length <= 3 ? 1 : 0.9
       let s = 0
-      if (wordBoundary(title, variant)) s = 10
-      else if (title.includes(variant)) s = 7
-      else if (company.includes(variant)) s = 5
-      else if (skills.includes(variant)) s = 3
-      else if (location.includes(variant)) s = 1
+      if (isWholeWord(title, variant)) s = 10
+      else if (startsAWord(title, variant)) s = 8
+      else if (startsAWord(company, variant)) s = 5
+      else if (startsAWord(skills, variant)) s = 3
+      else if (startsAWord(location, variant)) s = 1
       if (s * weight > best) best = s * weight
     })
     total += best
-    if (term.variants.some((v) => title.includes(v))) titleHits++
+    if (term.variants.some((v) => startsAWord(title, v))) titleHits++
   }
   if (plan.terms.length > 1 && titleHits === plan.terms.length) total += 5
   return total

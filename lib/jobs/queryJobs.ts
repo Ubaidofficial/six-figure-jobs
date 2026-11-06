@@ -7,7 +7,7 @@ import { HIGH_SALARY_THRESHOLDS } from '../currency/thresholds'
 import { inferCurrencyFromCountryCode } from '../normalizers/salary'
 import { getMinSalaryForCountry } from './salaryThresholds'
 import { buildFreshJobWhere } from './freshness'
-import { buildKeywordPlan, scoreJob, tokenize, type KeywordPlan } from '../search/keywordPlan'
+import { buildKeywordPlan, scoreJob, tokenize, wordStartPatterns, type KeywordPlan } from '../search/keywordPlan'
 import { getSearchVocabulary } from '../search/vocabulary'
 import { skillStoredTokens } from '../seo/pseoTargets'
 
@@ -304,6 +304,9 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   }
 }
 
+/** The fields a keyword is searched in. */
+const KEYWORD_FIELDS = ['title', 'company', 'locationRaw', 'techStack', 'skillsJson'] as const
+
 export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
     isExpired: false,
@@ -524,20 +527,19 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
     if (kw) {
       // Match each meaningful word independently (AND) across the searchable fields, so multi-word queries like
       // "senior backend python" match by intent regardless of word order. Each word can also be satisfied by an
-      // alias ("frontend" / "front-end") or a typo correction when queryJobs supplied a plan.
+      // alias ("frontend" / "front-end") or a typo correction when queryJobs supplied a plan. A word matches where
+      // a word of the field starts with it (not inside a word: "seo" is not in "WarehouseOS"), see WORD_BOUNDARIES.
       const plan = filters.keywordPlan
       const terms = plan
         ? plan.terms.map((t) => t.variants)
         : tokenize(kw).map((t) => [t])
       for (const variants of terms) {
         addAnd({
-          OR: variants.flatMap((term) => [
-            { title: { contains: term, mode: 'insensitive' as const } },
-            { company: { contains: term, mode: 'insensitive' as const } },
-            { locationRaw: { contains: term, mode: 'insensitive' as const } },
-            { techStack: { contains: term, mode: 'insensitive' as const } },
-            { skillsJson: { contains: term, mode: 'insensitive' as const } },
-          ]),
+          OR: variants.flatMap((term) =>
+            KEYWORD_FIELDS.flatMap((field) =>
+              wordStartPatterns(term).map((pattern) => ({ [field]: { ...pattern, mode: 'insensitive' as const } }) as Prisma.JobWhereInput),
+            ),
+          ),
         })
       }
     }
