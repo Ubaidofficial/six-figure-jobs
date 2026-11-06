@@ -40,6 +40,44 @@ export const KNOWN_BOARD_HOSTS = new Set([
   'weworkremotely.com',
   'wellfound.com',
   'ycombinator.com',
+  // Boards and public job portals that freehire jobs link to (found as the "website" of dozens of unrelated
+  // employers in the live data), so a logo or website taken from them is the board's, never the employer's.
+  'seek.com.au',
+  'seek.co.nz',
+  'xing.com',
+  'cadremploi.fr',
+  'francetravail.fr', // France's public employment service (candidat.francetravail.fr)
+  'free-work.com',
+  'welcometothejungle.com', // also its ATS, ats.welcometothejungle.com
+  'betterteam.com', // also hosts per-employer pages, e.g. irecruitings.betterteam.com
+  'arc.dev',
+  'startup.jobs',
+  'kubernetesjobs.com',
+  'workwise.io',
+  'arbeitnow.com',
+  'arbeitnow.nl',
+  'arbeitnow.co.uk',
+  'rocket-match.de',
+  'remote.com', // Remote's job board; three unrelated employers had it as their website
+  'civilservicejobs.service.gov.uk', // UK Civil Service Jobs: one portal for every department
+  'careers.vic.gov.au', // Victorian Government careers portal: one portal for every agency
+  // Adzuna runs one domain per country (adzuna.com is the only one the old list matched).
+  'adzuna.co.uk',
+  'adzuna.com.au',
+  'adzuna.de',
+  'adzuna.fr',
+  'adzuna.nl',
+  'adzuna.ca',
+  'adzuna.in',
+  'adzuna.at',
+  'adzuna.ch',
+  'adzuna.pl',
+  'adzuna.it',
+  'adzuna.es',
+  'adzuna.com.br',
+  'adzuna.co.za',
+  'adzuna.sg',
+  'adzuna.co.nz',
 ])
 
 export const BOARD_SOURCE_HOSTS: Record<string, string> = {

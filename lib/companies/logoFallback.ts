@@ -22,3 +22,13 @@ export function fallbackHue(name: string | null | undefined): number {
   for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) >>> 0
   return hash % 360
 }
+
+// Companies whose logo is white on a transparent background (logo.dev serves it that way), which is invisible
+// on the usual white logo tile. They get a dark tile instead. Found by rendering the live company directory
+// and looking for blank tiles; keyed by the first word of the company name, lowercased.
+const DARK_TILE_COMPANIES = new Set(['okta', 'cesiumastro'])
+
+export function needsDarkTile(name: string | null | undefined): boolean {
+  const first = String(name ?? '').toLowerCase().split(/[^a-z0-9]+/).find(Boolean)
+  return Boolean(first) && DARK_TILE_COMPANIES.has(first!)
+}

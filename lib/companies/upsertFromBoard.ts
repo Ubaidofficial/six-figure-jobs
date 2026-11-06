@@ -314,6 +314,8 @@ function inferWebsiteFromUrl(applyUrl: string): string | null {
     if (!host) return null
     if (isKnownBoardHost(host)) return null
     if (detectAtsFromUrl(applyUrl)) return null
+    // Hosted ATS / payroll portals (workforcenow.adp.com, recruiting.ultipro.com) are not the employer's site.
+    if (!normalizePublicCompanyWebsite(`https://${host}`)) return null
     return `https://${host}`
   } catch {
     return null
