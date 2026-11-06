@@ -49,6 +49,17 @@ export const REMOTE_REGIONS: readonly RemoteRegionDef[] = [
 /** The regions shown as chips on the Remote hub, in order. */
 export const REMOTE_HUB_CHIP_SLUGS = ['global', 'us-only', 'canada', 'australia', 'europe', 'middle-east', 'apac'] as const
 
+/**
+ * The regions to show as chips on the hub. With counts, a region with no remote jobs is left out (never a chip that
+ * opens an empty page); the region being viewed stays. Without counts all of them show.
+ */
+export function visibleHubRegionSlugs(
+  counts: Readonly<Record<string, number>> | null | undefined,
+  active: string | null,
+): string[] {
+  return REMOTE_HUB_CHIP_SLUGS.filter((slug) => !counts || (counts[slug] ?? 0) > 0 || slug === active)
+}
+
 const BY_SLUG = new Map(REMOTE_REGIONS.map((r) => [r.slug, r]))
 
 export function remoteRegionDef(slug: string | null | undefined): RemoteRegionDef | null {
