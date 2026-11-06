@@ -10,6 +10,7 @@ import {
 } from '../../lib/jobs/queryJobs'
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../components/JobList'
+import { SearchForm } from './SearchForm'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 import { knownLeftover, leftoverTokens } from '../../lib/search/leftover'
 import { getSearchVocabulary } from '../../lib/search/vocabulary'
@@ -351,145 +352,16 @@ export default async function SearchPage({ searchParams }: PageProps) {
       return (
         <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
       {/* Search Form */}
-      <div className="glass soft-shadow mb-10 rounded-2xl p-6 md:sticky md:top-24 md:z-30">
-        <form action="/search" method="GET" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-6">
-            {/* Search Query */}
-            <div className="md:col-span-2">
-              <label htmlFor="q" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Find your next six-figure job
-              </label>
-              <input
-                type="text"
-                id="q"
-                name="q"
-                defaultValue={q}
-                placeholder="Role, company, or skill…"
-                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            {/* Location */}
-            <div>
-              <label htmlFor="location" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Location
-              </label>
-              <select
-                id="location"
-                name="location"
-                defaultValue={resolvedLocation}
-                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">All locations</option>
-                <option value="remote">Remote Only</option>
-                <option value="US">United States</option>
-                <option value="GB">United Kingdom</option>
-                <option value="CA">Canada</option>
-                <option value="DE">Germany</option>
-                <option value="IE">Ireland</option>
-                <option value="CH">Switzerland</option>
-                <option value="SG">Singapore</option>
-                <option value="AU">Australia</option>
-                <option value="NZ">New Zealand</option>
-              </select>
-            </div>
-
-            {/* Work arrangement */}
-            <div>
-              <label htmlFor="remoteMode" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Work arrangement
-              </label>
-              <select
-                id="remoteMode"
-                name="remoteMode"
-                defaultValue={resolvedRemoteMode}
-                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Any</option>
-                <option value="remote">Remote</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="onsite">On-site</option>
-              </select>
-            </div>
-
-            {/* Min Salary */}
-            <div>
-              <label htmlFor="minSalary" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Minimum Salary
-              </label>
-              <select
-                id="minSalary"
-                name="minSalary"
-                defaultValue={minSalaryRaw}
-                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="100000">$100k+</option>
-              <option value="200000">$200k+</option>
-              <option value="300000">$300k+</option>
-              <option value="400000">$400k+</option>
-              </select>
-            </div>
-
-            {/* Remote region */}
-            <div>
-              <label htmlFor="remoteRegion" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Remote region
-              </label>
-              <select
-                id="remoteRegion"
-                name="remoteRegion"
-                defaultValue={resolvedRemoteRegion}
-                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Any</option>
-                <option value="global">Global</option>
-                <option value="us-only">US only</option>
-                <option value="canada">Canada</option>
-                <option value="emea">EMEA</option>
-                <option value="apac">APAC</option>
-                <option value="uk-ireland">UK & Ireland</option>
-              </select>
-            </div>
-
-            {/* Seniority */}
-            <div>
-              <label htmlFor="seniority" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Seniority
-              </label>
-              <select
-                id="seniority"
-                name="seniority"
-                defaultValue={resolvedSeniority}
-                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Any</option>
-                <option value="entry">Entry</option>
-                <option value="mid">Mid</option>
-                <option value="senior">Senior</option>
-                <option value="lead">Lead</option>
-                <option value="director">Director</option>
-                <option value="vp">VP</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-primary"
-            >
-              Find $100k+ roles
-            </button>
-            {(q || role || location || minSalaryRaw > 100000) && (
-              <Link
-                href="/search"
-                className="focus-ring inline-flex items-center max-md:min-h-11 rounded-md text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              >
-                Clear filters
-              </Link>
-            )}
-          </div>
-        </form>
+      <div className="glass soft-shadow mb-6 rounded-2xl p-4 md:sticky md:top-24 md:z-30 md:mb-10 md:p-6">
+        <SearchForm
+          q={q}
+          hasRole={Boolean(role)}
+          location={resolvedLocation}
+          remoteMode={resolvedRemoteMode ?? ''}
+          minSalary={minSalaryRaw}
+          remoteRegion={resolvedRemoteRegion}
+          seniority={resolvedSeniority}
+        />
       </div>
 
       {/* Header */}
@@ -530,7 +402,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             </Link>
             <Link
               href="/"
-              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-[0_14px_40px_rgba(16,185,129,0.22)] transition hover:bg-primary"
+              className="focus-ring inline-flex h-11 items-center justify-center rounded-xl bg-[var(--color-primary)] px-6 text-sm font-semibold text-[#0a0a0a] transition hover:brightness-95"
             >
               Explore newest opportunities
             </Link>
@@ -538,7 +410,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <>
-          <JobList jobs={jobs} />
+          <JobList jobs={jobs} headingLevel={2} />
 
           {/* Pagination */}
           <div className="mt-8 flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">

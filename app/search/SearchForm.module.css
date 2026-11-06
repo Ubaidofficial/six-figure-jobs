@@ -1,0 +1,219 @@
+/* /search form: same look as the homepage search (lime button, one consistent select style).
+   Phones: search box + button, then a "Filters" disclosure. Desktop (768px and up): everything open, no toggle. */
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.searchRow {
+  display: grid;
+  gap: 12px;
+}
+
+.queryField {
+  min-width: 0;
+}
+
+.label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-1);
+}
+
+.input,
+.select {
+  width: 100%;
+  height: 48px;
+  font: inherit;
+  font-size: 1rem; /* 16px: iOS Safari does not zoom the page on focus */
+  color: var(--color-text-0);
+  background: var(--color-bg-1);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 16%, transparent);
+  border-radius: 12px;
+}
+
+.input {
+  padding: 0 16px;
+}
+
+.input::placeholder {
+  color: var(--color-text-1);
+}
+
+.input:hover,
+.select:hover {
+  border-color: color-mix(in srgb, var(--color-fg) 30%, transparent);
+}
+
+.input:focus-visible,
+.select:focus-visible,
+.summary:focus-visible,
+.submit:focus-visible,
+.clear:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.submit {
+  height: 48px;
+  padding: 0 24px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0a0a0a;
+  background: var(--color-primary);
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.submit:hover {
+  filter: brightness(0.95);
+}
+
+/* Filters disclosure ------------------------------------------------------------------------------------------ */
+
+.filters {
+  min-width: 0;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 16px;
+  list-style: none;
+  font-size: 0.9375rem;
+  background: var(--color-bg-1);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 16%, transparent);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-right: 2px solid var(--color-text-1);
+  border-bottom: 2px solid var(--color-text-1);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 150ms ease;
+}
+
+.filters[open] > .summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+.summaryTitle {
+  font-weight: 600;
+  color: var(--color-text-0);
+}
+
+.summaryHint,
+.summaryCount {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  color: var(--color-text-1);
+}
+
+/* The count is a small lime pill so an applied filter is visible while the panel is closed. */
+.summaryCount {
+  padding: 2px 10px;
+  font-weight: 600;
+  color: #0a0a0a;
+  background: var(--color-primary);
+  border-radius: 999px;
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.field {
+  min-width: 0;
+}
+
+.selectWrap {
+  position: relative;
+}
+
+/* Chevron drawn with borders so it follows the theme colour. */
+.selectWrap::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--color-text-1);
+  border-bottom: 1.5px solid var(--color-text-1);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 38px 0 14px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.clear {
+  justify-self: start;
+  font-size: 0.75rem;
+  color: var(--color-text-1);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.clear:hover {
+  color: var(--color-text-0);
+}
+
+@media (min-width: 640px) {
+  .panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .searchRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .panel {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding-top: 0;
+  }
+
+  /* No toggle on desktop: show the panel whether or not the <details> is open. Only where the browser can style
+     the closed content (::details-content); elsewhere the summary stays so the filters are still reachable. */
+  @supports selector(::details-content) {
+    .summary {
+      display: none;
+    }
+
+    .filters::details-content {
+      content-visibility: visible;
+    }
+  }
+}

@@ -40,6 +40,8 @@ export type JobCardProps = {
   onClick?: () => void
   className?: string
   variant?: 'listing' | 'homepage' | 'grid'
+  /** Heading level of the job title. 3 under an H2 section (default); 2 where the page H1 is followed directly by cards. */
+  headingLevel?: 2 | 3
 }
 
 function toKCase(text: string): string {
@@ -232,7 +234,8 @@ function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; loc
   return null
 }
 
-export function JobCard({ job, onClick, className, variant = 'listing' }: JobCardProps) {
+export function JobCard({ job, onClick, className, variant = 'listing', headingLevel = 3 }: JobCardProps) {
+  const TitleTag = headingLevel === 2 ? 'h2' : 'h3'
   const router = useRouter()
   const isHomepage = variant === 'homepage'
   const isGrid = variant === 'grid'
@@ -337,7 +340,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
 
       <div className={styles.body}>
         <div className={styles.hero}>
-          <h3 className={styles.title}>
+          <TitleTag className={styles.title}>
             <Link
               href={jobHref}
               className={styles.titleLink}
@@ -345,7 +348,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
             >
               {job.title}
             </Link>
-          </h3>
+          </TitleTag>
 
           {hasSalary ? (
             <div className={styles.salaryStack}>
