@@ -330,7 +330,9 @@ export default async function JobPage({
     hasSalary &&
     typedJob.salaryValidated === true &&
     typedJob.salarySource === 'ats'
-  const lastUpdatedDays = daysSince(typedJob.updatedAt ?? typedJob.lastSeenAt ?? null)
+  // lastSeenAt is when the job was last seen listed at its source: the ingest sets it on every sighting and the
+  // freehire closed-job check on every job it confirms open. updatedAt also moves for unrelated edits, so it is not used.
+  const lastCheckedLabel = formatRelativeTime(typedJob.lastSeenAt ?? null)
 
   const isRemoteRole = typedJob.remote === true || (typedJob as any).remoteMode === 'remote'
   const workTypeLabel = isRemoteRole
@@ -359,17 +361,18 @@ export default async function JobPage({
 
   /* ------------------------------ Render ----------------------------------- */
 
+  type HeroChip = { Icon: typeof MapPin; label: string; compact?: string | null }
   const metaItems = [
-    { Icon: MapPin, label: locationText },
+    { Icon: MapPin, label: locationText, compact: compactLocationList(locationText) },
     { Icon: Laptop, label: isRemoteRole ? 'Remote' : workTypeLabel },
     { Icon: Clock, label: postedLabel ? `Posted ${postedLabel}` : null },
-  ].filter((m): m is { Icon: typeof MapPin; label: string } => Boolean(m.label))
+  ].filter((m): m is HeroChip => Boolean(m.label))
 
   const heroChips = [
     ...metaItems,
     { Icon: Briefcase, label: employmentType ? String(employmentType) : null },
     { Icon: TrendingUp, label: seniority ? String(seniority) : null },
-  ].filter((m): m is { Icon: typeof MapPin; label: string } => Boolean(m.label))
+  ].filter((m): m is HeroChip => Boolean(m.label))
 
   const salaryRank = await withRuntimeFallback<(SalaryRank & { scope: 'role' | 'market' }) | null>(
     `job.${typedJob.id}.salary-rank`,
@@ -391,10 +394,7 @@ export default async function JobPage({
   // Type and level are already chips in the hero, so the sidebar does not repeat them.
   const jobFacts = [
     { label: 'Team size', value: teamSize },
-    {
-      label: 'Updated',
-      value: lastUpdatedDays == null ? null : lastUpdatedDays === 0 ? 'Today' : `${lastUpdatedDays} days ago`,
-    },
+    { label: 'Last checked', value: lastCheckedLabel },
   ].filter((f): f is { label: string; value: string } => Boolean(f.value))
 
   const companyFacts = [
@@ -425,8 +425,8 @@ export default async function JobPage({
       <section className={styles.hero} aria-labelledby="job-title">
         <div className="min-w-0">
           <div className={styles.identity}>
-            <CompanyLogo name={companyName} src={logoUrl} size="xl" priority />
-            <div className="min-w-0">
+            <CompanyLogo name={companyName} src={logoUrl} size="xl" priority className={styles.logo} />
+            <div className={`min-w-0 ${styles.identityText}`}>
               <p className={styles.company}>
                 {company?.slug ? (
                   <NextLink href={`/company/${company.slug}`}>{companyName}</NextLink>
@@ -442,10 +442,18 @@ export default async function JobPage({
 
           {heroChips.length > 0 ? (
             <ul className={styles.chips}>
-              {heroChips.map(({ Icon, label }) => (
-                <li key={label} className={styles.chip}>
+              {heroChips.map(({ Icon, label, compact }) => (
+                <li key={label} className={styles.chip} title={compact ? label : undefined}>
                   <Icon aria-hidden="true" />
-                  {label}
+                  {compact ? (
+                    <>
+                      {/* Phones get the short form; the full list is kept for wider screens and as the tooltip. */}
+                      <span className={styles.chipFull}>{label}</span>
+                      <span className={styles.chipCompact}>{compact}</span>
+                    </>
+                  ) : (
+                    label
+                  )}
                 </li>
               ))}
             </ul>
@@ -655,14 +663,6 @@ function parseArray(raw?: string | null): string[] {
   }
 }
 
-function daysSince(date: Date | null | undefined): number | null {
-  if (!date) return null
-  const d = date instanceof Date ? date : new Date(date)
-  const ms = Date.now() - d.getTime()
-  if (!Number.isFinite(ms)) return null
-  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)))
-}
-
 function parseSkillsFromJob(job: any): string[] {
   const out: string[] = []
 
@@ -806,6 +806,12 @@ function buildLocationText(job: any): string {
   if (job.locationRaw) return humanizeLocationText(String(job.locationRaw))
   if (job.countryCode) return job.countryCode
   return 'Location not specified'
+}
+
+/** "Los Angeles, CA, USA; Mountain View, CA, USA" -> "Los Angeles, CA, USA +1 more"; null for a single place. */
+function compactLocationList(text: string): string | null {
+  const parts = Array.from(new Set(text.split(';').map((p) => p.trim()).filter(Boolean)))
+  return parts.length >= 2 ? `${parts[0]} +${parts.length - 1} more` : null
 }
 
 type InternalLink = { href: string; label: string }

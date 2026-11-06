@@ -18,6 +18,13 @@ export function MobileBarShell({ children }: { children: React.ReactNode }) {
     return () => io.disconnect()
   }, [])
 
+  // Tells the floating Feedback button whether the bar is on screen, so it only lifts above the bar while it is
+  // there (FeedbackWidget.module.css). With the bar slid away it used to stay lifted, floating over the salary card.
+  React.useEffect(() => {
+    document.documentElement.dataset.applyBar = visible ? 'shown' : 'hidden'
+  }, [visible])
+  React.useEffect(() => () => void delete document.documentElement.dataset.applyBar, [])
+
   return (
     <div
       className={`fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur transition-transform duration-200 lg:hidden ${
