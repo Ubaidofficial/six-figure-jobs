@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const { accountsEnabled } = require('./lib/accounts/enabled')
+
 const sitemapCacheHeaders = [
   {
     key: 'Cache-Control',
@@ -67,6 +69,12 @@ const countrySlugPattern =
 
 const nextConfig = {
   output: 'standalone',
+  // Accounts and billing are off unless ACCOUNTS_ENABLED=true (plus AUTH_SECRET, and AUTH_URL in production) is present
+  // when the site is BUILT. This only decides whether the header shows a "Sign in" link; the routes themselves check
+  // the flag again on every request. Unset, the value is '' and the header is unchanged.
+  env: {
+    NEXT_PUBLIC_ACCOUNTS_ENABLED: accountsEnabled() ? 'true' : '',
+  },
   // Prisma 5 uses a native .node library engine that Next.js file tracing
   // misses without this — without it the standalone bundle has no DB access.
   outputFileTracingIncludes: {

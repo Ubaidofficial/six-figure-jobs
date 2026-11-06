@@ -381,3 +381,98 @@ model ApplyClick {
   @@index([jobId, createdAt])
   @@index([createdAt])
 }
+
+// ---------------------------------------------------------------------------
+// Accounts and billing. Inert until ACCOUNTS_ENABLED=true (see lib/accounts/config.ts); nothing on a public page
+// reads these tables. Sessions are JWT, so there is no Session table. Additive migration only.
+// ---------------------------------------------------------------------------
+
+model User {
+  id               String         @id @default(cuid())
+  name             String?
+  email            String?        @unique
+  emailVerified    DateTime?
+  image            String?
+  // Set the first time the user starts a checkout; every Stripe event is mapped to a user through it.
+  stripeCustomerId String?        @unique
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  accounts         Account[]
+  subscriptions    Subscription[]
+  creditLedger     CreditLedger[]
+}
+
+// OAuth link (Google). Provider tokens are not stored: lib/auth/config.ts drops them before the adapter writes.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// Magic-link tokens (hashed by Auth.js before they are stored).
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Mirror of the Stripe subscription, written only by the webhook.
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String
+  stripeCustomerId     String
+  stripeSubscriptionId String    @unique
+  status               String
+  priceId              String?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  // `created` of the Stripe event that last wrote this row; older events are ignored (they can arrive out of order).
+  lastEventAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+}
+
+// Append-only. Balance = SUM(delta). Rows are inserted, never updated or deleted. idempotencyKey makes every grant,
+// spend and clawback safe to retry.
+model CreditLedger {
+  id             String   @id @default(cuid())
+  userId         String
+  delta          Int
+  // 'subscription_grant' | 'pack' | 'spend' | 'refund'
+  kind           String
+  reason         String
+  // Stripe invoice / payment intent / charge id for money-related rows.
+  refId          String?
+  idempotencyKey String   @unique
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([refId])
+}
+
+// Stripe event ids already processed (webhook idempotency).
+model StripeEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+}
