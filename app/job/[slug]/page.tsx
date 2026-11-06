@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import NextLink from 'next/link'
 import NextImage from 'next/image'
 import { notFound, permanentRedirect } from 'next/navigation'
-import { cache } from 'react'
+import { cache, type ReactNode } from 'react'
 import { JobUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '../../../lib/prisma'
 import { parseJobSlugParam, buildJobSlug } from '../../../lib/jobs/jobSlug'
@@ -22,21 +22,22 @@ import { normalizePublicCompanyWebsite } from '../../../lib/companies/website'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { cleanJobDescriptionHtml } from '../../../lib/jobs/descriptionCleaning'
-import {
-  countryCodeToSlug,
-  countryCodeToName,
-  COUNTRY_CODE_TO_NAME,
-} from '../../../lib/seo/countrySlug'
-import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
+import { countryCodeToSlug, countryCodeToName } from '../../../lib/seo/countrySlug'
+import { CITY_TARGETS, CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
+import { countryName, normalizeCountryCode } from '../../../lib/location/country'
+import { describeJobLocation } from '../../../lib/location/jobLocation'
+import { employmentTypeLabel } from '../../../lib/jobs/employmentTypeLabel'
+import { skillLabel } from '../../../lib/jobs/skillLabel'
 import { resolveJobRoleSlug, similarJobsKeyword } from '../../../lib/roles/indexableRole'
 import { JobCard } from '@/components/jobs/JobCard'
-import { Briefcase, Clock, Laptop, MapPin, TrendingUp } from 'lucide-react'
+import { Briefcase, Clock, Globe, Laptop, MapPin, TrendingUp } from 'lucide-react'
 
 import { SKILL_TARGETS } from '../../../lib/seo/pseoTargets'
 import { Badge, badgeVariants } from '@/components/ui/badge'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { cn } from '@/lib/utils'
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
+import { CountryFlag } from '@/components/ui/CountryFlag'
 import {
   ApplyCard,
   PayCard,
@@ -44,6 +45,7 @@ import {
   CompanyCard,
   DescriptionApply,
   DescriptionSections,
+  JobLocationText,
   JobSection,
   MobileApplyBar,
 } from './JobDetailParts'
@@ -220,7 +222,7 @@ export default async function JobPage({
   /* ------------------------------ Derived UI data ------------------------------ */
 
   const salaryText = buildSalaryText(typedJob)
-  const locationText = buildLocationText(typedJob)
+  const location = describeJobLocation(typedJob)
   const canonicalRoleSlug = resolveJobRoleSlug(typedJob)
   const seniority = inferSeniorityFromTitle(typedJob.title)
   const postedLabel = formatRelativeTime(
@@ -325,7 +327,7 @@ export default async function JobPage({
 
   const similarJobs = filterSimilarJobs(typedJob, similarResult.jobs, 6)
 
-  const companyCountry = company?.countryCode || typedJob.countryCode || 'Global'
+  const companyCountry = normalizeCountryCode(company?.countryCode) ?? normalizeCountryCode(typedJob.countryCode)
   const isSalaryVerified =
     hasSalary &&
     typedJob.salaryValidated === true &&
@@ -361,18 +363,38 @@ export default async function JobPage({
 
   /* ------------------------------ Render ----------------------------------- */
 
-  type HeroChip = { Icon: typeof MapPin; label: string; compact?: string | null }
-  const metaItems = [
-    { Icon: MapPin, label: locationText, compact: compactLocationList(locationText) },
-    { Icon: Laptop, label: isRemoteRole ? 'Remote' : workTypeLabel },
-    { Icon: Clock, label: postedLabel ? `Posted ${postedLabel}` : null },
-  ].filter((m): m is HeroChip => Boolean(m.label))
+  // City and country link to their landing pages only where those pages exist: a country page for the countries in
+  // lib/seo/countrySlug, a city page for the cities in CITY_TARGETS (and only when it is that city in that country).
+  const countrySlug = location.city ? countryCodeToSlug(location.countryCode) : null
+  const cityTarget = location.city
+    ? CITY_TARGETS.find((c) => c.slug === typedJob.citySlug && c.countryCode === location.countryCode)
+    : undefined
 
-  const heroChips = [
+  type HeroChip = { Icon: typeof MapPin; label: string; compact?: string | null; content?: ReactNode }
+  type HeroChipDraft = Omit<HeroChip, 'label'> & { label: string | null | undefined }
+  const metaItems = ([
+    {
+      Icon: location.remote ? Globe : MapPin,
+      label: location.text,
+      compact: location.compact,
+      content: (
+        <JobLocationText
+          view={location}
+          cityHref={cityTarget ? `/jobs/city/${cityTarget.slug}` : null}
+          countryHref={countrySlug ? `/jobs/location/${countrySlug}` : null}
+        />
+      ),
+    },
+    // A remote job's location chip already says "Remote".
+    { Icon: Laptop, label: isRemoteRole ? null : workTypeLabel },
+    { Icon: Clock, label: postedLabel ? `Posted ${postedLabel}` : null },
+  ] as HeroChipDraft[]).filter((m): m is HeroChip => Boolean(m.label))
+
+  const heroChips = ([
     ...metaItems,
-    { Icon: Briefcase, label: employmentType ? String(employmentType) : null },
+    { Icon: Briefcase, label: employmentTypeLabel(employmentType) },
     { Icon: TrendingUp, label: seniority ? String(seniority) : null },
-  ].filter((m): m is HeroChip => Boolean(m.label))
+  ] as HeroChipDraft[]).filter((m): m is HeroChip => Boolean(m.label))
 
   const salaryRank = await withRuntimeFallback<(SalaryRank & { scope: 'role' | 'market' }) | null>(
     `job.${typedJob.id}.salary-rank`,
@@ -398,10 +420,18 @@ export default async function JobPage({
   ].filter((f): f is { label: string; value: string } => Boolean(f.value))
 
   const companyFacts = [
-    { label: 'Country', value: companyCountry },
+    {
+      label: 'Country',
+      value: companyCountry ? (
+        <span className="inline-flex items-center gap-1.5">
+          <CountryFlag code={companyCountry} />
+          {countryName(companyCountry)}
+        </span>
+      ) : null,
+    },
     { label: 'Employees', value: company?.sizeBucket || (company as any)?.employeeCount || null },
     { label: 'Founded', value: company?.foundedYear ? String(company.foundedYear) : null },
-  ].filter((f): f is { label: string; value: string } => Boolean(f.value))
+  ].filter((f): f is { label: string; value: ReactNode } => Boolean(f.value))
 
   const applyHref = showApply ? cleanUrl(typedJob.applyUrl!) : null
   const websiteHref = normalizePublicCompanyWebsite(company?.website ?? null)
@@ -442,17 +472,20 @@ export default async function JobPage({
 
           {heroChips.length > 0 ? (
             <ul className={styles.chips}>
-              {heroChips.map(({ Icon, label, compact }) => (
+              {heroChips.map(({ Icon, label, compact, content }) => (
                 <li key={label} className={styles.chip} title={compact ? label : undefined}>
                   <Icon aria-hidden="true" />
                   {compact ? (
                     <>
                       {/* Phones get the short form; the full list is kept for wider screens and as the tooltip. */}
-                      <span className={styles.chipFull}>{label}</span>
-                      <span className={styles.chipCompact}>{compact}</span>
+                      <span className={styles.chipFull}>{content ?? label}</span>
+                      <span className={styles.chipCompact}>
+                        {content ? <CountryFlag code={location.countryCode} className="mr-1.5" /> : null}
+                        {compact}
+                      </span>
                     </>
                   ) : (
-                    label
+                    (content ?? label)
                   )}
                 </li>
               ))}
@@ -529,7 +562,7 @@ export default async function JobPage({
               <div className="flex flex-wrap gap-2">
                 {requiredSkills.map((skill) => (
                   <Badge key={skill} variant="secondary" className="rounded-md px-2.5 py-1 font-medium">
-                    {skill}
+                    {skillLabel(skill)}
                   </Badge>
                 ))}
               </div>
@@ -539,7 +572,7 @@ export default async function JobPage({
                   <div className="flex flex-wrap gap-2">
                     {niceSkills.map((skill) => (
                       <Badge key={skill} variant="outline" className="rounded-md px-2.5 py-1 font-normal">
-                        {skill}
+                        {skillLabel(skill)}
                       </Badge>
                     ))}
                   </div>
@@ -765,55 +798,6 @@ function extractBenefitsFromAi(raw: any): string[] {
   return []
 }
 
-function humanizeLocationText(value: string): string {
-  const trimmed = String(value || '').trim()
-  if (!trimmed) return ''
-
-  if (/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(trimmed)) {
-    return trimmed
-      .split('-')
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(' ')
-  }
-
-  return trimmed
-}
-
-/**
- * Build location text - handles remote vs physical location
- */
-function buildLocationText(job: any): string {
-  const isRemote = job.remote === true || job.remoteMode === 'remote'
-
-  if (isRemote) {
-    const cc = typeof job.countryCode === 'string' ? job.countryCode.trim().toUpperCase() : ''
-    if (cc) {
-      const flag =
-        cc.length === 2 && /^[A-Z]{2}$/.test(cc)
-          ? String.fromCodePoint(0x1f1e6 + (cc.charCodeAt(0) - 65), 0x1f1e6 + (cc.charCodeAt(1) - 65))
-          : ''
-      return `${flag ? `${flag} ` : ''}Remote (${cc})`
-    }
-    return '🌍 Remote'
-  }
-
-  const hasValidCityAndCountry =
-    job.city && job.countryCode && isLocationValid(job.city, job.countryCode, job.locationRaw)
-
-  if (hasValidCityAndCountry) return `${humanizeLocationText(String(job.city))}, ${job.countryCode}`
-
-  if (job.locationRaw) return humanizeLocationText(String(job.locationRaw))
-  if (job.countryCode) return job.countryCode
-  return 'Location not specified'
-}
-
-/** "Los Angeles, CA, USA; Mountain View, CA, USA" -> "Los Angeles, CA, USA +1 more"; null for a single place. */
-function compactLocationList(text: string): string | null {
-  const parts = Array.from(new Set(text.split(';').map((p) => p.trim()).filter(Boolean)))
-  return parts.length >= 2 ? `${parts[0]} +${parts.length - 1} more` : null
-}
-
 type InternalLink = { href: string; label: string }
 
 function prettyRole(slug: string): string {
@@ -1001,30 +985,6 @@ function sanitizeDescriptionHtml(html: string): string {
   if (!trimmed) return ''
   const hasParagraph = /<p[\s>]/i.test(trimmed)
   return hasParagraph ? trimmed : `<p>${trimmed}</p>`
-}
-
-function detectCountryFromText(raw?: string | null): string | null {
-  if (!raw) return null
-  const lower = raw.toLowerCase()
-  for (const [code, name] of Object.entries(COUNTRY_CODE_TO_NAME)) {
-    if (lower.includes(name.toLowerCase())) return code
-  }
-  return null
-}
-
-function isLocationValid(
-  city?: string | null,
-  countryCode?: string | null,
-  locationRaw?: string | null,
-): boolean {
-  if (!city || !countryCode) return false
-  if (!locationRaw) return true
-  const normalizedCountry = countryCodeToName(countryCode).toLowerCase()
-  const rawLower = locationRaw.toLowerCase()
-  if (rawLower.includes(normalizedCountry)) return true
-  const detected = detectCountryFromText(locationRaw)
-  if (detected && detected !== countryCode.toUpperCase()) return false
-  return true
 }
 
 function formatBenefitPill(benefit: string): string {

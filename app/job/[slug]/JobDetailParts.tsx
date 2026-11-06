@@ -5,6 +5,7 @@ import NextLink from 'next/link'
 import { BadgeCheck, ExternalLink, Globe } from 'lucide-react'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
+import { CountryFlag } from '@/components/ui/CountryFlag'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -12,6 +13,7 @@ import type { SalaryRank } from '@/lib/jobs/salaryRank'
 import { groupDescription, type DescriptionSection } from '@/lib/jobs/descriptionStructure'
 import type { ApplySurface } from '@/lib/analytics/applyClick'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
+import type { JobLocationView } from '@/lib/location/jobLocation'
 
 import styles from './JobDetail.module.css'
 
@@ -20,7 +22,7 @@ import { ApplyLink } from './ApplyLink'
 import { ReportJob } from './ReportJob'
 import { MobileBarShell } from './MobileBarShell'
 
-type Fact = { label: string; value: string }
+type Fact = { label: string; value: ReactNode }
 
 const applyButtonClass =
   'inline-flex items-center justify-center gap-2 rounded-md bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-neutral-950 transition-colors hover:bg-[var(--color-primary-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
@@ -46,6 +48,49 @@ export function ApplyButton({
 }
 
 /** Section of the article: a real heading, then content. No card chrome, so the page reads top to bottom. */
+const placeLink = 'underline-offset-4 hover:underline'
+
+/** The hero's location text with its flag. A single place links its city and country to their landing pages when given. */
+export function JobLocationText({
+  view,
+  cityHref,
+  countryHref,
+}: {
+  view: JobLocationView
+  cityHref: string | null
+  countryHref: string | null
+}) {
+  const flag = <CountryFlag code={view.countryCode} className="mr-1.5" />
+  if (!view.city || !view.countryName) {
+    return (
+      <span>
+        {flag}
+        {view.text}
+      </span>
+    )
+  }
+  return (
+    <span>
+      {flag}
+      {cityHref ? (
+        <NextLink href={cityHref} className={placeLink}>
+          {view.city}
+        </NextLink>
+      ) : (
+        view.city
+      )}
+      {view.region ? `, ${view.region}` : null},{' '}
+      {countryHref ? (
+        <NextLink href={countryHref} className={placeLink}>
+          {view.countryName}
+        </NextLink>
+      ) : (
+        view.countryName
+      )}
+    </span>
+  )
+}
+
 export function JobSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-3">

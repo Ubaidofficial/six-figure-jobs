@@ -1,10 +1,14 @@
 'use client'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
+import { CountryFlag } from '@/components/ui/CountryFlag'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
+import { countryName, normalizeCountryCode } from '@/lib/location/country'
+import { describeJobLocation } from '@/lib/location/jobLocation'
+import { skillLabel } from '@/lib/jobs/skillLabel'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildSalaryText } from '@/lib/jobs/salary'
@@ -36,15 +40,6 @@ export type JobCardProps = {
   onClick?: () => void
   className?: string
   variant?: 'listing' | 'homepage' | 'grid'
-}
-
-function countryFlag(code?: string | null): string {
-  const cc = String(code ?? '').trim().toUpperCase()
-  if (cc.length !== 2 || !/^[A-Z]{2}$/.test(cc)) return ''
-  return String.fromCodePoint(
-    0x1f1e6 + (cc.charCodeAt(0) - 65),
-    0x1f1e6 + (cc.charCodeAt(1) - 65),
-  )
 }
 
 function toKCase(text: string): string {
@@ -177,123 +172,60 @@ function resolveSkillSlug(value: string): string | null {
 
 function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; locationsJson?: any }): {
   label: string
+  /** For the flag; the name is always in `label`. */
+  countryCode: string | null
   hasMultiple: boolean
   count: number
 } | null {
-  // Country code to name mapping
-  const countryNames: Record<string, string> = {
-    'US': 'USA',
-    'GB': 'UK',
-    'CA': 'Canada',
-    'AU': 'Australia',
-    'DE': 'Germany',
-    'FR': 'France',
-    'NL': 'Netherlands',
-    'ES': 'Spain',
-    'IT': 'Italy',
-    'SE': 'Sweden',
-    'NO': 'Norway',
-    'DK': 'Denmark',
-    'FI': 'Finland',
-    'IE': 'Ireland',
-    'CH': 'Switzerland',
-    'AT': 'Austria',
-    'BE': 'Belgium',
-    'PT': 'Portugal',
-    'PL': 'Poland',
-    'CZ': 'Czech Republic',
-    'SG': 'Singapore',
-    'JP': 'Japan',
-    'KR': 'South Korea',
-    'IN': 'India',
-    'BR': 'Brazil',
-    'MX': 'Mexico',
-    'AR': 'Argentina',
-    'CL': 'Chile',
-    'NZ': 'New Zealand',
-  }
+  const isRemote = job.remote === true || job.remoteMode === 'remote'
+  const stored = normalizeCountryCode(job.countryCode)
 
   // Use primaryLocation if available
   if (job.primaryLocation) {
     const locations = parseJsonArray(job.locationsJson)
-    const isRemote = job.remote === true || job.remoteMode === 'remote'
+    const multi = { hasMultiple: locations.length > 1, count: locations.length }
+    const value = String(job.primaryLocation).trim()
 
     if (isRemote) {
-      const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
-      const flag = countryFlag(cc)
-      
-      // Get location value
-      const locationValue = String(job.primaryLocation).trim()
-      
-      // Only map 2-letter country codes to full names
-      // If it's already descriptive text (like "Remote, USA"), use as-is without flag
-      let displayName = humanizeLocationText(locationValue)
-      if (locationValue.length === 2 && locationValue === locationValue.toUpperCase()) {
-        // It's a bare country code like "US" - map to "USA" and add flag
-        displayName = countryNames[locationValue] || locationValue
-        return {
-          label: flag ? `${flag} ${displayName}` : displayName || 'Remote',
-          hasMultiple: locations.length > 1,
-          count: locations.length
-        }
+      // A bare country code ("US") becomes the country's name; descriptive text ("Remote, USA") is kept as is, without
+      // a flag (the text already says where).
+      if (value.length === 2 && value === value.toUpperCase()) {
+        const code = stored ?? normalizeCountryCode(value)
+        return { label: countryName(value, { short: true }) || 'Remote', countryCode: code, ...multi }
       }
-      
-      // It's descriptive text - return as-is WITHOUT flag (flag is redundant)
-      return {
-        label: displayName,
-        hasMultiple: locations.length > 1,
-        count: locations.length
-      }
+      return { label: humanizeLocationText(value), countryCode: null, ...multi }
     }
 
-    const primary = humanizeLocationText(String(job.primaryLocation))
-    const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
-    const flag = countryFlag(cc)
-
-    return {
-      label: flag ? `${flag} ${primary}` : primary,
-      hasMultiple: locations.length > 1,
-      count: locations.length
-    }
+    return { label: humanizeLocationText(value), countryCode: stored, ...multi }
   }
 
   // Fallback to old logic
-  const cc = job.countryCode ? String(job.countryCode).toUpperCase() : null
-  const flag = countryFlag(cc)
+  const view = describeJobLocation(job)
+  const cc = stored ?? view.countryCode
   const city = job.city ? humanizeLocationText(String(job.city)) : ''
-  const isRemote = job.remote === true || job.remoteMode === 'remote'
+  const name = cc ? countryName(cc, { short: true }) : null
 
   if (isRemote) {
-    const displayName = cc ? (countryNames[cc] || cc) : null
-    return {
-      label: displayName ? `${flag} ${displayName}` : 'Remote',
-      hasMultiple: false,
-      count: 1
-    }
+    // Without a country there is nothing to add: the work-type pill beside it already says "Remote".
+    return name ? { label: name, countryCode: cc, hasMultiple: false, count: 1 } : null
   }
 
-  if (city && cc) {
-    return {
-      label: `${flag} ${city}, ${cc}`,
-      hasMultiple: false,
-      count: 1
-    }
+  if (city && stored && name) {
+    return { label: `${city}, ${name}`, countryCode: stored, hasMultiple: false, count: 1 }
   }
 
-  if (cc) {
-    return {
-      label: `${flag} ${cc}`,
-      hasMultiple: false,
-      count: 1
-    }
+  if (stored && name) {
+    return { label: name, countryCode: stored, hasMultiple: false, count: 1 }
   }
 
   if (job.locationRaw) {
-    const raw = String(job.locationRaw)
+    // "A; B; C" is several places. "City, State" is one: its commas are not a count.
+    const multiple = view.count > 1
     return {
-      label: humanizeLocationText(raw.split(/[;,]/)[0]),
-      hasMultiple: raw.includes(';') || raw.includes(','),
-      count: raw.split(/[;,]/).length
+      label: multiple ? view.first : view.text,
+      countryCode: view.countryCode,
+      hasMultiple: multiple,
+      count: view.count,
     }
   }
 
@@ -434,6 +366,7 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
           {locationData ? (
             <span className={styles.metaPill}>
               <MapPin className={styles.metaIcon} aria-hidden="true" />
+              <CountryFlag code={locationData.countryCode} />
               {locationData.label}
               {locationData.hasMultiple ? ` +${locationData.count - 1}` : ''}
             </span>
@@ -465,8 +398,8 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
               const skillSlug = resolveSkillSlug(s)
               if (!skillSlug) {
                 return (
-                  <span key={s} className={styles.skill} title={s}>
-                    {s}
+                  <span key={s} className={styles.skill} title={skillLabel(s)}>
+                    {skillLabel(s)}
                   </span>
                 )
               }
@@ -479,9 +412,9 @@ export function JobCard({ job, onClick, className, variant = 'listing' }: JobCar
                   onClick={(e) => {
                     e.stopPropagation()
                   }}
-                  title={`Browse ${s} jobs`}
+                  title={`Browse ${skillLabel(s)} jobs`}
                 >
-                  {s}
+                  {skillLabel(s)}
                 </Link>
               )
             })}

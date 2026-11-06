@@ -4,6 +4,9 @@ import * as React from 'react'
 import { ReadonlyURLSearchParams } from 'next/navigation';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
+import { CountryFlag } from '@/components/ui/CountryFlag'
+import { countryName } from '@/lib/location/country'
+
 import styles from './JobsFilters.module.css'
 
 export type JobsFacetItem = { value: string; count: number }
@@ -20,43 +23,13 @@ export type JobsFacets = {
 
 export type LocationPreset = {
   label: string
-  emoji?: string
+  /** ISO code, for the flag. */
+  countryCode?: string
 }
 
 export type RolePreset = {
   label: string
   emoji?: string
-}
-
-const COUNTRY_LABELS: Record<string, string> = {
-  US: 'United States',
-  GB: 'United Kingdom',
-  CA: 'Canada',
-  DE: 'Germany',
-  AU: 'Australia',
-  NL: 'Netherlands',
-  IE: 'Ireland',
-  FR: 'France',
-  ES: 'Spain',
-  SE: 'Sweden',
-  CH: 'Switzerland',
-  DK: 'Denmark',
-  NO: 'Norway',
-  FI: 'Finland',
-  PL: 'Poland',
-  IN: 'India',
-  SG: 'Singapore',
-  JP: 'Japan',
-}
-
-function flagEmojiFromCountryCode(code: string): string {
-  const cc = (code || '').toUpperCase()
-  if (cc.length !== 2) return ''
-  const A = 0x1f1e6
-  const base = 'A'.charCodeAt(0)
-  const first = A + (cc.charCodeAt(0) - base)
-  const second = A + (cc.charCodeAt(1) - base)
-  return String.fromCodePoint(first, second)
 }
 
 function prettySlug(slug: string): string {
@@ -135,7 +108,7 @@ export function JobsFiltersPanel({
     if (!q) return facets.countries
     return facets.countries.filter((c) => {
       const code = c.value.toUpperCase()
-      const label = COUNTRY_LABELS[code] ?? code
+      const label = countryName(code) ?? code
       return `${label} ${code}`.toLowerCase().includes(q)
     })
   }, [facets.countries, locationQuery])
@@ -226,7 +199,7 @@ export function JobsFiltersPanel({
                 <div className={styles.controlRow}>
                   <div className={styles.label}>Country</div>
                   <div className={styles.value}>
-                    {locationPreset.emoji ? `${locationPreset.emoji} ` : ''}
+                    <CountryFlag code={locationPreset.countryCode} className="mr-1.5" />
                     {locationPreset.label}
                   </div>
                 </div>
@@ -245,7 +218,7 @@ export function JobsFiltersPanel({
                   {filteredCountries.map((c) => {
                     const active = selectedCountry.toUpperCase() === c.value.toUpperCase()
                     const code = c.value.toUpperCase()
-                    const label = COUNTRY_LABELS[code] ?? code
+                    const label = countryName(code) ?? code
                     return (
                       <button
                         key={c.value}
@@ -264,7 +237,8 @@ export function JobsFiltersPanel({
                             {active ? <span className={styles.checkMark}>✓</span> : null}
                           </span>
                           <span className={styles.name}>
-                            {flagEmojiFromCountryCode(code)} {label}
+                            <CountryFlag code={code} className="mr-1.5" />
+                            {label}
                           </span>
                         </span>
                         <span className={styles.count}>{c.count.toLocaleString()}</span>
