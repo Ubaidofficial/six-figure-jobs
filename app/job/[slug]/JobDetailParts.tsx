@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import type { SalaryRank } from '@/lib/jobs/salaryRank'
+import { groupDescription, type DescriptionSection } from '@/lib/jobs/descriptionStructure'
 import type { ApplySurface } from '@/lib/analytics/applyClick'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 
@@ -51,6 +52,95 @@ export function JobSection({ title, children }: { title: string; children: React
       <h2 className={styles.sectionTitle}>{title}</h2>
       {children}
     </section>
+  )
+}
+
+/**
+ * The posting's description. When the posting has at least two of Description / Requirements / Benefits worth of text,
+ * it is shown in those three labelled buckets (the layout job seekers know from other boards), the posting's own
+ * headings kept as sub-headings; otherwise as its own sections in order. Either way a jump list leads the way, and
+ * boilerplate (equal opportunity, privacy) is folded into a <details> so it does not sit between the reader and the
+ * apply button. The text itself is already sanitized by the page.
+ */
+export function DescriptionSections({ sections }: { sections: DescriptionSection[] }) {
+  const { groups, folded } = groupDescription(sections)
+  const prose = (html: string) => (
+    <div className={`prose max-w-none ${styles.richText}`} dangerouslySetInnerHTML={{ __html: html }} />
+  )
+  const foldedBlocks = folded.map((s) => (
+    <details key={s.id} id={s.id} className={styles.foldedSection}>
+      <summary>{s.title}</summary>
+      {prose(s.html)}
+    </details>
+  ))
+
+  if (groups.length > 0) {
+    return (
+      <div className="space-y-2">
+        <nav aria-label="In this description" className={styles.jumpNav}>
+          <ul>
+            {groups.map((g) => (
+              <li key={g.id}>
+                <a href={`#${g.id}`}>{g.title}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        {groups.map((g) => (
+          <section key={g.id} id={g.id} aria-labelledby={`${g.id}-title`} className={styles.descSection}>
+            <h3 id={`${g.id}-title`} className={styles.descHeading}>
+              {g.title}
+            </h3>
+            {g.sections.map((s) => (
+              <div key={s.id} id={s.id} className={styles.descSub}>
+                {s.title !== 'Overview' && s.title.toLowerCase() !== g.title.toLowerCase() ? (
+                  <h4 className={styles.descSubheading}>{s.title}</h4>
+                ) : null}
+                {prose(s.html)}
+              </div>
+            ))}
+          </section>
+        ))}
+        {foldedBlocks}
+      </div>
+    )
+  }
+
+  const jumpable = sections.filter((s) => !s.folded)
+  return (
+    <div className="space-y-2">
+      {jumpable.length >= 3 ? (
+        <nav aria-label="In this description" className={styles.jumpNav}>
+          <ul>
+            {jumpable.map((s) => (
+              <li key={s.id}>
+                <a href={`#${s.id}`}>{s.title}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
+      {jumpable.map((s) => (
+        <section key={s.id} id={s.id} aria-labelledby={`${s.id}-title`} className={styles.descSection}>
+          <h3 id={`${s.id}-title`} className={styles.descHeading}>
+            {s.title}
+          </h3>
+          {prose(s.html)}
+        </section>
+      ))}
+      {foldedBlocks}
+    </div>
+  )
+}
+
+/** Apply button after the description: the reader who has just finished it should not have to scroll back up. */
+export function DescriptionApply({ applyHref, companyName, jobId }: { applyHref: string | null; companyName: string; jobId: string }) {
+  if (!applyHref) return null
+  return (
+    <div className={styles.descApply}>
+      <ApplyButton href={applyHref} label="Apply on company site" jobId={jobId} surface="description-end" />
+      <p>Opens {companyName}&rsquo;s own application page in a new tab.</p>
+    </div>
   )
 }
 

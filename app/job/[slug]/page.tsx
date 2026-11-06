@@ -42,12 +42,15 @@ import {
   PayCard,
   BulletList,
   CompanyCard,
+  DescriptionApply,
+  DescriptionSections,
   JobSection,
   MobileApplyBar,
 } from './JobDetailParts'
 import styles from './JobDetail.module.css'
 import { loadPeerSalaries, rankSalary, type SalaryRank } from '@/lib/jobs/salaryRank'
 import { salaryMidpoint } from '@/lib/jobs/salarySnapshot'
+import { structureDescription } from '@/lib/jobs/descriptionStructure'
 
 const SKILL_SLUG_SET = new Set(SKILL_TARGETS.map((s) => s.slug))
 const SKILL_LABEL_MAP = new Map(SKILL_TARGETS.map((s) => [s.slug, s.label]))
@@ -247,6 +250,7 @@ export default async function JobPage({
       : null
 
   const hasDescription = !!safeDescriptionHtml && safeDescriptionHtml.trim().length > 0
+  const descriptionSections = safeDescriptionHtml ? structureDescription(safeDescriptionHtml).sections : []
 
   const jsonLd = buildJobJsonLd(typedJob)
   const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
@@ -384,9 +388,8 @@ export default async function JobPage({
     () => null,
   )
 
+  // Type and level are already chips in the hero, so the sidebar does not repeat them.
   const jobFacts = [
-    { label: 'Type', value: employmentType },
-    { label: 'Level', value: seniority },
     { label: 'Team size', value: teamSize },
     {
       label: 'Updated',
@@ -543,6 +546,8 @@ export default async function JobPage({
                 <p className="text-sm text-muted-foreground">
                   This description is too large to display safely. Use Apply to read the full posting on the company site.
                 </p>
+              ) : descriptionSections.length > 0 ? (
+                <DescriptionSections sections={descriptionSections} />
               ) : (
                 <div
                   className={`prose max-w-none ${styles.richText}`}
@@ -551,6 +556,8 @@ export default async function JobPage({
               )}
             </JobSection>
           ) : null}
+
+          {hasDescription ? <DescriptionApply applyHref={applyHref} companyName={companyName} jobId={typedJob.id} /> : null}
         </article>
 
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">

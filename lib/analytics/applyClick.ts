@@ -4,7 +4,7 @@
 // stored. The server only holds a hash of IP+user agent in memory for a few minutes, to ignore repeat clicks.
 // Do Not Track and Global Privacy Control are honoured by the browser component (nothing is sent).
 
-export const APPLY_SURFACES = ['apply-card', 'mobile-bar', 'hero'] as const
+export const APPLY_SURFACES = ['apply-card', 'mobile-bar', 'hero', 'description-end'] as const
 export type ApplySurface = (typeof APPLY_SURFACES)[number]
 export const APPLY_DEVICES = ['mobile', 'desktop'] as const
 export type ApplyDevice = (typeof APPLY_DEVICES)[number]
