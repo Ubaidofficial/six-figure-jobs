@@ -251,7 +251,7 @@ export default async function SalaryIndexPage() {
             <Link
               key={c.code}
               href={`/salary/software-engineer/${c.code}`}
-              className="rounded-full border border-border bg-card px-3 py-1.5 text-foreground hover:border-foreground/40"
+              className="max-md:inline-flex max-md:min-h-11 max-md:items-center rounded-full border border-border bg-card px-3 py-1.5 text-foreground hover:border-foreground/40"
             >
               {c.label} – Software Engineer
             </Link>
@@ -266,25 +266,25 @@ export default async function SalaryIndexPage() {
         <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Link
             href="/jobs/100k-plus"
-            className="rounded-xl border border-border bg-card px-3 py-2 text-foreground hover:border-foreground/40"
+            className="max-md:flex max-md:min-h-11 max-md:items-center rounded-xl border border-border bg-card px-3 py-2 text-foreground hover:border-foreground/40"
           >
             $100k+ jobs
           </Link>
           <Link
             href="/jobs/200k-plus"
-            className="rounded-xl border border-border bg-card px-3 py-2 text-foreground hover:border-foreground/40"
+            className="max-md:flex max-md:min-h-11 max-md:items-center rounded-xl border border-border bg-card px-3 py-2 text-foreground hover:border-foreground/40"
           >
             $200k+ jobs
           </Link>
           <Link
             href="/jobs/300k-plus"
-            className="rounded-xl border border-border bg-card px-3 py-2 text-foreground hover:border-foreground/40"
+            className="max-md:flex max-md:min-h-11 max-md:items-center rounded-xl border border-border bg-card px-3 py-2 text-foreground hover:border-foreground/40"
           >
             $300k+ jobs
           </Link>
           <Link
             href="/jobs/400k-plus"
-            className="rounded-xl border border-border bg-card px-3 py-2 text-foreground hover:border-foreground/40"
+            className="max-md:flex max-md:min-h-11 max-md:items-center rounded-xl border border-border bg-card px-3 py-2 text-foreground hover:border-foreground/40"
           >
             $400k+ jobs
           </Link>

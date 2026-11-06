@@ -54,6 +54,14 @@
   flex: none;
 }
 
+@media (max-width: 1023px) {
+  /* Title first at full width, Filters/Sort underneath: beside the title they squeezed it to ~110px on phones. */
+  .headerTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -237,6 +245,14 @@
   color: var(--color-text-2);
 }
 
+
+/* Touch targets: 44px tall chips and Previous/Next on phones; desktop sizes stay as they are. */
+@media (max-width: 768px) {
+  .chip,
+  .pageLink {
+    min-height: 44px;
+  }
+}
 
 @media (max-width: 640px) {
   .header {

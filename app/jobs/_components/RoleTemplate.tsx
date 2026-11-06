@@ -21,7 +21,7 @@ import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
 import { buildListingTitle, buildRoleDescription } from '@/lib/seo/metaText'
-import { CITY_TARGET_SLUG_SET } from '@/lib/seo/pseoTargets'
+import { CITY_TARGET_SLUG_SET, SKILL_TARGETS, skillStoredTokens } from '@/lib/seo/pseoTargets'
 import { SEARCH_ROLE_OPTIONS } from '@/lib/roles/searchRoles'
 import { CANONICAL_ROLE_SET } from '@/lib/roles/canonicalSlugs'
 import { formatRelativeTime } from '@/lib/utils/time'
@@ -64,30 +64,6 @@ function buildPageHref(basePath: string, sp: SearchParams, page: number): string
     else if (v != null) params.set(k, v)
   }
   if (page > 1) params.set('page', String(page))
-  const qs = params.toString()
-  return qs ? `${basePath}?${qs}` : basePath
-}
-
-function buildToggleMultiHref(basePath: string, sp: SearchParams, key: string, value: string): string {
-  const params = new URLSearchParams()
-  for (const [k, v] of Object.entries(sp)) {
-    if (k === 'page') continue
-    if (Array.isArray(v)) v.forEach((val) => val != null && params.append(k, val))
-    else if (v != null) params.set(k, v)
-  }
-
-  const existing = params
-    .getAll(key)
-    .flatMap((v) => v.split(','))
-    .map((v) => v.trim())
-    .filter(Boolean)
-  const set = new Set(existing)
-  if (set.has(value)) set.delete(value)
-  else set.add(value)
-
-  params.delete(key)
-  for (const v of Array.from(set)) params.append(key, v)
-  params.delete('page')
   const qs = params.toString()
   return qs ? `${basePath}?${qs}` : basePath
 }
@@ -481,15 +457,6 @@ export async function RoleTemplate({
   const emoji = roleOpt?.emoji ?? '💼'
 
   const basePath = `/jobs/${roleSlug}`
-  const selectedSeniority = new Set(seniority)
-  const seniorityChips = [
-    { value: 'mid', label: 'Mid' },
-    { value: 'senior', label: 'Senior' },
-    { value: 'staff', label: 'Staff' },
-    { value: 'principal', label: 'Principal' },
-    { value: 'lead', label: 'Lead' },
-  ] as const
-
   const itemListJsonLd = buildItemListJsonLd({
     name: `${roleTitle} jobs on ${SITE_NAME}`,
     jobs: jobs.map((j) => ({ id: j.id, title: j.title })),
@@ -498,6 +465,19 @@ export async function RoleTemplate({
   })
 
   const career = roleCareerPath(roleSlug)
+  // Seniority chips link to the real per-level role pages (/jobs/senior-<role>), never to `?seniority=`, which
+  // proxy.ts and the role page 308 back to the unfiltered hub. Only levels that exist as canonical roles get a chip.
+  const seniorityChips = career
+    .filter((step) => step.slug && ['senior', 'staff', 'principal'].includes(step.seniority ?? ''))
+    .map((step) => ({ label: step.stage, href: `/jobs/${step.slug}`, active: step.slug === roleSlug }))
+
+  // Skill chips link to the indexable /jobs/<role>/skills/<skill> landing pages. Only skills with a landing page
+  // (SKILL_TARGETS, incl. stored spellings such as `nodejs`) get a chip; `?skill=` is stripped by proxy.ts.
+  const skillChips = skills.flatMap((sk) => {
+    const name = sk.name.toLowerCase()
+    const target = SKILL_TARGETS.find((t) => t.slug === name || skillStoredTokens(t.slug).includes(name))
+    return target ? [{ label: sk.name, href: `${basePath}/skills/${target.slug}`, count: sk.count }] : []
+  })
 
   const avgUsdLabel = avgUsd ? `~$${Math.round(avgUsd / 1000)}k USD` : 'competitive salaries'
   const faqJsonLd = {
@@ -569,12 +549,7 @@ export async function RoleTemplate({
             {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
           </>
         }
-        chips={seniorityChips.map((chip) => ({
-          label: chip.label,
-          href: buildToggleMultiHref(basePath, sp, 'seniority', chip.value),
-          active: selectedSeniority.has(chip.value),
-          nofollow: true,
-        }))}
+        chips={seniorityChips}
         toolbar={<JobsToolbar facets={facets} rolePreset={{ label: roleTitle, emoji }} />}
       />
 
@@ -619,18 +594,9 @@ export async function RoleTemplate({
         </ListingSection>
       ) : null}
 
-      {skills.length > 0 ? (
+      {skillChips.length > 0 ? (
         <ListingSection title={`In-demand skills for ${roleTitle}`}>
-          <LinkChips
-            label="Skills"
-            items={skills.slice(0, 16).map((sk) => ({
-              label: sk.name,
-              href: buildToggleMultiHref(basePath, sp, 'skill', sk.name),
-              active: selectedSkills.includes(sk.name),
-              count: sk.count,
-              nofollow: true,
-            }))}
-          />
+          <LinkChips label="Skills" items={skillChips.slice(0, 16)} />
         </ListingSection>
       ) : null}
 
