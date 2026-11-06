@@ -9,7 +9,7 @@ import { prisma } from '../prisma'
 import { memoAsync } from '../cache/memo'
 import { formatCurrencyShort } from '../seo/salaryLabels'
 
-export type SalaryBand = { label: string; count: number }
+export type SalaryBand = { label: string; count: number; /** Lower edge of the band, in the snapshot's currency. */ min: number }
 
 export type SalarySnapshot = {
   count: number
@@ -56,7 +56,7 @@ export function summarizeSalaries(
     median: percentile(clean, 0.5),
     p25: percentile(clean, 0.25),
     p75: percentile(clean, 0.75),
-    bands: bands.map((b) => ({ label: b.label, count: clean.filter((v) => v >= b.min && v < b.max).length })),
+    bands: bands.map((b) => ({ label: b.label, min: b.min, count: clean.filter((v) => v >= b.min && v < b.max).length })),
   }
 }
 

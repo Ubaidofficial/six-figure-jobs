@@ -27,13 +27,19 @@ type HeroProps = {
 }
 
 // Pay floors shown in the panel come from the same table the site filters with, so they cannot drift.
+// `href` is where each market's row goes. There is no page for all Europe jobs yet, so Europe opens its remote jobs.
 const FLOORS = [
-  { market: 'United States', currency: 'USD' },
-  { market: 'United Kingdom', currency: 'GBP' },
-  { market: 'Europe', currency: 'EUR' },
-  { market: 'Canada', currency: 'CAD' },
-  { market: 'Australia', currency: 'AUD' },
+  { market: 'United States', currency: 'USD', href: '/jobs/location/united-states' },
+  { market: 'United Kingdom', currency: 'GBP', href: '/jobs/location/united-kingdom' },
+  { market: 'Europe', currency: 'EUR', href: '/remote?region=europe', title: 'Remote jobs in Europe' },
+  { market: 'Canada', currency: 'CAD', href: '/jobs/location/canada' },
+  { market: 'Australia', currency: 'AUD', href: '/jobs/location/australia' },
 ] as const
+
+/** A salary band opens the jobs paying at least its lower edge: the clean $100k+/$200k+/$300k+ pages where one exists. */
+function bandHref(min: number): string {
+  return [100_000, 200_000, 300_000, 400_000].includes(min) ? `/jobs/${min / 1000}k-plus` : `/jobs?minSalary=${min}`
+}
 
 function formatNewest(iso: string | null | undefined): string | null {
   if (!iso) return null
@@ -56,7 +62,11 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
   return (
     <section className={styles.hero}>
       <div className={styles.main}>
-      <p className={styles.eyebrow}>US · UK · EU · Canada · Australia</p>
+      <p className={styles.eyebrow}>
+        <Link href="/jobs/location/united-states">US</Link> · <Link href="/jobs/location/united-kingdom">UK</Link> ·{' '}
+        <Link href="/remote?region=europe" title="Remote jobs in Europe">EU</Link> · <Link href="/jobs/location/canada">Canada</Link> ·{' '}
+        <Link href="/jobs/location/australia">Australia</Link>
+      </p>
 
       <h1 className={styles.headline}>
         Six-figure jobs.
@@ -127,12 +137,14 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
               {salarySnapshot.bands.map((band) => {
                 const max = Math.max(...salarySnapshot.bands.map((x) => x.count), 1)
                 return (
-                  <li key={band.label} className={styles.barRow}>
-                    <span className={styles.barLabel}>{band.label}</span>
-                    <span className={styles.barTrack} aria-hidden="true">
-                      <span className={styles.barFill} style={{ width: `${Math.max(4, (band.count / max) * 100)}%` }} />
-                    </span>
-                    <span className={styles.barCount}>{band.count.toLocaleString()}</span>
+                  <li key={band.label}>
+                    <Link href={bandHref(band.min)} className={styles.barRow}>
+                      <span className={styles.barLabel}>{band.label}</span>
+                      <span className={styles.barTrack} aria-hidden="true">
+                        <span className={styles.barFill} style={{ width: `${Math.max(4, (band.count / max) * 100)}%` }} />
+                      </span>
+                      <span className={styles.barCount}>{band.count.toLocaleString()}</span>
+                    </Link>
                   </li>
                 )
               })}
@@ -159,22 +171,25 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
 
         <h2 className={`${styles.panelTitle} ${styles.panelTitleSpaced}`}>Pay floor by market</h2>
         <ul className={styles.floors}>
-          {FLOORS.map(({ market, currency }) => {
+          {FLOORS.map((floor) => {
+            const { market, currency, href } = floor
             const jobs = siteCounts ? countInCountries(siteCounts.byCountry, FLOOR_MARKET_COUNTRIES[currency] ?? []) : null
             return (
-              <li key={currency} className={styles.floor}>
-                <span>
-                  {market}
-                  {jobs !== null ? (
-                    <span className={styles.floorJobs}>
-                      {' '}
-                      {jobs.toLocaleString()} {jobs === 1 ? 'job' : 'jobs'}
-                    </span>
-                  ) : null}
-                </span>
-                <span className={styles.floorValue}>
-                  {formatCurrencyShort(Number(HIGH_SALARY_THRESHOLDS[currency]), currency)}+
-                </span>
+              <li key={currency}>
+                <Link href={href} className={styles.floor} title={'title' in floor ? floor.title : undefined}>
+                  <span>
+                    {market}
+                    {jobs !== null ? (
+                      <span className={styles.floorJobs}>
+                        {' '}
+                        {jobs.toLocaleString()} {jobs === 1 ? 'job' : 'jobs'}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className={styles.floorValue}>
+                    {formatCurrencyShort(Number(HIGH_SALARY_THRESHOLDS[currency]), currency)}+
+                  </span>
+                </Link>
               </li>
             )
           })}
@@ -183,17 +198,19 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
         {siteCounts ? (
           <>
             <h2 className={`${styles.panelTitle} ${styles.panelTitleSpaced}`}>Jobs by type</h2>
-            <ul className={styles.floors}>
+            <ul className={styles.types}>
               {(
                 [
-                  ['Remote', siteCounts.byWorkType.remote],
-                  ['Hybrid', siteCounts.byWorkType.hybrid],
-                  ['On-site', siteCounts.byWorkType.onsite],
+                  ['Remote', siteCounts.byWorkType.remote, '/remote'],
+                  ['Hybrid', siteCounts.byWorkType.hybrid, '/jobs?remoteMode=hybrid'],
+                  ['On-site', siteCounts.byWorkType.onsite, '/jobs?remoteMode=onsite'],
                 ] as const
-              ).map(([label, count]) => (
-                <li key={label} className={styles.floor}>
-                  <span>{label}</span>
-                  <span className={styles.floorValue}>{count.toLocaleString()}</span>
+              ).map(([label, count, href]) => (
+                <li key={label}>
+                  <Link href={href} className={styles.type}>
+                    <span className={styles.typeLabel}>{label}</span>
+                    <span className={styles.typeCount}>{count.toLocaleString()}</span>
+                  </Link>
                 </li>
               ))}
             </ul>

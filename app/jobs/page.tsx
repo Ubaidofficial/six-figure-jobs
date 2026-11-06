@@ -16,6 +16,7 @@ import { resolveSliceCanonicalPath } from '../../lib/seo/canonical'
 import { buildCleanJobsCanonicalPath, shouldNoindexListingPage, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
 import { parseSliceFilters } from '../../lib/slices/types'
+import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { getSearchVocabulary } from '@/lib/search/vocabulary'
@@ -463,7 +464,7 @@ export default async function JobsIndexPage({
         })
       )
     )
-  const bandCanonicalLinks = bandSlices.map((slices) => {
+  const bandCanonicalLinksAll = bandSlices.map((slices) => {
     const seen = new Set<string>()
     const normalized: Array<{
       slug: string
@@ -495,6 +496,8 @@ export default async function JobsIndexPage({
 
     return normalized.slice(0, 12)
   })
+  // A chip must open a page that shows jobs: the role x band page redirects to the role page when it has none.
+  const bandCanonicalLinks = await Promise.all(bandCanonicalLinksAll.map((links) => dropEmptyRoleBandLinks(links)))
 
   const basePath = '/jobs'
   const totalPages = data.totalPages
