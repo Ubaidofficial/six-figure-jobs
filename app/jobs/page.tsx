@@ -519,15 +519,36 @@ export default async function JobsIndexPage({
           aside={<ListingSalaryAside input={queryInput} />}
           breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs' }]}
           title={
-            <>
-              All <Accent>$100k+</Accent> Jobs
-            </>
+            keyword ? (
+              <>
+                Results for{' '}
+                {/* On phones the sort control sits beside the heading, so the query is set smaller and may break inside a
+                    very long word; otherwise the heading would push the control off the screen. */}
+                <Accent>
+                  <span className="max-sm:text-[0.7em] [overflow-wrap:anywhere]">
+                    &ldquo;{keyword.length > 80 ? `${keyword.slice(0, 80)}…` : keyword}&rdquo;
+                  </span>
+                </Accent>
+              </>
+            ) : (
+              <>
+                All <Accent>$100k+</Accent> Jobs
+              </>
+            )
           }
           summary={
             <>
               <strong>{data.total.toLocaleString()}</strong> {data.total === 1 ? 'job' : 'jobs'} with a published
               salary
               {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
+              {keyword ? (
+                <>
+                  {' · '}
+                  <Link href="/jobs" className="text-primary underline underline-offset-4">
+                    Clear search
+                  </Link>
+                </>
+              ) : null}
             </>
           }
           toolbar={<JobsToolbar facets={facets} />}

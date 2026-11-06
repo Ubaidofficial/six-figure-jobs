@@ -483,7 +483,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             {(q || role || location || minSalaryRaw > 100000) && (
               <Link
                 href="/search"
-                className="focus-ring rounded-md text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                className="focus-ring inline-flex items-center max-md:min-h-11 rounded-md text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
                 Clear filters
               </Link>

@@ -339,7 +339,7 @@ export default async function SalaryRolePage(props: PageProps) {
                   <Link
                     key={band}
                     href={href}
-                    className={`rounded-full border px-3 py-1.5 text-xs ${
+                    className={`max-md:inline-flex max-md:min-h-11 max-md:items-center rounded-full border px-3 py-1.5 text-xs ${
                       minAnnual === band
                         ? 'border-primary/50 bg-primary/10 text-foreground'
                         : 'border-border bg-card text-foreground hover:border-foreground/40'
@@ -351,7 +351,7 @@ export default async function SalaryRolePage(props: PageProps) {
               })}
               <Link
                 href={`/jobs/${roleSlug}`}
-                className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:border-foreground/40"
+                className="max-md:inline-flex max-md:min-h-11 max-md:items-center rounded-full border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:border-foreground/40"
               >
                 Browse live {roleName} jobs
               </Link>
@@ -483,7 +483,7 @@ export default async function SalaryRolePage(props: PageProps) {
                         sp,
                         page - 1,
                       )}
-                      className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
+                      className="max-md:inline-flex max-md:min-h-11 max-md:items-center rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
                     >
                       Previous
                     </Link>
@@ -496,7 +496,7 @@ export default async function SalaryRolePage(props: PageProps) {
                         sp,
                         page + 1,
                       )}
-                      className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
+                      className="max-md:inline-flex max-md:min-h-11 max-md:items-center rounded-lg border border-border bg-card px-3 py-1.5 text-foreground hover:border-border hover:bg-card"
                     >
                       Next
                     </Link>

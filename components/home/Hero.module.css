@@ -217,6 +217,15 @@
   text-decoration-color: var(--color-primary-text);
 }
 
+@media (max-width: 768px) {
+  /* 44px tap target for the inline "Popular" links on phones. */
+  .quickLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
 .freshness {
   margin: 14px 0 0;
   font-size: 0.8125rem;

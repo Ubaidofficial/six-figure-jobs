@@ -15,6 +15,7 @@ import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site
 import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
+import { newThisWeekClause } from '../../../../lib/jobs/postedRecently'
 import { countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { resolveJobCategory } from '../../../../lib/seo/jobCategories'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
@@ -294,20 +295,10 @@ async function getCategoryInsights(
   pageJobs: JobWithCompany[],
 ): Promise<CategoryInsights> {
   const baseWhere = buildWhere(filters)
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 7)
 
   const [remoteCount, newThisWeek, atsSalaryCount, salaryAgg, companyRows] = await Promise.all([
     prisma.job.count({ where: buildWhere({ ...filters, remoteOnly: true }) }),
-    prisma.job.count({
-      where: addAndClause(baseWhere, {
-        OR: [
-          { lastSeenAt: { gte: weekAgo } },
-          { postedAt: { gte: weekAgo } },
-          { createdAt: { gte: weekAgo } },
-        ],
-      }),
-    }),
+    prisma.job.count({ where: addAndClause(baseWhere, newThisWeekClause()) }),
     prisma.job.count({ where: { ...baseWhere, salarySource: 'ats' } }),
     prisma.job.aggregate({
       where: baseWhere,

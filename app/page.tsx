@@ -46,10 +46,10 @@ export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dy
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const stats = await loadPublicSiteStats()
-    const description = buildHomeDescription(stats.totalJobs, stats.totalCompanies)
+    const description = buildHomeDescription(stats.totalJobs, stats.totalCompaniesHiring)
     const ogDescription =
       `${stats.totalJobs.toLocaleString()}+ six-figure jobs with salary shown upfront. ` +
-      `Apply on the employer’s own page. $100k+ remote & on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
+      `Apply on the employer’s own page. $100k+ remote & on-site roles from ${stats.totalCompaniesHiring.toLocaleString()}+ companies.`
 
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
@@ -580,11 +580,11 @@ export default async function HomePage() {
       <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
         <HomepageSchemas
           jobCount={stats.totalJobs}
-          companyCount={stats.totalCompanies}
+          companyCount={stats.totalCompaniesHiring}
         />
       <Hero
         jobCount={stats.totalJobs}
-        companyCount={stats.totalCompanies}
+        companyCount={stats.totalCompaniesHiring}
         newThisWeek={stats.newThisWeek}
         newestPostedAtISO={newestPostedAt ? newestPostedAt.toISOString() : null}
         salarySnapshot={salarySnapshot}
@@ -632,7 +632,7 @@ export default async function HomePage() {
               <Link
                 key={role.href}
                 href={role.href}
-                className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm transition-colors hover:border-primary hover:bg-card"
+                className="group inline-flex items-center gap-1.5 max-md:min-h-11 rounded-full border border-border bg-card px-4 py-2 text-sm transition-colors hover:border-primary hover:bg-card"
               >
                 <span className="text-foreground group-hover:text-foreground">
                   {role.name}
@@ -641,13 +641,13 @@ export default async function HomePage() {
             ))}
           <Link
             href="/companies"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/40"
+            className="inline-flex items-center gap-2 max-md:min-h-11 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/40"
           >
             Explore companies →
           </Link>
           <Link
             href="/remote"
-            className="inline-flex items-center gap-2 rounded-full border border-primary bg-primary/10 px-4 py-2 text-sm text-foreground transition-colors hover:border-primary"
+            className="inline-flex items-center gap-2 max-md:min-h-11 rounded-full border border-primary bg-primary/10 px-4 py-2 text-sm text-foreground transition-colors hover:border-primary"
           >
             Remote $100k+ roles
           </Link>
