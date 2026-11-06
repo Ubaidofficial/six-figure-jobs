@@ -69,6 +69,7 @@ Set them for the service so they are present at **build time and run time** (Rai
 | `STRIPE_PRICE_PACK_SMALL`, `STRIPE_PRICE_PACK_LARGE` | for packs | One-time price ids. A product with no price id is not offered. |
 | `BILLING_MONTHLY_CREDITS` | **set it** | Credits granted when a subscription invoice is paid (first payment and each renewal). |
 | `BILLING_PACK_SMALL_CREDITS`, `BILLING_PACK_LARGE_CREDITS` | **set them** | Credits per pack purchase. |
+| `APPLICATION_KIT_CREDITS` | **set it** | Credits one application kit costs (placeholder 1). Also needs an AI key (`DEEPSEEK_API_KEY` or `OPENAI_API_KEY`) and the `20261106180000_add_application_kit` migration. |
 
 **The three credit amounts have placeholder defaults (100, 50, 250) so development runs. They are not product decisions. Set all three explicitly.** The number a customer is promised at checkout is written into the Checkout Session when it is created, so changing a variable later does not change purchases already in progress.
 

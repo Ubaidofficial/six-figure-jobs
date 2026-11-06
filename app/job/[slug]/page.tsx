@@ -8,6 +8,7 @@ import { cache, type ReactNode } from 'react'
 import { JobUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '../../../lib/prisma'
 import { parseJobSlugParam, buildJobSlug } from '../../../lib/jobs/jobSlug'
+import { ApplicationKitLink } from '@/components/applykit/ApplicationKitLink'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
 import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
 import { buildJobBreadcrumbJsonLd } from '../../../lib/seo/jobBreadcrumbJsonLd'
@@ -609,6 +610,7 @@ export default async function JobPage({
             jobId={typedJob.id}
             shareUrl={`${SITE_URL}/job/${canonicalSlug}`}
           />
+          <ApplicationKitLink slug={canonicalSlug} />
           <CompanyCard
             name={companyName}
             slug={company?.slug ?? null}
