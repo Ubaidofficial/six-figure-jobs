@@ -9,6 +9,7 @@ import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../l
 import { collectRemoteRoleRows } from '../../lib/seo/remoteSitemap'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
+import { newThisWeekClause } from '../../lib/jobs/postedRecently'
 import { buildSalaryText } from '../../lib/jobs/salary'
 import { countryCodeToName, countryCodeToSlug } from '../../lib/seo/countrySlug'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
@@ -285,15 +286,7 @@ const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null): Pr
     remoteRegion: activeRemoteRegion || undefined,
     excludeInternships: true,
   })
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 7)
-  const freshWhere = addAndClause(where, {
-    OR: [
-      { updatedAt: { gte: weekAgo } },
-      { postedAt: { gte: weekAgo } },
-      { createdAt: { gte: weekAgo } },
-    ],
-  })
+  const freshWhere = addAndClause(where, newThisWeekClause())
 
   const [remoteJobCount, companyGroups, countryGroups, avg, roleRows, newThisWeek, recentData] =
     await memoAsync(stableKey('remote-snapshot', activeRemoteRegion), DEFAULT_TTL_MS, () => Promise.all([

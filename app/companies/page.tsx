@@ -11,6 +11,7 @@ import {
 import { CompanySearch } from '@/components/companies/CompanySearch'
 import { getCompanyPublishingManifest } from '@/lib/seo/companyPublishing'
 import { getPriorityCompanyRank } from '@/lib/seo/priorityCompanies'
+import { MIN_COMPANY_INDEXABLE_JOBS } from '@/lib/seo/indexabilityGates'
 import { JobRows, ListingHeader, ListingPage, Pagination } from '@/components/listing/ListingParts'
 
 export const revalidate = 600 // 10m ISR
@@ -35,7 +36,7 @@ function buildCompaniesPageHref(page: number): string {
 
 function buildCompaniesDescription(totalCompanies: number, totalEligibleJobs: number) {
   if (totalCompanies > 0) {
-    return `Browse ${totalCompanies.toLocaleString()} companies actively hiring for ${totalEligibleJobs.toLocaleString()} $100k+ tech jobs. Find six-figure roles at top startups and high-growth companies, with links to apply.`
+    return `Browse ${totalCompanies.toLocaleString()} companies with ${MIN_COMPANY_INDEXABLE_JOBS}+ open $100k+ tech jobs (${totalEligibleJobs.toLocaleString()} jobs between them). Find six-figure roles at top startups and high-growth companies, with links to apply.`
   }
 
   return 'Browse companies actively hiring for $100k+ tech jobs. Find six-figure roles at top startups and high-growth companies, with links to apply.'
@@ -139,7 +140,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
   try {
     const sp = (await searchParams) || {}
     const requestedPage = parsePageParam(sp.page)
-    const [{ companies, totalCompanies, totalEligibleJobs }, manifest] = await Promise.all([
+    const [{ companies, totalCompanies, totalEligibleJobs, totalCompaniesHiring, totalJobs }, manifest] = await Promise.all([
       loadEligibleCompaniesDirectory(),
       getCompanyPublishingManifest(),
     ])
@@ -194,8 +195,10 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
           summary={
             companies.length > 0 ? (
               <>
-                <strong>{totalCompanies.toLocaleString()}</strong> companies with{' '}
-                <strong>{totalEligibleJobs.toLocaleString()}</strong> open $100k+ jobs
+                <strong>{totalCompanies.toLocaleString()}</strong> companies with {MIN_COMPANY_INDEXABLE_JOBS}+ open
+                $100k+ jobs, <strong>{totalEligibleJobs.toLocaleString()}</strong> jobs between them. Across the
+                whole site: <strong>{totalJobs.toLocaleString()}</strong> open jobs at{' '}
+                <strong>{totalCompaniesHiring.toLocaleString()}</strong> companies.
               </>
             ) : (
               'Companies with open $100k+ jobs will appear here.'

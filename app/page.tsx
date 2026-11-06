@@ -46,10 +46,10 @@ export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dy
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const stats = await loadPublicSiteStats()
-    const description = buildHomeDescription(stats.totalJobs, stats.totalCompanies)
+    const description = buildHomeDescription(stats.totalJobs, stats.totalCompaniesHiring)
     const ogDescription =
       `${stats.totalJobs.toLocaleString()}+ six-figure jobs with salary shown upfront. ` +
-      `Apply on the employer’s own page. $100k+ remote & on-site roles from ${stats.totalCompanies.toLocaleString()}+ companies.`
+      `Apply on the employer’s own page. $100k+ remote & on-site roles from ${stats.totalCompaniesHiring.toLocaleString()}+ companies.`
 
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
@@ -580,11 +580,11 @@ export default async function HomePage() {
       <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
         <HomepageSchemas
           jobCount={stats.totalJobs}
-          companyCount={stats.totalCompanies}
+          companyCount={stats.totalCompaniesHiring}
         />
       <Hero
         jobCount={stats.totalJobs}
-        companyCount={stats.totalCompanies}
+        companyCount={stats.totalCompaniesHiring}
         newThisWeek={stats.newThisWeek}
         newestPostedAtISO={newestPostedAt ? newestPostedAt.toISOString() : null}
         salarySnapshot={salarySnapshot}

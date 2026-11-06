@@ -3,6 +3,7 @@ import { cache } from 'react'
 import { prisma } from '../prisma'
 import { buildWhere } from './queryJobs'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '../seo/indexabilityGates'
+import { newThisWeekClause } from './postedRecently'
 
 export type PublicCompanyDirectoryEntry = {
   id: string
@@ -24,8 +25,6 @@ export const getPublicJobWhere = cache(() => buildWhere({}))
 
 export const loadPublicSiteStats = cache(async () => {
   const publicJobWhere = getPublicJobWhere()
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 7)
 
   const [totalJobs, companyRows, newThisWeek] = await Promise.all([
     prisma.job.count({ where: publicJobWhere }),
@@ -37,15 +36,7 @@ export const loadPublicSiteStats = cache(async () => {
       },
       _count: { _all: true },
     }),
-    prisma.job.count({
-      where: addAndClause(publicJobWhere, {
-        OR: [
-          { lastSeenAt: { gte: weekAgo } },
-          { postedAt: { gte: weekAgo } },
-          { createdAt: { gte: weekAgo } },
-        ],
-      }),
-    }),
+    prisma.job.count({ where: addAndClause(publicJobWhere, newThisWeekClause()) }),
   ])
 
   const eligibleCompanyRows = companyRows.filter(
@@ -55,6 +46,9 @@ export const loadPublicSiteStats = cache(async () => {
   return {
     totalJobs,
     newThisWeek,
+    /** Every company with at least one public job: the number to quote next to the total job count. */
+    totalCompaniesHiring: companyRows.length,
+    /** Only companies with MIN_COMPANY_INDEXABLE_JOBS or more jobs: the /companies directory. */
     totalCompanies: eligibleCompanyRows.length,
     totalCompanyDirectoryJobs: eligibleCompanyRows.reduce(
       (sum, row) => sum + Number(row._count?._all ?? 0),
@@ -66,8 +60,14 @@ export const loadPublicSiteStats = cache(async () => {
 })
 
 export const loadEligibleCompaniesDirectory = cache(async () => {
-  const { eligibleCompanyIds, totalCompanies, totalCompanyDirectoryJobs, publicJobWhere } =
-    await loadPublicSiteStats()
+  const {
+    eligibleCompanyIds,
+    totalCompanies,
+    totalCompanyDirectoryJobs,
+    totalCompaniesHiring,
+    totalJobs,
+    publicJobWhere,
+  } = await loadPublicSiteStats()
 
   const companies: PublicCompanyDirectoryEntry[] =
     eligibleCompanyIds.length === 0
@@ -98,5 +98,7 @@ export const loadEligibleCompaniesDirectory = cache(async () => {
     companies,
     totalCompanies,
     totalEligibleJobs: totalCompanyDirectoryJobs,
+    totalCompaniesHiring,
+    totalJobs,
   }
 })
