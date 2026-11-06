@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import type { SalarySnapshot } from '@/lib/jobs/salarySnapshot'
+import { FLOOR_MARKET_COUNTRIES } from '@/lib/jobs/remoteRegions'
+import { countInCountries, type SiteCounts } from '@/lib/jobs/siteCounts'
 
 import { HeroSearchInput } from './HeroSearchInput'
 import styles from './Hero.module.css'
@@ -18,6 +20,8 @@ type HeroProps = {
   newestPostedAtISO?: string | null
   /** Median and spread of USD listings; when missing the panel shows plain counts instead. */
   salarySnapshot?: SalarySnapshot | null
+  /** Jobs per country and per job type, counted from the database (refreshed about every 6 hours). */
+  siteCounts?: SiteCounts | null
   /** The role / location / work-mode / salary filters, rendered inside the search form. */
   children?: ReactNode
 }
@@ -38,7 +42,15 @@ function formatNewest(iso: string | null | undefined): string | null {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
-export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPostedAtISO, salarySnapshot, children }: HeroProps) {
+function formatCounted(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return 'recently'
+  const day = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })
+  return `${day}, ${time} UTC`
+}
+
+export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPostedAtISO, salarySnapshot, siteCounts, children }: HeroProps) {
   const newest = formatNewest(newestPostedAtISO)
 
   return (
@@ -147,15 +159,49 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
 
         <h2 className={`${styles.panelTitle} ${styles.panelTitleSpaced}`}>Pay floor by market</h2>
         <ul className={styles.floors}>
-          {FLOORS.map(({ market, currency }) => (
-            <li key={currency} className={styles.floor}>
-              <span>{market}</span>
-              <span className={styles.floorValue}>
-                {formatCurrencyShort(Number(HIGH_SALARY_THRESHOLDS[currency]), currency)}+
-              </span>
-            </li>
-          ))}
+          {FLOORS.map(({ market, currency }) => {
+            const jobs = siteCounts ? countInCountries(siteCounts.byCountry, FLOOR_MARKET_COUNTRIES[currency] ?? []) : null
+            return (
+              <li key={currency} className={styles.floor}>
+                <span>
+                  {market}
+                  {jobs !== null ? (
+                    <span className={styles.floorJobs}>
+                      {' '}
+                      {jobs.toLocaleString()} {jobs === 1 ? 'job' : 'jobs'}
+                    </span>
+                  ) : null}
+                </span>
+                <span className={styles.floorValue}>
+                  {formatCurrencyShort(Number(HIGH_SALARY_THRESHOLDS[currency]), currency)}+
+                </span>
+              </li>
+            )
+          })}
         </ul>
+
+        {siteCounts ? (
+          <>
+            <h2 className={`${styles.panelTitle} ${styles.panelTitleSpaced}`}>Jobs by type</h2>
+            <ul className={styles.floors}>
+              {(
+                [
+                  ['Remote', siteCounts.byWorkType.remote],
+                  ['Hybrid', siteCounts.byWorkType.hybrid],
+                  ['On-site', siteCounts.byWorkType.onsite],
+                ] as const
+              ).map(([label, count]) => (
+                <li key={label} className={styles.floor}>
+                  <span>{label}</span>
+                  <span className={styles.floorValue}>{count.toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
+            <p className={styles.panelNote}>
+              Counted {formatCounted(siteCounts.computedAt)}; recounted about every 6 hours.
+            </p>
+          </>
+        ) : null}
         <Link href="/salary" className={styles.panelLink}>
           Salary guides by role <span aria-hidden="true">→</span>
         </Link>

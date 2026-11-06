@@ -27,15 +27,38 @@ import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fa
 import { formatRelativeTime } from '@/lib/utils/time'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import {
+  REMOTE_HUB_CHIP_SLUGS,
+  countRemoteByRegion,
+  normalizeRemoteRegionSlug,
+  remoteRegionDef,
+} from '../../lib/jobs/remoteRegions'
+import { loadSiteCounts } from '../../lib/jobs/siteCounts'
 
 
-const REMOTE_REGION_CHIPS: Array<{ label: string; region: string | null }> = [
-  { label: 'All remote', region: null },
-  { label: 'Worldwide', region: 'global' },
-  { label: 'US', region: 'us-only' },
-  { label: 'Europe & Middle East', region: 'emea' },
-  { label: 'Asia-Pacific', region: 'apac' },
-]
+/**
+ * Region chips for the hub. With counts (taken from the database at most every 6 hours) a region with no remote jobs
+ * is shown muted and is not a link, instead of leading to an empty page.
+ */
+function buildRegionChips(active: string | null, regionCounts?: Record<string, number> | null) {
+  const all = {
+    label: 'All remote',
+    href: '/remote',
+    active: !active,
+  }
+  const regions = REMOTE_HUB_CHIP_SLUGS.map((slug) => {
+    const def = remoteRegionDef(slug)!
+    const count = regionCounts ? (regionCounts[slug] ?? 0) : undefined
+    return {
+      label: def.label,
+      href: `/remote?remoteRegion=${encodeURIComponent(slug)}`,
+      active: active === slug,
+      count,
+      disabled: count === 0 && active !== slug,
+    }
+  })
+  return [all, ...regions]
+}
 
 const SITE_URL = getSiteUrl()
 
@@ -138,11 +161,7 @@ export async function generateMetadata({
 }
 
 function normalizeRemoteRegion(raw?: string | string[]): string | null {
-  const v = Array.isArray(raw) ? raw[0] : raw
-  if (!v) return null
-  const value = String(v).trim()
-  const allowed = new Set(['global', 'us-only', 'emea', 'apac', 'uk-ireland', 'canada'])
-  return allowed.has(value) ? value : null
+  return normalizeRemoteRegionSlug(raw)
 }
 
 function toTitleCase(slug: string): string {
@@ -184,22 +203,7 @@ function addAndClause<T extends { AND?: any }>(where: T, clause: Record<string, 
 }
 
 function prettyRemoteRegion(region: string | null): string | null {
-  switch (region) {
-    case 'global':
-      return 'Worldwide Remote Jobs'
-    case 'us-only':
-      return 'US Remote Jobs'
-    case 'emea':
-      return 'EMEA Remote Jobs'
-    case 'apac':
-      return 'APAC Remote Jobs'
-    case 'uk-ireland':
-      return 'UK & Ireland Remote Jobs'
-    case 'canada':
-      return 'Canada Remote Jobs'
-    default:
-      return null
-  }
+  return remoteRegionDef(region)?.heading ?? null
 }
 
 function latestJobTimestamp(job: JobWithCompany): number {
@@ -408,11 +412,7 @@ function RemoteJobsFallback({ activeRemoteRegion }: { activeRemoteRegion: string
         accent="Remote"
         title="$100k+ Jobs"
         summary="Live remote job counts are temporarily unavailable. Browse by role below."
-        chips={REMOTE_REGION_CHIPS.map((c) => ({
-          label: c.label,
-          href: c.region ? `/remote?remoteRegion=${encodeURIComponent(c.region)}` : '/remote',
-          active: (activeRemoteRegion || null) === c.region,
-        }))}
+        chips={buildRegionChips(activeRemoteRegion)}
       />
       <ListingSection title="Remote roles">
         <LinkChips
@@ -456,6 +456,13 @@ export default async function RemoteJobsPage({
     const collectionPageJsonLd = buildRemoteCollectionPageJsonLd(remoteJobCount, canonicalPath)
     const faqJsonLd = buildRemoteFaqJsonLd()
     const regionPill = prettyRemoteRegion(activeRemoteRegion)
+    // Remote jobs per region, counted from the database at most every 6 hours; the chips still work without them.
+    const regionCounts = await loadSiteCounts()
+      .then((c) => countRemoteByRegion(c.remoteByCountry, c.remoteWithoutCountry))
+      .catch((error) => {
+        logRuntimeFallback('remote.regionCounts', error)
+        return null
+      })
 
     return (
       <ListingPage>
@@ -494,11 +501,7 @@ export default async function RemoteJobsPage({
               {newThisWeek ? <> · {newThisWeek.toLocaleString()} new this week</> : null}
             </>
           }
-          chips={REMOTE_REGION_CHIPS.map((c) => ({
-            label: c.label,
-            href: c.region ? `/remote?remoteRegion=${encodeURIComponent(c.region)}` : '/remote',
-            active: (activeRemoteRegion || null) === c.region,
-          }))}
+          chips={buildRegionChips(activeRemoteRegion, regionCounts)}
         />
 
         <JobRows

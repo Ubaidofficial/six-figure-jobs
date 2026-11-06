@@ -580,7 +580,7 @@
    ========================================================================== */
 .card.homepageCard {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
   column-gap: 16px;
   row-gap: 2px;
   align-items: center;
@@ -614,10 +614,16 @@
   grid-column: 1;
   grid-row: 1 / span 3;
   align-self: start;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: var(--radius-md);
-  box-shadow: none;
+  /* A white tile on a light page needs a visible edge, or the logo floats with no shape. */
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.homepageCard .logoImg {
+  padding: 5px;
 }
 
 .homepageCard .title {
@@ -634,8 +640,9 @@
 }
 
 .homepageCard .companyName {
-  font-size: 0.875rem;
-  color: var(--color-text-1);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text-0);
 }
 
 .homepageCard .metaRow {
@@ -688,14 +695,14 @@
 
 @media (max-width: 640px) {
   .card.homepageCard {
-    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-columns: 46px minmax(0, 1fr);
     padding: 12px 14px;
     column-gap: 12px;
   }
 
   .homepageCard .logoWrap {
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
     grid-row: 1 / span 5;
   }
 
