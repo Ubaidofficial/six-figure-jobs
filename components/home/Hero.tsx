@@ -7,6 +7,7 @@ import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import type { SalarySnapshot } from '@/lib/jobs/salarySnapshot'
 
+import { HeroSearchInput } from './HeroSearchInput'
 import styles from './Hero.module.css'
 
 type HeroProps = {
@@ -63,15 +64,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
             Search six-figure jobs
           </label>
           <Search className={styles.searchIcon} aria-hidden="true" />
-          <input
-            id="hero-q"
-            name="q"
-            type="text"
-            placeholder="Job title, company or keyword"
-            className={styles.searchInput}
-            autoComplete="off"
-            spellCheck={false}
-          />
+          <HeroSearchInput id="hero-q" name="q" placeholder="Job title, company or keyword" className={styles.searchInput} />
           <Button variant="primary" size="lg" type="submit" className={styles.cta}>
             Search jobs
           </Button>
