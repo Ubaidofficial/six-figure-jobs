@@ -28,9 +28,7 @@ function LogoItem({ company, index }: { company: FeaturedCompany; index: number 
             priority={index < 4}
           />
         </div>
-        <span className={styles.tooltip} role="tooltip">
-          {company.name}
-        </span>
+        <span className="sr-only">{company.name}</span>
       </Link>
     </li>
   )
