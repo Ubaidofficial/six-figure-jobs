@@ -1,15 +1,14 @@
 /* ==========================================================================
    Six Figure Jobs — Site Header / Navigation
-   Premium sticky header with dropdowns + search modal + mobile drawer.
+   Premium sticky header with dropdowns + persistent search field + mobile drawer.
    ========================================================================== */
 
 .header {
   position: sticky;
-  top: 0;
+  /* Only the bottom row (search on phones, nav on small desktops) stays pinned; the logo row scrolls away. A
+     fixed 130px+ header would eat a phone screen. The negative offset is the height of row 1 at each breakpoint. */
+  top: -56px;
   z-index: 50;
-  height: 80px;
-  display: flex;
-  align-items: center;
   background: color-mix(in srgb, var(--color-bg-0) 55%, transparent);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -23,7 +22,7 @@
 .scrolled {
   background: color-mix(in srgb, var(--color-bg-0) 78%, transparent);
   border-bottom-color: color-mix(in srgb, var(--color-fg) 8%, transparent);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 2px rgba(20, 20, 10, 0.04), 0 8px 24px rgba(20, 20, 10, 0.07);
 }
 
 .inner {
@@ -31,10 +30,15 @@
   margin: 0 auto;
   max-width: 1600px;
   padding: 0 var(--space-40);
-  display: flex;
+  display: grid;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-16);
+  column-gap: var(--space-16);
+  /* Phones and tablets: row 1 = logo | menu button, row 2 = full-width search. Wider breakpoints are below. */
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'brand right'
+    'search search';
+  grid-template-rows: 56px auto;
 }
 
 .skip {
@@ -59,7 +63,8 @@
   outline-offset: 2px;
 }
 
-.left {
+.brand {
+  grid-area: brand;
   display: inline-flex;
   align-items: center;
   gap: var(--space-16);
@@ -94,6 +99,7 @@
 }
 
 .nav {
+  grid-area: nav;
   display: none;
   align-items: center;
   gap: 10px;
@@ -139,28 +145,10 @@
 
 
 .right {
+  grid-area: right;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-}
-
-.searchBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
-  background: color-mix(in srgb, var(--color-bg-1) 55%, transparent);
-  color: var(--color-text-0);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
-}
-
-.searchBtn:hover {
-  border-color: rgba(132, 204, 22, 0.35);
-  box-shadow: var(--shadow-sm-glow);
 }
 
 .searchIcon {
@@ -342,78 +330,101 @@
   box-shadow: var(--shadow-lg-glow);
 }
 
-.searchDialog {
-  border-radius: var(--radius-2xl);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
-  background: color-mix(in srgb, var(--color-bg-1) 92%, transparent);
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.7);
+/* Always-visible search field (spainjobs-style): icon inside the left edge, 48px tall, 16px text so iOS does not zoom. */
+.search {
+  grid-area: search;
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+  /* The top gap matters once only this row is pinned: the field must not touch the top edge of the screen. */
+  padding: 8px 0 12px;
 }
 
-.searchTitle {
-  color: var(--color-text-0);
-  font-weight: var(--font-weight-semibold);
-}
-
-.searchRow {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-12);
-  align-items: center;
+.searchGlyph {
+  position: absolute;
+  left: 16px;
+  top: 32px; /* centre of the 48px field (8px padding above it) */
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  color: var(--color-text-1);
+  pointer-events: none;
 }
 
 .searchInput {
+  display: block;
   width: 100%;
-  border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
-  background: color-mix(in srgb, var(--color-bg-0) 35%, transparent);
+  height: 48px;
+  padding: 0 16px 0 46px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-1);
   color: var(--color-text-0);
-  padding: 12px 12px;
-  font-size: 14px;
+  font-size: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .searchInput::placeholder {
-  color: color-mix(in srgb, var(--color-fg) 40%, transparent);
-}
-
-.searchGo {
-  height: 44px;
-  padding: 0 16px;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(132, 204, 22, 0.25);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  color: #0a0a0a;
-  font-weight: var(--font-weight-semibold);
-}
-
-.searchHint {
-  margin-top: 10px;
   color: var(--color-text-2);
-  font-size: 12px;
-  line-height: var(--line-height-relaxed);
 }
 
-.hintBtn {
-  appearance: none;
-  border: none;
-  background: transparent;
+.searchInput:hover {
+  border-color: color-mix(in srgb, var(--color-fg) 22%, transparent);
+}
+
+.searchInput:focus-visible {
+  outline: none;
+  border-color: var(--color-primary-dark);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
   padding: 0;
-  margin: 0;
-  color: var(--color-primary-text);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: color-mix(in srgb, var(--color-primary-text) 45%, transparent);
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.hintBtn:hover {
-  color: var(--color-primary-text);
-  text-decoration-color: color-mix(in srgb, var(--color-primary-text) 70%, transparent);
-}
-
+/* Small desktops: row 1 = logo | search, row 2 = nav (the five links plus a 420px+ field do not fit one row yet). */
 @media (min-width: 1024px) {
+  .header {
+    top: -80px;
+  }
+
+  .inner {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'brand search'
+      'nav nav';
+    grid-template-rows: 80px auto;
+    padding-bottom: 8px;
+  }
+
+  .search {
+    max-width: 560px;
+    padding: 0;
+  }
+
+  .searchGlyph {
+    top: 24px;
+  }
+
   .nav {
     display: inline-flex;
+    justify-self: start;
+    padding-top: 4px; /* breathing room above the nav pills while this row is the pinned one */
+  }
+
+  .right {
+    display: none;
   }
 
   .signIn {
@@ -429,6 +440,24 @@
   }
 }
 
+/* Wide desktops: one row, logo | nav | search. */
+@media (min-width: 1360px) {
+  .header {
+    top: 0;
+  }
+
+  .inner {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas: 'brand nav search';
+    grid-template-rows: 80px;
+    padding-bottom: 0;
+  }
+
+  .nav {
+    padding-top: 0;
+  }
+}
+
 @media (max-width: 1023px) {
   .inner {
     padding: 0 var(--space-16);
@@ -440,10 +469,6 @@
 }
 
 @media (max-width: 480px) {
-  .header {
-    height: 64px;
-  }
-
   .logo {
     font-size: 23px;
   }

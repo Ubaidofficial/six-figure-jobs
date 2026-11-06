@@ -7,7 +7,6 @@ import { Menu, Search, X } from 'lucide-react'
 
 import { Wordmark } from './Wordmark'
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 
 import styles from './SiteHeader.module.css'
@@ -33,22 +32,13 @@ export function SiteHeader() {
   const scrolled = useScrolled(8)
   const router = useRouter()
 
-  const [searchOpen, setSearchOpen] = React.useState(false)
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [query, setQuery] = React.useState('')
-  const inputRef = React.useRef<HTMLInputElement | null>(null)
-
-  React.useEffect(() => {
-    if (!searchOpen) return
-    const id = window.setTimeout(() => inputRef.current?.focus(), 0)
-    return () => window.clearTimeout(id)
-  }, [searchOpen])
 
   const submitSearch = React.useCallback(
     (value: string) => {
       const q = value.trim()
       if (!q) return
-      setSearchOpen(false)
       setMobileOpen(false)
       router.push(`/search?q=${encodeURIComponent(q)}`)
     },
@@ -62,33 +52,55 @@ export function SiteHeader() {
       </a>
 
       <div className={styles.inner}>
-        <div className={styles.left}>
+        <div className={styles.brand}>
           <Link href="/" className={styles.logo} aria-label="six fig jobs home">
             <Wordmark />
           </Link>
           <span className={styles.kicker} aria-hidden="true">
             <span className={styles.kickerStrong}>$100k+</span> salaries shown
           </span>
-
-          <nav className={styles.nav} aria-label="Primary">
-            <Link href="/jobs" className={`${styles.navLink} ${isActive("/jobs") ? styles.navLinkActive : ''}`} aria-current={isActive("/jobs") ? 'page' : undefined}>Jobs</Link>
-            <Link href="/remote" className={`${styles.navLink} ${isActive("/remote") ? styles.navLinkActive : ''}`} aria-current={isActive("/remote") ? 'page' : undefined}>Remote</Link>
-            <Link href="/companies" className={`${styles.navLink} ${isActive("/companies") ? styles.navLinkActive : ''}`} aria-current={isActive("/companies") ? 'page' : undefined}>Companies</Link>
-            <Link href="/salary" className={`${styles.navLink} ${isActive("/salary") ? styles.navLinkActive : ''}`} aria-current={isActive("/salary") ? 'page' : undefined}>Salaries</Link>
-            <Link href="/blog" className={`${styles.navLink} ${isActive("/blog") ? styles.navLinkActive : ''}`} aria-current={isActive("/blog") ? 'page' : undefined}>Blog</Link>
-          </nav>
         </div>
 
-        <div className={styles.right}>
-          <button
-            type="button"
-            className={styles.searchBtn}
-            aria-label="Find your next six-figure job"
-            onClick={() => setSearchOpen(true)}
-          >
-            <Search className={styles.searchIcon} aria-hidden="true" />
-          </button>
+        <nav className={styles.nav} aria-label="Primary">
+          <Link href="/jobs" className={`${styles.navLink} ${isActive("/jobs") ? styles.navLinkActive : ''}`} aria-current={isActive("/jobs") ? 'page' : undefined}>Jobs</Link>
+          <Link href="/remote" className={`${styles.navLink} ${isActive("/remote") ? styles.navLinkActive : ''}`} aria-current={isActive("/remote") ? 'page' : undefined}>Remote</Link>
+          <Link href="/companies" className={`${styles.navLink} ${isActive("/companies") ? styles.navLinkActive : ''}`} aria-current={isActive("/companies") ? 'page' : undefined}>Companies</Link>
+          <Link href="/salary" className={`${styles.navLink} ${isActive("/salary") ? styles.navLinkActive : ''}`} aria-current={isActive("/salary") ? 'page' : undefined}>Salaries</Link>
+          <Link href="/blog" className={`${styles.navLink} ${isActive("/blog") ? styles.navLinkActive : ''}`} aria-current={isActive("/blog") ? 'page' : undefined}>Blog</Link>
+        </nav>
 
+        {/* Always-visible search. Same destination the old search dialog used: /search?q=... */}
+        <form
+          role="search"
+          method="get"
+          action="/search"
+          className={styles.search}
+          onSubmit={(e) => {
+            e.preventDefault()
+            submitSearch(query)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') (e.target as HTMLElement).blur()
+          }}
+        >
+          <label htmlFor="site-search" className={styles.srOnly}>
+            Find roles, companies, or skills
+          </label>
+          <Search className={styles.searchGlyph} aria-hidden="true" />
+          <input
+            id="site-search"
+            name="q"
+            type="text"
+            enterKeyHint="search"
+            autoComplete="off"
+            className={styles.searchInput}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Find roles, companies, or skills"
+          />
+        </form>
+
+        <div className={styles.right}>
           <span className={styles.mobileOnly}>
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
@@ -165,16 +177,6 @@ export function SiteHeader() {
                     <Link className={styles.mobileItem} href="/blog" onClick={() => setMobileOpen(false)}>
                       Career Blog <span className={styles.mobileMeta}>Tips + insights</span>
                     </Link>
-                    <button
-                      type="button"
-                      className={styles.mobileItem}
-                      onClick={() => {
-                        setMobileOpen(false)
-                        setSearchOpen(true)
-                      }}
-                    >
-                      Search Jobs <span className={styles.mobileMeta}>Find roles</span>
-                    </button>
                   </div>
                 </div>
               </SheetContent>
@@ -182,49 +184,6 @@ export function SiteHeader() {
           </span>
         </div>
       </div>
-
-      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <DialogContent className={styles.searchDialog}>
-          <DialogHeader>
-            <DialogTitle className={styles.searchTitle}>Find your next six-figure job</DialogTitle>
-          </DialogHeader>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              submitSearch(query)
-            }}
-          >
-            <div className={styles.searchRow}>
-              <input
-                ref={inputRef}
-                className={styles.searchInput}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Find roles, companies, or skills…"
-                aria-label="Find roles, companies, or skills"
-              />
-              <button type="submit" className={styles.searchGo}>
-                Find
-              </button>
-            </div>
-            <div className={styles.searchHint}>
-              Try:{' '}
-              <button type="button" onClick={() => submitSearch('remote $200k engineer')} className={styles.hintBtn}>
-                remote $200k engineer
-              </button>
-              ,{' '}
-              <button type="button" onClick={() => submitSearch('staff engineer no degree')} className={styles.hintBtn}>
-                staff engineer no degree
-              </button>
-              ,{' '}
-              <button type="button" onClick={() => submitSearch('product manager visa sponsorship')} className={styles.hintBtn}>
-                visa sponsorship PM
-              </button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </header>
   )
 }
