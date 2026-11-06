@@ -67,6 +67,23 @@ export function HeroSearchInput({
     return () => form.removeEventListener('change', onChange)
   }, [])
 
+  // Leave blank fields (an unchosen role/location/region, "Any" work arrangement, an empty box) out of the address, so the
+  // search lands on /jobs?q=data+engineer&minSalary=100000 rather than a URL full of empty parameters. The `formdata`
+  // event fires while the browser builds the submission, so this covers Enter, the Search button and "See all".
+  // Without JavaScript the form still submits as is, and /jobs ignores the empty parameters.
+  useEffect(() => {
+    const form = inputRef.current?.form
+    if (!form) return
+    const dropBlanks = (e: FormDataEvent) => {
+      for (const [key, val] of Array.from(e.formData.entries())) {
+        if (typeof val === 'string' && val.trim() === '') e.formData.delete(key)
+        else if (key === name && typeof val === 'string') e.formData.set(key, val.trim())
+      }
+    }
+    form.addEventListener('formdata', dropBlanks)
+    return () => form.removeEventListener('formdata', dropBlanks)
+  }, [name])
+
   useEffect(() => {
     const q = value.trim()
     const typed = lastTyped.current !== value // false when only the form changed
