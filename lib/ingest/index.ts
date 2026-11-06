@@ -14,6 +14,7 @@
 
 import { prisma } from '../prisma'
 import { upsertCompanyFromBoard } from '../companies/upsertFromBoard'
+import { relinkToRepairedCompany } from '../companies/repairCompanyName'
 import { cleanApplyUrl } from '../jobs/applyUrl'
 import {
   normalizeSalary,
@@ -252,7 +253,7 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
 
     if (incomingPriority === existingPriority) {
       // Same priority - refresh/update minor fields
-      return await refreshJob(existing, input)
+      return await refreshJob(existing, input, company, dedupeKey)
     }
 
     // Incoming source is lower priority - skip
@@ -628,13 +629,21 @@ async function upgradeJob(
 // Job Refresh (same priority, update minor fields)
 // =============================================================================
 
-async function refreshJob(existing: any, input: ScrapedJobInput): Promise<IngestResult> {
+async function refreshJob(
+  existing: any,
+  input: ScrapedJobInput,
+  company: ResolvedCompany,
+  dedupeKey: string,
+): Promise<IngestResult> {
   const sourceExpiresAt = getSourceExpirationDate(input)
   const updateData: any = {
     lastSeenAt: new Date(),
     updatedAt: new Date(),
     isExpired: false,
     shortId: getShortStableIdForJobId(existing.id),
+    // A job stored under an ATS identifier as its company moves to the real company once the name is recovered. If a
+    // job with the same title and place already existed there it would have been matched first, so this cannot collide.
+    ...relinkToRepairedCompany(existing, company, dedupeKey),
   }
 
   // Fill in a missing description, or replace a truncated preview with the full text

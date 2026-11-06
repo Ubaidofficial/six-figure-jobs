@@ -79,6 +79,41 @@ describe('mapFreehireJob', () => {
     expect(mapFreehireJob({ ...job, reality: { class: 'stale', fake_freshness: false } })).toBeNull() // no age: cannot tell
   })
 
+  describe('company names that are ATS identifiers', () => {
+    // The shape of the job reported from the live site: freehire named the company with an Ashby organisation id.
+    const amplitude: FreehireJob = {
+      ...job,
+      company: '9c26369c-d400-4eb7-a9b3-ab8f6469f9e8',
+      company_slug: '9c26369c-d400-4eb7-a9b3-ab8f6469f9e8',
+      url: 'https://jobs.ashbyhq.com/amplitude/70e2f3f0-71fd-473e-9c69-c6ed937ca57d?utm_source=freehire.me',
+      title: 'Content Marketing Manager',
+      description: '<p>Amplitude is the leading AI analytics platform, helping over 5,200 customers.</p>',
+    }
+
+    it('recovers the real name, and does not look the id up as a company at freehire', () => {
+      const mapped = mapFreehireJob(amplitude)
+      expect(mapped?.rawCompanyName).toBe('Amplitude')
+      expect(mapped?.companyRef).toBeNull()
+    })
+
+    it('leaves a real name and its freehire company handle untouched', () => {
+      const mapped = mapFreehireJob({ ...job, company_slug: 'zoox' })
+      expect(mapped?.rawCompanyName).toBe('Zoox')
+      expect(mapped?.companyRef).toBe('zoox')
+    })
+
+    it('skips a job whose company is only an id that nothing in the record can name', () => {
+      expect(
+        mapFreehireJob({
+          ...job,
+          company: '8a788267536ec009015376c7bcda018f',
+          url: 'https://recruitingbypaycor.com/career/JobIntroduction.action?clientId=8a788267536ec009015376c7bcda018f',
+          description: '<p>Position: Senior Director of Quality.</p>',
+        }),
+      ).toBeNull()
+    })
+  })
+
   it('keeps a job when freehire gives no reality verdict', () => {
     expect(mapFreehireJob({ ...job, reality: null })).not.toBeNull()
   })

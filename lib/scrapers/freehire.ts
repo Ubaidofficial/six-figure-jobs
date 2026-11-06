@@ -7,6 +7,7 @@ import axios from 'axios'
 import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
 import { ingestBoardJob, type BoardJobInput } from '../jobs/ingestBoardJob'
 import { normalizePublicCompanyWebsite } from '../companies/website'
+import { repairCompanyName } from '../companies/repairCompanyName'
 import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 
@@ -150,13 +151,21 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
   if (!job.title || !job.url) return null
 
   const url = stripFreehireUtm(job.url)
+  // freehire sometimes has an ATS identifier where the employer's name should be (Amplitude's Ashby jobs came as
+  // "9c26369c-d400-4eb7-a9b3-ab8f6469f9e8"). Recover the real name; a name that is only an id and cannot be recovered
+  // means the job is skipped rather than published under an id.
+  const given = (job.company ?? '').trim()
+  const companyName = repairCompanyName({ name: given, applyUrl: url, descriptionHtml: job.description })
+  if (given && !companyName) return null
+  const repaired = companyName !== given
   return {
     externalId: job.external_id || job.public_slug,
     title: job.title,
     url,
     applyUrl: url,
-    rawCompanyName: job.company ?? null,
-    companyRef: job.company_slug || null,
+    rawCompanyName: companyName,
+    // The slug is only used to look the company's website up at freehire; an id-named company has none to find.
+    companyRef: repaired ? null : job.company_slug || null,
     locationText: job.location ?? null,
     isRemote: job.work_mode === 'remote',
     employmentType: e.employment_type ?? null,
