@@ -368,6 +368,97 @@ describe('charge.refunded', () => {
   })
 })
 
+describe('charge.dispute.created / charge.dispute.closed', () => {
+  const dispute = (over: Record<string, any> = {}) => ({
+    id: 'dp_1',
+    object: 'dispute',
+    amount: 1000,
+    charge: 'ch_1',
+    payment_intent: 'pi_1',
+    status: 'needs_response',
+    ...over,
+  })
+  const refundedCharge = (over: Record<string, any> = {}) => ({
+    id: 'ch_1', object: 'charge', amount: 1000, amount_refunded: 400, payment_intent: 'pi_1', customer: 'cus_1', ...over,
+  })
+
+  it('takes back, in full, the credits a disputed pack payment granted', async () => {
+    const { fake, deps } = setup()
+    await post(deps, event('checkout.session.completed', packSession()))
+    await post(deps, event('charge.dispute.created', dispute()))
+    expect(fake.balance('u1')).toBe(0)
+    expect(fake.tables.creditLedger.at(-1)).toMatchObject({ kind: 'refund', delta: -50, refId: 'pi_1', reason: 'dispute_opened' })
+  })
+
+  it('finds a disputed subscription payment through its invoice', async () => {
+    const { fake, deps, list } = setup()
+    await post(deps, event('invoice.paid', invoice({ id: 'in_9' })))
+    list.mockResolvedValue({ data: [{ invoice: 'in_9' }] })
+    await post(deps, event('charge.dispute.created', dispute({ payment_intent: 'pi_sub' })))
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ payment: { type: 'payment_intent', payment_intent: 'pi_sub' } }))
+    expect(fake.balance('u1')).toBe(0)
+  })
+
+  it('takes nothing twice: a redelivered event, or a refund already taken for the same payment', async () => {
+    const { fake, deps } = setup()
+    await post(deps, event('checkout.session.completed', packSession()))
+    await post(deps, event('charge.refunded', refundedCharge())) // 40% of 50 = 20 already taken
+    const evt = event('charge.dispute.created', dispute())
+    await post(deps, evt)
+    await post(deps, evt)
+    expect(fake.balance('u1')).toBe(0) // total taken is 50, not 70
+    expect(fake.tables.creditLedger.filter((r) => r.kind === 'refund').reduce((s, r) => s + r.delta, 0)).toBe(-50)
+  })
+
+  it('never takes the balance below zero when the credits were already spent', async () => {
+    const { fake, deps } = setup()
+    await post(deps, event('checkout.session.completed', packSession()))
+    await (deps.db as any).$transaction(async (tx: any) => {
+      await tx.creditLedger.create({ data: { userId: 'u1', delta: -45, kind: 'spend', reason: 'x', idempotencyKey: 'spent' } })
+    })
+    await post(deps, event('charge.dispute.created', dispute()))
+    expect(fake.balance('u1')).toBe(0)
+  })
+
+  it('ignores a dispute on a payment that granted nothing, and one with no payment intent', async () => {
+    const { fake, deps, list } = setup()
+    list.mockResolvedValue({ data: [] })
+    await post(deps, event('charge.dispute.created', dispute({ payment_intent: 'pi_unrelated' })))
+    await post(deps, event('charge.dispute.created', dispute({ id: 'dp_2', payment_intent: null })))
+    expect(fake.tables.creditLedger).toHaveLength(0)
+  })
+
+  it('gives the credits back when the dispute is won, once, and a later refund of the same payment still takes them', async () => {
+    const { fake, deps } = setup()
+    await post(deps, event('checkout.session.completed', packSession()))
+    await post(deps, event('charge.dispute.created', dispute()))
+    expect(fake.balance('u1')).toBe(0)
+    const won = event('charge.dispute.closed', dispute({ status: 'won' }))
+    await post(deps, won)
+    await post(deps, won)
+    expect(fake.balance('u1')).toBe(50)
+    expect(fake.tables.creditLedger.at(-1)).toMatchObject({ kind: 'refund', delta: 50, reason: 'dispute_won', refId: 'pi_1' })
+    await post(deps, event('charge.refunded', refundedCharge({ amount_refunded: 1000 })))
+    expect(fake.balance('u1')).toBe(0) // the refund still finds the original 50-credit grant
+  })
+
+  it('changes nothing more when the dispute is lost, or closes without ever having been opened here', async () => {
+    const { fake, deps } = setup()
+    await post(deps, event('checkout.session.completed', packSession()))
+    await post(deps, event('charge.dispute.created', dispute()))
+    await post(deps, event('charge.dispute.closed', dispute({ status: 'lost' })))
+    expect(fake.balance('u1')).toBe(0)
+    await post(deps, event('charge.dispute.closed', dispute({ id: 'dp_never_seen', status: 'won' })))
+    expect(fake.balance('u1')).toBe(0)
+  })
+
+  it('answers 500 (so Stripe retries) if the invoice lookup fails', async () => {
+    const { deps, list } = setup()
+    list.mockRejectedValue(new Error('stripe is down'))
+    expect((await post(deps, event('charge.dispute.created', dispute({ payment_intent: 'pi_x' })))).status).toBe(500)
+  })
+})
+
 describe('other events', () => {
   it('records an unhandled event type as seen and changes nothing', async () => {
     const { fake, deps } = setup()

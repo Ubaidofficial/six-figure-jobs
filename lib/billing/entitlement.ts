@@ -17,6 +17,14 @@ export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing'] as const
  */
 export const STALE_PERIOD_GRACE_MS = 3 * 24 * 60 * 60 * 1000
 
+/**
+ * A failed renewal leaves the subscription "past_due" while Stripe retries the card (Smart Retries). A paying customer
+ * should not lose access the moment one attempt fails, so a past_due subscription still counts for this long after it
+ * went past_due (measured from the event that set the status). Stripe's own retry schedule ends the wait: when it gives up
+ * the status changes again and access stops. Credits are never granted for an unpaid period; that happens only on invoice.paid.
+ */
+export const PAST_DUE_GRACE_MS = 3 * 24 * 60 * 60 * 1000
+
 export async function hasActiveSubscription(
   userId: string,
   db: Pick<PrismaClient, 'subscription'> = prisma,
@@ -24,10 +32,13 @@ export async function hasActiveSubscription(
 ): Promise<boolean> {
   if (!userId) return false
   const rows = await db.subscription.findMany({
-    where: { userId, status: { in: [...ACTIVE_SUBSCRIPTION_STATUSES] } },
-    select: { currentPeriodEnd: true },
+    where: { userId, status: { in: [...ACTIVE_SUBSCRIPTION_STATUSES, 'past_due'] } },
+    select: { status: true, currentPeriodEnd: true, lastEventAt: true },
   })
-  return rows.some((r) => !r.currentPeriodEnd || r.currentPeriodEnd.getTime() + STALE_PERIOD_GRACE_MS > now.getTime())
+  return rows.some((r) => {
+    if (r.status === 'past_due') return !!r.lastEventAt && r.lastEventAt.getTime() + PAST_DUE_GRACE_MS > now.getTime()
+    return !r.currentPeriodEnd || r.currentPeriodEnd.getTime() + STALE_PERIOD_GRACE_MS > now.getTime()
+  })
 }
 
 export class EntitlementError extends Error {

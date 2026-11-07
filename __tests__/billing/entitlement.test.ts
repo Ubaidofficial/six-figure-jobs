@@ -1,6 +1,7 @@
 import { grantCredits } from '@/lib/billing/credits'
 import {
   EntitlementError,
+  PAST_DUE_GRACE_MS,
   STALE_PERIOD_GRACE_MS,
   hasActiveSubscription,
   requireEntitlement,
@@ -15,8 +16,12 @@ function setup() {
   const fake = createFakePrisma()
   fake.addUser('u1')
   const db = fake.prisma as any
-  const addSub = (status: string, currentPeriodEnd: Date | null, id = `sub_${fake.tables.subscription.length}`) =>
-    fake.tables.subscription.push({ id, userId: 'u1', stripeSubscriptionId: id, status, currentPeriodEnd })
+  const addSub = (
+    status: string,
+    currentPeriodEnd: Date | null,
+    id = `sub_${fake.tables.subscription.length}`,
+    lastEventAt: Date | null = null,
+  ) => fake.tables.subscription.push({ id, userId: 'u1', stripeSubscriptionId: id, status, currentPeriodEnd, lastEventAt })
   return { fake, db, addSub }
 }
 
@@ -27,10 +32,38 @@ describe('hasActiveSubscription', () => {
     expect(await hasActiveSubscription('u1', db, NOW)).toBe(true)
   })
 
-  it.each(['past_due', 'unpaid', 'canceled', 'incomplete', 'incomplete_expired', 'paused'])('is false for %s', async (status) => {
+  it.each(['unpaid', 'canceled', 'incomplete', 'incomplete_expired', 'paused'])('is false for %s', async (status) => {
     const { db, addSub } = setup()
     addSub(status, new Date(NOW.getTime() + 10 * DAY))
     expect(await hasActiveSubscription('u1', db, NOW)).toBe(false)
+  })
+
+  describe('past_due (a failed renewal while Stripe retries the card)', () => {
+    const wentPastDue = (agoMs: number) => new Date(NOW.getTime() - agoMs)
+
+    it('still counts for the grace period after it went past due', async () => {
+      const { db, addSub } = setup()
+      addSub('past_due', new Date(NOW.getTime() + 25 * DAY), 'sub_pd', wentPastDue(PAST_DUE_GRACE_MS - 60_000))
+      expect(await hasActiveSubscription('u1', db, NOW)).toBe(true)
+    })
+
+    it('stops counting once the grace period is over', async () => {
+      const { db, addSub } = setup()
+      addSub('past_due', new Date(NOW.getTime() + 25 * DAY), 'sub_pd', wentPastDue(PAST_DUE_GRACE_MS + 60_000))
+      expect(await hasActiveSubscription('u1', db, NOW)).toBe(false)
+    })
+
+    it('does not count when we do not know when it went past due (no free access on missing data)', async () => {
+      const { db, addSub } = setup()
+      addSub('past_due', new Date(NOW.getTime() + 25 * DAY))
+      expect(await hasActiveSubscription('u1', db, NOW)).toBe(false)
+    })
+
+    it('does not extend the other bad statuses: unpaid stays out however recent it is', async () => {
+      const { db, addSub } = setup()
+      addSub('unpaid', new Date(NOW.getTime() + 25 * DAY), 'sub_u', wentPastDue(60_000))
+      expect(await hasActiveSubscription('u1', db, NOW)).toBe(false)
+    })
   })
 
   it('is false with no subscription, no user id, or another user\'s subscription', async () => {
