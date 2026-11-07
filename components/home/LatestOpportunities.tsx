@@ -57,7 +57,7 @@ export function LatestOpportunities({
       ) : (
         <div className={styles.grid}>
           {latest.map((job) => (
-            <JobCard key={job.id} job={job} variant="homepage" />
+            <JobCard key={job.id} job={job} variant="homepage" className="reveal-on-scroll" />
           ))}
         </div>
       )}

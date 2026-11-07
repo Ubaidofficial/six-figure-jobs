@@ -319,6 +319,32 @@
   }
 }
 
+/* Scroll reveal ("whileInView") with no JS: the fade is driven by the element's position in the
+   viewport. Anything already on screen at load is at its end state, and browsers without
+   scroll-driven animations show the content as is, so server HTML is never hidden. It animates
+   `translate`, not `transform`, so it does not override hover transforms (e.g. JobCard lift).
+   See docs/DESIGN_UX_SPEC.md §11. */
+@keyframes reveal-on-scroll {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal-on-scroll {
+      animation: reveal-on-scroll linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* TOKEN OVERRIDES (APPEND-ONLY)                                              */
 /* -------------------------------------------------------------------------- */
