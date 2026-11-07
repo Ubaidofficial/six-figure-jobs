@@ -126,6 +126,7 @@ function getSalaryGateRejection(
 ): string | null {
   const gateInput = {
     salaryMin: salaryData.salaryMin,
+    salaryMax: salaryData.salaryMax,
     salaryCurrency: salaryData.salaryCurrency,
     title: input.title,
     source: input.source,

@@ -131,7 +131,6 @@ describe('mapFreehireJob', () => {
   it.each([
     ['USD', 99_999, 100_000],
     ['GBP', 74_999, 75_000],
-    ['EUR', 79_999, 80_000],
     ['CAD', 119_999, 120_000],
     ['AUD', 139_999, 140_000],
   ])('applies the %s threshold from lib/currency/thresholds.ts', (currency, below, atThreshold) => {
@@ -142,6 +141,28 @@ describe('mapFreehireJob', () => {
       salaryCurrency: currency,
       salaryMin: atThreshold,
       salaryInterval: 'year',
+    })
+  })
+
+  describe('euro jobs: the top of the range counts', () => {
+    const eur = (salary_min: number, salary_max: number | null) => ({
+      ...job,
+      enrichment: { ...job.enrichment!, salary_currency: 'EUR', salary_min, salary_max },
+    })
+
+    it('publishes a range whose bottom is below EUR 80,000 but whose top reaches it', () => {
+      expect(mapFreehireJob(eur(70_000, 95_000))?.salaryMin).toBe(70_000)
+      expect(mapFreehireJob(eur(60_000, 80_000))?.salaryMax).toBe(80_000)
+    })
+
+    it('skips a range whose top falls short, has no top, or whose bottom is under EUR 60,000', () => {
+      expect(mapFreehireJob(eur(70_000, 79_999))).toBeNull()
+      expect(mapFreehireJob(eur(70_000, null))).toBeNull()
+      expect(mapFreehireJob(eur(59_999, 95_000))).toBeNull()
+    })
+
+    it('still publishes a range that starts at the threshold', () => {
+      expect(mapFreehireJob(eur(80_000, 100_000))?.salaryMin).toBe(80_000)
     })
   })
 

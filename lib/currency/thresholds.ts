@@ -20,6 +20,26 @@ export const HIGH_SALARY_THRESHOLDS = {
 
 export type HighSalaryCurrency = keyof typeof HIGH_SALARY_THRESHOLDS
 
+/**
+ * Currencies where a salary range counts when its TOP reaches the threshold (a job paying EUR 70-95k qualifies at
+ * EUR 80k), as long as its bottom is at least TOP_OF_RANGE_MIN_SHARE of the threshold. In every other currency the
+ * BOTTOM of the range must reach the threshold. Euro jobs only for now: European employers publish ranges more often
+ * than flat figures, and freehire's 30-day pool for 9 euro countries (measured 2026-11-07) went from 1,670 to 2,691 jobs
+ * with this rule.
+ */
+export const TOP_OF_RANGE_CURRENCIES: ReadonlySet<string> = new Set(['EUR'])
+
+/** Lowest bottom-of-range accepted under the top-of-range rule, as a share of the threshold (0.75 -> EUR 60,000). */
+export const TOP_OF_RANGE_MIN_SHARE = 0.75
+
+/** Lowest annual salary that can qualify in `currency` (the threshold, or less under the top-of-range rule). */
+export function getSalaryFloorAnnual(currency: string | null | undefined): number | null {
+  const threshold = getHighSalaryThresholdAnnual(currency)
+  if (threshold == null) return null
+  const code = String(currency).trim().toUpperCase()
+  return TOP_OF_RANGE_CURRENCIES.has(code) ? Math.round(threshold * TOP_OF_RANGE_MIN_SHARE) : threshold
+}
+
 export function getHighSalaryThresholdAnnual(
   currency: string | null | undefined
 ): number | null {

@@ -4,7 +4,7 @@
 // lib/currency/thresholds.ts. Auth is optional: set FREEHIRE_API_KEY for the higher account limit.
 import axios from 'axios'
 
-import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
+import { getSalaryFloorAnnual } from '../currency/thresholds'
 import { ingestBoardJob, type BoardJobInput } from '../jobs/ingestBoardJob'
 import { normalizePublicCompanyWebsite } from '../companies/website'
 import { repairCompanyName } from '../companies/repairCompanyName'
@@ -31,7 +31,8 @@ export const FREEHIRE_MARKETS: ReadonlyArray<{ currency: string; geo: Record<str
   { currency: 'EUR', geo: { regions: 'eu' } },
   { currency: 'CAD', geo: { countries: 'ca' } },
   { currency: 'AUD', geo: { countries: 'au' } },
-  // Swiss-franc jobs are Swiss; freehire has no region facet for them. ~96 listable jobs in a 30-day sample (2026-11-07).
+  // Swiss-franc jobs are Swiss; freehire has no region facet for them. About 580 listable jobs in the last 30 days
+  // (measured 2026-11-07 with correct paging).
   { currency: 'CHF', geo: {} },
 ]
 
@@ -148,8 +149,8 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
   if (e.salary_period !== 'year') return null
   const currency = e.salary_currency?.toUpperCase()
   if (!currency || !FREEHIRE_MARKETS.some((m) => m.currency === currency)) return null
-  const threshold = getHighSalaryThresholdAnnual(currency)
-  if (threshold == null || typeof e.salary_min !== 'number' || e.salary_min < threshold) return null
+  if (typeof e.salary_min !== 'number') return null
+  if (getMinimumSalaryRejection({ salaryMin: e.salary_min, salaryMax: e.salary_max, salaryCurrency: currency })) return null
   if (!job.title || !job.url) return null
 
   const url = stripFreehireUtm(job.url)
@@ -198,7 +199,9 @@ async function fetchPage(market: (typeof FREEHIRE_MARKETS)[number], offset: numb
     params: {
       salary_currency: market.currency,
       salary_period: 'year',
-      salary_min: getHighSalaryThresholdAnnual(market.currency),
+      // The lowest bottom-of-range that can qualify (below the threshold for euro jobs, see TOP_OF_RANGE_CURRENCIES);
+      // mapFreehireJob then applies the full rule, since freehire can only filter on the bottom.
+      salary_min: getSalaryFloorAnnual(market.currency),
       sort: 'posted_at',
       order: 'desc',
       limit: PAGE_SIZE,
@@ -323,7 +326,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
           report.mappable++
           if (report.sample.length < 3) report.sample.push(`${input.title} — ${input.rawCompanyName}`)
           // Mirror the ingest salary gate so the report shows what would really be published.
-          if (getMinimumSalaryRejection({ salaryMin: input.salaryMin, salaryCurrency: input.salaryCurrency })) {
+          if (getMinimumSalaryRejection({ salaryMin: input.salaryMin, salaryMax: input.salaryMax, salaryCurrency: input.salaryCurrency })) {
             report.gateRejected++
           }
           inputs.set(input.externalId, input)
