@@ -23,6 +23,7 @@ import { normalizePublicCompanyWebsite } from '../../../lib/companies/website'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { cleanJobDescriptionHtml } from '../../../lib/jobs/descriptionCleaning'
+import { detectJobLanguage } from '../../../lib/jobs/language'
 import { countryCodeToSlug, countryCodeToName } from '../../../lib/seo/countrySlug'
 import { CITY_TARGETS, CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { countryName, normalizeCountryCode } from '../../../lib/location/country'
@@ -49,6 +50,7 @@ import {
   JobLocationText,
   JobSection,
   MobileApplyBar,
+  TranslateNotice,
 } from './JobDetailParts'
 import styles from './JobDetail.module.css'
 import { loadPeerSalaries, rankSalary, type SalaryRank } from '@/lib/jobs/salaryRank'
@@ -254,6 +256,12 @@ export default async function JobPage({
 
   const hasDescription = !!safeDescriptionHtml && safeDescriptionHtml.trim().length > 0
   const descriptionSections = safeDescriptionHtml ? structureDescription(safeDescriptionHtml).sections : []
+
+  // Postings stay in the employer's language. Non-English ones get a translate link, and the description is marked
+  // with its language ('other' is a non-Latin script we do not tell apart, so it gets the link but no lang attribute).
+  const detectedLanguage = hasDescription ? detectJobLanguage(safeDescriptionHtml) : null
+  const foreignLanguage = detectedLanguage && detectedLanguage !== 'en' ? detectedLanguage : null
+  const descriptionLang = foreignLanguage && foreignLanguage !== 'other' ? foreignLanguage : undefined
 
   const jsonLd = buildJobJsonLd(typedJob)
   const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
@@ -509,6 +517,7 @@ export default async function JobPage({
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
         <article className={`${styles.bodyCard} min-w-0 space-y-10`}>
+          {foreignLanguage ? <TranslateNotice language={foreignLanguage} pageUrl={`${SITE_URL}/job/${canonicalSlug}`} /> : null}
 
           {hasStructuredSections ? (
             <>
@@ -589,9 +598,12 @@ export default async function JobPage({
                   This description is too large to display safely. Use Apply to read the full posting on the company site.
                 </p>
               ) : descriptionSections.length > 0 ? (
-                <DescriptionSections sections={descriptionSections} />
+                <div lang={descriptionLang}>
+                  <DescriptionSections sections={descriptionSections} />
+                </div>
               ) : (
                 <div
+                  lang={descriptionLang}
                   className={`prose max-w-none ${styles.richText}`}
                   dangerouslySetInnerHTML={{ __html: safeDescriptionHtml! }}
                 />

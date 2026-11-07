@@ -28,6 +28,7 @@ export const TARGET_COUNTRIES: TargetCountry[] = [
   { code: 'BE', label: 'Belgium', currency: 'EUR' },
   { code: 'AT', label: 'Austria', currency: 'EUR' },
   { code: 'FI', label: 'Finland', currency: 'EUR' },
+  { code: 'PT', label: 'Portugal', currency: 'EUR' },
   { code: 'CH', label: 'Switzerland', currency: 'CHF' },
   { code: 'SG', label: 'Singapore', currency: 'SGD' },
   { code: 'AU', label: 'Australia', currency: 'AUD' },

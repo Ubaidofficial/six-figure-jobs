@@ -454,3 +454,18 @@
     padding: 20px;
   }
 }
+
+/* "Posted in <language> · Translate to English" line shown above a non-English posting. */
+.translateNotice {
+  max-width: 72ch;
+  color: color-mix(in srgb, var(--color-fg) 70%, transparent);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.translateLink {
+  color: var(--color-primary-text);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

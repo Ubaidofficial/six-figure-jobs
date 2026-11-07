@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import type { SalaryRank } from '@/lib/jobs/salaryRank'
 import { groupDescription, type DescriptionSection } from '@/lib/jobs/descriptionStructure'
 import type { ApplySurface } from '@/lib/analytics/applyClick'
+import { JOB_LANGUAGE_NAMES, type JobLanguage } from '@/lib/jobs/language'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import type { JobLocationView } from '@/lib/location/jobLocation'
 
@@ -88,6 +89,23 @@ export function JobLocationText({
         view.countryName
       )}
     </span>
+  )
+}
+
+/**
+ * Shown when the posting is not written in English. Postings stay in the employer's language (nothing is translated or
+ * stored on our side); the link opens Google Translate on this same public page, in a new tab, so the whole page,
+ * requirements included, can be read in English.
+ */
+export function TranslateNotice({ language, pageUrl }: { language: JobLanguage; pageUrl: string }) {
+  const href = `https://translate.google.com/translate?sl=auto&tl=en&u=${encodeURIComponent(pageUrl)}`
+  return (
+    <p className={styles.translateNotice}>
+      This job is posted in {JOB_LANGUAGE_NAMES[language]}.{' '}
+      <a href={href} target="_blank" rel="noopener noreferrer nofollow" className={styles.translateLink}>
+        Translate to English
+      </a>
+    </p>
   )
 }
 
