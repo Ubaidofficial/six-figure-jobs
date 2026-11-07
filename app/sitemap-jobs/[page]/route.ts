@@ -88,6 +88,7 @@ export async function GET(
   }
 
   const baseWhere = buildHundredKWhereBase()
+  const maxUrls = getMaxJobUrlsPerShard()
   const where: any = cursor
     ? ({
         ...baseWhere,
@@ -135,14 +136,16 @@ export async function GET(
       updatedAt: true,
     },
     orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-    take: PAGE_SIZE,
+    // Read only as many of the newest rows as the cap can use (with room for the ones the indexability checks drop),
+    // not always PAGE_SIZE: each row carries its full description, and this runs on every sitemap rebuild.
+    take: Math.min(PAGE_SIZE, Math.ceil(maxUrls * 1.5)),
   })
 
   const indexableJobs = dedupeIndexableJobs(
     jobs.filter(
       (job) => hasCanonicalJobShortId(job) && evaluateJobIndexability(job).indexable,
     ),
-  ).slice(0, getMaxJobUrlsPerShard())
+  ).slice(0, maxUrls)
 
   const urlXml = indexableJobs
     .map((job) => {

@@ -21,6 +21,52 @@ describe('sitemap-jobs/[page] route', () => {
   beforeEach(() => {
     findManyMock.mockReset()
   })
+  afterEach(() => {
+    delete process.env.SEO_CORE_JOB_URLS_PER_SHARD
+  })
+
+  const listable = (n: number) => ({
+    id: `job${n}`,
+    shortId: getShortStableIdForJobId(`job${n}`),
+    title: `Valid Job ${n}`,
+    isExpired: false,
+    postedAt: new Date(),
+    updatedAt: new Date(Date.now() - n * 1000),
+    salaryValidated: true,
+    salaryConfidence: 100,
+    currency: 'USD',
+    minAnnual: 150000,
+    company: `Company ${n}`,
+    descriptionHtml: `<p>Valid description for job ${n} </p>`.repeat(20),
+    remote: true,
+  })
+  const urlCount = (xml: string) => (xml.match(/<url>/g) ?? []).length
+
+  it('lists at most SEO_CORE_JOB_URLS_PER_SHARD jobs, keeping the newest', async () => {
+    process.env.SEO_CORE_JOB_URLS_PER_SHARD = '3'
+    findManyMock.mockResolvedValueOnce(Array.from({ length: 4 }, (_, i) => listable(i + 1)) as any)
+    const xml = await (await GET({} as any, { params: Promise.resolve({ page: '1' }) })).text()
+    expect(urlCount(xml)).toBe(3)
+    expect(xml).toContain(getShortStableIdForJobId('job1'))
+    expect(xml).not.toContain(getShortStableIdForJobId('job4'))
+  })
+
+  it('reads only as many rows as the cap can use, plus room for rows the checks drop, never more than 20,000', async () => {
+    findManyMock.mockResolvedValue([] as any)
+    process.env.SEO_CORE_JOB_URLS_PER_SHARD = '5000'
+    await GET({} as any, { params: Promise.resolve({ page: '1' }) })
+    expect(findManyMock.mock.calls[0][0]).toMatchObject({ take: 7500 })
+
+    findManyMock.mockClear()
+    process.env.SEO_CORE_JOB_URLS_PER_SHARD = '20000'
+    await GET({} as any, { params: Promise.resolve({ page: '1' }) })
+    expect(findManyMock.mock.calls[0][0]).toMatchObject({ take: 20000 })
+
+    findManyMock.mockClear()
+    delete process.env.SEO_CORE_JOB_URLS_PER_SHARD
+    await GET({} as any, { params: Promise.resolve({ page: '1' }) })
+    expect(findManyMock.mock.calls[0][0]).toMatchObject({ take: 20000 })
+  })
 
   it('excludes jobs that are marked expired or fail quality gates', async () => {
     const validShortId = getShortStableIdForJobId('job1')
