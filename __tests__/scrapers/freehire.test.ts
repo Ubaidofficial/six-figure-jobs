@@ -145,11 +145,18 @@ describe('mapFreehireJob', () => {
     })
   })
 
-  it('skips currencies outside the five target markets', () => {
+  it('skips currencies outside the target markets', () => {
     const enrichment = job.enrichment!
-    for (const currency of ['CHF', 'RUB', 'INR']) {
+    for (const currency of ['RUB', 'INR', 'PLN']) {
       expect(mapFreehireJob({ ...job, enrichment: { ...enrichment, salary_currency: currency } })).toBeNull()
     }
+  })
+
+  it('publishes Swiss-franc jobs from CHF 90,000 and not below it', () => {
+    const enrichment = job.enrichment!
+    const chf = (salary_min: number) => ({ ...job, enrichment: { ...enrichment, salary_currency: 'CHF', salary_min, salary_max: salary_min + 20000 } })
+    expect(mapFreehireJob(chf(90_000))?.salaryCurrency).toBe('CHF')
+    expect(mapFreehireJob(chf(89_999))).toBeNull()
   })
 
   it('falls back to public_slug when external_id is missing', () => {

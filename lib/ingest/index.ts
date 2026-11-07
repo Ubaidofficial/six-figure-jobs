@@ -26,6 +26,7 @@ import {
   type SalarySource,
 } from '../normalizers/salary'
 import { normalizeLocation as normalizeLocationData } from '../normalizers/location'
+import { countryCodeFromContext } from '../location/subdivisionCountry'
 import { normalizeRole } from '../normalizers/role'
 import slugify from 'slugify'
 import { parseGreenhouseSalary } from './greenhouseSalaryParser'
@@ -1102,10 +1103,12 @@ function inferExperienceLevelFromTitle(title: string | null | undefined): string
  * - If normalizer says "onsite" → remote=false, remoteMode='onsite' (wins)
  * - Only then consider true remote via input.isRemote or location.isRemote
  */
-function processLocation(input: ScrapedJobInput) {
+export function processLocation(input: ScrapedJobInput) {
   const locationText = input.locationText || ''
   const location = normalizeLocationData(locationText)
-  const countryCode = countryToCode(location.country)
+  // A location without a country name ("Nürnberg, Bayern", "Kanton Zürich") falls back to its state/canton, or to
+  // Switzerland for a Swiss-franc salary. processSalary keeps its own country lookup unchanged.
+  const countryCode = countryToCode(location.country) ?? countryCodeFromContext(locationText, input.salaryCurrency)
 
   // ✅ Hybrid / Onsite must win over any “isRemote” heuristic
   if (location.kind === 'hybrid') {

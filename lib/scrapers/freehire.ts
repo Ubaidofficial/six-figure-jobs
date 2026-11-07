@@ -1,6 +1,6 @@
 // lib/scrapers/freehire.ts
 // Pulls six-figure jobs from the freehire.me public API (https://freehire.me/docs/api) for the
-// US (any location, USD), UK, EU, Canada and Australia. The minimum salary per currency comes from
+// US (any location, USD), UK, EU, Canada, Australia and Switzerland (CHF). The minimum salary per currency comes from
 // lib/currency/thresholds.ts. Auth is optional: set FREEHIRE_API_KEY for the higher account limit.
 import axios from 'axios'
 
@@ -31,6 +31,8 @@ export const FREEHIRE_MARKETS: ReadonlyArray<{ currency: string; geo: Record<str
   { currency: 'EUR', geo: { regions: 'eu' } },
   { currency: 'CAD', geo: { countries: 'ca' } },
   { currency: 'AUD', geo: { countries: 'au' } },
+  // Swiss-franc jobs are Swiss; freehire has no region facet for them. ~96 listable jobs in a 30-day sample (2026-11-07).
+  { currency: 'CHF', geo: {} },
 ]
 
 export type FreehireJob = {
