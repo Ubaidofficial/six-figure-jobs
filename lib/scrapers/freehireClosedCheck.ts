@@ -14,6 +14,11 @@
 //
 // Safety: a run is skipped if too many lookups failed, and aborted if it would expire an implausible share.
 //
+// Budget: every lookup is one request against freehire's daily quota (10,000 on 2026-11-07), and a run used to look up
+// EVERY active job, so two runs a day (about 4,400 each) used the whole quota. `maxLookups` caps a run and takes the
+// jobs closest to the 7-day expiry first (oldest `updatedAt`); a confirmed-open job gets `updatedAt` refreshed, so the
+// next run moves on to the next jobs and every job is reached again within (active jobs / maxLookups) days.
+//
 // The same lookups also keep the site complete (they cost nothing extra, one request per job either way):
 //  - A job freehire confirms is open (and still listable, see isListableByReality) gets its `updatedAt` refreshed.
 //    The daily sync only re-reads the newest ~36 hours, so without this every job reached the 7-day expiry whether or
@@ -83,7 +88,18 @@ export async function resolveFreehireSlug(title: string, externalId: string): Pr
   }
 }
 
-export type ActiveJob = { id: string; title: string; externalId: string | null; sourceRef: string | null; descriptionHtml?: string | null }
+export type ActiveJob = {
+  id: string
+  title: string
+  externalId: string | null
+  sourceRef: string | null
+  descriptionHtml?: string | null
+  /** When the job was last refreshed; the cap looks up the oldest first. */
+  updatedAt?: Date | null
+}
+
+/** Lookups per run used by scripts/freehire-closed-check.ts unless FREEHIRE_CLOSED_CHECK_MAX_LOOKUPS says otherwise. */
+export const DEFAULT_MAX_LOOKUPS = 3000
 
 export type ClosedCheckOptions = {
   dryRun?: boolean
@@ -92,6 +108,8 @@ export type ClosedCheckOptions = {
   paceMs?: number
   maxErrorFraction?: number
   maxCloseFraction?: number
+  /** Most jobs to look up in one run (one API request each), least recently refreshed first. Unset = every job. */
+  maxLookups?: number
   /** Total time the check may take. When exceeded it stops and expires NOTHING (status `skipped`). */
   deadlineMs?: number
   /** Progress lines (phase and counts), so a stalled run is visible in the log. */
@@ -111,6 +129,8 @@ export type ClosedCheckResult = {
   active: number
   resolved: number
   unresolved: number
+  /** Jobs with a slug that were not looked up this run because of `maxLookups`; the next run reaches them. */
+  deferred: number
   checked: number
   open: number
   gone: number
@@ -178,7 +198,7 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     (() =>
       prisma.job.findMany({
         where: { source: makeBoardSource('freehire'), isExpired: false },
-        select: { id: true, title: true, externalId: true, sourceRef: true, descriptionHtml: true },
+        select: { id: true, title: true, externalId: true, sourceRef: true, descriptionHtml: true, updatedAt: true },
       }))
   const applyRefresh = options.applyRefresh ?? applyRefreshToDatabase
   const concurrency = options.concurrency ?? 3
@@ -212,12 +232,18 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     { stop: timedOut },
   )
 
-  const toCheck = active.filter((j) => slugOf.has(j.id))
+  const withSlug = active.filter((j) => slugOf.has(j.id))
+  const cap = options.maxLookups && options.maxLookups > 0 ? Math.floor(options.maxLookups) : withSlug.length
+  const toCheck =
+    cap >= withSlug.length
+      ? withSlug
+      : [...withSlug].sort((a, b) => (a.updatedAt?.getTime() ?? 0) - (b.updatedAt?.getTime() ?? 0)).slice(0, cap)
+  const deferred = withSlug.length - toCheck.length
   const counts = { open: 0, gone: 0, errors: 0 }
   const reportedClosed: ActiveJob[] = []
   const keepAliveIds: string[] = []
   const descriptions: Array<{ id: string; html: string }> = []
-  say(`checking ${toCheck.length} jobs`)
+  say(`checking ${toCheck.length} jobs${deferred > 0 ? ` (${deferred} more wait for the next run)` : ''}`)
   await pool(
     toCheck,
     concurrency,
@@ -264,7 +290,8 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     descriptionsUpgraded: options.dryRun ? 0 : descriptions.length,
     active: active.length,
     resolved,
-    unresolved: active.length - toCheck.length,
+    unresolved: active.length - withSlug.length,
+    deferred,
     checked: toCheck.length,
     ...counts,
     closed,

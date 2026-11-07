@@ -158,6 +158,50 @@ describe('checkClosedFreehireJobs', () => {
   })
 })
 
+describe('lookup cap (the daily freehire quota)', () => {
+  beforeEach(() => {
+    applyRefresh.mockReset()
+    expireJobsByIds.mockReset()
+    expireJobsByIds.mockImplementation(async (ids: string[]) => ({ expired: ids.length }))
+  })
+  const fresh = { class: 'fresh', age_days: 1, fake_freshness: false }
+  const day = 24 * 3600 * 1000
+  // job 0 refreshed 1 day ago, job 1 two days ago, ... job 9 ten days ago; listed newest first on purpose.
+  const aged = Array.from({ length: 10 }, (_, n) => ({ ...job(n), updatedAt: new Date(Date.now() - (n + 1) * day) }))
+
+  it('looks up only maxLookups jobs, the least recently refreshed first, and says how many wait', async () => {
+    const looked: string[] = []
+    const r = await run(aged, {}, { maxLookups: 3, lookup: async (slug: string) => (looked.push(slug), { state: 'open', reality: fresh }) })
+    expect(looked.sort()).toEqual(['slug-7', 'slug-8', 'slug-9'])
+    expect(r).toMatchObject({ checked: 3, deferred: 7, open: 3, status: 'ok' })
+  })
+
+  it('refreshes only the jobs it looked at, so the next run moves on to the next ones', async () => {
+    await run(aged, {}, { maxLookups: 3, lookup: async () => ({ state: 'open', reality: fresh }) })
+    expect(applyRefresh.mock.calls[0][0].keepAliveIds.sort()).toEqual(['job-7', 'job-8', 'job-9'])
+  })
+
+  it('treats a job with no updatedAt as the oldest', async () => {
+    const withUnknown = [...aged, { ...job(10), updatedAt: null }]
+    const looked: string[] = []
+    await run(withUnknown, {}, { maxLookups: 1, lookup: async (slug: string) => (looked.push(slug), { state: 'open', reality: fresh }) })
+    expect(looked).toEqual(['slug-10'])
+  })
+
+  it('looks up every job when there is no cap, or the cap is at least the number of jobs', async () => {
+    expect(await run(aged, {})).toMatchObject({ checked: 10, deferred: 0 })
+    expect(await run(aged, {}, { maxLookups: 10 })).toMatchObject({ checked: 10, deferred: 0 })
+    expect(await run(aged, {}, { maxLookups: 500 })).toMatchObject({ checked: 10, deferred: 0 })
+  })
+
+  it('does not count jobs it cannot identify as deferred, and judges closures only among the jobs it looked at', async () => {
+    const withUnidentified = [...aged, { ...job(11, null), externalId: null, updatedAt: new Date(0) }]
+    const r = await run(withUnidentified, { 'slug-9': { state: 'closed', closedAt: 'x' } }, { maxLookups: 2 })
+    expect(r).toMatchObject({ unresolved: 1, deferred: 8, checked: 2 })
+    expect(r.closed.map((j) => j.id)).toEqual(['job-9'])
+  })
+})
+
 describe('time budget and progress', () => {
   beforeEach(() => expireJobsByIds.mockReset())
   const slow = (ms: number) => async () => {

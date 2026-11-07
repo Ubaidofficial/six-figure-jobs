@@ -4,14 +4,16 @@
 //   npx tsx scripts/freehire-closed-check.ts             expire the closed ones
 // Exit code 1 on errors or when the safety limit aborts the run; "skipped" (too many failed lookups) is a warning.
 import { prisma } from '../lib/prisma'
-import { checkClosedFreehireJobs } from '../lib/scrapers/freehireClosedCheck'
+import { DEFAULT_MAX_LOOKUPS, checkClosedFreehireJobs } from '../lib/scrapers/freehireClosedCheck'
 
 const dryRun = process.argv.includes('--dry-run')
+// One API request per lookup; see the budget note in lib/scrapers/freehireClosedCheck.ts.
+const maxLookups = Number(process.env.FREEHIRE_CLOSED_CHECK_MAX_LOOKUPS) || DEFAULT_MAX_LOOKUPS
 
-checkClosedFreehireJobs({ dryRun, deadlineMs: 15 * 60 * 1000, onProgress: (m) => console.log(m) })
+checkClosedFreehireJobs({ dryRun, maxLookups, deadlineMs: 15 * 60 * 1000, onProgress: (m) => console.log(m) })
   .then((r) => {
     console.log(`freehire closed-job check ${dryRun ? '(DRY RUN — no job is expired)' : ''}`)
-    console.log(`active: ${r.active}  slugs found for older jobs: ${r.resolved}  without a slug: ${r.unresolved}`)
+    console.log(`active: ${r.active}  slugs found for older jobs: ${r.resolved}  without a slug: ${r.unresolved}  left for the next run (lookup cap ${maxLookups}): ${r.deferred}`)
     console.log(`checked: ${r.checked}  open: ${r.open}  closed (confirmed): ${r.closed.length}  reported closed but still listed (kept): ${r.conflicts.length}  not found (404, ignored): ${r.gone}  lookup errors: ${r.errors}`)
     console.log(`kept alive (confirmed open, updatedAt refreshed): ${r.refreshed}  full descriptions replacing truncated ones: ${r.descriptionsUpgraded}`)
     console.log(`expired: ${r.expired}`)

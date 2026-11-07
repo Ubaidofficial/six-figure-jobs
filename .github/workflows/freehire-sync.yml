@@ -19,6 +19,10 @@ on:
         description: "How many days of freehire jobs to re-read (default 1.5). Use 8 to backfill skills/visa on existing jobs."
         type: string
         default: "1.5"
+      check_closed:
+        description: "Also run the closed-job check, report only. Off by default: it asks freehire about up to 3,000 active jobs (one API request each), which uses a large part of the daily quota."
+        type: boolean
+        default: false
 
 # Shares a group with the manual reload so the two never write to the database at the same time.
 concurrency:
@@ -60,15 +64,17 @@ jobs:
         run: npm run sync:freehire
 
       # Asks freehire about each active job individually and expires those it reports as closed AND that its open
-      # search no longer lists (lib/scrapers/freehireClosedCheck.ts). LIVE on the daily schedule; a manual run is
-      # report-only unless closed_apply is ticked. The check skips itself with a warning if more than 5% of lookups
+      # search no longer lists (lib/scrapers/freehireClosedCheck.ts). LIVE on the daily schedule; a manual run skips
+      # it unless check_closed (report only) or closed_apply is ticked. Each run looks up at most 3,000 jobs (the
+      # least recently refreshed first, FREEHIRE_CLOSED_CHECK_MAX_LOOKUPS to change it) because each lookup is one
+      # request against freehire's daily quota. The check skips itself with a warning if more than 5% of lookups
       # fail, and aborts (failing the run, so the owner is emailed) if it would expire more than 40% of what it
       # checked. To switch it off, change the schedule condition below to report-only.
       # Both closed-check steps stop themselves after 15 minutes (nothing is expired) and the step timeout is a second
       # guard, so a stall here can no longer eat the whole job (on 2026-11-05 the scheduled run sat 42 minutes in this
       # step with no output, hit the job timeout and never reached the 7-day expiry below).
       - name: Closed-job check (report only)
-        if: ${{ success() && github.event_name != 'schedule' && !inputs.closed_apply }}
+        if: ${{ success() && github.event_name != 'schedule' && !inputs.closed_apply && inputs.check_closed }}
         timeout-minutes: 20
         run: npm run check-closed:freehire -- --dry-run
 
