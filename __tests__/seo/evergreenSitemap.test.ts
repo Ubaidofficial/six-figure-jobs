@@ -213,6 +213,56 @@ describe('collectPseoBatchEntries (phase 1)', () => {
     expect(await batchPaths(3)).toEqual([])
   })
 
+  describe('cache after a restart and when it expires', () => {
+    const TTL = 60 * 60 * 1000
+    const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+    it('runs one rebuild for requests that arrive together', async () => {
+      mockDb({}, { skills: { python: 279 } })
+      await collectPseoBatchEntries(1, 1)
+      const oneRebuild = aggregate.mock.calls.length
+
+      __resetEvergreenSitemapCacheForTests()
+      aggregate.mockClear()
+      const results = await Promise.all([1, 1, 1].map((n) => collectPseoBatchEntries(n, 1)))
+      expect(aggregate.mock.calls.length).toBe(oneRebuild)
+      results.forEach((r) => expect(paths(r)).toContain('/jobs/skills/python'))
+    })
+
+    it('serves the expired list at once and swaps in the new one once the rebuild finishes', async () => {
+      mockDb({}, { skills: { python: 279 } })
+      expect(paths(await collectPseoBatchEntries(1, 1))).toContain('/jobs/skills/python')
+
+      mockDb({}, { skills: { python: 279, typescript: 300 } })
+      expect(paths(await collectPseoBatchEntries(1, 2 + TTL))).not.toContain('/jobs/skills/typescript')
+      await flush()
+      expect(paths(await collectPseoBatchEntries(1, 3 + TTL))).toContain('/jobs/skills/typescript')
+    })
+
+    it('keeps serving the expired list when the rebuild fails, and tries again on the next request', async () => {
+      mockDb({}, { skills: { python: 279 } })
+      await collectPseoBatchEntries(1, 1)
+
+      aggregate.mockReset()
+      aggregate.mockRejectedValue(new Error('db down'))
+      expect(paths(await collectPseoBatchEntries(1, 2 + TTL))).toContain('/jobs/skills/python')
+      await flush()
+
+      mockDb({}, { skills: { python: 279, typescript: 300 } })
+      await collectPseoBatchEntries(1, 3 + TTL)
+      await flush()
+      expect(paths(await collectPseoBatchEntries(1, 4 + TTL))).toContain('/jobs/skills/typescript')
+    })
+
+    it('still fails the first request after a restart when the database is down, and does not cache that', async () => {
+      aggregate.mockRejectedValue(new Error('db down'))
+      await expect(collectPseoBatchEntries(1, 1)).rejects.toThrow('db down')
+
+      mockDb({}, { skills: { python: 279 } })
+      expect(paths(await collectPseoBatchEntries(1, 2))).toContain('/jobs/skills/python')
+    })
+  })
+
   it('adds nothing when PSEO_UNLOCK=0', async () => {
     process.env.PSEO_UNLOCK = '0'
     mockDb({}, { skills: { python: 279 }, cities: { 'new-york': 135 }, levels: { senior: 708 } })

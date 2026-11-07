@@ -147,7 +147,7 @@ export default async function Image({ params }: { params: Promise<{ role: string
                 padding: '10px 24px',
               }}
             >
-              {data.total.toLocaleString()} open roles
+              {`${data.total.toLocaleString()} open roles`}
             </div>
             {avgSalaryK && (
               <div
@@ -161,7 +161,7 @@ export default async function Image({ params }: { params: Promise<{ role: string
                   padding: '10px 24px',
                 }}
               >
-                ~${avgSalaryK}k avg (USD)
+                {`~$${avgSalaryK}k avg (USD)`}
               </div>
             )}
             {salaryBands.map((band) => (

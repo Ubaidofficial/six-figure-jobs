@@ -132,7 +132,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
                 {name}
               </div>
               <div style={{ color: TEXT_MUTED, fontSize: 18 }}>
-                {data?.company.countryCode ?? 'Global'} · Tech company
+                {`${data?.company.countryCode ?? 'Global'} · Tech company`}
               </div>
             </div>
           </div>
@@ -155,7 +155,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
                 padding: '8px 20px',
               }}
             >
-              {jobCount} open roles
+              {`${jobCount} open roles`}
             </div>
             {avgSalaryK && (
               <div
@@ -169,7 +169,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
                   padding: '8px 20px',
                 }}
               >
-                ~${avgSalaryK}k avg salary
+                {`~$${avgSalaryK}k avg salary`}
               </div>
             )}
             <div

@@ -237,20 +237,43 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
 }
 
 let pseoCache: { at: number; entries: SitemapEntry[] } | null = null
+let pseoRefresh: Promise<SitemapEntry[]> | null = null
+
+// One rebuild at a time. The rebuild is ~100 count queries, and the cache starts empty on every deploy (the site
+// deploys many times a day), so Googlebot arriving right after a deploy used to start several rebuilds at once and
+// time out. Concurrent callers now share the one in flight.
+function refreshPseoCache(now: number): Promise<SitemapEntry[]> {
+  pseoRefresh ??= collectAllPseoEntries()
+    .then((entries) => {
+      pseoCache = { at: now, entries }
+      return entries
+    })
+    .finally(() => {
+      pseoRefresh = null
+    })
+  return pseoRefresh
+}
 
 /**
  * URLs for one released pSEO batch (served at /sitemap-batch/<n>.xml). Empty when the batch is not released yet, so
  * an unreleased batch is never advertised. The full candidate list is cached for an hour and only when complete.
+ * Once cached, an expired list is still served while a rebuild runs behind the request, and a failed rebuild keeps
+ * the old list; only the very first build after a restart can make a request wait or fail.
  */
 export async function collectPseoBatchEntries(batch: number, now: number = Date.now()): Promise<SitemapEntry[]> {
   if (!getReleasedBatchNumbers(now).includes(batch)) return []
-  if (!pseoCache || now - pseoCache.at >= CACHE_TTL_MS) {
-    pseoCache = { at: now, entries: await collectAllPseoEntries() }
+  let entries: SitemapEntry[]
+  if (!pseoCache) {
+    entries = await refreshPseoCache(now)
+  } else {
+    entries = pseoCache.entries
+    if (now - pseoCache.at >= CACHE_TTL_MS) refreshPseoCache(now).catch(() => {})
   }
-  return pseoCache.entries.filter((e) => getPseoBatch(e.path) === batch && isPseoBatchReleased(e.path, now))
+  return entries.filter((e) => getPseoBatch(e.path) === batch && isPseoBatchReleased(e.path, now))
 }
 
 export function __resetEvergreenSitemapCacheForTests() {
   cache = null
   pseoCache = null
+  pseoRefresh = null
 }
