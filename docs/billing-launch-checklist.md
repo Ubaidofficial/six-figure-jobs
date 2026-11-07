@@ -24,10 +24,11 @@ This list is everything the owner has to do to turn it on. Do the steps in order
    - URL: `https://www.6figjobs.com/api/billing/webhook`
    - API version: **2026-10-28.endive**, the version the installed `stripe` package (23.1.0) is written against. Pick it when creating the endpoint. If you leave the account default and it differs, event payloads can have a different shape from what the code reads.
    - Events to send (these seven, no others needed):
-     `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `invoice.paid`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `charge.refunded`
+     `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `invoice.paid`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`
    - Copy the endpoint's **signing secret** -> `STRIPE_WEBHOOK_SECRET`.
 5. Payment methods (Settings, Payment methods): cards and wallets confirm at once. Delayed methods (bank debits) are handled (credits arrive on `checkout.session.async_payment_succeeded`) but have not been tested.
-6. Tax: decide whether to charge VAT or sales tax and turn on Stripe Tax if so. The code does not compute tax.
+6. Tax: decide whether to charge VAT or sales tax and turn on Stripe Tax if so. The code does not compute tax. Set each price's `tax_behavior` (exclusive or inclusive) **before launch**: a price created as "unspecified" can be set once, and Stripe Tax fails on a price that is left unspecified. Until you have a tax registration, turn on Stripe's free threshold monitoring (Settings, Tax) so you are told before you cross a limit.
+6a. Failed payments (Settings, Billing, Revenue recovery): keep **Smart Retries** on and turn on the failed-payment emails and automatic card updates. These are account settings, saved separately in test and live.
 7. API key: create a **restricted** key if you prefer (needs write on Customers, Checkout Sessions, Customer portal sessions; read on Prices and Invoice payments), or use the standard secret key -> `STRIPE_SECRET_KEY`. Never put it in the repository or in a `NEXT_PUBLIC_` variable.
 
 ## 3. Google sign-in
@@ -99,8 +100,8 @@ The live **Terms**, **Privacy** and **Cookie** pages have not been touched and d
 
 ## 9. What the code does and does not do (decisions to confirm)
 
-- Subscription access: `active` and `trialing` only. `past_due`, `unpaid`, `canceled`, `incomplete` and `paused` have no access. If a "subscription deleted" webhook is ever lost, access stops anyway once the stored period ended more than 3 days ago.
-- Monthly credits are granted on `invoice.paid` for the first invoice and each renewal, not for mid-period plan changes or manual invoices. No trial periods are configured.
+- Subscription access: `active` and `trialing`, plus `past_due` for 3 days after it went past due (Stripe is retrying the card; no credits are granted for an unpaid period). `unpaid`, `canceled`, `incomplete` and `paused` have no access. If a "subscription deleted" webhook is ever lost, access stops anyway once the stored period ended more than 3 days ago.
+- Monthly credits are granted on `invoice.paid` for the first invoice and each renewal, not for mid-period plan changes or manual invoices. No trial periods are configured. Subscriptions are created in Stripe's flexible billing mode. A dispute (chargeback) takes back the credits that payment granted, in full and capped at the balance; if the dispute is won they are given back.
 - One active subscription per user (a second checkout is refused); packs can always be bought.
 - **Not built**: disputes and chargebacks (`charge.dispute.*` are not handled, so credits from a disputed charge stay), account deletion (ledger and subscription rows block deleting a user), admin screens for manual credit adjustments, emails about receipts or low balance (Stripe sends receipts if enabled in its settings), and the features that spend credits (`spendCredits` exists and is tested but nothing calls it yet).
 - The sign-in email rate limit (3 per address and 10 per IP per 15 minutes) is held in memory per server instance and resets on deploy. It is a brake on abuse, not an audit log.

@@ -87,6 +87,16 @@ describe('createCheckoutUrl', () => {
     )
   })
 
+  it('creates subscriptions in flexible billing mode, and packs without any subscription settings', async () => {
+    const { stripe, deps } = setup()
+    await createCheckoutUrl('u1', 'subscription', deps)
+    expect(stripe.checkout.sessions.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ subscription_data: { metadata: { userId: 'u1' }, billing_mode: { type: 'flexible' } } }),
+    )
+    await createCheckoutUrl('u1', 'pack_small', deps)
+    expect((stripe.checkout.sessions.create as jest.Mock).mock.calls.at(-1)![0]).not.toHaveProperty('subscription_data')
+  })
+
   it('builds a one-off payment session for a pack with the credits fixed at purchase time', async () => {
     const { stripe, deps } = setup()
     await createCheckoutUrl('u1', 'pack_large', deps)

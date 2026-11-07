@@ -71,7 +71,10 @@ export async function processStripeEvent(event: Stripe.Event, deps: WebhookDeps)
   const log = deps.log ?? ((m, meta) => console.error(`[stripe-webhook] ${m}`, meta ?? {}))
 
   // Needs the Stripe API, so it is done before the transaction opens.
-  const refundInvoiceId = event.type === 'charge.refunded' ? await findRefundedInvoiceId(event, deps) : null
+  const paidInvoiceId =
+    event.type === 'charge.refunded' || event.type === 'charge.dispute.created'
+      ? await findPaidInvoiceId(idOf(event.data.object.payment_intent), deps)
+      : null
 
   return deps.db.$transaction(
     async (tx) => {
@@ -95,7 +98,13 @@ export async function processStripeEvent(event: Stripe.Event, deps: WebhookDeps)
           await onSubscriptionChange(tx, event, log)
           break
         case 'charge.refunded':
-          await onChargeRefunded(tx, event.data.object, refundInvoiceId, log)
+          await onChargeRefunded(tx, event.data.object, paidInvoiceId, log)
+          break
+        case 'charge.dispute.created':
+          await onDisputeCreated(tx, event.data.object, paidInvoiceId, log)
+          break
+        case 'charge.dispute.closed':
+          await onDisputeClosed(tx, event.data.object)
           break
         default:
           // Subscribed to something this code does not act on: recorded as seen, nothing else.
@@ -225,9 +234,7 @@ async function onChargeRefunded(
   const paymentIntent = idOf(charge.payment_intent)
   if (!paymentIntent || !(charge.amount > 0) || !(charge.amount_refunded > 0)) return
 
-  const grant =
-    (await tx.creditLedger.findFirst({ where: { refId: paymentIntent, kind: 'pack' } })) ??
-    (invoiceId ? await tx.creditLedger.findFirst({ where: { refId: invoiceId, kind: 'subscription_grant' } }) : null)
+  const grant = await findGrant(tx, paymentIntent, invoiceId)
   if (!grant || grant.delta <= 0) return
 
   const target = Math.floor((grant.delta * Math.min(charge.amount_refunded, charge.amount)) / charge.amount)
@@ -241,12 +248,60 @@ async function onChargeRefunded(
   if (taken < target) log('refund clawback capped at available balance', { charge: charge.id })
 }
 
-/** For a refunded subscription payment, find which invoice it paid (packs are found by payment intent directly). */
-async function findRefundedInvoiceId(
-  event: Extract<Stripe.Event, { type: 'charge.refunded' }>,
-  deps: WebhookDeps,
-): Promise<string | null> {
-  const paymentIntent = idOf(event.data.object.payment_intent)
+/** The credits a payment granted: a pack (found by payment intent) or a subscription period (found by its invoice). */
+async function findGrant(tx: Tx, paymentIntent: string, invoiceId: string | null) {
+  return (
+    (await tx.creditLedger.findFirst({ where: { refId: paymentIntent, kind: 'pack' } })) ??
+    (invoiceId ? await tx.creditLedger.findFirst({ where: { refId: invoiceId, kind: 'subscription_grant' } }) : null)
+  )
+}
+
+/**
+ * A customer opened a dispute (chargeback) on a payment. Take back the credits that payment granted, in full: a disputed
+ * payment is normally disputed whole, and a partial dispute is rare enough not to model. Credits already spent are not
+ * recovered, and a refund already taken for the same payment counts toward the total (clawbackCredits subtracts it).
+ */
+async function onDisputeCreated(
+  tx: Tx,
+  dispute: Stripe.Dispute,
+  invoiceId: string | null,
+  log: NonNullable<WebhookDeps['log']>,
+) {
+  const paymentIntent = idOf(dispute.payment_intent)
+  if (!paymentIntent) return
+  const grant = await findGrant(tx, paymentIntent, invoiceId)
+  if (!grant || grant.delta <= 0) return
+
+  const taken = await clawbackCredits(tx, {
+    userId: grant.userId,
+    refId: grant.refId ?? paymentIntent,
+    target: grant.delta,
+    reason: 'dispute_opened',
+    idempotencyKey: `dispute:${dispute.id}`,
+  })
+  if (taken < grant.delta) log('dispute clawback capped at available balance', { dispute: dispute.id })
+}
+
+/**
+ * A dispute closed in our favour: the payment stands, so give back what the dispute took. This is written as a positive
+ * "refund"-kind row on the same payment reference, which cancels the earlier clawback in the running total clawbackCredits
+ * keeps per payment. Without that, a later refund of the same payment would find it "already taken" and take nothing.
+ * A lost dispute changes nothing more.
+ */
+async function onDisputeClosed(tx: Tx, dispute: Stripe.Dispute) {
+  if (dispute.status !== 'won') return
+  const taken = await tx.creditLedger.findUnique({ where: { idempotencyKey: `dispute:${dispute.id}` } })
+  if (!taken || taken.delta >= 0 || !taken.refId) return
+
+  const key = `dispute-won:${dispute.id}`
+  if (await tx.creditLedger.findUnique({ where: { idempotencyKey: key } })) return
+  await tx.creditLedger.create({
+    data: { userId: taken.userId, delta: -taken.delta, kind: 'refund', reason: 'dispute_won', refId: taken.refId, idempotencyKey: key },
+  })
+}
+
+/** For a subscription payment, find which invoice it paid (packs are found by payment intent directly). */
+async function findPaidInvoiceId(paymentIntent: string | null, deps: WebhookDeps): Promise<string | null> {
   if (!paymentIntent) return null
   const pack = await deps.db.creditLedger.findFirst({ where: { refId: paymentIntent, kind: 'pack' } })
   if (pack) return null

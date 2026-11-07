@@ -69,7 +69,7 @@ export async function createCheckoutUrl(userId: string, productKey: ProductKey, 
       line_items: [{ price: product.priceId, quantity: 1 }],
       metadata,
       ...(product.mode === 'subscription'
-        ? { subscription_data: { metadata: { userId } } }
+        ? { subscription_data: { metadata: { userId }, billing_mode: { type: 'flexible' as const } } }
         : { payment_intent_data: { metadata } }),
       success_url: `${siteUrl}/account?checkout=success`,
       cancel_url: `${siteUrl}/account?checkout=cancelled`,
