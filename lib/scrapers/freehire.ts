@@ -333,7 +333,13 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
         }
 
         oldPages = oldOnPage === page.data.length ? oldPages + 1 : 0
-        if (oldPages >= 2 || page.data.length < PAGE_SIZE) {
+        // A page shorter than PAGE_SIZE is NOT the last one: freehire routinely returns 95-99 rows with many pages
+        // still to come (measured 2026-11-07, EUR/CHF/ES queries: rows 99, 95, 100, 100 ... down to the last page).
+        // Treating it as the end stopped each market after its first page, so most of the window was never read
+        // (CHF: 96 of roughly 400 jobs from the last three weeks). The end is the total freehire reports, or the
+        // window ending (two pages of nothing but older jobs).
+        const reachedEnd = typeof page.meta.total === 'number' && offset + PAGE_SIZE >= page.meta.total
+        if (oldPages >= 2 || reachedEnd) {
           report.complete = true
           break
         }
