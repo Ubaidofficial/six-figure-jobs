@@ -22,12 +22,12 @@ describe('city sitemap filters', () => {
     // below it. Counts bumped after the 1 → 5 threshold change in WIP.
     aggregateMock.mockImplementation(async ({ where }: any) => {
       if (where?.citySlug === 'new-york' && where?.countryCode === 'US') {
-        return { _count: { _all: 2 }, _max: { updatedAt: new Date('2026-02-14T00:00:00.000Z') } }
+        return { _count: { _all: 2 }, _max: { createdAt: new Date('2026-02-14T00:00:00.000Z') } }
       }
       if (where?.citySlug === 'london' && where?.countryCode === 'GB') {
-        return { _count: { _all: 6 }, _max: { updatedAt: new Date('2026-02-14T01:00:00.000Z') } }
+        return { _count: { _all: 6 }, _max: { createdAt: new Date('2026-02-14T01:00:00.000Z') } }
       }
-      return { _count: { _all: 0 }, _max: { updatedAt: null } }
+      return { _count: { _all: 0 }, _max: { createdAt: null } }
     })
 
     const urls = await getCitySitemapUrls()
@@ -38,7 +38,7 @@ describe('city sitemap filters', () => {
   })
 
   it('uses one aggregate query per city target with city+country filters', async () => {
-    aggregateMock.mockResolvedValue({ _count: { _all: 0 }, _max: { updatedAt: null } })
+    aggregateMock.mockResolvedValue({ _count: { _all: 0 }, _max: { createdAt: null } })
 
     await getCitySitemapUrls()
 

@@ -13,7 +13,7 @@ import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { prisma } from '../../lib/prisma'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
 import { resolveSliceCanonicalPath } from '../../lib/seo/canonical'
-import { buildCleanJobsCanonicalPath, shouldNoindexListingPage, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
+import { buildCleanJobsCanonicalPath, shouldNoindexListingPage, readListingPageParam } from '../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
 import { parseSliceFilters } from '../../lib/slices/types'
 import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
@@ -99,10 +99,12 @@ export async function generateMetadata({
   const canonical = `${SITE_URL}${canonicalPath}`
   
   // Noindex utility states (filtered lists or pagination beyond page 1) to conserve crawl budget
-  const noindexUtilityState = hasNonPaginationQueryParams(sp) || shouldNoindexListingPage(sp)
+  const noindexUtilityState = shouldNoindexListingPage(sp)
+  const pageNumber = readListingPageParam(sp)
+  const pageSuffix = pageNumber > 1 ? ` (Page ${pageNumber})` : ''
 
   return {
-    title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
+    title: `Six-Figure Tech Jobs — Browse $100k+ Openings${pageSuffix} | ${SITE_NAME}`,
     description:
       'Browse $100k+ tech jobs with published salaries and links to the employer’s application page. Filter by role, location, remote work, seniority and company size.',
     alternates: {
@@ -596,7 +598,7 @@ export default async function JobsIndexPage({
               <InfiniteJobsList initialJobs={dedupedJobs} initialPage={page} totalPages={totalPages} />
               {/* Server-rendered pagination links so Google can crawl pages beyond 1; the client list above
                   appends pages for people. */}
-              <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} />
+              <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} numbered />
             </>
           )}
         </ListingLayout>

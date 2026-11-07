@@ -31,9 +31,9 @@ async function getGlobalLastmod(): Promise<string> {
   try {
     const agg = await prisma.job.aggregate({
       where: buildWhere({}),
-      _max: { updatedAt: true },
+      _max: { createdAt: true },
     })
-    return (agg._max.updatedAt ?? new Date()).toISOString()
+    return (agg._max.createdAt ?? new Date()).toISOString()
   } catch {
     return new Date().toISOString()
   }

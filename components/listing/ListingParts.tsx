@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
 import { JobCard } from '@/components/jobs/JobCard'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
+import { pageLinkNumbers } from '@/lib/listing/pageNumbers'
 
 import styles from './Listing.module.css'
 
@@ -146,12 +147,16 @@ export function Pagination({
   page,
   totalPages,
   hrefFor,
+  numbered = false,
 }: {
   page: number
   totalPages: number
   hrefFor: (page: number) => string
+  /** Also link numbered pages (first, last, a window and jumps), so a crawler reaches deep pages in a few clicks. */
+  numbered?: boolean
 }) {
   if (totalPages <= 1) return null
+  const numbers = numbered ? pageLinkNumbers(page, totalPages) : []
   return (
     <nav className={styles.pagination} aria-label="Pagination">
       <span>
@@ -163,6 +168,20 @@ export function Pagination({
             Previous
           </Link>
         ) : null}
+        {numbers.map((n, i) => (
+          <span key={n} className={styles.pageNumberItem}>
+            {i > 0 && n - numbers[i - 1] > 1 ? <span className={styles.pageGap} aria-hidden="true">…</span> : null}
+            {n === page ? (
+              <span className={`${styles.pageLink} ${styles.pageCurrent}`} aria-current="page">
+                {n}
+              </span>
+            ) : (
+              <Link className={styles.pageLink} href={hrefFor(n)} scroll={false} aria-label={`Page ${n}`}>
+                {n}
+              </Link>
+            )}
+          </span>
+        ))}
         {page < totalPages ? (
           <Link className={styles.pageLink} href={hrefFor(page + 1)} scroll={false} rel="next">
             Next

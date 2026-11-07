@@ -163,7 +163,26 @@
 
 .pageLinks {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+}
+
+.pageNumberItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageGap {
+  color: var(--color-text-2);
+}
+
+.pageCurrent {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-foreground, #0b1400);
+  font-weight: 700;
 }
 
 .pageLink {

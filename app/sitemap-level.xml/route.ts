@@ -25,7 +25,7 @@ export async function GET() {
       by: ['experienceLevel'],
       where: { ...baseWhere, experienceLevel: { in: levels } },
       _count: { _all: true },
-      _max: { updatedAt: true },
+      _max: { createdAt: true },
     })
 
     const counts = new Map<string, number>()
@@ -33,7 +33,7 @@ export async function GET() {
     for (const row of rows) {
       if (!row.experienceLevel) continue
       counts.set(String(row.experienceLevel).toLowerCase(), Number(row._count?._all ?? 0))
-      const updatedAt = row._max?.updatedAt ?? null
+      const updatedAt = row._max?.createdAt ?? null
       if (updatedAt) lastmods.set(String(row.experienceLevel).toLowerCase(), updatedAt)
     }
 

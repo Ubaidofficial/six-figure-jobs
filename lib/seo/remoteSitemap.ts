@@ -35,7 +35,7 @@ export async function collectRemoteRoleRows(
       roleSlug: { in: canonicalSlugs },
     },
     _count: { _all: true },
-    _max: { updatedAt: true },
+    _max: { createdAt: true },
     orderBy: { _count: { roleSlug: 'desc' } },
   })
 
@@ -48,7 +48,7 @@ export async function collectRemoteRoleRows(
       return {
         roleSlug,
         total,
-        lastmod: (((row as any)._max?.updatedAt as Date | undefined) ?? new Date()).toISOString(),
+        lastmod: (((row as any)._max?.createdAt as Date | undefined) ?? new Date()).toISOString(),
       }
     })
     .filter((row): row is RemoteRoleSitemapRow => Boolean(row))

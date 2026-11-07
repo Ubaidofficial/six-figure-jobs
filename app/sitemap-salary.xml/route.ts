@@ -36,7 +36,7 @@ export async function GET() {
             prisma.job.count({ where }),
             prisma.job.aggregate({
               where,
-              _max: { updatedAt: true },
+              _max: { createdAt: true },
             }),
           ])
 
@@ -46,7 +46,7 @@ export async function GET() {
 
           return {
             url: `${SITE_URL}${path}`,
-            lastModified: (agg._max.updatedAt ?? new Date()).toISOString(),
+            lastModified: (agg._max.createdAt ?? new Date()).toISOString(),
           } satisfies SalarySitemapUrl
         }),
       )

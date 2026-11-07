@@ -26,14 +26,14 @@ export async function GET() {
       by: ['roleSlug'],
       where: { ...baseWhere, roleSlug: { not: null } },
       _count: { _all: true },
-      _max: { updatedAt: true },
+      _max: { createdAt: true },
     })
 
     const roleStats = roleRows
       .map((row) => ({
         slug: row.roleSlug ? String(row.roleSlug).toLowerCase() : '',
         count: Number(row._count?._all ?? 0),
-        lastmod: row._max?.updatedAt ?? null,
+        lastmod: row._max?.createdAt ?? null,
       }))
       .filter((row) => row.slug)
 

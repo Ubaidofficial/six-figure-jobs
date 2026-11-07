@@ -26,14 +26,20 @@ export function hasNonPaginationQueryParams(searchParams: ListingSearchParams): 
 }
 
 /**
+ * Deepest unfiltered page of /jobs that is indexable. A page that is `noindex` for long is eventually treated as
+ * `nofollow` by Google, so the job links on pages 2+ were never followed; every page that lists jobs has to be
+ * indexable for Google to walk to them. Beyond this depth (far more than we have today) pages are noindex again.
+ */
+export const MAX_INDEXABLE_LISTING_PAGE = 250
+
+/**
  * Returns true if a listing page should be noindexed.
- * Reasons: non-pagination query params (search/filter state) OR page 2+.
- * Page 1 with no filters is the only indexable listing page variant.
+ * Reasons: non-pagination query params (search/filter state), or a page deeper than MAX_INDEXABLE_LISTING_PAGE.
+ * Plain pagination (/jobs?page=2) is indexable and canonical to itself.
  */
 export function shouldNoindexListingPage(searchParams: ListingSearchParams): boolean {
   if (hasNonPaginationQueryParams(searchParams)) return true
-  const page = readListingPageParam(searchParams)
-  return page > 1
+  return readListingPageParam(searchParams) > MAX_INDEXABLE_LISTING_PAGE
 }
 
 export function buildNormalizedListingPath(
@@ -76,7 +82,12 @@ function normalizeSlug(value: string | null): string | null {
 
 export function buildCleanJobsCanonicalPath(searchParams: ListingSearchParams): string {
   const hasFilters = hasNonPaginationQueryParams(searchParams)
-  if (!hasFilters) return '/jobs'
+  if (!hasFilters) {
+    // Each page of the unfiltered list is its own canonical (a page-2 canonical pointing at page 1 tells Google page 2
+    // is a duplicate and that the jobs on it need not be crawled).
+    const page = readListingPageParam(searchParams)
+    return page > 1 ? `/jobs?page=${page}` : '/jobs'
+  }
 
   const role = normalizeSlug(firstValue(searchParams, 'role') ?? firstValue(searchParams, 'roleSlug'))
   const country = normalizeSlug(firstValue(searchParams, 'country') ?? firstValue(searchParams, 'countryCode'))

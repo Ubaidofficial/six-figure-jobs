@@ -103,6 +103,8 @@ export const PHASE_1_ENABLED_SITEMAP_FAMILIES = new Set<string>([
   'sitemap-jobs',
   'sitemap-company',
   'sitemap-salary',
+  // Only the phase-1 countries are listed in phase 1 (see lib/seo/countrySitemap.ts).
+  'sitemap-country',
 ])
 
 /**
@@ -140,6 +142,8 @@ export type IndexabilityContext = {
   roleSlug?: string | null
   countryCode?: string | null
   pathname?: string | null
+  /** Set to 'country' for /jobs/location/<country> listing pages. */
+  pageType?: 'country'
 }
 
 /**
@@ -158,6 +162,11 @@ export function isPhaseIndexable(ctx: IndexabilityContext): boolean {
 
   const roleSlug = String(ctx.roleSlug || '').toLowerCase().trim()
   const countryCode = String(ctx.countryCode || '').toUpperCase().trim()
+
+  // Country listing pages for the five phase-1 countries (the biggest pages on the site, with the most jobs).
+  if (ctx.pageType === 'country' && countryCode && PHASE_1_COUNTRY_CODES.has(countryCode)) {
+    return true
+  }
 
   // Salary guides for top roles (no country = the broad guide)
   if (roleSlug && PHASE_1_ROLE_SLUGS.has(roleSlug) && !countryCode) {

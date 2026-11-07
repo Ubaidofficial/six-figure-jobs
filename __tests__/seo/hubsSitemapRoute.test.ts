@@ -28,7 +28,7 @@ describe('sitemap routes', () => {
   })
 
   it('index: lastmod is the newest job update, never the request time', async () => {
-    aggregate.mockResolvedValue({ _max: { updatedAt: new Date('2026-01-02T03:04:05.000Z') } })
+    aggregate.mockResolvedValue({ _max: { createdAt: new Date('2026-01-02T03:04:05.000Z') } })
     const xml = await (await getIndex()).text()
     expect(xml).toContain('<lastmod>2026-01-02T03:04:05.000Z</lastmod>')
     expect(xml).not.toContain(String(new Date().getUTCFullYear() + 1))

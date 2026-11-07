@@ -14,6 +14,7 @@ import {
 } from '../../../lib/jobs/qualityGate'
 import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../../../lib/jobs/freshness'
 import { getMaxJobUrlsPerShard } from '../../../lib/seo/sitemapPolicy'
+import { jobSitemapLastmod } from '../../../lib/seo/jobLastmod'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
@@ -148,7 +149,7 @@ export async function GET(
       // ✅ Always generate canonical v2.8 URL (no legacy/roleSlug risk)
       const slug = buildJobSlug({ id: job.id, title: job.title })
       const loc = escapeXml(`${SITE_URL}/job/${slug}`)
-      const lastmod = (job.updatedAt ?? new Date()).toISOString()
+      const lastmod = jobSitemapLastmod(job).toISOString()
 
       return `  <url>
     <loc>${loc}</loc>
