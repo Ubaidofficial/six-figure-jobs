@@ -16,8 +16,8 @@ export const dynamic = 'force-dynamic' // built per request: the deploy-time bui
 
 async function getSlicesLastmod(): Promise<string> {
   try {
-    const agg = await prisma.job.aggregate({ where: { isExpired: false }, _max: { updatedAt: true } })
-    return (agg._max.updatedAt ?? new Date()).toISOString()
+    const agg = await prisma.job.aggregate({ where: { isExpired: false }, _max: { createdAt: true } })
+    return (agg._max.createdAt ?? new Date()).toISOString()
   } catch {
     return new Date().toISOString()
   }

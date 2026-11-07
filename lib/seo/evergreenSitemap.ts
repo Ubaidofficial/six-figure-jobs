@@ -36,8 +36,8 @@ let cache: { at: number; entries: SitemapEntry[] } | null = null
 /** Newest update among live jobs; null when the database cannot be reached (callers then omit `lastmod`). */
 export async function getLatestJobUpdate(): Promise<Date | null> {
   try {
-    const agg = await prisma.job.aggregate({ where: { isExpired: false }, _max: { updatedAt: true } })
-    return agg._max.updatedAt ?? null
+    const agg = await prisma.job.aggregate({ where: { isExpired: false }, _max: { createdAt: true } })
+    return agg._max.createdAt ?? null
   } catch {
     return null
   }
@@ -49,8 +49,8 @@ export function getLatestBlogUpdate(): Date | null {
 }
 
 async function countAndLatest(where: object): Promise<{ count: number; latest: Date | null }> {
-  const agg = await prisma.job.aggregate({ where, _count: { _all: true }, _max: { updatedAt: true } })
-  return { count: agg._count._all, latest: agg._max.updatedAt ?? null }
+  const agg = await prisma.job.aggregate({ where, _count: { _all: true }, _max: { createdAt: true } })
+  return { count: agg._count._all, latest: agg._max.createdAt ?? null }
 }
 
 async function collectRoleEntries(role: string): Promise<SitemapEntry[]> {
@@ -167,7 +167,7 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
       by: ['roleSlug'],
       where: buildWhere({ page: 1, pageSize: 1 }),
       _count: { _all: true },
-      _max: { updatedAt: true },
+      _max: { createdAt: true },
     })
     for (const role of getTier1Slugs()) {
       if (PHASE_1_ROLE_SLUGS.has(role)) continue // already listed by collectRoleEntries
@@ -176,7 +176,7 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
       for (const g of groups) {
         if (!g.roleSlug || !g.roleSlug.includes(role)) continue
         count += g._count._all
-        const at = g._max.updatedAt
+        const at = g._max.createdAt
         if (at && (!latest || at > latest)) latest = at
       }
       if (count >= 3 && meetsPseoRoleFloor(count)) entries.push({ path: `/jobs/${role}`, lastmod: latest })

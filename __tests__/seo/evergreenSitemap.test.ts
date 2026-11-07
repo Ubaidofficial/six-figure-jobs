@@ -42,20 +42,20 @@ type Pseo = {
 /** counts[role] = { jobs, salary, remote }; pseo = counts for the skill / city / level / role x skill pages */
 function mockDb(counts: Record<string, { jobs: number; salary: number; remote: number }>, pseo: Pseo = {}) {
   groupBy.mockResolvedValue(
-    (pseo.roleGroups ?? []).map((g) => ({ roleSlug: g.roleSlug, _count: { _all: g.count }, _max: { updatedAt: ROLE_LATEST } })),
+    (pseo.roleGroups ?? []).map((g) => ({ roleSlug: g.roleSlug, _count: { _all: g.count }, _max: { createdAt: ROLE_LATEST } })),
   )
   aggregate.mockImplementation(async ({ where, _count }: { where: any; _count?: unknown }) => {
-    if (!_count) return { _max: { updatedAt: LATEST } } // newest job overall
+    if (!_count) return { _max: { createdAt: LATEST } } // newest job overall
     if (where.skill || where.city || where.level) {
       const n = where.role
         ? (pseo.combos?.[`${where.role}/${where.skill ?? where.city}`] ?? 0)
         : (pseo.skills?.[where.skill] ?? pseo.cities?.[where.city] ?? pseo.levels?.[where.level] ?? 0)
-      return { _count: { _all: n }, _max: { updatedAt: n > 0 ? ROLE_LATEST : null } }
+      return { _count: { _all: n }, _max: { createdAt: n > 0 ? ROLE_LATEST : null } }
     }
     const role = where.role ?? where.roleSlug
     const c = counts[role] ?? { jobs: 0, salary: 0, remote: 0 }
     const n = where.kind === 'remote' ? c.remote : where.kind === 'jobs' ? c.jobs : c.salary
-    return { _count: { _all: n }, _max: { updatedAt: n > 0 ? ROLE_LATEST : null } }
+    return { _count: { _all: n }, _max: { createdAt: n > 0 ? ROLE_LATEST : null } }
   })
 }
 

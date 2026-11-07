@@ -34,7 +34,12 @@ jest.mock('../../app/sitemap-slices.xml/route', () => ({
   ),
 }))
 
+// Whether the country sitemap has any URL needs the database too.
+const mockHasCountries = jest.fn()
+jest.mock('../../lib/seo/countrySitemap', () => ({ hasCountrySitemapEntries: (...a: unknown[]) => mockHasCountries(...a) }))
+
 describe('sitemap.xml route', () => {
+  beforeEach(() => mockHasCountries.mockReset().mockResolvedValue(false))
   afterEach(() => {
     delete process.env.INDEXING_PHASE
     delete process.env.SEO_INDEXATION_PHASE
@@ -60,7 +65,24 @@ describe('sitemap.xml route', () => {
     expect(response.headers.get('x-sitemap-fallback')).toBeNull()
   })
 
+  it('advertises the country sitemap in phase 1 only when it has URLs (the phase-1 countries)', async () => {
+    process.env.INDEXING_PHASE = '1'
+    process.env.SEO_INDEXATION_PHASE = '1'
+
+    mockHasCountries.mockResolvedValue(true)
+    expect(await (await GET()).text()).toContain('/sitemap-country.xml')
+
+    mockHasCountries.mockResolvedValue(false)
+    expect(await (await GET()).text()).not.toContain('/sitemap-country.xml')
+
+    mockHasCountries.mockRejectedValue(new Error('database down'))
+    const down = await GET()
+    expect(down.status).toBe(200)
+    expect(await down.text()).not.toContain('/sitemap-country.xml')
+  })
+
   it('advertises all sitemap families once phase 2+ is enabled', async () => {
+    mockHasCountries.mockResolvedValue(true)
     process.env.INDEXING_PHASE = '3'
     process.env.SEO_INDEXATION_PHASE = '3'
 

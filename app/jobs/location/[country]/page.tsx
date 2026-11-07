@@ -82,10 +82,11 @@ export async function generateMetadata({
     : `Browse ${total.toLocaleString()} ${salaryLabel} jobs in ${loc.label}. Find high paying ${loc.label} roles, six figure jobs, direct apply links, and verified salary ranges.`
 
   const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
-  // Country listing pages aren't in the Phase 1 allowlist — noindex until phase 2.
+  // In phase 1 only the allowlisted countries (US, GB, CA, DE, AU) are indexable; the rest wait for phase 2.
   const allowIndex =
     isCountryPageIndexable(total) &&
     isPhaseIndexable({
+      pageType: 'country',
       countryCode: loc.countryCode ?? null,
       pathname: `/jobs/location/${loc.slug ?? country}`,
     })

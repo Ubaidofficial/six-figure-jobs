@@ -30,10 +30,10 @@ describe('sitemap-salary.xml route', () => {
       .mockResolvedValueOnce(7)
 
     aggregateMock
-      .mockResolvedValueOnce({ _max: { updatedAt: new Date('2026-03-10T00:00:00.000Z') } } as any)
-      .mockResolvedValueOnce({ _max: { updatedAt: null } } as any)
-      .mockResolvedValueOnce({ _max: { updatedAt: new Date('2026-03-11T00:00:00.000Z') } } as any)
-      .mockResolvedValueOnce({ _max: { updatedAt: new Date('2026-03-12T00:00:00.000Z') } } as any)
+      .mockResolvedValueOnce({ _max: { createdAt: new Date('2026-03-10T00:00:00.000Z') } } as any)
+      .mockResolvedValueOnce({ _max: { createdAt: null } } as any)
+      .mockResolvedValueOnce({ _max: { createdAt: new Date('2026-03-11T00:00:00.000Z') } } as any)
+      .mockResolvedValueOnce({ _max: { createdAt: new Date('2026-03-12T00:00:00.000Z') } } as any)
 
     const response = await GET()
     const xml = await response.text()

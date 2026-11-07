@@ -84,6 +84,21 @@ describe('isPhaseIndexable', () => {
     expect(isPhaseIndexable({ roleSlug: 'rust-engineer', countryCode: 'US' })).toBe(false)
   })
 
+  it('unlocks allowlisted country pages in phase 1, and only those', () => {
+    setPhase('1')
+    for (const code of ['US', 'GB', 'CA', 'DE', 'AU']) {
+      expect(isPhaseIndexable({ pageType: 'country', countryCode: code })).toBe(true)
+    }
+    expect(isPhaseIndexable({ pageType: 'country', countryCode: 'NL' })).toBe(false)
+    expect(isPhaseIndexable({ pageType: 'country', countryCode: null })).toBe(false)
+  })
+
+  it('does not unlock other page types just because the country is allowlisted', () => {
+    setPhase('1')
+    expect(isPhaseIndexable({ countryCode: 'US', pathname: '/jobs/location/united-states/some-city' })).toBe(false)
+    expect(isPhaseIndexable({ roleSlug: 'rust-engineer', countryCode: 'US' })).toBe(false)
+  })
+
   it('allows everything in phase 2+', () => {
     setPhase('2')
     expect(isPhaseIndexable({ roleSlug: 'anything', countryCode: 'JP' })).toBe(true)

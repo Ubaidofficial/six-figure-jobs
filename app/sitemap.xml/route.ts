@@ -2,6 +2,7 @@
 
 import { BLOG_POSTS } from '../../lib/blog/posts'
 import { getSiteUrl } from '../../lib/seo/site'
+import { hasCountrySitemapEntries } from '../../lib/seo/countrySitemap'
 import { getLatestBlogUpdate, getLatestJobUpdate } from '../../lib/seo/evergreenSitemap'
 import { shouldAdvertiseSitemapFamily } from '../../lib/seo/sitemapPolicy'
 import { getReleasedBatchNumbers } from '../../lib/seo/pseoBatches'
@@ -72,7 +73,11 @@ export async function GET() {
     const d = path === 'sitemap-blog.xml' ? latestBlog : latestJob
     return d ? d.toISOString() : null
   }
-  const direct: Entry[] = buildAdvertisedSitemaps().map((path) => ({ path, lastmod: lastmodFor(path) }))
+  // The country sitemap is advertised only when it has URLs (an empty or missing child is worse than none).
+  const hasCountries = shouldAdvertiseSitemapFamily('country') ? await hasCountrySitemapEntries().catch(() => false) : false
+  const direct: Entry[] = buildAdvertisedSitemaps()
+    .filter((path) => path !== 'sitemap-country.xml' || hasCountries)
+    .map((path) => ({ path, lastmod: lastmodFor(path) }))
   const [jobs, company, slices] = await Promise.all([
     shouldAdvertiseSitemapFamily('jobs') ? expandChildIndex(getJobsIndex) : [],
     shouldAdvertiseSitemapFamily('company') ? expandChildIndex(getCompanyIndex) : [],

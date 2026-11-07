@@ -19,7 +19,7 @@ export async function getSkillSitemapUrls() {
       const agg = await prisma.job.aggregate({
         where,
         _count: { _all: true },
-        _max: { updatedAt: true },
+        _max: { createdAt: true },
       })
 
       const total = Number(agg._count?._all ?? 0)
@@ -27,7 +27,7 @@ export async function getSkillSitemapUrls() {
 
       return {
         loc: `${SITE_URL}/jobs/skills/${skill.slug}`,
-        lastmod: (agg._max.updatedAt ?? new Date()).toISOString(),
+        lastmod: (agg._max.createdAt ?? new Date()).toISOString(),
       }
     }),
   )

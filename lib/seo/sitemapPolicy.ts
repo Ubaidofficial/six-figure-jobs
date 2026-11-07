@@ -26,7 +26,7 @@ export function getSeoPhase(): number {
 
 export function shouldAdvertiseSitemapFamily(family: CoreSitemapFamily): boolean {
   const phase = getSeoPhase()
-  const p1 = new Set(['jobs', 'company', 'salary'])
+  const p1 = new Set(['jobs', 'company', 'salary', 'country'])
   
   if (p1.has(family)) return true
   return phase >= 2
