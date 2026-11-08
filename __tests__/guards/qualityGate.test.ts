@@ -31,6 +31,13 @@ describe('evaluateJobIndexability', () => {
     expect(result).toEqual({ indexable: true, reason: 'ok' })
   })
 
+  it('does not index a posting written in another language (English site, owner decision 2026-11-08)', () => {
+    const german = `<p>${'Für unseren renommierten Partner suchen wir Sie in Festanstellung als Facharzt. Wir bieten Ihnen eine unbefristete Stelle und die Mitarbeiter sind mit der Klinik verbunden. '.repeat(4)}</p>`
+    const english = `<p>${'We are looking for an engineer who will join our team and work with the platform. You will have experience with the tools. '.repeat(4)}</p>`
+    expect(evaluateJobIndexability({ ...baseJob, descriptionHtml: german })).toEqual({ indexable: false, reason: 'non_english' })
+    expect(evaluateJobIndexability({ ...baseJob, descriptionHtml: english })).toEqual({ indexable: true, reason: 'ok' })
+  })
+
   it('rejects thin content when description and AI text are both insufficient', () => {
     const result = evaluateJobIndexability({
       ...baseJob,

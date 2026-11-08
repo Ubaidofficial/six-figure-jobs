@@ -3,6 +3,7 @@ import { getHighSalaryThresholdAnnual } from '../currency/thresholds'
 import { inferCurrencyFromCountryCode } from '../normalizers/salary'
 import { isJobFresh } from './freshness'
 import { hasJobDescriptionNoise } from './descriptionCleaning'
+import { detectJobLanguage } from './language'
 
 export const QUALITY_MIN_DESCRIPTION_CHARS = 140
 export const QUALITY_MIN_AI_SNIPPET_CHARS = 80
@@ -203,6 +204,13 @@ export function evaluateJobIndexability(job: JobIndexabilityInput): JobIndexabil
   if (descriptionLen > 0 && hasJobDescriptionNoise(String(job.descriptionHtml || ''))) {
     return fail('polluted_description')
   }
+
+  // An English site asks Google to index English postings only (owner's decision, 2026-11-08): German doctor and
+  // construction postings, many of them near-identical agency ads per city, were most of the newest jobs. They stay on
+  // the site and in search; their pages are noindex and they leave the job sitemaps and the Indexing API queue.
+  // An undetected language (short text, mixed) counts as English, as on the job page.
+  const language = detectJobLanguage(job.descriptionHtml)
+  if (language && language !== 'en') return fail('non_english')
 
   const aiSnippetLen = String(job.aiSnippet || '').trim().length
   const aiOneLinerLen = String(job.aiOneLiner || '').trim().length
