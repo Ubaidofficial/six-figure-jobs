@@ -72,6 +72,38 @@ function categoryOf(roleSlug: string): string | null {
   return prefixed[0]?.category ?? null
 }
 
+/** Jobs for a role page: every stored roleSlug that equals or contains the slug, as buildWhere() matches them. */
+function countFor(slug: string, counts: RoleSlugCount[]): { total: number; recent: number } {
+  let total = 0
+  let recent = 0
+  for (const c of counts) {
+    if (c.roleSlug.includes(slug)) {
+      total += c.total
+      recent += c.recent
+    }
+  }
+  return { total, recent }
+}
+
+/**
+ * Role pages for the search box: with a query, roles whose name has a word starting with each typed word
+ * ("prod man" -> Product Manager); without one, the roles with the most jobs. Only pages with at least MIN_JOBS jobs.
+ */
+export function matchRolePages(query: string, counts: RoleSlugCount[], limit = 3): RelatedRole[] {
+  const words = query.toLowerCase().split(/[^a-z0-9+#]+/).filter(Boolean)
+  const seen = new Set<string>()
+  const roles: RelatedRole[] = []
+  for (const { slug, label } of CANDIDATES) {
+    if (!slug || seen.has(slug)) continue
+    const names = `${label} ${slug.replace(/-/g, ' ')}`.toLowerCase().split(/[^a-z0-9+#]+/)
+    if (!words.every((w) => names.some((n) => n.startsWith(w)))) continue
+    seen.add(slug)
+    const { total, recent } = countFor(slug, counts)
+    if (total >= MIN_JOBS) roles.push({ slug, label, total, recent })
+  }
+  return roles.sort((a, b) => b.total - a.total || a.label.localeCompare(b.label)).slice(0, limit)
+}
+
 /**
  * Other canonical roles in the current role's field, with at least MIN_JOBS live jobs, ordered by jobs posted
  * recently (then total). A job counts toward a role when its roleSlug equals or contains the role's slug, the same
@@ -92,14 +124,7 @@ export function rankRelatedRoles(
     if (candidateCategory !== category || !slug || seen.has(slug) || slug === currentSlug || slug === base) continue
     seen.add(slug)
 
-    let total = 0
-    let recent = 0
-    for (const c of counts) {
-      if (c.roleSlug.includes(slug)) {
-        total += c.total
-        recent += c.recent
-      }
-    }
+    const { total, recent } = countFor(slug, counts)
     if (total < MIN_JOBS) continue
     roles.push({ slug, label, total, recent })
   }

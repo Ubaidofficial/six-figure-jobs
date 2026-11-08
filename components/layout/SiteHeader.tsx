@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Menu, Search, X } from 'lucide-react'
 
+import { HeroSearchInput } from '@/components/home/HeroSearchInput'
+
 import { AuthNav } from './AuthNav'
 import { Wordmark } from './Wordmark'
 
@@ -34,7 +36,6 @@ export function SiteHeader() {
   const router = useRouter()
 
   const [mobileOpen, setMobileOpen] = React.useState(false)
-  const [query, setQuery] = React.useState('')
 
   const submitSearch = React.useCallback(
     (value: string) => {
@@ -79,7 +80,7 @@ export function SiteHeader() {
           className={styles.search}
           onSubmit={(e) => {
             e.preventDefault()
-            submitSearch(query)
+            submitSearch(String(new FormData(e.currentTarget).get('q') ?? ''))
           }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') (e.target as HTMLElement).blur()
@@ -89,16 +90,13 @@ export function SiteHeader() {
             Find roles, companies, or skills
           </label>
           <Search className={styles.searchGlyph} aria-hidden="true" />
-          <input
+          {/* Live suggestions (roles, jobs) as you type. "/" focuses it, except on the homepage where the hero box takes it. */}
+          <HeroSearchInput
             id="site-search"
             name="q"
-            type="text"
-            enterKeyHint="search"
-            autoComplete="off"
             className={styles.searchInput}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
             placeholder="Find roles, companies, or skills"
+            shortcut={pathname !== '/'}
           />
         </form>
 

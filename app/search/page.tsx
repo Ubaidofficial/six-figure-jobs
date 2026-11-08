@@ -12,8 +12,7 @@ import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../components/JobList'
 import { SearchForm } from './SearchForm'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
-import { knownLeftover, leftoverTokens } from '../../lib/search/leftover'
-import { getSearchVocabulary } from '../../lib/search/vocabulary'
+import { leftoverTokens } from '../../lib/search/leftover'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
 
 // CDN-cacheable per-query. /search is noindex by design (X-Robots-Tag header in
@@ -292,11 +291,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const resolvedRemoteMode = remoteMode || normalizeRemoteMode(aiFilters.remoteMode)
   const resolvedRemoteRegion = remoteRegion || aiFilters.remoteRegion || ''
   const resolvedSeniority = seniority || aiFilters.experienceLevel || ''
-  const roleSlugs = aiFilters.roleSlugs?.length
-    ? aiFilters.roleSlugs
-    : role
-    ? [role]
-    : []
+  // Roles guessed from free text are not used as filters: the guess maps skills to roles ("react" -> frontend + mobile
+  // engineer, "data engineer" -> ... + recruiter) and then drops the words, so "react" found 1 job here and 84 from
+  // the homepage box. The words go to the same keyword search as /jobs?q= instead; only an explicit ?role= filters.
+  const roleSlugs = role ? [role] : []
   const resolvedCountryCode =
     resolvedLocation === 'remote' ? undefined : resolveCountryCode(resolvedLocation)
   const remoteOnly = resolvedLocation === 'remote' || (Boolean(aiFilters.remoteOnly) && !remoteMode)
@@ -306,16 +304,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
   return withRuntimeFallback(
     'search.page',
     async () => {
-      // Words the structured filters did not consume ("python" in "python developer") still narrow the results,
-      // but only when they are real words in our jobs.
-      let keyword: string | undefined = aiFilters.roleSlugs?.length ? undefined : q || undefined
-      if (aiFilters.roleSlugs?.length) {
-        const left = leftoverTokens(q, aiFilters.roleSlugs)
-        if (left.length > 0) {
-          const vocab = await getSearchVocabulary().catch(() => null)
-          keyword = knownLeftover(left, vocab).join(' ') || undefined
-        }
-      }
+      // The words not consumed by the country, remote, seniority or salary filters ("react developer" in
+      // "senior react developer uk") are the keyword, searched with typo correction, aliases and relevance.
+      const keyword = leftoverTokens(q, []).join(' ') || undefined
 
       const data = await queryJobs({
         page,
