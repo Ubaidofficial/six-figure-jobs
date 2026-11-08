@@ -12,7 +12,8 @@ import { CompanySearch } from '@/components/companies/CompanySearch'
 import { getCompanyPublishingManifest } from '@/lib/seo/companyPublishing'
 import { getPriorityCompanyRank } from '@/lib/seo/priorityCompanies'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '@/lib/seo/indexabilityGates'
-import { JobRows, ListingHeader, ListingPage, Pagination } from '@/components/listing/ListingParts'
+import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Pagination, Prose } from '@/components/listing/ListingParts'
+import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 
 export const revalidate = 600 // 10m ISR
 const SITE_URL = getSiteUrl()
@@ -174,6 +175,33 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     const pageStart = (currentPage - 1) * COMPANIES_PAGE_SIZE
     const pagedCompanies = orderedCompanies.slice(pageStart, pageStart + COMPANIES_PAGE_SIZE)
 
+    const topRoles = await loadTopRolePages({})
+    // The biggest employers right now, for the text under the grid (live counts, so the page says something specific).
+    const largestEmployers = [...companies]
+      .filter((c) => c.slug && c.name)
+      .sort((a, b) => (b._count.jobs ?? 0) - (a._count.jobs ?? 0))
+      .slice(0, 6)
+    const faqItems = [
+      {
+        question: 'How does a company get listed here?',
+        answer: `A company appears in this directory once it has at least ${MIN_COMPANY_INDEXABLE_JOBS} open jobs with a published salary of $100k+ (or the local equivalent, such as £75k+ or €80k+). Right now ${totalCompanies.toLocaleString()} companies qualify, and ${totalCompaniesHiring.toLocaleString()} companies have at least one open six-figure job.`,
+      },
+      {
+        question: 'Are the salaries real?',
+        answer:
+          'Every job listed was posted by the employer with a salary range, and the top of that range reaches the six-figure floor for its currency. Each listing links to the company’s own application page.',
+      },
+      {
+        question: 'How often is this list updated?',
+        answer: `Jobs are refreshed every day. Closed jobs and jobs not seen for 7 days are removed, so a company drops out of the directory when it has fewer than ${MIN_COMPANY_INDEXABLE_JOBS} open six-figure jobs.`,
+      },
+    ]
+    const faqJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqItems.map((q) => ({ '@type': 'Question', name: q.question, acceptedAnswer: { '@type': 'Answer', text: q.answer } })),
+    }
+
     const breadcrumbJsonLd = buildBreadcrumbJsonLd()
     // ItemList describes the visible page so /companies?page=2 isn't a duplicate
     // signal of page 1 to Google.
@@ -226,6 +254,42 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
             />
           </>
         )}
+
+        {/* Explanatory text and FAQ on page 1 only, so ?page=N pages do not repeat it. */}
+        {currentPage === 1 && orderedCompanies.length > 0 ? (
+          <>
+            <ListingSection title="About this directory">
+              <Prose>
+                <p>
+                  These are the companies with the most open six-figure jobs on {SITE_NAME}: every one has at least{' '}
+                  {MIN_COMPANY_INDEXABLE_JOBS} live roles that publish a salary of $100k+ (or the local equivalent).
+                  Between them they have {totalEligibleJobs.toLocaleString()} open jobs. Each company page lists all of
+                  its current six-figure openings with the published pay range and a link to apply on the company&apos;s
+                  own site.
+                </p>
+              </Prose>
+              {largestEmployers.length > 0 ? (
+                <LinkChips
+                  label="Largest employers right now"
+                  items={largestEmployers.map((c) => ({
+                    label: String(c.name),
+                    href: `/company/${c.slug}`,
+                    count: c._count.jobs,
+                  }))}
+                />
+              ) : null}
+            </ListingSection>
+            {topRoles.length > 0 ? (
+              <ListingSection title="Browse by role">
+                <LinkChips label="Top roles" items={topRolesRow('Top roles', topRoles)?.items ?? []} />
+              </ListingSection>
+            ) : null}
+            <ListingSection title="Questions about these companies">
+              <Faq items={faqItems} />
+            </ListingSection>
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+          </>
+        ) : null}
       </ListingPage>
     )
   } catch (error) {

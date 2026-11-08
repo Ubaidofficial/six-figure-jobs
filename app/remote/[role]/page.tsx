@@ -8,7 +8,12 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { RemoteUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 import { findBestMatchingRole, slugToLabel } from '@/lib/roles/slugMatcher'
-import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { buildWhere, queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { DEFAULT_TTL_MS, memoAsync } from '@/lib/cache/memo'
+import { prisma } from '@/lib/prisma'
+import { rankRelatedRoles } from '@/lib/roles/relatedRoles'
+import { loadRoleSlugCounts } from '@/lib/roles/roleSlugCounts'
+import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../../components/JobList'
@@ -147,6 +152,43 @@ function buildFilterHref(
 
   const query = params.toString()
   return query ? `${basePath}?${query}` : basePath
+}
+
+const regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
+
+/**
+ * Live facts for the "at a glance" section: how many of this role's jobs are remote, where the employers of the remote
+ * ones are based, and the related roles in the same field. Cached; on failure the section is left out.
+ */
+async function loadRemoteRoleGlance(roleSlug: string) {
+  try {
+    return await memoAsync(`remote-role-glance:${roleSlug}`, DEFAULT_TTL_MS, async () => {
+      const remoteWhere = buildWhere({ roleSlugs: [roleSlug], remoteOnly: true, page: 1, pageSize: 1 })
+      const [remote, all, countryRows, counts] = await Promise.all([
+        prisma.job.count({ where: remoteWhere }),
+        prisma.job.count({ where: buildWhere({ roleSlugs: [roleSlug], page: 1, pageSize: 1 }) }),
+        prisma.job.groupBy({
+          by: ['countryCode'],
+          where: { AND: [remoteWhere, { countryCode: { not: null } }] },
+          _count: { _all: true },
+          orderBy: { _count: { countryCode: 'desc' } },
+          take: 3,
+        }),
+        loadRoleSlugCounts(),
+      ])
+      const countries = countryRows
+        .map((r) => (r.countryCode ? regionNames.of(r.countryCode.toUpperCase()) ?? r.countryCode : null))
+        .filter((c): c is string => Boolean(c))
+      const related = rankRelatedRoles(roleSlug, counts, 6)
+      return { remote, all, countries, related: related?.roles ?? [] }
+    })
+  } catch {
+    return null
+  }
+}
+
+function joinList(items: string[]): string {
+  return items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
 }
 
 function faqItems(roleName: string) {
@@ -329,6 +371,7 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
 
       const jobs = data.jobs as JobWithCompany[]
       const totalPages = data.total > 0 ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1
+      const glance = await loadRemoteRoleGlance(roleSlug)
 
       const jsonLd = buildJobListJsonLd(roleSlug, jobs, page)
       const faqJsonLd = {
@@ -565,6 +608,49 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
           )}
         </>
       )}
+
+      {glance && glance.remote > 0 ? (
+        <section className="mt-8 rounded-2xl border border-border bg-card p-4">
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Remote {roleName} jobs at a glance</h2>
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+            <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+              <p>
+                <strong className="text-foreground">{glance.remote.toLocaleString()}</strong> of the{' '}
+                {glance.all.toLocaleString()} {roleName} jobs on {SITE_NAME}
+                {glance.all > 0 ? ` (${Math.round((glance.remote / glance.all) * 100)}%)` : ''} can be done remotely,
+                and every one publishes a salary of $100k+ or the local equivalent.
+                {glance.countries.length > 0
+                  ? ` Most of the remote openings are with employers based in ${joinList(glance.countries)}; some ask you to live in a given country or time zone, so check each listing.`
+                  : ''}
+              </p>
+              <p>
+                Looking for hybrid or on-site roles as well?{' '}
+                <Link href={`/jobs/${roleSlug}`} className="text-primary underline">
+                  See all {roleName} jobs
+                </Link>
+                .
+              </p>
+              {glance.related.length > 0 ? (
+                <div>
+                  <p className="mb-2 font-semibold text-foreground">Related remote roles</p>
+                  <div className="flex flex-wrap gap-2">
+                    {glance.related.map((r) => (
+                      <Link
+                        key={r.slug}
+                        href={`/remote/${r.slug}`}
+                        className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:border-foreground/40"
+                      >
+                        Remote {r.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <ListingSalaryAside input={{ roleSlugs: [roleSlug], remoteOnly: true }} scope={`remote ${roleName} roles`} />
+          </div>
+        </section>
+      ) : null}
 
       {topCompanies.length > 0 && (
         <section className="mt-8 rounded-2xl border border-border bg-card p-4">
