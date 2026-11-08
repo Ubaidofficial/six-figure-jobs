@@ -1,0 +1,55 @@
+name: google indexing (manual)
+# Sends job URLs to the Google Indexing API without running a freehire sync (so it uses none of the freehire API
+# quota). Optionally re-queues the newest live job URLs from the job sitemap first, then drains the queue at most
+# INDEXING_API_DAILY_LIMIT URLs a day. The daily freehire sync drains the same queue after each sync.
+on:
+  workflow_dispatch:
+    inputs:
+      enqueue_live:
+        description: "First queue the newest live job URLs from the job sitemap (a backfill)."
+        type: boolean
+        default: true
+      max_urls:
+        description: "How many live job URLs to queue (Google's default quota is 200 a day)."
+        type: string
+        default: "180"
+
+# Shares a group with the freehire workflows so it never drains the queue while a sync is writing to it.
+concurrency:
+  group: freehire-reload
+  cancel-in-progress: false
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+      - name: Queue live job URLs (backfill)
+        if: ${{ inputs.enqueue_live }}
+        env:
+          INDEXING_API_DRY_RUN: "0"
+          INDEXING_API_MAX_URLS: ${{ inputs.max_urls || '180' }}
+        run: npx tsx scripts/notify-google-indexing.ts
+      - name: Drain Google Indexing queue
+        env:
+          GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON }}
+          INDEXING_API_DRY_RUN: "0"
+          INDEXING_API_DAILY_LIMIT: "180"
+        run: npx tsx scripts/process-google-indexing-queue.ts
