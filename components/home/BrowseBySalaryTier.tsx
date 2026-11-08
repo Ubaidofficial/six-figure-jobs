@@ -23,7 +23,7 @@ export function BrowseBySalaryTier({ tiers }: { tiers: SalaryTier[] }) {
     <section className={styles.section} aria-label="Browse by salary tier">
       <header className={styles.header}>
         <h2 className={styles.title}>Browse by Salary Tier</h2>
-        <p className={styles.subtitle}>Find opportunities matching your expectations</p>
+        <p className={styles.subtitle}>US-dollar salaries, grouped by the top of each job&apos;s pay range</p>
       </header>
 
       <div className={styles.grid}>

@@ -25,8 +25,8 @@ beforeEach(() => {
 })
 
 describe('siteCounts', () => {
-  it('refreshes at most every 6 hours', () => {
-    expect(SITE_COUNTS_TTL_MS).toBe(6 * 60 * 60 * 1000)
+  it('refreshes at most every hour', () => {
+    expect(SITE_COUNTS_TTL_MS).toBe(60 * 60 * 1000)
   })
 
   it('turns groupBy rows into sorted upper-case countries and a no-country count', () => {
@@ -37,7 +37,7 @@ describe('siteCounts', () => {
     expect(countInCountries([{ code: 'DE', count: 3 }, { code: 'FR', count: 4 }, { code: 'US', count: 9 }], ['de', 'FR'])).toBe(7)
   })
 
-  it('counts from the database once and serves the same numbers until the 6 hours are up', async () => {
+  it('counts from the database once and serves the same numbers until the hour is up', async () => {
     const first = await loadSiteCounts()
     expect(first.total).toBe(3000)
     expect(first.byWorkType).toEqual({ remote: 973, hybrid: 400, onsite: 1500 })

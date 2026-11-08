@@ -37,7 +37,7 @@ import { loadSiteCounts } from '../../lib/jobs/siteCounts'
 
 
 /**
- * Region chips for the hub. With counts (taken from the database at most every 6 hours) a region that has no remote jobs
+ * Region chips for the hub. With counts (taken from the database at most every hour) a region that has no remote jobs
  * right now is left out, so there is never a chip that opens an empty page; the region being viewed always stays.
  */
 function buildRegionChips(active: string | null, regionCounts?: Record<string, number> | null) {
@@ -451,7 +451,7 @@ export default async function RemoteJobsPage({
     const collectionPageJsonLd = buildRemoteCollectionPageJsonLd(remoteJobCount, canonicalPath)
     const faqJsonLd = buildRemoteFaqJsonLd()
     const regionPill = prettyRemoteRegion(activeRemoteRegion)
-    // Remote jobs per region, counted from the database at most every 6 hours; the chips still work without them.
+    // Remote jobs per region, counted from the database at most every hour; the chips still work without them.
     const regionCounts = await loadSiteCounts()
       .then((c) => countRemoteByRegion(c.remoteByCountry, c.remoteWithoutCountry))
       .catch((error) => {
