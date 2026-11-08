@@ -288,6 +288,23 @@
   min-width: 0;
 }
 
+.headerRelated {
+  margin-top: 18px;
+}
+
+.headerRelatedLabel {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-2);
+}
+
+.headerRelated .chips {
+  margin-top: 8px;
+}
+
 @media (min-width: 1024px) {
   /* With the card on the right, the sort control sits under the summary instead of floating mid-header. */
   .headerWithAside .headerTop {
