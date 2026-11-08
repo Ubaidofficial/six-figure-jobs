@@ -238,7 +238,7 @@ A scheduled Claude Code task runs on the 1st and 15th of each month to keep the 
 2. Picks **at most 3–5 small, focused** visual/UX improvements (spacing, typography, contrast, consistency, motion per §11, mobile layout). No redesigns, no new dependencies without a stated reason.
 3. Must not touch SEO-sensitive output (canonicals, hreflang, robots/noindex, JSON-LD, H1 text, sitemaps, URL patterns) or the rules in `CLAUDE.md`.
 4. Verifies with `npm run typecheck`, lint on changed files, relevant tests, and a production build; adds a `CHANGELOG.md` entry and a line to the log below.
-5. Opens a pull request into `main` for human review. It **never pushes to `main` or merges**, because Railway deploys `main` straight to production.
+5. Opens a pull request into `main` and, once its CI checks (`audit`, `SEO Local Gates`) pass, squash-merges it without waiting for review (owner's standing instruction, 2026-11-08). It never pushes directly to `main` (the PR is what runs the CI gates) and never merges a PR with failing or pending checks. Railway then deploys `main`; the run confirms the change is on https://www.6figjobs.com.
 
 ### Refresh log
 - 2026-11-07: Motion pass from shadcnspace review: JobCard press feedback, homepage row hover tint, CSS scroll reveal on homepage job rows and discovery modules.
