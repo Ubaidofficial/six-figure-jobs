@@ -134,9 +134,9 @@ export default function AboutPage() {
 
       <h2 className="mt-10 text-xl font-semibold text-foreground">Where the listings come from</h2>
       <p className="mt-4 text-muted-foreground">
-        Jobs are collected every day from companies&apos; own career sites and the applicant tracking systems they post
-        on. Each listing links straight to the employer&apos;s application page, so you apply with the company, not
-        through us. We keep only roles that publish a salary, and we show the pay range exactly as the employer gives it,
+        Jobs are collected every day from employers&apos; career sites, the applicant tracking systems they post on, and
+        the job boards where they advertise. Each apply button says where it goes, the employer&apos;s own application
+        page or the job board the role was posted on, and you apply there, not through us. We keep only roles that publish a salary, and we show the pay range exactly as the employer gives it,
         converted to a yearly figure when it is quoted per hour or per month.
       </p>
 

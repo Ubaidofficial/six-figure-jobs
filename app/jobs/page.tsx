@@ -107,7 +107,7 @@ export async function generateMetadata({
   return {
     title: `Six-Figure Tech Jobs — Browse $100k+ Openings${pageSuffix} | ${SITE_NAME}`,
     description:
-      'Browse $100k+ tech jobs with published salaries and links to the employer’s application page. Filter by role, location, remote work, seniority and company size.',
+      'Browse $100k+ tech jobs with published salaries. Filter by role, location, remote work, seniority and company size.',
     alternates: {
       canonical,
     },
@@ -235,7 +235,7 @@ function buildJobsFaqJsonLd() {
         name: 'How are these six-figure jobs selected?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Every job on this page has a published salary at or above the six-figure threshold for its currency, was posted recently, and links to the employer’s application page. Jobs that are no longer open are removed.',
+          text: 'Every job on this page has a published salary at or above the six-figure threshold for its currency, was posted recently, and says where its apply button goes: the employer’s own page or the job board it was posted on. Jobs that are no longer open are removed.',
         },
       },
       {

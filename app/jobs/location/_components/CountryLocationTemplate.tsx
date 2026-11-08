@@ -212,7 +212,7 @@ function buildCountryFaqItems(input: {
     },
     {
       q: `Can I find remote jobs in ${input.loc.label}?`,
-      a: `Yes. Use the work type filter to compare remote, hybrid, and on-site six figure jobs in ${input.loc.label}, then apply through the employer’s application page linked on each listing.`,
+      a: `Yes. Use the work type filter to compare remote, hybrid, and on-site six figure jobs in ${input.loc.label}, then apply through the link on each listing: the employer’s own page or the job board it was posted on.`,
     },
   ]
 }
@@ -507,7 +507,7 @@ export async function CountryLocationTemplate({
           <p>
             This page lists roles with a published salary of at least <strong>{thresholdLabel}</strong>, the
             six-figure threshold for {countryCurrency}. Salaries are taken from each employer&rsquo;s posting, and every
-            listing links to the company&rsquo;s own application page.
+            apply button says where it goes: the company&rsquo;s own page or the job board it was posted on.
           </p>
         </Prose>
       </ListingSection>

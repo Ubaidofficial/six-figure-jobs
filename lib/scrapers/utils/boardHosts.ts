@@ -78,6 +78,9 @@ export const KNOWN_BOARD_HOSTS = new Set([
   'adzuna.co.za',
   'adzuna.sg',
   'adzuna.co.nz',
+  // Swiss job boards that freehire's Swiss jobs link to (seen as apply links in the live data, 2026-11-08).
+  'jobs.ch',
+  'jobup.ch',
 ])
 
 export const BOARD_SOURCE_HOSTS: Record<string, string> = {
@@ -127,6 +130,39 @@ export function isKnownBoardHost(hostOrUrl: string | null | undefined): boolean 
     if (normalized === known || normalized.endsWith(`.${known}`)) return true
   }
   return false
+}
+
+const BOARD_NAMES: Record<string, string> = {
+  'xing.com': 'XING',
+  'whatjobs.com': 'WhatJobs',
+  'himalayas.app': 'Himalayas',
+  'builtin.com': 'Built In',
+  'seek.com.au': 'SEEK',
+  'seek.co.nz': 'SEEK',
+  'ziprecruiter.com': 'ZipRecruiter',
+  'weworkremotely.com': 'We Work Remotely',
+  'remoteok.com': 'Remote OK',
+  'ycombinator.com': 'Y Combinator',
+  'rocket-match.de': 'rocket match',
+  'jobs.ch': 'jobs.ch',
+  'jobup.ch': 'jobup.ch',
+}
+
+/**
+ * The name of the job board a URL points at ("Adzuna", "XING"), or null when it is not a known board, i.e. the
+ * employer's own site or its applicant tracking system. Used to label apply buttons truthfully: about half of the
+ * freehire jobs sampled on 2026-11-08 applied through a board, not on the employer's site.
+ */
+export function boardNameFor(url: string | null | undefined): string | null {
+  const host = hostOf(url)
+  if (!host || !isKnownBoardHost(host)) return null
+  for (const [known, name] of Object.entries(BOARD_NAMES)) {
+    if (host === known || host.endsWith(`.${known}`)) return name
+  }
+  // adzuna.co.uk -> Adzuna, en-ca.whatjobs.com -> handled above, indeed.com -> Indeed
+  const known = [...KNOWN_BOARD_HOSTS].find((k) => host === k || host.endsWith(`.${k}`)) ?? host
+  const label = known.split('.')[0]
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 export function boardSourceToHost(source: string | null | undefined): string | null {
