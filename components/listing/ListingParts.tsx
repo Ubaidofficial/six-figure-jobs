@@ -59,6 +59,7 @@ export function ListingHeader({
   accent,
   summary,
   chips,
+  related,
   toolbar,
   aside,
 }: {
@@ -68,6 +69,8 @@ export function ListingHeader({
   accent?: ReactNode
   summary?: ReactNode
   chips?: ListingChip[]
+  /** A second, labelled chip row under `chips`, e.g. "Trending in Marketing". */
+  related?: { label: string; items: ListingChip[] }
   toolbar?: ReactNode
   /** A white card at the right of the header, e.g. <ListingSalaryAside />. Renders nothing when it has no data. */
   aside?: ReactNode
@@ -88,6 +91,12 @@ export function ListingHeader({
           {toolbar ? <div className={styles.toolbar}>{toolbar}</div> : null}
         </div>
         {chips ? <LinkChips items={chips} label="Related pages" /> : null}
+        {related && related.items.length > 0 ? (
+          <div className={styles.headerRelated}>
+            <p className={styles.headerRelatedLabel}>{related.label}</p>
+            <LinkChips items={related.items} label={related.label} />
+          </div>
+        ) : null}
       </div>
       {aside}
     </header>
