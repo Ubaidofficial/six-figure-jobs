@@ -614,7 +614,7 @@ export default async function JobPage({
           {hasDescription ? <DescriptionApply applyHref={applyHref} companyName={companyName} jobId={typedJob.id} /> : null}
         </article>
 
-        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <aside className="space-y-4 lg:sticky lg:top-[72px] lg:self-start min-[1360px]:top-[96px]">
           <ApplyCard
             applyHref={applyHref}
             companyName={companyName}

@@ -265,8 +265,9 @@
 }
 
 
-/* Touch targets: 44px tall chips and Previous/Next on phones; desktop sizes stay as they are. */
-@media (max-width: 768px) {
+/* Touch targets: 44px tall chips and Previous/Next on phones and any touch screen (tablets, foldables); desktop
+   mouse sizes stay as they are. */
+@media (max-width: 768px), (pointer: coarse) {
   .chip,
   .pageLink {
     min-height: 44px;
