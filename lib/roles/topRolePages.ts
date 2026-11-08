@@ -11,6 +11,9 @@ import { roleLabelFor } from './relatedRoles'
 
 const SENIORITY_PREFIX = /^(senior|staff|principal|lead|junior|associate)-/
 
+/** Catch-all roles: a canonical page exists, but "Other" is not a role anyone browses for. */
+const CATCH_ALL_ROLES = new Set(['other'])
+
 export type TopRolePage = { slug: string; label: string; count: number }
 
 /**
@@ -26,7 +29,7 @@ export function rankTopRolePages(
     if (!roleSlug) continue
     const base = roleSlug.replace(SENIORITY_PREFIX, '')
     const page = isCanonicalSlug(base) ? base : isCanonicalSlug(roleSlug) ? roleSlug : null
-    if (!page || exclude.includes(page)) continue
+    if (!page || CATCH_ALL_ROLES.has(page) || exclude.includes(page)) continue
     bySlug.set(page, (bySlug.get(page) ?? 0) + count)
   }
   return [...bySlug.entries()]
