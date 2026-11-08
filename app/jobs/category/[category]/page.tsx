@@ -21,6 +21,7 @@ import { countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { resolveJobCategory } from '../../../../lib/seo/jobCategories'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
+import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const PAGE_SIZE = 40
 const SITE_URL = getSiteUrl()
@@ -164,6 +165,7 @@ export default async function CategoryPage({
   }, jobs as JobWithCompany[])
 
   const totalPages = total === 0 ? 1 : Math.ceil(total / PAGE_SIZE)
+  notFoundPastLastPage(page, totalPages)
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(category, cfg.label)
   const itemListJsonLd = buildSafeItemListJsonLd({
     name: `${cfg.label} jobs paying $100k+`,

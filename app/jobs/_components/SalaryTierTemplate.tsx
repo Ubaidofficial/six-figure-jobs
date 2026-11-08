@@ -24,6 +24,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
@@ -200,6 +201,7 @@ export async function SalaryTierTemplate({
   const topRoles = await loadTopRolePages(tierQueryInput(tierId))
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
   const totalPages = data.totalPages
+  notFoundPastLastPage(page, totalPages)
   const mostRecentUpdateMs = jobs.reduce((acc, job: any) => {
     const candidate = job?.updatedAt ?? job?.postedAt ?? job?.createdAt ?? null
     if (!candidate) return acc

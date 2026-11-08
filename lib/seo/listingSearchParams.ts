@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation'
 export type ListingSearchParams = Record<string, string | string[] | undefined>
 
 function asTrimmedValues(value: string | string[] | undefined): string[] {
@@ -37,6 +38,15 @@ export const MAX_INDEXABLE_LISTING_PAGE = 250
  * Reasons: non-pagination query params (search/filter state), or a page deeper than MAX_INDEXABLE_LISTING_PAGE.
  * Plain pagination (/jobs?page=2) is indexable and canonical to itself.
  */
+/**
+ * A listing page past the last one has no jobs: answer 404 instead of an indexable empty page, which Google reports as
+ * a soft 404 (found 2026-11-08: /jobs/software-engineer?page=999 and /jobs/100k-plus?page=500 were "index, follow"
+ * with no jobs). Call it inside the page's loader, where `withRuntimeFallback` re-throws Next's notFound.
+ */
+export function notFoundPastLastPage(page: number, totalPages: number): void {
+  if (page > 1 && page > Math.max(1, totalPages)) notFound()
+}
+
 export function shouldNoindexListingPage(searchParams: ListingSearchParams): boolean {
   if (hasNonPaginationQueryParams(searchParams)) return true
   return readListingPageParam(searchParams) > MAX_INDEXABLE_LISTING_PAGE

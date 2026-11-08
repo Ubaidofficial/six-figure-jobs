@@ -32,6 +32,7 @@ import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
+import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
@@ -290,6 +291,7 @@ export async function RoleTemplate({
   const data = await memoAsync(stableKey('role-list', queryInput), DEFAULT_TTL_MS, () => queryJobs(queryInput))
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
   const totalPages = Math.max(1, data.totalPages || 1)
+  notFoundPastLastPage(page, totalPages)
   const mostRecentUpdateMs = jobs.reduce((acc, job: any) => {
     const candidate = job?.updatedAt ?? job?.postedAt ?? job?.createdAt ?? null
     if (!candidate) return acc
