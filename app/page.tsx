@@ -22,6 +22,7 @@ import { HeroFilters } from '@/components/home/HeroFilters'
 import { loadSalarySnapshot } from '@/lib/jobs/salarySnapshot'
 import { loadSiteCounts } from '@/lib/jobs/siteCounts'
 import { LiveJobFeed } from '@/components/home/LiveJobFeed'
+import { SiteStatsStrip } from '@/components/home/SiteStatsStrip'
 import { buildFeedItems } from '@/lib/jobs/latestFeed'
 import {
   FeaturedCompaniesCarousel,
@@ -41,6 +42,7 @@ import { TopLocations, type TopLocationCard } from '@/components/home/TopLocatio
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
 import { getPriorityPublishedCompanyCandidates } from '@/lib/seo/companyPublishing'
+import { TOP_COMPANY_SLUGS } from '@/lib/constants/topCompanies'
 
 export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dynamic
 
@@ -475,8 +477,43 @@ export default async function HomePage() {
     })
     .filter((c): c is FeaturedCompany => Boolean(c))
 
+  // Well-known employers first (a saved list), each only while it has live $100k+ jobs. A failure only drops them.
+  const topCompaniesRaw = await prisma.company
+    .findMany({
+      where: { slug: { in: [...TOP_COMPANY_SLUGS] } },
+      select: { id: true, name: true, slug: true, logoUrl: true, website: true },
+    })
+    .catch(() => [])
+  const topCompanyJobCounts = topCompaniesRaw.length
+    ? await prisma.job
+        .groupBy({
+          by: ['companyId'],
+          where: { ...publicJobWhere, companyId: { in: topCompaniesRaw.map((c) => c.id) } },
+          _count: { _all: true },
+        })
+        .catch(() => [])
+    : []
+  const topCompanyJobsById = new Map(topCompanyJobCounts.map((g) => [g.companyId, g._count._all]))
+  const topCompanyBySlug = new Map(topCompaniesRaw.map((c) => [c.slug, c]))
+  const topFeaturedCompanies: FeaturedCompany[] = TOP_COMPANY_SLUGS.flatMap((slug) => {
+    const company = topCompanyBySlug.get(slug)
+    const jobs = company ? topCompanyJobsById.get(company.id) ?? 0 : 0
+    if (!company?.slug || jobs === 0) return []
+    return [
+      {
+        id: company.id,
+        name: company.name,
+        slug: company.slug,
+        logoUrl: company.logoUrl ?? null,
+        website: company.website ?? null,
+        activeHighPayingJobs: jobs,
+      },
+    ]
+  })
+
   const seenFeaturedCompanyIds = new Set<string>()
   const featuredCompanies: FeaturedCompany[] = [
+    ...topFeaturedCompanies,
     ...priorityFeaturedCompanies,
     ...volumeFeaturedCompanies,
   ].filter((company) => {
@@ -490,6 +527,7 @@ export default async function HomePage() {
 
   // Live feed: the newest jobs we added (real data), rendered here and refreshed in the browser once a minute.
   const feedItems = buildFeedItems(jobs)
+  const feedItemIds = new Set(feedItems.map((item) => item.id))
   const salaryTiers: SalaryTier[] = [
     {
       slug: '100k-plus',
@@ -585,9 +623,18 @@ export default async function HomePage() {
 
       <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} />
 
-      <LatestOpportunities jobs={jobs} totalJobs={stats.totalJobs} />
+      {/* Jobs already in the live feed above are left out, so no job appears twice with two different times. */}
+      <LatestOpportunities jobs={jobs.filter((job) => !feedItemIds.has(job.id))} totalJobs={stats.totalJobs} />
 
       <FeaturedCompaniesCarousel companies={featuredCompanies} />
+
+      <SiteStatsStrip
+        jobs={stats.totalJobs}
+        companies={stats.totalCompaniesHiring}
+        newThisWeek={stats.newThisWeek}
+        countries={siteCounts ? siteCounts.byCountry.filter((c) => c.count > 0).length : null}
+        medianUsd={salarySnapshot?.median ?? null}
+      />
 
       {priorityFeaturedCompanies.length > 0 && (
         <section className="mb-8 rounded-2xl border border-border bg-card p-5">
