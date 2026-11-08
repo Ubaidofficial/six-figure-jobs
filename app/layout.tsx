@@ -4,12 +4,18 @@ import type { Viewport } from 'next'
 import localFont from 'next/font/local'
 import Script from 'next/script'
 
+
 import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
 import ErrorTracker from '@/components/ErrorTracker'
 import { getSiteUrl } from '../lib/seo/site'
 import { PreloadResources } from './preload-resources'
+
+// Only a well-formed GA4 id is ever written into the page.
+const GA_MEASUREMENT_ID = /^G-[A-Z0-9]{4,16}$/.test(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? '')
+  ? process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
+  : null
 
 const SITE_URL = getSiteUrl()
 
@@ -108,6 +114,15 @@ export default function RootLayout({
         </div>
         <FeedbackWidget />
         <ErrorTracker />
+        {/* Google Analytics 4: loads only when NEXT_PUBLIC_GA_MEASUREMENT_ID is set to a G- id (inlined at build time) */}
+        {GA_MEASUREMENT_ID ? (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}');`}
+            </Script>
+          </>
+        ) : null}
         {/* Microsoft Clarity (project zagoogkx9a) */}
         <Script id="microsoft-clarity" strategy="afterInteractive">
           {`(function(c,l,a,r,i,t,y){
