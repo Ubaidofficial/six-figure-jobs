@@ -565,9 +565,19 @@ export function inferCountryFromJob(job: any): string | null {
   const byCity = countryFromCity(job.city ?? job.citySlug)
   if (byCity) return byCity
 
+  // A euro job's location that ends in a euro-area country code names its country: "Kerestinec, HR" is Croatia, and was
+  // tagged DE by the guess below (seen live 2026-11-08). Two-letter codes are not lifted from free text in general
+  // ("WA" in "East Perth WA" is Western Australia), only this one case where the pay currency backs them.
+  if (currency === 'EUR') {
+    const tail = rawLocation.split(',').pop()?.trim().toUpperCase() ?? ''
+    if (EURO_AREA.has(tail)) return tail
+  }
+
   // Last resort for euro pay with nothing else to go on: the euro area's largest country. Often right, not always.
   return currency === 'EUR' ? 'DE' : null
 }
+
+const EURO_AREA = new Set(['AT', 'BE', 'BG', 'CY', 'DE', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PT', 'SI', 'SK'])
 
 const US_STATE_CODES = new Set([
   'AL',
