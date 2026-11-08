@@ -101,6 +101,11 @@ export default function RootLayout({
       lang="en"
       className={`light h-full ${bodyFont.variable} ${displayFont.variable} ${logoFont.variable} ${monoFont.variable}`}
     >
+      <head>
+        {/* Public job feeds, so feed readers and aggregators can find them from any page. */}
+        <link rel="alternate" type="application/rss+xml" title="Newest $100k+ jobs" href="/feeds/jobs.rss" />
+        <link rel="alternate" type="application/rss+xml" title="Newest remote $100k+ jobs" href="/feeds/remote-jobs.rss" />
+      </head>
       <body className="min-h-full bg-background text-foreground">
         <PreloadResources />
         <div className="flex min-h-screen flex-col">
