@@ -10,6 +10,7 @@ import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import { queryJobs, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildSalaryText } from '@/lib/jobs/salary'
 import { describeJobLocation } from '@/lib/location/jobLocation'
+import { isHomepageFeatured } from '@/lib/jobs/latestSelection'
 
 export const LATEST_FEED_TTL_MS = 60 * 1000
 export const FEED_SIZE = 12
@@ -37,7 +38,9 @@ export function buildFeedItems(jobs: JobWithCompany[], limit = FEED_SIZE): FeedI
   const out: FeedItem[] = []
   const seen = new Set<string>()
   const perCompany = new Map<string, number>()
-  for (const job of jobs) {
+  // Featured jobs (English, with a real role) are taken first; the list is put back in newest-first order below.
+  const ordered = [...jobs.filter((j) => isHomepageFeatured(j as any)), ...jobs.filter((j) => !isHomepageFeatured(j as any))]
+  for (const job of ordered) {
     const added = job.createdAt ?? job.postedAt ?? job.updatedAt
     if (!added) continue
     const company = String(job.companyRef?.name ?? job.company ?? '').trim() || 'A hiring company'
@@ -64,7 +67,7 @@ export function buildFeedItems(jobs: JobWithCompany[], limit = FEED_SIZE): FeedI
     })
     if (out.length >= limit) break
   }
-  return out
+  return out.sort((a, b) => Date.parse(b.addedAt) - Date.parse(a.addedAt))
 }
 
 export function newestAddedAt(items: ReadonlyArray<Pick<FeedItem, 'addedAt'>>): string | null {

@@ -119,3 +119,17 @@ describe('loadLatestFeed', () => {
     expect(LATEST_FEED_TTL_MS).toBe(60_000)
   })
 })
+
+describe('buildFeedItems: featured jobs first', () => {
+  it('takes English jobs with a real role before German agency ads, then shows them newest first', () => {
+    // Newest first, as queryJobs returns them: the three ads are newer than every featured job.
+    const ads = [2, 1, 0].map((i) =>
+      job({ id: `de${i}`, title: `Facharzt (m/w/d) ${i}`, companyId: `d${i}`, roleSlug: 'other', createdAt: new Date(`2026-11-08T2${i}:00:00Z`) }),
+    )
+    const roles = [2, 1, 0].map((i) =>
+      job({ id: `en${i}`, title: `Data Engineer ${i}`, companyId: `e${i}`, roleSlug: 'data-engineer', createdAt: new Date(`2026-11-08T0${i}:00:00Z`) }),
+    )
+    const items = buildFeedItems([...ads, ...roles] as never, 4)
+    expect(items.map((i) => i.id)).toEqual(['de2', 'en2', 'en1', 'en0'])
+  })
+})
