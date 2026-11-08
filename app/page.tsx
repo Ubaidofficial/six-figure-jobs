@@ -288,7 +288,6 @@ export default async function HomePage() {
     const [
       jobsData,
       priorityCompanyCandidates,
-      featuredCompanyGroups,
       salaryBandCounts,
       locationCounts,
       locationCityCounts,
@@ -304,16 +303,6 @@ export default async function HomePage() {
         excludeInternships: true,
       }),
       getPriorityPublishedCompanyCandidates(8),
-      prisma.job.groupBy({
-        by: ['companyId'],
-        where: {
-          ...publicJobWhere,
-          companyId: { not: null },
-        },
-        _count: { _all: true },
-        orderBy: { _count: { companyId: 'desc' } },
-        take: 20,
-      }),
       // Each tier card counts exactly what its page lists (USD, by the top of the range), so the numbers match.
       Promise.all(
         SALARY_TIER_IDS.map(async (slug) => {
@@ -416,25 +405,15 @@ export default async function HomePage() {
       loadSiteCounts().catch(() => null),
     ])
 
-    const featuredCompanyIds = featuredCompanyGroups
-      .map((g) => g.companyId)
-      .filter((id): id is string => typeof id === 'string')
-
     const priorityCompanySlugs = priorityCompanyCandidates.map((candidate) => candidate.slug)
 
-    const featuredCompaniesRaw = featuredCompanyIds.length || priorityCompanySlugs.length
+    const featuredCompaniesRaw = priorityCompanySlugs.length
       ? await prisma.company.findMany({
-          where: {
-            OR: [
-              ...(featuredCompanyIds.length ? [{ id: { in: featuredCompanyIds } }] : []),
-              ...(priorityCompanySlugs.length ? [{ slug: { in: priorityCompanySlugs } }] : []),
-            ],
-          },
+          where: { slug: { in: priorityCompanySlugs } },
           select: { id: true, name: true, slug: true, logoUrl: true, website: true },
         })
       : []
 
-  const featuredCompaniesById = new Map(featuredCompaniesRaw.map((c) => [c.id, c]))
   const featuredCompaniesBySlug = new Map(
     featuredCompaniesRaw
       .filter((c) => typeof c.slug === 'string')
@@ -455,22 +434,6 @@ export default async function HomePage() {
       }
     })
     .filter((company): company is FeaturedCompany => Boolean(company))
-
-  const volumeFeaturedCompanies: FeaturedCompany[] = featuredCompanyGroups
-    .map((g) => {
-      if (!g.companyId) return null
-      const company = featuredCompaniesById.get(g.companyId)
-      if (!company?.slug) return null
-      return {
-        id: company.id,
-        name: company.name,
-        slug: company.slug,
-        logoUrl: company.logoUrl ?? null,
-        website: company.website ?? null,
-        activeHighPayingJobs: g._count._all,
-      }
-    })
-    .filter((c): c is FeaturedCompany => Boolean(c))
 
   // Well-known employers first (a saved list), each only while it has live $100k+ jobs. A failure only drops them.
   const topCompaniesRaw = await prisma.company
@@ -507,11 +470,9 @@ export default async function HomePage() {
   })
 
   const seenFeaturedCompanyIds = new Set<string>()
-  const featuredCompanies: FeaturedCompany[] = [
-    ...topFeaturedCompanies,
-    ...priorityFeaturedCompanies,
-    ...volumeFeaturedCompanies,
-  ].filter((company) => {
+  // Only the two hand-picked lists: filling up with the companies that post the most jobs put recruitment agencies
+  // ("rocket match powered by notificAI", TROVA, Orion Placement...) on the wall (seen 2026-11-08).
+  const featuredCompanies: FeaturedCompany[] = [...topFeaturedCompanies, ...priorityFeaturedCompanies].filter((company) => {
     if (seenFeaturedCompanyIds.has(company.id)) return false
     seenFeaturedCompanyIds.add(company.id)
     return true

@@ -515,7 +515,7 @@ export default async function JobPage({
         />
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
         <article className={`${styles.bodyCard} min-w-0 space-y-10`}>
           {foreignLanguage ? <TranslateNotice language={foreignLanguage} pageUrl={`${SITE_URL}/job/${canonicalSlug}`} /> : null}
 
