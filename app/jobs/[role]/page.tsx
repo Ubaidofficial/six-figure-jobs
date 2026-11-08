@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 
 import { prisma } from '@/lib/prisma'
+import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { buildWhere } from '@/lib/jobs/queryJobs'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '@/lib/seo/listingSearchParams'
@@ -82,7 +83,8 @@ export async function generateMetadata({
     `jobs.role.${role}.metadata`,
     async () => {
       const where = buildWhere({ roleSlugs: [role], page: 1, pageSize: 1 })
-      const [total, avgAgg] = await Promise.all([
+      // Same role-wide numbers on every request: cached like the page's own facets (pages render per request).
+      const [total, avgAgg] = await memoAsync(stableKey('role-meta', role), DEFAULT_TTL_MS, () => Promise.all([
         prisma.job.count({ where }),
         prisma.job.aggregate({
           where: {
@@ -92,7 +94,7 @@ export async function generateMetadata({
           },
           _avg: { maxAnnual: true, minAnnual: true },
         }),
-      ])
+      ]))
 
       // Phase-aware gate: even tier-1 roles with enough jobs stay noindex until
       // the indexing rollout phase has unlocked /jobs/<role> pages.

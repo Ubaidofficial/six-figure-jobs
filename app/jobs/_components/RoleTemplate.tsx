@@ -286,7 +286,8 @@ export async function RoleTemplate({
   return withRuntimeFallback(
     `jobs.role.${roleSlug}.page`,
     async () => {
-  const data = await queryJobs(queryInput)
+  // The listing for this exact filter set, kept for the same 5 minutes as the facets (pages render per request).
+  const data = await memoAsync(stableKey('role-list', queryInput), DEFAULT_TTL_MS, () => queryJobs(queryInput))
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
   const totalPages = Math.max(1, data.totalPages || 1)
   const mostRecentUpdateMs = jobs.reduce((acc, job: any) => {
@@ -382,11 +383,42 @@ export async function RoleTemplate({
     .filter((c) => c.slug && CITY_TARGET_SLUG_SET.has(c.slug))
     .filter((c) => c.slug && c.city)
 
-  const skillSample = await prisma.job.findMany({
-    where: insightsWhere,
-    select: { skillsJson: true },
-    orderBy: [{ postedAt: 'desc' }, { updatedAt: 'desc' }],
-    take: 2000,
+  // Skills and top employers for the role overall, like the insights above: cached per role, the two queries in
+  // parallel. Uncached, they ran one after another on every request (up to 2,000 rows for the skills alone).
+  const [skillSample, topCompanyGroups, companies] = await memoAsync(stableKey('role-skills-companies', roleSlug), DEFAULT_TTL_MS, async () => {
+    const [skillRows, groups] = await Promise.all([
+      prisma.job.findMany({
+        where: insightsWhere,
+        select: { skillsJson: true },
+        orderBy: [{ postedAt: 'desc' }, { updatedAt: 'desc' }],
+        take: 2000,
+      }),
+      (prisma.job.groupBy as any)({
+        by: ['companyId'],
+        where: { ...insightsWhere, companyId: { not: null } },
+        _count: { _all: true },
+        orderBy: { _count: { companyId: 'desc' } } as any,
+        take: 24,
+      }) as Promise<any[]>,
+    ])
+    const ids = Array.from(new Set(groups.map((r) => String(r.companyId)).filter(Boolean)))
+    const companyRows = ids.length
+      ? await prisma.company.findMany({
+          where: { id: { in: ids } },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logoUrl: true,
+            website: true,
+            description: true,
+            industry: true,
+            sizeBucket: true,
+            headquarters: true,
+          },
+        })
+      : []
+    return [skillRows, groups, companyRows] as const
   })
 
   const skillCounts = new Map<string, number>()
@@ -407,33 +439,6 @@ export async function RoleTemplate({
       return { name, count, w, hot }
     })
 
-  const topCompanyGroups = await (prisma.job.groupBy as any)({
-    by: ['companyId'],
-    where: { ...insightsWhere, companyId: { not: null } },
-    _count: { _all: true },
-    orderBy: { _count: { companyId: 'desc' } } as any,
-    take: 24,
-  })
-
-  const companyIds = Array.from(
-    new Set((topCompanyGroups as any[]).map((r) => String(r.companyId)).filter(Boolean))
-  )
-  const companies = companyIds.length
-    ? await prisma.company.findMany({
-        where: { id: { in: companyIds } },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          logoUrl: true,
-          website: true,
-          description: true,
-          industry: true,
-          sizeBucket: true,
-          headquarters: true,
-        },
-      })
-    : []
   const companyById = new Map(companies.map((c) => [c.id, c]))
 
   const topCompanies = (topCompanyGroups as any[])
