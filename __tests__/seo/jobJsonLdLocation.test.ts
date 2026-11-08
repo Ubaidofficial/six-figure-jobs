@@ -50,6 +50,12 @@ describe('JobPosting jobLocation: addressCountry', () => {
     expect(countries(withCode)).toEqual(['AU'])
   })
 
+  it('reads a trailing euro-area code on a euro job instead of guessing Germany', () => {
+    // Live 2026-11-08: "Kerestinec, HR" (Croatia) was tagged DE.
+    expect(countries(ld({ locationRaw: 'Kerestinec, HR', city: null, countryCode: null, currency: 'EUR' }))).toEqual(['HR'])
+    expect(countries(ld({ locationRaw: 'Schwetzingen, Rhein-Neckar-Kreis', city: null, countryCode: null, currency: 'EUR' }))).toEqual(['DE'])
+  })
+
   it('does not call a EUR job German: Amsterdam is not DE', () => {
     const noCode = ld({ locationRaw: 'Amsterdam', city: 'Amsterdam', countryCode: null, currency: 'EUR' })
     expect(countries(noCode)).toEqual(['NL']) // from the city, not from the euro
