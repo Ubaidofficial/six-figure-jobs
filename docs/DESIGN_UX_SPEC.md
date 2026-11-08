@@ -198,3 +198,47 @@ Detailed implementation planning lives in:
 - Updated color scheme and branding
 - Mobile-optimized responsive layouts
 - Inspired by RemoteYeah + Remote Rocketship aesthetics
+
+---
+
+## 11) Motion (Added 2026-11-07)
+
+### Reference: shadcnspace
+`shadcnspace/shadcnspace` (shadcnspace.com) is MIT licensed, so code may be copied or adapted. Any file that copies a substantial part must keep its copyright line in a comment: `Adapted from shadcnspace (MIT, Copyright (c) 2026 Shadcn Space)`.
+
+Almost all of its motion (149 files) is built on the `motion` library (`motion/react`): `AnimatePresence`, `whileHover`/`whileTap`, `whileInView`, `layoutId`, staggered lists. We **borrow the patterns, not the library**:
+- `motion` would be a new dependency and adds client JS; every component using it must be `"use client"`.
+- Its entrance pattern (`initial={{ opacity: 0 }}` + `whileInView`) ships server HTML that is invisible until hydration, which hurts LCP on our SEO pages.
+- shadcnspace is on Tailwind v4; we are on v3.4, so copied class names may need adjusting.
+
+### Rules
+- **Never hide content in server HTML.** No entrance animation may start from `opacity: 0` unless it is CSS that leaves the element visible when unsupported (see `reveal-on-scroll`).
+- **No motion on SEO-critical content above the fold**: H1, job title on the job page, salary block, apply CTA, job description.
+- **CSS first.** Use transitions/keyframes in CSS Modules or `app/globals.css`. Add `motion` only for something CSS cannot do (shared-layout `layoutId` indicators, exit animations of removed list items), behind `LazyMotion`, in a leaf client component.
+- **Respect `prefers-reduced-motion`.** Every new animation must be disabled under `reduce`.
+- **Hover/press transforms**: hover uses `transform`; press uses `scale`; scroll reveal uses `translate`. These are separate properties so they compose and never override each other.
+- Durations: 120 ms press, ~220 ms hover, easing `cubic-bezier(0.22, 1, 0.36, 1)`. Subtle movement only (≤ 4 px lift, ≥ 0.98 scale).
+
+### Patterns in use
+| shadcnspace pattern | Our implementation |
+|---|---|
+| `whileHover` card lift | `components/jobs/JobCard.module.css` `.card:hover` (lift, accent bar, sheen, CTA arrow nudge); homepage rows get a border + background tint |
+| `whileTap` press | `.card:active { scale: 0.99 }` |
+| `whileInView` reveal / staggered list | `.reveal-on-scroll` in `app/globals.css`: CSS scroll-driven animation (`animation-timeline: view()`) inside `@supports`; zero JS. Used on homepage job rows and the discovery modules below the jobs feed |
+| Animated list (items arriving) | `components/home/LiveJobFeed.module.css` `arrive` / `pulse` keyframes |
+| `layoutId` sliding indicator | Not used. Candidate for `motion` only if we add tabs/segmented filters |
+| `@number-flow/react` counters | Not used (extra dependency) |
+
+---
+
+## 12) Recurring Design Refresh (Added 2026-11-07)
+
+A scheduled Claude Code task runs on the 1st and 15th of each month to keep the public site and the dashboards (`/account`, `/ubaid93`) modern and consistent. Each run:
+1. Screenshots key pages on https://www.6figjobs.com (desktop 1440px + mobile 390px): `/`, `/jobs`, one `/job/...` page, `/remote`, `/salary`, one `/company/...` page, `/pricing`. The dashboards are auth-gated, so they are reviewed from code.
+2. Picks **at most 3–5 small, focused** visual/UX improvements (spacing, typography, contrast, consistency, motion per §11, mobile layout). No redesigns, no new dependencies without a stated reason.
+3. Must not touch SEO-sensitive output (canonicals, hreflang, robots/noindex, JSON-LD, H1 text, sitemaps, URL patterns) or the rules in `CLAUDE.md`.
+4. Verifies with `npm run typecheck`, lint on changed files, relevant tests, and a production build; adds a `CHANGELOG.md` entry and a line to the log below.
+5. Opens a pull request into `main` for human review. It **never pushes to `main` or merges**, because Railway deploys `main` straight to production.
+
+### Refresh log
+- 2026-11-07: Motion pass from shadcnspace review: JobCard press feedback, homepage row hover tint, CSS scroll reveal on homepage job rows and discovery modules.

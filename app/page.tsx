@@ -643,13 +643,17 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <TopLocations locations={topLocations} />
+      <div className="reveal-on-scroll">
+        <TopLocations locations={topLocations} />
+      </div>
 
-      <section className="mb-10">
+      <section className="reveal-on-scroll mb-10">
         <BrowseBySalaryTier tiers={salaryTiers} />
       </section>
 
-      <ExplorePremiumRoles roles={premiumRoles} />
+      <div className="reveal-on-scroll">
+        <ExplorePremiumRoles roles={premiumRoles} />
+      </div>
 
       <HomeFAQ />
 

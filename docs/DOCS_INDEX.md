@@ -14,6 +14,7 @@
 If docs conflict → follow order.
 
 ## Recent Updates
+- 2026-11-07: Added motion rules (§11, shadcnspace reference) and the recurring design-refresh process (§12) to DESIGN_UX_SPEC.
 - 2026-05-02: Added Remote100K-inspired homepage/job-card implementation direction to DESIGN_UX_SPEC and PRD-8 task docs.
 - 2025-12-20: Added SCRAPER_SPEC.md
 - 2025-12-20: Updated .chatgpt-rules to v2.7
