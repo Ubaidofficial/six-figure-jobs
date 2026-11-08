@@ -53,7 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const description = buildHomeDescription(stats.totalJobs, stats.totalCompaniesHiring)
     const ogDescription =
       `${stats.totalJobs.toLocaleString()}+ six-figure jobs with salary shown upfront. ` +
-      `Apply on the employer’s own page. $100k+ remote & on-site roles from ${stats.totalCompaniesHiring.toLocaleString()}+ companies.`
+      `Pay thresholds set per currency. $100k+ remote & on-site roles from ${stats.totalCompaniesHiring.toLocaleString()}+ companies.`
 
     return {
       title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',

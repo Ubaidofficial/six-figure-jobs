@@ -189,7 +189,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
       {
         question: 'Are the salaries real?',
         answer:
-          'Every job listed was posted by the employer with a salary range, and the top of that range reaches the six-figure floor for its currency. Each listing links to the company’s own application page.',
+          'Every job listed was posted by the employer with a salary range, and the top of that range reaches the six-figure floor for its currency. Each apply button says where it goes: the company’s own application page or the job board the role was posted on.',
       },
       {
         question: 'How often is this list updated?',

@@ -80,8 +80,8 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
       <p className={styles.subheadline}>
         {jobCount.toLocaleString()} roles
         {companyCount > 0 ? ` at ${companyCount.toLocaleString()} companies` : ''}, every one with its pay
-        range on the listing. Pay thresholds are set per currency, and every apply button goes to the
-        employer&rsquo;s own application page.
+        range on the listing. Pay thresholds are set per currency, and every apply button says where it goes: the
+        employer&rsquo;s own site or the job board the role was posted on.
       </p>
 
       <form className={styles.searchForm} method="GET" action="/jobs">
