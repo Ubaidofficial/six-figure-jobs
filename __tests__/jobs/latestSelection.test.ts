@@ -30,10 +30,18 @@ describe('dedupeLatest', () => {
   })
 
   it('counts a job without countryCode toward the country its location names', () => {
-    const de = (i: number, countryCode: string | null) =>
-      ({ id: `de${i}`, title: `Arzt ${i}`, companyId: `d${i}`, countryCode, locationRaw: 'Cottbus, Brandenburg, Germany', minAnnual: 1, maxAnnual: 2 }) as never
-    const jobs = [de(1, 'DE'), de(2, 'DE'), de(3, null), de(4, null), de(5, null), job('US', 'u9'), job('GB', 'g9'), job('CA', 'c9')]
-    const picked = dedupeLatest(jobs, 6) as Array<{ locationRaw?: string }>
-    expect(picked.filter((j) => j.locationRaw?.includes('Germany'))).toHaveLength(3)
+    // Live data, 2026-11-08: two had countryCode DE, one only "Cottbus, Brandenburg, Germany", one only "Hamburg, Hamburg"
+    // with euro pay (the job page's JSON-LD says DE for both).
+    const de = (i: number, countryCode: string | null, locationRaw: string, city: string) =>
+      ({ id: `de${i}`, title: `Arzt ${i}`, companyId: `d${i}`, countryCode, locationRaw, city, currency: 'EUR', minAnnual: 1, maxAnnual: 2 }) as never
+    const jobs = [
+      de(1, 'DE', 'Krefeld, Nordrhein-Westfalen', 'Krefeld'),
+      de(2, 'DE', 'Olpe, Nordrhein-Westfalen', 'Olpe'),
+      de(3, null, 'Cottbus, Brandenburg, Germany', 'Cottbus'),
+      de(4, null, 'Hamburg, Hamburg', 'Hamburg'),
+      job('US', 'u9'), job('GB', 'g9'), job('CA', 'c9'),
+    ]
+    const picked = dedupeLatest(jobs, 6) as Array<{ id: string }>
+    expect(picked.filter((j) => j.id.startsWith('de'))).toHaveLength(3)
   })
 })
