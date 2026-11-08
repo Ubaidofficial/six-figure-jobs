@@ -6,6 +6,7 @@ export const revalidate = 600
 
 import { SKILL_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
+import { loadTopRolePages, topRolesRow } from '../../../../lib/roles/topRolePages'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
@@ -94,6 +95,7 @@ export default async function SkillPage({ params }: { params: Params }) {
     page: 1,
     pageSize: PAGE_SIZE,
   })
+  const topRoles = await loadTopRolePages({ skillSlugs: [resolved.slug], isHundredKLocal: true })
 
   const minAnnualValues = jobs
     .map((j) => (j.minAnnual != null ? Number(j.minAnnual) : null))
@@ -167,6 +169,7 @@ export default async function SkillPage({ params }: { params: Params }) {
             page.
           </>
         }
+        related={topRolesRow(`Top roles using ${resolved.label}`, topRoles)}
         chips={[
           { label: 'All $100k+ jobs', href: '/jobs/100k-plus' },
           { label: 'Remote', href: '/remote' },

@@ -18,6 +18,7 @@ import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SALARY_TIERS, tierQueryInput, type SalaryTierId } from '@/lib/jobs/salaryTiers'
+import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
@@ -196,6 +197,7 @@ export async function SalaryTierTemplate({
     `jobs.salary-tier.${tierId}.page`,
     async () => {
   const data = await queryJobs(queryInput)
+  const topRoles = await loadTopRolePages(tierQueryInput(tierId))
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
   const totalPages = data.totalPages
   const mostRecentUpdateMs = jobs.reduce((acc, job: any) => {
@@ -363,6 +365,7 @@ export async function SalaryTierTemplate({
             {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
           </>
         }
+        related={topRolesRow(`Top roles at ${tier.rangeLabel}`, topRoles)}
         toolbar={<JobsToolbar facets={facets} salaryPresetLabel={tier.rangeLabel} />}
       />
 

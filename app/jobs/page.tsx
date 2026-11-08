@@ -9,6 +9,7 @@ import {
   type JobQueryInput,
   type JobWithCompany,
 } from '../../lib/jobs/queryJobs'
+import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { prisma } from '../../lib/prisma'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
@@ -360,6 +361,7 @@ export default async function JobsIndexPage({
   try {
     const data = await queryJobs(queryInput)
     const jobs = data.jobs as JobWithCompany[]
+    const topRoles = await loadTopRolePages({})
 
   const baseFacetInput: JobQueryInput = {
     ...queryInput,
@@ -522,6 +524,7 @@ export default async function JobsIndexPage({
 
         <ListingHeader
           aside={<ListingSalaryAside input={queryInput} />}
+          related={topRolesRow('Top roles', topRoles)}
           breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs' }]}
           title={
             keyword ? (

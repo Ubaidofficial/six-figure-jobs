@@ -72,6 +72,12 @@ function categoryOf(roleSlug: string): string | null {
   return prefixed[0]?.category ?? null
 }
 
+/** Display name of a role page: its search option's label, else the slug in title case. */
+export function roleLabelFor(slug: string): string {
+  const hit = CANDIDATES.find((c) => c.slug === slug)
+  return hit?.label ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
+}
+
 /** Jobs for a role page: every stored roleSlug that equals or contains the slug, as buildWhere() matches them. */
 function countFor(slug: string, counts: RoleSlugCount[]): { total: number; recent: number } {
   let total = 0
