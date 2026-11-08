@@ -1,6 +1,7 @@
 // lib/jobs/latestSelection.ts
 // Which jobs the homepage "Latest Six Figure Opportunities" list shows: newest first, but varied by employer and
 // market, the way the big remote boards balance their front page across categories.
+import { countryFromText } from '../location/jobLocation'
 import type { JobWithCompany } from './queryJobs'
 
 const MAX_PER_COMPANY = 2
@@ -10,7 +11,9 @@ const MAX_PER_MARKET = 3
 
 function marketOf(job: JobWithCompany): string {
   if ((job as any).remote === true || (job as any).remoteMode === 'remote') return 'remote'
-  return String((job as any).countryCode || 'unknown').toUpperCase()
+  // Many imported jobs have no countryCode but name the country in locationRaw ("Cottbus, Brandenburg, Germany"); read it
+  // from there too, so they count toward that country's cap instead of a separate "unknown" bucket.
+  return String((job as any).countryCode || countryFromText((job as any).locationRaw) || 'unknown').toUpperCase()
 }
 
 /**
