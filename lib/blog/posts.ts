@@ -20,7 +20,7 @@ export type BlogPost = {
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'software-engineer-salary-2026',
-    metaTitle: 'Software Engineer Salary 2026: Guide by Level & Location',
+    metaTitle: 'Software Engineer Salary 2026 by Level',
     title: 'Software Engineer Salary in 2026: Complete Guide by Level & Location',
     excerpt:
       'Average software engineer salaries range from $120k to $300k+ in 2026. This guide breaks down compensation by level (junior to staff), tech stack, and location with real data.',
@@ -118,7 +118,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: 'six-figure-tech-job-no-degree',
-    metaTitle: 'Get a $100k+ Tech Job Without a Degree (2026 Guide)',
+    metaTitle: 'Get a $100k+ Tech Job Without a Degree',
     title: 'How to Get a $100k+ Tech Job Without a College Degree in 2026',
     excerpt:
       'Landing a six-figure tech job without a degree is more achievable than ever. Here are the 4 proven paths — bootcamp, certifications, self-taught, and sales — with real salary data.',
@@ -363,7 +363,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: '200k-tech-job-what-it-takes',
-    metaTitle: 'The $200k Tech Job: What It Takes to Earn $200,000',
+    metaTitle: 'The $200k Tech Job: What It Takes to Earn It',
     title: 'The $200k Tech Job: What It Actually Takes to Earn $200,000 in Tech',
     excerpt:
       'Only the top 10–15% of tech workers earn $200k+. Here is what separates them — the roles, companies, levels, and skills that clear the $200,000 threshold in 2026.',

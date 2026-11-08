@@ -100,6 +100,7 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
+      type: 'website',
     },
   }
 }

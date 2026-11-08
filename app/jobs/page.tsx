@@ -104,10 +104,14 @@ export async function generateMetadata({
   // Noindex utility states (filtered lists or pagination beyond page 1) to conserve crawl budget
   const noindexUtilityState = shouldNoindexListingPage(sp)
   const pageNumber = readListingPageParam(sp)
-  const pageSuffix = pageNumber > 1 ? ` (Page ${pageNumber})` : ''
 
   return {
-    title: `Six-Figure Tech Jobs — Browse $100k+ Openings${pageSuffix} | ${SITE_NAME}`,
+    // Deeper pages get a short title of their own: with the page number appended to the full title it ran to 72
+    // characters and was cut off in search results.
+    title:
+      pageNumber > 1
+        ? `Six-Figure Tech Jobs, Page ${pageNumber} | ${SITE_NAME}`
+        : `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
     description:
       'Browse $100k+ tech jobs with published salaries. Filter by role, location, remote work, seniority and company size.',
     alternates: {
