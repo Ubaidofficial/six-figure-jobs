@@ -79,6 +79,11 @@
     align-items: flex-start;
   }
 
+  /* Phones: 5 cards; the button below links all of them (keeps the homepage short, see LiveJobFeed). */
+  .grid > :nth-child(n + 6) {
+    display: none;
+  }
+
   .ctaButton {
     width: 100%;
   }

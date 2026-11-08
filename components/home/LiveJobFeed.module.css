@@ -164,5 +164,7 @@
 
 @media (max-width: 480px) {
   .header { flex-direction: column; gap: var(--space-4, 4px); }
+  /* Phones: the 5 newest; "All new jobs" links the rest (the homepage was ~13,000px tall on an iPhone, 2026-11-08). */
+  .list > li:nth-child(n + 6) { display: none; }
   .section { padding: var(--space-12); }
 }
