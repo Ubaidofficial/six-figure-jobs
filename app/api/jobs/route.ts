@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { queryJobs, type JobQueryInput } from '@/lib/jobs/queryJobs'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
+import { readHubExtraFilters } from '@/lib/jobs/hubFilters'
 const PAGE_SIZE = 24
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -33,6 +34,8 @@ export async function GET(request: Request) {
     companySizeBuckets: companySizes.length ? companySizes : undefined,
     tech,
     keyword,
+    // remoteRegion, city: the same filters the /jobs page applies (its "load more" calls this route).
+    ...readHubExtraFilters((key) => searchParams.getAll(key)),
     ...(visa ? { visaSponsorship: true } : {}),
     ...(keyword && exact ? { keywordPlan: buildKeywordPlan(keyword, null) } : {}),
     ...(minSalary ? { minAnnual: minSalary } : {}),

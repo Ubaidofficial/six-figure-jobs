@@ -21,6 +21,8 @@ import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { getSearchVocabulary } from '@/lib/search/vocabulary'
+import { loadHubExtraFacets } from '@/lib/jobs/hubFacets'
+import { readHubExtraFilters } from '@/lib/jobs/hubFilters'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 
 import { JobsFiltersPanel, type JobsFacets } from './_components/JobsFilters'
@@ -324,6 +326,8 @@ export default async function JobsIndexPage({
   const roles = allParams(sp, 'role')
   const seniority = allParams(sp, 'seniority')
   const companySizes = allParams(sp, 'companySize')
+  // remoteRegion and city; /api/jobs reads them with the same function so "load more" keeps them.
+  const extra = readHubExtraFilters((key) => allParams(sp, key))
 
   const minSalaryRaw = Number(firstParam(sp, 'minSalary') || '') || null
   const minSalary =
@@ -340,7 +344,9 @@ export default async function JobsIndexPage({
     (techFilter ? 1 : 0) +
     (visa ? 1 : 0) +
     (keyword ? 1 : 0) +
-    (minSalary ? 1 : 0)
+    (minSalary ? 1 : 0) +
+    (extra.remoteRegion ? 1 : 0) +
+    (extra.citySlug ? 1 : 0)
 
   const queryInput: JobQueryInput = {
     page,
@@ -353,6 +359,7 @@ export default async function JobsIndexPage({
     companySizeBuckets: companySizes.length ? companySizes : undefined,
     tech: techFilter,
     keyword,
+    ...extra,
     ...(visa ? { visaSponsorship: true } : {}),
     ...(keyword && exact ? { keywordPlan: buildKeywordPlan(keyword, null) } : {}),
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
@@ -369,7 +376,7 @@ export default async function JobsIndexPage({
     pageSize: 1,
   }
 
-    const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] =
+    const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount, extraFacets] =
       await memoAsync(stableKey('jobs-hub-facets', { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
         prisma.job.groupBy({
           by: ['roleSlug'],
@@ -400,6 +407,7 @@ export default async function JobsIndexPage({
         prisma.job.count({
           where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
         }),
+        loadHubExtraFacets(baseFacetInput),
       ]))
 
   const vocabulary = await getSearchVocabulary().catch(() => null)
@@ -424,6 +432,7 @@ export default async function JobsIndexPage({
     },
     techs: vocabulary?.topSkills.map((t) => ({ value: t.term, count: t.count })),
     visaFilter: true,
+    ...extraFacets,
   }
 
   // ✅ UI dedupe: collapse identical ATS duplicates (same company + title + comp)
@@ -559,7 +568,7 @@ export default async function JobsIndexPage({
               ) : null}
             </>
           }
-          toolbar={<JobsToolbar facets={facets} />}
+          toolbar={<JobsToolbar facets={facets} keywordSearch />}
         />
 
         <ListingLayout sidebar={<JobsFiltersPanel facets={facets} />}>

@@ -50,12 +50,13 @@ const REGIONS: Option[] = [
 
 const SENIORITY: Option[] = [
   { value: '', label: 'Any' },
-  { value: 'entry', label: 'Entry' },
-  { value: 'mid', label: 'Mid' },
   { value: 'senior', label: 'Senior' },
   { value: 'lead', label: 'Lead' },
+  { value: 'staff', label: 'Staff' },
+  { value: 'principal', label: 'Principal' },
   { value: 'director', label: 'Director' },
   { value: 'vp', label: 'VP' },
+  { value: 'c-level', label: 'C-level' },
 ]
 
 function Select({

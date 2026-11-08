@@ -5,6 +5,8 @@ import { ReadonlyURLSearchParams } from 'next/navigation';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import { CountryFlag } from '@/components/ui/CountryFlag'
+import { COMPANY_SIZE_BUCKETS, SENIORITY_LEVELS, type HubExtraFacets } from '@/lib/jobs/hubFilters'
+import { remoteRegionDef } from '@/lib/jobs/remoteRegions'
 import { countryName } from '@/lib/location/country'
 
 import styles from './JobsFilters.module.css'
@@ -19,7 +21,7 @@ export type JobsFacets = {
   techs?: JobsFacetItem[]
   /** When true, the panel shows the Visa sponsorship toggle (the page must apply the `visa` param). */
   visaFilter?: boolean
-}
+} & HubExtraFacets
 
 export type LocationPreset = {
   label: string
@@ -59,6 +61,46 @@ function replaceSearchParams(
   router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
 }
 
+type OptionItem = { value: string; label: string; count?: number }
+
+/** A checkbox-style list of choices; `onToggle` gets the value that was clicked. */
+function OptionList({
+  items,
+  isActive,
+  onToggle,
+  label,
+}: {
+  items: OptionItem[]
+  isActive: (value: string) => boolean
+  onToggle: (value: string) => void
+  label: string
+}) {
+  return (
+    <div className={styles.list} role="group" aria-label={label}>
+      {items.map((item) => {
+        const active = isActive(item.value)
+        return (
+          <button
+            key={item.value}
+            type="button"
+            className={styles.option}
+            aria-pressed={active}
+            onClick={() => onToggle(item.value)}
+          >
+            <span className={styles.left}>
+              <span className={`${styles.check} ${active ? styles.checked : ''}`}>
+                {active ? <span className={styles.checkMark}>✓</span> : null}
+              </span>
+              <span className={styles.name}>{item.label}</span>
+            </span>
+            <span className={styles.count}>{typeof item.count === 'number' ? item.count.toLocaleString() : null}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export function JobsFiltersPanel({
   facets,
   salaryPresetLabel,
@@ -80,6 +122,7 @@ export function JobsFiltersPanel({
 
   const [locationQuery, setLocationQuery] = React.useState('')
   const [roleQuery, setRoleQuery] = React.useState('')
+  const [cityQuery, setCityQuery] = React.useState('')
 
   const selectedCountry = searchParams.get('country') || ''
   const selectedRemoteMode = searchParams.get('remoteMode') || ''
@@ -95,6 +138,8 @@ export function JobsFiltersPanel({
     () => parseMulti(searchParams, 'companySize'),
     [searchParams]
   )
+  const selectedRegion = searchParams.get('remoteRegion') || ''
+  const selectedCity = searchParams.get('city') || ''
 
   const minSalary = (() => {
     const raw = searchParams.get('minSalary') || ''
@@ -113,6 +158,12 @@ export function JobsFiltersPanel({
     })
   }, [facets.countries, locationQuery])
 
+  const filteredCities = React.useMemo(() => {
+    const q = cityQuery.trim().toLowerCase()
+    const cities = facets.cities ?? []
+    return q ? cities.filter((c) => c.label.toLowerCase().includes(q)) : cities
+  }, [facets.cities, cityQuery])
+
   const filteredRoles = React.useMemo(() => {
     const q = roleQuery.trim().toLowerCase()
     if (!q) return facets.roles
@@ -128,9 +179,30 @@ export function JobsFiltersPanel({
       next.delete('seniority')
       next.delete('companySize')
       next.delete('minSalary')
+      next.delete('remoteRegion')
+      next.delete('city')
+      next.delete('tech')
+      next.delete('visa')
       next.delete('page')
     })
   }, [pathname, router, searchParams])
+
+  // Toggles one value of a multi-value filter (`?seniority=senior&seniority=lead`).
+  const toggleMulti = (key: string, current: string[], value: string) =>
+    replaceSearchParams(pathname, searchParams, router, (next) => {
+      const updated = current.includes(value) ? current.filter((v) => v !== value) : [...current, value]
+      next.delete(key)
+      for (const v of updated) next.append(key, v)
+      next.delete('page')
+    })
+
+  // Sets a single-value filter, or clears it when the chosen value is already active.
+  const toggleSingle = (key: string, current: string, value: string) =>
+    replaceSearchParams(pathname, searchParams, router, (next) => {
+      if (current === value) next.delete(key)
+      else next.set(key, value)
+      next.delete('page')
+    })
 
   return (
     <div className={styles.panel}>
@@ -246,6 +318,26 @@ export function JobsFiltersPanel({
                     )
                   })}
                 </div>
+                {facets.cities && facets.cities.length > 0 ? (
+                  <>
+                    <div className={styles.label} style={{ marginTop: 12 }}>
+                      City
+                    </div>
+                    <input
+                      className={styles.textInput}
+                      value={cityQuery}
+                      onChange={(e) => setCityQuery(e.target.value)}
+                      placeholder="Search cities…"
+                      aria-label="Search cities"
+                    />
+                    <OptionList
+                      label="City"
+                      items={filteredCities}
+                      isActive={(v) => selectedCity === v}
+                      onToggle={(v) => toggleSingle('city', selectedCity, v)}
+                    />
+                  </>
+                ) : null}
               </>
             )}
           </div>
@@ -294,6 +386,27 @@ export function JobsFiltersPanel({
             </div>
           </div>
         </details>
+
+        {facets.remoteRegions && (facets.remoteRegions.length > 0 || selectedRegion) ? (
+          <details className={styles.section} open>
+            <summary className={styles.summary}>
+              Remote Region <span className={styles.chev}>⌄</span>
+            </summary>
+            <div className={styles.content}>
+              <OptionList
+                label="Remote region"
+                items={facets.remoteRegions.map((r) => ({
+                  value: r.value,
+                  label: remoteRegionDef(r.value)?.label ?? r.value,
+                  count: r.count,
+                }))}
+                isActive={(v) => selectedRegion === v}
+                onToggle={(v) => toggleSingle('remoteRegion', selectedRegion, v)}
+              />
+              <div className={styles.help}>Remote jobs open to people in that region.</div>
+            </div>
+          </details>
+        ) : null}
 
         {!hideRoleFilter ? (
           <details className={styles.section} open>
@@ -363,94 +476,38 @@ export function JobsFiltersPanel({
             Seniority <span className={styles.chev}>⌄</span>
           </summary>
           <div className={styles.content}>
-            <div className={styles.list} role="group">
-              {(
-                [
-                  { value: 'mid', label: 'Mid-level' },
-                  { value: 'senior', label: 'Senior' },
-                  { value: 'staff', label: 'Staff' },
-                  { value: 'principal', label: 'Principal' },
-                  { value: 'lead', label: 'Lead' },
-                ] as const
-              ).map((opt) => {
-                const active = selectedSeniority.includes(opt.value)
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    className={styles.option}
-                    onClick={() => {
-                      replaceSearchParams(pathname, searchParams, router, (next) => {
-                        const current = parseMulti(next, 'seniority')
-                        const updated = active
-                          ? current.filter((v) => v !== opt.value)
-                          : [...current, opt.value]
-                        next.delete('seniority')
-                        for (const v of updated) next.append('seniority', v)
-                        next.delete('page')
-                      })
-                    }}
-                  >
-                    <span className={styles.left}>
-                      <span className={`${styles.check} ${active ? styles.checked : ''}`}>
-                        {active ? <span className={styles.checkMark}>✓</span> : null}
-                      </span>
-                      <span className={styles.name}>{opt.label}</span>
-                    </span>
-                    <span className={styles.count} />
-                  </button>
-                )
+            <OptionList
+              label="Seniority"
+              items={SENIORITY_LEVELS.flatMap((l) => {
+                const found = facets.seniorities?.find((s) => s.value === l.value)
+                // With counts from the page, only levels that have jobs; without (role and salary pages), all of them.
+                return facets.seniorities && !found ? [] : [{ value: l.value, label: l.label, count: found?.count }]
               })}
-            </div>
+              isActive={(v) => selectedSeniority.includes(v)}
+              onToggle={(v) => toggleMulti('seniority', selectedSeniority, v)}
+            />
+            <div className={styles.help}>Read from the job title, so jobs without a level word are not listed here.</div>
           </div>
         </details>
 
-        <details className={styles.section} open>
-          <summary className={styles.summary}>
-            Company Size <span className={styles.chev}>⌄</span>
-          </summary>
-          <div className={styles.content}>
-            <div className={styles.list} role="group">
-              {(
-                [
-                  { value: '1-10', label: '1–10' },
-                  { value: '11-50', label: '11–50' },
-                  { value: '51-200', label: '51–200' },
-                  { value: '201-1000', label: '201–1000' },
-                  { value: '1000+', label: '1000+' },
-                ] as const
-              ).map((opt) => {
-                const active = selectedCompanySizes.includes(opt.value)
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    className={styles.option}
-                    onClick={() => {
-                      replaceSearchParams(pathname, searchParams, router, (next) => {
-                        const current = parseMulti(next, 'companySize')
-                        const updated = active
-                          ? current.filter((v) => v !== opt.value)
-                          : [...current, opt.value]
-                        next.delete('companySize')
-                        for (const v of updated) next.append('companySize', v)
-                        next.delete('page')
-                      })
-                    }}
-                  >
-                    <span className={styles.left}>
-                      <span className={`${styles.check} ${active ? styles.checked : ''}`}>
-                        {active ? <span className={styles.checkMark}>✓</span> : null}
-                      </span>
-                      <span className={styles.name}>{opt.label} employees</span>
-                    </span>
-                    <span className={styles.count} />
-                  </button>
-                )
-              })}
+        {facets.companySizes && facets.companySizes.length > 0 ? (
+          <details className={styles.section} open>
+            <summary className={styles.summary}>
+              Company Size <span className={styles.chev}>⌄</span>
+            </summary>
+            <div className={styles.content}>
+              <OptionList
+                label="Company size"
+                items={COMPANY_SIZE_BUCKETS.filter((b) => facets.companySizes?.includes(b.value)).map((b) => ({
+                  value: b.value,
+                  label: `${b.label} employees`,
+                }))}
+                isActive={(v) => selectedCompanySizes.includes(v)}
+                onToggle={(v) => toggleMulti('companySize', selectedCompanySizes, v)}
+              />
             </div>
-          </div>
-        </details>
+          </details>
+        ) : null}
 
         {facets.techs && facets.techs.length > 0 ? (
           <details className={styles.section} open>

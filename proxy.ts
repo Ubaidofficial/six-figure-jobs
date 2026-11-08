@@ -55,6 +55,12 @@ const ALLOWED_PUBLIC_QUERY_PARAMS = new Set([
   'minSalary',
   'maxSalary',
   'remoteRegion',
+  // The /jobs sidebar's Role, Seniority and Company Size filters. Without them here every click was redirected back to
+  // plain /jobs, so those three filters did nothing on the live site. These URLs stay noindex (shouldNoindexListingPage)
+  // and are only reached by the sidebar's buttons, which are not links.
+  'role',
+  'seniority',
+  'companySize',
   'level',
   'skill',
   'industry',

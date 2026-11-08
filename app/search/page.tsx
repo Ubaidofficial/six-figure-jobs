@@ -86,18 +86,19 @@ function resolveSeniorityLevels(
   const value = (explicit || inferred || '').trim().toLowerCase()
   if (!value) return undefined
 
+  // Levels come from words in the job title (see SENIORITY_LEVELS), so there are no "entry" or "mid" jobs to filter to:
+  // asking for them filters nothing, rather than returning no jobs.
   switch (value) {
-    case 'entry':
-    case 'mid':
     case 'senior':
     case 'staff':
     case 'principal':
     case 'lead':
     case 'director':
     case 'vp':
+    case 'c-level':
       return [value]
     case 'executive':
-      return ['director', 'vp']
+      return ['director', 'vp', 'c-level']
     default:
       return undefined
   }
