@@ -10,7 +10,7 @@ import { HeroSearchInput } from '@/components/home/HeroSearchInput'
 import { AuthNav } from './AuthNav'
 import { Wordmark } from './Wordmark'
 
-import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 
 import styles from './SiteHeader.module.css'
 
@@ -109,7 +109,9 @@ export function SiteHeader() {
                   <Menu className={styles.searchIcon} aria-hidden="true" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className={styles.mobileSheet} hideClose>
+              <SheetContent side="right" className={styles.mobileSheet} hideClose aria-describedby={undefined}>
+                {/* Screen readers announce the open dialog by its title; the logo below is its visible heading. */}
+                <SheetTitle className="sr-only">Menu</SheetTitle>
                 <div className={styles.mobileHeader}>
                   <Link href="/" className={styles.logo} onClick={() => setMobileOpen(false)}>
                     <Wordmark />
