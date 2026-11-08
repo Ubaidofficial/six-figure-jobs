@@ -17,7 +17,7 @@ import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../../components/JobList'
-import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../../lib/seo/listingSearchParams'
+import { buildNormalizedListingPath, hasNonPaginationQueryParams, notFoundPastLastPage } from '../../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
 import { buildListingDescription, countPrefix, fitTitle } from '../../../lib/seo/metaText'
 import { isRemoteRolePageIndexable } from '../../../lib/seo/indexabilityGates'
@@ -371,6 +371,7 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
 
       const jobs = data.jobs as JobWithCompany[]
       const totalPages = data.total > 0 ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1
+      notFoundPastLastPage(page, totalPages)
       const glance = await loadRemoteRoleGlance(roleSlug)
 
       const jsonLd = buildJobListJsonLd(roleSlug, jobs, page)

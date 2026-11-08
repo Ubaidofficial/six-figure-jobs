@@ -26,6 +26,7 @@ import { JobsFiltersPanel, type JobsFacets } from '../../_components/JobsFilters
 import { JobsToolbar } from '../../_components/JobsToolbar'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const PAGE_SIZE = 24
 const SITE_URL = getSiteUrl()
@@ -286,6 +287,7 @@ export async function CountryLocationTemplate({
   const topRoles = await loadTopRolePages({ countryCode })
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
   const totalPages = data.totalPages
+  notFoundPastLastPage(page, totalPages)
   const mostRecentUpdateMs = jobs.reduce((acc, job: any) => {
     const candidate = job?.updatedAt ?? job?.postedAt ?? job?.createdAt ?? null
     if (!candidate) return acc

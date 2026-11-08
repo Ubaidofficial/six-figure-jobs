@@ -2,7 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { permanentRedirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import {
   queryJobs,
   type JobWithCompany,
@@ -127,7 +127,9 @@ function resolveCanonicalRoleOrRedirect(rawRole: string): string {
   const matched = findBestMatchingRole(normalized)
   if (matched) permanentRedirect(`/salary/${matched}`)
 
-  permanentRedirect('/salary/software-engineer')
+  // No role it could mean: 404, as /jobs/<role> and /remote/<role> do. Sending every unknown slug ("xyz", "mechanic")
+  // to the software engineer guide was a misleading redirect (found 2026-11-08).
+  notFound()
 }
 
 /* -------------------------------------------------------------------------- */
