@@ -526,7 +526,8 @@ function inferCountryFromLocationRaw(locationRaw: string): string | null {
   return US_STATE_NAMES.has(lower) && lower !== 'georgia' ? 'US' : null
 }
 
-function inferCountryFromJob(job: any): string | null {
+// Also used by the homepage "Latest" list's per-country cap (lib/jobs/latestSelection.ts), so both agree on a job's country.
+export function inferCountryFromJob(job: any): string | null {
   const explicitCountry = normalizeCountryCode(job.countryCode)
   if (explicitCountry) return explicitCountry
 
