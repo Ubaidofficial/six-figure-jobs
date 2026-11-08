@@ -10,10 +10,12 @@ export function Footer() {
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>
-        <section className={styles.newsletter} aria-label="Newsletter signup">
+        <section className={styles.newsletter} aria-label="Follow new jobs">
           <div>
-            <div className={styles.newsletterTitle}>Get weekly six-figure jobs in your inbox</div>
-            <div className={styles.newsletterSub}>New six-figure jobs each week, pay ranges included.</div>
+            <div className={styles.newsletterTitle}>Follow new six-figure jobs</div>
+            <div className={styles.newsletterSub}>
+              Email alerts are coming. Until then, add a feed to any RSS reader, Slack or Feedly: new jobs with pay ranges.
+            </div>
           </div>
           <FooterNewsletter />
         </section>
