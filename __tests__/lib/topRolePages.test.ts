@@ -27,6 +27,14 @@ describe('rankTopRolePages', () => {
     expect(roles).toEqual([])
   })
 
+  it('never links the catch-all "other" role', () => {
+    const roles = rankTopRolePages([
+      { roleSlug: 'other', count: 500 },
+      { roleSlug: 'software-engineer', count: 10 },
+    ])
+    expect(roles.map((r) => r.slug)).toEqual(['software-engineer'])
+  })
+
   it('caps the list', () => {
     const rows = ['software-engineer', 'product-manager', 'data-scientist', 'data-engineer'].map((roleSlug, i) => ({ roleSlug, count: 10 - i }))
     expect(rankTopRolePages(rows, { limit: 2 }).map((r) => r.slug)).toEqual(['software-engineer', 'product-manager'])
