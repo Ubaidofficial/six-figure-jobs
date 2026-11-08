@@ -860,8 +860,8 @@ function buildCompanyFaqItems(company: CompanyWithJobs['company'], jobs: JobWith
       q: `Where do the ${company.name} salaries come from?`,
       a:
         salaryBackedCount > 0
-          ? `${salaryBackedCount.toLocaleString()} ${company.name} roles take their salary from the employer’s applicant-tracking system. Every listing shows the salary range published in the posting and links to ${company.name}’s own application page.`
-          : `Every ${company.name} listing shows the salary range published in the posting and links to ${company.name}’s own application page.`,
+          ? `${salaryBackedCount.toLocaleString()} ${company.name} roles take their salary from the employer’s applicant-tracking system. Every listing shows the salary range published in the posting, and its apply button says whether it opens ${company.name}’s own site or the job board the role was posted on.`
+          : `Every ${company.name} listing shows the salary range published in the posting, and its apply button says whether it opens ${company.name}’s own site or the job board the role was posted on.`,
     },
     {
       q: `Does ${company.name} hire remote six figure roles?`,

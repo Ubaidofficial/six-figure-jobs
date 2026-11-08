@@ -8,6 +8,7 @@ import { prisma } from '../lib/prisma'
 import { cleanApplyUrl, isAggregatorApplyUrl, unwrapRedirectUrl } from '../lib/jobs/applyUrl'
 import { processLocation } from '../lib/ingest'
 import { normalizeRole } from '../lib/normalizers/role'
+import { duplicateJobIdsToExpire } from '../lib/jobs/crossSourceDuplicates'
 
 const DRY = process.argv.includes('--dry-run')
 const PLAN_VALUES = new Set([401000, 403000, 457000])
@@ -120,6 +121,18 @@ async function main() {
   }
   const topRoles = [...byRole].sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([r, ids]) => `${r} ${ids.length}`).join(', ')
   console.log(`[remediate] role relabeled: ${roleFixed} of ${unlabeled.filter((j) => j.roleSlug === 'other').length} "other" (${topRoles}); country filled: ${countryFixed} of ${unlabeled.filter((j) => !j.countryCode).length} missing`)
+
+  // 6. One opening imported twice (an employer's ATS copy and a job board's re-post, location text differing):
+  //    keep the employer copy, else the newest. See lib/jobs/crossSourceDuplicates.ts.
+  const liveForDupes = await prisma.job.findMany({
+    where: { isExpired: false },
+    select: { id: true, companyId: true, title: true, locationRaw: true, city: true, applyUrl: true, url: true, postedAt: true, createdAt: true },
+  })
+  const crossSourceDupes = duplicateJobIdsToExpire(liveForDupes)
+  if (!DRY && crossSourceDupes.length) {
+    await prisma.job.updateMany({ where: { id: { in: crossSourceDupes } }, data: { isExpired: true, updatedAt: new Date() } })
+  }
+  console.log(`[remediate] cross-source duplicates expired: ${crossSourceDupes.length}`)
 
   console.log(`[remediate] apply-url sanitized: ${apptySanitized}, deduped(expired): ${deduped}, 401k-fixed: ${planFixed}, inverted-fixed: ${invertedFixed}${DRY ? '  [DRY RUN]' : ''}`)
   await prisma.$disconnect()

@@ -330,7 +330,7 @@ export async function SalaryTierTemplate({
         name: `How often are ${tier.rangeLabel} job listings updated?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `New ${tier.rangeLabel} listings are added every day and jobs that are no longer open are removed. Each listing shows the salary from the employer’s posting and links to the company’s own application page.`,
+          text: `New ${tier.rangeLabel} listings are added every day and jobs that are no longer open are removed. Each listing shows the salary from the employer’s posting, and its apply button says where it goes: the company’s own page or the job board it was posted on.`,
         },
       },
       {
@@ -386,7 +386,7 @@ export async function SalaryTierTemplate({
           <p>
             <strong>{tier.rangeLabel} jobs</strong> on Six Figure Jobs: {data.total.toLocaleString()} roles with a
             published salary range.{avgSalary ? ` Average salary: ${formatUsdK(avgSalary)} USD.` : ''} Salaries come
-            from the employer&rsquo;s own posting, and every listing links to the company&rsquo;s application page.
+            from the employer&rsquo;s own posting, and every apply button says whether it goes to the company&rsquo;s site or a job board.
             Filter by role, country or work type to narrow the list.
           </p>
         </Prose>

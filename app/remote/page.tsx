@@ -97,7 +97,7 @@ const REMOTE_FAQ = [
   },
   {
     q: 'Where do these jobs come from?',
-    a: 'Jobs are collected from company career pages and job boards. Each listing links to the employer’s own application page.',
+    a: 'Jobs are collected from company career pages and job boards. Each apply button says where it goes: the employer’s own application page or the job board the role was posted on.',
   },
   {
     q: 'How often is the remote jobs hub refreshed?',

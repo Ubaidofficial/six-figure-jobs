@@ -45,14 +45,14 @@ describe('dedupeLatest', () => {
     expect(picked.filter((j) => j.id.startsWith('de'))).toHaveLength(3)
   })
 
-  it('lists English jobs with a real role first, still newest first, and fills with the rest', () => {
+  it('lists English jobs with a real role first, newest first, and fills with the rest after them', () => {
     // Live 2026-11-08: German agency ads (role "other", "(m/w/d)") were the newest jobs and topped the homepage.
     const at = (h: number) => new Date(Date.UTC(2026, 10, 8, h)).toISOString()
     const de = (i: number) => ({ id: `de${i}`, title: `Facharzt (m/w/d) ${i}`, companyId: `d${i}`, countryCode: 'DE', roleSlug: 'other', postedAt: at(20 - i), minAnnual: 1, maxAnnual: 2 }) as never
     const en = (i: number, cc: string) => ({ id: `en${i}`, title: `Data Engineer ${i}`, companyId: `e${i}`, countryCode: cc, roleSlug: 'data-engineer', postedAt: at(10 - i), minAnnual: 1, maxAnnual: 2 }) as never
     const jobs = [de(1), de(2), en(1, 'US'), en(2, 'GB'), en(3, 'CA')]
     const picked = (dedupeLatest(jobs, 4) as Array<{ id: string }>).map((j) => j.id)
-    expect(picked).toEqual(['de1', 'en1', 'en2', 'en3'])
+    expect(picked).toEqual(['en1', 'en2', 'en3', 'de1'])
   })
 
   it('features a job only with a real role and no German gender tag in the title', () => {

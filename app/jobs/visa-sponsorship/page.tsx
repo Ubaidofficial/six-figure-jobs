@@ -223,7 +223,7 @@ export default async function VisaSponsorshipPage({
         </h2>
         <ul style={{ color: 'var(--color-text-1)', fontSize: 16, lineHeight: 1.8, paddingLeft: 20 }}>
           <li>Every job is <strong style={{ color: 'var(--color-text-0)' }}>$100k+ with a published salary range</strong> — no guessing, no negotiation from zero</li>
-          <li>Jobs are scraped directly from company ATS systems (Greenhouse, Lever, Ashby, Workday) so the apply link goes straight to the hiring company</li>
+          <li>Jobs are collected daily from employers’ career sites, applicant tracking systems and job boards, and each apply button says where it goes</li>
           <li>Listings are refreshed daily and expired jobs are removed automatically</li>
           <li>Filter by role, country, remote mode, and seniority to find the right H1B opportunities</li>
         </ul>

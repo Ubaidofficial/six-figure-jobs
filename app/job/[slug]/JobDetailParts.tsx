@@ -13,6 +13,7 @@ import type { SalaryRank } from '@/lib/jobs/salaryRank'
 import { groupDescription, type DescriptionSection } from '@/lib/jobs/descriptionStructure'
 import type { ApplySurface } from '@/lib/analytics/applyClick'
 import { JOB_LANGUAGE_NAMES, type JobLanguage } from '@/lib/jobs/language'
+import { boardNameFor } from '@/lib/scrapers/utils/boardHosts'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import type { JobLocationView } from '@/lib/location/jobLocation'
 
@@ -196,13 +197,27 @@ export function DescriptionSections({ sections }: { sections: DescriptionSection
   )
 }
 
+// Say where the apply button goes. About half of the jobs sampled on 2026-11-08 apply through a job board (XING,
+// Adzuna, Himalayas...), not on the employer's site, while every button said "Apply on company site".
+function applyLabel(href: string): string {
+  const board = boardNameFor(href)
+  return board ? `Apply on ${board}` : 'Apply on company site'
+}
+
+function applyNote(href: string, companyName: string): string {
+  const board = boardNameFor(href)
+  return board
+    ? `Opens ${companyName}\u2019s listing on ${board} in a new tab.`
+    : `Opens ${companyName}\u2019s own application page in a new tab.`
+}
+
 /** Apply button after the description: the reader who has just finished it should not have to scroll back up. */
 export function DescriptionApply({ applyHref, companyName, jobId }: { applyHref: string | null; companyName: string; jobId: string }) {
   if (!applyHref) return null
   return (
     <div className={styles.descApply}>
-      <ApplyButton href={applyHref} label="Apply on company site" jobId={jobId} surface="description-end" />
-      <p>Opens {companyName}&rsquo;s own application page in a new tab.</p>
+      <ApplyButton href={applyHref} label={applyLabel(applyHref)} jobId={jobId} surface="description-end" />
+      <p>{applyNote(applyHref, companyName)}</p>
     </div>
   )
 }
@@ -237,9 +252,9 @@ export function ApplyCard({
 
       {applyHref ? (
         <>
-          <ApplyButton href={applyHref} label="Apply on company site" className="mt-4 w-full" jobId={jobId} surface="apply-card" />
+          <ApplyButton href={applyHref} label={applyLabel(applyHref)} className="mt-4 w-full" jobId={jobId} surface="apply-card" />
           <p className="mt-2 text-xs text-muted-foreground">
-            Opens {companyName}&rsquo;s own application page in a new tab. We only count that the button was clicked (no cookies, nothing about you).
+            {applyNote(applyHref, companyName)} We only count that the button was clicked (no cookies, nothing about you).
           </p>
         </>
       ) : (
@@ -317,7 +332,7 @@ export function PayCard({
       ) : null}
 
       {applyHref ? (
-        <ApplyButton href={applyHref} label="Apply on company site" className="mt-5 w-full" jobId={jobId} surface="hero" />
+        <ApplyButton href={applyHref} label={applyLabel(applyHref)} className="mt-5 w-full" jobId={jobId} surface="hero" />
       ) : null}
     </div>
   )
