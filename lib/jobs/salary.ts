@@ -1,4 +1,5 @@
 import { formatSalaryRange } from "../normalizers/salary"
+import { getSalaryFloorAnnual } from "../currency/thresholds"
 // lib/jobs/salary.ts
 // Unified salary helpers for JobCard, JobPage, CompanyPage, Slices, SEO, etc.
 
@@ -184,18 +185,10 @@ export function buildSalaryText(job: SalaryJob): string | null {
   if (min != null && (!Number.isFinite(min) || min <= 0)) min = null
   if (max != null && (!Number.isFinite(max) || max <= 0)) max = null
 
-  // Currency-aware six-figure minimums
-  const MIN_BY_CURRENCY: Record<string, number> = {
-    USD: 100000,
-    EUR: 90000,
-    GBP: 85000,
-    SEK: 1000000,
-    NOK: 1000000,
-    DKK: 900000,
-    INR: 3000000,
-  }
-
-  const minThreshold = cur && MIN_BY_CURRENCY[cur.toUpperCase()]
+  // Hide a bound below the lowest salary the site publishes in that currency (getSalaryFloorAnnual: the threshold, or
+  // EUR 60k under the euro top-of-range rule). An older copy of these minimums here (EUR 90k, GBP 85k) hid the pay of
+  // jobs the site does publish: EUR 68-81k showed no salary at all, EUR 70-90k showed "Up to EUR 90K" (2026-11-08).
+  const minThreshold = cur ? getSalaryFloorAnnual(cur) ?? (cur.toUpperCase() === 'INR' ? 3000000 : null) : null
 
   if (minThreshold) {
     if (min != null && min < minThreshold) min = null

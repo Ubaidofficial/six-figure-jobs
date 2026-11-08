@@ -67,3 +67,22 @@ describe('buildSalaryText – annual salary enforcement', () => {
     ).toBe('$High salary role')
   })
 })
+
+describe('buildSalaryText – the range the site publishes is the range it shows', () => {
+  // Live jobs on 2026-11-08 that showed no salary, or only the top, under older display minimums (EUR 90k, GBP 85k).
+  const eur = (min: number, max: number) => buildSalaryText({ minAnnual: min, maxAnnual: max, currency: 'EUR', countryCode: 'DE' })
+  it('shows euro ranges accepted by their top (EUR 80k threshold, EUR 60k floor)', () => {
+    expect(eur(68000, 81000)).toBe('€68K - €81K')
+    expect(eur(60000, 85000)).toBe('€60K - €85K')
+    expect(eur(70000, 90000)).toBe('€70K - €90K')
+  })
+
+  it('shows UK ranges from the GBP 75k threshold', () => {
+    expect(buildSalaryText({ minAnnual: 75000, maxAnnual: 90000, currency: 'GBP', countryCode: 'GB' })).toBe('£75K - £90K')
+  })
+
+  it('still hides a bound below the floor', () => {
+    expect(eur(40000, 90000)).toBe('Up to €90K')
+    expect(buildSalaryText({ minAnnual: 90000, currency: 'USD', countryCode: 'US' })).toBeNull()
+  })
+})

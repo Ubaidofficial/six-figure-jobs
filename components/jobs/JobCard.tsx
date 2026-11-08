@@ -431,7 +431,9 @@ export function JobCard({ job, onClick, className, variant = 'listing', headingL
       <footer className={styles.footer}>
         <div className={styles.posted}>
           <Clock className={styles.footerIcon} aria-hidden="true" />
-          <span>{postedLabel ? `Posted ${postedLabel}` : 'Recently posted'}</span>
+          {/* Relative to the clock at render: cached server HTML ("15 hours ago") can differ from the browser's ("16 hours
+              ago"), which made React throw hydration error #418 on / and /remote. Expected here, so not an error. */}
+          <span suppressHydrationWarning>{postedLabel ? `Posted ${postedLabel}` : 'Recently posted'}</span>
         </div>
 
         <div className={styles.cta} aria-hidden="true">
