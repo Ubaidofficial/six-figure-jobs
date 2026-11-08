@@ -28,4 +28,12 @@ describe('dedupeLatest', () => {
     const jobs = Array.from({ length: 12 }, () => job('CH', 'same'))
     expect(dedupeLatest(jobs, 10)).toHaveLength(2)
   })
+
+  it('counts a job without countryCode toward the country its location names', () => {
+    const de = (i: number, countryCode: string | null) =>
+      ({ id: `de${i}`, title: `Arzt ${i}`, companyId: `d${i}`, countryCode, locationRaw: 'Cottbus, Brandenburg, Germany', minAnnual: 1, maxAnnual: 2 }) as never
+    const jobs = [de(1, 'DE'), de(2, 'DE'), de(3, null), de(4, null), de(5, null), job('US', 'u9'), job('GB', 'g9'), job('CA', 'c9')]
+    const picked = dedupeLatest(jobs, 6) as Array<{ locationRaw?: string }>
+    expect(picked.filter((j) => j.locationRaw?.includes('Germany'))).toHaveLength(3)
+  })
 })
