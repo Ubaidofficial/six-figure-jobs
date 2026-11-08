@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
+import { loadTopRolePages, topRolesRow } from '../../../../lib/roles/topRolePages'
 import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Pagination, Prose } from '@/components/listing/ListingParts'
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
@@ -154,6 +155,7 @@ export default async function CategoryPage({
     pageSize: PAGE_SIZE,
     sortBy: 'date',
   })
+  const topRoles = await loadTopRolePages({ roleSlugs: cfg.roleSlugs, isHundredKLocal: true })
   const insights = await getCategoryInsights({
     roleSlugs: cfg.roleSlugs,
     isHundredKLocal: true,
@@ -189,6 +191,7 @@ export default async function CategoryPage({
             {insights.remoteCount ? <> · {insights.remoteCount.toLocaleString()} remote</> : null}
           </>
         }
+        related={topRolesRow(`Top ${cfg.label} roles`, topRoles)}
         chips={[
           ...['100k-plus', '200k-plus', '300k-plus', '400k-plus'].map((band) => ({
             label: `${band.replace('-plus', '')}+`,

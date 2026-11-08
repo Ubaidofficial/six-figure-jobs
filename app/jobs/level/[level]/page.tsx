@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
+import { loadTopRolePages, topRolesRow } from '../../../../lib/roles/topRolePages'
 import JobList from '../../../components/JobList'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
@@ -142,6 +143,7 @@ export default async function LevelPage({
     isHundredKLocal: true,
     pageSize: 40,
   })
+  const topRoles = await loadTopRolePages({ experienceLevel: level, isHundredKLocal: true })
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(level, info.label)
   const itemListJsonLd = buildSafeItemListJsonLd({
     name: `${info.label} $100k+ jobs`,
@@ -168,6 +170,7 @@ export default async function LevelPage({
             $100k or more. {info.description}.
           </>
         }
+        related={topRolesRow(`Top ${info.label} roles`, topRoles)}
         chips={[
           { label: 'All $100k+ jobs', href: '/jobs/100k-plus' },
           { label: 'Engineering', href: '/jobs/category/engineering' },

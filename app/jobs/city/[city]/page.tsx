@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { permanentRedirect } from 'next/navigation'
 import { CITY_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
+import { loadTopRolePages, topRolesRow } from '../../../../lib/roles/topRolePages'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
@@ -103,6 +104,7 @@ export default async function CityPage({ params }: { params: Params }) {
     page: 1,
     pageSize: PAGE_SIZE,
   })
+  const topRoles = await loadTopRolePages({ citySlug: resolved.slug, countryCode: resolved.countryCode, isHundredKLocal: true })
 
   const salaryLabel = getThresholdLabelForCountry(resolved.countryCode ?? null)
   const currencyCode = getCurrencyForCountry(resolved.countryCode ?? null) ?? 'USD'
@@ -186,6 +188,7 @@ export default async function CityPage({ params }: { params: Params }) {
             on-site teams.
           </>
         }
+        related={topRolesRow(`Top roles in ${resolved.label}`, topRoles)}
         chips={[
           { label: 'All jobs', href: '/jobs/100k-plus' },
           ...relatedCities.map((c) => ({ label: c.label, href: `/jobs/city/${c.slug}` })),

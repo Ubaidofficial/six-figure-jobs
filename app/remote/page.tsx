@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
 import { cache } from 'react'
 import { queryJobs, buildWhere, type JobWithCompany } from '../../lib/jobs/queryJobs'
+import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 import { prisma } from '../../lib/prisma'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
@@ -439,6 +440,11 @@ export default async function RemoteJobsPage({
       topCompanies,
       topCountries,
     } = await getRemoteHubSnapshot(activeRemoteRegion)
+    const topRemoteRoles = await loadTopRolePages({
+      remoteOnly: true,
+      remoteRegion: activeRemoteRegion || undefined,
+      excludeInternships: true,
+    })
 
     const canonicalPath = buildNormalizedListingPath('/remote', sp)
     const breadcrumbJsonLd = buildRemoteBreadcrumbJsonLd()
@@ -497,6 +503,7 @@ export default async function RemoteJobsPage({
             </>
           }
           chips={buildRegionChips(activeRemoteRegion, regionCounts)}
+          related={topRolesRow('Top remote roles', topRemoteRoles, '/remote')}
         />
 
         <JobRows

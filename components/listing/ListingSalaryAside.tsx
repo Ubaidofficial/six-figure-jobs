@@ -54,7 +54,8 @@ export async function ListingSalaryAside({
         in {currency}. {vsMarket ? <strong>{vsMarket}</strong> : null}
       </p>
       <ul className={styles.asideBars} aria-label="Listings by salary band">
-        {snapshot.bands.map((band) => (
+        {/* Empty bands are left out: on a $100k–$199k page "$300k+ 0" reads as broken, not as information. */}
+        {snapshot.bands.filter((band) => band.count > 0).map((band) => (
           <li key={band.label} className={styles.asideBarRow}>
             <span className={styles.asideBarLabel}>{band.label}</span>
             <span className={styles.asideBarTrack} aria-hidden="true">

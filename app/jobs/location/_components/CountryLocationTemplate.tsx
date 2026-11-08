@@ -15,6 +15,7 @@ import {
 
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
 import { CITY_TARGET_SLUG_SET } from '@/lib/seo/pseoTargets'
@@ -282,6 +283,7 @@ export async function CountryLocationTemplate({
   }
 
   const data = await queryJobs(queryInput)
+  const topRoles = await loadTopRolePages({ countryCode })
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
   const totalPages = data.totalPages
   const mostRecentUpdateMs = jobs.reduce((acc, job: any) => {
@@ -455,6 +457,7 @@ export async function CountryLocationTemplate({
             {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
           </>
         }
+        related={topRolesRow(`Top roles in ${loc.label}`, topRoles)}
         toolbar={
           <JobsToolbar facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />
         }
