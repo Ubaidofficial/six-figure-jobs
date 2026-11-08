@@ -15,7 +15,8 @@ import { TARGET_COUNTRIES } from '../lib/seo/regions'
 import { buildSliceCanonicalPath } from '../lib/seo/canonical'
 import { HomeFAQ } from './pageFAQ'
 import { CATEGORY_LINKS } from '@/lib/constants/category-links'
-import { LOCATIONS, SALARY_BANDS } from '@/lib/constants/homepage'
+import { LOCATIONS } from '@/lib/constants/homepage'
+import { SALARY_TIERS, tierQueryInput, type SalaryTierId } from '@/lib/jobs/salaryTiers'
 import { countryCodeToSlug } from '@/lib/seo/countrySlug'
 import { Hero } from '@/components/home/Hero'
 import { HeroFilters } from '@/components/home/HeroFilters'
@@ -108,6 +109,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const PAGE_SIZE = 40
+const SALARY_TIER_IDS: SalaryTierId[] = ['100k-plus', '200k-plus', '300k-plus', '400k-plus']
 
 const PREMIUM_ROLE_DEFS = [
   { slug: 'software-engineer', name: 'Software Engineer', emoji: '💻' },
@@ -312,18 +314,11 @@ export default async function HomePage() {
         orderBy: { _count: { companyId: 'desc' } },
         take: 20,
       }),
+      // Each tier card counts exactly what its page lists (USD, by the top of the range), so the numbers match.
       Promise.all(
-        SALARY_BANDS.map(async (band) => {
-          const count = await prisma.job.count({
-            where: addAndClause(publicJobWhere, {
-              OR: [
-                { maxAnnual: { gte: BigInt(band.min) } },
-                { minAnnual: { gte: BigInt(band.min) } },
-              ],
-            }),
-          })
-
-          return { ...band, count }
+        SALARY_TIER_IDS.map(async (slug) => {
+          const { total } = await queryJobs({ page: 1, pageSize: 1, ...tierQueryInput(slug) })
+          return { slug, count: total }
         })
       ),
       prisma.job.groupBy({
@@ -417,7 +412,7 @@ export default async function HomePage() {
       })()),
       // A failure here only hides the salary card; the rest of the page still renders.
       loadSalarySnapshot(publicJobWhere).catch(() => null),
-      // Jobs by country and job type, counted at most every 6 hours; a failure only hides those rows.
+      // Jobs by country and job type, counted at most every hour; a failure only hides those rows.
       loadSiteCounts().catch(() => null),
     ])
 
@@ -528,28 +523,11 @@ export default async function HomePage() {
   // Live feed: the newest jobs we added (real data), rendered here and refreshed in the browser once a minute.
   const feedItems = buildFeedItems(jobs)
   const feedItemIds = new Set(feedItems.map((item) => item.id))
-  const salaryTiers: SalaryTier[] = [
-    {
-      slug: '100k-plus',
-      label: '$100k+',
-      count: salaryBandCounts.find((b) => b.slug === '100k-plus')?.count ?? 0,
-    },
-    {
-      slug: '200k-plus',
-      label: '$200k+',
-      count: salaryBandCounts.find((b) => b.slug === '200k-plus')?.count ?? 0,
-    },
-    {
-      slug: '300k-plus',
-      label: '$300k+',
-      count: salaryBandCounts.find((b) => b.slug === '300k-plus')?.count ?? 0,
-    },
-    {
-      slug: '400k-plus',
-      label: '$400k+',
-      count: salaryBandCounts.find((b) => b.slug === '400k-plus')?.count ?? 0,
-    },
-  ]
+  const salaryTiers: SalaryTier[] = salaryBandCounts.map(({ slug, count }) => ({
+    slug,
+    label: SALARY_TIERS[slug].rangeLabel,
+    count,
+  }))
 
   const premiumRolesBySlug = new Map(
     premiumRoleRows.map((row) => [row.slug, row]),

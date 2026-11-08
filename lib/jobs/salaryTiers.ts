@@ -72,3 +72,16 @@ export const SALARY_TIERS: Record<SalaryTierId, SalaryTierConfig> = {
   },
 }
 
+/**
+ * The job filter of a salary tier page: USD salaries whose range falls in the tier (a job counts in the tier of the
+ * top of its range). The homepage tier cards count with this too, so a card's number is the number its page shows.
+ */
+export function tierQueryInput(tierId: SalaryTierId): { currency: 'USD'; minAnnual: number; maxAnnual?: number } {
+  const tier = SALARY_TIERS[tierId]
+  return {
+    currency: 'USD',
+    minAnnual: tier.minAnnualUsd,
+    ...(tier.maxAnnualUsd ? { maxAnnual: tier.maxAnnualUsd } : {}),
+  }
+}
+

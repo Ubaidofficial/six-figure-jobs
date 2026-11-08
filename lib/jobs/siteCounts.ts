@@ -2,7 +2,7 @@
 //
 // Real counts of live jobs by country and by job type (remote / hybrid / on-site), for the homepage panel and the
 // Remote hub chips. Counted from the database over the same public-job filter the listings use, and cached for
-// SITE_COUNTS_TTL_MS (6 hours) so a busy page costs one set of count queries per 6 hours, not one per visit.
+// SITE_COUNTS_TTL_MS (1 hour) so a busy page costs one set of count queries per hour, not one per visit.
 // `computedAt` says when the numbers were taken.
 
 import { memoAsync } from '../cache/memo'
@@ -10,7 +10,7 @@ import { prisma } from '../prisma'
 import { buildWhere } from './queryJobs'
 import { REMOTE_JOB_CLAUSE } from './remoteRegions'
 
-export const SITE_COUNTS_TTL_MS = 6 * 60 * 60 * 1000
+export const SITE_COUNTS_TTL_MS = 60 * 60 * 1000
 
 export type CountryCount = { code: string; count: number }
 

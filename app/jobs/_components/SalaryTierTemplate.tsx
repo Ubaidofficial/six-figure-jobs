@@ -17,7 +17,7 @@ import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
-import { SALARY_TIERS, type SalaryTierId } from '@/lib/jobs/salaryTiers'
+import { SALARY_TIERS, tierQueryInput, type SalaryTierId } from '@/lib/jobs/salaryTiers'
 import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
@@ -91,14 +91,6 @@ function formatUsdK(amount: number | null): string {
 }
 
 
-function buildTierQueryInput(tierId: SalaryTierId): Pick<JobQueryInput, 'currency' | 'minAnnual' | 'maxAnnual'> {
-  const tier = SALARY_TIERS[tierId]
-  return {
-    currency: 'USD',
-    minAnnual: tier.minAnnualUsd,
-    ...(tier.maxAnnualUsd ? { maxAnnual: tier.maxAnnualUsd } : {}),
-  }
-}
 
 function dedupeJobs(jobs: JobWithCompany[]): JobWithCompany[] {
   const seen = new Set<string>()
@@ -189,7 +181,7 @@ export async function SalaryTierTemplate({
     remoteMode: remoteMode || undefined,
     seniorityLevels: seniority.length ? seniority : undefined,
     companySizeBuckets: companySizes.length ? companySizes : undefined,
-    ...buildTierQueryInput(tierId),
+    ...tierQueryInput(tierId),
   }
 
   const scopeLabels = [

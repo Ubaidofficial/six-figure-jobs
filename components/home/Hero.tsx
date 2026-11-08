@@ -20,7 +20,7 @@ type HeroProps = {
   newestPostedAtISO?: string | null
   /** Median and spread of USD listings; when missing the panel shows plain counts instead. */
   salarySnapshot?: SalarySnapshot | null
-  /** Jobs per country and per job type, counted from the database (refreshed about every 6 hours). */
+  /** Jobs per country and per job type, counted from the database (refreshed about every hour). */
   siteCounts?: SiteCounts | null
   /** The role / location / work-mode / salary filters, rendered inside the search form. */
   children?: ReactNode
@@ -36,9 +36,13 @@ const FLOORS = [
   { market: 'Australia', currency: 'AUD', href: '/jobs/location/australia' },
 ] as const
 
-/** A salary band opens the jobs paying at least its lower edge: the clean $100k+/$200k+/$300k+ pages where one exists. */
+/**
+ * A salary band opens the jobs paying at least its lower edge: a salary tier page where its range covers the band
+ * ($100k-$199k for $100k-$150k, $200k-$299k for $200k-$300k, $400k+), otherwise /jobs?minSalary=. The open "$300k+" band
+ * must not open the $300k-$399k page, which leaves out $400k+ jobs.
+ */
 function bandHref(min: number): string {
-  return [100_000, 200_000, 300_000, 400_000].includes(min) ? `/jobs/${min / 1000}k-plus` : `/jobs?minSalary=${min}`
+  return [100_000, 200_000, 400_000].includes(min) ? `/jobs/${min / 1000}k-plus` : `/jobs?minSalary=${min}`
 }
 
 function formatNewest(iso: string | null | undefined): string | null {
@@ -215,7 +219,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
               ))}
             </ul>
             <p className={styles.panelNote}>
-              Counted {formatCounted(siteCounts.computedAt)}; recounted about every 6 hours.
+              Counted {formatCounted(siteCounts.computedAt)}; recounted about every hour.
             </p>
           </>
         ) : null}
