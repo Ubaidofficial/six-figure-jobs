@@ -500,3 +500,13 @@
     min-height: 48px;
   }
 }
+
+/* Short landscape screens (phones and flip/fold cover screens turned sideways, ~300-500px tall): the pinned search
+   row plus a job page's Apply bar took ~45% of the screen. The whole header scrolls away there instead. */
+@media (max-height: 500px) {
+  .header {
+    position: relative;
+    top: auto;
+  }
+}
+

@@ -210,7 +210,8 @@
   }
 
   .panel {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
     padding-top: 0;
   }
 
@@ -224,5 +225,12 @@
     .filters::details-content {
       content-visibility: visible;
     }
+  }
+}
+
+/* Five filters in a row only where they fit without "Work arrangement" wrapping or "All locations" truncating. */
+@media (min-width: 1024px) {
+  .panel {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }

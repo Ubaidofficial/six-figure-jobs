@@ -343,7 +343,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
       return (
         <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
       {/* Search Form */}
-      <div className="glass soft-shadow mb-6 rounded-2xl p-4 md:sticky md:top-24 md:z-30 md:mb-10 md:p-6">
+      <div className="glass soft-shadow mb-6 rounded-2xl p-4 md:z-30 md:mb-10 md:p-6 [@media(min-width:1024px)_and_(min-height:800px)]:sticky lg:top-[72px] min-[1360px]:top-[96px]">
         <SearchForm
           q={q}
           hasRole={Boolean(role)}

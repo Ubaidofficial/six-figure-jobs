@@ -29,10 +29,12 @@
   box-shadow: 0 8px 28px rgba(132, 204, 22, 0.45), 0 2px 8px rgba(0,0,0,0.3);
 }
 
-/* Phones: a small icon-only button in the corner. It slides out of view while the page scrolls down (.toggleTucked,
-   set by FeedbackWidget.tsx) and returns on scroll up. On job pages it sits above the sticky Apply bar only while that
-   bar is on screen (MobileBarShell sets data-apply-bar on <html>). */
-@media (max-width: 767px) {
+/* Phones, tablets, foldables and short landscape screens: a small icon-only button in the corner. It slides out of
+   view while the page scrolls down (.toggleTucked, set by FeedbackWidget.tsx) and returns on scroll up. On job pages it
+   sits above the sticky Apply bar only while that bar is on screen (MobileBarShell sets data-apply-bar on <html>).
+   The width matches the Apply bar's (shown below 1024px, `lg:hidden`); at 767px the full pill covered two thirds of
+   the Apply button on iPads and the Galaxy Z Fold inner screen. */
+@media (max-width: 1023px), (max-height: 500px) {
   .toggle {
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     right: 12px;
