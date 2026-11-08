@@ -73,6 +73,8 @@ export function dedupeLatest(jobs: JobWithCompany[], limit: number): JobWithComp
     if ((perCompany.get(companyId) ?? 0) >= MAX_PER_COMPANY) continue
     take(job)
   }
-  // Newest first, as the list says.
-  return unique.filter((job) => picked.has(job))
+  // Featured picks first, then the fill, each newest first. Sorting all of them by date put newer German agency ads,
+  // taken only to fill the list, back on top (seen live after the change, 2026-11-08).
+  const featured = (job: JobWithCompany) => isHomepageFeatured(job as any)
+  return [...unique.filter((job) => picked.has(job) && featured(job)), ...unique.filter((job) => picked.has(job) && !featured(job))]
 }
