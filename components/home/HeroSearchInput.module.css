@@ -94,3 +94,75 @@
   font-weight: 600;
   color: var(--color-primary-text);
 }
+
+/* Group headings ("Roles", "Jobs", "Popular roles"): not options, skipped by the arrow keys. */
+.group {
+  padding: 8px 12px 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-2);
+}
+
+.roleLink {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-2);
+}
+
+.jobLink {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Logos sit on a white tile, as everywhere else on the site. */
+.logo {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.jobText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* "/" key cap: only where there is a keyboard pointer and room for it. */
+.kbd {
+  flex: none;
+  align-self: center;
+  display: none;
+  min-width: 22px;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--color-text-2);
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+  .kbd {
+    display: inline-block;
+  }
+}

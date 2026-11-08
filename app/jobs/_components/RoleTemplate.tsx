@@ -24,7 +24,8 @@ import { buildListingTitle, buildRoleDescription } from '@/lib/seo/metaText'
 import { CITY_TARGET_SLUG_SET, SKILL_TARGETS, skillStoredTokens } from '@/lib/seo/pseoTargets'
 import { SEARCH_ROLE_OPTIONS } from '@/lib/roles/searchRoles'
 import { CANONICAL_ROLE_SET } from '@/lib/roles/canonicalSlugs'
-import { rankRelatedRoles, type RoleSlugCount } from '@/lib/roles/relatedRoles'
+import { rankRelatedRoles } from '@/lib/roles/relatedRoles'
+import { loadRoleSlugCounts } from '@/lib/roles/roleSlugCounts'
 import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
@@ -34,37 +35,6 @@ import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
-
-/**
- * Live job counts per stored roleSlug (all time and last 30 days), for the "Trending in <field>" chips. One cached
- * query shared by every role page; on failure the chips are simply left out.
- */
-async function loadRoleSlugCounts(): Promise<RoleSlugCount[]> {
-  try {
-    return await memoAsync('role-slug-counts', DEFAULT_TTL_MS, async () => {
-      const base = buildWhere({ page: 1, pageSize: 1 })
-      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      const [totals, recent] = await Promise.all([
-        prisma.job.groupBy({
-          by: ['roleSlug'],
-          where: { AND: [base, { roleSlug: { not: null } }] },
-          _count: { _all: true },
-        }),
-        prisma.job.groupBy({
-          by: ['roleSlug'],
-          where: { AND: [base, { roleSlug: { not: null } }, { postedAt: { gte: since } }] },
-          _count: { _all: true },
-        }),
-      ])
-      const recentBySlug = new Map(recent.map((r) => [r.roleSlug, r._count._all]))
-      return totals
-        .filter((r): r is typeof r & { roleSlug: string } => Boolean(r.roleSlug))
-        .map((r) => ({ roleSlug: r.roleSlug, total: r._count._all, recent: recentBySlug.get(r.roleSlug) ?? 0 }))
-    })
-  } catch {
-    return []
-  }
-}
 
 type SearchParams = Record<string, string | string[] | undefined>
 

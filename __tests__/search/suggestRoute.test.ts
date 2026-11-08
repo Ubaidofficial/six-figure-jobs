@@ -1,5 +1,7 @@
 const queryJobs = jest.fn()
 jest.mock('../../lib/jobs/queryJobs', () => ({ queryJobs: (...a: unknown[]) => queryJobs(...a) }))
+const loadRoleSlugCounts = jest.fn()
+jest.mock('../../lib/roles/roleSlugCounts', () => ({ loadRoleSlugCounts: () => loadRoleSlugCounts() }))
 
 import { GET } from '../../app/api/jobs/suggest/route'
 
@@ -20,6 +22,8 @@ const call = async (query: string) => {
 
 describe('GET /api/jobs/suggest', () => {
   beforeEach(() => {
+    loadRoleSlugCounts.mockReset()
+    loadRoleSlugCounts.mockResolvedValue([])
     queryJobs.mockReset()
     queryJobs.mockResolvedValue({
       total: 10,
@@ -59,8 +63,8 @@ describe('GET /api/jobs/suggest', () => {
   })
 
   it('does not search for under two characters, and caps a very long query', async () => {
-    expect((await call('q=s')).body).toEqual({ total: 0, jobs: [] })
-    expect((await call('')).body).toEqual({ total: 0, jobs: [] })
+    expect((await call('q=s')).body).toEqual({ total: 0, jobs: [], roles: [] })
+    expect((await call('')).body).toEqual({ total: 0, jobs: [], roles: [] })
     expect(queryJobs).not.toHaveBeenCalled()
     await call(`q=${'x'.repeat(200)}`)
     expect(queryJobs.mock.calls[0][0].keyword).toHaveLength(60)
@@ -77,8 +81,23 @@ describe('GET /api/jobs/suggest', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
     const { status, body } = await call('q=failingquery')
     expect(status).toBe(200)
-    expect(body).toEqual({ total: 0, jobs: [] })
+    expect(body).toEqual({ total: 0, jobs: [], roles: [] })
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()
+  })
+
+  it('suggests role pages matching the query, and the biggest roles for an empty box, never for one character', async () => {
+    loadRoleSlugCounts.mockResolvedValue([
+      { roleSlug: 'data-scientist', total: 40, recent: 5 },
+      { roleSlug: 'data-engineer', total: 25, recent: 3 },
+      { roleSlug: 'product-manager', total: 60, recent: 9 },
+    ])
+    expect((await call('q=data+sci')).body.roles).toEqual([{ label: 'Data Scientist', href: '/jobs/data-scientist', count: 40 }])
+    expect((await call('')).body.roles.map((r: { href: string }) => r.href)).toEqual([
+      '/jobs/product-manager',
+      '/jobs/data-scientist',
+      '/jobs/data-engineer',
+    ])
+    expect((await call('q=d')).body.roles).toEqual([])
   })
 })

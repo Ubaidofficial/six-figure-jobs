@@ -1,4 +1,27 @@
-import { rankRelatedRoles } from '@/lib/roles/relatedRoles'
+import { matchRolePages, rankRelatedRoles } from '@/lib/roles/relatedRoles'
+
+describe('matchRolePages', () => {
+  const counts = [
+    { roleSlug: 'product-manager', total: 30, recent: 5 },
+    { roleSlug: 'senior-product-manager', total: 10, recent: 2 },
+    { roleSlug: 'product-designer', total: 8, recent: 1 },
+    { roleSlug: 'project-manager', total: 2, recent: 0 },
+    { roleSlug: 'software-engineer', total: 95, recent: 40 },
+  ]
+
+  it('matches word prefixes of every typed word, biggest first, with role-page counts', () => {
+    expect(matchRolePages('prod', counts).map((r) => [r.slug, r.total])).toEqual([
+      ['product-manager', 40],
+      ['product-designer', 8],
+    ])
+    expect(matchRolePages('prod man', counts).map((r) => r.slug)).toEqual(['product-manager'])
+  })
+
+  it('skips roles under 3 jobs and returns the biggest roles for an empty query', () => {
+    expect(matchRolePages('project', counts)).toEqual([])
+    expect(matchRolePages('', counts, 2).map((r) => r.slug)).toEqual(['software-engineer', 'product-manager'])
+  })
+})
 
 describe('rankRelatedRoles', () => {
   const counts = [

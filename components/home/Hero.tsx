@@ -86,7 +86,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
             Search six-figure jobs
           </label>
           <Search className={styles.searchIcon} aria-hidden="true" />
-          <HeroSearchInput id="hero-q" name="q" placeholder="Job title, company or keyword" className={styles.searchInput} />
+          <HeroSearchInput id="hero-q" name="q" placeholder="Job title, company or keyword" className={styles.searchInput} shortcut shortcutHint />
           <Button variant="primary" size="lg" type="submit" className={styles.cta}>
             Search jobs
           </Button>
