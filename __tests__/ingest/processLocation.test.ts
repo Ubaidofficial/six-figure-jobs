@@ -25,10 +25,20 @@ describe('processLocation country code', () => {
     expect(processLocation(job({ locationText: 'Dällikon', salaryCurrency: 'CHF' })).countryCode).toBe('CH')
   })
 
-  it('does not guess for a euro or dollar job with only a city', () => {
-    expect(processLocation(job({ locationText: 'Munich', salaryCurrency: 'EUR' })).countryCode).toBeNull()
-    expect(processLocation(job({ locationText: 'Springfield', salaryCurrency: 'USD' })).countryCode).toBeNull()
-    expect(processLocation(job({ locationText: 'Vienna', salaryCurrency: 'EUR' })).countryCode).toBeNull()
+  it('reads a known city, or a national pay currency, for an on-site job with only a city', () => {
+    expect(processLocation(job({ locationText: 'Munich', salaryCurrency: 'EUR' })).countryCode).toBe('DE')
+    expect(processLocation(job({ locationText: 'Mitte, Berlin', salaryCurrency: 'EUR' })).countryCode).toBe('DE')
+    expect(processLocation(job({ locationText: 'Hamburg, Hamburg', salaryCurrency: 'EUR' })).countryCode).toBe('DE')
+    expect(processLocation(job({ locationText: 'Springfield', salaryCurrency: 'USD' })).countryCode).toBe('US')
+    expect(processLocation(job({ locationText: 'Irvine, California', salaryCurrency: 'USD' })).countryCode).toBe('US')
+    expect(processLocation(job({ locationText: 'Nellis AFB, NV, Nevada, United States', salaryCurrency: 'USD' })).countryCode).toBe('US')
+  })
+
+  it('does not guess from the euro, from a city that disagrees with the currency, or for a remote job', () => {
+    expect(processLocation(job({ locationText: 'Kerestinec, HR', salaryCurrency: 'EUR' })).countryCode).toBeNull()
+    expect(processLocation(job({ locationText: 'Schwetzingen, Rhein-Neckar-Kreis', salaryCurrency: 'EUR' })).countryCode).toBeNull()
+    expect(processLocation(job({ locationText: 'Birmingham, Jefferson County', salaryCurrency: 'USD' })).countryCode).toBeNull()
+    expect(processLocation(job({ locationText: 'Any Location / Remote', salaryCurrency: 'USD', isRemote: true })).countryCode).toBeNull()
   })
 
   it('keeps the on-site mode and city for a job whose country was found from its state', () => {
