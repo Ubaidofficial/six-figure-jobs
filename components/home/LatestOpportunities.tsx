@@ -2,33 +2,9 @@ import Link from 'next/link'
 
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { JobCard } from '@/components/jobs/JobCard'
+import { dedupeLatest } from '@/lib/jobs/latestSelection'
 
 import styles from './LatestOpportunities.module.css'
-
-const MAX_PER_COMPANY = 2
-
-function dedupeLatest(jobs: JobWithCompany[], limit: number): JobWithCompany[] {
-  const result: JobWithCompany[] = []
-  const seen = new Set<string>()
-  const perCompany = new Map<string, number>()
-
-  for (const job of jobs) {
-    const companyId = (job as any).companyId || job.companyRef?.id || ''
-    const title = (job.title || '').trim().toLowerCase()
-    const min = String((job as any).minAnnual ?? '')
-    const max = String((job as any).maxAnnual ?? '')
-    const key = `${companyId}:${title}:${min}:${max}`
-    if (seen.has(key)) continue
-    // One employer must not fill the whole list (a bulk import can post dozens at once).
-    if ((perCompany.get(companyId) ?? 0) >= MAX_PER_COMPANY) continue
-    seen.add(key)
-    perCompany.set(companyId, (perCompany.get(companyId) ?? 0) + 1)
-    result.push(job)
-    if (result.length >= limit) break
-  }
-
-  return result
-}
 
 export function LatestOpportunities({
   jobs,

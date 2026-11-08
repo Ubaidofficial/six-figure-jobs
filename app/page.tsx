@@ -108,7 +108,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-const PAGE_SIZE = 40
+const PAGE_SIZE = 80 // newest jobs fetched for the live feed and the market-balanced "Latest" list (lib/jobs/latestSelection.ts)
 const SALARY_TIER_IDS: SalaryTierId[] = ['100k-plus', '200k-plus', '300k-plus', '400k-plus']
 
 const PREMIUM_ROLE_DEFS = [
