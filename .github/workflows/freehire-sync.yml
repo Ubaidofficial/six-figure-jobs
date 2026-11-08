@@ -83,7 +83,12 @@ jobs:
       - name: Expire jobs not refreshed in 7 days
         if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
         run: npx tsx scripts/run-expiry.ts
-      # The three steps below each run whenever the sync succeeded, even if an earlier step after it failed.
+      # The steps below each run whenever the sync succeeded, even if an earlier step after it failed.
+      # Self-heal data quality, including filling missing roles and countries; before the slices so they include them.
+      - name: Data quality remediation (self-heal)
+        if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
+        timeout-minutes: 10
+        run: npm run remediate:data-quality
       # Rebuild the precomputed role / country / salary listing slices from today's jobs.
       - name: Refresh slices
         if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
@@ -103,7 +108,3 @@ jobs:
           INDEXING_API_DRY_RUN: "0"
           INDEXING_API_DAILY_LIMIT: "180"
         run: npx tsx scripts/process-google-indexing-queue.ts
-      - name: Data quality remediation (self-heal)
-        if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
-        timeout-minutes: 10
-        run: npm run remediate:data-quality

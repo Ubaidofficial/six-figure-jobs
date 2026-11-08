@@ -27,6 +27,7 @@ import {
 } from '../normalizers/salary'
 import { normalizeLocation as normalizeLocationData } from '../normalizers/location'
 import { countryCodeFromContext } from '../location/subdivisionCountry'
+import { countryFromCity, countryFromText } from '../location/jobLocation'
 import { normalizeRole } from '../normalizers/role'
 import slugify from 'slugify'
 import { parseGreenhouseSalary } from './greenhouseSalaryParser'
@@ -1109,14 +1110,26 @@ export function processLocation(input: ScrapedJobInput) {
   const location = normalizeLocationData(locationText)
   // A location without a country name ("Nürnberg, Bayern", "Kanton Zürich") falls back to its state/canton, or to
   // Switzerland for a Swiss-franc salary. processSalary keeps its own country lookup unchanged.
-  const countryCode = countryToCode(location.country) ?? countryCodeFromContext(locationText, input.salaryCurrency)
+  const statedCountry = countryToCode(location.country) ?? countryCodeFromContext(locationText, input.salaryCurrency)
+  // normalizeLocation takes the last segment as the country, so on-site jobs at "Irvine, California", "Hamburg, Hamburg"
+  // or "Redwood City" got none. For on-site and hybrid jobs only (remote jobs keep the rule above): the location text read
+  // the way job pages read it ("..., NV, United States", US states), else a city we have a page for, else a national pay
+  // currency. City and currency must agree when both are known ("Birmingham, Jefferson County" paid in USD is Alabama, not
+  // England), and the euro never names a country ("Kerestinec, HR" is in Croatia).
+  const byCity = countryFromCity(location.city) ?? countryFromCity(location.country) // "Mitte, Berlin": the last segment is a city
+  const byCurrency = CURRENCY_COUNTRY[String(input.salaryCurrency ?? '').toUpperCase()] ?? null
+  const countryCode = (onsite: boolean): string | null =>
+    statedCountry ??
+    (onsite
+      ? countryFromText(locationText) ?? (byCity && byCurrency && byCity !== byCurrency ? null : byCity ?? byCurrency)
+      : null)
 
   // ✅ Hybrid / Onsite must win over any “isRemote” heuristic
   if (location.kind === 'hybrid') {
     return {
       city: location.city ?? null,
       citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
-      countryCode,
+      countryCode: countryCode(true),
       isRemote: false,
       remoteMode: 'hybrid',
     }
@@ -1126,7 +1139,7 @@ export function processLocation(input: ScrapedJobInput) {
     return {
       city: location.city ?? null,
       citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
-      countryCode,
+      countryCode: countryCode(true),
       isRemote: false,
       remoteMode: 'onsite',
     }
@@ -1138,11 +1151,13 @@ export function processLocation(input: ScrapedJobInput) {
   return {
     city: location.city ?? null,
     citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
-    countryCode,
+    countryCode: countryCode(!effectiveRemote),
     isRemote: effectiveRemote,
     remoteMode: effectiveRemote ? 'remote' : location.city || location.country ? 'onsite' : null,
   }
 }
+
+const CURRENCY_COUNTRY: Record<string, string> = { USD: 'US', CAD: 'CA', GBP: 'GB', AUD: 'AU', CHF: 'CH' }
 
 function countryToCode(country: string | null | undefined): string | null {
   if (!country) return null

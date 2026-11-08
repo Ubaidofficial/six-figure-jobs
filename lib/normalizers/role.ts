@@ -78,7 +78,8 @@ export function normalizeRole(rawTitle: string | null | undefined): NormalizedRo
 
   const lower = cleaned.toLowerCase()
 
-  const seniority = inferSeniority(lower)
+  // "Member of Technical Staff" is a title, not the staff level.
+  const seniority = inferSeniority(lower.replace(/\bmember of (the )?technical staff\b/g, ''))
   const discipline = inferDiscipline(lower)
   const isManager = inferIsManager(lower)
 
@@ -86,8 +87,12 @@ export function normalizeRole(rawTitle: string | null | undefined): NormalizedRo
   const generatedBaseRoleSlug = slugify(baseTitle)
   const generatedRoleSlug = buildRoleSlug(generatedBaseRoleSlug, seniority)
 
-  // v2.7: enforce canonical-only role slugs (prevents garbage URLs)
-  const canonicalRoleSlug = isCanonicalSlug(generatedRoleSlug) ? generatedRoleSlug : 'other'
+  // v2.7: enforce canonical-only role slugs (prevents garbage URLs). When the whole title is not a canonical slug, fall
+  // back to its base role ("Lead Data Engineer" → data-engineer), then to the role its words name
+  // ("Senior Full-Stack Developer" → senior-full-stack-engineer). Without these ~90% of jobs were "other" (2026-11-08).
+  const canonicalRoleSlug = isCanonicalSlug(generatedRoleSlug)
+    ? generatedRoleSlug
+    : withSeniority(isCanonicalSlug(generatedBaseRoleSlug) ? generatedBaseRoleSlug : classifyTitle(lower), seniority)
 
   // Derive canonical base role slug (remove seniority prefix when present)
   // Note: seniority "mid" and "unknown" do not prefix roleSlug.
@@ -111,6 +116,132 @@ export function normalizeRole(rawTitle: string | null | undefined): NormalizedRo
 /* ------------------------------------------------------------------ */
 /* Internals                                                          */
 /* ------------------------------------------------------------------ */
+
+/** "senior" + data-engineer → senior-data-engineer when that page exists, else the base role; no role page → "other". */
+function withSeniority(base: string | null, seniority: Seniority): string {
+  if (!base || !isCanonicalSlug(base)) return 'other'
+  const prefixed = `${seniority}-${base}`
+  return ['junior', 'senior', 'staff', 'principal', 'lead'].includes(seniority) && isCanonicalSlug(prefixed) ? prefixed : base
+}
+
+// Title words → canonical base role, first match wins. Leadership and manager titles only map to leadership and manager
+// roles, so "Director, Data Analytics" is not filed as a data analyst. Only roles with a page are listed; titles outside
+// them (physicians, attorneys at law firms, construction, hardware engineering) stay "other".
+const LEADERSHIP_RULES: Array<[RegExp, string]> = [
+  [/\bchief financial officer\b/, 'cfo'],
+  [/\bchief technology officer\b/, 'cto'],
+  [/\bchief executive officer\b/, 'ceo'],
+  [/\bchief marketing officer\b/, 'cmo'],
+  [/\bchief operating officer\b/, 'chief-operating-officer'],
+  [/\bchief information security officer\b/, 'ciso'],
+  [/\bengineering\b|\bsoftware\b|\btechnology\b/, 'engineering-director'],
+  [/\bmarketing\b/, 'marketing-director'],
+  [/\bsales\b/, 'sales-director'],
+  [/\bfinance\b|\bfinancial\b|\bcontrolling\b/, 'finance-director'],
+  [/\bcustomer success\b/, 'customer-success-director'],
+  [/\bcompliance\b/, 'compliance-director'],
+  [/\bcreative\b/, 'creative-director'],
+  [/\b(hr|human resources|people)\b/, 'hr-director'],
+  [/\boperations\b/, 'operations-director'],
+]
+const MANAGER_RULES: Array<[RegExp, string]> = [
+  [/\btechnical program manager\b|\btpm\b/, 'technical-program-manager'],
+  [/\bengineering manager\b|\bmanager,? (software )?engineering\b|\bsoftware development manager\b/, 'engineering-manager'],
+  [/\bproduct marketing\b/, 'product-marketing-manager'],
+  [/\bgroup product manager\b/, 'group-product-manager'],
+  [/\bproduct (manager|management|owner)\b/, 'product-manager'],
+  [/\bprogram manager\b/, 'program-manager'],
+  [/\bproje[ck]t ?(manager|leiter|lead)/, 'project-manager'],
+  [/\bcustomer success\b/, 'customer-success-manager'],
+  [/\baccount manag/, 'account-manager'],
+  [/\bbusiness development\b/, 'business-development-manager'],
+  [/\bsales manager\b/, 'sales-manager'],
+  [/\bgrowth marketing\b/, 'growth-marketing-manager'],
+  [/\bmarketing manager\b/, 'marketing-manager'],
+  [/\boperations manager\b/, 'operations-manager'],
+  [/\bfinance manager\b/, 'finance-manager'],
+  [/\b(hr|human resources) manager\b/, 'hr-manager'],
+  [/\bsupply chain\b/, 'supply-chain-manager'],
+  [/\bprocurement\b/, 'procurement-manager'],
+  [/\btalent acquisition\b|\brecruiting manager\b/, 'talent-acquisition-manager'],
+]
+const ROLE_RULES: Array<[RegExp, string]> = [
+  [/\bsite reliability\b|\bsre\b/, 'site-reliability-engineer'],
+  [/\bmlops\b/, 'mlops-engineer'],
+  [/\bdev(sec)?ops\b/, 'devops-engineer'],
+  [/\bcomputer vision\b/, 'computer-vision-engineer'],
+  [/\b(machine learning|ml)\b.*\b(engineer|developer)\b/, 'machine-learning-engineer'],
+  [/\b(ai|llm|genai|generative ai)\b.*\b(engineer|developer)\b/, 'ai-engineer'],
+  [/\bdata scien/, 'data-scientist'],
+  [/\bapplied scientist\b/, 'applied-scientist'],
+  [/\bresearch scientist\b/, 'research-scientist'],
+  [/\banalytics engineer/, 'analytics-engineer'],
+  [/\bdata architect/, 'data-architect'],
+  [/\bdata (engineer|engineering)\b|\bdata (platform|integration|pipeline) (engineer|developer)\b|\betl developer\b/, 'data-engineer'],
+  [/\b(business intelligence|bi) (analyst|developer)\b/, 'business-intelligence-analyst'],
+  [/\bdata analyst\b/, 'data-analyst'],
+  [/\bfull[- ]?stack\b/, 'full-stack-engineer'],
+  [/\bfront[- ]?end\b/, 'frontend-engineer'],
+  [/\bback[- ]?end\b/, 'backend-engineer'],
+  [/\bios\b/, 'ios-engineer'],
+  [/\bandroid\b/, 'android-engineer'],
+  [/\bmobile (engineer|developer)\b/, 'mobile-engineer'],
+  [/\bembedded (software )?(engineer|developer)\b/, 'embedded-engineer'],
+  [/\bfirmware\b/, 'firmware-engineer'],
+  [/\b(cyber ?security|security|infosec|application security|cloud security)\b.*\b(engineer|architect)\b/, 'security-engineer'],
+  [/\bcloud architect\b/, 'cloud-architect'],
+  [/\bcloud engineer\b/, 'cloud-engineer'],
+  [/\bsolutions? architect\b/, 'solutions-architect'],
+  [/\benterprise architect\b/, 'enterprise-architect'],
+  [/\bsoftware architect\b/, 'software-architect'],
+  [/\bsolutions? engineer\b/, 'solutions-engineer'],
+  [/\bsales engineer\b/, 'sales-engineer'],
+  [/\bplatform engineer\b/, 'platform-engineer'],
+  [/\binfrastructure engineer\b/, 'infrastructure-engineer'],
+  [/\bnetwork engineer\b/, 'network-engineer'],
+  [/\bsystems? administrator\b|\bsysadmin\b/, 'systems-administrator'],
+  [/\b(qa|quality assurance)\b.*\b(engineer|tester|automation)\b|\bsdet\b|\btest automation\b/, 'qa-engineer'],
+  [/\btest engineer\b/, 'test-engineer'],
+  [/\bsystems? engineer\b/, 'systems-engineer'],
+  [/\bsupport engineer\b/, 'support-engineer'],
+  [/\bdatabase administrator\b|\bdba\b/, 'database-engineer'],
+  [/\bsoftware (engineer|developer|development engineer)\b|\bmember of technical staff\b|\bforward deployed engineer\b/, 'software-engineer'],
+  [/\b(python|java|golang|ruby|rust|c\+\+|c#|\.net|node(\.js)?|typescript|javascript|scala|kotlin|php|servicenow|salesforce)\b.*\b(engineer|developer)\b/, 'software-engineer'],
+  [/\bweb developer\b/, 'web-developer'],
+  [/\btechnical writer\b/, 'technical-writer'],
+  [/\bproduct designer\b/, 'product-designer'],
+  [/\bux research/, 'ux-researcher'],
+  [/\b(ux|ui\/ux|ux\/ui|user experience) designer\b/, 'ux-designer'],
+  [/\bgraphic designer\b/, 'graphic-designer'],
+  [/\bscrum master\b/, 'scrum-master'],
+  [/\b(enterprise |strategic )?account executive\b/, 'account-executive'],
+  [/\bsales development representative\b|\bsdr\b/, 'sales-development-representative'],
+  [/\bbusiness systems analyst\b/, 'business-systems-analyst'],
+  [/\bbusiness analyst\b/, 'business-analyst'],
+  [/\bfinancial analyst\b/, 'financial-analyst'],
+  [/\bfp&a\b/, 'fp-a-analyst'],
+  [/\bcontroll(er|ing)\b|\bcontr[oô]leur\b/, 'controller'],
+  [/accountant|buchhalter/, 'accountant'],
+  [/\bgeneral counsel\b/, 'general-counsel'],
+  [/\b(counsel|attorney|lawyer)\b/, 'legal-counsel'],
+  [/\brecruiter\b/, 'recruiter'],
+  [/\bhr business partner\b|\bhrbp\b/, 'hr-business-partner'],
+  [/\bchief of staff\b/, 'chief-of-staff'],
+  [/\bexecutive assistant\b/, 'executive-assistant'],
+  [/\bsolutions? consultant\b/, 'solutions-consultant'],
+  [/\bconsultant\b/, 'consultant'],
+  [/\b(developer|entwickler)\b/, 'software-developer'],
+]
+
+/** The canonical base role a title's words name, or null. Expects a lower-cased title. */
+export function classifyTitle(lower: string): string | null {
+  const rules = /\b(director|head of|vp|vice president|chief|president)\b/.test(lower)
+    ? LEADERSHIP_RULES
+    : /(manager|management|leiter)\b/.test(lower)
+      ? MANAGER_RULES
+      : ROLE_RULES
+  return rules.find(([pattern]) => pattern.test(lower))?.[1] ?? null
+}
 
 function cleanTitle(raw: string | null | undefined): string {
   if (!raw) return ''

@@ -6,6 +6,8 @@
 // Applies by default; pass --dry-run to preview.
 import { prisma } from '../lib/prisma'
 import { cleanApplyUrl, isAggregatorApplyUrl, unwrapRedirectUrl } from '../lib/jobs/applyUrl'
+import { processLocation } from '../lib/ingest'
+import { normalizeRole } from '../lib/normalizers/role'
 
 const DRY = process.argv.includes('--dry-run')
 const PLAN_VALUES = new Set([401000, 403000, 457000])
@@ -84,6 +86,40 @@ async function main() {
   if (!DRY && inverted.length) {
     await prisma.job.updateMany({ where: { id: { in: inverted.map((j) => j.id) } }, data: { salaryValidated: false, salaryRejectedReason: 'inverted_range', updatedAt: new Date() } })
   }
+
+  // 5. Missing labels — role "other" and no country — recomputed with the ingest rules, so jobs imported before those
+  //    rules improved get them too (2026-11-08: ~90% of live jobs were "other", many on-site jobs had no country).
+  //    Only fills gaps: a job's existing role or country is never changed.
+  const unlabeled = await prisma.job.findMany({
+    where: { isExpired: false, OR: [{ roleSlug: 'other' }, { countryCode: null }] },
+    select: { id: true, title: true, roleSlug: true, countryCode: true, locationRaw: true, remote: true, salaryCurrency: true },
+  })
+  const byRole = new Map<string, string[]>()
+  const byCountry = new Map<string, string[]>()
+  for (const j of unlabeled) {
+    if (j.roleSlug === 'other') {
+      const role = normalizeRole(j.title).roleSlug
+      if (role !== 'other') byRole.set(role, [...(byRole.get(role) ?? []), j.id])
+    }
+    if (!j.countryCode) {
+      const country = processLocation({ locationText: j.locationRaw, isRemote: j.remote, salaryCurrency: j.salaryCurrency } as never).countryCode
+      if (country) byCountry.set(country, [...(byCountry.get(country) ?? []), j.id])
+    }
+  }
+  const roleFixed = [...byRole.values()].reduce((n, ids) => n + ids.length, 0)
+  const countryFixed = [...byCountry.values()].reduce((n, ids) => n + ids.length, 0)
+  // Raw SQL so updatedAt is left alone: a relabel is not a sign the job is still open, and run-expiry closes jobs whose
+  // updatedAt is over 7 days old (Prisma's updateMany would bump it).
+  if (!DRY) {
+    for (const [roleSlug, ids] of byRole) {
+      await prisma.$executeRaw`UPDATE "Job" SET "roleSlug" = ${roleSlug} WHERE "id" = ANY(${ids}) AND "roleSlug" = 'other'`
+    }
+    for (const [countryCode, ids] of byCountry) {
+      await prisma.$executeRaw`UPDATE "Job" SET "countryCode" = ${countryCode} WHERE "id" = ANY(${ids}) AND "countryCode" IS NULL`
+    }
+  }
+  const topRoles = [...byRole].sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([r, ids]) => `${r} ${ids.length}`).join(', ')
+  console.log(`[remediate] role relabeled: ${roleFixed} of ${unlabeled.filter((j) => j.roleSlug === 'other').length} "other" (${topRoles}); country filled: ${countryFixed} of ${unlabeled.filter((j) => !j.countryCode).length} missing`)
 
   console.log(`[remediate] apply-url sanitized: ${apptySanitized}, deduped(expired): ${deduped}, 401k-fixed: ${planFixed}, inverted-fixed: ${invertedFixed}${DRY ? '  [DRY RUN]' : ''}`)
   await prisma.$disconnect()
