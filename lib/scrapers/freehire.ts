@@ -24,8 +24,24 @@ const LOOKBACK_DAYS = Number(process.env.FREEHIRE_LOOKBACK_DAYS) || 30
 // Public limit is 120 requests/minute without a key; stay well under it.
 const PAGE_DELAY_MS = 700
 
-/** One query per currency. `geo` narrows by freehire's region/country facets (unset = anywhere). */
-export const FREEHIRE_MARKETS: ReadonlyArray<{ currency: string; geo: Record<string, string> }> = [
+/**
+ * One query per currency. `geo` narrows by freehire's region/country facets (unset = anywhere). `lookbackDays` gives a
+ * query its own, longer window than FREEHIRE_LOOKBACK_DAYS (the daily run reads 1.5 days).
+ */
+export type FreehireMarket = { currency: string; geo: Record<string, string>; label?: string; lookbackDays?: number }
+
+// Worldwide-remote jobs (freehire's `regions=global`), read over 30 days. The daily 1.5-day window missed most of them
+// for good (a missed run, or a job freehire found days after its posting date): on 2026-11-09 freehire had 57 jobs at
+// $100k+ whose location says worldwide, and the site showed 6. All of them fit in a few pages (USD 254, CAD 5, EUR 4,
+// GBP 3 at the pay floor).
+const WORLDWIDE_MARKETS: FreehireMarket[] = ['USD', 'EUR', 'GBP', 'CAD'].map((currency) => ({
+  currency,
+  geo: { regions: 'global' },
+  label: `${currency} worldwide`,
+  lookbackDays: MAX_LISTED_AGE_DAYS,
+}))
+
+export const FREEHIRE_MARKETS: ReadonlyArray<FreehireMarket> = [
   { currency: 'USD', geo: {} },
   { currency: 'GBP', geo: { regions: 'uk' } },
   { currency: 'EUR', geo: { regions: 'eu' } },
@@ -34,6 +50,7 @@ export const FREEHIRE_MARKETS: ReadonlyArray<{ currency: string; geo: Record<str
   // Swiss-franc jobs are Swiss; freehire has no region facet for them. About 580 listable jobs in the last 30 days
   // (measured 2026-11-07 with correct paging).
   { currency: 'CHF', geo: {} },
+  ...WORLDWIDE_MARKETS,
 ]
 
 export type FreehireJob = {
@@ -192,7 +209,7 @@ export function freehireHeaders(): Record<string, string> {
   return headers
 }
 
-async function fetchPage(market: (typeof FREEHIRE_MARKETS)[number], offset: number): Promise<FreehireResponse> {
+async function fetchPage(market: FreehireMarket, offset: number): Promise<FreehireResponse> {
   const res = await axios.get<FreehireResponse>(API_URL, {
     headers: freehireHeaders(),
     timeout: 30_000,
@@ -232,7 +249,7 @@ export function decideRateLimitWait(
 }
 
 /** fetchPage that waits out short 429 rate limits (Retry-After) and fails fast, with a clear message, on a long one. */
-async function fetchPageWithRetry(market: (typeof FREEHIRE_MARKETS)[number], offset: number): Promise<FreehireResponse> {
+async function fetchPageWithRetry(market: FreehireMarket, offset: number): Promise<FreehireResponse> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fetchPage(market, offset)
@@ -277,8 +294,12 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
   const cutoff = options.since?.getTime() ?? Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
   for (const market of FREEHIRE_MARKETS) {
+    // A market with its own window reads at least that far back.
+    const marketCutoff = market.lookbackDays
+      ? Math.min(cutoff, Date.now() - market.lookbackDays * 24 * 60 * 60 * 1000)
+      : cutoff
     const report: FreehireMarketReport = {
-      currency: market.currency,
+      currency: market.label ?? market.currency,
       available: 0,
       fetched: 0,
       mappable: 0,
@@ -308,7 +329,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
 
         let oldOnPage = 0
         for (const job of page.data) {
-          if (job.posted_at && new Date(job.posted_at).getTime() < cutoff) {
+          if (job.posted_at && new Date(job.posted_at).getTime() < marketCutoff) {
             oldOnPage++
             continue
           }
@@ -346,8 +367,8 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
         await sleep(PAGE_DELAY_MS)
       }
     } catch (error) {
-      console.error(`[freehire] ❌ ${market.currency} fetch failed:`, error)
-      errors.push(`${market.currency}: ${error instanceof Error ? error.message : String(error)}`)
+      console.error(`[freehire] ❌ ${report.currency} fetch failed:`, error)
+      errors.push(`${report.currency}: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
