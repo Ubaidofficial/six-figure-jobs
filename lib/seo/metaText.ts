@@ -6,8 +6,11 @@
 // desktop), so these limits are conventions that keep the part that earns the click inside the visible text.
 import { SITE_NAME } from './site'
 
-/** Hard limit for any <title>. Page templates aim for ~60; nothing may go past this. */
-export const TITLE_MAX = 65
+/**
+ * Hard limit for any <title>. Search results show roughly the first 60 characters, and site audits (OpenSEO)
+ * flag anything longer, so 60 is the cap: templates drop the brand suffix first, then optional words.
+ */
+export const TITLE_MAX = 60
 /** Descriptions aim for 130-155 characters. */
 export const DESCRIPTION_MIN = 130
 export const DESCRIPTION_MAX = 155

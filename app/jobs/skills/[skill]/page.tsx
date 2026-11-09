@@ -12,7 +12,7 @@ import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
-import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
+import { buildListingDescription, countPrefix, fitTitle } from '../../../../lib/seo/metaText'
 import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
@@ -54,10 +54,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total >= 5 &&
     (isPhaseIndexable({ pathname: `/jobs/skills/${resolved.slug}` }) || isPseoHubUnlocked(total, `/jobs/skills/${resolved.slug}`))
   const titleBase = `$100k+ ${resolved.label} jobs`
+  // Same wording as before; the brand, then the count, drop out when the title would pass TITLE_MAX.
   const title =
     total > 0
-      ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
-      : `${titleBase} | ${SITE_NAME}`
+      ? fitTitle([
+          `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`,
+          `${titleBase} (${total.toLocaleString()} openings)`,
+          `${titleBase} | ${SITE_NAME}`,
+          titleBase,
+        ])
+      : fitTitle([`${titleBase} | ${SITE_NAME}`, titleBase])
   const description = buildListingDescription(
     `${countPrefix(total)}$100k+ ${resolved.label} jobs.`,
     [['High-paying roles at top tech companies.']],

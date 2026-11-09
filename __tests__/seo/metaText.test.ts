@@ -88,7 +88,7 @@ describe('buildListingTitle', () => {
     )
   })
 
-  it('never exceeds 65 characters for any role, count or city', () => {
+  it('never exceeds 60 characters for any role, count or city', () => {
     const cities = CITY_TARGETS.map((c) => c.label)
     for (const role of ROLES) {
       for (const count of COUNTS) {
@@ -113,18 +113,21 @@ describe('buildListingTitle', () => {
   it('keeps the brand last when it fits and drops it before dropping the qualifier', () => {
     const withBrand = buildListingTitle({ topic: 'Data Engineer Jobs', count: 12, qualifier: 'Paying $100k+' })
     expect(withBrand.endsWith('| Six Figure Jobs')).toBe(true)
-    const noBrand = buildListingTitle({
+    const noBrand = buildListingTitle({ topic: 'Machine Learning Engineer Jobs', count: 1234, qualifier: 'Paying $100k+' })
+    expect(noBrand).toBe('1,234 Machine Learning Engineer Jobs Paying $100k+')
+    expect(noBrand.length).toBeLessThanOrEqual(TITLE_MAX)
+    const noQualifier = buildListingTitle({
       topic: 'DevOps & Site Reliability Engineer (SRE) Jobs',
       count: 1234,
       qualifier: 'Paying $100k+',
     })
-    expect(noBrand).toBe('1,234 DevOps & Site Reliability Engineer (SRE) Jobs Paying $100k+')
-    expect(noBrand.length).toBeLessThanOrEqual(TITLE_MAX)
+    expect(noQualifier).toBe('1,234 DevOps & Site Reliability Engineer (SRE) Jobs')
+    expect(noQualifier.length).toBeLessThanOrEqual(TITLE_MAX)
   })
 })
 
 describe('remote role title (candidates as used by /remote/[role])', () => {
-  it('keeps the established wording when it fits and never exceeds 65 characters', () => {
+  it('keeps the established wording when it fits and never exceeds 60 characters', () => {
     for (const role of ROLES) {
       for (const count of [1, 72, 12345]) {
         const c = count.toLocaleString()
@@ -195,7 +198,7 @@ describe('company page metadata', () => {
     expect(buildCompanyPageTitle('Stripe', 12)).toBe('Stripe $100k+ Jobs - 12 Open Positions | Six Figure Jobs')
   })
 
-  it('never exceeds 65 characters, including very long company names', () => {
+  it('never exceeds 60 characters, including very long company names', () => {
     const names = ['Stripe', 'Anduril Industries', ...LONG_NAMES]
     for (const name of names) {
       for (const count of [1, 12, 1234]) {
@@ -313,15 +316,17 @@ describe('buildDescription', () => {
 })
 
 describe('job page fitTitle (jobMeta)', () => {
-  it('cuts very long role names at a word boundary and stays within 65 characters', () => {
+  it('cuts very long role names at a word boundary, keeps the salary and stays within 60 characters', () => {
     const role = 'Senior Principal Distinguished Staff Machine Learning Infrastructure Platform Reliability Engineer'
     const out = fitJobTitle(role, 'Acme Robotics', '$200k–$250k/yr')
     expect(out.length).toBeLessThanOrEqual(TITLE_MAX)
-    expect(out.endsWith('…')).toBe(true)
-    expect(endsOnWholeWord(out, `${role} — $200k–$250k/yr`)).toBe(true)
+    expect(out.endsWith(' — $200k–$250k')).toBe(true)
+    const rolePart = out.slice(0, -' — $200k–$250k'.length)
+    expect(rolePart.endsWith('…')).toBe(true)
+    expect(endsOnWholeWord(rolePart, role)).toBe(true)
   })
 
-  it('stays within 65 characters for long company names too', () => {
+  it('stays within 60 characters for long company names too', () => {
     for (const name of LONG_NAMES) {
       expect(fitJobTitle('Staff Engineer', name, null).length).toBeLessThanOrEqual(TITLE_MAX)
       expect(fitJobTitle('Staff Engineer', name, '$200k–$250k/yr').length).toBeLessThanOrEqual(TITLE_MAX)
@@ -331,7 +336,7 @@ describe('job page fitTitle (jobMeta)', () => {
 
 describe('/jobs hub title and description', () => {
   it('leads with the live count and keeps the six-figure wording', () => {
-    expect(buildJobsHubTitle(3874)).toBe('3,874 Six-Figure Tech Jobs — $100k+ Openings | Six Figure Jobs')
+    expect(buildJobsHubTitle(3874)).toBe('3,874 Six-Figure Tech Jobs — $100k+ Openings')
     expect(buildJobsHubDescription(3874).startsWith('3,874 $100k+ tech jobs open now.')).toBe(true)
   })
 
