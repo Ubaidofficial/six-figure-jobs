@@ -96,7 +96,13 @@ export function parseGreenhouseSalary(input: {
 
     if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0 || min > max) return null
 
-    return { min, max, currency, interval: inferIntervalFromContext(decoded, Math.max(min, max)) }
+    // Only the range and the words right after it say what it is per ("$45 - $60 per hour"). The rest of the posting
+    // does not: "requests per day" or "daily stand-ups" elsewhere turned a yearly $198,500 range into a daily one
+    // (over the annual cap, so the job was dropped). Text before the range is left out too: "three days per week."
+    // in the sentence above it would do the same.
+    const at = legacy.index ?? 0
+    const rangeAndAfter = decoded.slice(at, Math.min(decoded.length, at + legacy[0].length + 60))
+    return { min, max, currency, interval: inferIntervalFromContext(rangeAndAfter, Math.max(min, max)) }
   }
 
   const compSnippet = extractCompensationSnippet(text) ?? text.slice(0, 2500)

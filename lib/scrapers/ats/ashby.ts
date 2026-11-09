@@ -43,8 +43,41 @@ function normalizeTextValue(value: unknown): string | null {
   return null
 }
 
+// Ashby's posting API describes pay as {summaryComponents: [{compensationType, interval: "1 YEAR", currencyCode,
+// minValue, maxValue}, ...]} when asked with includeCompensation=true. Only the "Salary" component is a salary (equity,
+// bonus and commission sit beside it). Nothing is guessed: an interval we do not know leaves the salary to the text.
+const ASHBY_INTERVALS: Record<string, string> = {
+  '1 YEAR': 'year',
+  '1 MONTH': 'month',
+  '1 WEEK': 'week',
+  '1 DAY': 'day',
+  '1 HOUR': 'hour',
+}
+
+export function readAshbySalary(
+  compensation: any,
+): { min: number; max: number; currency: string; interval: string } | null {
+  const parts: any[] = Array.isArray(compensation?.summaryComponents) ? compensation.summaryComponents : []
+  const salary = parts.find(
+    (c) => c?.compensationType === 'Salary' && (typeof c?.minValue === 'number' || typeof c?.maxValue === 'number'),
+  )
+  if (!salary) return null
+  const interval = ASHBY_INTERVALS[String(salary.interval ?? '').trim().toUpperCase()]
+  if (!interval) return null
+  const currency =
+    typeof salary.currencyCode === 'string' && salary.currencyCode.trim().length === 3
+      ? salary.currencyCode.trim().toUpperCase()
+      : null
+  // Without a currency the later pipeline cannot use the numbers (and would skip the text fallback), so leave it to the text.
+  if (!currency) return null
+  return { min: salary.minValue ?? salary.maxValue, max: salary.maxValue ?? salary.minValue, currency, interval }
+}
+
 function collectSalaryRawFromPayload(payload: any): string | null {
+  const compensation = payload?.compensation && typeof payload.compensation === 'object' ? payload.compensation : null
   const values = [
+    compensation?.scrapeableCompensationSalarySummary,
+    compensation?.compensationTierSummary,
     payload?.compensation,
     payload?.compensationText,
     payload?.compensationTierSummary,
@@ -217,6 +250,7 @@ function processApiJobs(
         : postedAt
 
     const salaryRaw = collectSalaryRawFromPayload(p)
+    const structuredSalary = readAshbySalary(p?.compensation)
 
     jobs.push({
       externalId,
@@ -225,10 +259,10 @@ function processApiJobs(
       locationText,
       remote: remoteHint ? true : null,
 
-      salaryMin: null,
-      salaryMax: null,
-      salaryCurrency: null,
-      salaryInterval: null,
+      salaryMin: structuredSalary?.min ?? null,
+      salaryMax: structuredSalary?.max ?? null,
+      salaryCurrency: structuredSalary?.currency ?? null,
+      salaryInterval: structuredSalary?.interval ?? null,
       salaryRaw,
 
       employmentType: p?.employmentType ?? null,
@@ -299,7 +333,8 @@ export async function scrapeAshby(atsUrl: string): Promise<AtsJob[]> {
     ])
 
     for (const slug of slugCandidates) {
-      apiUrls.unshift(`https://api.ashbyhq.com/posting-api/job-board/${slug}`)
+      // includeCompensation=true: without it the API leaves every job's pay out.
+      apiUrls.unshift(`https://api.ashbyhq.com/posting-api/job-board/${slug}?includeCompensation=true`)
     }
   }
 
