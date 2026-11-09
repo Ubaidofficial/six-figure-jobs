@@ -54,6 +54,61 @@
   flex: none;
 }
 
+/* Primary button + counted links under the summary. */
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin-top: 20px;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-0);
+  color: var(--color-bg-1);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 120ms;
+}
+
+.cta span {
+  margin-left: 8px;
+}
+
+.cta:hover {
+  opacity: 0.88;
+}
+
+.stat {
+  color: var(--color-text-1);
+  font-size: 0.9375rem;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-text-0) 35%, transparent);
+  text-underline-offset: 4px;
+}
+
+.stat strong {
+  color: var(--color-text-0);
+  font-weight: 700;
+}
+
+.stat:hover {
+  color: var(--color-text-0);
+  text-decoration-color: var(--color-primary-text);
+}
+
+.cta:focus-visible,
+.stat:focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 3px;
+}
+
 @media (max-width: 1023px) {
   /* Title first at full width, Filters/Sort underneath: beside the title they squeezed it to ~110px on phones. */
   .headerTop {
@@ -121,6 +176,8 @@
 
 .results {
   min-width: 0;
+  /* The header's "Browse N jobs" button jumps here; leave room for the sticky site header. */
+  scroll-margin-top: 96px;
 }
 
 .count {

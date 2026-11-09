@@ -52,12 +52,22 @@ export function ListingPage({ children }: { children: ReactNode }) {
   return <main className={styles.page}>{children}</main>
 }
 
-/** Breadcrumb, H1, one summary line, optional related-page chips, optional toolbar (sort/filters). */
+export type ListingStat = {
+  label: string
+  href: string
+  count: number
+  /** Filter toggles should not be crawled. */
+  nofollow?: boolean
+}
+
+/** Breadcrumb, H1, one summary line, optional action row, related-page chips, optional toolbar (sort/filters). */
 export function ListingHeader({
   breadcrumb,
   title,
   accent,
   summary,
+  cta,
+  stats,
   chips,
   related,
   toolbar,
@@ -68,6 +78,10 @@ export function ListingHeader({
   /** Part of the title shown in the accent colour. */
   accent?: ReactNode
   summary?: ReactNode
+  /** Primary button under the summary, e.g. "Browse 120 jobs"; jumps to the results (`#jobs`). */
+  cta?: string
+  /** Counted links beside the button: "42 remote roles". Only those with a count above zero are shown. */
+  stats?: ListingStat[]
   chips?: ListingChip[]
   /** A second, labelled chip row under `chips`, e.g. "Trending in Marketing". */
   related?: { label: string; items: ListingChip[] }
@@ -90,6 +104,29 @@ export function ListingHeader({
           </div>
           {toolbar ? <div className={styles.toolbar}>{toolbar}</div> : null}
         </div>
+        {cta || stats?.some((s) => s.count > 0) ? (
+          <div className={styles.heroActions}>
+            {cta ? (
+              <a href="#jobs" className={styles.cta}>
+                {cta}
+                <span aria-hidden="true">↓</span>
+              </a>
+            ) : null}
+            {stats
+              ?.filter((s) => s.count > 0)
+              .map((s) => (
+                <Link
+                  key={s.href}
+                  href={s.href}
+                  className={styles.stat}
+                  rel={s.nofollow ? 'nofollow' : undefined}
+                  scroll={s.nofollow ? false : undefined}
+                >
+                  <strong>{s.count.toLocaleString()}</strong> {s.label}
+                </Link>
+              ))}
+          </div>
+        ) : null}
         {chips ? <LinkChips items={chips} label="Related pages" /> : null}
         {related && related.items.length > 0 ? (
           <div className={styles.headerRelated}>
@@ -112,7 +149,9 @@ export function ListingLayout({ sidebar, children }: { sidebar?: ReactNode; chil
           {sidebar}
         </aside>
       ) : null}
-      <div className={styles.results}>{children}</div>
+      <div id="jobs" className={styles.results}>
+        {children}
+      </div>
     </div>
   )
 }
