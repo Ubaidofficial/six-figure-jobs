@@ -8,7 +8,6 @@ import { memoAsync } from '@/lib/cache/memo'
 export type FreehireCatalog = { jobs: number; companies: number; sources: number; atsPlatforms: number }
 
 export const FREEHIRE_CATALOG_URL = 'https://freehire.me/api/v1/stats/catalog'
-export const FREEHIRE_OPEN_URL = 'https://freehire.me/open'
 /** Their figures move slowly; a failed read is kept for the same hour, so a freehire outage cannot slow every visit. */
 export const FREEHIRE_CATALOG_TTL_MS = 60 * 60 * 1000
 

@@ -28,7 +28,9 @@ describe('SiteStatsStrip', () => {
     expect(t).toContain('8,656 new this week')
     expect(t).toContain('23 countries')
     expect(t).toContain('about 1 in 334 makes the list')
-    expect(html).toContain('href="https://freehire.me/open"')
+    // No data source is named or linked on the site.
+    expect(html.toLowerCase()).not.toContain('freehire')
+    expect(t).toContain('Screened jobs counted across the sources and hiring platforms we read')
     // The screened panel comes first in the HTML, as it reads.
     expect(t.indexOf('We screen')).toBeLessThan(t.indexOf('You see'))
   })

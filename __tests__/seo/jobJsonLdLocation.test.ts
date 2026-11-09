@@ -117,6 +117,14 @@ describe('JobPosting jobLocation: addressCountry', () => {
   })
 })
 
+describe('JobPosting identifier', () => {
+  it('names neither where we found the job nor its stored id', () => {
+    const j = buildJobJsonLd({ id: 'board:freehire:abc123', source: 'board:freehire', title: 'Engineer' } as any)
+    expect(JSON.stringify(j).toLowerCase()).not.toContain('freehire')
+    expect(j.identifier).toEqual({ '@type': 'PropertyValue', name: 'Six Figure Jobs', value: j.url.split('-j-').pop() })
+  })
+})
+
 describe('JobPosting jobLocation: addressLocality', () => {
   it('drops "US-REMOTE" and keeps the country', () => {
     const j = ld({ locationRaw: 'US-REMOTE', city: 'US-REMOTE', countryCode: 'US' })

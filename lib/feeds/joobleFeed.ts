@@ -6,7 +6,7 @@
 // dates as DD.MM.YYYY; Jooble indexes only jobs published or updated in the last 45 days. Confirm against the
 // current spec with xml_support@jooble.com before relying on it.
 
-import { buildJobSlug } from '../jobs/jobSlug'
+import { buildJobSlug, getShortStableIdForJobId } from '../jobs/jobSlug'
 import { cleanJobDescriptionText, decodeJobHtmlEntities } from '../jobs/descriptionCleaning'
 import { buildSalaryText } from '../jobs/salary'
 
@@ -105,7 +105,8 @@ export function buildJoobleJobXml(job: JoobleJob, siteUrl: string, now: number =
   const type = joobleJobType(job.employmentType)
 
   const lines = [
-    `    <job id="${job.id.replace(/[^A-Za-z0-9_-]/g, '')}">`,
+    // The id at the end of the job's URL, not the stored id, which names where we found the job ("board:freehire:…").
+    `    <job id="${getShortStableIdForJobId(job.id)}">`,
     `      <link>${cdata(link)}</link>`,
     `      <name>${cdata(name)}</name>`,
     `      <region>${cdata(reg)}</region>`,

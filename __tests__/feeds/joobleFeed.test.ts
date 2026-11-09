@@ -29,6 +29,12 @@ describe('Jooble feed', () => {
     expect(formatJoobleDate(new Date('2026-01-05T23:59:00Z'))).toBe('05.01.2026')
   })
 
+  it('does not name where we found the job', () => {
+    const xml = buildJoobleJobXml(job({ id: 'board:freehire:https://himalayas.app/companies/acme/jobs/x' }), SITE, NOW)!
+    expect(xml.toLowerCase()).not.toContain('freehire')
+    expect(xml.toLowerCase()).not.toContain('himalayas')
+  })
+
   it('wraps text in CDATA and splits a literal ]]>', () => {
     expect(cdata('a & b <c>')).toBe('<![CDATA[a & b <c>]]>')
     expect(cdata('x]]>y')).toBe('<![CDATA[x]]]]><![CDATA[>y]]>')
@@ -37,8 +43,9 @@ describe('Jooble feed', () => {
 
   it('emits every required tag, CDATA content and the optional ones when known', () => {
     const xml = buildJoobleJobXml(job(), SITE, NOW)!
-    expect(xml).toContain('<job id="clx1abc">')
-    expect(xml).toMatch(/<link><!\[CDATA\[https:\/\/www\.6figjobs\.com\/job\/senior-backend-engineer-j-[a-z0-9]+\]\]><\/link>/)
+    const shortId = xml.match(/\/job\/senior-backend-engineer-j-([a-z0-9]+)\]\]>/)?.[1]
+    expect(shortId).toBeTruthy()
+    expect(xml).toContain(`<job id="${shortId}">`)
     expect(xml).toContain('<name><![CDATA[Senior Backend Engineer]]></name>')
     expect(xml).toContain('<region><![CDATA[New York, NY]]></region>')
     expect(xml).toContain('<description><![CDATA[')
