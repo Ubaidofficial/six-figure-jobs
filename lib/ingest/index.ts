@@ -687,6 +687,14 @@ async function refreshJob(
     }
   }
 
+  // A source with a structured workplace type is the authority on remote vs hybrid vs on-site, so a job stored as
+  // remote from Ashby's `isRemote` flag (true on hybrid jobs too) is corrected the next time it is seen.
+  if (input.workplaceType) {
+    const loc = processLocation(input)
+    updateData.remote = loc.isRemote
+    updateData.remoteMode = loc.remoteMode
+  }
+
   // The source is the authority for skills; visa is only ever turned on (never off) so an earlier detection survives.
   if (input.skills?.length) updateData.skillsJson = JSON.stringify(input.skills)
   if (input.sourceRef) updateData.sourceRef = input.sourceRef
@@ -1124,8 +1132,12 @@ export function processLocation(input: ScrapedJobInput) {
       ? countryFromText(locationText) ?? (byCity && byCurrency && byCity !== byCurrency ? null : byCity ?? byCurrency)
       : null)
 
+  // A structured workplace type from the source decides; otherwise the location text does. Ashby marks hybrid jobs
+  // `isRemote: true` (OpenAI on 2026-11-09: 533 of 814), so that flag alone stored hybrid jobs as remote.
+  const kind = input.workplaceType ?? location.kind
+
   // ✅ Hybrid / Onsite must win over any “isRemote” heuristic
-  if (location.kind === 'hybrid') {
+  if (kind === 'hybrid') {
     return {
       city: location.city ?? null,
       citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
@@ -1135,7 +1147,7 @@ export function processLocation(input: ScrapedJobInput) {
     }
   }
 
-  if (location.kind === 'onsite') {
+  if (kind === 'onsite') {
     return {
       city: location.city ?? null,
       citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
@@ -1146,7 +1158,7 @@ export function processLocation(input: ScrapedJobInput) {
   }
 
   // True remote only
-  const effectiveRemote = input.isRemote === true || location.isRemote === true
+  const effectiveRemote = kind === 'remote' || input.isRemote === true || location.isRemote === true
 
   return {
     city: location.city ?? null,

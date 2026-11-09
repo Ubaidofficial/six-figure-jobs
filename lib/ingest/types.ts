@@ -106,6 +106,9 @@ export interface ScrapedJobInput {
   
   /** Is this explicitly marked as remote? */
   isRemote?: boolean | null
+
+  /** The source's own structured workplace type (Ashby `workplaceType`); when set it decides remote, hybrid or on-site. */
+  workplaceType?: 'remote' | 'hybrid' | 'onsite' | null
   
   /** Remote region if specified (e.g., "US only", "EMEA") */
   remoteRegion?: string | null
