@@ -12,6 +12,9 @@ export type RoleMedian = {
   listings: number
   /** null when there are too few listings to call it a median. */
   median: number | null
+  /** Bottom and top of the middle half of the listings (25th and 75th percentile); null with the median. */
+  p25: number | null
+  p75: number | null
 }
 
 type Row = { roleSlug: string | null; minAnnual: unknown; maxAnnual: unknown }
@@ -26,7 +29,13 @@ export function summarizeRoleMedians(rows: Row[], slugs: string[]): Map<string, 
   }
   const result = new Map<string, RoleMedian>()
   for (const [slug, values] of byRole) {
-    result.set(slug, { listings: values.length, median: summarizeSalaries(values)?.median ?? null })
+    const snapshot = summarizeSalaries(values)
+    result.set(slug, {
+      listings: values.length,
+      median: snapshot?.median ?? null,
+      p25: snapshot?.p25 ?? null,
+      p75: snapshot?.p75 ?? null,
+    })
   }
   return result
 }

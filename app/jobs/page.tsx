@@ -24,6 +24,10 @@ import { displayKeyword } from '@/lib/search/displayKeyword'
 import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
 import { CategoryRow, type CategoryRowItem } from '@/components/listing/CategoryRow'
+import { loadListingSalaryStats } from '@/lib/jobs/listingSalaryStats'
+import { countryName } from '@/lib/location/country'
+import { countryCodeToSlug } from '@/lib/seo/countrySlug'
+import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import { buildJobsHubDescription, buildJobsHubTitle } from '@/lib/seo/metaText'
 import { getSearchVocabulary } from '@/lib/search/vocabulary'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
@@ -555,6 +559,25 @@ export default async function JobsIndexPage({
         })
       : []
 
+  // "Where the jobs are": the biggest countries with their typical pay, on the plain hub only. A country without
+  // enough listings paid in its currency to quote a median is left out rather than shown with a thin number.
+  const countryPay =
+    activeFilterCount === 0 && page === 1
+      ? (
+          await Promise.all(
+            facets.countries.slice(0, 6).map(async (c) => ({
+              code: c.value,
+              jobs: c.count,
+              stats: await loadListingSalaryStats({ countryCode: c.value }).catch(() => null),
+            })),
+          )
+        ).flatMap((row) => {
+          const slug = countryCodeToSlug(row.code)
+          const name = countryName(row.code, { short: true })
+          return row.stats && slug && name ? [{ ...row, slug, name, stats: row.stats }] : []
+        })
+      : []
+
   const workTypeLinks = workTypeStats(
     facets.workTypes,
     (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1),
@@ -677,6 +700,47 @@ export default async function JobsIndexPage({
             </>
           )}
         </ListingLayout>
+
+        {countryPay.length > 0 ? (
+          <ListingSection title="Where the six-figure jobs are">
+            <p className="mb-4 max-w-3xl text-sm text-muted-foreground">
+              The countries with the most open jobs, and what they typically pay in local currency. Typical pay is the
+              median of the listings that show a salary; the middle half runs from the 25th to the 75th percentile.
+            </p>
+            <div className="overflow-x-auto rounded-xl border border-border bg-card">
+              <table className="w-full min-w-[30rem] text-left text-sm">
+                <caption className="sr-only">Open six-figure jobs and typical pay by country</caption>
+                <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 font-medium">Country</th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium">Open jobs</th>
+                    <th scope="col" className="px-4 py-3 font-medium">Typical pay</th>
+                    <th scope="col" className="px-4 py-3 font-medium">Middle half</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {countryPay.map((row) => (
+                    <tr key={row.code} className="border-b border-border last:border-0">
+                      <th scope="row" className="px-4 py-3 font-medium text-foreground">
+                        <Link href={`/jobs/location/${row.slug}`} className="hover:underline underline-offset-4">
+                          {row.name}
+                        </Link>
+                      </th>
+                      <td className="px-4 py-3 text-right text-muted-foreground">{row.jobs.toLocaleString()}</td>
+                      <td className="px-4 py-3 font-semibold text-primary">
+                        {formatCurrencyShort(Math.round(row.stats.snapshot.median / 1000) * 1000, row.stats.currency)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {formatCurrencyShort(Math.round(row.stats.snapshot.p25 / 1000) * 1000, row.stats.currency)}&ndash;
+                        {formatCurrencyShort(Math.round(row.stats.snapshot.p75 / 1000) * 1000, row.stats.currency)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ListingSection>
+        ) : null}
 
         <ListingSection title="Browse by salary band">
           <LinkChips

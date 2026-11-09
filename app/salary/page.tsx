@@ -6,6 +6,8 @@ import { getSiteUrl, defaultOgImages } from '@/lib/seo/site'
 import { countryCodeToSlug } from '@/lib/seo/countrySlug'
 import { prisma } from '../../lib/prisma'
 import { summarizeRoleMedians, type RoleMedian } from '../../lib/salary/indexMedians'
+import { formatMoneyShort, glanceRows, salaryFaq } from '../../lib/salary/indexGlance'
+import { Faq } from '@/components/listing/ListingParts'
 import { pluralize } from '../../lib/utils/number'
 import {
   buildGlobalExclusionsWhere,
@@ -74,13 +76,6 @@ async function loadGuideMedians(): Promise<Map<string, RoleMedian>> {
   return summarizeRoleMedians(rows, slugs)
 }
 
-function formatMoneyShort(value: number | null): string {
-  if (value == null) return '—'
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
-  if (value >= 1_000) return `$${Math.round(value / 1_000)}k`
-  return `$${value.toLocaleString('en-US')}`
-}
-
 // One line under a median: how many listings it rests on, or why there is no number.
 function medianHint(stats: RoleMedian | undefined): string {
   if (!stats) return 'Open the role guide for pay ranges'
@@ -115,6 +110,14 @@ const salaryJsonLd = [
   },
 ]
 
+function faqJsonLd(items: Array<{ question: string; answer: string }>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((i) => ({ '@type': 'Question', name: i.question, acceptedAnswer: { '@type': 'Answer', text: i.answer } })),
+  }
+}
+
 export default async function SalaryIndexPage() {
   let medians: Map<string, RoleMedian> | null = null
   try {
@@ -125,6 +128,10 @@ export default async function SalaryIndexPage() {
     medians = null
   }
 
+  const glance = glanceRows(medians, GUIDES)
+  const faq = salaryFaq(glance)
+  const jsonLd = [...salaryJsonLd, faqJsonLd(faq)]
+
   const featured = [
     { label: 'Software Engineer median', stats: medians?.get('software-engineer') },
     { label: 'Product Manager median', stats: medians?.get('product-manager') },
@@ -133,7 +140,7 @@ export default async function SalaryIndexPage() {
 
   return (
     <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10 space-y-8">
-      {salaryJsonLd.map((ld) => (
+      {jsonLd.map((ld) => (
         <script key={ld['@type']} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       ))}
       <PageHero
@@ -180,6 +187,56 @@ export default async function SalaryIndexPage() {
           ]}
         />
       </PageHero>
+
+      {glance.length >= 2 ? (
+        <PageSection
+          title="Salary at a glance"
+          description={
+            <>
+              {glance.length} roles have enough listings to quote a median.
+              {glance[0].median !== glance[glance.length - 1].median ? (
+                <>
+                  {' '}{glance[0].name} leads at{' '}
+                  <strong className="text-foreground">{formatMoneyShort(glance[0].median)}</strong>;{' '}
+                  {glance[glance.length - 1].name} is lowest at{' '}
+                  <strong className="text-foreground">{formatMoneyShort(glance[glance.length - 1].median)}</strong>.
+                </>
+              ) : null}{' '}
+              The middle half is the range from the 25th to the 75th percentile. US-dollar listings only.
+            </>
+          }
+        >
+          <div className="overflow-x-auto rounded-xl border border-border bg-card">
+            <table className="w-full min-w-[32rem] text-left text-sm">
+              <caption className="sr-only">Median salary by role in US dollars, from live listings that show their pay</caption>
+              <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">Role</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Median</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Middle half</th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">Listings</th>
+                </tr>
+              </thead>
+              <tbody>
+                {glance.map((row) => (
+                  <tr key={row.slug} className="border-b border-border last:border-0">
+                    <th scope="row" className="px-4 py-3 font-medium text-foreground">
+                      <Link href={`/salary/${row.slug}`} className="hover:underline underline-offset-4">
+                        {row.name}
+                      </Link>
+                    </th>
+                    <td className="px-4 py-3 font-semibold text-primary">{formatMoneyShort(row.median)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {formatMoneyShort(row.p25)}&ndash;{formatMoneyShort(row.p75)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{row.listings.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </PageSection>
+      ) : null}
 
       <PageSection
         title="Choose a role"
@@ -261,7 +318,7 @@ export default async function SalaryIndexPage() {
 
       <PageSection
         title="How we build these salary guides"
-        description="Each guide is assembled from live $100k+ tech job listings scraped directly from company career pages. We normalize compensation, remove expired or lowball postings, and tag every role with title, seniority, country, currency, and remote eligibility."
+        description="Each guide is assembled from live job postings that publish a salary at or above the six-figure threshold for their currency, collected from employers’ career pages and job boards. We normalize compensation, drop expired postings, and tag every role with title, seniority, country, currency, and remote eligibility."
       >
         <ul className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
           <li className="rounded-lg border border-border bg-card px-3 py-2">
@@ -277,6 +334,10 @@ export default async function SalaryIndexPage() {
             Every salary range links to the live openings behind it — research to application in one click.
           </li>
         </ul>
+      </PageSection>
+
+      <PageSection title="Salary questions">
+        <Faq items={faq} />
       </PageSection>
     </main>
   )

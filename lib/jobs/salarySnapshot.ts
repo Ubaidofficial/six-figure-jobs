@@ -34,7 +34,8 @@ function bandsFor(floor: number, currency: string): Array<{ label: string; min: 
   ]
 }
 
-const MIN_LISTINGS = 20 // below this a "typical" figure would be noise
+/** Fewest listings a "typical" figure may rest on; below this it would be noise. Page copy quotes it. */
+export const MIN_LISTINGS = 20
 
 export function percentile(sorted: number[], p: number): number {
   const idx = (sorted.length - 1) * p
