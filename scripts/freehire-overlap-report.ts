@@ -78,20 +78,26 @@ async function main() {
     const name = j.company || '?'
     byLabel.set(`${link.kind}:${link.label}`, (byLabel.get(`${link.kind}:${link.label}`) ?? 0) + 1)
     if (link.kind === 'board') {
-      buckets.board.jobs++, buckets.board.companies.add(name)
+      buckets.board.jobs++
+      buckets.board.companies.add(name)
     } else if (link.kind === 'other') {
-      buckets.other.jobs++, buckets.other.companies.add(name)
+      buckets.other.jobs++
+      buckets.other.companies.add(name)
     } else {
       const slug = j.companyId ? slugById.get(j.companyId) : undefined
       const covered = (link.boardKey && coveredBoards.has(link.boardKey)) || (slug && coveredSlugs.has(slug))
       if (covered) {
-        buckets.atsCovered.jobs++, buckets.atsCovered.companies.add(name)
+        buckets.atsCovered.jobs++
+        buckets.atsCovered.companies.add(name)
       } else {
         uncoveredByCompany.set(name, (uncoveredByCompany.get(name) ?? 0) + 1)
         if (link.boardKey) {
-          buckets.atsTokenKnown.jobs++, buckets.atsTokenKnown.companies.add(name), buckets.atsTokenKnown.boards.add(link.boardKey)
+          buckets.atsTokenKnown.jobs++
+          buckets.atsTokenKnown.companies.add(name)
+          buckets.atsTokenKnown.boards.add(link.boardKey)
         } else {
-          buckets.atsNeedsLookup.jobs++, buckets.atsNeedsLookup.companies.add(name)
+          buckets.atsNeedsLookup.jobs++
+          buckets.atsNeedsLookup.companies.add(name)
         }
       }
     }
