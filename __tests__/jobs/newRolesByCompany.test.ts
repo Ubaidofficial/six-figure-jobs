@@ -8,7 +8,12 @@ jest.mock('@/lib/prisma', () => ({
 }))
 
 import { __clearMemoForTests } from '@/lib/cache/memo'
-import { NEW_ROLES_LIMIT, loadNewRolesByCompany, shapeNewRolesCompanies } from '@/lib/jobs/newRolesByCompany'
+import {
+  NEW_ROLES_LIMIT,
+  loadNewRolesByCompany,
+  looksLikeAgency,
+  shapeNewRolesCompanies,
+} from '@/lib/jobs/newRolesByCompany'
 
 const company = (id: string, over: Record<string, unknown> = {}) => ({
   id,
@@ -45,10 +50,59 @@ describe('shapeNewRolesCompanies', () => {
     expect(out.map((c) => c.id)).toEqual(['a'])
   })
 
+  it('puts hand-picked employers first, whatever their count, then the rest by new jobs', () => {
+    const out = shapeNewRolesCompanies(
+      [group('x', 20), group('g', 1), group('y', 5), group('a', 2)],
+      [company('x'), company('g', { name: 'Google', slug: 'google' }), company('y'), company('a', { name: 'Anthropic', slug: 'anthropic' })],
+      new Set(['x', 'g', 'y', 'a']),
+    )
+    expect(out.map((c) => c.slug)).toEqual(['anthropic', 'google', 'company-x', 'company-y'])
+  })
+
+  it('drops agency-looking companies, but never a hand-picked one', () => {
+    const out = shapeNewRolesCompanies(
+      [group('t', 29), group('j', 4), group('s', 3), group('g', 1), group('f', 7)],
+      [
+        company('t', { name: 'TROVA Personal- und Managementberatung', slug: 'trova' }),
+        company('j', { name: 'Jobot', slug: 'jobot' }),
+        company('s', { name: 'Acme Staffing', slug: 'acme-staffing' }),
+        company('g', { name: 'Google Recruiting Services', slug: 'google' }), // hand-picked slug: kept as is
+        company('f', { name: 'First Citizens', slug: 'first-citizens' }),
+      ],
+      new Set(['t', 'j', 's', 'g', 'f']),
+    )
+    expect(out.map((c) => c.slug)).toEqual(['google', 'first-citizens'])
+  })
+
   it('caps the list', () => {
     const ids = Array.from({ length: NEW_ROLES_LIMIT + 10 }, (_, i) => `c${i}`)
     const out = shapeNewRolesCompanies(ids.map((id) => group(id, 1)), ids.map((id) => company(id)), new Set(ids))
     expect(out).toHaveLength(NEW_ROLES_LIMIT)
+  })
+})
+
+describe('looksLikeAgency', () => {
+  it.each([
+    ['TROVA Personal- und Managementberatung', 'trova'],
+    ['Robert Half Staffing', 'robert-half'],
+    ['Acme Recruitment', 'acme'],
+    ['Global Talent Partners', 'global'],
+    ['Executive Search Group', 'esg'],
+    ['Jobot', 'jobot'], // no giveaway word: caught by the known-slug list
+    ['rocket match powered by notificAI GmbH', 'rocket-match-powered-by-notificai-gmbh'],
+  ])('flags %s', (name, slug) => {
+    expect(looksLikeAgency(name, slug)).toBe(true)
+  })
+
+  it.each([
+    ['First Citizens', 'first-citizens'],
+    ['Cisco', 'cisco'],
+    ['General Dynamics Information Technology', 'gdit'],
+    ['Personalis', 'personalis'],
+    ['Personal Capital', 'personal-capital'],
+    ['Research Labs', 'research-labs'],
+  ])('keeps %s', (name, slug) => {
+    expect(looksLikeAgency(name, slug)).toBe(false)
   })
 })
 
