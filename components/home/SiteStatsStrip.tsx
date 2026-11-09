@@ -1,7 +1,10 @@
 // components/home/SiteStatsStrip.tsx
-// "6figjobs today": the size of the board in a few big numbers, all live counts the homepage already loads.
-// A number that is missing (its query failed) is left out rather than shown as 0.
-import { Briefcase, Building2, Database, DollarSign, Globe2, Layers, ScanSearch, Sparkles, type LucideIcon } from 'lucide-react'
+// "From 4.8M jobs to the ones that pay": what we screen (freehire's live catalogue plus the careers sites we read
+// directly) and what is left on 6figjobs (our own live counts), as two panels with one big number each. Replaced two
+// rows of nine equal big numbers (2026-11-09), which read as a wall of figures and did not say how they relate.
+// A number that is missing (its query failed) is left out rather than shown as 0; without the catalogue only the
+// second panel shows.
+import { ArrowRight } from 'lucide-react'
 
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { DIRECT_EMPLOYERS } from '@/lib/constants/directEmployers'
@@ -10,16 +13,13 @@ import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 
 import styles from './SiteStatsStrip.module.css'
 
-type Stat = { icon: LucideIcon; value: string; label: string }
-
 const n = (v: number) => v.toLocaleString('en-US')
 
-const catalogStats = (c: FreehireCatalog): Stat[] => [
-  { icon: ScanSearch, value: n(c.jobs), label: 'open jobs screened' },
-  { icon: Building2, value: n(c.companies), label: 'companies' },
-  { icon: Database, value: n(c.sources), label: 'sources' },
-  { icon: Layers, value: n(c.atsPlatforms), label: 'ATS platforms' },
-]
+/** "about 1 in 334": how many screened jobs there are for each one listed; null when it would not read sensibly. */
+export function screenRatio(screened: number, listed: number): number | null {
+  if (!(screened > 0) || !(listed > 0) || screened <= listed) return null
+  return Math.round(screened / listed)
+}
 
 export function SiteStatsStrip({
   jobs,
@@ -34,69 +34,72 @@ export function SiteStatsStrip({
   newThisWeek: number
   countries: number | null
   medianUsd: number | null
-  /** freehire's live catalogue size; the line naming it is left out when it could not be read. */
+  /** freehire's live catalogue size; the "We screen" panel is left out when it could not be read. */
   catalog: FreehireCatalog | null
 }) {
-  const stats: Stat[] = [
-    { icon: Briefcase, value: jobs.toLocaleString('en-US'), label: '$100k+ jobs with published pay' },
-    { icon: Building2, value: companies.toLocaleString('en-US'), label: 'companies hiring' },
-    { icon: Sparkles, value: newThisWeek.toLocaleString('en-US'), label: 'new this week' },
-    ...(countries ? [{ icon: Globe2, value: countries.toLocaleString('en-US'), label: 'countries' }] : []),
-    ...(medianUsd
-      ? [{ icon: DollarSign, value: formatCurrencyShort(Math.round(medianUsd / 1000) * 1000, 'USD'), label: 'typical salary' }]
-      : []),
-  ]
   if (jobs <= 0) return null
+  const ratio = catalog ? screenRatio(catalog.jobs, jobs) : null
+  const listedFacts = [
+    `${n(companies)} companies`,
+    `${n(newThisWeek)} new this week`,
+    countries ? `${n(countries)} countries` : null,
+    medianUsd ? `${formatCurrencyShort(Math.round(medianUsd / 1000) * 1000, 'USD')} typical salary` : null,
+  ].filter((f): f is string => Boolean(f))
 
   return (
     <section className={styles.section} aria-labelledby="site-stats-title">
       <p id="site-stats-title" className={styles.eyebrow}>
         {'// 6figjobs today'}
       </p>
-      <dl className={styles.grid}>
-        {stats.map(({ icon: Icon, value, label }) => (
-          <div key={label} className={styles.stat}>
-            <dt className={styles.label}>
-              <Icon className={styles.icon} aria-hidden="true" />
-              {label}
-            </dt>
-            <dd className={styles.value}>
-              <AnimatedNumber text={value} reveal />
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <p className={styles.note}>Counted from our own job database, refreshed every few minutes.</p>
-      {catalog && (
-        // What we screen, not what we list: freehire collects the jobs, we keep only those with published six-figure
-        // pay. Its numbers are read live from the endpoint it publishes for quoting (lib/jobs/freehireCatalog.ts).
-        <div className={styles.catalog}>
-          <p id="site-catalog-title" className={styles.eyebrow}>
-            {'// The catalogue we screen, today'}
+      <div className={`${styles.funnel} ${catalog ? '' : styles.single}`}>
+        {catalog ? (
+          <>
+            <div className={styles.panel}>
+              <p className={styles.panelLabel}>We screen</p>
+              <p className={styles.big}>
+                <AnimatedNumber text={n(catalog.jobs)} reveal />
+              </p>
+              <p className={styles.bigLabel}>open jobs in the catalogue</p>
+              <ul className={styles.facts}>
+                <li>{n(catalog.companies)} companies</li>
+                <li>
+                  {n(catalog.sources)} sources and {n(catalog.atsPlatforms)} hiring platforms
+                </li>
+                <li>plus {n(DIRECT_EMPLOYERS.length)} careers sites we read directly</li>
+              </ul>
+            </div>
+            <div className={styles.arrow} aria-hidden={ratio ? undefined : 'true'}>
+              <ArrowRight className={styles.arrowIcon} aria-hidden="true" />
+              {ratio ? <span className={styles.ratio}>about 1 in {n(ratio)} makes the list</span> : null}
+            </div>
+          </>
+        ) : null}
+        <div className={`${styles.panel} ${styles.panelMain}`}>
+          <p className={styles.panelLabel}>You see</p>
+          <p className={styles.big}>
+            <AnimatedNumber text={n(jobs)} reveal />
           </p>
-          <dl className={styles.grid} aria-labelledby="site-catalog-title">
-            {catalogStats(catalog).map(({ icon: Icon, value, label }) => (
-              <div key={label} className={styles.stat}>
-                <dt className={styles.label}>
-                  <Icon className={styles.icon} aria-hidden="true" />
-                  {label}
-                </dt>
-                <dd className={styles.value}>
-                  <AnimatedNumber text={value} reveal />
-                </dd>
-              </div>
+          <p className={styles.bigLabel}>$100k+ jobs with published pay</p>
+          <ul className={styles.facts}>
+            {listedFacts.map((f) => (
+              <li key={f}>{f}</li>
             ))}
-          </dl>
-          <p className={styles.note}>
-            Collected by{' '}
-            <a href={FREEHIRE_OPEN_URL} className={styles.link}>
-              freehire (live numbers)
-            </a>
-            , plus {n(DIRECT_EMPLOYERS.length)} employers&apos; careers sites we read directly. We list only the jobs
-            whose published pay clears our six-figure line.
-          </p>
+          </ul>
         </div>
-      )}
+      </div>
+      <p className={styles.note}>
+        {catalog ? (
+          <>
+            Screened jobs from{' '}
+            <a href={FREEHIRE_OPEN_URL} className={styles.link}>
+              freehire&apos;s live catalogue
+            </a>
+            ; listed jobs counted from our own database, refreshed every few minutes.
+          </>
+        ) : (
+          'Counted from our own job database, refreshed every few minutes.'
+        )}
+      </p>
     </section>
   )
 }
