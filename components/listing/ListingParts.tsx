@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
-import { JobCard } from '@/components/jobs/JobCard'
+import { JobRow, JobRowList } from '@/components/jobs/JobRow'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { pageLinkNumbers } from '@/lib/listing/pageNumbers'
 
@@ -183,11 +183,11 @@ export function JobRows({
     )
   }
   return (
-    <div className={styles.rows}>
+    <JobRowList>
       {jobs.map((job) => (
-        <JobCard key={job.id} job={job} variant="homepage" />
+        <JobRow key={job.id} job={job} />
       ))}
-    </div>
+    </JobRowList>
   )
 }
 

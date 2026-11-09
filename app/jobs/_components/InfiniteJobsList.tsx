@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { JobCard } from '@/components/jobs/JobCard'
+import { JobRow, JobRowList } from '@/components/jobs/JobRow'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import styles from '@/components/listing/Listing.module.css'
 
@@ -83,11 +83,11 @@ export function InfiniteJobsList({
 
   return (
     <>
-      <div className={styles.rows}>
+      <JobRowList>
         {jobs.map((job) => (
-          <JobCard key={job.id} job={job} variant="homepage" />
+          <JobRow key={job.id} job={job} />
         ))}
-      </div>
+      </JobRowList>
 
       {loading && (
         <div className={styles.rows} aria-hidden="true">

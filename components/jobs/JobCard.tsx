@@ -44,7 +44,7 @@ export type JobCardProps = {
   headingLevel?: 2 | 3
 }
 
-function toKCase(text: string): string {
+export function toKCase(text: string): string {
   return text.replace(/(\d)K\b/g, '$1k').replace(/(\d)M\b/g, '$1M')
 }
 
@@ -63,7 +63,7 @@ function humanizeLocationText(value: string): string {
   return trimmed
 }
 
-function getWorkType(job: JobWithCompany): { label: string; Icon: React.ComponentType<any> } | null {
+export function getWorkType(job: JobWithCompany): { label: string; Icon: React.ComponentType<any> } | null {
   const mode = (job.remoteMode ?? job.workArrangementNormalized ?? '').toString().toLowerCase()
   if (job.remote === true || mode === 'remote') return { label: 'Remote', Icon: Globe }
   if (mode === 'hybrid') return { label: 'Hybrid', Icon: Shuffle }
@@ -71,7 +71,7 @@ function getWorkType(job: JobWithCompany): { label: string; Icon: React.Componen
   return null
 }
 
-function inferSeniority(job: JobWithCompany): string | null {
+export function inferSeniority(job: JobWithCompany): string | null {
   const exp = (job.experienceLevel ?? '').toString().toLowerCase()
   if (exp === 'senior') return 'Senior'
   if (exp === 'lead') return 'Lead'
@@ -89,7 +89,7 @@ function inferSeniority(job: JobWithCompany): string | null {
   return null
 }
 
-function parseJsonArray(raw?: any): string[] {
+export function parseJsonArray(raw?: any): string[] {
   if (!raw) return []
   if (Array.isArray(raw)) {
     return raw
@@ -128,7 +128,7 @@ function parseJsonArray(raw?: any): string[] {
   }
 }
 
-function uniqStrings(values: string[]): string[] {
+export function uniqStrings(values: string[]): string[] {
   const seen = new Set<string>()
   const result: string[] = []
   for (const raw of values) {
@@ -164,7 +164,7 @@ const SKILL_ALIASES: Record<string, string> = {
   go: 'golang',
 }
 
-function resolveSkillSlug(value: string): string | null {
+export function resolveSkillSlug(value: string): string | null {
   const key = normalizeSkillKey(value.trim())
   if (!key) return null
   const alias = SKILL_ALIASES[key]
@@ -172,7 +172,7 @@ function resolveSkillSlug(value: string): string | null {
   return SKILL_KEY_TO_SLUG.get(key) ?? null
 }
 
-function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; locationsJson?: any }): {
+export function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; locationsJson?: any }): {
   label: string
   /** For the flag; the name is always in `label`. */
   countryCode: string | null
