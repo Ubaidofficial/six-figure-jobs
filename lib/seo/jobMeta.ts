@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import type { Job, Company } from '@prisma/client'
 import { buildJobSlugHref } from '../jobs/jobSlug'
 import { getSiteUrl, SITE_NAME } from './site'
-import { truncateAtWord } from './metaText'
+import { TITLE_MAX, truncateAtWord } from './metaText'
 import { cleanJobDescriptionText } from '../jobs/descriptionCleaning'
 
 export type JobWithCompany = Job & { companyRef: Company | null }
@@ -84,21 +84,32 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
 
 // Search results cut titles at roughly 60 characters and descriptions at roughly 160. These are
 // conventions, not hard limits — they keep the salary (the click reason) inside the visible part.
-const MAX_TITLE_LENGTH = 65
+// The title cap is the shared one in metaText, so job pages and listing pages agree.
+const MAX_TITLE_LENGTH = TITLE_MAX
 const MAX_DESCRIPTION_LENGTH = 160
 
-/** Longest of: full title, without brand suffix, without company, then a hard cut — first that fits. */
+/**
+ * First that fits: full title, without the brand suffix, with the salary's "/yr" dropped, without the company.
+ * The salary is the click reason, so a role too long for even that is shortened rather than the salary dropped.
+ */
 export function fitTitle(role: string, company: string, salary: string | null): string {
-  const candidates = salary
-    ? [
-        `${role} at ${company} — ${salary} | ${SITE_NAME}`,
-        `${role} at ${company} — ${salary}`,
-        `${role} — ${salary}`,
-      ]
-    : [`${role} at ${company} | ${SITE_NAME}`, `${role} at ${company}`, role]
+  if (!salary) {
+    const candidates = [`${role} at ${company} | ${SITE_NAME}`, `${role} at ${company}`, role]
+    const fits = candidates.find((c) => c.length <= MAX_TITLE_LENGTH)
+    return fits ?? truncateAtWord(role, MAX_TITLE_LENGTH)
+  }
+  const short = salary.replace(/\/yr$/, '')
+  const candidates = [
+    `${role} at ${company} — ${salary} | ${SITE_NAME}`,
+    `${role} at ${company} — ${salary}`,
+    `${role} at ${company} — ${short}`,
+    `${role} — ${salary}`,
+    `${role} — ${short}`,
+  ]
   const fits = candidates.find((c) => c.length <= MAX_TITLE_LENGTH)
   if (fits) return fits
-  return truncateAtWord(candidates[candidates.length - 1], MAX_TITLE_LENGTH)
+  const room = MAX_TITLE_LENGTH - ` — ${short}`.length
+  return room >= 20 ? `${truncateAtWord(role, room)} — ${short}` : truncateAtWord(`${role} — ${short}`, MAX_TITLE_LENGTH)
 }
 
 export function capDescription(text: string): string {

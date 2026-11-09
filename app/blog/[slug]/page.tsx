@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPostBySlug, getAllPosts } from '@/lib/blog/posts'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
+import { fitTitle } from '@/lib/seo/metaText'
 import { capDescription } from '@/lib/seo/jobMeta'
 
 export const revalidate = 86400
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const url = `${SITE_URL}/blog/${post.slug}`
   return {
-    title: `${post.metaTitle ?? post.title} | ${SITE_NAME}`,
+    title: fitTitle([`${post.metaTitle ?? post.title} | ${SITE_NAME}`, post.metaTitle ?? post.title]),
     description: capDescription(post.excerpt),
     alternates: { canonical: url },
     openGraph: {
