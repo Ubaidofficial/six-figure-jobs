@@ -159,6 +159,8 @@ export const DIRECT_EMPLOYERS: readonly DirectEmployer[] = [
   { slug: 'miro', name: 'Miro', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/miro', website: 'miro.com' },
   { slug: 'lattice', name: 'Lattice', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/lattice', website: 'lattice.com' },
   { slug: 'airtable', name: 'Airtable', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/airtable', website: 'airtable.com' },
+  // Board named "Everpure" (Pure Storage's new name, purestorage.com redirects to everpuredata.com on 2026-11-09).
+  { slug: 'pure-storage', name: 'Pure Storage', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/purestorage', website: 'purestorage.com' },
   // Remote employers listed on remote100k.com/remote-companies (2026-11-09) with no or few jobs here; each board found
   // by its public API and accepted only when the board's own company name matched.
   { slug: 'esri', name: 'Esri', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/esri', website: 'esri.com' },
