@@ -48,10 +48,10 @@
   color: var(--color-text-1);
 }
 
-.note strong {
-  font-weight: 600;
-  color: var(--color-text-0);
-  font-variant-numeric: tabular-nums;
+.catalog {
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-border);
 }
 
 .link {

@@ -12,16 +12,26 @@ const base = { jobs: 14597, companies: 1200, newThisWeek: 900, countries: 30, me
 const text = (html: string) => html.replace(/<[^>]+>/g, '')
 
 describe('SiteStatsStrip catalogue line', () => {
-  it("names freehire's live numbers as what we screen, links its page, and counts our direct employers", () => {
+  it("shows freehire's live numbers as big stats of what we screen, links its page, and counts our direct employers", () => {
     const html = renderToStaticMarkup(
       createElement(SiteStatsStrip, {
         ...base,
         catalog: { jobs: 4871976, companies: 697981, sources: 438, atsPlatforms: 179 },
       }),
     )
-    expect(text(html)).toContain(
-      `we screen the 4,871,976 open jobs at 697,981 companies that freehire collects from 438 sources and 179 hiring platforms, plus the careers sites of ${DIRECT_EMPLOYERS.length} employers we read directly`,
-    )
+    const t = text(html)
+    for (const [value, label] of [
+      ['4,871,976', 'open jobs screened'],
+      ['697,981', 'companies'],
+      ['438', 'sources'],
+      ['179', 'ATS platforms'],
+    ]) {
+      expect(t).toContain(label)
+      expect(t).toContain(value)
+    }
+    expect(t).toContain('The catalogue we screen')
+    expect(t).toContain(`plus ${DIRECT_EMPLOYERS.length} employers`)
+    expect(t).toContain('We list only the jobs whose published pay clears our six-figure line')
     expect(html).toContain('href="https://freehire.me/open"')
   })
 
