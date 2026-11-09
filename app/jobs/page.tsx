@@ -22,6 +22,8 @@ import { formatRelativeTime } from '@/lib/utils/time'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { displayKeyword } from '@/lib/search/displayKeyword'
 import { workTypeStats } from '@/lib/listing/workTypeStats'
+import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
+import { CategoryRow, type CategoryRowItem } from '@/components/listing/CategoryRow'
 import { buildJobsHubDescription, buildJobsHubTitle } from '@/lib/seo/metaText'
 import { getSearchVocabulary } from '@/lib/search/vocabulary'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
@@ -534,6 +536,23 @@ export default async function JobsIndexPage({
   const shownKeyword = keywordLabel.length > 80 ? `${keywordLabel.slice(0, 80)}…` : keywordLabel
   const jobsWord = data.total === 1 ? 'job' : 'jobs'
   const updatedSentence = lastUpdatedLabel ? ` Updated ${lastUpdatedLabel}.` : ''
+  // Category tiles show on the plain hub only. Each count is the category page's own number (same roles, same filter).
+  const categoryItems: CategoryRowItem[] =
+    activeFilterCount === 0 && page === 1
+      ? await memoAsync(stableKey('jobs-hub-categories', {}), DEFAULT_TTL_MS, async () => {
+          const rows = await Promise.all(
+            Object.entries(JOB_CATEGORY_MAP).map(async ([slug, cfg]) => ({
+              slug,
+              label: cfg.label,
+              count: await prisma.job.count({
+                where: buildWhere({ roleSlugs: cfg.roleSlugs, isHundredKLocal: true, page: 1, pageSize: 1 }),
+              }),
+            })),
+          )
+          return rows.filter((r) => r.count > 0).sort((a, b) => b.count - a.count)
+        })
+      : []
+
   const workTypeLinks = workTypeStats(
     facets.workTypes,
     (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1),
@@ -610,6 +629,8 @@ export default async function JobsIndexPage({
           stats={workTypeLinks}
           toolbar={<JobsToolbar facets={facets} />}
         />
+
+        <CategoryRow items={categoryItems} />
 
         <ListingLayout sidebar={<JobsFiltersPanel facets={facets} />}>
           {techFilter ? (
