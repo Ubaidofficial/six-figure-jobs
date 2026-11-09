@@ -103,8 +103,45 @@
   color: var(--color-primary-text);
 }
 
+/* A light track filled in brand green up to the chosen minimum (--fill is set by the component), and a white thumb
+   with a green ring. The browser's own slider drew a near-black track and a blue thumb. */
 .range {
   width: 100%;
+  height: 6px;
+  margin: 8px 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-primary) 0 var(--fill, 0%),
+    color-mix(in srgb, var(--color-fg) 12%, transparent) var(--fill, 0%) 100%
+  );
+  cursor: pointer;
+}
+
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--color-primary-dark);
+  background: var(--color-bg-1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--color-primary-dark);
+  background: var(--color-bg-1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.range:focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 6px;
 }
 
 .textInput {
@@ -124,27 +161,45 @@
 
 .list {
   display: grid;
-  gap: var(--space-8);
+  gap: 2px;
   max-height: 260px;
   overflow: auto;
   padding-right: 2px;
 }
 
+/* One option per row, no box around each: the rows read as a list, and the picked one is tinted. */
 .option {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-12);
-  min-height: 44px;
-  padding: 10px 10px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
   border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 6%, transparent);
-  background: color-mix(in srgb, var(--color-bg-0) 22%, transparent);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
 }
 
 .option:hover {
-  border-color: rgba(132, 204, 22, 0.35);
-  background: color-mix(in srgb, var(--color-bg-2) 55%, transparent);
+  background: color-mix(in srgb, var(--color-fg) 4%, transparent);
+}
+
+.optionOn,
+.optionOn:hover {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.optionOn .name {
+  font-weight: var(--font-weight-semibold);
+}
+
+.option:focus-visible,
+.radio:focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 1px;
 }
 
 .left {
@@ -194,25 +249,44 @@
 
 .radios {
   display: grid;
-  gap: var(--space-10);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 
+/* Work type: four chips in a 2 x 2 grid (one choice), the picked one filled. */
 .radio {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-12);
-  min-height: 44px;
-  padding: 10px 10px;
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 6%, transparent);
-  background: color-mix(in srgb, var(--color-bg-0) 22%, transparent);
+  gap: var(--space-8);
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
+  background: var(--color-bg-1);
   cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .radio:hover {
-  border-color: rgba(132, 204, 22, 0.35);
-  background: color-mix(in srgb, var(--color-bg-2) 55%, transparent);
+  border-color: color-mix(in srgb, var(--color-fg) 22%, transparent);
+}
+
+.radioOn,
+.radioOn:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.radioOn .name,
+.radioOn .count {
+  color: #0a0a0a;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* The chip's fill shows which one is picked (and aria-pressed says so), so the radio dot is not drawn. */
+.radio .dot {
+  display: none;
 }
 
 .radioLeft {

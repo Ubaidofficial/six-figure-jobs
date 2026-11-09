@@ -1,5 +1,5 @@
 // components/home/SiteStatsStrip.tsx
-// "From 4.8M jobs to the ones that pay": what we screen (freehire's live catalogue plus the careers sites we read
+// "From 4.8M jobs to the ones that pay": what we screen (a live job catalogue plus the careers sites we read
 // directly) and what is left on 6figjobs (our own live counts), as two panels with one big number each. Replaced two
 // rows of nine equal big numbers (2026-11-09), which read as a wall of figures and did not say how they relate.
 // A number that is missing (its query failed) is left out rather than shown as 0; without the catalogue only the
@@ -8,7 +8,7 @@ import { ArrowRight } from 'lucide-react'
 
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { DIRECT_EMPLOYERS } from '@/lib/constants/directEmployers'
-import { FREEHIRE_OPEN_URL, type FreehireCatalog } from '@/lib/jobs/freehireCatalog'
+import type { FreehireCatalog } from '@/lib/jobs/freehireCatalog'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 
 import styles from './SiteStatsStrip.module.css'
@@ -34,7 +34,7 @@ export function SiteStatsStrip({
   newThisWeek: number
   countries: number | null
   medianUsd: number | null
-  /** freehire's live catalogue size; the "We screen" panel is left out when it could not be read. */
+  /** The live catalogue's size; the "We screen" panel is left out when it could not be read. */
   catalog: FreehireCatalog | null
 }) {
   if (jobs <= 0) return null
@@ -88,17 +88,10 @@ export function SiteStatsStrip({
         </div>
       </div>
       <p className={styles.note}>
-        {catalog ? (
-          <>
-            Screened jobs from{' '}
-            <a href={FREEHIRE_OPEN_URL} className={styles.link}>
-              freehire&apos;s live catalogue
-            </a>
-            ; listed jobs counted from our own database, refreshed every few minutes.
-          </>
-        ) : (
-          'Counted from our own job database, refreshed every few minutes.'
-        )}
+        {/* No data source is named on the site (owner's request, 2026-11-09). */}
+        {catalog
+          ? 'Screened jobs counted across the sources and hiring platforms we read; listed jobs counted from our own database, refreshed every few minutes.'
+          : 'Counted from our own job database, refreshed every few minutes.'}
       </p>
     </section>
   )

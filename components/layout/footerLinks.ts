@@ -24,11 +24,11 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
     title: 'Remote Jobs',
     links: [
-      ['Worldwide', '/remote?region=global'],
-      ['United States', '/remote?region=us-only'],
-      ['Canada', '/remote?region=canada'],
-      ['Europe', '/remote?region=europe'],
-      ['Australia', '/remote?region=australia'],
+      ['Worldwide', '/remote?remoteRegion=global'],
+      ['United States', '/remote?remoteRegion=us-only'],
+      ['Canada', '/remote?remoteRegion=canada'],
+      ['Europe', '/remote?remoteRegion=europe'],
+      ['Australia', '/remote?remoteRegion=australia'],
     ],
   },
   {

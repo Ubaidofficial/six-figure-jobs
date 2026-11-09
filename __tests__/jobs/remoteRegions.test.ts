@@ -4,6 +4,7 @@ import {
   REMOTE_HUB_CHIP_SLUGS,
   REMOTE_REGIONS,
   countRemoteByRegion,
+  isWorldwideLocationText,
   normalizeRemoteRegionSlug,
   remoteRegionDef,
   remoteRegionWhere,
@@ -66,7 +67,7 @@ describe('remote regions', () => {
     expect(out['uk-ireland']).toBe(26)
     expect(out['middle-east']).toBe(4)
     expect(out.apac).toBe(2) // AU
-    expect(out.global).toBe(196) // no country listed
+    expect(out.global).toBe(196) // the worldwide count, passed in
     expect(out.emea).toBe(33) // GB + DE + AE
   })
 
@@ -88,9 +89,33 @@ describe('the region filter', () => {
     expect(json(where)).not.toContain('"remoteRegion":"canada"')
   })
 
-  it('Worldwide means remote jobs that are not tied to a country', () => {
-    const where = remoteRegionWhere('global') as any
-    expect(where.AND).toContainEqual({ countryCode: null })
+  it('Anywhere in the world: remote, no country, and text that says so', () => {
+    const where = json(remoteRegionWhere('global'))
+    expect(where).toContain('"countryCode":null')
+    expect(where).toContain('"contains":"worldwide"')
+    expect(where).toContain('"NOT"')
+    expect(remoteRegionDef('global')!.label).toBe('Anywhere in the world')
+  })
+
+  it('reads "worldwide", "anywhere" and "global" as worldwide only when nothing limits them', () => {
+    for (const t of ['Remote - Worldwide', 'Anywhere', 'Remote (Global)', 'Work from anywhere', 'Worldwide; Remote']) {
+      expect(isWorldwideLocationText(t)).toBe(true)
+    }
+    // Seen live on 2026-11-09 under the old rule (remote + no country), none of them worldwide:
+    for (const t of [
+      'Remote (US)',
+      'San Francisco Bay Area or Remote (U.S.)',
+      'New York City',
+      'Remote',
+      'Anywhere in the US',
+      'US - Anywhere',
+      'Global (EMEA)',
+      'Remote - anywhere in North America',
+      'Remote, anywhere, EST hours',
+      null,
+    ]) {
+      expect(isWorldwideLocationText(t)).toBe(false)
+    }
   })
 
   it('an unknown slug keeps the old exact match', () => {

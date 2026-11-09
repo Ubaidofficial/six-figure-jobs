@@ -25,6 +25,7 @@ import { loadSiteCounts } from '@/lib/jobs/siteCounts'
 import { loadBandSamples } from '@/lib/jobs/salaryBandSamples'
 import { loadNewRolesByCompany } from '@/lib/jobs/newRolesByCompany'
 import { loadFreehireCatalog } from '@/lib/jobs/freehireCatalog'
+import { REMOTE_REGIONS } from '@/lib/jobs/remoteRegions'
 import { LiveJobFeed } from '@/components/home/LiveJobFeed'
 import { NewRolesStrip } from '@/components/home/NewRolesStrip'
 import { SiteStatsStrip } from '@/components/home/SiteStatsStrip'
@@ -154,15 +155,8 @@ function roleSlugToName(slug: string): string {
     .join(' ')
 }
 
-const REMOTE_REGIONS = [
-  { value: '', label: 'Any remote region' },
-  { value: 'global', label: 'Global' },
-  { value: 'us-only', label: 'US only' },
-  { value: 'canada', label: 'Canada' },
-  { value: 'emea', label: 'EMEA' },
-  { value: 'apac', label: 'APAC' },
-  { value: 'uk-ireland', label: 'UK & Ireland' },
-] as const
+// The same regions, labels and meaning as the /jobs sidebar and the Remote hub ("global" = can be done from anywhere).
+const HERO_REMOTE_REGIONS = REMOTE_REGIONS.filter((r) => r.slug !== 'emea').map((r) => ({ value: r.slug, label: r.label }))
 
 function HomepageSchemas({
   jobCount,
@@ -573,7 +567,7 @@ export default async function HomePage() {
         <HeroFilters
           roles={ROLE_OPTIONS.map((o) => ({ value: o.slug, label: o.label }))}
           locations={LOCATIONS.map((l) => ({ value: l.code, label: l.label }))}
-          remoteRegions={REMOTE_REGIONS.map((r) => ({ value: r.value, label: r.label }))}
+          remoteRegions={HERO_REMOTE_REGIONS}
         />
       </Hero>
 

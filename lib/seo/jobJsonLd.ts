@@ -3,7 +3,7 @@
 import type { Job, Company } from '@prisma/client'
 import { normalizePublicCompanyWebsite } from '../companies/website'
 import { getSiteUrl } from './site'
-import { buildJobSlug } from '../jobs/jobSlug'
+import { buildJobSlug, getShortStableIdForJobId } from '../jobs/jobSlug'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 import { resolveSalaryCurrency } from '../jobs/salary'
 import { buildJobValidThroughDate } from '../jobs/validThrough'
@@ -77,10 +77,12 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     ...(baseSalary ? { baseSalary } : {}),
     ...(applicantLocationRequirements ? { applicantLocationRequirements } : {}),
 
+    // Our own id for the job (the suffix of its URL): the stored id and source name where we found the job
+    // ("board:freehire:…") are not published (owner's request, 2026-11-09).
     identifier: {
       '@type': 'PropertyValue',
-      name: job.source || 'SixFigureJobs',
-      value: job.id,
+      name: 'Six Figure Jobs',
+      value: getShortStableIdForJobId(job.id),
     },
   }
 

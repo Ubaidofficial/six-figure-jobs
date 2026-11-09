@@ -113,12 +113,6 @@
   color: var(--color-text-1);
 }
 
-.link {
-  color: var(--color-primary-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 @media (max-width: 860px) {
   .funnel {
     grid-template-columns: minmax(0, 1fr);

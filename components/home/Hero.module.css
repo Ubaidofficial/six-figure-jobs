@@ -21,20 +21,38 @@
   display: none;
 }
 
+/* Desktop: the panel is split in two halves (salary snapshot | pay floors and job types). In one narrow column beside
+   the copy it was about twice as tall as the copy, which left a band of empty green above and below the headline (seen
+   at 70% zoom on a 13" MacBook Air, 2026-11-09). Below 1360px it sits under the search at full width; from 1360px it
+   sits beside the copy, and the two columns of the hero end up about the same height. */
 @media (min-width: 1024px) {
-  .hero {
-    grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 400px);
-    gap: 56px;
-    /* The panel is taller than the copy; centre the copy beside it so no empty block pools under it. */
-    align-items: center;
-  }
-
   .panel {
-    display: block;
-    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 28px;
+    padding: 24px 28px;
     background: var(--color-bg-1);
     border-radius: 20px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  /* The right half starts at the top: no rule above its first heading, a hairline between the halves instead. */
+  .panelColSide {
+    padding-left: 28px;
+    border-left: 1px solid var(--color-border);
+  }
+
+  .panelColSide > .panelTitleSpaced:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+@media (min-width: 1360px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) clamp(600px, 40vw, 680px);
+    gap: 48px;
+    align-items: center;
   }
 }
 

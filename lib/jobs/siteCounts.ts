@@ -8,7 +8,7 @@
 import { memoAsync } from '../cache/memo'
 import { prisma } from '../prisma'
 import { buildWhere } from './queryJobs'
-import { REMOTE_JOB_CLAUSE } from './remoteRegions'
+import { REMOTE_JOB_CLAUSE, remoteRegionWhere } from './remoteRegions'
 
 export const SITE_COUNTS_TTL_MS = 60 * 60 * 1000
 
@@ -21,9 +21,9 @@ export type SiteCounts = {
   byCountry: CountryCount[]
   /** Jobs by how the work is done. The three need not add up to `total`: some jobs state none of them. */
   byWorkType: { remote: number; hybrid: number; onsite: number }
-  /** Remote jobs per country, and remote jobs with no country. */
+  /** Remote jobs per country, and remote jobs that can be done from anywhere (the "global" region). */
   remoteByCountry: CountryCount[]
-  remoteWithoutCountry: number
+  remoteWorldwide: number
   /** ISO time the counts were taken. */
   computedAt: string
 }
@@ -54,13 +54,14 @@ export function loadSiteCounts(): Promise<SiteCounts> {
     const base = buildWhere({ excludeInternships: true, page: 1, pageSize: 1 })
     const remoteWhere = { AND: [base, REMOTE_JOB_CLAUSE] }
 
-    const [total, countryRows, remote, hybrid, onsite, remoteCountryRows] = await Promise.all([
+    const [total, countryRows, remote, hybrid, onsite, remoteCountryRows, remoteWorldwide] = await Promise.all([
       prisma.job.count({ where: base }),
       prisma.job.groupBy({ by: ['countryCode'], where: base, _count: { _all: true } }),
       prisma.job.count({ where: remoteWhere }),
       prisma.job.count({ where: { AND: [base, { remoteMode: 'hybrid' }, { NOT: REMOTE_JOB_CLAUSE }] } }),
       prisma.job.count({ where: { AND: [base, { remoteMode: { in: ['onsite', 'on-site'] } }, { NOT: REMOTE_JOB_CLAUSE }] } }),
       prisma.job.groupBy({ by: ['countryCode'], where: remoteWhere, _count: { _all: true } }),
+      prisma.job.count({ where: { AND: [base, remoteRegionWhere('global')] } }),
     ])
 
     const all = summarizeCountryGroups(countryRows)
@@ -70,7 +71,7 @@ export function loadSiteCounts(): Promise<SiteCounts> {
       byCountry: all.countries,
       byWorkType: { remote, hybrid, onsite },
       remoteByCountry: rem.countries,
-      remoteWithoutCountry: rem.withoutCountry,
+      remoteWorldwide,
       computedAt: new Date().toISOString(),
     }
   })
