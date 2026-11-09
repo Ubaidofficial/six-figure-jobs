@@ -227,7 +227,9 @@ Almost all of its motion (149 files) is built on the `motion` library (`motion/r
 | `whileInView` reveal / staggered list | `.reveal-on-scroll` in `app/globals.css`: CSS scroll-driven animation (`animation-timeline: view()`) inside `@supports`; zero JS. Used on homepage job rows and the discovery modules below the jobs feed |
 | Animated list (items arriving) | `components/home/LiveJobFeed.module.css` `arrive` / `pulse` keyframes |
 | `layoutId` sliding indicator | Not used. Candidate for `motion` only if we add tabs/segmented filters |
-| `@number-flow/react` counters | Not used (extra dependency) |
+| `@number-flow/react` counters | Not used (extra dependency). `components/ui/AnimatedNumber.tsx` instead: a leaf client component; the server renders the final number, it counts up only when a number that starts below the fold scrolls into view (or when its text changes), and never under `reduce` |
+| Marquee / logo strip | `components/home/NewRolesStrip.tsx`: CSS-only (two equal lists, `translateX(-50%)`), the second copy `inert`, pauses on hover/focus, stops under `reduce`. The "Top Companies Hiring Now" row does not move |
+| Interactive panel (tabs) | `components/home/HeroSalaryBands.tsx`: buttons with `aria-pressed`; every panel stays in the server HTML (`hidden`, not removed) so its links stay crawlable |
 
 ---
 

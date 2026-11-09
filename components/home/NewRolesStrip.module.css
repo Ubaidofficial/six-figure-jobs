@@ -1,0 +1,122 @@
+.section {
+  margin: 0 0 40px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text-0);
+}
+
+.sub {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-1);
+}
+
+.viewport {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+
+/* Two equal lists side by side; sliding by half the rail is exactly one list, so the loop has no jump. */
+.rail {
+  display: flex;
+  width: max-content;
+  animation: new-roles-marquee var(--marquee-duration, 60s) linear infinite;
+}
+
+.viewport:hover .rail,
+.viewport:focus-within .rail {
+  animation-play-state: paused;
+}
+
+.list {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 2px 10px 2px 0; /* the right padding is the gap between the two copies */
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  color: var(--color-text-0);
+  text-decoration: none;
+  background: var(--color-bg-1);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  transition: border-color 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chip:hover {
+  border-color: var(--color-primary-text);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 2px;
+}
+
+/* A white tile, so a dark or transparent logo stays readable. */
+.logo {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+}
+
+.badge {
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary-text);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  border-radius: 999px;
+}
+
+@keyframes new-roles-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail {
+    width: auto;
+    animation: none;
+  }
+
+  .viewport {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .clone {
+    display: none;
+  }
+}
