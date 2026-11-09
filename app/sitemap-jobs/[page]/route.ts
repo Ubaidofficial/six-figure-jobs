@@ -120,6 +120,7 @@ export async function GET(
       remote: true,
       remoteMode: true,
       descriptionHtml: true,
+      applyUrl: true,
       aiSnippet: true,
       aiOneLiner: true,
       salaryValidated: true,

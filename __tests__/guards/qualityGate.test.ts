@@ -38,6 +38,24 @@ describe('evaluateJobIndexability', () => {
     expect(evaluateJobIndexability({ ...baseJob, descriptionHtml: english })).toEqual({ indexable: true, reason: 'ok' })
   })
 
+  describe('a way to apply (Google does not allow a job posting without one)', () => {
+    const withApply = { ...baseJob, applyUrl: 'https://jobs.lever.co/acme/123' }
+
+    it('indexes a job with a link to apply', () => {
+      expect(evaluateJobIndexability(withApply)).toEqual({ indexable: true, reason: 'ok' })
+      expect(evaluateJobIndexability({ ...baseJob, applyUrl: 'careers.acme.com/jobs/123' })).toEqual({ indexable: true, reason: 'ok' })
+    })
+
+    it.each([null, '', '   ', 'mailto:jobs@acme.com', 'not a url %%'])('does not index a job whose applyUrl is %j', (applyUrl) => {
+      expect(evaluateJobIndexability({ ...baseJob, applyUrl })).toEqual({ indexable: false, reason: 'no_apply_url' })
+    })
+
+    it('does not mistake a caller that never loaded applyUrl for a job without a link', () => {
+      expect('applyUrl' in baseJob).toBe(false)
+      expect(evaluateJobIndexability(baseJob)).toEqual({ indexable: true, reason: 'ok' })
+    })
+  })
+
   it('rejects thin content when description and AI text are both insufficient', () => {
     const result = evaluateJobIndexability({
       ...baseJob,

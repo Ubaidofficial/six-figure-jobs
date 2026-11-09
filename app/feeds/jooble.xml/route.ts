@@ -31,7 +31,7 @@ async function loadFeed(): Promise<{ xml: string; count: number }> {
     },
     select: {
       id: true, shortId: true, externalId: true, title: true, roleSlug: true, company: true, companyId: true,
-      locationRaw: true, citySlug: true, countryCode: true, remote: true, remoteMode: true, descriptionHtml: true,
+      locationRaw: true, citySlug: true, countryCode: true, remote: true, remoteMode: true, descriptionHtml: true, applyUrl: true,
       aiSnippet: true, aiOneLiner: true, salaryValidated: true, salaryConfidence: true, salaryCurrency: true,
       salaryPeriod: true, salaryMin: true, salaryMax: true, minAnnual: true, maxAnnual: true, currency: true,
       employmentType: true, isExpired: true, lastSeenAt: true, postedAt: true, createdAt: true, updatedAt: true,

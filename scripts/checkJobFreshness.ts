@@ -149,6 +149,7 @@ async function collectIndexabilityDiagnostics(
             remote: true,
             remoteMode: true,
             descriptionHtml: true,
+            applyUrl: true,
             aiSnippet: true,
             aiOneLiner: true,
             salaryValidated: true,

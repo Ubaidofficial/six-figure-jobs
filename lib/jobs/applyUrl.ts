@@ -20,6 +20,19 @@ const AGGREGATOR_APPLY_HOSTS = [
   'himalayas.app',
 ]
 
+/** True when `url` is a link a visitor can follow. The job page shows its Apply button only then. */
+export function hasUsableApplyUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+  // "mailto:jobs@acme.com" would get "https://" put in front and parse as a web address.
+  if (/^\s*(mailto|tel|javascript|data):/i.test(url)) return false
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch {
+    return false
+  }
+}
+
 function hostOf(url: string): string | null {
   try {
     return new URL(url).hostname.toLowerCase().replace(/^www\./, '')

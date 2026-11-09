@@ -16,6 +16,7 @@ import { queryJobs, type JobQueryResult, type JobWithCompany } from '../../../li
 import { filterSimilarJobs } from '../../../lib/jobs/similarJobs'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { isJobDetailAvailable } from '../../../lib/jobs/detailAvailability'
+import { hasUsableApplyUrl } from '../../../lib/jobs/applyUrl'
 import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
@@ -241,7 +242,7 @@ export default async function JobPage({
     return raw.map((b) => b.trim()).filter((b): b is string => b.length > 0)
   })()
 
-  const showApply = isValidUrl(typedJob.applyUrl)
+  const showApply = hasUsableApplyUrl(typedJob.applyUrl)
 
   // Prefer rich HTML, fallback to raw text
   const rawDescriptionHtml =
@@ -901,16 +902,6 @@ function cleanUrl(url: string): string {
   if (!url) return '#'
   if (url.startsWith('http://') || url.startsWith('https://')) return url
   return `https://${url}`
-}
-
-function isValidUrl(url?: string | null): boolean {
-  if (!url) return false
-  try {
-    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
-    return ['http:', 'https:'].includes(parsed.protocol)
-  } catch {
-    return false
-  }
 }
 
 function decodeHtmlEntities(str: string): string {

@@ -460,6 +460,7 @@ async function getIndexableJobUrlSet(): Promise<Set<string>> {
           remote: true,
           remoteMode: true,
           descriptionHtml: true,
+          applyUrl: true,
           aiSnippet: true,
           aiOneLiner: true,
           salaryValidated: true,

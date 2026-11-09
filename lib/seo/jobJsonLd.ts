@@ -41,12 +41,16 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   const physicalJobLocation = buildJobLocation(job)
   const isRemote = isRemoteJob(job)
   const isHybrid = job.remoteMode === 'hybrid' || (isRemote && hasPhysicalWorkplace(job))
-  const applicantLocationRequirements = isRemote ? buildApplicantLocationRequirements(job) : undefined
+  // Google: "Jobs marked as TELECOMMUTE must be fully remote". A hybrid job is not, so it keeps its physical jobLocation
+  // and gets neither the remote marker nor applicantLocationRequirements. (A remote job that also names an office is
+  // still remote: Google's own example pairs the two.)
+  const fullyRemote = isRemote && job.remoteMode !== 'hybrid'
+  const applicantLocationRequirements = fullyRemote ? buildApplicantLocationRequirements(job) : undefined
   // For non-remote jobs: if buildJobLocation returned nothing, try a country-only fallback
   // so we always satisfy Google's requirement of at least one location signal.
   const jobLocationRaw = isRemote && !isHybrid ? undefined : (physicalJobLocation ?? buildCountryFallbackLocation(job))
   const jobLocation = jobLocationRaw
-  const jobLocationType = isRemote || isHybrid ? 'TELECOMMUTE' : undefined
+  const jobLocationType = fullyRemote ? 'TELECOMMUTE' : undefined
 
   // Only emit a value we actually recognised — an unknown type is omitted, never guessed.
   const employmentType = normalizeEmploymentType(job.type || job.employmentType)
@@ -55,7 +59,7 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     '@context': 'https://schema.org',
     '@type': 'JobPosting',
 
-    title: job.title,
+    title: cleanJobPostingTitle(job.title),
     description,
     url,
 
@@ -306,6 +310,35 @@ export function cleanLocality(value: unknown): string | undefined {
   if (/\b(remote|hq|headquarters|anywhere|worldwide|global|hybrid|on-?site|virtual|multiple locations)\b/i.test(v)) return undefined
   if (v.split(' ').length > 8) return undefined // a sentence, not a place
   return v
+}
+
+const MONEY = /[$€£]\s?\d|\d\s?[kK]\s?\/\s?(?:yr|year|hr|hour)/i
+const GENDER_TAG = /^(?:[mwfdx]\s*[\/|]\s*){1,2}[mwfdx]$|^all genders$|^gn$/i
+const JOB_CODE = /^(?:#\s?\d{3,}|[A-Z]{1,4}[- ]?\d{3,}[A-Z0-9-]*)$/
+
+/**
+ * The job title as Google wants it in a JobPosting: "the title of the job only. Don't include job codes, addresses, dates,
+ * salaries, or company names". The page keeps the title as posted; only the structured data is cleaned, and only for what
+ * is unambiguous: a (bracketed) salary, job code or gender tag, and salary text tacked on the end after a dash or bar. A title that
+ * would end up empty or tiny is returned as it was.
+ */
+export function cleanJobPostingTitle(title: string): string {
+  const original = String(title ?? '')
+  let t = original
+  // "(R-19961)", "[$320k/yr]", "(f/m/d)": a bracketed group that is only a code, a salary or a gender tag
+  t = t.replace(/\s*[([]([^()[\]]{1,40})[)\]]/g, (whole, inner: string) => {
+    const s = inner.trim()
+    return MONEY.test(s) || JOB_CODE.test(s) || GENDER_TAG.test(s) ? '' : whole
+  })
+  // "... - €80.000 - €110.000 A Year", "| $150k-$200k", "- £86,000 p.a. + benefits": trailing segments after a spaced
+  // separator that carry a currency amount (looped: a range puts one amount in each of two segments)
+  for (let i = 0; i < 3; i++) {
+    const cut = Math.max(...[' - ', ' – ', ' — ', ' | '].map((sep) => t.lastIndexOf(sep)))
+    if (cut < 3 || !/[$€£]\s?\d/.test(t.slice(cut))) break
+    t = t.slice(0, cut)
+  }
+  t = t.replace(/\s{2,}/g, ' ').replace(/\s*[-–—|:,]\s*$/, '').trim()
+  return t.length >= 3 ? t : original
 }
 
 const US_STATE_CODE_BY_NAME = new Map(STATE_TARGETS.map((s) => [s.name.toLowerCase(), s.code]))

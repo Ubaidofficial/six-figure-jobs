@@ -4,6 +4,7 @@ import { inferCurrencyFromCountryCode } from '../normalizers/salary'
 import { isJobFresh } from './freshness'
 import { hasJobDescriptionNoise } from './descriptionCleaning'
 import { detectJobLanguage } from './language'
+import { hasUsableApplyUrl } from './applyUrl'
 
 export const QUALITY_MIN_DESCRIPTION_CHARS = 140
 export const QUALITY_MIN_AI_SNIPPET_CHARS = 80
@@ -23,6 +24,8 @@ export type JobIndexabilityInput = {
   remote?: boolean | null
   remoteMode?: string | null
   descriptionHtml?: string | null
+  /** Left undefined when the caller did not load the field; that is not the same as a job with no link. */
+  applyUrl?: string | null
   aiSnippet?: string | null
   aiOneLiner?: string | null
   salaryValidated?: boolean | null
@@ -157,6 +160,11 @@ export function evaluateJobIndexability(job: JobIndexabilityInput): JobIndexabil
     Boolean(String(job.countryCode || '').trim())
 
   if (!hasLocationSignal) return fail('missing_location')
+
+  // Google does not allow a job posting without a way to apply (its job posting guidelines), and the job page shows its
+  // Apply button only for a followable applyUrl. A job without one stays off the site's index, sitemaps, Indexing API
+  // queue and feeds.
+  if (job.applyUrl !== undefined && !hasUsableApplyUrl(job.applyUrl)) return fail('no_apply_url')
 
   if (job.salaryValidated !== true) return fail('salary_not_validated')
 

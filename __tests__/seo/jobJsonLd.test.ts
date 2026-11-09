@@ -1,4 +1,4 @@
-import { buildJobJsonLd } from '../../lib/seo/jobJsonLd'
+import { buildJobJsonLd, cleanJobPostingTitle } from '../../lib/seo/jobJsonLd'
 
 describe('buildJobJsonLd', () => {
   it('sets a future validThrough and preserves cleaned HTML descriptions', () => {
@@ -530,6 +530,33 @@ describe('buildJobJsonLd', () => {
       expect(Array.isArray(withCity.jobLocation)).toBe(false)
     })
 
+    describe('TELECOMMUTE is for fully remote jobs only (Google: "Jobs marked as TELECOMMUTE must be fully remote")', () => {
+      const ld = (over: Record<string, unknown>) => buildJobJsonLd({ ...base, ...over } as any)
+
+      it('keeps a hybrid job on its office address, without the remote marker', () => {
+        const job = ld({ remoteMode: 'hybrid', locationRaw: 'Washington, DC', city: 'Washington' })
+        expect(job.jobLocationType).toBeUndefined()
+        expect(job.applicantLocationRequirements).toBeUndefined()
+        expect(job.jobLocation.address).toMatchObject({ addressLocality: 'Washington', addressRegion: 'DC', addressCountry: 'US' })
+      })
+
+      it('still marks a fully remote job, with who may apply', () => {
+        const job = ld({ remote: true, remoteMode: 'remote', locationRaw: 'Remote - US' })
+        expect(job.jobLocationType).toBe('TELECOMMUTE')
+        expect(job.applicantLocationRequirements).toEqual({ '@type': 'Country', name: 'United States' })
+      })
+
+      it('still marks a remote job that also names an office, as Google\'s own example does', () => {
+        const job = ld({ remote: true, remoteMode: 'remote', city: 'Austin', locationRaw: 'Austin, TX' })
+        expect(job.jobLocationType).toBe('TELECOMMUTE')
+        expect(job.jobLocation).toBeDefined()
+      })
+
+      it('does not mark an on-site job', () => {
+        expect(ld({ remoteMode: 'onsite', city: 'Austin', locationRaw: 'Austin, TX' }).jobLocationType).toBeUndefined()
+      })
+    })
+
     describe('addressRegion of a single place (jobs have no stateCode, so it is read from the location text)', () => {
       const address = (over: Record<string, unknown>) => buildJobJsonLd({ ...base, ...over } as any).jobLocation.address
 
@@ -573,5 +600,42 @@ describe('buildJobJsonLd', () => {
         expect(address({ locationRaw: 'Maryville, TN', city: 'Maryville', stateCode: 'ca' }).addressRegion).toBe('CA')
       })
     })
+  })
+})
+
+describe('cleanJobPostingTitle (Google: the title of the job only, no codes, salaries or the like)', () => {
+  it.each([
+    ['Senior Full-Stack Engineer - Shape Product & Data Pipelines - €80.000 - €110.000 A Year', 'Senior Full-Stack Engineer - Shape Product & Data Pipelines'],
+    ['Mid-Level Applied AI Engineer [$320k/yr] TS/SCI-FS Poly with Security Clearance', 'Mid-Level Applied AI Engineer TS/SCI-FS Poly with Security Clearance'],
+    ['Principal Power Platform Engineer (R-19961)', 'Principal Power Platform Engineer'],
+    ['Staff Technical Program Manager (f/m/d)', 'Staff Technical Program Manager'],
+    ['Softwareentwickler (m/w/d)', 'Softwareentwickler'],
+    ['Backend Engineer | $150k-$200k', 'Backend Engineer'],
+    ['Data Engineer - $180,000', 'Data Engineer'],
+    ['Engineer (REQ-20458) (m/f/d)', 'Engineer'],
+    ['Software/Data Engineer - Quant Hedge Fund - £250k+', 'Software/Data Engineer - Quant Hedge Fund'],
+    ['Deputy Director, Research and Development - £86,000 p.a. + benefits', 'Deputy Director, Research and Development'],
+    ['Senior Electrical Engineer – Satellite C&DH Subsystem - $10K Sign On Bonus', 'Senior Electrical Engineer – Satellite C&DH Subsystem'],
+    ['Primary Care Physician | Salisbury, North Carolina | $280K–$325K + ( open to discussions )', 'Primary Care Physician | Salisbury, North Carolina'],
+  ])('%s', (input, out) => expect(cleanJobPostingTitle(input)).toBe(out))
+
+  it.each([
+    'Senior Software Engineer',
+    'Director, Platform (Remote)',
+    'Staff Engineer (Payments)',
+    'VP, $1B Revenue Growth Strategy',
+    'Engineer II (Contract)',
+    'Software Engineer, AI/ML',
+    'Nurse Practitioner (PMHNP) - Inpatient',
+  ])('leaves a normal title alone: %s', (title) => expect(cleanJobPostingTitle(title)).toBe(title))
+
+  it('never returns an empty title', () => {
+    expect(cleanJobPostingTitle('(f/m/d)')).toBe('(f/m/d)')
+    expect(cleanJobPostingTitle('')).toBe('')
+  })
+
+  it('is what the JobPosting carries', () => {
+    const job = { id: 'x', title: 'Staff Engineer (R-19961)', company: 'Acme', companyRef: null, remote: false, remoteMode: 'onsite', city: 'Austin', countryCode: 'US', locationRaw: 'Austin, TX', descriptionHtml: '<p>Build.</p>', salaryValidated: false, source: 'board', applyUrl: 'https://x.test/1', postedAt: new Date(), createdAt: new Date(), lastSeenAt: new Date() }
+    expect(buildJobJsonLd(job as any).title).toBe('Staff Engineer')
   })
 })
