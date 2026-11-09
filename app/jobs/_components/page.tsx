@@ -14,7 +14,6 @@ import {
   buildBreadcrumbJsonLd,
   buildSliceWebPageJsonLd,
   buildSliceFaqJsonLd,
-  buildSliceSpeakableJsonLd,
 } from '../../../lib/seo/structuredData'
 import { buildSliceInternalLinks } from '../../../lib/navigation/internalLinks'
 import { resolveSliceCanonicalPath } from '../../../lib/seo/canonical'
@@ -221,7 +220,6 @@ export default async function JobsSlicePage({
       const breadcrumbJsonLd = buildBreadcrumbJsonLd(slice)
       const webPageJsonLd = buildSliceWebPageJsonLd(slice, data)
       const faqJsonLd = buildSliceFaqJsonLd(slice, data.total)
-      const speakableJsonLd = buildSliceSpeakableJsonLd()
       const internalLinks = buildSliceInternalLinks(slice)
       const roleName = humanizeRole(slice.filters.roleSlugs?.[0])
       const band = bandLabel(slice.filters.minAnnual)
@@ -280,13 +278,6 @@ export default async function JobsSlicePage({
             type="application/ld+json"
             dangerouslySetInnerHTML={{
               __html: JSON.stringify(faqJsonLd),
-            }}
-          />
-
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify(speakableJsonLd),
             }}
           />
 
