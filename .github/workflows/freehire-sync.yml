@@ -30,7 +30,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150
     permissions:
       contents: read
     env:
@@ -79,19 +79,27 @@ jobs:
         timeout-minutes: 20
         run: npm run check-closed:freehire
 
-      # Runs whenever the sync itself succeeded, even if the closed-job check above failed or timed out.
+      # Employers read straight from their own applicant tracking system (lib/constants/directEmployers.ts: OpenAI,
+      # Anthropic, SpaceX, xAI and ~90 more), through the normal ATS ingest. Independent of freehire: it runs even when
+      # the freehire sync failed (for example on freehire's daily quota), and the steps below run if either succeeded.
+      - name: Sync direct employers
+        id: employers
+        if: ${{ !cancelled() }}
+        timeout-minutes: 90
+        run: npx tsx scripts/sync-direct-employers.ts
+      # Runs whenever a sync succeeded, even if the closed-job check above failed or timed out.
       - name: Expire jobs not refreshed in 7 days
-        if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
+        if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
         run: npx tsx scripts/run-expiry.ts
       # The steps below each run whenever the sync succeeded, even if an earlier step after it failed.
       # Self-heal data quality, including filling missing roles and countries; before the slices so they include them.
       - name: Data quality remediation (self-heal)
-        if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
+        if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
         timeout-minutes: 10
         run: npm run remediate:data-quality
       # Rebuild the precomputed role / country / salary listing slices from today's jobs.
       - name: Refresh slices
-        if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
+        if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
         timeout-minutes: 10
         run: |
           set -euo pipefail
@@ -101,7 +109,7 @@ jobs:
       # Send queued new/updated/removed job URLs to the Google Indexing API, at most 180 a day (Google's default
       # quota is 200). Expired jobs in the queue are skipped by the worker.
       - name: Drain Google Indexing queue
-        if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
+        if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
         timeout-minutes: 10
         env:
           GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON }}
