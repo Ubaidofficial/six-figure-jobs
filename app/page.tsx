@@ -577,14 +577,15 @@ export default async function HomePage() {
         />
       </Hero>
 
+      {/* Company trust strip right under the hero (docs/DESIGN_UX_SPEC.md §10, homepage order step 2). */}
+      <FeaturedCompaniesCarousel companies={featuredCompanies} />
+
       <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} />
 
       <NewRolesStrip companies={newRolesCompanies} />
 
       {/* Jobs already in the live feed above are left out, so no job appears twice with two different times. */}
       <LatestOpportunities jobs={jobs.filter((job) => !feedItemIds.has(job.id))} totalJobs={stats.totalJobs} />
-
-      <FeaturedCompaniesCarousel companies={featuredCompanies} />
 
       <SiteStatsStrip
         jobs={stats.totalJobs}
