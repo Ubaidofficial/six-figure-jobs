@@ -27,4 +27,12 @@ describe('DIRECT_EMPLOYERS', () => {
       expect(e.slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/)
     }
   })
+
+  it('gives websites as bare domains (no scheme, path, shortener or job-board host)', () => {
+    for (const e of DIRECT_EMPLOYERS) {
+      if (!e.website) continue
+      expect(e.website).toMatch(/^([a-z0-9-]+\.)+[a-z]{2,}$/)
+      expect(e.website).not.toMatch(/(^|\.)(greenhouse\.io|lever\.co|ashbyhq\.com|myworkdayjobs\.com|bit\.ly)$/)
+    }
+  })
 })

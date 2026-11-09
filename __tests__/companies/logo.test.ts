@@ -82,7 +82,7 @@ describe('GET /logo/[kind]/[value]', () => {
   })
 
   const image = (ok: boolean) =>
-    ({ ok, headers: new Headers({ 'content-type': ok ? 'image/webp' : 'text/plain' }), body: null }) as unknown as Response
+    ({ ok, status: ok ? 200 : 404, headers: new Headers({ 'content-type': ok ? 'image/webp' : 'text/plain' }), body: null }) as unknown as Response
   const mockFetch = (...answers: boolean[]) => {
     const fn = jest.fn()
     answers.forEach((ok) => fn.mockResolvedValueOnce(image(ok)))
@@ -128,11 +128,41 @@ describe('GET /logo/[kind]/[value]', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  it('treats a probe that throws (timeout, network) as "no logo here" and moves on', async () => {
+  it('uses the fallback when logo.dev does not answer (timeout, network), but only briefly', async () => {
     process.env.LOGODEV_API_KEY = 'pk_server'
-    global.fetch = jest.fn().mockRejectedValue(new Error('timeout')) as unknown as typeof fetch
+    const fn = jest.fn().mockRejectedValue(new Error('timeout'))
+    global.fetch = fn as unknown as typeof fetch
     const res = await call('domain', 'times-out.com')
     expect(res.headers.get('location')).toBe('https://icon.horse/icon/times-out.com')
+    expect(res.headers.get('cache-control')).toBe('public, max-age=300')
+  })
+
+  it('does not remember a fallback chosen because logo.dev was rate-limiting, and asks again', async () => {
+    process.env.LOGODEV_API_KEY = 'pk_server'
+    const limited = { ok: false, status: 429, headers: new Headers(), body: null } as unknown as Response
+    const fn = jest.fn().mockResolvedValueOnce(limited).mockResolvedValueOnce(image(true))
+    global.fetch = fn as unknown as typeof fetch
+    const nowSpy = jest.spyOn(Date, 'now')
+    nowSpy.mockReturnValue(1_000_000)
+    const first = await call('domain', 'rate-limited.com')
+    expect(first.headers.get('location')).toBe('https://icon.horse/icon/rate-limited.com')
+    expect(first.headers.get('cache-control')).toBe('public, max-age=300')
+    // Six minutes later logo.dev answers, and its logo is used and remembered.
+    nowSpy.mockReturnValue(1_000_000 + 6 * 60 * 1000)
+    const second = await call('domain', 'rate-limited.com')
+    expect(second.headers.get('location')).toContain('https://img.logo.dev/rate-limited.com')
+    expect(second.headers.get('cache-control')).toContain('s-maxage')
+    expect(fn).toHaveBeenCalledTimes(2)
+    nowSpy.mockRestore()
+  })
+
+  it('remembers a settled "no logo" from logo.dev for the day', async () => {
+    process.env.LOGODEV_API_KEY = 'pk_server'
+    const fn = mockFetch(false)
+    const res = await call('domain', 'settled-none.com')
+    expect(res.headers.get('cache-control')).toContain('s-maxage')
+    await call('domain', 'settled-none.com')
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 
   it('decodes names and can only ever redirect to a fixed logo host', async () => {

@@ -27,7 +27,7 @@ import { shouldAdvertiseSitemapFamily } from './sitemapPolicy'
 
 export type SitemapEntry = { path: string; lastmod: Date | null }
 
-const PILLAR_PATHS = ['/', '/jobs', '/salary', '/companies', '/remote']
+const PILLAR_PATHS = ['/', '/jobs', '/salary', '/companies', '/remote', '/remote/companies']
 const MIN_ROLE_PAGE_JOBS = 3
 const CACHE_TTL_MS = 60 * 60 * 1000
 

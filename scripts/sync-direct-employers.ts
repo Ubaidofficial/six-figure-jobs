@@ -11,21 +11,24 @@ import { prisma } from '../lib/prisma'
 import { DIRECT_EMPLOYERS, type DirectEmployer } from '../lib/constants/directEmployers'
 import { scrapeCompanyAtsJobs } from '../lib/scrapers/ats'
 import { upsertJobsForCompanyFromAts } from '../lib/jobs/ingestFromAts'
+import { companyUpdatesFor } from '../lib/companies/directEmployerCompany'
 
 const DRY = process.argv.includes('--dry-run')
 const only = (process.argv.find((a) => a.startsWith('--only='))?.slice(7) ?? '').split(',').filter(Boolean)
 const CONCURRENCY = 3
 
-/** The employer's company row: its existing page by slug (or exact name), else a new one; ATS fields kept current. */
+/** The employer's company row: its existing page by slug (or exact name), else a new one. */
 async function companyFor(e: DirectEmployer) {
   const existing =
     (await prisma.company.findUnique({ where: { slug: e.slug } })) ??
     (await prisma.company.findFirst({ where: { name: { equals: e.name, mode: 'insensitive' } } }))
   if (existing) {
-    if (existing.atsProvider === e.provider && existing.atsUrl === e.boardUrl) return existing
-    return prisma.company.update({ where: { id: existing.id }, data: { atsProvider: e.provider, atsUrl: e.boardUrl } })
+    const data = companyUpdatesFor(e, existing)
+    return Object.keys(data).length ? prisma.company.update({ where: { id: existing.id }, data }) : existing
   }
-  return prisma.company.create({ data: { name: e.name, slug: e.slug, atsProvider: e.provider, atsUrl: e.boardUrl } })
+  return prisma.company.create({
+    data: { name: e.name, slug: e.slug, atsProvider: e.provider, atsUrl: e.boardUrl, website: e.website ? `https://${e.website}` : null },
+  })
 }
 
 async function syncOne(e: DirectEmployer) {
