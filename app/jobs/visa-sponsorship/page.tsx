@@ -70,7 +70,7 @@ export async function generateMetadata({
   }
 
   const title = `Visa Sponsorship Tech Jobs — $100k+ | ${SITE_NAME}`
-  const description = `${total > 0 ? `${total.toLocaleString()} ` : ''}$100k+ tech jobs that offer visa sponsorship, with salary shown upfront. Software engineer, data scientist and engineering manager roles, with links to apply.`
+  const description = `${total > 0 ? `${total.toLocaleString()} ` : ''}$100k+ tech jobs that offer visa sponsorship, with salary shown upfront. Software engineer, data scientist and engineering manager roles.`
 
   const canonical = page > 1 ? `${SITE_URL}/jobs/visa-sponsorship?page=${page}` : `${SITE_URL}/jobs/visa-sponsorship`
 
@@ -193,7 +193,8 @@ export default async function VisaSponsorshipPage({
       </div>
 
       {/* Job listings */}
-      <section aria-label="Visa sponsorship job listings">
+      <section aria-labelledby="visa-jobs-heading">
+        <h2 id="visa-jobs-heading" style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Open roles with visa sponsorship</h2>
         {jobs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-1)' }}>
             <p>No visa-sponsored listings found right now. <Link href="/jobs/100k-plus" style={{ color: 'var(--color-primary-text)' }}>Browse all $100k+ jobs</Link></p>
