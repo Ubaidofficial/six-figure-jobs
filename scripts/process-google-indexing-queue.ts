@@ -12,6 +12,7 @@
 import { prisma } from '../lib/prisma'
 import {
   getAccessToken,
+  isDailyQuotaError,
   publishUrl,
   type IndexingRequestType,
 } from '../lib/indexing/googleIndexingClient'
@@ -114,6 +115,7 @@ async function main() {
     return
   }
 
+  let quotaExhausted = false
   for (const record of pendingRecords) {
     console.log(`[indexing:worker] Processing record id=${record.id} url=${record.url} type=${record.type}`)
 
@@ -162,6 +164,17 @@ async function main() {
       console.log(`[indexing:worker] Successfully notified Google Indexing API: type=${record.type} url=${record.url}`)
       summary.sent++
     } catch (error: any) {
+      // The day's quota is used up. Stop here and leave this URL and every one after it exactly as they are: counting
+      // the 429 as a failed attempt used up each URL's three tries without Google ever looking at it, and a URL that
+      // fails three times is dropped for good.
+      if (isDailyQuotaError(error)) {
+        console.log(
+          `[indexing:worker] Google's daily publish quota is used up. Stopping; the remaining URLs stay pending for the next run. ${error.message}`
+        )
+        quotaExhausted = true
+        break
+      }
+
       const status = error.status
       const isTransient = !status || status === 429 || status === 503 || status >= 500
 
@@ -209,6 +222,7 @@ async function main() {
   console.log(`[indexing:worker] Failed:  ${summary.failed}`)
   console.log(`[indexing:worker] Skipped: ${summary.skipped}`)
   console.log(`[indexing:worker] Retrying:${summary.pending}`)
+  if (quotaExhausted) console.log(`[indexing:worker] Stopped early: daily quota used up (resets once a day).`)
 }
 
 main().catch((error) => {

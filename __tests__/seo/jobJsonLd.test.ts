@@ -529,5 +529,49 @@ describe('buildJobJsonLd', () => {
       const withCity = buildJobJsonLd({ ...base, city: 'Austin', locationRaw: 'Austin, TX; Remote' } as any)
       expect(Array.isArray(withCity.jobLocation)).toBe(false)
     })
+
+    describe('addressRegion of a single place (jobs have no stateCode, so it is read from the location text)', () => {
+      const address = (over: Record<string, unknown>) => buildJobJsonLd({ ...base, ...over } as any).jobLocation.address
+
+      it.each([
+        ['Maryville, TN, USA', 'Maryville', 'TN'],
+        ['North Bethesda, MD', 'North Bethesda', 'MD'],
+        ['East Syracuse, NY, US, 13057-0278', 'East Syracuse', 'NY'],
+        ['Irvine, California, United States', 'Irvine', 'CA'],
+        ['Troy, Michigan, United States', 'Troy', 'MI'],
+        ['Washington, DC', 'Washington', 'DC'],
+      ])('%s', (locationRaw, city, region) => {
+        expect(address({ locationRaw, city })).toMatchObject({ addressLocality: city, addressRegion: region, addressCountry: 'US' })
+      })
+
+      it('reads a Canadian province for a Canadian job', () => {
+        expect(address({ locationRaw: 'Toronto, ON, Canada', city: 'Toronto', countryCode: 'CA' })).toMatchObject({ addressRegion: 'ON', addressCountry: 'CA' })
+      })
+
+      it('does not read a US state from another country\'s text ("DE" is Germany, "IN" is India, "CA" is Canada)', () => {
+        expect(address({ locationRaw: 'Berlin, DE', city: 'Berlin', countryCode: 'DE' }).addressRegion).toBeUndefined()
+        expect(address({ locationRaw: 'Pune, IN', city: 'Pune', countryCode: 'IN' }).addressRegion).toBeUndefined()
+        expect(address({ locationRaw: 'Calgary, CA', city: 'Calgary', countryCode: 'CA' }).addressRegion).toBeUndefined()
+      })
+
+      it('adds nothing when the text names no state', () => {
+        expect(address({ locationRaw: 'Boston', city: 'Boston' }).addressRegion).toBeUndefined()
+        expect(address({ locationRaw: 'Austin, USA', city: 'Austin' }).addressRegion).toBeUndefined()
+      })
+
+      it('puts a state named as the whole location in addressRegion, not addressLocality', () => {
+        expect(address({ locationRaw: 'Iowa' })).toEqual({ '@type': 'PostalAddress', addressRegion: 'IA', addressCountry: 'US' })
+      })
+
+      it('keeps "New York" and "Washington" alone as places, since they are cities as often as states', () => {
+        expect(address({ locationRaw: 'New York' })).toMatchObject({ addressLocality: 'New York' })
+        expect(address({ locationRaw: 'New York' }).addressRegion).toBeUndefined()
+        expect(address({ locationRaw: 'Washington' })).toMatchObject({ addressLocality: 'Washington' })
+      })
+
+      it('lets a stored stateCode win', () => {
+        expect(address({ locationRaw: 'Maryville, TN', city: 'Maryville', stateCode: 'ca' }).addressRegion).toBe('CA')
+      })
+    })
   })
 })

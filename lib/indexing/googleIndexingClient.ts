@@ -165,6 +165,17 @@ export async function getAccessToken(): Promise<string> {
   )
 }
 
+/**
+ * True when Google refused because the day's publish quota is used up ("Quota exceeded for quota metric 'Publish
+ * requests' and limit 'Publish requests per day'"). Unlike a per-minute 429 or a 5xx, waiting a few minutes cannot help:
+ * the quota comes back once a day.
+ */
+export function isDailyQuotaError(error: unknown): boolean {
+  const e = error as { status?: number; body?: unknown; message?: unknown } | null
+  if (!e || e.status !== 429) return false
+  return /per day/i.test(`${e.body ?? ''} ${e.message ?? ''}`)
+}
+
 export async function publishUrl(
   url: string,
   token: string,

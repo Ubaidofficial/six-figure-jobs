@@ -9,6 +9,7 @@ import { resolveSalaryCurrency } from '../jobs/salary'
 import { buildJobValidThroughDate } from '../jobs/validThrough'
 import { countryName, normalizeCountryCode } from '../location/country'
 import { countryFromCity, countryFromText } from '../location/jobLocation'
+import { STATE_TARGETS } from './pseoTargets'
 import {
   cleanJobDescriptionHtml,
   cleanJobDescriptionText,
@@ -307,9 +308,34 @@ export function cleanLocality(value: unknown): string | undefined {
   return v
 }
 
+const US_STATE_CODE_BY_NAME = new Map(STATE_TARGETS.map((s) => [s.name.toLowerCase(), s.code]))
+// A US state name that is also a city people mean on its own ("New York", "Washington"): read as a state only after a
+// place ("Albany, New York"), never when it is the whole location.
+const STATE_NAME_ALSO_A_CITY = new Set(['new york', 'washington'])
+
+/**
+ * The state or province named after the place: "Kinston, NC" -> NC, "Irvine, California, United States" -> CA,
+ * "Toronto, ON, Canada" -> ON. Only a code or name that fits the job's country counts ("CA" after a Canadian place is
+ * Canada, "IN" after an Indian one is not Indiana). `job.stateCode` is empty on live jobs, so without this the single
+ * place a job usually has carried no addressRegion at all (the places of a multi-location job already got one).
+ */
+function regionFromLocationRaw(locationRaw: string, country: string | undefined): string | undefined {
+  if (country !== 'US' && country !== 'CA') return undefined
+  for (const segment of locationRaw.split(',').map((s) => s.trim()).filter(Boolean).slice(1)) {
+    const code = segment.toUpperCase()
+    if (country === 'US' && US_STATE_CODES.has(code)) return code
+    if (country === 'CA' && CA_PROVINCE_CODES.has(code)) return code
+    if (country === 'US') {
+      const byName = US_STATE_CODE_BY_NAME.get(segment.toLowerCase())
+      if (byName) return byName
+    }
+  }
+  return undefined
+}
+
 function buildJobLocation(job: any): any {
   const city = cleanLocality(job.city)
-  const region = job.stateCode ? String(job.stateCode).toUpperCase() : undefined
+  let region = job.stateCode ? String(job.stateCode).toUpperCase() : undefined
   // The stored country wins; the text is read only when it clearly names a country; then the company and the currency.
   const country = normalizeCountryCode(job.countryCode) ?? undefined
   const locationRaw = job.locationRaw ? String(job.locationRaw).trim() : ''
@@ -329,7 +355,16 @@ function buildJobLocation(job: any): any {
     return undefined
   }
 
-  const locality = city ?? (countryOnly(locationRaw) ? undefined : cleanLocality(locationRaw))
+  let locality = city ?? (countryOnly(locationRaw) ? undefined : cleanLocality(locationRaw))
+  region = region ?? regionFromLocationRaw(locationRaw, addressCountry)
+  // "Iowa" as the whole location is a state, not a city: publishing it as addressLocality tells Google the city is Iowa.
+  if (!region && addressCountry === 'US' && locality && !STATE_NAME_ALSO_A_CITY.has(locality.toLowerCase())) {
+    const asState = US_STATE_CODE_BY_NAME.get(locality.toLowerCase())
+    if (asState) {
+      region = asState
+      locality = undefined
+    }
+  }
   return {
     '@type': 'Place',
     address: {
