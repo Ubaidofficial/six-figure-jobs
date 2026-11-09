@@ -89,6 +89,25 @@ function collectSalaryMentions(item: any): string[] {
   return dedupeStrings(mentions)
 }
 
+// Lever's postings carry a structured pay range: salaryRange {min, max, currency, interval: "per-year-salary"}.
+// Intervals other than a pay period (e.g. a one-time bonus) are ignored rather than guessed.
+export function readLeverSalaryRange(
+  range: any,
+): { min: number; max: number; currency: string; interval: string } | null {
+  if (!range || typeof range !== 'object') return null
+  const min = typeof range.min === 'number' ? range.min : null
+  const max = typeof range.max === 'number' ? range.max : null
+  if (min == null && max == null) return null
+  const label = String(range.interval ?? '').toLowerCase()
+  const interval = ['year', 'month', 'week', 'day', 'hour'].find((p) => label.includes(p))
+  if (!interval) return null
+  const currency =
+    typeof range.currency === 'string' && range.currency.trim().length === 3 ? range.currency.trim().toUpperCase() : null
+  // Without a currency the later pipeline cannot use the numbers (and would skip the text fallback), so leave it to the text.
+  if (!currency) return null
+  return { min: (min ?? max) as number, max: (max ?? min) as number, currency, interval }
+}
+
 function parseSalaryRangeFromText(
   text: string,
   locationText: string | null | undefined,
@@ -199,6 +218,15 @@ export async function scrapeLever(atsUrl: string): Promise<AtsJob[]> {
     let salaryCurrency: string | null = parsedSalary?.salaryCurrency ?? null
     let salaryInterval: string | null = parsedSalary?.salaryInterval ?? null
     const salaryRaw: string | null = parsedSalary?.salaryRaw ?? (bestSalaryText || null)
+
+    // The structured range is authoritative when Lever gives one.
+    const structured = readLeverSalaryRange(item.salaryRange)
+    if (structured) {
+      salaryMin = structured.min
+      salaryMax = structured.max
+      salaryCurrency = structured.currency
+      salaryInterval = structured.interval
+    }
 
     // Backward-compatible fallback: some Lever boards expose salary in lists[].content
     if (!salaryMin && !salaryMax) {

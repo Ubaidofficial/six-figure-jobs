@@ -90,3 +90,32 @@ describe('parseGreenhouseSalary (real-world Greenhouse formats)', () => {
     expect(parsed?.interval).toBe('year')
   })
 })
+
+describe('parseGreenhouseSalary: pay interval comes from the text next to the range, not the whole posting', () => {
+  const payRange = (min: string, max: string, after = '') =>
+    `&lt;div class="pay-range"&gt;&lt;span&gt;${min}&lt;/span&gt;&lt;span class="divider"&gt;&amp;mdash;&lt;/span&gt;&lt;span&gt;${max} USD&lt;/span&gt;&lt;/div&gt;${after}`
+
+  it('a yearly pay-range stays yearly when the posting says "per day" elsewhere', () => {
+    const html = `&lt;p&gt;Our systems handle billions of requests per day.&lt;/p&gt;${payRange('$198,500', '$248,000')}`
+    const parsed = parseGreenhouseSalary({ html, locationText: 'Redwood City, CA', countryCode: 'US' })
+    expect(parsed).toMatchObject({ min: 198500, max: 248000, currency: 'USD', interval: 'year' })
+  })
+
+  it('a yearly pay-range stays yearly when the posting mentions daily stand-ups', () => {
+    const html = `&lt;p&gt;Join daily stand-ups and retrospectives.&lt;/p&gt;${payRange('$127,300', '$190,900', '&lt;p&gt;Benefits&lt;/p&gt;')}`
+    const parsed = parseGreenhouseSalary({ html, locationText: 'Boston, MA', countryCode: 'US' })
+    expect(parsed?.interval).toBe('year')
+  })
+
+  it('a sentence right above the range does not set the interval either', () => {
+    const html = `&lt;p&gt;The team works three days per week in the office.&lt;/p&gt;${payRange('$150,000', '$180,000')}`
+    const parsed = parseGreenhouseSalary({ html, locationText: 'Denver, CO', countryCode: 'US' })
+    expect(parsed?.interval).toBe('year')
+  })
+
+  it('still reads an interval written right beside the range', () => {
+    const html = payRange('$45', '$60', ' per hour')
+    const parsed = parseGreenhouseSalary({ html, locationText: 'Austin, TX', countryCode: 'US' })
+    expect(parsed).toMatchObject({ min: 45, max: 60, interval: 'hour' })
+  })
+})
