@@ -8,6 +8,8 @@
 //   INDEXING_API_DRY_RUN   — "0" to actually publish to Google (default: 1, dry run)
 //   INDEXING_API_MAX_URLS  — max URLs to process in this run (default: 200)
 //   INDEXING_API_DAILY_LIMIT — internal safety cap (default: 180)
+//   INDEXING_API_DELETE_SHARE — share of the daily limit set aside for removal notices (default: 0.2); new and
+//                               updated pages are sent first, removals take the reserved share plus any quota left over
 
 import { prisma } from '../lib/prisma'
 import {
@@ -15,6 +17,7 @@ import {
   publishUrl,
   type IndexingRequestType,
 } from '../lib/indexing/googleIndexingClient'
+import { parseDeleteShare, selectIndexingBatch } from '../lib/indexing/queueSelection'
 import {
   verifyJobIndexingUpdateSafety,
   verifyJobIndexingDeleteSafety,
@@ -27,6 +30,8 @@ import {
 const DAILY_LIMIT = Math.max(1, Number(process.env.INDEXING_API_DAILY_LIMIT || '180'))
 const MAX_URLS = Math.max(1, Number(process.env.INDEXING_API_MAX_URLS || '200'))
 const DRY_RUN = process.env.INDEXING_API_DRY_RUN !== '0'
+// Share of the daily limit set aside for removal notices; new and updated pages get the rest.
+const DELETE_SHARE = parseDeleteShare(process.env.INDEXING_API_DELETE_SHARE)
 
 async function main() {
   console.log(`[indexing:worker] Starting indexing queue processor...`)
@@ -61,8 +66,13 @@ async function main() {
   const batchLimit = Math.min(MAX_URLS, remainingQuota)
   console.log(`[indexing:worker] Remaining quota: ${remainingQuota}. Batch limit: ${batchLimit}`)
 
-  // 2. Query pending records
-  const pendingRecords = await prisma.jobIndexingQueue.findMany({
+  // 2. Pick this run's batch. New and updated pages go first and removals get a reserved share of the day (see
+  // lib/indexing/queueSelection.ts); the queue used to be read oldest first, which let removal notices use up the quota.
+  const sentRemovalCount = await prisma.jobIndexingQueue.count({
+    where: { status: 'sent', type: 'URL_DELETED', sentAt: { gte: twentyFourHoursAgo } },
+  })
+  const deleteBudget = Math.max(0, Math.floor(DAILY_LIMIT * DELETE_SHARE) - sentRemovalCount)
+  const candidates = await prisma.jobIndexingQueue.findMany({
     where: {
       status: 'pending',
       OR: [
@@ -70,12 +80,21 @@ async function main() {
         { notBefore: { lte: new Date() } },
       ],
     },
-    orderBy: {
-      createdAt: 'asc',
-    },
-    take: batchLimit,
+    select: { id: true, type: true, createdAt: true },
+  })
+  const chosenIds = selectIndexingBatch(candidates, { batchLimit, deleteBudget })
+  const chosen = await prisma.jobIndexingQueue.findMany({ where: { id: { in: chosenIds } } })
+  const chosenById = new Map(chosen.map((r) => [r.id, r]))
+  const pendingRecords = chosenIds.flatMap((id) => {
+    const record = chosenById.get(id)
+    return record ? [record] : []
   })
 
+  const removalsChosen = pendingRecords.filter((r) => r.type === 'URL_DELETED').length
+  console.log(
+    `[indexing:worker] ${candidates.length} pending. Batch: ${pendingRecords.length - removalsChosen} new/updated pages, ` +
+      `${removalsChosen} removals (removal share ${DELETE_SHARE}, ${sentRemovalCount} removals sent in the last 24h).`
+  )
   console.log(`[indexing:worker] Found ${pendingRecords.length} pending records to process.`)
 
   if (pendingRecords.length === 0) {
