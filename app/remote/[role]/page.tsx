@@ -385,10 +385,12 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
         })),
       }
 
+      // speakable belongs to a page; a SpeakableSpecification on its own describes nothing.
       const speakableJsonLd = {
         '@context': 'https://schema.org',
-        '@type': 'SpeakableSpecification',
-        cssSelector: ['main h1', '[data-speakable="summary"]'],
+        '@type': 'WebPage',
+        url: `${SITE_URL}${buildNormalizedListingPath(`/remote/${roleSlug}`, sp)}`,
+        speakable: { '@type': 'SpeakableSpecification', cssSelector: ['main h1', '[data-speakable="summary"]'] },
       }
 
       const availableCountries = Array.from(

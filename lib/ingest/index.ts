@@ -689,16 +689,27 @@ async function refreshJob(
 
   // A source with a structured workplace type is the authority on remote vs hybrid vs on-site, so a job stored as
   // remote from Ashby's `isRemote` flag (true on hybrid jobs too) is corrected the next time it is seen.
+  const loc = processLocation(input)
   if (input.workplaceType) {
-    const loc = processLocation(input)
     updateData.remote = loc.isRemote
     updateData.remoteMode = loc.remoteMode
+  }
+
+  // The country is read again from the source each time the job is seen, so one stored by an earlier, wrong reading
+  // ("San Francisco, CA" stored as Canada until 2026-11-09) is corrected. An unknown country never clears a stored one.
+  if (loc.countryCode && loc.countryCode !== existing.countryCode) {
+    updateData.countryCode = loc.countryCode
   }
 
   // The source is the authority for skills; visa is only ever turned on (never off) so an earlier detection survives.
   if (input.skills?.length) updateData.skillsJson = JSON.stringify(input.skills)
   if (input.sourceRef) updateData.sourceRef = input.sourceRef
   if (input.visaSponsorship === true) updateData.visaSponsorship = true
+
+  // Fill in a missing posting date (never move one already stored: datePosted is when the employer first posted it)
+  if (!existing.postedAt && input.postedAt) {
+    updateData.postedAt = input.postedAt
+  }
 
   // Fill in missing logo
   if (!existing.companyLogo && input.companyLogoUrl) {
@@ -1118,7 +1129,10 @@ export function processLocation(input: ScrapedJobInput) {
   const location = normalizeLocationData(locationText)
   // A location without a country name ("Nürnberg, Bayern", "Kanton Zürich") falls back to its state/canton, or to
   // Switzerland for a Swiss-franc salary. processSalary keeps its own country lookup unchanged.
-  const statedCountry = countryToCode(location.country) ?? countryCodeFromContext(locationText, input.salaryCurrency)
+  const statedCountry =
+    countryToCode(location.country) ??
+    countryCodeFromContext(locationText, input.salaryCurrency) ??
+    stateOrCountryCodeByCurrency(location, input.salaryCurrency)
   // normalizeLocation takes the last segment as the country, so on-site jobs at "Irvine, California", "Hamburg, Hamburg"
   // or "Redwood City" got none. For on-site and hybrid jobs only (remote jobs keep the rule above): the location text read
   // the way job pages read it ("..., NV, United States", US states), else a city we have a page for, else a national pay
@@ -1170,6 +1184,18 @@ export function processLocation(input: ScrapedJobInput) {
 }
 
 const CURRENCY_COUNTRY: Record<string, string> = { USD: 'US', CAD: 'CA', GBP: 'GB', AUD: 'AU', CHF: 'CH' }
+
+// The normalizer leaves "Frankfurt, DE" without a country ("DE" is also Delaware); the pay currency settles it.
+const STATE_OR_COUNTRY_CODE_CURRENCY: Record<string, string> = { CA: 'CAD', DE: 'EUR', IN: 'INR' }
+
+function stateOrCountryCodeByCurrency(
+  location: { region: string | null; country: string | null },
+  salaryCurrency: string | null | undefined,
+): string | null {
+  const code = String(location.region ?? '').trim().toUpperCase()
+  const currency = String(salaryCurrency ?? '').trim().toUpperCase()
+  return !location.country && currency && STATE_OR_COUNTRY_CODE_CURRENCY[code] === currency ? code : null
+}
 
 function countryToCode(country: string | null | undefined): string | null {
   if (!country) return null
