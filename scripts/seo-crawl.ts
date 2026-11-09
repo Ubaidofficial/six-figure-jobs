@@ -282,6 +282,8 @@ type PageResult = {
   url: string
   /** In a sitemap (false: found by following a link). */
   listed: boolean
+  /** The URL redirected, so `facts` describe another page (it must not count as a duplicate of it). */
+  redirected: boolean
   finalUrl: string
   firstStatus: number
   status: number
@@ -303,6 +305,7 @@ async function crawlPage(entry: Entry, listed: boolean): Promise<PageResult> {
   const result: PageResult = {
     url: entry.loc,
     listed,
+    redirected: chain.hops.length > 0,
     finalUrl: chain.finalUrl,
     firstStatus: chain.hops[0]?.status ?? final.status,
     status: final.status,
@@ -473,7 +476,8 @@ function groupBy<T>(items: T[], key: (item: T) => string | null): Map<string, T[
 }
 
 function checkDuplicates(results: PageResult[]) {
-  const pages = results.filter((r) => r.facts && r.indexable)
+  // A URL that redirects shows another page's content, and ?page=N repeats its first page's title: neither is a duplicate.
+  const pages = results.filter((r) => r.facts && r.indexable && !r.redirected && !/[?&]page=/.test(r.url))
   const list = (g: PageResult[]) => g.slice(0, 4).map((r) => r.url).join(', ')
 
   // The same role in different cities is normal for a job board (one posting per location): information only.
