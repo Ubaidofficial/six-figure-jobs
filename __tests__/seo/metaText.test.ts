@@ -8,9 +8,13 @@ import {
   buildCompanyPageTitle,
   buildDescription,
   buildHomeDescription,
+  buildJobsHubDescription,
+  buildJobsHubTitle,
   buildListingDescription,
   buildListingTitle,
   buildRoleDescription,
+  buildSalaryTierDescription,
+  buildSalaryTierTitle,
   countPrefix,
   fitTitle,
   truncateAtWord,
@@ -19,6 +23,7 @@ import { fitTitle as fitJobTitle } from '../../lib/seo/jobMeta'
 import { SEARCH_ROLE_OPTIONS } from '../../lib/roles/searchRoles'
 import { CITY_TARGETS, INDUSTRY_TARGETS, SKILL_TARGETS, STATE_TARGETS } from '../../lib/seo/pseoTargets'
 import { JOB_CATEGORY_MAP } from '../../lib/seo/jobCategories'
+import { SALARY_TIERS } from '../../lib/jobs/salaryTiers'
 
 const ROLES = Array.from(new Set(SEARCH_ROLE_OPTIONS.map((r) => r.label)))
 const COUNTS = [0, 1, 7, 72, 1234, 12345]
@@ -319,5 +324,48 @@ describe('job page fitTitle (jobMeta)', () => {
       expect(fitJobTitle('Staff Engineer', name, null).length).toBeLessThanOrEqual(TITLE_MAX)
       expect(fitJobTitle('Staff Engineer', name, '$200k–$250k/yr').length).toBeLessThanOrEqual(TITLE_MAX)
     }
+  })
+})
+
+describe('/jobs hub title and description', () => {
+  it('leads with the live count and keeps the six-figure wording', () => {
+    expect(buildJobsHubTitle(3874)).toBe('3,874 Six-Figure Tech Jobs — $100k+ Openings | Six Figure Jobs')
+    expect(buildJobsHubDescription(3874).startsWith('3,874 $100k+ tech jobs open now.')).toBe(true)
+  })
+
+  it('stays within the limits for every count, with or without a page suffix', () => {
+    for (const count of [null, 0, 1, 7, 72, 1234, 12345, 123456]) {
+      expect(buildJobsHubTitle(count).length).toBeLessThanOrEqual(TITLE_MAX)
+      expect(buildJobsHubTitle(count, ' (Page 12)').length).toBeLessThanOrEqual(TITLE_MAX)
+      const d = buildJobsHubDescription(count)
+      expect(d.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
+      expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
+    }
+  })
+
+  it('has no count when it is unknown or zero', () => {
+    expect(buildJobsHubTitle(null)).toBe('Six-Figure Tech Jobs — $100k+ Openings | Six Figure Jobs')
+    expect(buildJobsHubTitle(0)).toBe('Six-Figure Tech Jobs — $100k+ Openings | Six Figure Jobs')
+    expect(buildJobsHubDescription(0).startsWith('$100k+ tech jobs open now.')).toBe(true)
+  })
+})
+
+describe('salary tier title and description', () => {
+  it('stays within the limits for every tier and count', () => {
+    for (const tier of Object.values(SALARY_TIERS)) {
+      for (const count of COUNTS) {
+        expect(buildSalaryTierTitle(tier.rangeLabel, count).length).toBeLessThanOrEqual(TITLE_MAX)
+        const d = buildSalaryTierDescription(tier.rangeLabel, count)
+        expect(d.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN - 20)
+        expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
+      }
+    }
+  })
+
+  it('puts the live count first and names the range', () => {
+    const { rangeLabel } = SALARY_TIERS['100k-plus']
+    expect(buildSalaryTierTitle(rangeLabel, 1234).startsWith(`1,234 ${rangeLabel} Jobs`)).toBe(true)
+    expect(buildSalaryTierDescription(rangeLabel, 1234).startsWith(`1,234 ${rangeLabel} jobs open now.`)).toBe(true)
+    expect(buildSalaryTierTitle(rangeLabel, 0).startsWith(rangeLabel)).toBe(true)
   })
 })

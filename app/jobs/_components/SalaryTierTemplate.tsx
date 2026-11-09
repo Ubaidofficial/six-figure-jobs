@@ -16,6 +16,7 @@ import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
+import { buildSalaryTierDescription, buildSalaryTierTitle } from '@/lib/seo/metaText'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SALARY_TIERS, tierQueryInput, type SalaryTierId } from '@/lib/jobs/salaryTiers'
 import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
@@ -24,6 +25,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const SITE_URL = getSiteUrl()
@@ -116,11 +118,8 @@ export function buildSalaryTierMetadata(
   options?: { canonicalPath?: string },
 ): Metadata {
   const tier = SALARY_TIERS[tierId]
-  const title = `Top ${tier.rangeLabel} Jobs | ${SITE_NAME}`
-  const description =
-    total > 0
-      ? `Browse ${total.toLocaleString()} ${tier.rangeLabel} jobs with published salary ranges, and fresh listings by role, location, and work type.`
-      : `Browse ${tier.rangeLabel} jobs with published salary ranges.`
+  const title = buildSalaryTierTitle(tier.rangeLabel, total)
+  const description = buildSalaryTierDescription(tier.rangeLabel, total)
 
   const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${tierId}`
   return {
@@ -362,11 +361,13 @@ export async function SalaryTierTemplate({
         title="Jobs"
         summary={
           <>
-            <strong>{data.total.toLocaleString()}</strong> {data.total === 1 ? 'job' : 'jobs'} with a published salary
+            Every job here shows a published salary in the {tier.rangeLabel} range
             {avgSalary ? <> · average <strong>{formatUsdK(avgSalary)}</strong></> : null}
             {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
           </>
         }
+        cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${data.total === 1 ? 'job' : 'jobs'}` : undefined}
+        stats={workTypeStats(facets.workTypes, (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1), remoteMode)}
         related={topRolesRow(`Top roles at ${tier.rangeLabel}`, topRoles)}
         toolbar={<JobsToolbar facets={facets} salaryPresetLabel={tier.rangeLabel} />}
       />

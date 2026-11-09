@@ -21,6 +21,8 @@ import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { displayKeyword } from '@/lib/search/displayKeyword'
+import { workTypeStats } from '@/lib/listing/workTypeStats'
+import { buildJobsHubDescription, buildJobsHubTitle } from '@/lib/seo/metaText'
 import { getSearchVocabulary } from '@/lib/search/vocabulary'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 
@@ -105,27 +107,37 @@ export async function generateMetadata({
   const pageNumber = readListingPageParam(sp)
   const pageSuffix = pageNumber > 1 ? ` (Page ${pageNumber})` : ''
 
+  // The live count is the same `total` the page itself shows for the unfiltered list, so title, description and the
+  // "Browse N jobs" button agree. Filtered and deep pages are noindex, so they skip the extra query.
+  let total: number | null = null
+  if (!noindexUtilityState) {
+    try {
+      total = (await queryJobs({ page: 1, pageSize: 1, sortBy: 'date' })).total
+    } catch (error) {
+      logRuntimeFallback('jobs.page.metadata', error)
+    }
+  }
+  const title = buildJobsHubTitle(total, pageSuffix)
+  const description = buildJobsHubDescription(total)
+
   return {
-    title: `Six-Figure Tech Jobs — Browse $100k+ Openings${pageSuffix} | ${SITE_NAME}`,
-    description:
-      'Browse $100k+ tech jobs with published salaries. Filter by role, location, remote work, seniority and company size.',
+    title,
+    description,
     alternates: {
       canonical,
     },
     robots: noindexUtilityState ? { index: false, follow: true } : { index: true, follow: true },
     openGraph: { images: defaultOgImages(),
-      title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
-      description:
-        'Thousands of $100k+ tech jobs with salary ranges, and fresh listings by role, location, and work type.',
+      title,
+      description,
       url: canonical,
       siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
-      description:
-        'Thousands of $100k+ tech jobs with published salaries and direct links to apply.',
+      title,
+      description,
     },
   }
 }
@@ -522,19 +534,11 @@ export default async function JobsIndexPage({
   const shownKeyword = keywordLabel.length > 80 ? `${keywordLabel.slice(0, 80)}…` : keywordLabel
   const jobsWord = data.total === 1 ? 'job' : 'jobs'
   const updatedSentence = lastUpdatedLabel ? ` Updated ${lastUpdatedLabel}.` : ''
-  // Counts are for the current search with that work type applied, so each link shows what it will return.
-  const workTypeStats = rawRemoteMode
-    ? []
-    : [
-        { label: 'remote roles', mode: 'remote', count: facets.workTypes.remote },
-        { label: 'hybrid roles', mode: 'hybrid', count: facets.workTypes.hybrid },
-        { label: 'on-site roles', mode: 'onsite', count: facets.workTypes.onsite },
-      ].map((s) => ({
-        label: s.label,
-        count: s.count,
-        href: buildPageHref(basePath, { ...sp, remoteMode: s.mode }, 1),
-        nofollow: true,
-      }))
+  const workTypeLinks = workTypeStats(
+    facets.workTypes,
+    (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1),
+    rawRemoteMode,
+  )
 
     return (
       <ListingPage>
@@ -597,13 +601,13 @@ export default async function JobsIndexPage({
               </>
             ) : (
               <>
-                Every listing shows a published salary. Browse <strong>{data.total.toLocaleString()}</strong> open{' '}
-                {data.total === 1 ? 'role' : 'roles'} by role, country, remote work or seniority.{updatedSentence}
+                Every listing shows a published salary. Filter by role, country, remote work or seniority.
+                {updatedSentence}
               </>
             )
           }
           cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${jobsWord}` : undefined}
-          stats={workTypeStats}
+          stats={workTypeLinks}
           toolbar={<JobsToolbar facets={facets} />}
         />
 

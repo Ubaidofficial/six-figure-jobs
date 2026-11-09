@@ -172,3 +172,35 @@ export function buildCompaniesIndexDescription(totalCompanies: number, totalElig
     ],
   )
 }
+
+/**
+ * /jobs hub title. Keeps the established "Six-Figure Tech Jobs" wording and leads with the live count when it is
+ * known. `pageSuffix` is " (Page 2)" style text for deeper pages.
+ */
+export function buildJobsHubTitle(total: number | null, pageSuffix = ''): string {
+  return buildListingTitle({
+    topic: 'Six-Figure Tech Jobs',
+    count: total,
+    qualifier: `— $100k+ Openings${pageSuffix}`,
+  })
+}
+
+/** /jobs hub description with the live count. Pass the same total the page shows, so the two never disagree. */
+export function buildJobsHubDescription(total: number | null): string {
+  return buildListingDescription(`${countPrefix(total ?? 0)}$100k+ tech jobs open now.`, [
+    ['Filter by role, country, remote work or seniority.', 'Filter by role, country or seniority.'],
+  ])
+}
+
+/** Salary-tier page title ("1,234 $100k+ Jobs with Published Salaries | Six Figure Jobs"). */
+export function buildSalaryTierTitle(rangeLabel: string, total: number): string {
+  return buildListingTitle({ topic: `${rangeLabel} Jobs`, count: total, qualifier: 'with Published Salaries' })
+}
+
+/** Salary-tier page description with the live count. */
+export function buildSalaryTierDescription(rangeLabel: string, total: number): string {
+  if (total <= 0) return buildDescription(`Browse ${rangeLabel} jobs.`, [SALARY_SHOWN])
+  return buildListingDescription(`${countPrefix(total)}${rangeLabel} jobs open now.`, [
+    ['Filter by role, country, remote work or seniority.', 'Filter by role or country.'],
+  ])
+}
