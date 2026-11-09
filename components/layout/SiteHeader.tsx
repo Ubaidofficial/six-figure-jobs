@@ -97,6 +97,7 @@ export function SiteHeader() {
             className={styles.searchInput}
             placeholder="Find roles, companies, or skills"
             shortcut={pathname !== '/'}
+            shortcutHint={pathname !== '/'}
           />
         </form>
 

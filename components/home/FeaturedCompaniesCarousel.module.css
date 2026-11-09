@@ -5,9 +5,8 @@
    ========================================================================== */
 
 .section {
-  margin: var(--space-32) auto 0;
-  max-width: 72rem;
-  padding: 0 var(--space-16);
+  /* As wide as the hero and the job lists around it (the page's main already sets the side padding). */
+  margin: var(--space-32) 0 0;
 }
 
 .header {

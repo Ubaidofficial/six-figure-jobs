@@ -34,7 +34,7 @@ export type RemoteRegionDef = {
 }
 
 export const REMOTE_REGIONS: readonly RemoteRegionDef[] = [
-  { slug: 'global', label: 'Worldwide', heading: 'Worldwide Remote Jobs', countries: null },
+  { slug: 'global', label: 'Anywhere in the world', heading: 'Worldwide Remote Jobs', countries: null },
   { slug: 'us-only', label: 'US', heading: 'US Remote Jobs', countries: ['US'] },
   { slug: 'canada', label: 'Canada', heading: 'Canada Remote Jobs', countries: ['CA'] },
   { slug: 'australia', label: 'Australia', heading: 'Australia Remote Jobs', countries: ['AU'] },
@@ -75,6 +75,45 @@ export function normalizeRemoteRegionSlug(raw: string | string[] | undefined | n
 /** Same predicate as the `remoteOnly` filter in queryJobs. */
 export const REMOTE_JOB_CLAUSE: Prisma.JobWhereInput = { OR: [{ remote: true }, { remoteMode: 'remote' }] }
 
+// "Anywhere in the world" needs the posting to say so. A remote job with no country is not enough: on the live site
+// (2026-11-09) most of the 1,021 such jobs read "Remote (US)", "San Francisco Bay Area or Remote (U.S.)" or a US city.
+const WORLDWIDE_WORDS = ['worldwide', 'anywhere', 'global'] as const
+// ...and to name no place or time zone that limits it: "Anywhere in the US", "Global (EMEA)", "Remote - anywhere, EST".
+// Read loosely on purpose: leaving out a truly worldwide job is better than offering a US-only one to the world.
+const LIMITING_WORDS = [
+  ' us', '(us', 'us)', 'u.s', 'usa', 'united states', 'america', 'canada', ' uk', '(uk', 'united kingdom', 'britain',
+  'europe', 'emea', 'apac', 'asia', 'latam', 'africa', 'australia', 'india', 'germany', 'time zone', 'timezone', 'utc',
+  'gmt', 'cet', ' est', ' pst', ' cst',
+] as const
+const LIMITING_PREFIXES = ['us ', 'us-', 'us,', 'uk ', 'uk-', 'uk,'] as const
+
+/** True when a remote job's location text says it can be done from anywhere, and names nothing that limits it. */
+export function isWorldwideLocationText(text: string | null | undefined): boolean {
+  const t = String(text ?? '').toLowerCase()
+  return (
+    WORLDWIDE_WORDS.some((w) => t.includes(w)) &&
+    !LIMITING_WORDS.some((w) => t.includes(w)) &&
+    !LIMITING_PREFIXES.some((p) => t.startsWith(p))
+  )
+}
+
+/** The database form of isWorldwideLocationText, for remote jobs with no country (the same words, the same rules). */
+const WORLDWIDE_CLAUSE: Prisma.JobWhereInput = {
+  AND: [
+    REMOTE_JOB_CLAUSE,
+    { countryCode: null },
+    { OR: WORLDWIDE_WORDS.map((w) => ({ locationRaw: { contains: w, mode: 'insensitive' as const } })) },
+    {
+      NOT: {
+        OR: [
+          ...LIMITING_WORDS.map((w) => ({ locationRaw: { contains: w, mode: 'insensitive' as const } })),
+          ...LIMITING_PREFIXES.map((p) => ({ locationRaw: { startsWith: p, mode: 'insensitive' as const } })),
+        ],
+      },
+    },
+  ],
+}
+
 /**
  * The filter for "remote jobs in <region>". An unknown slug keeps the old behaviour (an exact match on the stored
  * region) so nothing that worked before stops working.
@@ -83,22 +122,19 @@ export function remoteRegionWhere(slug: string): Prisma.JobWhereInput {
   const def = remoteRegionDef(slug)
   if (!def) return { remoteRegion: slug }
   const stored: Prisma.JobWhereInput = { remoteRegion: { equals: def.slug, mode: 'insensitive' } }
-  if (def.countries === null) {
-    // Worldwide: remote jobs not tied to any country.
-    return { AND: [REMOTE_JOB_CLAUSE, { countryCode: null }] }
-  }
+  if (def.countries === null) return WORLDWIDE_CLAUSE
   return { AND: [REMOTE_JOB_CLAUSE, { OR: [{ countryCode: { in: [...def.countries] } }, stored] }] }
 }
 
-/** Remote jobs per region from per-country counts (pure; the database part is in siteCounts). */
+/** Remote jobs per region from per-country counts and the worldwide count (pure; the database part is in siteCounts). */
 export function countRemoteByRegion(
   remoteByCountry: ReadonlyArray<{ code: string; count: number }>,
-  remoteWithoutCountry: number,
+  remoteWorldwide: number,
 ): Record<string, number> {
   const out: Record<string, number> = {}
   for (const def of REMOTE_REGIONS) {
     if (def.countries === null) {
-      out[def.slug] = remoteWithoutCountry
+      out[def.slug] = remoteWorldwide
       continue
     }
     const set = new Set(def.countries)

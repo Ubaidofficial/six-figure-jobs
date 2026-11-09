@@ -19,6 +19,8 @@ export type JobsFacets = {
   techs?: JobsFacetItem[]
   /** When true, the panel shows the Visa sponsorship toggle (the page must apply the `visa` param). */
   visaFilter?: boolean
+  /** Remote jobs per region ("global" = can be done from anywhere). When present, the panel shows a Remote region filter. */
+  remoteRegions?: Array<{ value: string; label: string; count: number }>
 }
 
 export type LocationPreset = {
@@ -83,6 +85,7 @@ export function JobsFiltersPanel({
 
   const selectedCountry = searchParams.get('country') || ''
   const selectedRemoteMode = searchParams.get('remoteMode') || ''
+  const selectedRemoteRegion = (searchParams.get('remoteRegion') || '').toLowerCase()
   const selectedRoles = React.useMemo(
     () => parseMulti(searchParams, 'role'),
     [searchParams]
@@ -123,6 +126,7 @@ export function JobsFiltersPanel({
     replaceSearchParams(pathname, searchParams, router, (next) => {
       next.delete('country')
       next.delete('remoteMode')
+      next.delete('remoteRegion')
       next.delete('role')
       next.delete('skill')
       next.delete('seniority')
@@ -171,6 +175,7 @@ export function JobsFiltersPanel({
                     max={450_000}
                     step={5_000}
                     value={minSalary}
+                    style={{ '--fill': `${((minSalary - 100_000) / (450_000 - 100_000)) * 100}%` } as React.CSSProperties}
                     aria-label="Minimum salary"
                     onChange={(e) => {
                       const value = Number(e.target.value) || 100_000
@@ -223,7 +228,7 @@ export function JobsFiltersPanel({
                       <button
                         key={c.value}
                         type="button"
-                        className={styles.option}
+                        className={`${styles.option} ${active ? styles.optionOn : ''}`}
                         onClick={() => {
                           replaceSearchParams(pathname, searchParams, router, (next) => {
                             if (active) next.delete('country')
@@ -256,7 +261,7 @@ export function JobsFiltersPanel({
             Work Type <span className={styles.chev}>⌄</span>
           </summary>
           <div className={styles.content}>
-            <div className={styles.radios} role="radiogroup" aria-label="Work type">
+            <div className={styles.radios} role="group" aria-label="Work type">
               {(
                 [
                   { value: '', label: 'Any', count: null },
@@ -270,7 +275,8 @@ export function JobsFiltersPanel({
                   <button
                     key={opt.value || 'any'}
                     type="button"
-                    className={styles.radio}
+                    className={`${styles.radio} ${active ? styles.radioOn : ''}`}
+                    aria-pressed={active}
                     onClick={() => {
                       replaceSearchParams(pathname, searchParams, router, (next) => {
                         if (!opt.value) next.delete('remoteMode')
@@ -294,6 +300,48 @@ export function JobsFiltersPanel({
             </div>
           </div>
         </details>
+
+        {facets.remoteRegions && facets.remoteRegions.length > 0 ? (
+          <details className={styles.section} open>
+            <summary className={styles.summary}>
+              Remote region <span className={styles.chev}>⌄</span>
+            </summary>
+            <div className={styles.content}>
+              <div className={styles.list} role="group" aria-label="Remote region">
+                {facets.remoteRegions
+                  .filter((r) => r.count > 0 || r.value === selectedRemoteRegion)
+                  .map((r) => {
+                    const active = selectedRemoteRegion === r.value
+                    return (
+                      <button
+                        key={r.value}
+                        type="button"
+                        className={`${styles.option} ${active ? styles.optionOn : ''}`}
+                        aria-pressed={active}
+                        onClick={() => {
+                          replaceSearchParams(pathname, searchParams, router, (next) => {
+                            if (active) next.delete('remoteRegion')
+                            else next.set('remoteRegion', r.value)
+                            // A region means remote work; a hybrid or on-site choice would leave nothing to show.
+                            if (!active && next.get('remoteMode') !== 'remote') next.delete('remoteMode')
+                            next.delete('page')
+                          })
+                        }}
+                      >
+                        <span className={styles.left}>
+                          <span className={`${styles.check} ${active ? styles.checked : ''}`}>
+                            {active ? <span className={styles.checkMark}>✓</span> : null}
+                          </span>
+                          <span className={styles.name}>{r.label}</span>
+                        </span>
+                        <span className={styles.count}>{r.count.toLocaleString()}</span>
+                      </button>
+                    )
+                  })}
+              </div>
+            </div>
+          </details>
+        ) : null}
 
         {!hideRoleFilter ? (
           <details className={styles.section} open>
@@ -328,7 +376,7 @@ export function JobsFiltersPanel({
                         <button
                           key={r.value}
                           type="button"
-                          className={styles.option}
+                          className={`${styles.option} ${active ? styles.optionOn : ''}`}
                           onClick={() => {
                             replaceSearchParams(pathname, searchParams, router, (next) => {
                               const current = parseMulti(next, 'role')
@@ -378,7 +426,7 @@ export function JobsFiltersPanel({
                   <button
                     key={opt.value}
                     type="button"
-                    className={styles.option}
+                    className={`${styles.option} ${active ? styles.optionOn : ''}`}
                     onClick={() => {
                       replaceSearchParams(pathname, searchParams, router, (next) => {
                         const current = parseMulti(next, 'seniority')
@@ -425,7 +473,7 @@ export function JobsFiltersPanel({
                   <button
                     key={opt.value}
                     type="button"
-                    className={styles.option}
+                    className={`${styles.option} ${active ? styles.optionOn : ''}`}
                     onClick={() => {
                       replaceSearchParams(pathname, searchParams, router, (next) => {
                         const current = parseMulti(next, 'companySize')
@@ -465,7 +513,7 @@ export function JobsFiltersPanel({
                     <button
                       key={t.value}
                       type="button"
-                      className={styles.option}
+                      className={`${styles.option} ${active ? styles.optionOn : ''}`}
                       aria-pressed={active}
                       onClick={() => {
                         replaceSearchParams(pathname, searchParams, router, (next) => {
@@ -502,7 +550,7 @@ export function JobsFiltersPanel({
                   return (
                     <button
                       type="button"
-                      className={styles.option}
+                      className={`${styles.option} ${active ? styles.optionOn : ''}`}
                       aria-pressed={active}
                       onClick={() => {
                         replaceSearchParams(pathname, searchParams, router, (next) => {

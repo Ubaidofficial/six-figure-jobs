@@ -411,34 +411,110 @@
   border: 0;
 }
 
-/* Small desktops: row 1 = logo | search, row 2 = nav (the five links plus a 420px+ field do not fit one row yet). */
+/* Desktop: one floating capsule as wide as the page content (the homepage main is 1600px with 40px sides), holding
+   logo | the five links as a segmented pill | search. It floats 12px below the top edge and stays pinned; the page
+   scrolls behind the gaps around it. Phones and tablets keep the two-row layout above. */
 @media (min-width: 1024px) {
   .header {
-    top: -80px;
+    top: 0;
+    padding: 12px 0;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .header.scrolled {
+    background: transparent;
+    border-bottom-color: transparent;
+    box-shadow: none;
   }
 
   .inner {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:
-      'brand search'
-      'nav nav';
-    grid-template-rows: 80px auto;
-    padding-bottom: 8px;
+    width: calc(100% - 80px);
+    max-width: 1520px;
+    height: 64px;
+    padding: 0 8px 0 22px;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas: 'brand nav search';
+    grid-template-rows: 64px;
+    column-gap: 20px;
+    border: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg-1) 84%, transparent);
+    backdrop-filter: saturate(1.4) blur(16px);
+    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    box-shadow: 0 1px 2px rgba(20, 20, 10, 0.04);
+    transition:
+      background-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .scrolled .inner {
+    /* Nearly opaque once content passes under it: headings behind a glassier capsule read as clutter. */
+    background: color-mix(in srgb, var(--color-bg-1) 97%, transparent);
+    box-shadow: 0 1px 2px rgba(20, 20, 10, 0.05), 0 12px 32px rgba(20, 20, 10, 0.1);
+  }
+
+  .logo {
+    font-size: 24px;
+  }
+
+  /* The five links as one segmented control: a tinted track, the current page raised on it. */
+  .nav {
+    display: inline-flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-fg) 5%, transparent);
+  }
+
+  .navLink {
+    min-height: 36px;
+    padding: 6px 15px;
+    border: 0;
+    font-size: 15px;
+  }
+
+  .navLink:hover {
+    background: color-mix(in srgb, var(--color-bg-1) 75%, transparent);
+    border-color: transparent;
+  }
+
+  .navLink.navLinkActive,
+  .navLink.navLinkActive:hover {
+    background: var(--color-bg-1);
+    box-shadow:
+      0 1px 2px rgba(20, 20, 10, 0.1),
+      0 0 0 1px color-mix(in srgb, var(--color-fg) 6%, transparent);
   }
 
   .search {
-    max-width: 560px;
+    justify-self: end;
+    max-width: 380px;
+    margin: 0; /* the base rule centres it with auto margins */
     padding: 0;
   }
 
   .searchGlyph {
-    top: 24px;
+    top: 50%;
   }
 
-  .nav {
-    display: inline-flex;
-    justify-self: start;
-    padding-top: 4px; /* breathing room above the nav pills while this row is the pinned one */
+  .searchInput {
+    height: 44px;
+    padding-right: 40px;
+    background: var(--color-bg-0);
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 7%, transparent);
+  }
+
+  /* The "/" shortcut hint (HeroSearchInput), drawn inside the field's right edge. */
+  .search kbd {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    margin: 0;
+    transform: translateY(-50%);
+    background: var(--color-bg-1);
   }
 
   .right {
@@ -458,21 +534,10 @@
   }
 }
 
-/* Wide desktops: one row, logo | nav | search. */
-@media (min-width: 1360px) {
-  .header {
-    top: 0;
-  }
-
-  .inner {
-    grid-template-columns: auto auto minmax(0, 1fr);
-    grid-template-areas: 'brand nav search';
-    grid-template-rows: 80px;
-    padding-bottom: 0;
-  }
-
-  .nav {
-    padding-top: 0;
+/* The kicker joins the logo once there is room for it next to the links and the search. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .kicker {
+    display: none;
   }
 }
 
