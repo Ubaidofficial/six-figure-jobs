@@ -48,6 +48,18 @@
   color: var(--color-text-1);
 }
 
+.note strong {
+  font-weight: 600;
+  color: var(--color-text-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.link {
+  color: var(--color-primary-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .label {
   display: inline-flex;
   align-items: center;
