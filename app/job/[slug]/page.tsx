@@ -54,6 +54,7 @@ import {
 } from './JobDetailParts'
 import styles from './JobDetail.module.css'
 import { loadPeerSalaries, rankSalary, type SalaryRank } from '@/lib/jobs/salaryRank'
+import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { salaryMidpoint } from '@/lib/jobs/salarySnapshot'
 import { structureDescription } from '@/lib/jobs/descriptionStructure'
 
@@ -315,15 +316,18 @@ export default async function JobPage({
     `job.${typedJob.id}.similar`,
     async () =>
       canonicalRoleSlug || similarKeyword
-        ? queryJobs({
-            roleSlugs: canonicalRoleSlug ? [canonicalRoleSlug] : undefined,
-            keyword: similarKeyword ?? undefined,
-            sortBy: similarKeyword ? 'relevant' : undefined,
-            countryCode: typedJob.countryCode || undefined,
-            isHundredKLocal: true,
-            page: 1,
-            pageSize: 7,
-          })
+        ? // Shared by every job of the same role (or title words) and country, so cached like the role pages' lists.
+          memoAsync(stableKey('job-similar', canonicalRoleSlug, similarKeyword, typedJob.countryCode), DEFAULT_TTL_MS, () =>
+            queryJobs({
+              roleSlugs: canonicalRoleSlug ? [canonicalRoleSlug] : undefined,
+              keyword: similarKeyword ?? undefined,
+              sortBy: similarKeyword ? 'relevant' : undefined,
+              countryCode: typedJob.countryCode || undefined,
+              isHundredKLocal: true,
+              page: 1,
+              pageSize: 7,
+            }),
+          )
         : { jobs: [], total: 0, page: 1, pageSize: 7, totalPages: 1 },
     () => ({
       jobs: [],

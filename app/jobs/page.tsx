@@ -114,7 +114,7 @@ export async function generateMetadata({
   let total: number | null = null
   if (!noindexUtilityState) {
     try {
-      total = (await queryJobs({ page: 1, pageSize: 1, sortBy: 'date' })).total
+      total = (await memoAsync(stableKey('jobs-hub-total'), DEFAULT_TTL_MS, () => queryJobs({ page: 1, pageSize: 1, sortBy: 'date' }))).total
     } catch (error) {
       logRuntimeFallback('jobs.page.metadata', error)
     }
@@ -374,7 +374,7 @@ export default async function JobsIndexPage({
   }
 
   try {
-    const data = await queryJobs(queryInput)
+    const data = await memoAsync(stableKey('jobs-list', queryInput), DEFAULT_TTL_MS, () => queryJobs(queryInput))
     const jobs = data.jobs as JobWithCompany[]
     const topRoles = await loadTopRolePages({})
 
@@ -465,7 +465,7 @@ export default async function JobsIndexPage({
   const lastUpdatedLabel = mostRecentUpdateMs ? formatRelativeTime(mostRecentUpdateMs) : null
 
   // For each salary band, pull the most popular role+country JobSlices
-    const bandSlices = await Promise.all(
+    const bandSlices = await memoAsync(stableKey('jobs-hub-band-slices'), DEFAULT_TTL_MS, () => Promise.all(
       BANDS.map((band) =>
         prisma.jobSlice.findMany({
           where: {
@@ -482,7 +482,7 @@ export default async function JobsIndexPage({
           take: 12,
         })
       )
-    )
+    ))
   const bandCanonicalLinksAll = bandSlices.map((slices) => {
     const seen = new Set<string>()
     const normalized: Array<{
@@ -516,7 +516,9 @@ export default async function JobsIndexPage({
     return normalized.slice(0, 12)
   })
   // A chip must open a page that shows jobs: the role x band page redirects to the role page when it has none.
-  const bandCanonicalLinks = await Promise.all(bandCanonicalLinksAll.map((links) => dropEmptyRoleBandLinks(links)))
+  const bandCanonicalLinks = await memoAsync(stableKey('jobs-hub-band-links', bandCanonicalLinksAll.map((links) => links.map((l) => l.href))), DEFAULT_TTL_MS, () =>
+    Promise.all(bandCanonicalLinksAll.map((links) => dropEmptyRoleBandLinks(links))),
+  )
 
   const basePath = '/jobs'
   const totalPages = data.totalPages
