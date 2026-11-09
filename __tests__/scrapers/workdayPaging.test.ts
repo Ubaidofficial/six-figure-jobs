@@ -28,5 +28,7 @@ describe('scrapeWorkday paging', () => {
     const jobs = await scrapeWorkday('https://acme.wd5.myworkdayjobs.com/wday/cxs/acme/External/jobs')
     expect(Math.max(...limits)).toBeLessThanOrEqual(20)
     expect(jobs).toHaveLength(45)
+    // Requisition numbers repeat across employers; the id carries the Workday tenant.
+    expect(jobs[0].externalId).toBe('acme:0')
   })
 })

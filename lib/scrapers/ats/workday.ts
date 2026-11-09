@@ -360,14 +360,17 @@ function mapWorkdayDetailToJob(
     parsePostedOn(summary.postedOn) ||
     null
 
+  // Requisition numbers ("R1005314", "JR19876") are counted per employer, so two Workday employers can share one;
+  // without the tenant the second employer's job would land on the first one's row (job id is source + externalId).
+  const reqId =
+    detail?.jobReqId ||
+    detail?.jobPostingId ||
+    detail?.id ||
+    summary.externalPath ||
+    summary.title ||
+    'unknown'
   return {
-    externalId:
-      detail?.jobReqId ||
-      detail?.jobPostingId ||
-      detail?.id ||
-      summary.externalPath ||
-      summary.title ||
-      'unknown',
+    externalId: `${context.tenant}:${reqId}`,
     title: detail?.title || summary.title || 'Untitled',
     url:
       detail?.externalUrl ||
