@@ -82,7 +82,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
       </h1>
 
       <p className={styles.subheadline}>
-        {jobCount.toLocaleString()} roles
+        {jobCount.toLocaleString()} high-paying 6-figure roles
         {companyCount > 0 ? ` at ${companyCount.toLocaleString()} companies` : ''}. Every listing shows its pay range.
         Every apply button says where it goes: the employer&rsquo;s own site, or the job board the role was posted on.
       </p>
