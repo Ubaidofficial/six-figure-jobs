@@ -28,6 +28,7 @@
     "seed:ci": "tsx scripts/seed-ci.ts",
     "check-closed:freehire": "tsx scripts/freehire-closed-check.ts",
     "sync:freehire": "tsx scripts/freehire-sync.ts",
+    "sync:fourdayweek": "tsx scripts/fourdayweek-sync.ts",
     "scraper:smoke": "node --import tsx scripts/smokeScrapers.ts",
     "scraper:audit": "node --import tsx scripts/auditScrapers.ts",
     "scraper:ats:report": "tsx scripts/reportAtsCoverage.ts",

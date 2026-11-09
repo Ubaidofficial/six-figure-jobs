@@ -77,6 +77,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       ['Career Blog', '/blog'],
       ['Visa Sponsorship Jobs', '/jobs/visa-sponsorship'],
       ['No-Degree Tech Jobs', '/jobs/no-degree'],
+      ['4-Day Work Week Jobs', '/jobs/4-day-week'],
       ['Senior-Level Jobs', '/jobs/level/senior'],
     ],
   },

@@ -737,6 +737,9 @@ export default async function HomePage() {
             <Link href="/jobs/no-degree" className="block hover:text-foreground">
               Six-Figure Jobs Without a Degree
             </Link>
+            <Link href="/jobs/4-day-week" className="block hover:text-foreground">
+              4-Day Work Week Jobs
+            </Link>
           </div>
           <div className="space-y-2">
             <p className="font-medium text-foreground">Top Companies</p>

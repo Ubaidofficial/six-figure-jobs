@@ -267,6 +267,7 @@ export default async function NoDegreeJobsPage({
             { href: '/high-paying-jobs', label: 'High-paying jobs ranked by pay' },
             { href: '/remote', label: 'Remote $100k+ jobs' },
             { href: '/jobs/visa-sponsorship', label: 'Visa sponsorship jobs' },
+            { href: '/jobs/4-day-week', label: '4-day work week jobs' },
             { href: '/jobs/100k-plus', label: 'All $100k+ jobs' },
             { href: '/jobs/200k-plus', label: '$200k+ jobs' },
             { href: '/salary', label: 'Salary guides' },
