@@ -33,7 +33,9 @@ export function loadFreehireCatalog(): Promise<FreehireCatalog | null> {
       const res = await fetch(FREEHIRE_CATALOG_URL, {
         headers: { 'User-Agent': '6FigJobs/1.0 (+https://www.6figjobs.com)' },
         signal: AbortSignal.timeout(2500),
-        cache: 'no-store',
+        // Cacheable, never `cache: 'no-store'`: a no-store fetch makes Next render the whole homepage on every request
+        // (it had been `private, no-store` and 4-8 s slow since 2026-11-09 17:28 instead of a 5-minute ISR page).
+        next: { revalidate: FREEHIRE_CATALOG_TTL_MS / 1000 },
       })
       return res.ok ? parseFreehireCatalog(await res.json()) : null
     } catch {
