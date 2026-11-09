@@ -6,6 +6,7 @@ import { queryJobs, buildWhere, type JobWithCompany } from '../../lib/jobs/query
 import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 import { prisma } from '../../lib/prisma'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
+import { fitTitle } from '../../lib/seo/metaText'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
 import { collectRemoteRoleRows } from '../../lib/seo/remoteSitemap'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
@@ -126,9 +127,18 @@ export async function generateMetadata({
   const canonical = `${SITE_URL}${canonicalPath}`
   const noindexUtilityState = hasNonPaginationQueryParams(sp)
   const regionLabel = prettyRemoteRegion(activeRemoteRegion)
+  // Same wording as before; the brand, then the count, drop out when the title would pass TITLE_MAX.
   const title = regionLabel
-    ? `${regionLabel} Remote $100k+ Jobs (${total.toLocaleString()} Open Roles) | ${SITE_NAME}`
-    : `Remote $100k+ Jobs — ${total.toLocaleString()} Six-Figure Openings | ${SITE_NAME}`
+    ? fitTitle([
+        `${regionLabel} Remote $100k+ Jobs (${total.toLocaleString()} Open Roles) | ${SITE_NAME}`,
+        `${regionLabel} Remote $100k+ Jobs (${total.toLocaleString()} Open Roles)`,
+        `${regionLabel} Remote $100k+ Jobs`,
+      ])
+    : fitTitle([
+        `Remote $100k+ Jobs — ${total.toLocaleString()} Six-Figure Openings | ${SITE_NAME}`,
+        `Remote $100k+ Jobs — ${total.toLocaleString()} Six-Figure Openings`,
+        `Remote $100k+ Jobs`,
+      ])
   const description = regionLabel
     ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs in engineering, product, data and more, with published salaries and fresh listings.`
     : `Browse ${total.toLocaleString()} remote six-figure jobs with published salaries and links to apply. Engineering, product, data and more, new jobs added daily.`

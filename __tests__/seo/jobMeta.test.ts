@@ -7,22 +7,27 @@ describe('fitTitle', () => {
     )
   })
 
-  it('drops the brand suffix before dropping anything the searcher cares about', () => {
+  it('drops the brand, then the salary\'s /yr, before dropping anything the searcher cares about', () => {
     const title = fitTitle('Principal Software Engineer', 'Acme Robotics', '$200k–$250k/yr')
-    expect(title).toBe('Principal Software Engineer at Acme Robotics — $200k–$250k/yr')
-    expect(title.length).toBeLessThanOrEqual(65)
+    expect(title).toBe('Principal Software Engineer at Acme Robotics — $200k–$250k')
+    expect(title.length).toBeLessThanOrEqual(60)
   })
 
-  it('drops the company but keeps the salary for a long role + company', () => {
+  it('drops the company but keeps the salary when role + company do not fit', () => {
+    const title = fitTitle('Lead Software Engineer', 'Green Dot Corporation', '$140k–$199k/yr')
+    expect(title).toBe('Lead Software Engineer — $140k–$199k/yr')
+  })
+
+  it('shortens a very long role rather than dropping the salary', () => {
     const title = fitTitle('Technical Program Manager, Omen Mission Systems', 'Anduril', '$166k–$220k/yr')
-    expect(title).toBe('Technical Program Manager, Omen Mission Systems — $166k–$220k/yr')
-    expect(title.length).toBeLessThanOrEqual(65)
+    expect(title).toBe('Technical Program Manager, Omen Mission… — $166k–$220k')
+    expect(title.length).toBeLessThanOrEqual(60)
   })
 
-  it('never exceeds 65 characters', () => {
+  it('never exceeds 60 characters', () => {
     const title = fitTitle('A'.repeat(90), 'Acme', '$200k/yr')
-    expect(title.length).toBeLessThanOrEqual(65)
-    expect(title.endsWith('…')).toBe(true)
+    expect(title.length).toBeLessThanOrEqual(60)
+    expect(title.endsWith('— $200k')).toBe(true)
   })
 
   it('works without a salary', () => {
