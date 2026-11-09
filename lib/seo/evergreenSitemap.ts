@@ -11,6 +11,8 @@
 
 import { prisma } from '../prisma'
 import { BLOG_POSTS } from '../blog/posts'
+import { loadDegreeRequiredJobIds } from '../jobs/degreeRequirement'
+import { HIGH_PAYING_MIN_ROLES_TO_INDEX, loadHighPayingJobs } from '../jobs/highPayingJobs'
 import { buildGlobalExclusionsWhere, buildHighSalaryEligibilityWhere, buildWhere } from '../jobs/queryJobs'
 import { getTier1Slugs, isTier1Role } from '../roles/canonicalSlugs'
 import { isCityPageIndexable, isRemoteRolePageIndexable } from './indexabilityGates'
@@ -207,6 +209,28 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
   return entries
 }
 
+/**
+ * Hub pages built from live data, listed only when they pass the same rule their robots tag uses, so the sitemap never
+ * advertises one while it is noindex: /high-paying-jobs with enough ranked roles, /jobs/no-degree with any jobs. A
+ * failed lookup leaves the page out.
+ */
+async function collectDataPageEntries(lastmod: Date | null): Promise<SitemapEntry[]> {
+  const out: SitemapEntry[] = []
+  try {
+    const { roles } = await loadHighPayingJobs()
+    if (roles.length >= HIGH_PAYING_MIN_ROLES_TO_INDEX) out.push({ path: '/high-paying-jobs', lastmod })
+  } catch {
+    // left out
+  }
+  try {
+    const pass = await loadDegreeRequiredJobIds()
+    if ((await prisma.job.count({ where: buildWhere({ noDegreeRequired: pass }) })) > 0) out.push({ path: '/jobs/no-degree', lastmod })
+  } catch {
+    // left out
+  }
+  return out
+}
+
 export async function collectEvergreenEntries(now: number = Date.now()): Promise<SitemapEntry[]> {
   if (cache && now - cache.at < CACHE_TTL_MS) return cache.entries
 
@@ -229,7 +253,8 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
       complete = false
     }
   }
-  const result = [...entries, ...roleEntries]
+  const dataPageEntries = complete ? await collectDataPageEntries(latestJob) : []
+  const result = [...entries, ...roleEntries, ...dataPageEntries]
 
   // Only cache a complete result; a database blip must not freeze a thin sitemap for an hour.
   if (complete) cache = { at: now, entries: result }

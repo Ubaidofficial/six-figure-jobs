@@ -72,10 +72,17 @@ function categoryOf(roleSlug: string): string | null {
   return prefixed[0]?.category ?? null
 }
 
+/** Words that stay in capitals when a slug is title-cased ("hr-director" is "HR Director", not "Hr Director"). */
+const ACRONYMS = new Set(['hr', 'it', 'qa', 'ui', 'ux', 'ai', 'ml', 'vp', 'seo', 'sre', 'gtm', 'cfo', 'cto', 'ceo', 'coo', 'cpo', 'ciso', 'cio', 'fp&a'])
+
 /** Display name of a role page: its search option's label, else the slug in title case. */
 export function roleLabelFor(slug: string): string {
   const hit = CANDIDATES.find((c) => c.slug === slug)
-  return hit?.label ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
+  if (hit) return hit.label
+  return slug
+    .split('-')
+    .map((w) => (ACRONYMS.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ')
 }
 
 /** Jobs for a role page: every stored roleSlug that equals or contains the slug, as buildWhere() matches them. */
