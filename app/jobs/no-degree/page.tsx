@@ -29,7 +29,7 @@ const NO_DEGREE_ROLES = [
   { slug: 'full-stack-engineer', label: 'Full-Stack Engineer', note: 'Open source contributions & side projects count' },
   { slug: 'sales-development-representative', label: 'Sales (SDR/AE)', note: 'Track record beats formal education in sales' },
   { slug: 'product-manager', label: 'Product Manager', note: 'Product sense + domain expertise matters most' },
-  { slug: 'customer-success', label: 'Customer Success', note: 'Communication skills + domain knowledge lead to $100k+' },
+  { slug: 'customer-success-manager', label: 'Customer Success', note: 'Communication skills + domain knowledge lead to $100k+' },
   { slug: 'account-executive', label: 'Account Executive', note: 'Performance-based; top AEs earn $150k–$300k+ without degrees' },
 ]
 

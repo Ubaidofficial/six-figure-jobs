@@ -15,9 +15,8 @@ import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { buildCategoryTitle, buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
-import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
+import { SALARY_BAND_MINS, categoryLinkRole, categoryLocationHref, categorySalaryChips } from '../../../../lib/seo/categoryLinks'
 import { newThisWeekClause } from '../../../../lib/jobs/postedRecently'
-import { countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { resolveJobCategory } from '../../../../lib/seo/jobCategories'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
@@ -154,6 +153,15 @@ export default async function CategoryPage({
     sortBy: 'date',
   })
   const topRoles = await loadTopRolePages({ roleSlugs: cfg.roleSlugs, isHundredKLocal: true })
+  // A role's salary-band page redirects to the role page when no job pays that much: only link the bands that have jobs.
+  const linkRole = categoryLinkRole(cfg.roleSlugs)
+  const bandsWithJobs = new Set<number>()
+  if (linkRole) {
+    const totals = await Promise.all(
+      SALARY_BAND_MINS.map((min) => queryJobs({ roleSlugs: [linkRole], minAnnual: min, pageSize: 1 })),
+    )
+    SALARY_BAND_MINS.forEach((min, i) => totals[i].total > 0 && bandsWithJobs.add(min))
+  }
   const insights = await getCategoryInsights({
     roleSlugs: cfg.roleSlugs,
     isHundredKLocal: true,
@@ -172,7 +180,6 @@ export default async function CategoryPage({
   })
   const faqJsonLd = buildFaqJsonLd(cfg.label)
   const faqs = faqItems(cfg.label)
-  const primaryRoleSlug = cfg.roleSlugs[0]
   const avgSalaryLabel = formatSalary(insights.avgAnnual)
 
   return (
@@ -192,16 +199,7 @@ export default async function CategoryPage({
         }
         cta={total > 0 ? `Browse ${total.toLocaleString()} ${total === 1 ? 'job' : 'jobs'}` : undefined}
         related={topRolesRow(`Top ${cfg.label} roles`, topRoles)}
-        chips={[
-          ...['100k-plus', '200k-plus', '300k-plus', '400k-plus'].map((band) => ({
-            label: `${band.replace('-plus', '')}+`,
-            href: buildJobsPath({ salaryMin: Number(band.replace('k-plus', '000')), roleSlug: primaryRoleSlug }),
-          })),
-          {
-            label: 'Remote $100k+',
-            href: buildJobsPath({ salaryMin: 100_000, roleSlug: primaryRoleSlug, remoteOnly: true }),
-          },
-        ]}
+        chips={categorySalaryChips(cfg.roleSlugs, bandsWithJobs)}
       />
 
       <ListingLayout>
@@ -226,23 +224,10 @@ export default async function CategoryPage({
       <ListingSection title={`${cfg.label} jobs by location`}>
         <LinkChips
           label="Locations"
-          items={[
-            ...LOCATIONS.map((loc) => ({
-              label: loc.code === 'remote' ? 'Remote' : loc.label,
-              href:
-                loc.code === 'remote'
-                  ? `/remote/${primaryRoleSlug}`
-                  : buildJobsPath({
-                      salaryMin: 100_000,
-                      roleSlug: primaryRoleSlug,
-                      countryCode: countrySlugToCode(loc.code) ?? undefined,
-                    }),
-            })),
-            {
-              label: '$200k+ Remote',
-              href: buildJobsPath({ salaryMin: 200_000, roleSlug: primaryRoleSlug, remoteOnly: true }),
-            },
-          ]}
+          items={LOCATIONS.map((loc) => ({
+            label: loc.code === 'remote' ? 'Remote' : loc.label,
+            href: categoryLocationHref(cfg.roleSlugs, loc.code),
+          }))}
         />
       </ListingSection>
 
