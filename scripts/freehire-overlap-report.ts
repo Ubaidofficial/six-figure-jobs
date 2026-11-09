@@ -31,6 +31,8 @@ export function classifyLink(rawUrl: string | null | undefined): LinkClass {
         slug = null
       }
     }
+    // Workable short links (apply.workable.com/j/<id>) name no board; "j" is just the path prefix.
+    if (ats === 'workable' && slug === 'j') slug = null
     return { kind: 'ats', label: ats, boardKey: slug ? `${ats}:${slug}` : null }
   }
   if (/[?&]gh_jid=/.test(url)) return { kind: 'ats', label: 'greenhouse', boardKey: null }
