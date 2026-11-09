@@ -9,11 +9,11 @@ import { notFound } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import { loadTopRolePages, topRolesRow } from '../../../../lib/roles/topRolePages'
-import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Pagination, Prose } from '@/components/listing/ListingParts'
+import { Faq, JobRows, LinkChips, ListingHeader, ListingLayout, ListingPage, ListingSection, Pagination, Prose } from '@/components/listing/ListingParts'
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
-import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
+import { buildCategoryTitle, buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
 import { newThisWeekClause } from '../../../../lib/jobs/postedRecently'
@@ -112,10 +112,7 @@ export async function generateMetadata({
     total >= 5 && isPhaseIndexable({ pathname: `/jobs/category/${category}` })
   const canonical = `${SITE_URL}/jobs/category/${category}`
   const shouldIndex = allowIndex && page === 1
-  const title =
-    total > 0
-      ? `${cfg.label} jobs paying $100k+ (${total.toLocaleString()} openings) | ${SITE_NAME}`
-      : `${cfg.label} jobs paying $100k+ | ${SITE_NAME}`
+  const title = buildCategoryTitle(cfg.label, total)
   const description = buildListingDescription(`${countPrefix(total)}$100k+ ${cfg.label.toLowerCase()} jobs.`, [
     ['Remote, hybrid and on-site roles.'],
   ])
@@ -193,6 +190,7 @@ export default async function CategoryPage({
             {insights.remoteCount ? <> · {insights.remoteCount.toLocaleString()} remote</> : null}
           </>
         }
+        cta={total > 0 ? `Browse ${total.toLocaleString()} ${total === 1 ? 'job' : 'jobs'}` : undefined}
         related={topRolesRow(`Top ${cfg.label} roles`, topRoles)}
         chips={[
           ...['100k-plus', '200k-plus', '300k-plus', '400k-plus'].map((band) => ({
@@ -206,20 +204,22 @@ export default async function CategoryPage({
         ]}
       />
 
-      <JobRows
-        jobs={jobs as JobWithCompany[]}
-        empty={{
-          title: `No ${cfg.label.toLowerCase()} roles meet the $100k+ filter yet.`,
-          body: 'Check back soon, or browse every $100k+ job.',
-          href: '/jobs',
-          hrefLabel: 'Browse all jobs',
-        }}
-      />
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        hrefFor={(n) => (n <= 1 ? `/jobs/category/${category}` : `/jobs/category/${category}?page=${n}`)}
-      />
+      <ListingLayout>
+        <JobRows
+          jobs={jobs as JobWithCompany[]}
+          empty={{
+            title: `No ${cfg.label.toLowerCase()} roles meet the $100k+ filter yet.`,
+            body: 'Check back soon, or browse every $100k+ job.',
+            href: '/jobs',
+            hrefLabel: 'Browse all jobs',
+          }}
+        />
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          hrefFor={(n) => (n <= 1 ? `/jobs/category/${category}` : `/jobs/category/${category}?page=${n}`)}
+        />
+      </ListingLayout>
 
       <SalaryByLevel input={{ roleSlugs: cfg.roleSlugs, isHundredKLocal: true }} label={cfg.label} />
 

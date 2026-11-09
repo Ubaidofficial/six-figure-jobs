@@ -26,6 +26,7 @@ import { JobsFiltersPanel, type JobsFacets } from '../../_components/JobsFilters
 import { JobsToolbar } from '../../_components/JobsToolbar'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const PAGE_SIZE = 24
@@ -452,13 +453,15 @@ export async function CountryLocationTemplate({
         title={`Jobs in ${loc.label}`}
         summary={
           <>
-            <strong>{data.total.toLocaleString()}</strong> {data.total === 1 ? 'job' : 'jobs'} from{' '}
-            <strong>{companyCount.toLocaleString()}</strong> {companyCount === 1 ? 'company' : 'companies'}
+            Every job in {loc.label} shows a published salary of at least {thresholdLabel}, from{' '}
+            <strong>{companyCount.toLocaleString()}</strong>{' '}
+            {companyCount === 1 ? 'company' : 'companies'}
             {avgLocal ? <> · average <strong>{formatCurrencyCompact(avgLocal, countryCurrency)}</strong></> : null}
-            {' '}· minimum {thresholdLabel}
             {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
           </>
         }
+        cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${data.total === 1 ? 'job' : 'jobs'}` : undefined}
+        stats={workTypeStats(facets.workTypes, (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1), remoteMode)}
         related={topRolesRow(`Top roles in ${loc.label}`, topRoles)}
         toolbar={
           <JobsToolbar facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />

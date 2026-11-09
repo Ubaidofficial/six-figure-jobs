@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 // Pagination is a plain component; the CSS module and the two job-list imports next to it are not part of what is tested.
 jest.mock('@/components/listing/Listing.module.css', () => new Proxy({}, { get: (_t, key) => String(key) }))
-jest.mock('@/components/jobs/JobCard', () => ({ JobCard: () => null }))
+jest.mock('@/components/jobs/JobRow', () => ({ JobRow: () => null, JobRowList: () => null }))
 jest.mock('@/components/layout/Breadcrumb', () => ({ Breadcrumb: () => null }))
 
 import { Pagination } from '@/components/listing/ListingParts'

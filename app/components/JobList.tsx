@@ -1,5 +1,5 @@
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
-import { JobCard } from '@/components/jobs/JobCard'
+import { JobRow, JobRowList } from '@/components/jobs/JobRow'
 
 export type JobListProps = {
   jobs: JobWithCompany[]
@@ -30,10 +30,10 @@ export default function JobList({ jobs, headingLevel }: JobListProps) {
   })
 
   return (
-    <div className="flex flex-col gap-2">
+    <JobRowList>
       {dedupedJobs.map((job) => (
-        <JobCard key={job.id} job={job as JobWithCompany} variant="homepage" headingLevel={headingLevel} />
+        <JobRow key={job.id} job={job as JobWithCompany} headingLevel={headingLevel} />
       ))}
-    </div>
+    </JobRowList>
   )
 }

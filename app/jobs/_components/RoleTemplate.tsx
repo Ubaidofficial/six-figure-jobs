@@ -31,6 +31,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
@@ -561,11 +562,13 @@ export async function RoleTemplate({
         title="Jobs — $100k+"
         summary={
           <>
-            <strong>{data.total.toLocaleString()}</strong> {data.total === 1 ? 'job' : 'jobs'} with a published salary
+            Every {roleTitle} job here shows a published salary of $100k or more
             {avgUsd ? <> · average <strong>{formatUsdK(avgUsd)}</strong></> : null}
             {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
           </>
         }
+        cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${data.total === 1 ? 'job' : 'jobs'}` : undefined}
+        stats={workTypeStats(facets.workTypes, (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1), remoteMode)}
         chips={seniorityChips}
         related={relatedChips}
         toolbar={<JobsToolbar facets={facets} rolePreset={{ label: roleTitle, emoji }} />}

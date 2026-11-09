@@ -12,8 +12,8 @@ import { formatCurrencyShort, getThresholdLabelForCountry } from '../../../../li
 import { isCityPageIndexable } from '../../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
-import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
-import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
+import { buildCityTitle, buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
+import { Faq, JobRows, ListingHeader, ListingLayout, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 export const revalidate = 600
@@ -61,11 +61,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       pathname: `/jobs/city/${resolved.slug}`,
     }) ||
       isPseoHubUnlocked(total, `/jobs/city/${resolved.slug}`))
-  const titleBase = `${salaryLabel} jobs in ${resolved.label}`
-  const title =
-    total > 0
-      ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
-      : `${titleBase} | ${SITE_NAME}`
+  const title = buildCityTitle(resolved.label, salaryLabel, total)
   const description = buildListingDescription(
     `${countPrefix(total)}${salaryLabel} jobs in ${resolved.label}.`,
     [['Remote, hybrid and on-site roles.']],
@@ -188,6 +184,7 @@ export default async function CityPage({ params }: { params: Params }) {
             on-site teams.
           </>
         }
+        cta={total > 0 ? `Browse ${total.toLocaleString()} ${total === 1 ? 'job' : 'jobs'}` : undefined}
         related={topRolesRow(`Top roles in ${resolved.label}`, topRoles)}
         chips={[
           { label: 'All jobs', href: '/jobs/100k-plus' },
@@ -195,15 +192,17 @@ export default async function CityPage({ params }: { params: Params }) {
         ]}
       />
 
-      <JobRows
-        jobs={jobs as JobWithCompany[]}
-        empty={{
-          title: `No ${salaryLabel} roles in ${resolved.label} yet.`,
-          body: 'New postings land daily.',
-          href: '/jobs/100k-plus',
-          hrefLabel: 'Browse all jobs',
-        }}
-      />
+      <ListingLayout>
+        <JobRows
+          jobs={jobs as JobWithCompany[]}
+          empty={{
+            title: `No ${salaryLabel} roles in ${resolved.label} yet.`,
+            body: 'New postings land daily.',
+            href: '/jobs/100k-plus',
+            hrefLabel: 'Browse all jobs',
+          }}
+        />
+      </ListingLayout>
 
       <ListingSection title="Frequently asked questions">
         <Faq items={faqJsonLd.mainEntity.map((q) => ({ question: q.name, answer: q.acceptedAnswer.text }))} />

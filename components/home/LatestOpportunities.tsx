@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
-import { JobCard } from '@/components/jobs/JobCard'
+import { JobRow, JobRowList } from '@/components/jobs/JobRow'
 import { dedupeLatest } from '@/lib/jobs/latestSelection'
 
 import styles from './LatestOpportunities.module.css'
@@ -31,11 +31,11 @@ export function LatestOpportunities({
           <p>No jobs found. Try adjusting your filters or explore all six-figure opportunities.</p>
         </div>
       ) : (
-        <div className={styles.grid}>
+        <JobRowList>
           {latest.map((job) => (
-            <JobCard key={job.id} job={job} variant="homepage" className="reveal-on-scroll" />
+            <JobRow key={job.id} job={job} className="reveal-on-scroll" />
           ))}
-        </div>
+        </JobRowList>
       )}
 
       <div className={styles.cta}>

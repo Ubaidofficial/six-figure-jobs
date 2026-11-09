@@ -20,6 +20,11 @@ import { parseSliceFilters } from '../../lib/slices/types'
 import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
+import { displayKeyword } from '@/lib/search/displayKeyword'
+import { workTypeStats } from '@/lib/listing/workTypeStats'
+import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
+import { CategoryRow, type CategoryRowItem } from '@/components/listing/CategoryRow'
+import { buildJobsHubDescription, buildJobsHubTitle } from '@/lib/seo/metaText'
 import { getSearchVocabulary } from '@/lib/search/vocabulary'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 
@@ -104,27 +109,37 @@ export async function generateMetadata({
   const pageNumber = readListingPageParam(sp)
   const pageSuffix = pageNumber > 1 ? ` (Page ${pageNumber})` : ''
 
+  // The live count is the same `total` the page itself shows for the unfiltered list, so title, description and the
+  // "Browse N jobs" button agree. Filtered and deep pages are noindex, so they skip the extra query.
+  let total: number | null = null
+  if (!noindexUtilityState) {
+    try {
+      total = (await queryJobs({ page: 1, pageSize: 1, sortBy: 'date' })).total
+    } catch (error) {
+      logRuntimeFallback('jobs.page.metadata', error)
+    }
+  }
+  const title = buildJobsHubTitle(total, pageSuffix)
+  const description = buildJobsHubDescription(total)
+
   return {
-    title: `Six-Figure Tech Jobs — Browse $100k+ Openings${pageSuffix} | ${SITE_NAME}`,
-    description:
-      'Browse $100k+ tech jobs with published salaries. Filter by role, location, remote work, seniority and company size.',
+    title,
+    description,
     alternates: {
       canonical,
     },
     robots: noindexUtilityState ? { index: false, follow: true } : { index: true, follow: true },
     openGraph: { images: defaultOgImages(),
-      title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
-      description:
-        'Thousands of $100k+ tech jobs with salary ranges, and fresh listings by role, location, and work type.',
+      title,
+      description,
       url: canonical,
       siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `Six-Figure Tech Jobs — Browse $100k+ Openings | ${SITE_NAME}`,
-      description:
-        'Thousands of $100k+ tech jobs with published salaries and direct links to apply.',
+      title,
+      description,
     },
   }
 }
@@ -515,6 +530,35 @@ export default async function JobsIndexPage({
   const collectionPageJsonLd = buildJobsCollectionPageJsonLd(data.total)
   const faqJsonLd = buildJobsFaqJsonLd()
 
+  // A search reads as a page title ("SEO Manager jobs paying $100k+"); a very long query would not, so it is quoted instead.
+  const keywordLabel = keyword ? displayKeyword(keyword) : ''
+  const keywordFitsHeading = keywordLabel.length <= 40 && keywordLabel.split(/\s+/).length <= 5
+  const shownKeyword = keywordLabel.length > 80 ? `${keywordLabel.slice(0, 80)}…` : keywordLabel
+  const jobsWord = data.total === 1 ? 'job' : 'jobs'
+  const updatedSentence = lastUpdatedLabel ? ` Updated ${lastUpdatedLabel}.` : ''
+  // Category tiles show on the plain hub only. Each count is the category page's own number (same roles, same filter).
+  const categoryItems: CategoryRowItem[] =
+    activeFilterCount === 0 && page === 1
+      ? await memoAsync(stableKey('jobs-hub-categories', {}), DEFAULT_TTL_MS, async () => {
+          const rows = await Promise.all(
+            Object.entries(JOB_CATEGORY_MAP).map(async ([slug, cfg]) => ({
+              slug,
+              label: cfg.label,
+              count: await prisma.job.count({
+                where: buildWhere({ roleSlugs: cfg.roleSlugs, isHundredKLocal: true, page: 1, pageSize: 1 }),
+              }),
+            })),
+          )
+          return rows.filter((r) => r.count > 0).sort((a, b) => b.count - a.count)
+        })
+      : []
+
+  const workTypeLinks = workTypeStats(
+    facets.workTypes,
+    (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1),
+    rawRemoteMode,
+  )
+
     return (
       <ListingPage>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
@@ -528,16 +572,31 @@ export default async function JobsIndexPage({
           breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs' }]}
           title={
             keyword ? (
-              <>
-                Results for{' '}
-                {/* On phones the sort control sits beside the heading, so the query is set smaller and may break inside a
-                    very long word; otherwise the heading would push the control off the screen. */}
-                <Accent>
-                  <span className="max-sm:text-[0.7em] [overflow-wrap:anywhere]">
-                    &ldquo;{keyword.length > 80 ? `${keyword.slice(0, 80)}…` : keyword}&rdquo;
-                  </span>
-                </Accent>
-              </>
+              // On phones the sort control sits beside the heading, so the query is set smaller and may break inside a
+              // very long word; otherwise the heading would push the control off the screen.
+              data.total === 0 ? (
+                <>
+                  No jobs matching{' '}
+                  <Accent>
+                    <span className="max-sm:text-[0.7em] [overflow-wrap:anywhere]">&ldquo;{shownKeyword}&rdquo;</span>
+                  </Accent>{' '}
+                  yet
+                </>
+              ) : keywordFitsHeading ? (
+                <>
+                  <Accent>
+                    <span className="max-sm:text-[0.7em] [overflow-wrap:anywhere]">{shownKeyword}</span>
+                  </Accent>{' '}
+                  jobs paying $100k+
+                </>
+              ) : (
+                <>
+                  $100k+ jobs matching{' '}
+                  <Accent>
+                    <span className="max-sm:text-[0.7em] [overflow-wrap:anywhere]">&ldquo;{shownKeyword}&rdquo;</span>
+                  </Accent>
+                </>
+              )
             ) : (
               <>
                 All <Accent>$100k+</Accent> Jobs
@@ -545,22 +604,33 @@ export default async function JobsIndexPage({
             )
           }
           summary={
-            <>
-              <strong>{data.total.toLocaleString()}</strong> {data.total === 1 ? 'job' : 'jobs'} with a published
-              salary
-              {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
-              {keyword ? (
-                <>
-                  {' · '}
-                  <Link href="/jobs" className="text-primary underline underline-offset-4">
-                    Clear search
-                  </Link>
-                </>
-              ) : null}
-            </>
+            keyword ? (
+              <>
+                {data.total === 0 ? (
+                  <>Try a broader keyword, or browse every $100k+ job.</>
+                ) : (
+                  <>
+                    <strong>{data.total.toLocaleString()}</strong> open {jobsWord} matching &ldquo;{shownKeyword}&rdquo;,
+                    each with a published salary.{updatedSentence}
+                  </>
+                )}{' '}
+                <Link href="/jobs" className="text-primary underline underline-offset-4">
+                  Clear search
+                </Link>
+              </>
+            ) : (
+              <>
+                Every listing shows a published salary. Filter by role, country, remote work or seniority.
+                {updatedSentence}
+              </>
+            )
           }
+          cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${jobsWord}` : undefined}
+          stats={workTypeLinks}
           toolbar={<JobsToolbar facets={facets} />}
         />
+
+        <CategoryRow items={categoryItems} />
 
         <ListingLayout sidebar={<JobsFiltersPanel facets={facets} />}>
           {techFilter ? (
