@@ -224,7 +224,9 @@ function parseSalaryRangeFromText(
   salaryInterval: string | null
   salaryRaw: string | null
 } {
-  const salarySnippet = extractSalarySnippet(text) ?? text
+  // Retirement plans ("401k", "401(k)", "403(b)", "457(b)") are not pay: "401k" was read as $401,000 on Chewy's
+  // vet-care postings (2026-11-09). Remove them before reading numbers.
+  const salarySnippet = (extractSalarySnippet(text) ?? text).replace(/\b(?:401|403|457)\s*\(?\s*[kb]\s*\)?/gi, ' ')
   const lower = salarySnippet.toLowerCase()
   const interval =
     /\/\s*hour|per\s*hour|\bhr\b/.test(lower)

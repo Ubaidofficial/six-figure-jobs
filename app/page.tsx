@@ -737,6 +737,12 @@ export default async function HomePage() {
             <Link href="/jobs/400k-plus" className="block hover:text-foreground">
               $400k+ Jobs
             </Link>
+            <Link href="/high-paying-jobs" className="block hover:text-foreground">
+              High-Paying Jobs Ranked by Pay
+            </Link>
+            <Link href="/jobs/no-degree" className="block hover:text-foreground">
+              Six-Figure Jobs Without a Degree
+            </Link>
           </div>
           <div className="space-y-2">
             <p className="font-medium text-foreground">Top Companies</p>

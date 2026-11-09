@@ -20,16 +20,22 @@ export type TopRolePage = { slug: string; label: string; count: number }
  * Stored roleSlug counts -> role pages, biggest first. Seniority variants fold into their base role page when it
  * exists ("senior-software-engineer" counts toward Software Engineer); slugs with no canonical page are dropped.
  */
+/** The role page a stored roleSlug belongs to (seniority folded into the base role), or null when there is none. */
+export function rolePageFor(roleSlug: string | null): string | null {
+  if (!roleSlug) return null
+  const base = roleSlug.replace(SENIORITY_PREFIX, '')
+  const page = isCanonicalSlug(base) ? base : isCanonicalSlug(roleSlug) ? roleSlug : null
+  return page && !CATCH_ALL_ROLES.has(page) ? page : null
+}
+
 export function rankTopRolePages(
   rows: Array<{ roleSlug: string | null; count: number }>,
   { limit = 8, minJobs = 2, exclude = [] as string[] } = {},
 ): TopRolePage[] {
   const bySlug = new Map<string, number>()
   for (const { roleSlug, count } of rows) {
-    if (!roleSlug) continue
-    const base = roleSlug.replace(SENIORITY_PREFIX, '')
-    const page = isCanonicalSlug(base) ? base : isCanonicalSlug(roleSlug) ? roleSlug : null
-    if (!page || CATCH_ALL_ROLES.has(page) || exclude.includes(page)) continue
+    const page = rolePageFor(roleSlug)
+    if (!page || exclude.includes(page)) continue
     bySlug.set(page, (bySlug.get(page) ?? 0) + count)
   }
   return [...bySlug.entries()]

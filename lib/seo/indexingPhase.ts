@@ -83,6 +83,10 @@ export const ALWAYS_INDEXABLE_HUBS = new Set<string>([
   '/remote',
   // Directory of remote six-figure employers (2026-11-09); one page, its companies are already indexable.
   '/remote/companies',
+  // Roles ranked by median pay and the no-degree list (2026-11-09), for "high paying jobs" and "six figure jobs
+  // without a degree"; each built from live listings.
+  '/high-paying-jobs',
+  '/jobs/no-degree',
 ])
 
 // Sitemap families that ship URLs in Phase 1. Families NOT in this set should
