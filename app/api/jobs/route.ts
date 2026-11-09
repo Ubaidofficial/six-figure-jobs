@@ -5,7 +5,8 @@ import { readHubExtraFilters } from '@/lib/jobs/hubFilters'
 const PAGE_SIZE = 24
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const page = Number(searchParams.get('page') || '1')
+  // A whole page number from 1; "abc" made this NaN and the query threw (500, found 2026-11-08), "-5" read as page 1.
+  const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1)
   const country = searchParams.get('country') || undefined
   const remoteMode = (searchParams.get('remoteMode') || undefined) as 'remote' | 'hybrid' | 'onsite' | undefined
   const keyword = (searchParams.get('q') || '').trim() || undefined
