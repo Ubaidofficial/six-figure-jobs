@@ -3,6 +3,7 @@
 // A number that is missing (its query failed) is left out rather than shown as 0.
 import { Briefcase, Building2, DollarSign, Globe2, Sparkles, type LucideIcon } from 'lucide-react'
 
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 
 import styles from './SiteStatsStrip.module.css'
@@ -45,10 +46,13 @@ export function SiteStatsStrip({
               <Icon className={styles.icon} aria-hidden="true" />
               {label}
             </dt>
-            <dd className={styles.value}>{value}</dd>
+            <dd className={styles.value}>
+              <AnimatedNumber text={value} reveal />
+            </dd>
           </div>
         ))}
       </dl>
+      <p className={styles.note}>Counted from our own job database, refreshed every few minutes.</p>
     </section>
   )
 }

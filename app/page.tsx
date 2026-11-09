@@ -22,7 +22,10 @@ import { Hero } from '@/components/home/Hero'
 import { HeroFilters } from '@/components/home/HeroFilters'
 import { loadSalarySnapshot } from '@/lib/jobs/salarySnapshot'
 import { loadSiteCounts } from '@/lib/jobs/siteCounts'
+import { loadBandSamples } from '@/lib/jobs/salaryBandSamples'
+import { loadNewRolesByCompany } from '@/lib/jobs/newRolesByCompany'
 import { LiveJobFeed } from '@/components/home/LiveJobFeed'
+import { NewRolesStrip } from '@/components/home/NewRolesStrip'
 import { SiteStatsStrip } from '@/components/home/SiteStatsStrip'
 import { buildFeedItems } from '@/lib/jobs/latestFeed'
 import {
@@ -294,6 +297,8 @@ export default async function HomePage() {
       premiumRoleRows,
       salarySnapshot,
       siteCounts,
+      bandSamples,
+      newRolesCompanies,
     ] = await Promise.all([
       queryJobs({
         isHundredKLocal: true,
@@ -403,6 +408,13 @@ export default async function HomePage() {
       loadSalarySnapshot(publicJobWhere).catch(() => null),
       // Jobs by country and job type, counted at most every hour; a failure only hides those rows.
       loadSiteCounts().catch(() => null),
+      // A few real roles per salary band for the hero panel (the snapshot call is shared with the one above); a failure
+      // only leaves the bands without example roles.
+      loadSalarySnapshot(publicJobWhere)
+        .then((snapshot) => (snapshot ? loadBandSamples(snapshot.bands) : null))
+        .catch(() => null),
+      // Companies with new roles in the last 24 hours, for the strip under the live feed; a failure hides the strip.
+      loadNewRolesByCompany(publicJobWhere, stats.eligibleCompanyIds).catch(() => []),
     ])
 
     const priorityCompanySlugs = priorityCompanyCandidates.map((candidate) => candidate.slug)
@@ -552,6 +564,7 @@ export default async function HomePage() {
         newestPostedAtISO={newestPostedAt ? newestPostedAt.toISOString() : null}
         salarySnapshot={salarySnapshot}
         siteCounts={siteCounts}
+        bandSamples={bandSamples}
       >
         <HeroFilters
           roles={ROLE_OPTIONS.map((o) => ({ value: o.slug, label: o.label }))}
@@ -561,6 +574,8 @@ export default async function HomePage() {
       </Hero>
 
       <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} />
+
+      <NewRolesStrip companies={newRolesCompanies} />
 
       {/* Jobs already in the live feed above are left out, so no job appears twice with two different times. */}
       <LatestOpportunities jobs={jobs.filter((job) => !feedItemIds.has(job.id))} totalJobs={stats.totalJobs} />

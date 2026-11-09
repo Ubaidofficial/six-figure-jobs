@@ -8,7 +8,9 @@ import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import type { SalarySnapshot } from '@/lib/jobs/salarySnapshot'
 import { FLOOR_MARKET_COUNTRIES } from '@/lib/jobs/remoteRegions'
 import { countInCountries, type SiteCounts } from '@/lib/jobs/siteCounts'
+import type { FeedItem } from '@/lib/jobs/latestFeed'
 
+import { HeroSalaryBands } from './HeroSalaryBands'
 import { HeroSearchInput } from './HeroSearchInput'
 import styles from './Hero.module.css'
 
@@ -22,6 +24,8 @@ type HeroProps = {
   salarySnapshot?: SalarySnapshot | null
   /** Jobs per country and per job type, counted from the database (refreshed about every hour). */
   siteCounts?: SiteCounts | null
+  /** Up to three recent roles per salary band of the snapshot (same order), shown when a band is picked. */
+  bandSamples?: FeedItem[][] | null
   /** The role / location / work-mode / salary filters, rendered inside the search form. */
   children?: ReactNode
 }
@@ -60,7 +64,7 @@ function formatCounted(iso: string): string {
   return `${day}, ${time} UTC`
 }
 
-export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPostedAtISO, salarySnapshot, siteCounts, children }: HeroProps) {
+export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPostedAtISO, salarySnapshot, siteCounts, bandSamples, children }: HeroProps) {
   const newest = formatNewest(newestPostedAtISO)
 
   return (
@@ -79,9 +83,8 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
 
       <p className={styles.subheadline}>
         {jobCount.toLocaleString()} roles
-        {companyCount > 0 ? ` at ${companyCount.toLocaleString()} companies` : ''}, every one with its pay
-        range on the listing. Pay thresholds are set per currency, and every apply button says where it goes: the
-        employer&rsquo;s own site or the job board the role was posted on.
+        {companyCount > 0 ? ` at ${companyCount.toLocaleString()} companies` : ''}. Every listing shows its pay range.
+        Every apply button says where it goes: the employer&rsquo;s own site, or the job board the role was posted on.
       </p>
 
       <form className={styles.searchForm} method="GET" action="/jobs">
@@ -137,22 +140,14 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
               {formatCurrencyShort(Math.round(salarySnapshot.p75 / 1000) * 1000, 'USD')}. Median of{' '}
               {salarySnapshot.count.toLocaleString()} listings paid in USD.
             </p>
-            <ul className={styles.bars} aria-label="Listings by salary band">
-              {salarySnapshot.bands.map((band) => {
-                const max = Math.max(...salarySnapshot.bands.map((x) => x.count), 1)
-                return (
-                  <li key={band.label}>
-                    <Link href={bandHref(band.min)} className={styles.barRow}>
-                      <span className={styles.barLabel}>{band.label}</span>
-                      <span className={styles.barTrack} aria-hidden="true">
-                        <span className={styles.barFill} style={{ width: `${Math.max(4, (band.count / max) * 100)}%` }} />
-                      </span>
-                      <span className={styles.barCount}>{band.count.toLocaleString()}</span>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
+            <HeroSalaryBands
+              bands={salarySnapshot.bands.map((band, i) => ({
+                label: band.label,
+                count: band.count,
+                href: bandHref(band.min),
+                samples: bandSamples?.[i] ?? [],
+              }))}
+            />
           </>
         ) : (
           <dl className={styles.stats}>

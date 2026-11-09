@@ -1,0 +1,4 @@
+/* Equal-width digits, so a counting number does not shift the text around it. */
+.number {
+  font-variant-numeric: tabular-nums;
+}
