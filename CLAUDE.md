@@ -33,7 +33,9 @@ Loop until verified. Don't stop at "should work."
 
 **Stack**: Next.js 15 App Router · TypeScript · Prisma (PostgreSQL) · CSS Modules · Tailwind (utility classes via `cn()`)
 
-**Deploy**: Railway — deploys from the **`main`** branch on GitHub. Always push to `main`.
+**Deploy**: Railway — deploys from the **`main`** branch on GitHub. Never push to `main` directly: work on the branch you were given.
+
+**Pull requests (standing rule from the owner, 2026-11-09)**: when a change is finished, committed and pushed, **always open a PR into `main` right away, without asking or waiting for the owner**, then subscribe to its activity and fix CI failures and review comments. Do not merge it unless the owner says so (the scheduled design refresh in `docs/DESIGN_UX_SPEC.md` §12 has its own merge rule). If the branch's earlier PR was already merged, open a new one.
 
 **Pre-commit hook**: `checkChangelogUpdated.js` blocks commits if `CHANGELOG.md` is not updated. Always add a changelog entry and stage it before committing code files.
 
