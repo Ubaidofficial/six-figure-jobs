@@ -4,6 +4,7 @@ import { prisma } from '../prisma'
 import { buildWhere } from './queryJobs'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '../seo/indexabilityGates'
 import { newThisWeekClause } from './postedRecently'
+import { DEFAULT_TTL_MS, memoAsync } from '../cache/memo'
 
 export type PublicCompanyDirectoryEntry = {
   id: string
@@ -23,7 +24,11 @@ function addAndClause(where: any, clause: any): any {
 
 export const getPublicJobWhere = cache(() => buildWhere({}))
 
-export const loadPublicSiteStats = cache(async () => {
+// Both loaders are cached per request (react cache) and across requests (memoAsync): /companies is rendered per request,
+// and the groupBy over every public job plus the directory's per-company counts ran on each visit.
+export const loadPublicSiteStats = cache(() => memoAsync('public-site-stats', DEFAULT_TTL_MS, loadPublicSiteStatsUncached))
+
+async function loadPublicSiteStatsUncached() {
   const publicJobWhere = getPublicJobWhere()
 
   const [totalJobs, companyRows, newThisWeek] = await Promise.all([
@@ -57,9 +62,11 @@ export const loadPublicSiteStats = cache(async () => {
     eligibleCompanyIds: eligibleCompanyRows.map((row) => row.companyId as string),
     publicJobWhere,
   }
-})
+}
 
-export const loadEligibleCompaniesDirectory = cache(async () => {
+export const loadEligibleCompaniesDirectory = cache(() => memoAsync('companies-directory', DEFAULT_TTL_MS, loadEligibleCompaniesDirectoryUncached))
+
+async function loadEligibleCompaniesDirectoryUncached() {
   const {
     eligibleCompanyIds,
     totalCompanies,
@@ -101,4 +108,4 @@ export const loadEligibleCompaniesDirectory = cache(async () => {
     totalCompaniesHiring,
     totalJobs,
   }
-})
+}
