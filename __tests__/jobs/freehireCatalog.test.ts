@@ -44,6 +44,16 @@ describe('loadFreehireCatalog', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  // A `cache: 'no-store'` fetch turned the ISR homepage into a page rendered on every request (2026-11-09).
+  it('asks for a cacheable fetch, so the homepage stays statically cached', async () => {
+    const fetchMock = jest.fn(async (..._args: unknown[]) => new Response(JSON.stringify(live), { status: 200 }))
+    global.fetch = fetchMock as never
+    await loadFreehireCatalog()
+    const init = fetchMock.mock.calls[0][1] as RequestInit & { next?: { revalidate?: number } }
+    expect(init.cache).not.toBe('no-store')
+    expect(init.next?.revalidate).toBe(3600)
+  })
+
   it('gives null, not an error, when freehire is down or unreachable', async () => {
     global.fetch = jest.fn(async () => new Response('down', { status: 503 })) as never
     expect(await loadFreehireCatalog()).toBeNull()
