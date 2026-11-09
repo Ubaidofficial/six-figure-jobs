@@ -48,6 +48,18 @@
   color: var(--color-text-1);
 }
 
+.catalog {
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-border);
+}
+
+.link {
+  color: var(--color-primary-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .label {
   display: inline-flex;
   align-items: center;

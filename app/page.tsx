@@ -24,6 +24,7 @@ import { loadSalarySnapshot } from '@/lib/jobs/salarySnapshot'
 import { loadSiteCounts } from '@/lib/jobs/siteCounts'
 import { loadBandSamples } from '@/lib/jobs/salaryBandSamples'
 import { loadNewRolesByCompany } from '@/lib/jobs/newRolesByCompany'
+import { loadFreehireCatalog } from '@/lib/jobs/freehireCatalog'
 import { LiveJobFeed } from '@/components/home/LiveJobFeed'
 import { NewRolesStrip } from '@/components/home/NewRolesStrip'
 import { SiteStatsStrip } from '@/components/home/SiteStatsStrip'
@@ -299,6 +300,7 @@ export default async function HomePage() {
       siteCounts,
       bandSamples,
       newRolesCompanies,
+      freehireCatalog,
     ] = await Promise.all([
       queryJobs({
         isHundredKLocal: true,
@@ -415,6 +417,8 @@ export default async function HomePage() {
         .catch(() => null),
       // Companies with new roles in the last 24 hours, for the strip under the live feed; a failure hides the strip.
       loadNewRolesByCompany(publicJobWhere, stats.eligibleCompanyIds).catch(() => []),
+      // freehire's catalogue size for the stats strip, read live and cached an hour; a failure only hides that line.
+      loadFreehireCatalog(),
     ])
 
     const priorityCompanySlugs = priorityCompanyCandidates.map((candidate) => candidate.slug)
@@ -588,6 +592,7 @@ export default async function HomePage() {
         newThisWeek={stats.newThisWeek}
         countries={siteCounts ? siteCounts.byCountry.filter((c) => c.count > 0).length : null}
         medianUsd={salarySnapshot?.median ?? null}
+        catalog={freehireCatalog}
       />
 
       {priorityFeaturedCompanies.length > 0 && (
