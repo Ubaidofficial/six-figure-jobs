@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { JobCard } from '@/components/jobs/JobCard'
+import { JobRow, JobRowList } from '@/components/jobs/JobRow'
 import { companyJobsPagePath, companyJobsShowingText } from '@/lib/companies/jobsPaging'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 
@@ -82,9 +82,11 @@ export function CompanyJobsMore({ slug, page, start, end, total: initialTotal }:
     <>
       {extra.length > 0 ? (
         <div ref={rowsRef} className={styles.rows}>
-          {extra.map((job) => (
-            <JobCard key={job.id} job={job} variant="homepage" />
-          ))}
+          <JobRowList>
+            {extra.map((job) => (
+              <JobRow key={job.id} job={job} />
+            ))}
+          </JobRowList>
         </div>
       ) : null}
 

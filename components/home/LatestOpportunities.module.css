@@ -35,12 +35,6 @@
   text-underline-offset: 3px;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
 .empty {
   border-radius: var(--radius-xl);
   padding: var(--space-24);

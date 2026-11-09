@@ -204,3 +204,13 @@ export function buildSalaryTierDescription(rangeLabel: string, total: number): s
     ['Filter by role, country, remote work or seniority.', 'Filter by role or country.'],
   ])
 }
+
+/** City page title ("1,234 $100k+ Jobs in Austin | Six Figure Jobs"); fits within TITLE_MAX for any city name. */
+export function buildCityTitle(cityLabel: string, salaryLabel: string, total: number): string {
+  return buildListingTitle({ topic: `${salaryLabel} Jobs in ${cityLabel}`, count: total })
+}
+
+/** Category page title ("1,420 Engineering Jobs Paying $100k+ | Six Figure Jobs"), the same shape as role pages. */
+export function buildCategoryTitle(categoryLabel: string, total: number): string {
+  return buildListingTitle({ topic: `${categoryLabel} Jobs`, count: total, qualifier: 'Paying $100k+' })
+}

@@ -19,6 +19,7 @@ import listingStyles from '@/components/listing/Listing.module.css'
 import {
   Faq,
   JobRows,
+  ListingLayout,
   LinkChips,
   ListingHeader,
   ListingPage,
@@ -502,26 +503,29 @@ export default async function RemoteJobsPage({
               {newThisWeek ? <> · {newThisWeek.toLocaleString()} new this week</> : null}
             </>
           }
+          cta={remoteJobCount > 0 ? `Browse ${remoteJobCount.toLocaleString()} remote ${remoteJobCount === 1 ? 'job' : 'jobs'}` : undefined}
           chips={buildRegionChips(activeRemoteRegion, regionCounts)}
           related={topRolesRow('Top remote roles', topRemoteRoles, '/remote')}
         />
 
-        <JobRows
-          jobs={recentJobs}
-          empty={{
-            title: 'No remote jobs found.',
-            body: 'Try another region, or browse every $100k+ job.',
-            href: '/jobs',
-            hrefLabel: 'Browse all jobs',
-          }}
-        />
-        {remoteJobCount > recentJobs.length ? (
-          <p style={{ marginTop: 16 }}>
-            <Link href="/jobs?remoteMode=remote" className={listingStyles.pageLink}>
-              See all {remoteJobCount.toLocaleString()} remote jobs →
-            </Link>
-          </p>
-        ) : null}
+        <ListingLayout>
+          <JobRows
+            jobs={recentJobs}
+            empty={{
+              title: 'No remote jobs found.',
+              body: 'Try another region, or browse every $100k+ job.',
+              href: '/jobs',
+              hrefLabel: 'Browse all jobs',
+            }}
+          />
+          {remoteJobCount > recentJobs.length ? (
+            <p style={{ marginTop: 16 }}>
+              <Link href="/jobs?remoteMode=remote" className={listingStyles.pageLink}>
+                See all {remoteJobCount.toLocaleString()} remote jobs →
+              </Link>
+            </p>
+          ) : null}
+        </ListingLayout>
 
         {roleList.length > 0 ? (
           <ListingSection title="Remote jobs by role">

@@ -5,6 +5,8 @@ import {
   TITLE_MAX,
   buildCompaniesIndexDescription,
   buildCompanyPageDescription,
+  buildCategoryTitle,
+  buildCityTitle,
   buildCompanyPageTitle,
   buildDescription,
   buildHomeDescription,
@@ -367,5 +369,30 @@ describe('salary tier title and description', () => {
     expect(buildSalaryTierTitle(rangeLabel, 1234).startsWith(`1,234 ${rangeLabel} Jobs`)).toBe(true)
     expect(buildSalaryTierDescription(rangeLabel, 1234).startsWith(`1,234 ${rangeLabel} jobs open now.`)).toBe(true)
     expect(buildSalaryTierTitle(rangeLabel, 0).startsWith(rangeLabel)).toBe(true)
+  })
+})
+
+describe('city and category titles', () => {
+  const SALARY_LABELS = ['$100k+', '£75k+', '€80k+', 'C$120k+', 'A$140k+']
+
+  it('lead with the live count and stay within the limit for every city, label and count', () => {
+    for (const city of CITY_TARGETS) {
+      for (const label of SALARY_LABELS) {
+        for (const count of COUNTS) {
+          expect(buildCityTitle(city.label, label, count).length).toBeLessThanOrEqual(TITLE_MAX)
+        }
+      }
+    }
+    expect(buildCityTitle('Austin', '$100k+', 1234)).toBe('1,234 $100k+ Jobs in Austin | Six Figure Jobs')
+    expect(buildCityTitle('Austin', '$100k+', 0)).toBe('$100k+ Jobs in Austin | Six Figure Jobs')
+  })
+
+  it('category titles match the role-page shape and stay within the limit', () => {
+    for (const cfg of Object.values(JOB_CATEGORY_MAP)) {
+      for (const count of COUNTS) {
+        expect(buildCategoryTitle(cfg.label, count).length).toBeLessThanOrEqual(TITLE_MAX)
+      }
+    }
+    expect(buildCategoryTitle('Engineering', 1420)).toBe('1,420 Engineering Jobs Paying $100k+ | Six Figure Jobs')
   })
 })

@@ -40,10 +40,12 @@ export function JobRowList({ children }: { children: ReactNode }) {
 export function JobRow({
   job,
   headingLevel = 3,
+  className,
 }: {
   job: JobWithCompany & { primaryLocation?: any; locationsJson?: any; aiSnippet?: string | null }
   /** 3 under an H2 section (default); 2 where the page H1 is followed directly by the list. */
   headingLevel?: 2 | 3
+  className?: string
 }) {
   const TitleTag = headingLevel === 2 ? 'h2' : 'h3'
   const [open, setOpen] = useState(false)
@@ -77,7 +79,7 @@ export function JobRow({
   const shownSkills = skills.slice(0, MAX_SKILLS)
 
   return (
-    <article className={cn(styles.row, open && styles.open)}>
+    <article className={cn(styles.row, open && styles.open, className)}>
       <div
         className={styles.main}
         onClick={(e) => {
