@@ -8,7 +8,7 @@
 export type DirectEmployer = {
   slug: string
   name: string
-  provider: 'greenhouse' | 'ashby' | 'lever'
+  provider: 'greenhouse' | 'ashby' | 'lever' | 'workday'
   boardUrl: string
 }
 
@@ -110,4 +110,51 @@ export const DIRECT_EMPLOYERS: readonly DirectEmployer[] = [
   { slug: 'llamaindex', name: 'LlamaIndex', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/llamaindex' },
   { slug: 'weaviate', name: 'Weaviate', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/weaviate' },
   { slug: 'stability-ai', name: 'Stability AI', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/stabilityai' },
+  // Added 2026-11-09 from a check of ~150 top tech companies: ones with no or few live jobs whose board answered.
+  // Workday boards (tenant.wdN.myworkdayjobs.com/site) were verified against Workday's public job-search endpoint.
+  { slug: 'micron', name: 'Micron', provider: 'workday', boardUrl: 'https://micron.wd1.myworkdayjobs.com/External' },
+  { slug: 'capital-one', name: 'Capital One', provider: 'workday', boardUrl: 'https://capitalone.wd12.myworkdayjobs.com/Capital_One' },
+  { slug: 'nvidia', name: 'NVIDIA', provider: 'workday', boardUrl: 'https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite' },
+  { slug: 'salesforce', name: 'Salesforce', provider: 'workday', boardUrl: 'https://salesforce.wd12.myworkdayjobs.com/External_Career_Site' },
+  { slug: 'cisco', name: 'Cisco', provider: 'workday', boardUrl: 'https://cisco.wd5.myworkdayjobs.com/Cisco_Careers' },
+  { slug: 'mastercard', name: 'Mastercard', provider: 'workday', boardUrl: 'https://mastercard.wd1.myworkdayjobs.com/CorporateCareers' },
+  { slug: 'intel', name: 'Intel', provider: 'workday', boardUrl: 'https://intel.wd1.myworkdayjobs.com/External' },
+  { slug: 'visa', name: 'Visa', provider: 'workday', boardUrl: 'https://visa.wd5.myworkdayjobs.com/Visa' },
+  { slug: 'lucid-motors', name: 'Lucid Motors', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/lucidmotors' },
+  { slug: 'elastic', name: 'Elastic', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/elastic' },
+  { slug: 'crowdstrike', name: 'CrowdStrike', provider: 'workday', boardUrl: 'https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers' },
+  { slug: 'broadcom', name: 'Broadcom', provider: 'workday', boardUrl: 'https://broadcom.wd1.myworkdayjobs.com/External_Career' },
+  { slug: 'workday', name: 'Workday', provider: 'workday', boardUrl: 'https://workday.wd5.myworkdayjobs.com/Workday' },
+  { slug: 'toast', name: 'Toast', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/toast' },
+  { slug: 'paypal', name: 'PayPal', provider: 'workday', boardUrl: 'https://paypal.wd1.myworkdayjobs.com/jobs' },
+  { slug: 'adobe', name: 'Adobe', provider: 'workday', boardUrl: 'https://adobe.wd5.myworkdayjobs.com/external_experienced' },
+  { slug: 'ebay', name: 'eBay', provider: 'workday', boardUrl: 'https://ebay.wd5.myworkdayjobs.com/apply' },
+  { slug: 'zoox', name: 'Zoox', provider: 'lever', boardUrl: 'https://jobs.lever.co/zoox' },
+  { slug: 'chewy', name: 'Chewy', provider: 'workday', boardUrl: 'https://chewy.wd5.myworkdayjobs.com/External' },
+  { slug: 'snap', name: 'Snap', provider: 'workday', boardUrl: 'https://snapchat.wd1.myworkdayjobs.com/snap' },
+  { slug: 'zillow-group', name: 'Zillow', provider: 'workday', boardUrl: 'https://zillow.wd5.myworkdayjobs.com/Zillow_Group_External' },
+  { slug: 'block', name: 'Block', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/block' },
+  { slug: 'riot-games', name: 'Riot Games', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/riotgames' },
+  { slug: 'ripple', name: 'Ripple', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/ripple' },
+  { slug: 'expedia', name: 'Expedia', provider: 'workday', boardUrl: 'https://expedia.wd108.myworkdayjobs.com/search' },
+  { slug: 'spotify', name: 'Spotify', provider: 'lever', boardUrl: 'https://jobs.lever.co/spotify' },
+  { slug: 'zoom', name: 'Zoom', provider: 'workday', boardUrl: 'https://zoom.wd5.myworkdayjobs.com/Zoom' },
+  { slug: '1password', name: '1Password', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/1password' },
+  { slug: 'carta', name: 'Carta', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/carta' },
+  { slug: 'mercury', name: 'Mercury', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/mercury' },
+  { slug: 'supabase', name: 'Supabase', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/supabase' },
+  { slug: 'etsy', name: 'Etsy', provider: 'workday', boardUrl: 'https://etsy.wd5.myworkdayjobs.com/Etsy_Careers' },
+  { slug: 'faire', name: 'Faire', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/faire' },
+  { slug: 'benchling', name: 'Benchling', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/benchling' },
+  { slug: 'sofi', name: 'SoFi', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/sofi' },
+  { slug: 'peloton', name: 'Peloton', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/peloton' },
+  { slug: 'snyk', name: 'Snyk', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/snyk' },
+  { slug: 'checkr', name: 'Checkr', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/checkr' },
+  { slug: 'linear', name: 'Linear', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/linear' },
+  { slug: 'hp', name: 'HP', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/hp' },
+  { slug: 'nextdoor', name: 'Nextdoor', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/nextdoor' },
+  { slug: 'squarespace', name: 'Squarespace', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/squarespace' },
+  { slug: 'miro', name: 'Miro', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/miro' },
+  { slug: 'lattice', name: 'Lattice', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/lattice' },
+  { slug: 'airtable', name: 'Airtable', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/airtable' },
 ]
