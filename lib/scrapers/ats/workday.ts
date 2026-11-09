@@ -4,7 +4,9 @@ import { fetchWithBackoff } from '../utils/fetchWithBackoff'
 
 const USER_AGENT = 'SixFigureJobs/1.0 (+job-board-scraper)'
 const TIMEOUT_MS = 15000
-const PAGE_SIZE = 100
+// Workday's job search answers 400 Bad Request above 20 per page (checked 2026-11-09 on zoom.wd5: 20 -> 200, 21 -> 400),
+// so with 100 every Workday board failed on its first request.
+const PAGE_SIZE = 20
 const DETAIL_CONCURRENCY = 4
 
 type WorkdayContext = {
@@ -423,7 +425,11 @@ export async function scrapeWorkday(atsUrl: string): Promise<AtsJob[]> {
       )
 
       const jobPostings = Array.isArray(page.jobPostings) ? page.jobPostings : []
-      total = Number(page.total ?? jobPostings.length)
+      // Workday reports the real total on the first page only and `total: 0` on later ones (offset 20 -> 0 on zoom.wd5),
+      // which ended the loop after the second page: keep the first non-zero total.
+      const reported = Number(page.total ?? 0)
+      if (reported > 0) total = reported
+      else if (!Number.isFinite(total)) total = jobPostings.length
       if (!jobPostings.length) break
 
       summaries.push(...jobPostings)
