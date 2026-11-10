@@ -8,7 +8,7 @@
 }
 
 .header {
-  text-align: center;
+  text-align: left; /* every homepage section heading starts at the left edge, like the job lists */
   margin-bottom: var(--space-24);
 }
 

@@ -640,8 +640,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      <section className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">
+      <section className="my-12">
+        <h2 className="mb-4 [font-family:var(--font-display)] text-xl font-extrabold tracking-tight text-foreground">
           Explore Six Figure Jobs by Role
         </h2>
           <div className="flex flex-wrap gap-2">
@@ -649,7 +649,7 @@ export default async function HomePage() {
               <Link
                 key={role.href}
                 href={role.href}
-                className="group inline-flex items-center gap-1.5 max-md:min-h-11 rounded-full border border-border bg-card px-4 py-2 text-sm transition-colors hover:border-primary hover:bg-card"
+                className="group inline-flex items-center gap-1.5 max-md:min-h-11 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:border-primary hover:shadow-glow"
               >
                 <span className="text-foreground group-hover:text-foreground">
                   {role.name}

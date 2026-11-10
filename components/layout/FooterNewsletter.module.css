@@ -21,6 +21,7 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
+  white-space: nowrap;
   transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
 }
 
@@ -34,5 +35,16 @@
   .form {
     grid-template-columns: 1fr 1fr;
     justify-content: stretch;
+  }
+}
+
+/* Small phones: the two labels did not fit side by side ("Remote jobs feed" wrapped onto two lines). */
+@media (max-width: 480px) {
+  .form {
+    grid-template-columns: 1fr;
+  }
+
+  .button {
+    width: 100%;
   }
 }
