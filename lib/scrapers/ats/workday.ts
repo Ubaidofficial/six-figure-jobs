@@ -7,7 +7,9 @@ const TIMEOUT_MS = 15000
 // Workday's job search answers 400 Bad Request above 20 per page (checked 2026-11-09 on zoom.wd5: 20 -> 200, 21 -> 400),
 // so with 100 every Workday board failed on its first request.
 const PAGE_SIZE = 20
-const DETAIL_CONCURRENCY = 4
+// Two job pages at a time: with four (and several tenants at once) every Workday board answered 429 from the daily
+// sync on 2026-11-10.
+const DETAIL_CONCURRENCY = 2
 
 type WorkdayContext = {
   origin: string
