@@ -25,17 +25,26 @@ export function HomeFAQ() {
     },
   ]
 
+  // An accordion: questions scan in one glance and each answer opens in place (it stays in the HTML for search engines).
   return (
-    <section className="mt-10 rounded-2xl border border-border bg-card p-5">
-      <h2 className="mb-3 text-sm font-semibold text-foreground">
-        FAQs about Six Figure Jobs
+    <section className="mt-12" aria-labelledby="home-faq-heading">
+      <h2 id="home-faq-heading" className="mb-4 [font-family:var(--font-display)] text-xl font-bold tracking-tight text-foreground">
+        Questions people ask
       </h2>
-      <div className="space-y-3 text-sm text-muted-foreground">
+      <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
         {items.map((item) => (
-          <div key={item.q}>
-            <p className="font-semibold text-foreground">{item.q}</p>
-            <p className="text-muted-foreground">{item.a}</p>
-          </div>
+          <details key={item.q} className="group">
+            <summary className="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold text-foreground hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+              {item.q}
+              <span
+                aria-hidden="true"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-lg leading-none text-muted-foreground transition-transform group-open:rotate-45"
+              >
+                +
+              </span>
+            </summary>
+            <p className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground">{item.a}</p>
+          </details>
         ))}
       </div>
     </section>

@@ -219,6 +219,36 @@ export function JobsFiltersPanel({
                   placeholder="Search countries…"
                   aria-label="Search countries"
                 />
+                {(() => {
+                  // "Anywhere in the world" where people look for it: the same filter as Remote region > global.
+                  const worldwide = facets.remoteRegions?.find((r) => r.value === 'global')
+                  if (!worldwide || (worldwide.count === 0 && selectedRemoteRegion !== 'global')) return null
+                  const active = selectedRemoteRegion === 'global'
+                  return (
+                    <button
+                      type="button"
+                      className={`${styles.option} ${active ? styles.optionOn : ''}`}
+                      aria-pressed={active}
+                      onClick={() => {
+                        replaceSearchParams(pathname, searchParams, router, (next) => {
+                          if (active) next.delete('remoteRegion')
+                          else next.set('remoteRegion', 'global')
+                          if (!active && next.get('remoteMode') !== 'remote') next.delete('remoteMode')
+                          next.delete('country')
+                          next.delete('page')
+                        })
+                      }}
+                    >
+                      <span className={styles.left}>
+                        <span className={`${styles.check} ${active ? styles.checked : ''}`}>
+                          {active ? <span className={styles.checkMark}>✓</span> : null}
+                        </span>
+                        <span className={styles.name}>🌍 Anywhere in the world</span>
+                      </span>
+                      <span className={styles.count}>{worldwide.count.toLocaleString()}</span>
+                    </button>
+                  )
+                })()}
                 <div className={styles.list} role="group">
                   {filteredCountries.map((c) => {
                     const active = selectedCountry.toUpperCase() === c.value.toUpperCase()
