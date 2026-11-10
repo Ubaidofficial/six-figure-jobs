@@ -1,5 +1,6 @@
 // app/sitemap-jobs/[page]/route.ts
 
+import { memoAsync } from '../../../lib/cache/memo'
 import { prisma } from '../../../lib/prisma'
 import { buildJobSlug, hasCanonicalJobShortId } from '../../../lib/jobs/jobSlug'
 import { getSiteUrl } from '../../../lib/seo/site'
@@ -19,6 +20,11 @@ import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../../lib/s
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
+// Building a shard reads up to 7,500 jobs with their descriptions (the quality gate needs them): about 13 s on
+// 2026-11-10, on every request, because a route with a dynamic segment is not cached by `revalidate`. Search Console's
+// sitemap reader timed out on it. The URL list is kept in memory for 30 minutes; after that the previous list is
+// served at once while a fresh one is built (memoAsync), so crawlers never wait for the database.
+const SHARD_TTL_MS = 30 * 60 * 1000
 
 export const revalidate = 86400
 
@@ -87,6 +93,25 @@ export async function GET(
     return new Response('Not found', { status: 404 })
   }
 
+  // Keyed by the per-shard cap too, so changing SEO_CORE_JOB_URLS_PER_SHARD never serves a list built under the old one.
+  const urlXml = await memoAsync(`sitemap-jobs:${page}:${getMaxJobUrlsPerShard()}`, SHARD_TTL_MS, () => buildShardXml(cursor))
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urlXml}
+  ${buildSitemapMetaComment('sitemap-jobs-page')}
+</urlset>`
+
+  return new Response(xml, {
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      ...buildSitemapMetaHeaders('sitemap-jobs-page'),
+    },
+  })
+}
+
+/** The <url> entries of one shard: the newest indexable jobs (after `cursor` when given), capped per shard. */
+async function buildShardXml(cursor: Cursor | null): Promise<string> {
   const baseWhere = buildHundredKWhereBase()
   const maxUrls = getMaxJobUrlsPerShard()
   const where: any = cursor
@@ -147,7 +172,7 @@ export async function GET(
     ),
   ).slice(0, maxUrls)
 
-  const urlXml = indexableJobs
+  return indexableJobs
     .map((job) => {
       // ✅ Always generate canonical v2.8 URL (no legacy/roleSlug risk)
       const slug = buildJobSlug({ id: job.id, title: job.title })
@@ -160,17 +185,4 @@ export async function GET(
   </url>`
     })
     .join('\n')
-
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urlXml}
-  ${buildSitemapMetaComment('sitemap-jobs-page')}
-</urlset>`
-
-  return new Response(xml, {
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      ...buildSitemapMetaHeaders('sitemap-jobs-page'),
-    },
-  })
 }

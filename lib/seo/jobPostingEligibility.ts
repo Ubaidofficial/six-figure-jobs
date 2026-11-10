@@ -15,7 +15,8 @@ export function validateJobPostingEligibility(jobPosting: any): string[] {
   if (!jobPosting.title) errors.push('Missing title')
   if (!jobPosting.description) errors.push('Missing description')
   if (!jobPosting.datePosted) errors.push('Missing datePosted')
-  if (!jobPosting.validThrough) errors.push('Missing validThrough')
+  // validThrough is recommended, not required, and must be left out when the expiry is not known; when present it must be in the future.
+  if (jobPosting.validThrough && !(new Date(jobPosting.validThrough).getTime() > Date.now())) errors.push('validThrough is in the past')
   if (!jobPosting.hiringOrganization || !jobPosting.hiringOrganization.name) {
     errors.push('Missing hiringOrganization.name')
   }

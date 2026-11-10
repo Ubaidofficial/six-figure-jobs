@@ -6,6 +6,7 @@
 // Computed at request time (not prerendered): the deploy-time build cannot reach the database, and a build-time
 // result would freeze a pillars-only sitemap.
 
+import { memoAsync } from '../../lib/cache/memo'
 import { getSiteUrl } from '../../lib/seo/site'
 import { collectEvergreenEntries } from '../../lib/seo/evergreenSitemap'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
@@ -13,6 +14,10 @@ import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/
 const SITE_URL = getSiteUrl()
 
 export const dynamic = 'force-dynamic'
+
+// The evergreen checks take about 14 s (2026-11-10); the entries are kept in memory for 30 minutes and served
+// stale while they refresh (memoAsync), so a crawler never waits for them.
+const ENTRIES_TTL_MS = 30 * 60 * 1000
 
 function escapeXml(value: string) {
   return value
@@ -24,7 +29,7 @@ function escapeXml(value: string) {
 }
 
 export async function GET() {
-  const entries = await collectEvergreenEntries()
+  const entries = await memoAsync('sitemap-hubs', ENTRIES_TTL_MS, () => collectEvergreenEntries())
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

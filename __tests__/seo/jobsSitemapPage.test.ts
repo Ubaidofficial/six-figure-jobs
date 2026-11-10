@@ -2,6 +2,7 @@ import { GET } from '../../app/sitemap-jobs/[page]/route'
 import { prisma } from '../../lib/prisma'
 import { getShortStableIdForJobId } from '../../lib/jobs/jobSlug'
 import { MAX_INDEXABLE_JOB_AGE_DAYS } from '../../lib/jobs/freshness'
+import { __clearMemoForTests } from '../../lib/cache/memo'
 
 jest.mock('../../lib/prisma', () => ({
   prisma: {
@@ -20,6 +21,8 @@ const findManyMock = prisma.job.findMany as jest.MockedFunction<typeof prisma.jo
 describe('sitemap-jobs/[page] route', () => {
   beforeEach(() => {
     findManyMock.mockReset()
+    // Shards are cached in memory (memoAsync); each test builds its own.
+    __clearMemoForTests()
   })
   afterEach(() => {
     delete process.env.SEO_CORE_JOB_URLS_PER_SHARD
@@ -63,6 +66,7 @@ describe('sitemap-jobs/[page] route', () => {
     expect(findManyMock.mock.calls[0][0]).toMatchObject({ take: 20000 })
 
     findManyMock.mockClear()
+    __clearMemoForTests() // the default cap equals the previous one, so the cached shard would be reused
     delete process.env.SEO_CORE_JOB_URLS_PER_SHARD
     await GET({} as any, { params: Promise.resolve({ page: '1' }) })
     expect(findManyMock.mock.calls[0][0]).toMatchObject({ take: 20000 })
@@ -149,5 +153,16 @@ describe('sitemap-jobs/[page] route', () => {
     const gteDate = freshnessClause.OR[0].lastSeenAt.gte
     const actualDateMs = gteDate.getTime()
     expect(Math.abs(actualDateMs - expectedDateMs)).toBeLessThan(60 * 1000)
+  })
+
+  it('serves a shard from memory instead of querying the database on every request', async () => {
+    findManyMock.mockResolvedValue([listable(1)] as any)
+    const first = await (await GET({} as any, { params: Promise.resolve({ page: '1' }) })).text()
+    const second = await (await GET({} as any, { params: Promise.resolve({ page: '1' }) })).text()
+    expect(findManyMock).toHaveBeenCalledTimes(1)
+    // Same URL entries; the trailing meta comment carries the request time, so it is left out of the comparison.
+    const urls = (xml: string) => xml.match(/<url>[\s\S]*?<\/url>/g)
+    expect(urls(second)).toEqual(urls(first))
+    expect(urls(first)).toHaveLength(1)
   })
 })
