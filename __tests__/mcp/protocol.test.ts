@@ -108,3 +108,21 @@ describe('MCP tool arguments', () => {
     expect(() => readJobRef('two words')).toThrow(ToolInputError)
   })
 })
+
+describe('salary benchmark helpers', () => {
+  const { salaryQuantiles, resolveRoleSlug } = jest.requireActual('@/lib/mcp/tools')
+
+  it('gives the quartiles and median', () => {
+    expect(salaryQuantiles([])).toBeNull()
+    expect(salaryQuantiles([100, 200, 300, 400, 500])).toEqual({ count: 5, p25: 200, median: 300, p75: 400 })
+    expect(salaryQuantiles([400, 100, 300, 200])).toEqual({ count: 4, p25: 175, median: 250, p75: 325 })
+    expect(salaryQuantiles([150000, -1, NaN, 0]).count).toBe(1)
+  })
+
+  it('resolves a role name, slug or synonym to a role that has jobs', () => {
+    const known = ['software-engineer', 'data-engineer', 'product-manager', 'machine-learning-engineer']
+    expect(resolveRoleSlug('Data Engineer', known)).toBe('data-engineer')
+    expect(resolveRoleSlug('product-manager', known)).toBe('product-manager')
+    expect(resolveRoleSlug('basket weaver', known)).toBeNull()
+  })
+})
