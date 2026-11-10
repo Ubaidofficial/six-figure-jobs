@@ -171,6 +171,20 @@
   color: var(--color-text-1);
 }
 
+/* Beside the copy (1360px+) the column is too narrow for flag, market, count and floor on one line: the count goes on
+   its own line under the market name (indented past the flag) on every row, instead of some rows wrapping "jobs". */
+@media (min-width: 1360px) {
+  .floor {
+    align-items: center;
+  }
+
+  .floorJobs {
+    display: block;
+    margin: 1px 0 0 26px;
+    line-height: 1.2;
+  }
+}
+
 .panelNote {
   margin: 10px 0 0;
   font-size: 0.75rem;
