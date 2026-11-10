@@ -7,7 +7,7 @@
 // companies that have filed H1B petitions with wage/role info.
 // We scrape them to populate the visa sponsorship tag on jobs.
 
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 import { ingestBoardJob } from '../jobs/ingestBoardJob'
 import type { ScraperStats } from './scraperStats'
 

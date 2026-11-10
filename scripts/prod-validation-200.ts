@@ -1,4 +1,4 @@
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 
 const PROD_URL = 'https://www.6figjobs.com'
 const HEADERS = {

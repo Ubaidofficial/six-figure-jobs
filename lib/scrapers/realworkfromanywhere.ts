@@ -1,5 +1,5 @@
 // lib/scrapers/realworkfromanywhere.ts
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
 import { detectATS, getCompanyJobsUrl, isExternalToHost, toAtsProvider } from './utils/detectATS'

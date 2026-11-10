@@ -2,7 +2,7 @@
 // Minimal HTML-based Ashby scraper.
 // We do NOT rely on careers.json anymore because many boards return HTML there.
 
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 
 export async function scrapeAshby(atsSlugOrUrl: string): Promise<any[]> {
   // Normalize the input into a base URL like "https://jobs.ashbyhq.com/airbyte"

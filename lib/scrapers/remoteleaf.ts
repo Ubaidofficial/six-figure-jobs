@@ -1,7 +1,7 @@
 // lib/scrapers/remoteleaf.ts
 // Scrapes jobs from https://remoteleaf.com/remote-jobs
 import axios from 'axios'
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'
