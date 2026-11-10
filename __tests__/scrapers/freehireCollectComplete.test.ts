@@ -58,7 +58,8 @@ describe('collectFreehireJobs completeness flag', () => {
   })
 
   it('stops, complete, after two pages made up only of jobs older than the window', async () => {
-    const old = (offset: number) => Array.from({ length: 100 }, (_, i) => rec(offset + i, hoursAgo(24 * 30)))
+    // Older than every market's window, including the 30-day worldwide one.
+    const old = (offset: number) => Array.from({ length: 100 }, (_, i) => rec(offset + i, hoursAgo(24 * 40)))
     get.mockImplementation(async (_url: string, config: { params: { offset: number } }) => page(old(config.params.offset), 99_999))
     const r = await withImmediateTimers(() => collectFreehireJobs({ since }))
     expect(r.markets[0].fetched).toBe(0)
@@ -75,7 +76,7 @@ describe('collectFreehireJobs completeness flag', () => {
   it('is NOT complete when the page limit stops paging while jobs inside the window remain', async () => {
     const full = Array.from({ length: 100 }, (_, i) => rec(i, hoursAgo(1)))
     get.mockResolvedValue(page(full))
-    const r = await collectFreehireJobs({ since, maxPagesPerMarket: 1 })
+    const r = await withImmediateTimers(() => collectFreehireJobs({ since, maxPagesPerMarket: 1 }))
     expect(r.markets.every((m) => !m.complete)).toBe(true)
   })
 
@@ -84,5 +85,25 @@ describe('collectFreehireJobs completeness flag', () => {
     const r = await collectFreehireJobs({ since })
     expect(r.errors.length).toBeGreaterThan(0)
     expect(r.markets.every((m) => !m.complete)).toBe(true)
+  })
+})
+
+describe('worldwide-remote markets', () => {
+  beforeEach(() => get.mockReset())
+
+  it('read 30 days back while the regular markets keep the daily window', async () => {
+    // Every query returns one job from 1 hour ago and one from 10 days ago (only the worldwide query should keep it).
+    get.mockImplementation(async (_url: string, config: { params: { regions?: string; salary_currency: string } }) =>
+      page([rec(1, hoursAgo(1)), rec(config.params.regions === 'global' ? 2 : 3, hoursAgo(240))], 2),
+    )
+    const r = await collectFreehireJobs({ since: hoursAgo(36) })
+    const usd = r.markets.find((m) => m.currency === 'USD')!
+    const usdWorldwide = r.markets.find((m) => m.currency === 'USD worldwide')!
+    expect(usd.fetched).toBe(1)
+    expect(usdWorldwide.fetched).toBe(2)
+    expect(r.inputs.map((i) => i.externalId)).toContain('ext-2')
+    expect(r.inputs.map((i) => i.externalId)).not.toContain('ext-3')
+    const params = get.mock.calls.map((c) => c[1].params)
+    expect(params).toContainEqual(expect.objectContaining({ regions: 'global', salary_currency: 'USD' }))
   })
 })

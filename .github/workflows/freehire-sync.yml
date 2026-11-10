@@ -87,6 +87,14 @@ jobs:
         if: ${{ !cancelled() }}
         timeout-minutes: 90
         run: npx tsx scripts/sync-direct-employers.ts
+      # 4dayweek.io's four-day-week listings (reduced hours at full pay) from its public API, for /jobs/4-day-week.
+      # Independent of the steps above; a failure here does not stop the steps below. Seen jobs are refreshed daily, so
+      # a listing 4dayweek.io drops expires with the 7-day rule below.
+      - name: Sync 4-day-week jobs
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        timeout-minutes: 10
+        run: npm run sync:fourdayweek
       # Runs whenever a sync succeeded, even if the closed-job check above failed or timed out.
       - name: Expire jobs not refreshed in 7 days
         if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}

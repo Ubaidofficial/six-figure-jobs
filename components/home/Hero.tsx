@@ -116,6 +116,9 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
         <Link className={styles.quickLink} href="/jobs/visa-sponsorship">
           Visa sponsorship
         </Link>
+        <Link className={styles.quickLink} href="/jobs/4-day-week">
+          4-day week
+        </Link>
       </p>
 
       {newest || (typeof newThisWeek === 'number' && newThisWeek > 0) ? (

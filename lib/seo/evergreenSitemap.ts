@@ -12,6 +12,7 @@
 import { prisma } from '../prisma'
 import { BLOG_POSTS } from '../blog/posts'
 import { loadDegreeRequiredJobIds } from '../jobs/degreeRequirement'
+import { FOUR_DAY_WEEK_MIN_JOBS_TO_INDEX, FOUR_DAY_WEEK_PATH, loadFourDayWeekListings } from '../jobs/fourDayWeek'
 import { HIGH_PAYING_MIN_ROLES_TO_INDEX, loadHighPayingJobs } from '../jobs/highPayingJobs'
 import { buildGlobalExclusionsWhere, buildHighSalaryEligibilityWhere, buildWhere } from '../jobs/queryJobs'
 import { getTier1Slugs, isTier1Role } from '../roles/canonicalSlugs'
@@ -211,8 +212,8 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
 
 /**
  * Hub pages built from live data, listed only when they pass the same rule their robots tag uses, so the sitemap never
- * advertises one while it is noindex: /high-paying-jobs with enough ranked roles, /jobs/no-degree with any jobs. A
- * failed lookup leaves the page out.
+ * advertises one while it is noindex: /high-paying-jobs with enough ranked roles, /jobs/no-degree with any jobs,
+ * /jobs/4-day-week with at least FOUR_DAY_WEEK_MIN_JOBS_TO_INDEX jobs. A failed lookup leaves the page out.
  */
 async function collectDataPageEntries(lastmod: Date | null): Promise<SitemapEntry[]> {
   const out: SitemapEntry[] = []
@@ -225,6 +226,13 @@ async function collectDataPageEntries(lastmod: Date | null): Promise<SitemapEntr
   try {
     const pass = await loadDegreeRequiredJobIds()
     if ((await prisma.job.count({ where: buildWhere({ noDegreeRequired: pass }) })) > 0) out.push({ path: '/jobs/no-degree', lastmod })
+  } catch {
+    // left out
+  }
+  try {
+    const listings = await loadFourDayWeekListings()
+    const open = await prisma.job.count({ where: buildWhere({ fourDayWeek: listings }) })
+    if (open >= FOUR_DAY_WEEK_MIN_JOBS_TO_INDEX) out.push({ path: FOUR_DAY_WEEK_PATH, lastmod })
   } catch {
     // left out
   }
