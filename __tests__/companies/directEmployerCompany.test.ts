@@ -15,8 +15,14 @@ describe('companyUpdatesFor', () => {
     expect(companyUpdatesFor(scale, row({}))).toEqual({ website: 'https://scale.com' })
   })
 
-  it('keeps a website the company already has', () => {
+  it('keeps a website on the employer domain', () => {
     expect(companyUpdatesFor(scale, row({ website: 'https://www.scale.com' }))).toEqual({})
+    expect(companyUpdatesFor(scale, row({ website: 'https://scale.com/careers' }))).toEqual({})
+  })
+
+  // Live on 2026-11-10: Scale AI's stored website was the slug-guessed "scale-ai.com", so its logo stayed a letter.
+  it('replaces a website on another domain with the checked one', () => {
+    expect(companyUpdatesFor(scale, row({ website: 'https://scale-ai.com' }))).toEqual({ website: 'https://scale.com' })
   })
 
   // Live on 2026-11-09: /companies drew a letter for Scale AI, its stored logo was img.logo.dev/scale-ai.com.
