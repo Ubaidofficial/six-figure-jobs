@@ -13,7 +13,11 @@ async function fetchHtml(url: string): Promise<string | null> {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SixFigureJobsBot/1.0)' },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+      await res.body?.cancel().catch(() => undefined)
+      return null
+    }
     return res.text()
   } catch {
     return null

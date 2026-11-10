@@ -148,7 +148,11 @@ async function fetchTextWithRetry(
         `[Workday] retry ${info.attempt}/${info.attempts} for ${info.url} in ${info.delayMs}ms (${info.reason})`,
       ),
   })
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
+  if (!res.ok) {
+    // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+    await res.body?.cancel().catch(() => undefined)
+    throw new Error(`HTTP ${res.status} ${res.statusText}`)
+  }
   return res.text()
 }
 

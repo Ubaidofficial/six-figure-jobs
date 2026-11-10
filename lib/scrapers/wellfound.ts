@@ -110,7 +110,11 @@ async function postGraphqlWithRetry<T>(
 
       clearTimeout(id)
 
-      if (!res.ok) throw new Error(`Wellfound API returned ${res.status}`)
+      if (!res.ok) {
+        // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+        await res.body?.cancel().catch(() => undefined)
+        throw new Error(`Wellfound API returned ${res.status}`)
+      }
 
       return (await res.json()) as T
     } catch (err: any) {

@@ -26,7 +26,11 @@ async function fetchJson(url: string): Promise<any> {
       cache: 'no-store',
       signal: controller.signal,
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.ok) {
+      // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+      await res.body?.cancel().catch(() => undefined)
+      throw new Error(`HTTP ${res.status}`)
+    }
     return res.json()
   } finally {
     clearTimeout(id)
@@ -46,7 +50,11 @@ async function fetchText(url: string): Promise<string> {
       cache: 'no-store',
       signal: controller.signal,
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.ok) {
+      // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+      await res.body?.cancel().catch(() => undefined)
+      throw new Error(`HTTP ${res.status}`)
+    }
     return res.text()
   } finally {
     clearTimeout(id)
