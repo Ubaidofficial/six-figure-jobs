@@ -70,9 +70,6 @@ export type JobQueryInput = {
   sortBy?: 'salary' | 'date' | 'relevant'
   excludeInternships?: boolean
 
-  /** Leave out jobs from these sources (Job.source, e.g. 'board:freehire'), where their terms forbid passing them on. */
-  excludeSources?: string[]
-
   // Specialty filters
   visaSponsorship?: boolean
   /**
@@ -431,10 +428,6 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 
   if (filters.citySlug) {
     where.citySlug = filters.citySlug
-  }
-
-  if (filters.excludeSources?.length) {
-    addAnd({ source: { notIn: filters.excludeSources } })
   }
 
   if (filters.remoteOnly) {

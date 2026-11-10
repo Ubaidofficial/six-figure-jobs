@@ -17,14 +17,6 @@ import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
 import { ToolInputError, type McpTool, type ServerInfo } from './protocol'
 
-/**
- * Sources whose terms forbid handing their postings on through an API. freehire's Terms of Service (updated
- * 2026-10-28, https://freehire.me/terms): "You may not resell or redistribute the raw data — as a download, a dataset,
- * or an API or feed whose purpose is to hand the postings on to other services." This server is such an API, so its
- * jobs are left out unless freehire agrees in writing.
- */
-export const MCP_EXCLUDED_SOURCES = ['board:freehire']
-
 const PAGE_SIZE = 10
 const MAX_PAGE = 50
 const DESCRIPTION_MAX_CHARS = 6_000
@@ -189,7 +181,6 @@ const searchJobs: McpTool = {
       remoteMode: remote === true ? undefined : (parsed.remoteMode as 'remote' | 'hybrid' | 'onsite' | undefined),
       remoteRegion: parsed.remoteRegion,
       seniorityLevels: seniorityLevelsFor(parsed.experienceLevel),
-      excludeSources: MCP_EXCLUDED_SOURCES,
       ...(minAnnual > 0 ? { minAnnual } : {}),
     })
 
@@ -234,7 +225,7 @@ const getJob: McpTool = {
       ors.length === 0
         ? null
         : ((await prisma.job.findFirst({
-            where: { OR: ors, isExpired: false, source: { notIn: MCP_EXCLUDED_SOURCES } },
+            where: { OR: ors, isExpired: false },
             include: { companyRef: true },
           })) as JobWithCompany | null)
 
