@@ -17,6 +17,7 @@ import { degreeRequirement } from './degreeRequirement'
 import { extractBenefits, extractExperience, summarizeRole } from './jobSummary'
 import { loadPeerSalaries, rankSalary } from './salaryRank'
 import { salaryMidpoint } from './salarySnapshot'
+import { resolveJobRoleSlug } from '../roles/indexableRole'
 import { roleLabelFor } from '../roles/relatedRoles'
 
 export type JobWithCompany = Job & {
@@ -174,7 +175,7 @@ const jobFullSelect = {
  * read on the server so the descriptions themselves never reach the browser. A failure leaves the jobs as they were.
  */
 async function withCardSummaries<
-  T extends { id: string; company?: string | null; roleSlug?: string | null; currency?: string | null; minAnnual?: bigint | number | null; maxAnnual?: bigint | number | null },
+  T extends { id: string; title?: string | null; company?: string | null; roleSlug?: string | null; currency?: string | null; minAnnual?: bigint | number | null; maxAnnual?: bigint | number | null },
 >(jobs: T[]): Promise<T[]> {
   if (jobs.length === 0) return jobs
   try {
@@ -185,9 +186,12 @@ async function withCardSummaries<
     const ranks = await Promise.all(
       jobs.map(async (j) => {
         const mine = salaryMidpoint(j.minAnnual ?? null, j.maxAnnual ?? null)
-        if (!j.roleSlug || !j.currency || mine == null) return null
-        const rank = rankSalary(mine, await loadPeerSalaries(j.roleSlug, j.currency).catch(() => []))
-        return rank ? { percent: rank.percent, peers: rank.peers, role: roleLabelFor(j.roleSlug) } : null
+        // The role as the job page resolves it: most jobs are stored as "other", so the title is read when it is.
+        // No real role, no comparison ("Pays more than 80% of Other jobs" said nothing).
+        const role = resolveJobRoleSlug(j)
+        if (!role || !j.currency || mine == null) return null
+        const rank = rankSalary(mine, await loadPeerSalaries(role, j.currency).catch(() => []))
+        return rank ? { percent: rank.percent, peers: rank.peers, role: roleLabelFor(role) } : null
       }),
     )
     return jobs.map((j, i) => {
