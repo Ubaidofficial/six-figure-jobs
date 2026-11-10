@@ -108,3 +108,14 @@ describe('MCP tool arguments', () => {
     expect(() => readJobRef('two words')).toThrow(ToolInputError)
   })
 })
+
+describe('MCP source exclusion', () => {
+  it('leaves freehire jobs out of the MCP query, and only when asked', () => {
+    const { buildWhere } = jest.requireActual('@/lib/jobs/queryJobs')
+    const { MCP_EXCLUDED_SOURCES } = jest.requireActual('@/lib/mcp/tools')
+    const json = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x))
+    expect(MCP_EXCLUDED_SOURCES).toContain('board:freehire')
+    expect(json(buildWhere({ excludeSources: MCP_EXCLUDED_SOURCES }))).toContain('{"source":{"notIn":["board:freehire"]}}')
+    expect(json(buildWhere({}))).not.toContain('notIn":["board:freehire"')
+  })
+})
