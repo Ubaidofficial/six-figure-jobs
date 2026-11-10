@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { RegionMark } from '@/components/ui/RegionMark'
 import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
 import { cache } from 'react'
@@ -51,6 +52,7 @@ function buildRegionChips(active: string | null, regionCounts?: Record<string, n
   }
   const regions = visibleHubRegionSlugs(regionCounts, active).map((slug) => ({
     label: remoteRegionDef(slug)!.label,
+    logo: <RegionMark mark={remoteRegionDef(slug)!.mark} className="mr-1.5" />,
     href: `/remote?remoteRegion=${encodeURIComponent(slug)}`,
     active: active === slug,
     count: regionCounts ? (regionCounts[slug] ?? 0) : undefined,

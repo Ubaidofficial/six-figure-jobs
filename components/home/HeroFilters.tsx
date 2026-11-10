@@ -109,7 +109,7 @@ function LocationField({ locations, regions }: { locations: Option[]; regions: O
           <optgroup label="Remote">
             {regions.map((r) => (
               <option key={r.value} value={r.value}>
-                {r.value === 'global' ? 'Anywhere in the world (remote)' : `Remote · ${r.label}`}
+                {r.value === 'global' ? '🌍 Anywhere in the world (remote)' : `Remote · ${r.label}`}
               </option>
             ))}
           </optgroup>

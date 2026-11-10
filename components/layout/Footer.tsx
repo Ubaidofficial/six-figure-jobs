@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Linkedin, MessageCircle, Twitter } from 'lucide-react'
 
+import { RegionMark } from '@/components/ui/RegionMark'
+
 import { FooterNewsletter } from './FooterNewsletter'
 import { FOOTER_COLUMNS } from './footerLinks'
 import styles from './Footer.module.css'
@@ -61,8 +63,9 @@ export function Footer() {
             <div key={col.title}>
               <div className={styles.colTitle}>{col.title}</div>
               <div className={styles.list}>
-                {col.links.map(([label, href]) => (
+                {col.links.map(([label, href, mark]) => (
                   <Link key={href} className={styles.link} href={href}>
+                    <RegionMark mark={mark} className="mr-2" />
                     {label}
                   </Link>
                 ))}
@@ -115,8 +118,9 @@ export function Footer() {
               </summary>
               <div className={styles.accordionBody}>
                 <div className={styles.list}>
-                  {col.links.map(([label, href]) => (
+                  {col.links.map(([label, href, mark]) => (
                     <Link key={href} className={styles.link} href={href}>
+                      <RegionMark mark={mark} className="mr-2" />
                       {label}
                     </Link>
                   ))}

@@ -7,8 +7,9 @@ import { hasFlag, normalizeCountryCode } from '@/lib/location/country'
  * Images (public/flags), not emoji: Windows shows flag emoji as two letters.
  */
 export function CountryFlag({ code, className }: { code?: string | null; className?: string }) {
-  const cc = normalizeCountryCode(code)
-  if (!cc || !hasFlag(cc)) return null
+  // The EU flag (public/flags/eu.svg) is for the "Europe" market and region; EU is not a country code in job data.
+  const cc = typeof code === 'string' && code.trim().toUpperCase() === 'EU' ? 'EU' : normalizeCountryCode(code)
+  if (!cc || (cc !== 'EU' && !hasFlag(cc))) return null
   return (
     // eslint-disable-next-line @next/next/no-img-element -- 1 KB SVGs; next/image would only add a proxy hop
     <img
