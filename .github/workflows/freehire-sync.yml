@@ -95,6 +95,13 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         run: npm run sync:fourdayweek
+      # Worldwide-remote jobs from We Work Remotely (RSS) and Himalayas (search API), which freehire barely carries.
+      # Independent of the steps above; a failure here does not stop the steps below.
+      - name: Sync worldwide remote boards
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        timeout-minutes: 10
+        run: npm run sync:worldwide-boards
       # Runs whenever a sync succeeded, even if the closed-job check above failed or timed out.
       - name: Expire jobs not refreshed in 7 days
         if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}

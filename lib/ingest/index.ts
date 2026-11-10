@@ -15,7 +15,7 @@
 import { prisma } from '../prisma'
 import { upsertCompanyFromBoard } from '../companies/upsertFromBoard'
 import { relinkToRepairedCompany } from '../companies/repairCompanyName'
-import { cleanApplyUrl } from '../jobs/applyUrl'
+import { cleanApplyUrlForSource } from '../jobs/applyUrl'
 import {
   normalizeSalary,
   parseSalaryFromText,
@@ -238,7 +238,7 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
           companyLogo: input.companyLogoUrl ?? null,
           source: input.source,
           url: input.url ?? null,
-          applyUrl: cleanApplyUrl(input.applyUrl, input.url),
+          applyUrl: cleanApplyUrlForSource(input.source, input.applyUrl, input.url),
           sourcePriority: incomingPriority,
           dedupeKey,
           isExpired: false,
@@ -408,7 +408,7 @@ async function createNewJob(
     type: input.employmentType ?? 'Full-time',
     employmentType: input.employmentType ?? null,
     experienceLevel: inferExperienceLevelFromTitle(input.title),
-    applyUrl: cleanApplyUrl(input.applyUrl, input.url),
+    applyUrl: cleanApplyUrlForSource(input.source, input.applyUrl, input.url),
     url: input.url ?? null,
     descriptionHtml: input.descriptionHtml ?? null,
     skillsJson: input.skills?.length ? JSON.stringify(input.skills) : null,
@@ -588,7 +588,7 @@ async function upgradeJob(
     employmentType: input.employmentType ?? existing.employmentType,
 
     // URLs — never let the apply button point at an aggregator we scraped from.
-    applyUrl: cleanApplyUrl(input.applyUrl, input.url, existing.applyUrl),
+    applyUrl: cleanApplyUrlForSource(input.source, input.applyUrl, input.url, existing.applyUrl),
     url: input.url ?? existing.url,
     descriptionHtml: input.descriptionHtml ?? existing.descriptionHtml,
 
@@ -743,7 +743,7 @@ async function refreshJob(
   // (e.g. ad.doubleclick.net → the real employer URL) that were set before the
   // apply-URL rules existed and would otherwise persist across refreshes.
   const resolvedApplyUrl = updateData.applyUrl ?? existing.applyUrl ?? null
-  const sanitizedApplyUrl = cleanApplyUrl(resolvedApplyUrl)
+  const sanitizedApplyUrl = cleanApplyUrlForSource(existing.source, resolvedApplyUrl)
   if (sanitizedApplyUrl !== (existing.applyUrl ?? null)) {
     updateData.applyUrl = sanitizedApplyUrl
   }

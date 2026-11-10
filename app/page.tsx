@@ -17,7 +17,7 @@ import { HomeFAQ } from './pageFAQ'
 import { CATEGORY_LINKS } from '@/lib/constants/category-links'
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { SALARY_TIERS, tierQueryInput, type SalaryTierId } from '@/lib/jobs/salaryTiers'
-import { countryCodeToSlug } from '@/lib/seo/countrySlug'
+import { countryCodeToSlug, slugToCountryCode } from '@/lib/seo/countrySlug'
 import { Hero } from '@/components/home/Hero'
 import { HeroFilters } from '@/components/home/HeroFilters'
 import { loadSalarySnapshot } from '@/lib/jobs/salarySnapshot'
@@ -535,7 +535,7 @@ export default async function HomePage() {
     topCityByCode.set(code, row.city.trim())
   }
 
-  const topLocations: TopLocationCard[] = TOP_LOCATION_DEFS.map((def) => {
+  const countryCards: TopLocationCard[] = TOP_LOCATION_DEFS.map((def) => {
     const slug = countryCodeToSlug(def.code) ?? def.code.toLowerCase()
     const name = TARGET_COUNTRIES.find((c) => c.code === def.code)?.label ?? slug
     return {
@@ -547,6 +547,28 @@ export default async function HomePage() {
       topCity: topCityByCode.get(def.code) ?? null,
     }
   })
+  // Countries with no jobs are left out, and remote jobs open to every country get their own card after the US
+  // (people outside the listed countries asked where those are); six cards fill the 3-column grid.
+  const worldwideCount = siteCounts?.remoteWorldwide ?? 0
+  const withJobs = countryCards.filter((c) => c.jobCount > 0)
+  const topLocations: TopLocationCard[] = (
+    worldwideCount > 0
+      ? [
+          ...withJobs.slice(0, 1),
+          {
+            slug: 'anywhere',
+            name: 'Anywhere in the world',
+            countryCode: null,
+            jobCount: worldwideCount,
+            thresholdLabel: '$100k+',
+            topCity: null,
+            href: '/remote?remoteRegion=global',
+            detail: 'Remote, open to every country',
+          },
+          ...withJobs.slice(1),
+        ]
+      : withJobs
+  ).slice(0, 6)
 
     return (
     <>
@@ -566,7 +588,12 @@ export default async function HomePage() {
       >
         <HeroFilters
           roles={ROLE_OPTIONS.map((o) => ({ value: o.slug, label: o.label }))}
-          locations={LOCATIONS.map((l) => ({ value: l.code, label: l.label }))}
+          // /jobs filters on ISO codes (`country=US`); the slugs sent before were ignored there. "Remote Only" is covered
+          // by the Remote group of the same list.
+          locations={LOCATIONS.flatMap((l) => {
+            const code = slugToCountryCode(l.code)
+            return code ? [{ value: code, label: l.label }] : []
+          })}
           remoteRegions={HERO_REMOTE_REGIONS}
         />
       </Hero>
@@ -574,21 +601,21 @@ export default async function HomePage() {
       {/* Company trust strip right under the hero (docs/DESIGN_UX_SPEC.md §10, homepage order step 2). */}
       <FeaturedCompaniesCarousel companies={featuredCompanies} />
 
+      {/* The numbers band right after the employers (moved up from the foot of the page and made compact, 2026-11-10). */}
+      <SiteStatsStrip
+        jobs={stats.totalJobs}
+        companies={stats.totalCompaniesHiring}
+        newThisWeek={stats.newThisWeek}
+        countries={siteCounts ? siteCounts.byCountry.filter((c) => c.count > 0).length : null}
+        catalog={freehireCatalog}
+      />
+
       <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} />
 
       <NewRolesStrip companies={newRolesCompanies} />
 
       {/* Jobs already in the live feed above are left out, so no job appears twice with two different times. */}
       <LatestOpportunities jobs={jobs.filter((job) => !feedItemIds.has(job.id))} totalJobs={stats.totalJobs} />
-
-      <SiteStatsStrip
-        jobs={stats.totalJobs}
-        companies={stats.totalCompaniesHiring}
-        newThisWeek={stats.newThisWeek}
-        countries={siteCounts ? siteCounts.byCountry.filter((c) => c.count > 0).length : null}
-        medianUsd={salarySnapshot?.median ?? null}
-        catalog={freehireCatalog}
-      />
 
       {priorityFeaturedCompanies.length > 0 && (
         <section className="mb-8 rounded-2xl border border-border bg-card p-5">

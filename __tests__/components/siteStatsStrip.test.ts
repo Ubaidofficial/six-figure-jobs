@@ -8,8 +8,8 @@ jest.mock('@/components/ui/AnimatedNumber.module.css', () => mockClassNames())
 import { SiteStatsStrip, screenRatio } from '@/components/home/SiteStatsStrip'
 import { DIRECT_EMPLOYERS } from '@/lib/constants/directEmployers'
 
-const base = { jobs: 14597, companies: 2140, newThisWeek: 8656, countries: 23, medianUsd: 200000 }
-const text = (html: string) => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')
+const base = { jobs: 14597, companies: 2140, newThisWeek: 8656, countries: 23 }
+const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 const catalog = { jobs: 4871976, companies: 697981, sources: 438, atsPlatforms: 179 }
 
 describe('SiteStatsStrip', () => {
@@ -18,13 +18,11 @@ describe('SiteStatsStrip', () => {
     const t = text(html)
     expect(t).toContain('We screen')
     expect(t).toContain('4,871,976')
-    expect(t).toContain('697,981 companies')
-    expect(t).toContain('438 sources and 179 hiring platforms')
-    expect(t).toContain(`plus ${DIRECT_EMPLOYERS.length} careers sites we read directly`)
+    expect(t).toContain(`open jobs from 438 sources, 179 hiring platforms and ${DIRECT_EMPLOYERS.length} careers sites`)
     expect(t).toContain('You see')
     expect(t).toContain('14,597')
     expect(t).toContain('$100k+ jobs with published pay')
-    expect(t).toContain('2,140 companies')
+    expect(t).toContain('2,140 companies hiring')
     expect(t).toContain('8,656 new this week')
     expect(t).toContain('23 countries')
     expect(t).toContain('about 1 in 334 makes the list')

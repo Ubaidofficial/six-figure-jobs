@@ -10,6 +10,7 @@ type Option = { value: string; label: string }
 type HeroFiltersProps = {
   roles: Option[]
   locations: Option[]
+  /** Remote regions ("global" = anywhere in the world), offered at the top of the Location list. */
   remoteRegions: Option[]
 }
 
@@ -91,8 +92,41 @@ function Pills({
   )
 }
 
+/**
+ * One Location list: remote regions first ("Anywhere in the world" at the top), then countries (ISO codes). Both submit as `country`;
+ * /jobs reads a region slug there as a remote region. Replaced a separate "Remote region" select (2026-11-10): asked for
+ * the worldwide option in Location, where people look for it.
+ */
+function LocationField({ locations, regions }: { locations: Option[]; regions: Option[] }) {
+  return (
+    <div className={styles.field}>
+      <label htmlFor="country" className={styles.label}>
+        Location
+      </label>
+      <div className={styles.selectWrap}>
+        <select id="country" name="country" className={styles.select} defaultValue="">
+          <option value="">All locations</option>
+          <optgroup label="Remote">
+            {regions.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.value === 'global' ? 'Anywhere in the world (remote)' : `Remote · ${r.label}`}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Country">
+            {locations.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+      </div>
+    </div>
+  )
+}
+
 export function HeroFilters({ roles, locations, remoteRegions }: HeroFiltersProps) {
-  // The first remote-region entry is the "any" option with an empty value; the select renders its own.
   const regions = remoteRegions.filter((r) => r.value !== '')
   return (
     <div className={styles.filters}>
@@ -106,14 +140,7 @@ export function HeroFilters({ roles, locations, remoteRegions }: HeroFiltersProp
       <div className={styles.panel}>
       <div className={styles.selects}>
         <SelectField id="role" name="role" label="Role" allLabel="All roles" options={roles} />
-        <SelectField id="country" name="country" label="Location" allLabel="All locations" options={locations} />
-        <SelectField
-          id="remoteRegion"
-          name="remoteRegion"
-          label="Remote region"
-          allLabel="Any remote region"
-          options={regions}
-        />
+        <LocationField locations={locations} regions={regions} />
       </div>
       <div className={styles.pillGroups}>
         <Pills legend="Work arrangement" name="remoteMode" options={WORK} defaultValue="" />

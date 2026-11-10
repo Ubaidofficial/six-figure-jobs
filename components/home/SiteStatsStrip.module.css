@@ -1,135 +1,192 @@
-.section {
-  margin: 0 0 40px;
-  padding: 28px 0;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
+/* The homepage numbers band: one dark, compact block (the one dark moment on the light page), funnel on the left,
+   facts on the right. Wraps to two rows below 1100 px and stacks on phones. */
+
+.band {
+  margin: 28px 0 0;
+  padding: 24px 28px 18px;
+  border-radius: 24px;
+  background: #12160d;
+  color: #f4f6ee;
 }
 
 .eyebrow {
-  margin: 0 0 18px;
+  margin: 0 0 14px;
   font-family: var(--font-mono);
   font-size: 0.75rem;
+  font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-text-2);
+  color: color-mix(in srgb, #f4f6ee 55%, transparent);
 }
 
-/* Two panels joined by an arrow: what we screen, what is left. One column on narrow screens. */
-.funnel {
+.eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  vertical-align: 1px;
+}
+
+.row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: stretch;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(90px, 0.45fr) minmax(0, 1fr) minmax(0, 1.25fr);
+  align-items: start; /* the two big numbers on one line */
+  gap: 20px;
 }
 
-.single {
-  grid-template-columns: minmax(0, 1fr);
+.connector,
+.facts {
+  align-self: center;
 }
 
-.panel {
-  display: flex;
-  flex-direction: column;
+.noScreen {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+}
+
+.step {
   min-width: 0;
-  padding: 22px 24px;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  background: var(--color-background-card);
 }
 
-/* The panel that matters to a job seeker gets the brand tint. */
-.panelMain {
-  border-color: color-mix(in srgb, var(--color-primary-text) 35%, var(--color-border));
-  background: color-mix(in srgb, var(--color-primary-text) 6%, transparent);
-}
-
-.panelLabel {
-  margin: 0 0 10px;
-  font-size: 0.8125rem;
+.label {
+  margin: 0;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-text-2);
+  color: color-mix(in srgb, #f4f6ee 55%, transparent);
 }
 
 .big {
-  margin: 0;
-  font-size: clamp(2rem, 1.3rem + 2vw, 3rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
+  font-weight: 800;
   line-height: 1.05;
-  color: var(--color-text-0);
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
-.bigLabel {
-  margin: 6px 0 0;
-  font-size: 0.9375rem;
-  color: var(--color-text-1);
+.bigMain {
+  color: var(--color-primary);
 }
 
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 8px;
-  margin: 16px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.facts li {
-  padding: 4px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
+.sub {
+  margin: 4px 0 0;
   font-size: 0.8125rem;
-  color: var(--color-text-1);
-  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  color: color-mix(in srgb, #f4f6ee 70%, transparent);
 }
 
-.arrow {
+/* The funnel's middle: a line that narrows to an arrowhead, the ratio written under it. */
+.connector {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  max-width: 120px;
   text-align: center;
 }
 
-.arrowIcon {
-  width: 28px;
-  height: 28px;
-  color: var(--color-primary-text);
+.line {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, color-mix(in srgb, #f4f6ee 15%, transparent), var(--color-primary));
+}
+
+.line::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: -4px;
+  border: 5px solid transparent;
+  border-left: 7px solid var(--color-primary);
+  border-right: 0;
 }
 
 .ratio {
   font-size: 0.75rem;
   line-height: 1.3;
-  color: var(--color-text-2);
+  color: color-mix(in srgb, #f4f6ee 70%, transparent);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facts li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0 4px 16px;
+  border-left: 1px solid color-mix(in srgb, #f4f6ee 14%, transparent);
+}
+
+.factValue {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.factLabel {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, #f4f6ee 60%, transparent);
 }
 
 .note {
-  margin: 18px 0 0;
-  font-size: 0.8125rem;
-  color: var(--color-text-1);
+  margin: 16px 0 0;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, #f4f6ee 45%, transparent);
 }
 
-@media (max-width: 860px) {
-  .funnel {
+@media (max-width: 1100px) {
+  .row,
+  .noScreen {
+    grid-template-columns: minmax(0, 1fr) minmax(80px, 0.4fr) minmax(0, 1fr);
+  }
+
+  .facts {
+    grid-column: 1 / -1;
+    padding-top: 14px;
+    border-top: 1px solid color-mix(in srgb, #f4f6ee 12%, transparent);
+  }
+
+  .noScreen .facts {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .band {
+    padding: 20px 18px 16px;
+    border-radius: 20px;
+  }
+
+  .row,
+  .noScreen {
     grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
   }
 
-  .arrow {
+  .connector {
     flex-direction: row;
-    max-width: none;
+    justify-content: flex-start;
   }
 
-  .arrowIcon {
-    transform: rotate(90deg);
+  .line {
+    width: 48px;
+    flex: none;
   }
-}
 
-@media (max-width: 380px) {
-  .panel {
-    padding: 18px;
+  .facts li:first-child {
+    padding-left: 0;
+    border-left: 0;
   }
 }
