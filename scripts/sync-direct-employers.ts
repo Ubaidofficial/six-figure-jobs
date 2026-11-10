@@ -16,6 +16,7 @@ import { companyUpdatesFor } from '../lib/companies/directEmployerCompany'
 const DRY = process.argv.includes('--dry-run')
 const only = (process.argv.find((a) => a.startsWith('--only='))?.slice(7) ?? '').split(',').filter(Boolean)
 const CONCURRENCY = 3
+const WORKDAY_PAUSE_MS = 15_000
 
 /** The employer's company row: its existing page by slug (or exact name), else a new one. */
 async function companyFor(e: DirectEmployer) {
@@ -45,18 +46,25 @@ async function main() {
   const list = only.length ? DIRECT_EMPLOYERS.filter((e) => only.includes(e.slug)) : [...DIRECT_EMPLOYERS]
   console.log(`[direct-employers] ${list.length} employers${DRY ? ' (dry run)' : ''}`)
   const results: Awaited<ReturnType<typeof syncOne>>[] = []
-  const queue = [...list]
-  await Promise.all(
-    Array.from({ length: CONCURRENCY }, async () => {
-      for (let e = queue.shift(); e; e = queue.shift()) {
-        const started = Date.now()
-        const r = await syncOne(e).catch((err) => ({ slug: e!.slug, scraped: 0, created: 0, updated: 0, skipped: 0, error: String(err).slice(0, 160) }))
-        results.push(r)
-        const secs = Math.round((Date.now() - started) / 1000)
-        console.log(`  ${r.slug}: scraped ${r.scraped}, created ${r.created}, updated ${r.updated}, skipped ${r.skipped}${'error' in r && r.error ? `, ERROR ${r.error}` : ''} (${secs}s)`)
-      }
-    }),
-  )
+  const runLane = async (queue: DirectEmployer[], pauseMs: number) => {
+    for (let e = queue.shift(); e; e = queue.shift()) {
+      const started = Date.now()
+      const r = await syncOne(e).catch((err) => ({ slug: e!.slug, scraped: 0, created: 0, updated: 0, skipped: 0, error: String(err).slice(0, 160) }))
+      results.push(r)
+      const secs = Math.round((Date.now() - started) / 1000)
+      console.log(`  ${r.slug}: scraped ${r.scraped}, created ${r.created}, updated ${r.updated}, skipped ${r.skipped}${'error' in r && r.error ? `, ERROR ${r.error}` : ''} (${secs}s)`)
+      if (pauseMs && queue.length) await new Promise((resolve) => setTimeout(resolve, pauseMs))
+    }
+  }
+  // Workday boards in a lane of their own, one at a time with a pause between them: Workday rate-limits per caller
+  // across its tenants, and with three of them at once every one of the 19 answered 429 on 2026-11-10. The other
+  // providers keep CONCURRENCY workers alongside, so the step takes about as long as the Workday lane.
+  const workdayQueue = list.filter((e) => e.provider === 'workday')
+  const otherQueue = list.filter((e) => e.provider !== 'workday')
+  await Promise.all([
+    ...Array.from({ length: CONCURRENCY }, () => runLane(otherQueue, 0)),
+    runLane(workdayQueue, WORKDAY_PAUSE_MS),
+  ])
   const sum = (k: 'scraped' | 'created' | 'updated' | 'skipped') => results.reduce((n, r) => n + r[k], 0)
   const failed = results.filter((r) => 'error' in r && r.error).map((r) => r.slug)
   console.log(`[direct-employers] scraped ${sum('scraped')}, created ${sum('created')}, updated ${sum('updated')}, skipped ${sum('skipped')} (no qualifying salary or excluded); failed: ${failed.length ? failed.join(', ') : 'none'}`)
