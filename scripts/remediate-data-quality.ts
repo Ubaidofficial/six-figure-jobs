@@ -9,6 +9,7 @@ import { cleanApplyUrlForSource, isAggregatorApplyUrl, unwrapRedirectUrl } from 
 import { processLocation } from '../lib/ingest'
 import { normalizeRole } from '../lib/normalizers/role'
 import { duplicateJobIdsToExpire } from '../lib/jobs/crossSourceDuplicates'
+import { COMPANY_WEBSITE_CORRECTIONS, websiteUpdatesFor } from '../lib/companies/websiteCorrections'
 
 const DRY = process.argv.includes('--dry-run')
 const PLAN_VALUES = new Set([401000, 403000, 457000])
@@ -133,6 +134,20 @@ async function main() {
     await prisma.job.updateMany({ where: { id: { in: crossSourceDupes } }, data: { isExpired: true, updatedAt: new Date() } })
   }
   console.log(`[remediate] cross-source duplicates expired: ${crossSourceDupes.length}`)
+
+  // 7. Known wrong company websites (guessed from slugs, or missing), so their logos are looked up on the real domain.
+  const toCorrect = await prisma.company.findMany({
+    where: { slug: { in: Object.keys(COMPANY_WEBSITE_CORRECTIONS) } },
+    select: { id: true, slug: true, website: true, logoUrl: true },
+  })
+  let websitesFixed = 0
+  for (const c of toCorrect) {
+    const data = websiteUpdatesFor(COMPANY_WEBSITE_CORRECTIONS[c.slug], c)
+    if (!Object.keys(data).length) continue
+    websitesFixed++
+    if (!DRY) await prisma.company.update({ where: { id: c.id }, data })
+  }
+  console.log(`[remediate] company websites corrected: ${websitesFixed} of ${toCorrect.length} listed`)
 
   console.log(`[remediate] apply-url sanitized: ${apptySanitized}, deduped(expired): ${deduped}, 401k-fixed: ${planFixed}, inverted-fixed: ${invertedFixed}${DRY ? '  [DRY RUN]' : ''}`)
   await prisma.$disconnect()

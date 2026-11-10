@@ -806,26 +806,10 @@ async function main() {
       // NOTE: for Workday / Workable / SmartRecruiters / etc. we leave provider null for now.
     }
 
-    // Best-guess website if not explicitly provided
-    const website = c.website || `https://${slug}.com`
-
-    // --- NEW: logo.dev instead of Clearbit -------------------------------
-    let logoDomain: string | null = null
-    try {
-      const urlObj = new URL(website)
-      logoDomain = urlObj.hostname
-    } catch {
-      // Fallback if website isn't a valid URL
-      logoDomain = `${slug.replace(/-/g, '')}.com`
-    }
-
-    const logoToken =
-      process.env.LOGO_DEV_PUBLISHABLE_KEY ?? 'pk_MxvH3NvfTD6CYFx-txjD2g'
-
-    const logoUrl = logoDomain
-      ? `https://img.logo.dev/${logoDomain}?token=${logoToken}`
-      : null
-    // --------------------------------------------------------------------
+    // No guessed website or logo: "https://${slug}.com" was wrong for Grafana Labs, Ashby, Kong and others (2026-11-10),
+    // and logo.dev draws a letter or another company's logo for it. With neither set, the logo is looked up by name.
+    const website = c.website || null
+    const logoUrl = null
 
     await prisma.company.create({
       data: {
