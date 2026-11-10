@@ -2,7 +2,8 @@ name: job alerts
 
 # Emails every due job alert (daily and weekly digests) the new matching jobs since its last email
 # (scripts/send-job-alerts.ts). Runs after the daily freehire sync has added the day's jobs. Does nothing until the
-# repository secrets ALERTS_ENABLED (true), EMAIL_SERVER, EMAIL_FROM and ALERTS_POSTAL_ADDRESS are all set.
+# repository secrets ALERTS_ENABLED (true), RESEND_API_KEY (or EMAIL_SERVER), EMAIL_FROM and ALERTS_POSTAL_ADDRESS are
+# all set. If the email provider's daily limit is reached, the rest go out on the next run, longest-waiting first.
 # A manual run is a dry run by default: it builds every email and prints the counts; it sends nothing and records
 # nothing. The emails themselves are not uploaded: they hold each subscriber's address and private alert link.
 
@@ -29,6 +30,7 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       ALERTS_ENABLED: ${{ secrets.ALERTS_ENABLED }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       EMAIL_SERVER: ${{ secrets.EMAIL_SERVER }}
       EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
       ALERTS_POSTAL_ADDRESS: ${{ secrets.ALERTS_POSTAL_ADDRESS }}

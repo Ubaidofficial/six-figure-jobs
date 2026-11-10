@@ -19,7 +19,7 @@ import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { getSearchVocabulary } from '@/lib/search/vocabulary'
 
 import { normalizeEmail } from './email'
-import { MAX_ALERTS_PER_EMAIL, MAX_CONFIRMATIONS_PER_EMAIL_PER_DAY, type AlertFrequency } from './config'
+import { MAX_ALERTS_PER_EMAIL, MAX_CONFIRMATIONS_PER_EMAIL_PER_DAY, SEND_GAP_MS, type AlertFrequency } from './config'
 import { alertFiltersKey, alertQueryInput, buildAlertLabel, sanitizeAlertFilters, type AlertFilters } from './filters'
 import {
   asFrequency,
@@ -44,9 +44,37 @@ export type SendMail = (mail: OutgoingMail) => Promise<void>
 
 let transport: Transporter | null = null
 
+/** The email provider refused because a sending limit is reached (its daily quota, or too many requests). */
+export class SendLimitError extends Error {}
+
+const RESEND_URL = 'https://api.resend.com/emails'
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 /**
- * Sends through EMAIL_SERVER from EMAIL_FROM. With ALERTS_DRY_RUN_DIR set, writes each email there as HTML and text
- * instead (to preview them); nothing is sent.
+ * Resend's HTTPS API (https://resend.com/docs/api-reference/emails/send-email). Railway blocks outbound SMTP below its
+ * Pro plan and recommends this instead. A 429 (too many requests, or the plan's daily quota) is retried once after a
+ * pause; a second 429 is a SendLimitError. Error messages never include the response body, which can echo the address.
+ */
+export async function sendViaResend(mail: OutgoingMail, apiKey: string, from: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetchImpl(RESEND_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: [mail.to], subject: mail.subject, html: mail.html, text: mail.text, headers: mail.headers }),
+    })
+    if (res.ok) return
+    if (res.status === 429) {
+      if (attempt >= 2) throw new SendLimitError('email provider limit reached (HTTP 429)')
+      await sleep(1500)
+      continue
+    }
+    throw new Error(`email provider refused the email (HTTP ${res.status})`)
+  }
+}
+
+/**
+ * Sends from EMAIL_FROM through Resend's API when RESEND_API_KEY is set, else through the SMTP server in EMAIL_SERVER.
+ * With ALERTS_DRY_RUN_DIR set, writes each email there as HTML and text instead (to preview them); nothing is sent.
  */
 export const sendMail: SendMail = async (mail) => {
   const dir = process.env.ALERTS_DRY_RUN_DIR?.trim()
@@ -57,6 +85,8 @@ export const sendMail: SendMail = async (mail) => {
     await writeFile(`${base}.txt`, [`To: ${mail.to}`, `Subject: ${mail.subject}`, ...Object.entries(mail.headers ?? {}).map(([k, v]) => `${k}: ${v}`), '', mail.text].join('\n'))
     return
   }
+  const apiKey = process.env.RESEND_API_KEY?.trim()
+  if (apiKey) return sendViaResend(mail, apiKey, String(process.env.EMAIL_FROM))
   transport ??= createTransport(String(process.env.EMAIL_SERVER))
   const result = await transport.sendMail({ from: process.env.EMAIL_FROM, ...mail })
   // Deliberately generic: the transport's message can contain the recipient address.
@@ -209,7 +239,15 @@ function toDigestJob(job: ListingRow, base: string): DigestJob {
   }
 }
 
-export type DigestRunStats = { active: number; due: number; sent: number; nothingNew: number; failed: number }
+export type DigestRunStats = {
+  active: number
+  due: number
+  sent: number
+  nothingNew: number
+  failed: number
+  /** Due alerts not tried because the email provider's limit was reached; they go out on the next run, first. */
+  leftForNextRun: number
+}
 
 /**
  * Mails every active alert that is due the jobs added since its last email that it has not sent before, best paid
@@ -229,82 +267,85 @@ export async function runDigests(
   const log = opts.log ?? (() => {})
   const base = getSiteUrl()
   const postalAddress = String(process.env.ALERTS_POSTAL_ADDRESS)
-  const stats: DigestRunStats = { active: 0, due: 0, sent: 0, nothingNew: 0, failed: 0 }
+  const stats: DigestRunStats = { active: 0, due: 0, sent: 0, nothingNew: 0, failed: 0, leftForNextRun: 0 }
 
-  let cursor: string | undefined
-  for (;;) {
-    const batch = await prisma.jobAlert.findMany({
-      where: { status: 'active' },
-      orderBy: { id: 'asc' },
-      take: 200,
-      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-    })
-    if (batch.length === 0) break
-    cursor = batch[batch.length - 1].id
+  // Longest-waiting first (never sent, then oldest last email), so when a daily sending limit cuts a run short, the
+  // alerts it skipped are the first to go out the next day instead of the same ones missing out every day.
+  const active = await prisma.jobAlert.findMany({ where: { status: 'active' } })
+  stats.active = active.length
+  const due = active
+    .filter((a) => isDue(a, now))
+    .sort((a, b) => (a.lastSentAt?.getTime() ?? 0) - (b.lastSentAt?.getTime() ?? 0) || a.id.localeCompare(b.id))
+  stats.due = due.length
 
-    for (const alert of batch) {
-      stats.active++
-      if (!isDue(alert, now)) continue
-      stats.due++
-      try {
-        const filters = sanitizeAlertFilters(alert.filters)
-        if (!filters) continue
-        // Same keyword reading as the listing (aliases, typo corrections); the plain words if the vocabulary fails.
-        const keywordPlan = filters.keyword
-          ? buildKeywordPlan(filters.keyword, await getSearchVocabulary().catch(() => null))
-          : undefined
-        const where: Prisma.JobWhereInput = {
-          AND: [
-            buildWhere({ ...alertQueryInput(filters), keywordPlan }),
-            { createdAt: { gt: newJobsSince(alert, now), lte: now } },
-          ],
-        }
-        const [totalNew, rows] = await Promise.all([
-          prisma.job.count({ where }),
-          prisma.job.findMany({
-            where,
-            select: jobListingSelect,
-            orderBy: [{ maxAnnual: 'desc' }, { minAnnual: 'desc' }, { createdAt: 'desc' }],
-            take: CANDIDATES,
-          }),
-        ])
-        const already = new Set(
-          (
-            await prisma.jobAlertSent.findMany({
-              where: { alertId: alert.id, jobId: { in: rows.map((r) => r.id) } },
-              select: { jobId: true },
-            })
-          ).map((r) => r.jobId),
-        )
-        const jobs = pickDigestJobs(
-          rows.filter((r) => !already.has(r.id)).map((r) => toDigestJob(r, base)),
-          digestSize(alert.frequency),
-        )
-        if (jobs.length === 0) {
-          stats.nothingNew++
-          continue
-        }
-
-        const mail = buildDigestEmail({
-          label: buildAlertLabel(filters),
-          frequency: asFrequency(alert.frequency),
-          jobs,
-          totalNew: Math.max(totalNew - already.size, jobs.length),
-          links: linksFor({ token: alert.token, filters }, base),
-          postalAddress,
-        })
-        await send({ to: alert.email, ...mail })
-        stats.sent++
-        if (opts.dryRun) continue
-        await prisma.$transaction([
-          prisma.jobAlertSent.createMany({ data: jobs.map((j) => ({ alertId: alert.id, jobId: j.id })), skipDuplicates: true }),
-          prisma.jobAlert.update({ where: { id: alert.id }, data: { lastSentAt: now } }),
-        ])
-      } catch (err) {
-        stats.failed++
-        // The alert id only: never the address.
-        log(`[alerts] alert ${alert.id} failed: ${err instanceof Error ? err.message.split('\n')[0] : 'unknown error'}`)
+  let sentSoFar = 0
+  for (const [index, alert] of due.entries()) {
+    try {
+      const filters = sanitizeAlertFilters(alert.filters)
+      if (!filters) continue
+      // Same keyword reading as the listing (aliases, typo corrections); the plain words if the vocabulary fails.
+      const keywordPlan = filters.keyword
+        ? buildKeywordPlan(filters.keyword, await getSearchVocabulary().catch(() => null))
+        : undefined
+      const where: Prisma.JobWhereInput = {
+        AND: [
+          buildWhere({ ...alertQueryInput(filters), keywordPlan }),
+          { createdAt: { gt: newJobsSince(alert, now), lte: now } },
+        ],
       }
+      const [totalNew, rows] = await Promise.all([
+        prisma.job.count({ where }),
+        prisma.job.findMany({
+          where,
+          select: jobListingSelect,
+          orderBy: [{ maxAnnual: 'desc' }, { minAnnual: 'desc' }, { createdAt: 'desc' }],
+          take: CANDIDATES,
+        }),
+      ])
+      const already = new Set(
+        (
+          await prisma.jobAlertSent.findMany({
+            where: { alertId: alert.id, jobId: { in: rows.map((r) => r.id) } },
+            select: { jobId: true },
+          })
+        ).map((r) => r.jobId),
+      )
+      const jobs = pickDigestJobs(
+        rows.filter((r) => !already.has(r.id)).map((r) => toDigestJob(r, base)),
+        digestSize(alert.frequency),
+      )
+      if (jobs.length === 0) {
+        stats.nothingNew++
+        continue
+      }
+
+      const mail = buildDigestEmail({
+        label: buildAlertLabel(filters),
+        frequency: asFrequency(alert.frequency),
+        jobs,
+        totalNew: Math.max(totalNew - already.size, jobs.length),
+        links: linksFor({ token: alert.token, filters }, base),
+        postalAddress,
+      })
+      if (sentSoFar > 0) await sleep(SEND_GAP_MS)
+      await send({ to: alert.email, ...mail })
+      sentSoFar++
+      stats.sent++
+      if (opts.dryRun) continue
+      await prisma.$transaction([
+        prisma.jobAlertSent.createMany({ data: jobs.map((j) => ({ alertId: alert.id, jobId: j.id })), skipDuplicates: true }),
+        prisma.jobAlert.update({ where: { id: alert.id }, data: { lastSentAt: now } }),
+      ])
+    } catch (err) {
+      if (err instanceof SendLimitError) {
+        // Nothing more will go through today: stop, and leave the rest due for the next run.
+        stats.leftForNextRun = due.length - index
+        log(`[alerts] ${err.message}; ${stats.leftForNextRun} due alerts left for the next run`)
+        break
+      }
+      stats.failed++
+      // The alert id only: never the address.
+      log(`[alerts] alert ${alert.id} failed: ${err instanceof Error ? err.message.split('\n')[0] : 'unknown error'}`)
     }
   }
   return stats

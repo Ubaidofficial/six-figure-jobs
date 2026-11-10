@@ -15,13 +15,13 @@ async function main() {
   const dryRun = process.argv.includes('--dry-run')
   if (dryRun) process.env.ALERTS_DRY_RUN_DIR ||= 'alert-previews'
   if (!alertsEnabled() && !dryRun) {
-    console.log('[alerts] off (ALERTS_ENABLED, EMAIL_SERVER, EMAIL_FROM and ALERTS_POSTAL_ADDRESS must all be set); nothing sent')
+    console.log('[alerts] off (ALERTS_ENABLED, RESEND_API_KEY or EMAIL_SERVER, EMAIL_FROM and ALERTS_POSTAL_ADDRESS must all be set); nothing sent')
     return
   }
   const stats = await runDigests({ dryRun, send: sendMail, log: (line) => console.error(line) })
   console.log(
     `[alerts]${dryRun ? ' DRY RUN (previews in ' + process.env.ALERTS_DRY_RUN_DIR + ')' : ''} active=${stats.active} ` +
-      `due=${stats.due} sent=${stats.sent} nothing_new=${stats.nothingNew} failed=${stats.failed}`,
+      `due=${stats.due} sent=${stats.sent} nothing_new=${stats.nothingNew} failed=${stats.failed} left_for_next_run=${stats.leftForNextRun}`,
   )
   // A failed alert fails the run, so GitHub emails the owner.
   if (stats.failed > 0) process.exitCode = 1
