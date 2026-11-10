@@ -89,6 +89,8 @@ export default function FeedbackList({
                 {item.message}
               </p>
 
+              {item.hasScreenshot ? <ScreenshotThumb id={item.id} /> : null}
+
               {item.url && (
                 <a href={item.url} target="_blank" rel="noopener" style={{ color: '#60a5fa', fontSize: 12, display: 'block', marginBottom: 12 }}>
                   {item.url}
@@ -133,4 +135,25 @@ function btnStyle(bg: string, color: string): React.CSSProperties {
     padding: '5px 12px', background: bg, border: 'none', borderRadius: 6,
     color, fontSize: 12, cursor: 'pointer', fontWeight: 500,
   }
+}
+
+/** The pasted screenshot, opened full size in a new tab. Feedback sent before 2026-11-10 kept no image (404). */
+function ScreenshotThumb({ id }: { id: string }) {
+  const [missing, setMissing] = useState(false)
+  const src = `/api/ubaid93/feedback/${encodeURIComponent(id)}/screenshot`
+  if (missing) {
+    return <p style={{ color: '#555', fontSize: 12, margin: '0 0 12px' }}>Screenshot not stored (sent before screenshots were saved).</p>
+  }
+  return (
+    <a href={src} target="_blank" rel="noopener" style={{ display: 'inline-block', margin: '0 0 12px' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- admin-only image behind a session check */}
+      <img
+        src={src}
+        alt="Screenshot sent with this feedback"
+        loading="lazy"
+        onError={() => setMissing(true)}
+        style={{ maxWidth: 360, maxHeight: 220, borderRadius: 8, border: '1px solid #2a2a2a', display: 'block' }}
+      />
+    </a>
+  )
 }

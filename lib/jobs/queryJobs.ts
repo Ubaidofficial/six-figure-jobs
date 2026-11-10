@@ -13,7 +13,11 @@ import { skillStoredTokens } from '../seo/pseoTargets'
 import { remoteRegionWhere } from './remoteRegions'
 import { noDegreeRequiredWhere, type DegreeRequiredJobs } from './degreeRequirement'
 import { fourDayWeekWhere, type FourDayWeekListing } from './fourDayWeek'
-import { extractBenefits, summarizeRole } from './jobSummary'
+import { degreeRequirement } from './degreeRequirement'
+import { extractBenefits, extractExperience, summarizeRole } from './jobSummary'
+import { loadPeerSalaries, rankSalary } from './salaryRank'
+import { salaryMidpoint } from './salarySnapshot'
+import { roleLabelFor } from '../roles/relatedRoles'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -22,6 +26,12 @@ export type JobWithCompany = Job & {
   cardSummary?: string | null
   /** Benefits the description names ("Equity", "401(k)", "Unlimited PTO"...). */
   cardBenefits?: string[]
+  /** Experience the description asks for ("5+ years", "3–5 years"). */
+  cardExperience?: string | null
+  /** What the description says about a degree; 'not_mentioned' is left out of the page. */
+  cardDegree?: 'required' | 'equivalent_accepted' | 'not_mentioned'
+  /** Where the pay sits among live listings for the same role in the same currency. */
+  cardPayRank?: { percent: number; peers: number; role: string } | null
 }
 
 export type JobQueryInput = {
@@ -114,6 +124,7 @@ export const jobListingSelect = {
   salaryValidated: true,
   type: true,
   employmentType: true,
+  visaSponsorship: true,
   experienceLevel: true,
   industry: true,
   workArrangement: true,
@@ -162,14 +173,37 @@ const jobFullSelect = {
  * Adds `cardSummary` and `cardBenefits` to a page of listing jobs: one extra query for just these jobs' descriptions,
  * read on the server so the descriptions themselves never reach the browser. A failure leaves the jobs as they were.
  */
-async function withCardSummaries<T extends { id: string; company?: string | null }>(jobs: T[]): Promise<T[]> {
+async function withCardSummaries<
+  T extends { id: string; company?: string | null; roleSlug?: string | null; currency?: string | null; minAnnual?: bigint | number | null; maxAnnual?: bigint | number | null },
+>(jobs: T[]): Promise<T[]> {
   if (jobs.length === 0) return jobs
   try {
     const rows = await prisma.job.findMany({ where: { id: { in: jobs.map((j) => j.id) } }, select: { id: true, descriptionHtml: true } })
     const html = new Map(rows.map((r) => [r.id, r.descriptionHtml]))
-    return jobs.map((j) => {
+    // Peer salaries per role and currency are cached for 10 minutes (loadPeerSalaries), so a page costs at most one
+    // query per role it shows, and usually none.
+    const ranks = await Promise.all(
+      jobs.map(async (j) => {
+        const mine = salaryMidpoint(j.minAnnual ?? null, j.maxAnnual ?? null)
+        if (!j.roleSlug || !j.currency || mine == null) return null
+        const rank = rankSalary(mine, await loadPeerSalaries(j.roleSlug, j.currency).catch(() => []))
+        return rank ? { percent: rank.percent, peers: rank.peers, role: roleLabelFor(j.roleSlug) } : null
+      }),
+    )
+    return jobs.map((j, i) => {
       const d = html.get(j.id)
-      return d ? { ...j, cardSummary: summarizeRole(d, { company: j.company }), cardBenefits: extractBenefits(d) } : j
+      return {
+        ...j,
+        cardPayRank: ranks[i],
+        ...(d
+          ? {
+              cardSummary: summarizeRole(d, { company: j.company }),
+              cardBenefits: extractBenefits(d),
+              cardExperience: extractExperience(d),
+              cardDegree: degreeRequirement(d),
+            }
+          : {}),
+      }
     })
   } catch {
     return jobs

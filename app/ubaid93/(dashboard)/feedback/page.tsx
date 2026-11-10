@@ -13,6 +13,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams?: Pr
   const [items, total, newCount, resolvedCount] = await Promise.all([
     prisma.feedback.findMany({
       where,
+      select: { id: true, type: true, message: true, url: true, hasScreenshot: true, userAgent: true, status: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,

@@ -4,7 +4,7 @@
 // summary, pills and skills. Used by the listing pages; the homepage, company pages and search keep JobCard.
 import { useId, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ChevronDown, Gift } from 'lucide-react'
+import { ArrowRight, Briefcase, ChevronDown, ExternalLink, FileText, Gift, GraduationCap, Plane, TrendingUp } from 'lucide-react'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { CountryFlag } from '@/components/ui/CountryFlag'
@@ -21,7 +21,9 @@ import { cn } from '@/lib/utils'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
-import { extractBenefits } from '@/lib/jobs/jobSummary'
+import { degreeRequirement } from '@/lib/jobs/degreeRequirement'
+import { extractBenefits, extractExperience } from '@/lib/jobs/jobSummary'
+import { boardNameFor } from '@/lib/scrapers/utils/boardHosts'
 import { buildSalaryText } from '@/lib/jobs/salary'
 import { getJobCardSnippet } from '@/lib/jobs/snippet'
 import { skillLabel } from '@/lib/jobs/skillLabel'
@@ -79,6 +81,29 @@ export function JobRow({
   // Read on the server for listing pages (cardBenefits); pages that load whole jobs (company pages) have the description.
   const benefits =
     job.cardBenefits ?? (typeof (job as any).descriptionHtml === 'string' ? extractBenefits((job as any).descriptionHtml) : [])
+  // Key facts: read on the server for listing pages (card*), from the description on pages that load whole jobs.
+  const description = typeof (job as any).descriptionHtml === 'string' ? (job as any).descriptionHtml : null
+  const experience = job.cardExperience !== undefined ? job.cardExperience : description ? extractExperience(description) : null
+  const degree = job.cardDegree ?? (description ? degreeRequirement(description) : 'not_mentioned')
+  const employment = String(job.employmentType ?? job.type ?? '').toLowerCase()
+  const board = boardNameFor(job.applyUrl ?? job.url ?? null)
+  const facts = [
+    // Only when it pays at least as well as most listings for the role: a highlight, not a ranking of every job.
+    job.cardPayRank && job.cardPayRank.percent >= 50
+      ? { key: 'pay', Icon: TrendingUp, label: `Pays more than ${job.cardPayRank.percent}% of ${job.cardPayRank.role} jobs`, strong: true }
+      : null,
+    experience ? { key: 'exp', Icon: Briefcase, label: `${experience} experience` } : null,
+    degree === 'equivalent_accepted'
+      ? { key: 'degree', Icon: GraduationCap, label: 'Degree or equivalent experience' }
+      : degree === 'required'
+        ? { key: 'degree', Icon: GraduationCap, label: 'Degree required' }
+        : null,
+    (job as any).visaSponsorship ? { key: 'visa', Icon: Plane, label: 'Visa sponsorship' } : null,
+    /contract|part[- ]?time|temp|freelance/.test(employment)
+      ? { key: 'type', Icon: FileText, label: /part/.test(employment) ? 'Part-time' : /freelance/.test(employment) ? 'Freelance' : 'Contract' }
+      : null,
+    job.applyUrl || job.url ? { key: 'apply', Icon: ExternalLink, label: board ? `Apply on ${board}` : 'Apply on company site' } : null,
+  ].filter(Boolean) as Array<{ key: string; Icon: typeof Briefcase; label: string; strong?: boolean }>
   const skills = uniqStrings([...parseJsonArray((job as any)?.techStack), ...parseJsonArray((job as any)?.skillsJson)])
   const shownSkills = skills.slice(0, MAX_SKILLS)
 
@@ -139,6 +164,17 @@ export function JobRow({
       {/* Kept in the page when closed (hidden, not removed) so nothing about the job is lost to crawlers. */}
       <div id={panelId} className={styles.panel} hidden={!open}>
         {summary ? <p className={styles.summary}>{summary}</p> : null}
+
+        {facts.length > 0 ? (
+          <ul className={styles.facts} aria-label="Key facts">
+            {facts.map(({ key, Icon, label, strong }) => (
+              <li key={key} className={cn(styles.fact, strong && styles.factStrong)}>
+                <Icon size={14} aria-hidden="true" />
+                {label}
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         {benefits.length > 0 ? (
           <ul className={styles.benefits} aria-label="Benefits">

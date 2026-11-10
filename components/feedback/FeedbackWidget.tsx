@@ -60,9 +60,7 @@ export function FeedbackWidget() {
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile()
         if (!file) continue
-        const reader = new FileReader()
-        reader.onload = (ev) => setScreenshot(ev.target?.result as string)
-        reader.readAsDataURL(file)
+        void shrinkScreenshot(file).then(setScreenshot).catch(() => setScreenshot(null))
         e.preventDefault()
         break
       }
@@ -242,4 +240,30 @@ export function FeedbackWidget() {
       )}
     </>
   )
+}
+
+/** A pasted screenshot as a JPEG data URL at most 1600px wide (a full-resolution PNG can be several MB). */
+function shrinkScreenshot(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const scale = Math.min(1, 1600 / img.naturalWidth)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.naturalWidth * scale)
+      canvas.height = Math.round(img.naturalHeight * scale)
+      const ctx = canvas.getContext('2d')
+      URL.revokeObjectURL(url)
+      if (!ctx) return reject(new Error('no canvas'))
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/jpeg', 0.82))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('not an image'))
+    }
+    img.src = url
+  })
 }

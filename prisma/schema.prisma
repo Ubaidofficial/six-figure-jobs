@@ -310,6 +310,8 @@ model Feedback {
   message       String
   url           String?
   hasScreenshot Boolean  @default(false)
+  /// The pasted screenshot as a data: URL (image/jpeg, png or webp), shrunk in the browser; null before 2026-11-10.
+  screenshot    String?
   userAgent     String?
   status        String   @default("new")
   createdAt     DateTime @default(now())
