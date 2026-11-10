@@ -92,18 +92,20 @@ export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedIte
             are here.
           </p>
         </div>
-        <Link href="/jobs?sort=recent" className={styles.all}>
-          All new jobs <span aria-hidden="true">→</span>
-        </Link>
+        {/* The "Show N new jobs" button sits beside the link, in a row that is always there, so it never moves the list. */}
+        <div className={styles.actions}>
+          <span aria-live="polite">
+            {pending.length > 0 ? (
+              <button type="button" className={styles.pending} onClick={showPending}>
+                Show {pending.length} new {pending.length === 1 ? 'job' : 'jobs'}
+              </button>
+            ) : null}
+          </span>
+          <Link href="/jobs?sort=recent" className={styles.all}>
+            All new jobs <span aria-hidden="true">→</span>
+          </Link>
+        </div>
       </header>
-
-      <div aria-live="polite" className={styles.pendingSlot}>
-        {pending.length > 0 ? (
-          <button type="button" className={styles.pending} onClick={showPending}>
-            Show {pending.length} new {pending.length === 1 ? 'job' : 'jobs'}
-          </button>
-        ) : null}
-      </div>
 
       <ul className={styles.list}>
         {items.map((job) => (

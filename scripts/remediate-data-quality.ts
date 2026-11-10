@@ -5,7 +5,7 @@
 // pollution) is cleaned automatically instead of failing the workflow.
 // Applies by default; pass --dry-run to preview.
 import { prisma } from '../lib/prisma'
-import { cleanApplyUrl, isAggregatorApplyUrl, unwrapRedirectUrl } from '../lib/jobs/applyUrl'
+import { cleanApplyUrlForSource, isAggregatorApplyUrl, unwrapRedirectUrl } from '../lib/jobs/applyUrl'
 import { processLocation } from '../lib/ingest'
 import { normalizeRole } from '../lib/normalizers/role'
 import { duplicateJobIdsToExpire } from '../lib/jobs/crossSourceDuplicates'
@@ -22,12 +22,12 @@ async function main() {
   // 1. Sanitize aggregator / ad-redirect apply URLs (unwrap → real, or clear).
   const withApply = await prisma.job.findMany({
     where: { isExpired: false, applyUrl: { not: null } },
-    select: { id: true, applyUrl: true, url: true },
+    select: { id: true, applyUrl: true, url: true, source: true },
   })
   for (const j of withApply) {
     const cur = j.applyUrl as string
-    if (!isAggregatorApplyUrl(cur) && unwrapRedirectUrl(cur) === cur) continue
-    const cleaned = cleanApplyUrl(cur, j.url)
+    if (!isAggregatorApplyUrl(cur, j.source) && unwrapRedirectUrl(cur) === cur) continue
+    const cleaned = cleanApplyUrlForSource(j.source, cur, j.url)
     if (cleaned === cur) continue
     apptySanitized++
     if (!DRY) await prisma.job.update({ where: { id: j.id }, data: { applyUrl: cleaned, updatedAt: new Date() } })

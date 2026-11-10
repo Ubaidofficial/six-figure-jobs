@@ -15,11 +15,11 @@ async function main() {
   // 1. Apply links must point at real employers — no aggregators, no ad-redirects.
   const withApply = await prisma.job.findMany({
     where: { isExpired: false, applyUrl: { not: null } },
-    select: { id: true, applyUrl: true },
+    select: { id: true, applyUrl: true, source: true },
   })
   const badApply = withApply.filter((j) => {
     const url = j.applyUrl as string
-    return isAggregatorApplyUrl(url) || unwrapRedirectUrl(url) !== url
+    return isAggregatorApplyUrl(url, j.source) || unwrapRedirectUrl(url) !== url
   })
   checks.push({
     name: 'apply_url_aggregator_or_redirect',

@@ -87,10 +87,25 @@ export function unwrapRedirectUrl(rawUrl: string | null | undefined, depth = 0):
   return url
 }
 
-export function isAggregatorApplyUrl(url: string | null | undefined): boolean {
+// Boards whose own job page is the apply route for the jobs imported from them: they publish no employer link (We Work
+// Remotely's feed sends applicants to its own page, Himalayas' API too), and the owner chose "Apply on <board>" over
+// leaving those worldwide jobs without an apply button (2026-11-10). Any other job's link to these boards is still
+// dropped.
+const OWN_BOARD_APPLY_HOSTS: Record<string, string> = {
+  'board:weworkremotely': 'weworkremotely.com',
+  'board:himalayas': 'himalayas.app',
+}
+
+/**
+ * True for a link to a job board we do not send applicants to. With the job's `source`, a link to the board the job
+ * was imported from is allowed (OWN_BOARD_APPLY_HOSTS).
+ */
+export function isAggregatorApplyUrl(url: string | null | undefined, source?: string | null): boolean {
   if (!url) return false
   const host = hostOf(String(url).trim())
   if (!host) return false
+  const own = source ? OWN_BOARD_APPLY_HOSTS[source] : undefined
+  if (own && (host === own || host.endsWith(`.${own}`))) return false
   return AGGREGATOR_APPLY_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))
 }
 
@@ -101,11 +116,19 @@ export function isAggregatorApplyUrl(url: string | null | undefined): boolean {
  * aggregator. (ATS links pass through — they are the genuine application page.)
  */
 export function cleanApplyUrl(...candidates: Array<string | null | undefined>): string | null {
+  return cleanApplyUrlForSource(null, ...candidates)
+}
+
+/** cleanApplyUrl for a job from `source`: a link to the board it was imported from is kept (OWN_BOARD_APPLY_HOSTS). */
+export function cleanApplyUrlForSource(
+  source: string | null | undefined,
+  ...candidates: Array<string | null | undefined>
+): string | null {
   for (const candidate of candidates) {
     if (!candidate) continue
     const url = unwrapRedirectUrl(String(candidate).trim())
     if (!/^https?:\/\//i.test(url)) continue
-    if (isAggregatorApplyUrl(url)) continue
+    if (isAggregatorApplyUrl(url, source)) continue
     return url
   }
   return null

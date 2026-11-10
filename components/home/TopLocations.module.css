@@ -70,6 +70,12 @@
   line-height: 1;
 }
 
+.globe {
+  display: block;
+  font-size: 34px;
+  line-height: 48px; /* the flags sit in a 48px line, so the names line up */
+}
+
 .name {
   margin-top: var(--space-16);
   font-size: var(--text-lg);

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { unstable_rethrow } from 'next/navigation'
+import { redirect, unstable_rethrow } from 'next/navigation'
 import { InfiniteJobsList } from './_components/InfiniteJobsList'
 
 import {
@@ -331,6 +331,18 @@ export default async function JobsIndexPage({
 
   const rawCountry = (firstParam(sp, 'country') || '').trim().toUpperCase()
   const country = rawCountry.length === 2 ? rawCountry : undefined
+  // The homepage Location list also offers remote regions ("global" = anywhere in the world); they arrive as `country`
+  // and are moved to `remoteRegion`, the one parameter the filters read.
+  const regionFromLocation = country ? null : normalizeRemoteRegionSlug(rawCountry.toLowerCase())
+  if (regionFromLocation) {
+    const next = new URLSearchParams()
+    for (const [k, v] of Object.entries(sp)) {
+      if (k === 'country' || v == null) continue
+      for (const one of Array.isArray(v) ? v : [v]) next.append(k, one)
+    }
+    next.set('remoteRegion', regionFromLocation)
+    redirect(`/jobs?${next.toString()}`)
+  }
 
   const rawRemoteMode = (firstParam(sp, 'remoteMode') || '').trim()
   const remoteMode: '' | 'remote' | 'hybrid' | 'onsite' =
