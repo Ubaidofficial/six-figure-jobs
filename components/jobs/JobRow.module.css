@@ -177,6 +177,35 @@
   background: color-mix(in srgb, var(--color-text-0) 6%, var(--color-bg-1));
 }
 
+/* Benefits the posting names: a label, then one quiet chip per benefit. */
+.benefits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.benefitsLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 2px;
+  color: var(--color-text-1);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.benefit {
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  border-radius: var(--radius-full);
+  color: var(--color-text-0);
+  font-size: 0.8125rem;
+}
+
 a.skill:hover {
   background: color-mix(in srgb, var(--color-primary) 22%, var(--color-bg-1));
 }
