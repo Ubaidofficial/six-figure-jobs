@@ -9,6 +9,7 @@ CREATE TABLE "JobAlert" (
     "filtersKey" TEXT NOT NULL,
     "frequency" TEXT NOT NULL DEFAULT 'weekly',
     "status" TEXT NOT NULL DEFAULT 'pending',
+    "source" TEXT,
     "confirmedAt" TIMESTAMP(3),
     "lastSentAt" TIMESTAMP(3),
     "unsubscribedAt" TIMESTAMP(3),

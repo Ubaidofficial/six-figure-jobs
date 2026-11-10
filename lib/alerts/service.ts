@@ -18,6 +18,7 @@ import { getSiteUrl } from '@/lib/seo/site'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { getSearchVocabulary } from '@/lib/search/vocabulary'
 
+import { normalizeEmail } from './email'
 import { MAX_ALERTS_PER_EMAIL, MAX_CONFIRMATIONS_PER_EMAIL_PER_DAY, type AlertFrequency } from './config'
 import { alertFiltersKey, alertQueryInput, buildAlertLabel, sanitizeAlertFilters, type AlertFilters } from './filters'
 import {
@@ -95,11 +96,13 @@ export function linksFor(alert: { token: string; filters: AlertFilters }, base =
 /* Signing up                                                                                                         */
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-export function normalizeEmail(raw: unknown): string | null {
+export { normalizeEmail }
+
+/** A site path ("/jobs/data-engineer"), without query or fragment, or null. Kept short: it is only for counting. */
+export function readSource(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
-  const email = raw.trim().toLowerCase()
-  if (email.length > 254 || !/^[^\s@<>()",;:]+@[^\s@<>()",;:]+\.[a-z]{2,}$/.test(email)) return null
-  return email
+  const path = raw.split(/[?#]/)[0]
+  return /^\/[a-z0-9\-/._~%]{0,199}$/i.test(path) ? path : null
 }
 
 const confirmationsPerEmail = createRateLimiter()
@@ -115,6 +118,8 @@ export async function subscribe(input: {
   email: unknown
   filters: unknown
   frequency: unknown
+  /** The page the form was on. */
+  source?: unknown
   send?: SendMail
 }): Promise<SubscribeResult> {
   const email = normalizeEmail(input.email)
@@ -135,7 +140,14 @@ export async function subscribe(input: {
   const alert = existing
     ? await prisma.jobAlert.update({ where: { id: existing.id }, data: { status: 'pending', frequency } })
     : await prisma.jobAlert.create({
-        data: { email, filters: filters as Prisma.InputJsonValue, filtersKey, frequency, token: randomBytes(32).toString('hex') },
+        data: {
+          email,
+          filters: filters as Prisma.InputJsonValue,
+          filtersKey,
+          frequency,
+          source: readSource(input.source),
+          token: randomBytes(32).toString('hex'),
+        },
       })
 
   const mail = buildConfirmationEmail({

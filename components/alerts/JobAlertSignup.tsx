@@ -7,6 +7,7 @@ import { BellRing } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import type { AlertFilters } from '@/lib/alerts/filters'
+import { suggestEmailFix } from '@/lib/alerts/email'
 
 import styles from './JobAlertSignup.module.css'
 
@@ -24,17 +25,29 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className }
   const [email, setEmail] = React.useState('')
   const [frequency, setFrequency] = React.useState<'weekly' | 'daily'>('weekly')
   const [state, setState] = React.useState<State>({ kind: 'idle' })
+  // "name@gmial.com" -> offer "name@gmail.com". Checked when the field is left and on submit; never changed silently.
+  const [suggestion, setSuggestion] = React.useState<string | null>(null)
+  // The fix a submit has already stopped for. Only a submit counts: clicking the button blurs the field first, which
+  // shows the suggestion a moment before the click, and that must not count as the visitor having seen it.
+  const warnedFor = React.useRef<string | null>(null)
   const id = React.useId()
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const website = (new FormData(e.currentTarget).get('website') as string) || ''
+    // A likely typo stops the first submit so the visitor sees the suggestion; a second submit sends as typed.
+    const fix = suggestEmailFix(email)
+    if (fix && warnedFor.current !== fix) {
+      warnedFor.current = fix
+      setSuggestion(fix)
+      return
+    }
     setState({ kind: 'sending' })
     try {
       const res = await fetch('/api/alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, frequency, filters, website }),
+        body: JSON.stringify({ email, frequency, filters, website, source: window.location.pathname }),
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string }
       setState(
@@ -75,7 +88,12 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className }
             inputMode="email"
             placeholder="you@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setSuggestion(null)
+            }}
+            onBlur={() => setSuggestion(suggestEmailFix(email))}
+            aria-describedby={suggestion ? `${id}-suggestion` : undefined}
             className={styles.input}
           />
           <label htmlFor={`${id}-frequency`} className={styles.srOnly}>
@@ -97,6 +115,23 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className }
           </button>
         </form>
       )}
+
+      {suggestion && state.kind !== 'done' ? (
+        <p id={`${id}-suggestion`} className={styles.suggestion} role="status">
+          Did you mean{' '}
+          <button
+            type="button"
+            className={styles.suggestionButton}
+            onClick={() => {
+              setEmail(suggestion)
+              setSuggestion(null)
+            }}
+          >
+            {suggestion}
+          </button>
+          ?
+        </p>
+      ) : null}
 
       {state.kind === 'error' ? (
         <p role="alert" className={styles.error}>

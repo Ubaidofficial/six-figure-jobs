@@ -117,6 +117,24 @@
   color: var(--color-text-0);
 }
 
+.suggestion {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-0);
+}
+
+.suggestionButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-primary-text);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .trap {
   position: absolute;
   left: -10000px;

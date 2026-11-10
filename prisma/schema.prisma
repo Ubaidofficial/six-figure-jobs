@@ -582,6 +582,8 @@ model JobAlert {
   frequency      String         @default("weekly")
   // 'pending' (not confirmed) | 'active' | 'unsubscribed'
   status         String         @default("pending")
+  // The site path the visitor signed up on ("/jobs/data-engineer", "/remote"): which pages grow the list.
+  source         String?
   confirmedAt    DateTime?
   lastSentAt     DateTime?
   unsubscribedAt DateTime?
