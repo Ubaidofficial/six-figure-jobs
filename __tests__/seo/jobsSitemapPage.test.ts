@@ -160,6 +160,9 @@ describe('sitemap-jobs/[page] route', () => {
     const first = await (await GET({} as any, { params: Promise.resolve({ page: '1' }) })).text()
     const second = await (await GET({} as any, { params: Promise.resolve({ page: '1' }) })).text()
     expect(findManyMock).toHaveBeenCalledTimes(1)
-    expect(second).toBe(first)
+    // Same URL entries; the trailing meta comment carries the request time, so it is left out of the comparison.
+    const urls = (xml: string) => xml.match(/<url>[\s\S]*?<\/url>/g)
+    expect(urls(second)).toEqual(urls(first))
+    expect(urls(first)).toHaveLength(1)
   })
 })
