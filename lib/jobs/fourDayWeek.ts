@@ -55,7 +55,11 @@ export async function fetchFourDayWeekJobs(fetchImpl: typeof fetch = fetch): Pro
       headers: { 'User-Agent': '6FigJobs/1.0 (+https://www.6figjobs.com)', accept: 'application/json' },
       cache: 'no-store',
     })
-    if (!res.ok) throw new Error(`4dayweek.io API ${res.status} on page ${page}`)
+    if (!res.ok) {
+      // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+      await res.body?.cancel().catch(() => undefined)
+      throw new Error(`4dayweek.io API ${res.status} on page ${page}`)
+    }
     const body = (await res.json()) as Page
     out.push(...body.data.filter(isReducedHoursFourDayWeek))
     if (!body.has_more) break

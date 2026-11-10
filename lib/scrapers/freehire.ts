@@ -411,7 +411,11 @@ export async function loadFreehireCompanyWebsites(
           await sleep(decision.seconds * 1000)
           continue
         }
-        if (!res.ok) return
+        if (!res.ok) {
+          // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+          await res.body?.cancel().catch(() => undefined)
+          return
+        }
         const json = (await res.json()) as { data?: { company?: { company_info?: { website?: unknown } | null } } }
         const raw = json?.data?.company?.company_info?.website
         const site = typeof raw === 'string' ? normalizePublicCompanyWebsite(raw) : null

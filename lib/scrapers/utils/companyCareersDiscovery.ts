@@ -671,7 +671,11 @@ export async function fetchHtmlPage(
       },
     })
 
-    if (!response.ok) return null
+    if (!response.ok) {
+      // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+      await response.body?.cancel().catch(() => undefined)
+      return null
+    }
 
     const contentType = response.headers.get('content-type') || ''
     if (!contentType.includes('text/html')) return null

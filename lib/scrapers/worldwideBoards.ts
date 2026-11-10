@@ -151,7 +151,11 @@ export async function fetchWwrJobs(fetchImpl: typeof fetch = fetch): Promise<Boa
   const byId = new Map<string, BoardJobInput>()
   for (const feed of WWR_FEEDS) {
     const res = await fetchImpl(feed, { headers: { 'User-Agent': UA, accept: 'application/rss+xml' }, cache: 'no-store' })
-    if (!res.ok) throw new Error(`We Work Remotely feed ${res.status}: ${feed}`)
+    if (!res.ok) {
+      // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+      await res.body?.cancel().catch(() => undefined)
+      throw new Error(`We Work Remotely feed ${res.status}: ${feed}`)
+    }
     for (const item of (await res.text()).split('<item>').slice(1)) {
       const job = mapWwrItem(item.split('</item>')[0])
       if (job) byId.set(job.externalId, job)
@@ -212,7 +216,11 @@ export async function fetchHimalayasJobs(
   const out: BoardJobInput[] = []
   for (let page = 1; page <= HIMALAYAS_MAX_PAGES; page++) {
     const res = await fetchImpl(`${HIMALAYAS_API}&page=${page}`, { headers: { 'User-Agent': UA, accept: 'application/json' }, cache: 'no-store' })
-    if (!res.ok) throw new Error(`Himalayas API ${res.status} on page ${page}`)
+    if (!res.ok) {
+      // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+      await res.body?.cancel().catch(() => undefined)
+      throw new Error(`Himalayas API ${res.status} on page ${page}`)
+    }
     const jobs = ((await res.json()) as { jobs?: HimalayasJob[] }).jobs ?? []
     if (jobs.length === 0) break
     for (const j of jobs) {

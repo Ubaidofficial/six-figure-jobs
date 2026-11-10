@@ -75,7 +75,11 @@ async function fetchJobPage(jobUrl: string): Promise<{ descriptionHtml: string |
       },
       cache: 'no-store',
     })
-    if (!res.ok) return { descriptionHtml: null, applyUrl: null }
+    if (!res.ok) {
+      // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+      await res.body?.cancel().catch(() => undefined)
+      return { descriptionHtml: null, applyUrl: null }
+    }
 
     const html = await res.text()
     const $ = cheerio.load(html)

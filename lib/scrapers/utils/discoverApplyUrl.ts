@@ -13,7 +13,11 @@ export async function discoverApplyUrlFromPage(jobUrl: string): Promise<string |
       cache: 'no-store',
     })
 
-    if (!res.ok) return null
+    if (!res.ok) {
+      // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
+      await res.body?.cancel().catch(() => undefined)
+      return null
+    }
     const html = await res.text()
     if (!html) return null
 
