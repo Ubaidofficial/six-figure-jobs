@@ -572,7 +572,7 @@ export default async function HomePage() {
 
     return (
     <>
-      <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
+      <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10 lg:pt-4">
         <HomepageSchemas
           jobCount={stats.totalJobs}
           companyCount={stats.totalCompaniesHiring}
