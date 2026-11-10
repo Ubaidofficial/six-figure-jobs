@@ -4,7 +4,7 @@
 // All active jobs load on one page (~20-50 listings).
 
 import axios from 'axios'
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 

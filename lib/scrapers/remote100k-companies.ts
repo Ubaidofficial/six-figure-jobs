@@ -1,5 +1,5 @@
 import axios from 'axios'
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 
 import type { ScraperStats } from './scraperStats'
 import { detectATS, toAtsProvider } from './utils/detectATS'

@@ -1,7 +1,7 @@
 // lib/scrapers/remoteyeah.ts
 // Scrapes companies from RemoteYeah.com/remote-companies
 import axios from 'axios'
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 import { PrismaClient } from '@prisma/client'
 import { safeSlug } from './base'
 

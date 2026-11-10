@@ -1,5 +1,5 @@
 // lib/scrapers/weworkremotely.ts
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 import type { AnyNode } from 'domhandler'
 import type { ScrapedJobInput } from '../ingest/types'
 import { ingestJob } from '../ingest'

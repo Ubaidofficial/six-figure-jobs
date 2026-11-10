@@ -1,4 +1,4 @@
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 
 import { ingestJob } from '../ingest'
 import { makeBoardSource } from '../ingest/sourcePriority'
