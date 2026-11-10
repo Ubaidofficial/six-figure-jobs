@@ -80,6 +80,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       ['No-Degree Tech Jobs', '/jobs/no-degree'],
       ['4-Day Work Week Jobs', '/jobs/4-day-week'],
       ['Senior-Level Jobs', '/jobs/level/senior'],
+      ['Search in Claude & ChatGPT', '/mcp'],
     ],
   },
   {
