@@ -7,14 +7,18 @@ type Env = Record<string, string | undefined>
 const isSet = (v: string | undefined) => typeof v === 'string' && v.trim() !== ''
 
 /**
- * On only when ALERTS_ENABLED=true and everything a lawful email needs is configured: an SMTP server and From address
- * (EMAIL_SERVER, EMAIL_FROM, the same ones the sign-in emails use) and a postal address for the footer, which the US
- * CAN-SPAM Act requires in every commercial email (ALERTS_POSTAL_ADDRESS).
+ * On only when ALERTS_ENABLED=true and everything a lawful email needs is configured: a way to send (RESEND_API_KEY, an
+ * HTTPS API that works on every Railway plan; or EMAIL_SERVER, an SMTP URL, which Railway allows only on Pro and up), a
+ * From address (EMAIL_FROM) and a postal address for the footer, which the US CAN-SPAM Act requires in every commercial
+ * email (ALERTS_POSTAL_ADDRESS).
  */
 export function alertsEnabled(env: Env = process.env): boolean {
   if (String(env.ALERTS_ENABLED ?? '').trim().toLowerCase() !== 'true') return false
-  return isSet(env.EMAIL_SERVER) && isSet(env.EMAIL_FROM) && isSet(env.ALERTS_POSTAL_ADDRESS)
+  return (isSet(env.RESEND_API_KEY) || isSet(env.EMAIL_SERVER)) && isSet(env.EMAIL_FROM) && isSet(env.ALERTS_POSTAL_ADDRESS)
 }
+
+/** Pause between two emails in a digest run, under the email API's per-second limit. */
+export const SEND_GAP_MS = 600
 
 export type AlertFrequency = 'daily' | 'weekly'
 export const ALERT_FREQUENCIES: readonly AlertFrequency[] = ['daily', 'weekly']

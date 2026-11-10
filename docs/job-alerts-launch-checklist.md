@@ -32,17 +32,35 @@ link or an address.
 
 1. **Apply the migration** `20261110180000_add_job_alerts`. It adds two new tables, `JobAlert` and `JobAlertSent`, and
    changes no existing table. Use the "database migrate" workflow with "apply" ticked.
-2. **Pick a sending service for bulk email** (an SMTP URL in `EMAIL_SERVER`, e.g.
-   `smtps://user:pass@smtp.example.com:465`). A transactional or newsletter provider is better than a personal mailbox.
-   On the 6figjobs.com DNS, set **SPF, DKIM and DMARC** for the sending domain; Gmail and Yahoo require them for bulk
-   senders. Use an address on that domain in `EMAIL_FROM`, e.g. `Six Figure Jobs <alerts@6figjobs.com>`.
+2. **Set up Resend (free) to send the emails.** Railway allows outbound SMTP only on its Pro plan
+   (https://docs.railway.com/networking/outbound-networking: "SMTP is only available on the Pro plan and above") and
+   recommends Resend's HTTPS API, which works on every plan. Resend's free plan was 3,000 emails a month, at most 100 a
+   day (check https://resend.com/pricing; these change).
+   1. Sign up at resend.com.
+   2. Domains → Add domain. Use a sending subdomain such as `mail.6figjobs.com`, so a bad day for bulk mail cannot
+      hurt the main domain's mail.
+   3. Add the DNS records Resend shows (SPF and DKIM) in Cloudflare, with the proxy off (DNS only). Wait until Resend
+      says "Verified".
+   4. Add a DMARC record if the domain has none: TXT `_dmarc.6figjobs.com` = `v=DMARC1; p=none; rua=mailto:<your address>`.
+      Gmail and Yahoo require DMARC for bulk senders.
+   5. API Keys → Create, permission "Sending access", limited to that domain. Copy the key (`re_...`).
+   - `EMAIL_FROM`: an address on the verified domain, e.g. `Six Figure Jobs <alerts@mail.6figjobs.com>`.
+   - SMTP still works instead (`EMAIL_SERVER`, an SMTP URL) where the host allows it, e.g. the GitHub runner.
+     `RESEND_API_KEY` wins when both are set.
 3. **Railway variables** (web app: signup and confirmation emails):
    - `ALERTS_ENABLED=true`
-   - `EMAIL_SERVER`
+   - `RESEND_API_KEY`
    - `EMAIL_FROM`
    - `ALERTS_POSTAL_ADDRESS`: a real postal address, which the US CAN-SPAM Act requires in every commercial email. A PO
      box or a registered-agent address is fine.
 4. **GitHub repository secrets** (daily digest): the same four. `DATABASE_URL` is already there.
+
+**Capacity on the free plan (100 emails a day).** Every confirmation email and every digest counts. Roughly,
+`daily subscribers + weekly subscribers ÷ 7 + new signups` must stay under 100 a day. That is about 100 daily
+subscribers or about 600 weekly ones. When a run hits the limit it stops, and the rest go out on the next run,
+longest-waiting first. Nothing is lost, but some digests are a day late. Watch `/ubaid93/alerts`, and move to a paid
+plan (or a provider with a higher free limit) before you get there.
+
 5. **Privacy policy**: say that you store the email address, the saved search and which jobs were sent; that it is used
    only for the alert; how to unsubscribe; and how long it is kept.
 6. **Try it as yourself** before announcing it:
