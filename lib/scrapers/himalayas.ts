@@ -1,7 +1,7 @@
 // lib/scrapers/himalayas.ts
 // Scrapes jobs from https://himalayas.app/jobs/remote
 import axios from 'axios'
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 
 import { upsertBoardJob } from './_boardHelpers'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'

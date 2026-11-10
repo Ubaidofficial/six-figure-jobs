@@ -5,7 +5,7 @@
 // - Uses ingestBoardJob so board jobs are *fallback* to ATS/company jobs.
 // - Keeps requests light and respects 429 responses.
 
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 import { ingestBoardJob } from '../jobs/ingestBoardJob'
 import { parseSalaryFromText } from '../normalizers/salary'
 import { addBoardIngestResult, errorStats, type ScraperStats } from './scraperStats'

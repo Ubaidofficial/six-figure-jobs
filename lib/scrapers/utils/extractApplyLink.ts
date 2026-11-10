@@ -1,7 +1,7 @@
 // lib/scrapers/utils/extractApplyLink.ts
 
 import type { Page } from 'puppeteer'
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 
 import { detectATS } from './detectATS'
 

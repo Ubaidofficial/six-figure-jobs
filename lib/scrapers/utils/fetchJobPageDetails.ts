@@ -1,5 +1,5 @@
 // Fetches a board job page once and returns both the external apply URL and description HTML.
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 import { extractApplyDestinationFromHtml } from './extractApplyLink'
 import { cleanJobDescriptionHtml } from '../../jobs/descriptionCleaning'
 

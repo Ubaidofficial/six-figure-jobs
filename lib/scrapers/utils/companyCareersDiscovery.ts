@@ -1,4 +1,4 @@
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 
 import { fetchWithBackoff } from './fetchWithBackoff'
 import { normalizePublicCompanyWebsite } from '../../companies/website'

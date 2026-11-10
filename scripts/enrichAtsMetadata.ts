@@ -3,7 +3,7 @@
 
 import { format as __format } from 'node:util'
 import { PrismaClient } from '@prisma/client'
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio/slim'
 import { isSupportedAtsProvider } from '../lib/scrapers/ats/types'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
