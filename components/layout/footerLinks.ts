@@ -1,10 +1,11 @@
 // Footer links in one place, rendered by both the desktop columns and the mobile accordions, and checked by
 // __tests__/guards/internalLinks.test.ts against the routes that exist. Only link to pages that exist and are not redirects.
 
-export type FooterLink = readonly [label: string, href: string]
+/** label, href, and optionally a flag code or emoji shown before the label (see RegionMark). */
+export type FooterLink = readonly [label: string, href: string, mark?: string]
 export type FooterColumn = { title: string; links: readonly FooterLink[] }
 
-const location = (name: string, slug: string): FooterLink => [name, `/jobs/location/${slug}`]
+const location = (name: string, slug: string, flag: string): FooterLink => [name, `/jobs/location/${slug}`, flag]
 const guide = (name: string, slug: string): FooterLink => [`${name} Salary`, `/salary/${slug}`]
 
 export const FOOTER_COLUMNS: readonly FooterColumn[] = [
@@ -24,26 +25,26 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
     title: 'Remote Jobs',
     links: [
-      ['Worldwide', '/remote?remoteRegion=global'],
-      ['United States', '/remote?remoteRegion=us-only'],
-      ['Canada', '/remote?remoteRegion=canada'],
-      ['Europe', '/remote?remoteRegion=europe'],
-      ['Australia', '/remote?remoteRegion=australia'],
+      ['Worldwide', '/remote?remoteRegion=global', '🌍'],
+      ['United States', '/remote?remoteRegion=us-only', 'US'],
+      ['Canada', '/remote?remoteRegion=canada', 'CA'],
+      ['Europe', '/remote?remoteRegion=europe', 'EU'],
+      ['Australia', '/remote?remoteRegion=australia', 'AU'],
     ],
   },
   {
     title: 'By Location',
     links: [
-      location('United States', 'united-states'),
-      location('United Kingdom', 'united-kingdom'),
-      location('Canada', 'canada'),
-      location('Germany', 'germany'),
-      location('Australia', 'australia'),
-      location('Netherlands', 'netherlands'),
-      location('Ireland', 'ireland'),
-      location('Spain', 'spain'),
-      location('France', 'france'),
-      location('Singapore', 'singapore'),
+      location('United States', 'united-states', 'US'),
+      location('United Kingdom', 'united-kingdom', 'GB'),
+      location('Canada', 'canada', 'CA'),
+      location('Germany', 'germany', 'DE'),
+      location('Australia', 'australia', 'AU'),
+      location('Netherlands', 'netherlands', 'NL'),
+      location('Ireland', 'ireland', 'IE'),
+      location('Spain', 'spain', 'ES'),
+      location('France', 'france', 'FR'),
+      location('Singapore', 'singapore', 'SG'),
     ],
   },
   {

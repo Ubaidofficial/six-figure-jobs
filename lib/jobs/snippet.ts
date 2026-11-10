@@ -1,4 +1,5 @@
 // lib/jobs/snippet.ts
+import { summarizeRole } from './jobSummary'
 
 /**
  * Job card snippet rules:
@@ -50,21 +51,6 @@ function looksLikeCompanyBio(text: string): boolean {
   )
 }
 
-function firstSentences(text: string, maxChars = 180): string | null {
-  const cleaned = (text || '').replace(/\s+/g, ' ').trim()
-  if (!cleaned) return null
-
-  const parts = cleaned.split(/(?<=[.!?])\s+/).filter(Boolean)
-  const combined = (parts[0] || '') + (parts[1] ? ' ' + parts[1] : '')
-  const out = combined.slice(0, maxChars).trim()
-
-  if (looksLikeCompanyBio(out)) return null
-
-  // ✅ allow shorter snippets if role-focused
-  return out.length >= 30 ? out : null
-}
-
-
 export function getJobCardSnippet(job: any): string | null {
   const one = typeof job?.aiOneLiner === "string" ? job.aiOneLiner.trim() : ""
   if (one) {
@@ -82,10 +68,12 @@ export function getJobCardSnippet(job: any): string | null {
     }
   }
 
+  if (typeof job?.cardSummary === "string" && job.cardSummary) return job.cardSummary
+
   const html = typeof job?.descriptionHtml === "string" ? job.descriptionHtml : ""
   if (!html) return null
 
-  return firstSentences(cleanText(html))
+  return summarizeRole(html, { company: job?.companyRef?.name ?? job?.company ?? null })
 }
 
 export function buildSnippetFromJob(input: {

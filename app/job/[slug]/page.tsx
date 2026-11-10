@@ -17,6 +17,7 @@ import { filterSimilarJobs } from '../../../lib/jobs/similarJobs'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { isJobDetailAvailable } from '../../../lib/jobs/detailAvailability'
 import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
+import { extractBenefits } from '@/lib/jobs/jobSummary'
 import { formatRelativeTime } from '../../../lib/utils/time'
 import { buildLogoUrl } from '../../../lib/companies/logo'
 import { normalizePublicCompanyWebsite } from '../../../lib/companies/website'
@@ -238,7 +239,7 @@ export default async function JobPage({
   const benefitItems = ((): string[] => {
     const fromAi = extractBenefitsFromAi((typedJob as any)?.aiBenefits)
     const fromLegacy = parseArray(typedJob.benefitsJson)
-    const raw = fromAi.length > 0 ? fromAi : fromLegacy
+    const raw = fromAi.length > 0 ? fromAi : fromLegacy.length > 0 ? fromLegacy : extractBenefits((typedJob as any).descriptionHtml)
     return raw.map((b) => b.trim()).filter((b): b is string => b.length > 0)
   })()
 
@@ -565,7 +566,7 @@ export default async function JobPage({
               ) : null}
               {benefitItems.length > 0 ? (
                 <JobSection title="Benefits">
-                  <BulletList items={benefitItems.slice(0, 4).map(formatBenefitPill)} />
+                  <BulletList items={benefitItems.slice(0, 10).map(formatBenefitPill)} />
                 </JobSection>
               ) : null}
             </>
