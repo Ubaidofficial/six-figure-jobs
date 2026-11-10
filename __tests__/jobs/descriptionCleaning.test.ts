@@ -81,3 +81,49 @@ describe('isFullerDescription', () => {
     expect(isFullerDescription(preview, null)).toBe(false)
   })
 })
+
+describe('local job-search lists pasted in by job boards', () => {
+  // As served for a WhatJobs posting (Data Engineer, Envision Financial, 2026-11-10), shortened.
+  const posting = [
+    '<p>CA$121,610.00–CA$132,886.00 yearly</p>',
+    '<p>The cities near North Cowichan, BC that boast the highest number of engineer jobs are:</p>',
+    ...['Vancouver', 'Surrey', 'Victoria', 'Burnaby', 'Richmond', 'Abbotsford', 'Coquitlam', 'Delta', 'Langley', 'Nanaimo'].map(
+      (c) => `<p>${c}</p>`,
+    ),
+    '<p>The 10 cities near North Cowichan, BC that have the most job openings are:</p>',
+    '<p>Vancouver</p><p>Surrey</p><p>Ladner</p>',
+    '<p class="x">The 10 most popular job searches in North Cowichan, BC are:</p>',
+    '<p>server</p><p>software product manager</p><p>it</p>',
+    '<p>We are currently seeking a Data Engineer to join our team.</p>',
+    '<p>Responsibilities</p>',
+  ].join('')
+
+  it('removes the lists and keeps the job', () => {
+    expect(cleanJobDescriptionHtml(posting)).toBe(
+      '<p>CA$121,610.00–CA$132,886.00 yearly</p><p>We are currently seeking a Data Engineer to join our team.</p><p>Responsibilities</p>',
+    )
+  })
+
+  it('removes the lists when lines are separated by <br> (as stored for WhatJobs postings)', () => {
+    const html = posting.replace(/<p[^>]*>/g, '').replace(/<\/p>/g, '<br><br>')
+    expect(cleanJobDescriptionHtml(html)).toBe(
+      'CA$121,610.00–CA$132,886.00 yearly<br><br>We are currently seeking a Data Engineer to join our team.<br><br>Responsibilities<br><br>',
+    )
+  })
+
+  it('never eats part of a longer line that follows a list', () => {
+    const html = '<p>The 10 most popular job searches in Austin, TX are:</p><p>server</p><p>We hire engineers to build data systems</p>'
+    expect(cleanJobDescriptionHtml(html)).toBe('<p>We hire engineers to build data systems</p>')
+  })
+
+  it('takes at most ten items, so a short heading after a full list is kept', () => {
+    const items = Array.from({ length: 10 }, (_, i) => `<p>City ${i}</p>`).join('')
+    const html = `<p>The 10 cities near Austin, TX that have the most job openings are:</p>${items}<p>Benefits</p>`
+    expect(cleanJobDescriptionHtml(html)).toBe('<p>Benefits</p>')
+  })
+
+  it('leaves ordinary descriptions alone', () => {
+    const html = '<p>The cities near our office are great.</p><p>Vancouver</p>'
+    expect(cleanJobDescriptionHtml(html)).toBe(html)
+  })
+})

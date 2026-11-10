@@ -159,15 +159,36 @@ export function buildCompanyPageDescription(
   ])
 }
 
-/** /companies description (meta only; the CollectionPage JSON-LD keeps its own text). */
-export function buildCompaniesIndexDescription(totalCompanies: number, totalEligibleJobs: number): string {
+/**
+ * /companies title. The directory lists only companies with `minJobs`+ open jobs, a subset of every company hiring
+ * (the number the home page quotes), so the title says which companies it counts.
+ */
+export function buildCompaniesIndexTitle(totalCompanies: number, minJobs: number): string {
+  if (totalCompanies <= 0) return fitTitle([`Companies Hiring $100k+ Roles | ${SITE_NAME}`, 'Companies Hiring $100k+ Roles'])
+  const lead = `${totalCompanies.toLocaleString()} Companies With ${minJobs}+ Open $100k+ Jobs`
+  return fitTitle([`${lead} | ${SITE_NAME}`, lead])
+}
+
+/**
+ * /companies description (meta only; the CollectionPage JSON-LD keeps its own text). The directory is the companies
+ * with `minJobs`+ open jobs; `totalCompaniesHiring` (every company with an open job, as on the home page) is quoted
+ * beside it so the two numbers never read as a contradiction.
+ */
+export function buildCompaniesIndexDescription(
+  totalCompanies: number,
+  totalEligibleJobs: number,
+  totalCompaniesHiring: number,
+  minJobs: number,
+): string {
   if (totalCompanies <= 0) {
     return buildDescription('Companies hiring for $100k+ tech jobs.', [
       ['Six-figure roles at top startups and high-growth companies, salary shown upfront.'],
     ])
   }
+  const outOf =
+    totalCompaniesHiring > totalCompanies ? `, out of ${totalCompaniesHiring.toLocaleString()} companies hiring` : ''
   return buildDescription(
-    `${totalCompanies.toLocaleString()} companies hiring for ${totalEligibleJobs.toLocaleString()} $100k+ tech jobs.`,
+    `${totalCompanies.toLocaleString()} companies with ${minJobs}+ open $100k+ jobs (${totalEligibleJobs.toLocaleString()} jobs between them)${outOf}.`,
     [
       [
         'Six-figure roles at top startups and high-growth companies, salary shown upfront.',
