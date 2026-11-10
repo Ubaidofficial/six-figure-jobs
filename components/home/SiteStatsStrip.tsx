@@ -1,58 +1,91 @@
 // components/home/SiteStatsStrip.tsx
-// "6figjobs today": the size of the board in a few big numbers, all live counts the homepage already loads.
-// A number that is missing (its query failed) is left out rather than shown as 0.
-import { Briefcase, Building2, DollarSign, Globe2, Sparkles, type LucideIcon } from 'lucide-react'
-
+// "From 4.8M jobs to the ones that pay", as one compact band under the companies strip: what we screen (a live job
+// catalogue plus the careers sites we read directly) -> how few make it -> what is listed, then three facts about the
+// list. Redesigned 2026-11-10 at the owner's request: it was two tall panels near the foot of the page (~380 px), it is
+// now one band (~150 px) right after "Top Companies Hiring Now". The typical salary is left out: the hero shows it.
+// A number that is missing (its query failed) is left out rather than shown as 0; without the catalogue only the listed
+// side shows.
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
-import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
+import { DIRECT_EMPLOYERS } from '@/lib/constants/directEmployers'
+import type { FreehireCatalog } from '@/lib/jobs/freehireCatalog'
 
 import styles from './SiteStatsStrip.module.css'
 
-type Stat = { icon: LucideIcon; value: string; label: string }
+const n = (v: number) => v.toLocaleString('en-US')
+
+/** "about 1 in 334": how many screened jobs there are for each one listed; null when it would not read sensibly. */
+export function screenRatio(screened: number, listed: number): number | null {
+  if (!(screened > 0) || !(listed > 0) || screened <= listed) return null
+  return Math.round(screened / listed)
+}
 
 export function SiteStatsStrip({
   jobs,
   companies,
   newThisWeek,
   countries,
-  medianUsd,
+  catalog,
 }: {
   jobs: number
   companies: number
   newThisWeek: number
   countries: number | null
-  medianUsd: number | null
+  /** The live catalogue's size; the "We screen" side is left out when it could not be read. */
+  catalog: FreehireCatalog | null
 }) {
-  const stats: Stat[] = [
-    { icon: Briefcase, value: jobs.toLocaleString('en-US'), label: '$100k+ jobs with published pay' },
-    { icon: Building2, value: companies.toLocaleString('en-US'), label: 'companies hiring' },
-    { icon: Sparkles, value: newThisWeek.toLocaleString('en-US'), label: 'new this week' },
-    ...(countries ? [{ icon: Globe2, value: countries.toLocaleString('en-US'), label: 'countries' }] : []),
-    ...(medianUsd
-      ? [{ icon: DollarSign, value: formatCurrencyShort(Math.round(medianUsd / 1000) * 1000, 'USD'), label: 'typical salary' }]
-      : []),
-  ]
   if (jobs <= 0) return null
+  const ratio = catalog ? screenRatio(catalog.jobs, jobs) : null
+  const facts: Array<[number, string]> = [
+    [companies, 'companies hiring'],
+    [newThisWeek, 'new this week'],
+    ...(countries ? ([[countries, 'countries']] as Array<[number, string]>) : []),
+  ]
 
   return (
-    <section className={styles.section} aria-labelledby="site-stats-title">
-      <p id="site-stats-title" className={styles.eyebrow}>
-        {'// 6figjobs today'}
+    <section className={styles.band} aria-labelledby="site-stats-title">
+      <h2 id="site-stats-title" className={styles.eyebrow}>
+        6figjobs today
+      </h2>
+      <div className={`${styles.row} ${catalog ? '' : styles.noScreen}`}>
+        {catalog ? (
+          <>
+            <div className={styles.step}>
+              <p className={styles.label}>We screen</p>
+              <p className={styles.big}>
+                <AnimatedNumber text={n(catalog.jobs)} reveal />
+              </p>
+              <p className={styles.sub}>
+                open jobs from {n(catalog.sources)} sources, {n(catalog.atsPlatforms)} hiring platforms and{' '}
+                {n(DIRECT_EMPLOYERS.length)} careers sites
+              </p>
+            </div>
+            <div className={styles.connector} aria-hidden={ratio ? undefined : 'true'}>
+              <span className={styles.line} aria-hidden="true" />
+              {ratio ? <span className={styles.ratio}>about 1 in {n(ratio)} makes the list</span> : null}
+            </div>
+          </>
+        ) : null}
+        <div className={`${styles.step} ${styles.stepMain}`}>
+          <p className={styles.label}>You see</p>
+          <p className={`${styles.big} ${styles.bigMain}`}>
+            <AnimatedNumber text={n(jobs)} reveal />
+          </p>
+          <p className={styles.sub}>$100k+ jobs with published pay</p>
+        </div>
+        <ul className={styles.facts}>
+          {facts.map(([value, label]) => (
+            <li key={label}>
+              <span className={styles.factValue}>{n(value)}</span>
+              <span className={styles.factLabel}>{label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <p className={styles.note}>
+        {catalog
+          ? 'Screened jobs counted across the sources and hiring platforms we read; listed jobs counted from our own database, refreshed every few minutes.'
+          : 'Counted from our own job database, refreshed every few minutes.'}
       </p>
-      <dl className={styles.grid}>
-        {stats.map(({ icon: Icon, value, label }) => (
-          <div key={label} className={styles.stat}>
-            <dt className={styles.label}>
-              <Icon className={styles.icon} aria-hidden="true" />
-              {label}
-            </dt>
-            <dd className={styles.value}>
-              <AnimatedNumber text={value} reveal />
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <p className={styles.note}>Counted from our own job database, refreshed every few minutes.</p>
     </section>
   )
 }

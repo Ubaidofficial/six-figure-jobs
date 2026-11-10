@@ -31,14 +31,18 @@ export function createSessionToken(): string {
   return Buffer.from(`${payload}:${sig}`).toString('base64url')
 }
 
-export function verifySessionToken(token: string): boolean {
+export function verifySessionToken(token: string, now: number = Date.now()): boolean {
   try {
     const decoded = Buffer.from(token, 'base64url').toString('utf8')
     const lastColon = decoded.lastIndexOf(':')
     const payload = decoded.slice(0, lastColon)
     const sig = decoded.slice(lastColon + 1)
     const expected = sign(payload)
-    return safeEqual(sig, expected)
+    if (!safeEqual(sig, expected)) return false
+    // The cookie expires after COOKIE_MAX_AGE in the browser; a copied token must stop working then too.
+    const issuedAt = Number(payload.slice(payload.lastIndexOf(':') + 1))
+    // A minute of tolerance for clock differences between instances.
+    return Number.isFinite(issuedAt) && issuedAt <= now + 60_000 && now - issuedAt < COOKIE_MAX_AGE * 1000
   } catch {
     return false
   }

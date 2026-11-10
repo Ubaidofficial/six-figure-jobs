@@ -46,6 +46,12 @@ function normalizeTextValue(value: unknown): string | null {
 // Ashby's posting API describes pay as {summaryComponents: [{compensationType, interval: "1 YEAR", currencyCode,
 // minValue, maxValue}, ...]} when asked with includeCompensation=true. Only the "Salary" component is a salary (equity,
 // bonus and commission sit beside it). Nothing is guessed: an interval we do not know leaves the salary to the text.
+/** Ashby's `workplaceType` ("Remote", "Hybrid", "OnSite") to ours; anything else is unknown. */
+export function readAshbyWorkplaceType(value: unknown): 'remote' | 'hybrid' | 'onsite' | null {
+  const v = String(value ?? '').toLowerCase().replace(/[^a-z]/g, '')
+  return v === 'remote' ? 'remote' : v === 'hybrid' ? 'hybrid' : v === 'onsite' ? 'onsite' : null
+}
+
 const ASHBY_INTERVALS: Record<string, string> = {
   '1 YEAR': 'year',
   '1 MONTH': 'month',
@@ -227,9 +233,13 @@ function processApiJobs(
     const locationText: string | null =
       p?.location ?? p?.locationName ?? p?.locationText ?? null
 
+    // Ashby sets `isRemote: true` on hybrid jobs as well (OpenAI on 2026-11-09: 533 of 814 jobs were isRemote with
+    // workplaceType "Hybrid"), so the workplace type decides when Ashby gives one.
+    const workplaceType = readAshbyWorkplaceType(p?.workplaceType)
     const isRemoteVal = p?.isRemote
-    const remoteHint =
-      typeof isRemoteVal === 'boolean'
+    const remoteHint = workplaceType
+      ? workplaceType === 'remote'
+      : typeof isRemoteVal === 'boolean'
         ? isRemoteVal
         : locationText?.toLowerCase().includes('remote') ?? false
 
@@ -258,6 +268,7 @@ function processApiJobs(
       url,
       locationText,
       remote: remoteHint ? true : null,
+      workplaceType,
 
       salaryMin: structuredSalary?.min ?? null,
       salaryMax: structuredSalary?.max ?? null,

@@ -118,6 +118,11 @@ export function buildSliceWebPageJsonLd(
       name: SITE_NAME,
       url: SITE_ORIGIN,
     },
+    // speakable belongs to a page; a SpeakableSpecification on its own describes nothing.
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: ['main h1', 'main h2', '[data-speakable="summary"]'],
+    },
   }
 }
 
@@ -196,13 +201,5 @@ export function buildSliceFaqJsonLd(
         },
       },
     ],
-  }
-}
-
-export function buildSliceSpeakableJsonLd(): any {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'SpeakableSpecification',
-    cssSelector: ['main h1', 'main h2', '[data-speakable="summary"]'],
   }
 }

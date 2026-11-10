@@ -11,6 +11,8 @@ import { buildKeywordPlan, scoreJob, tokenize, wordStartPatterns, type KeywordPl
 import { getSearchVocabulary } from '../search/vocabulary'
 import { skillStoredTokens } from '../seo/pseoTargets'
 import { remoteRegionWhere } from './remoteRegions'
+import { noDegreeRequiredWhere, type DegreeRequiredJobs } from './degreeRequirement'
+import { fourDayWeekWhere, type FourDayWeekListing } from './fourDayWeek'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -54,6 +56,13 @@ export type JobQueryInput = {
 
   // Specialty filters
   visaSponsorship?: boolean
+  /**
+   * Only jobs whose description asks for no degree, or accepts equivalent experience: pass the latest
+   * loadDegreeRequiredJobIds() result (lib/jobs/degreeRequirement.ts).
+   */
+  noDegreeRequired?: DegreeRequiredJobs
+  /** Four-day-week jobs: the labelled 4dayweek.io listings (lib/jobs/fourDayWeek.ts). */
+  fourDayWeek?: readonly FourDayWeekListing[]
 
   // Keyword search (title / company name contains)
   keyword?: string
@@ -523,6 +532,14 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 
   if (filters.visaSponsorship === true) {
     where.visaSponsorship = true
+  }
+
+  if (filters.noDegreeRequired) {
+    addAnd(noDegreeRequiredWhere(filters.noDegreeRequired))
+  }
+
+  if (filters.fourDayWeek) {
+    addAnd(fourDayWeekWhere(filters.fourDayWeek))
   }
 
   if (filters.keyword) {

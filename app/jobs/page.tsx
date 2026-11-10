@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { unstable_rethrow } from 'next/navigation'
+import { redirect, unstable_rethrow } from 'next/navigation'
 import { InfiniteJobsList } from './_components/InfiniteJobsList'
 
 import {
@@ -26,6 +26,7 @@ import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
 import { CategoryRow, type CategoryRowItem } from '@/components/listing/CategoryRow'
 import { loadListingSalaryStats } from '@/lib/jobs/listingSalaryStats'
 import { countryName } from '@/lib/location/country'
+import { REMOTE_REGIONS, normalizeRemoteRegionSlug } from '@/lib/jobs/remoteRegions'
 import { countryCodeToSlug } from '@/lib/seo/countrySlug'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import { buildJobsHubDescription, buildJobsHubTitle } from '@/lib/seo/metaText'
@@ -48,6 +49,9 @@ import {
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 export const revalidate = 600
+
+// Regions offered in the sidebar: the Remote hub's set plus UK & Ireland (EMEA stays reachable by URL only).
+const JOBS_REMOTE_REGIONS = REMOTE_REGIONS.filter((r) => r.slug !== 'emea')
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24
@@ -327,12 +331,27 @@ export default async function JobsIndexPage({
 
   const rawCountry = (firstParam(sp, 'country') || '').trim().toUpperCase()
   const country = rawCountry.length === 2 ? rawCountry : undefined
+  // The homepage Location list also offers remote regions ("global" = anywhere in the world); they arrive as `country`
+  // and are moved to `remoteRegion`, the one parameter the filters read.
+  const regionFromLocation = country ? null : normalizeRemoteRegionSlug(rawCountry.toLowerCase())
+  if (regionFromLocation) {
+    const next = new URLSearchParams()
+    for (const [k, v] of Object.entries(sp)) {
+      if (k === 'country' || v == null) continue
+      for (const one of Array.isArray(v) ? v : [v]) next.append(k, one)
+    }
+    next.set('remoteRegion', regionFromLocation)
+    redirect(`/jobs?${next.toString()}`)
+  }
 
   const rawRemoteMode = (firstParam(sp, 'remoteMode') || '').trim()
   const remoteMode: '' | 'remote' | 'hybrid' | 'onsite' =
     rawRemoteMode === 'remote' || rawRemoteMode === 'hybrid' || rawRemoteMode === 'onsite'
       ? rawRemoteMode
       : ''
+
+  // Remote jobs in a region (a set of countries), or "global" for jobs that can be done from anywhere.
+  const remoteRegion = normalizeRemoteRegionSlug(firstParam(sp, 'remoteRegion')) ?? undefined
 
   const rawSort = (firstParam(sp, 'sort') || '').trim()
   // A keyword search is ranked by relevance unless the visitor picked another order.
@@ -356,6 +375,7 @@ export default async function JobsIndexPage({
     companySizes.length +
     (country ? 1 : 0) +
     (remoteMode ? 1 : 0) +
+    (remoteRegion ? 1 : 0) +
     (techFilter ? 1 : 0) +
     (visa ? 1 : 0) +
     (keyword ? 1 : 0) +
@@ -368,6 +388,7 @@ export default async function JobsIndexPage({
     roleSlugs: roles.length ? roles : undefined,
     countryCode: country || undefined,
     remoteMode: remoteMode || undefined,
+    remoteRegion,
     seniorityLevels: seniority.length ? seniority : undefined,
     companySizeBuckets: companySizes.length ? companySizes : undefined,
     tech: techFilter,
@@ -388,7 +409,7 @@ export default async function JobsIndexPage({
     pageSize: 1,
   }
 
-    const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] =
+    const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount, regionCounts] =
       await memoAsync(stableKey('jobs-hub-facets', { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
         prisma.job.groupBy({
           by: ['roleSlug'],
@@ -419,6 +440,11 @@ export default async function JobsIndexPage({
         prisma.job.count({
           where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
         }),
+        Promise.all(
+          JOBS_REMOTE_REGIONS.map((r) =>
+            prisma.job.count({ where: buildWhere({ ...baseFacetInput, remoteRegion: r.slug }) }),
+          ),
+        ),
       ]))
 
   const vocabulary = await getSearchVocabulary().catch(() => null)
@@ -443,6 +469,7 @@ export default async function JobsIndexPage({
     },
     techs: vocabulary?.topSkills.map((t) => ({ value: t.term, count: t.count })),
     visaFilter: true,
+    remoteRegions: JOBS_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
   }
 
   // ✅ UI dedupe: collapse identical ATS duplicates (same company + title + comp)

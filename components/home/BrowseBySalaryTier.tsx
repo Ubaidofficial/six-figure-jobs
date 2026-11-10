@@ -18,6 +18,7 @@ const ROUTES: Record<SalaryTier['slug'], string> = {
 
 export function BrowseBySalaryTier({ tiers }: { tiers: SalaryTier[] }) {
   if (!tiers?.length) return null
+  const total = tiers.reduce((sum, t) => sum + t.count, 0)
 
   return (
     <section className={styles.section} aria-label="Browse by salary tier">
@@ -27,27 +28,32 @@ export function BrowseBySalaryTier({ tiers }: { tiers: SalaryTier[] }) {
       </header>
 
       <div className={styles.grid}>
-        {tiers.map((tier) => (
-          <Link
-            key={tier.slug}
-            href={ROUTES[tier.slug]}
-            className={`${styles.card} ${styles[`tier_${tier.slug}`]}`}
-          >
-            <div className={styles.content}>
-              <div className={styles.tierLabel}>{tier.label} Jobs</div>
+        {tiers.map((tier) => {
+          // Each tier's share of the US-dollar jobs, drawn as a bar so the four cards compare at a glance.
+          const share = total > 0 ? Math.round((tier.count / total) * 100) : 0
+          return (
+            <Link
+              key={tier.slug}
+              href={ROUTES[tier.slug]}
+              className={`${styles.card} ${styles[`tier_${tier.slug}`]}`}
+            >
+              <div className={styles.tierLabel}>{tier.label}</div>
               <div className={styles.count}>
                 {tier.count.toLocaleString()}
                 <span className={styles.countSuffix}> jobs</span>
               </div>
-            </div>
+              <div className={styles.bar} aria-hidden="true">
+                <span className={styles.barFill} style={{ width: `${Math.max(share, 2)}%` }} />
+              </div>
+              <div className={styles.share}>{share}% of US-dollar listings</div>
 
-            <span className={styles.arrow} aria-hidden="true">
-              <ArrowUpRight className={styles.arrowIcon} />
-            </span>
-          </Link>
-        ))}
+              <span className={styles.arrow} aria-hidden="true">
+                <ArrowUpRight className={styles.arrowIcon} />
+              </span>
+            </Link>
+          )
+        })}
       </div>
     </section>
   )
 }
-

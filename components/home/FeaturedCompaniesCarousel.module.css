@@ -1,19 +1,20 @@
 /* ==========================================================================
-   Six Figure Jobs — Featured Companies Carousel
-   - Token-driven, dark premium card
-   - Crawlable company links rendered once each
-   - Grayscale logos → color on hover
+   Six Figure Jobs — Top Companies Hiring Now
+   - Company trust strip right under the hero (docs/DESIGN_UX_SPEC.md §10)
+   - Each company once, as a crawlable link: wraps on wide screens, one swipeable row on phones
    ========================================================================== */
 
 .section {
-  margin: var(--space-40) auto 0;
-  max-width: 72rem;
-  padding: 0 var(--space-16);
+  /* As wide as the hero and the job lists around it (the page's main already sets the side padding). */
+  margin: var(--space-32) 0 0;
 }
 
 .header {
-  text-align: center;
-  margin-bottom: var(--space-16);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-16);
+  margin-bottom: var(--space-12);
 }
 
 .title {
@@ -21,67 +22,36 @@
   font-weight: var(--font-weight-extrabold);
   letter-spacing: -0.02em;
   color: var(--color-text-0);
-  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
   line-height: var(--line-height-tight);
 }
 
 .subtitle {
-  margin-top: var(--space-8);
+  margin-top: var(--space-4, 4px);
   color: var(--color-text-1);
-  font-size: var(--text-base);
+  font-size: var(--text-sm, 0.875rem);
   line-height: var(--line-height-normal);
 }
 
+.allLink {
+  flex: none;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  color: var(--color-primary-text);
+  white-space: nowrap;
+}
+
+.allLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .card {
-  position: relative;
   border-radius: var(--radius-2xl);
   background: color-mix(in srgb, var(--color-bg-1) 62%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
   box-shadow: var(--shadow-md);
-  padding: var(--space-16);
-  overflow: hidden;
-}
-
-.rows {
-  position: relative;
-}
-
-/* Edge fade */
-.card::before,
-.card::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 72px;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.card::before {
-  left: 0;
-  background: linear-gradient(to right, color-mix(in srgb, var(--color-bg-1) 95%, transparent), color-mix(in srgb, var(--color-bg-1) 0%, transparent));
-}
-
-.card::after {
-  right: 0;
-  background: linear-gradient(to left, color-mix(in srgb, var(--color-bg-1) 95%, transparent), color-mix(in srgb, var(--color-bg-1) 0%, transparent));
-}
-
-.desktopRow {
-  display: block;
-}
-
-.mobileRows {
-  display: none;
-  gap: var(--space-12);
-}
-
-.marquee {
-  position: relative;
-  overflow: hidden;
-  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  padding: var(--space-12) var(--space-16);
 }
 
 .track {
@@ -89,14 +59,15 @@
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: var(--space-16);
-  width: 100%;
-  padding: var(--space-8) 0;
+  gap: var(--space-12);
+  margin: 0;
+  padding: var(--space-4, 4px) 0;
   list-style: none;
 }
 
 .item {
   position: relative;
+  flex: none;
 }
 
 .logoLink {
@@ -104,8 +75,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--color-bg-2) 55%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-fg) 6%, transparent);
@@ -114,8 +85,7 @@
     transform 200ms ease,
     border-color 200ms ease,
     box-shadow 200ms ease,
-    background-color 200ms ease,
-    filter 200ms ease;
+    background-color 200ms ease;
 }
 
 .logoLink:hover {
@@ -126,62 +96,62 @@
 }
 
 .logoBox {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   display: grid;
   place-items: center;
-}
-
-.logoImg {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  filter: grayscale(100%) contrast(1.05) brightness(0.9);
-  transition: filter 200ms ease;
-}
-
-.logoLink:hover .logoImg {
-  filter: grayscale(0%) contrast(1.05) brightness(1);
-}
-
-.fallback {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-fg) 6%, transparent);
-  color: var(--color-text-0);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-mono);
-  font-weight: var(--font-weight-bold);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marquee {
-    overflow-x: auto;
-    scroll-behavior: smooth;
+  .logoLink {
+    transition: none;
+  }
+
+  .logoLink:hover {
+    transform: none;
   }
 }
 
+/* Phones: one row to swipe, with the edges faded so it reads as scrollable. */
 @media (max-width: 767px) {
-  .card {
-    padding: var(--space-12);
+  .header {
+    align-items: flex-start;
   }
 
-  .desktopRow {
+  .subtitle {
     display: none;
   }
 
-  .mobileRows {
-    display: grid;
+  .card {
+    padding: var(--space-8) 0;
   }
 
   .track {
-    gap: var(--space-12);
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    padding: var(--space-4, 4px) var(--space-12);
+    mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 24px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 24px), transparent);
   }
 
-  .card::before,
-  .card::after {
-    width: 48px;
+  .track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .item {
+    scroll-snap-align: start;
+  }
+
+  .logoLink {
+    width: 60px;
+    height: 60px;
+  }
+
+  .logoBox {
+    width: 46px;
+    height: 46px;
   }
 }

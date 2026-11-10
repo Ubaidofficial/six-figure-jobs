@@ -24,7 +24,8 @@ function highlight(text: string, query: string): React.ReactNode {
   )
 }
 
-export function CompanySearch({ companies }: { companies: PublicCompanyDirectoryEntry[] }) {
+/** `noun` names what the count counts ("remote job" on /remote/companies); plural adds an s. */
+export function CompanySearch({ companies, noun = 'job' }: { companies: PublicCompanyDirectoryEntry[]; noun?: string }) {
   const [query, setQuery] = useState('')
 
   const filtered = useMemo(() => {
@@ -71,7 +72,7 @@ export function CompanySearch({ companies }: { companies: PublicCompanyDirectory
                 <span className={styles.text}>
                   <span className={styles.name}>{highlight(c.name ?? '', query)}</span>
                   <span className={styles.meta}>
-                    {c._count.jobs.toLocaleString()} {c._count.jobs === 1 ? 'job' : 'jobs'}
+                    {c._count.jobs.toLocaleString()} {c._count.jobs === 1 ? noun : `${noun}s`}
                   </span>
                 </span>
               </Link>

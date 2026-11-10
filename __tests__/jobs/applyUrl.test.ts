@@ -1,4 +1,4 @@
-import { isAggregatorApplyUrl, cleanApplyUrl, unwrapRedirectUrl } from '../../lib/jobs/applyUrl'
+import { cleanApplyUrl, cleanApplyUrlForSource, isAggregatorApplyUrl, unwrapRedirectUrl } from '../../lib/jobs/applyUrl'
 
 describe('isAggregatorApplyUrl', () => {
   it('flags aggregator/scraper hosts (incl. subdomains + www)', () => {
@@ -64,5 +64,23 @@ describe('unwrapRedirectUrl', () => {
     expect(unwrapRedirectUrl('https://boards.greenhouse.io/x/jobs/2')).toBe(
       'https://boards.greenhouse.io/x/jobs/2',
     )
+  })
+})
+
+describe('apply links to the board a job was imported from', () => {
+  const wwr = 'https://weworkremotely.com/remote-jobs/acme-staff-engineer'
+  const him = 'https://himalayas.app/companies/acme/jobs/staff-engineer'
+
+  it('keeps a We Work Remotely or Himalayas link for jobs imported from that board', () => {
+    expect(cleanApplyUrlForSource('board:weworkremotely', wwr)).toBe(wwr)
+    expect(cleanApplyUrlForSource('board:himalayas', him)).toBe(him)
+    expect(isAggregatorApplyUrl(wwr, 'board:weworkremotely')).toBe(false)
+  })
+
+  it('still drops those links for any other job, and the other board for these jobs', () => {
+    expect(cleanApplyUrl(wwr)).toBeNull()
+    expect(cleanApplyUrlForSource('board:freehire', wwr, him)).toBeNull()
+    expect(cleanApplyUrlForSource('board:himalayas', wwr)).toBeNull()
+    expect(isAggregatorApplyUrl(him)).toBe(true)
   })
 })

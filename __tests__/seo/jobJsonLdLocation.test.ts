@@ -93,10 +93,35 @@ describe('JobPosting jobLocation: addressCountry', () => {
     })
   })
 
+  it('lists a hybrid job at its office, not as TELECOMMUTE', () => {
+    const j = ld({ remote: false, remoteMode: 'hybrid', locationRaw: 'Foster City, CA', city: 'Foster City', countryCode: 'US' })
+    expect(j.jobLocationType).toBeUndefined()
+    expect(j.applicantLocationRequirements).toBeUndefined()
+    expect(countries(j)).toEqual(['US'])
+  })
+
+  it("reads the job's own city before the employer's country", () => {
+    const j = ld({ remote: true, remoteMode: 'remote', locationRaw: 'Berlin', currency: 'EUR', companyRef: { countryCode: 'CA' } })
+    expect(j.applicantLocationRequirements).toEqual({ '@type': 'Country', name: 'Germany' })
+  })
+
+  it("still falls back to the employer's country when the job names no place", () => {
+    const j = ld({ remote: true, remoteMode: 'remote', locationRaw: 'Remote', companyRef: { countryCode: 'CA' } })
+    expect(j.applicantLocationRequirements).toEqual({ '@type': 'Country', name: 'Canada' })
+  })
+
   it('keeps TELECOMMUTE and applicant requirements for a remote job whose country is unknown', () => {
     const j = ld({ remote: true, remoteMode: 'remote', locationRaw: 'Remote', countryCode: 'HQ', currency: null })
     expect(j.jobLocationType).toBe('TELECOMMUTE')
     expect(j.jobLocation).toBeUndefined()
+  })
+})
+
+describe('JobPosting identifier', () => {
+  it('names neither where we found the job nor its stored id', () => {
+    const j = buildJobJsonLd({ id: 'board:freehire:abc123', source: 'board:freehire', title: 'Engineer' } as any)
+    expect(JSON.stringify(j).toLowerCase()).not.toContain('freehire')
+    expect(j.identifier).toEqual({ '@type': 'PropertyValue', name: 'Six Figure Jobs', value: j.url.split('-j-').pop() })
   })
 })
 

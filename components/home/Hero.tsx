@@ -35,7 +35,7 @@ type HeroProps = {
 const FLOORS = [
   { market: 'United States', currency: 'USD', href: '/jobs/location/united-states' },
   { market: 'United Kingdom', currency: 'GBP', href: '/jobs/location/united-kingdom' },
-  { market: 'Europe', currency: 'EUR', href: '/remote?region=europe', title: 'Remote jobs in Europe' },
+  { market: 'Europe', currency: 'EUR', href: '/remote?remoteRegion=europe', title: 'Remote jobs in Europe' },
   { market: 'Canada', currency: 'CAD', href: '/jobs/location/canada' },
   { market: 'Australia', currency: 'AUD', href: '/jobs/location/australia' },
 ] as const
@@ -72,7 +72,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
       <div className={styles.main}>
       <p className={styles.eyebrow}>
         <Link href="/jobs/location/united-states">US</Link> · <Link href="/jobs/location/united-kingdom">UK</Link> ·{' '}
-        <Link href="/remote?region=europe" title="Remote jobs in Europe">EU</Link> · <Link href="/jobs/location/canada">Canada</Link> ·{' '}
+        <Link href="/remote?remoteRegion=europe" title="Remote jobs in Europe">EU</Link> · <Link href="/jobs/location/canada">Canada</Link> ·{' '}
         <Link href="/jobs/location/australia">Australia</Link>
       </p>
 
@@ -82,7 +82,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
       </h1>
 
       <p className={styles.subheadline}>
-        {jobCount.toLocaleString()} roles
+        {jobCount.toLocaleString()} high-paying 6-figure roles
         {companyCount > 0 ? ` at ${companyCount.toLocaleString()} companies` : ''}. Every listing shows its pay range.
         Every apply button says where it goes: the employer&rsquo;s own site, or the job board the role was posted on.
       </p>
@@ -116,6 +116,9 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
         <Link className={styles.quickLink} href="/jobs/visa-sponsorship">
           Visa sponsorship
         </Link>
+        <Link className={styles.quickLink} href="/jobs/4-day-week">
+          4-day week
+        </Link>
       </p>
 
       {newest || (typeof newThisWeek === 'number' && newThisWeek > 0) ? (
@@ -130,6 +133,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
       </div>
 
       <aside className={styles.panel} aria-label="Typical salary and pay floors">
+        <div className={styles.panelCol}>
         {salarySnapshot ? (
           <>
             <h2 className={styles.panelTitle}>Typical salary</h2>
@@ -167,7 +171,9 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
             </div>
           </dl>
         )}
+        </div>
 
+        <div className={`${styles.panelCol} ${styles.panelColSide}`}>
         <h2 className={`${styles.panelTitle} ${styles.panelTitleSpaced}`}>Pay floor by market</h2>
         <ul className={styles.floors}>
           {FLOORS.map((floor) => {
@@ -221,6 +227,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
         <Link href="/salary" className={styles.panelLink}>
           Salary guides by role <span aria-hidden="true">→</span>
         </Link>
+        </div>
       </aside>
     </section>
   )

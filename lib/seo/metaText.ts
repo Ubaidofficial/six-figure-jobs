@@ -105,12 +105,14 @@ export function countPrefix(count: number): string {
 /** Home page description: live job and company counts, the benefit, freshness. */
 export function buildHomeDescription(totalJobs: number, totalCompanies: number): string {
   return buildDescription(
-    `${totalJobs.toLocaleString()}+ jobs paying $100k+ from ${totalCompanies.toLocaleString()}+ companies.`,
+    // "6-figure" and "high-paying" are how many people search for these jobs ("6 figure jobs", "high paying jobs");
+    // the title and H1 already say "Six Figure Jobs" / "Six-figure jobs" (2026-11-09).
+    `${totalJobs.toLocaleString()}+ high-paying 6-figure jobs ($100k+) from ${totalCompanies.toLocaleString()}+ companies.`,
     [
       [
-        'Salary shown upfront, no entry-level noise. Verified six-figure remote and on-site roles.',
         'Salary shown upfront, no entry-level noise. Remote and on-site roles.',
         'Salary shown upfront, no entry-level noise.',
+        'Salary shown upfront.',
       ],
     ],
   )

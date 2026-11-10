@@ -28,6 +28,12 @@ jest.mock('../../lib/jobs/queryJobs', () => ({
   buildGlobalExclusionsWhere: () => ({}),
 }))
 
+// The four-day-week hub asks 4dayweek.io for its list; tests never reach the network.
+jest.mock('../../lib/jobs/fourDayWeek', () => ({
+  ...jest.requireActual('../../lib/jobs/fourDayWeek'),
+  loadFourDayWeekListings: () => Promise.reject(new Error('offline in tests')),
+}))
+
 const LATEST = new Date('2026-11-04T10:00:00.000Z')
 const ROLE_LATEST = new Date('2026-11-03T08:00:00.000Z')
 

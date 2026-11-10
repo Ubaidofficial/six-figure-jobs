@@ -47,3 +47,29 @@ describe('processLocation country code', () => {
     expect(r.remoteMode).toBe('onsite')
   })
 })
+
+describe('processLocation: CA, DE and IN after a city are US states unless the city says otherwise', () => {
+  it('stores "San Francisco, CA" and "Foster City, CA" as the US, not Canada (seen live 2026-11-09)', () => {
+    expect(processLocation(job({ locationText: 'San Francisco, CA', salaryCurrency: 'USD' })).countryCode).toBe('US')
+    expect(processLocation(job({ locationText: 'San Francisco, CA', isRemote: true })).countryCode).toBe('US')
+    expect(processLocation(job({ locationText: 'Foster City, CA', salaryCurrency: 'USD', workplaceType: 'hybrid' })).countryCode).toBe('US')
+    expect(processLocation(job({ locationText: 'US-CA-Menlo Park', salaryCurrency: 'USD', workplaceType: 'hybrid' })).countryCode).toBe('US')
+    expect(processLocation(job({ locationText: 'Wilmington, DE', salaryCurrency: 'USD' })).countryCode).toBe('US')
+    expect(processLocation(job({ locationText: 'Indianapolis, IN', salaryCurrency: 'USD' })).countryCode).toBe('US')
+  })
+
+  it('keeps Canada, Germany and India for their own cities, or when the pay currency agrees', () => {
+    expect(processLocation(job({ locationText: 'Toronto, CA', salaryCurrency: 'CAD' })).countryCode).toBe('CA')
+    expect(processLocation(job({ locationText: 'Montreal, CA' })).countryCode).toBe('CA')
+    expect(processLocation(job({ locationText: 'Kitchener, CA', salaryCurrency: 'CAD' })).countryCode).toBe('CA')
+    expect(processLocation(job({ locationText: 'Berlin, DE', salaryCurrency: 'EUR' })).countryCode).toBe('DE')
+    expect(processLocation(job({ locationText: 'Frankfurt, DE', salaryCurrency: 'EUR' })).countryCode).toBe('DE')
+    expect(processLocation(job({ locationText: 'Bangalore, IN', salaryCurrency: 'INR' })).countryCode).toBe('IN')
+  })
+
+  it('reads a city written alone as a city, so a remote Berlin job is German', () => {
+    const r = processLocation(job({ locationText: 'Berlin', isRemote: true }))
+    expect(r.countryCode).toBe('DE')
+    expect(r.city).toBe('Berlin')
+  })
+})

@@ -3,7 +3,7 @@
 import type { Job, Company } from '@prisma/client'
 import { normalizePublicCompanyWebsite } from '../companies/website'
 import { getSiteUrl } from './site'
-import { buildJobSlug } from '../jobs/jobSlug'
+import { buildJobSlug, getShortStableIdForJobId } from '../jobs/jobSlug'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 import { resolveSalaryCurrency } from '../jobs/salary'
 import { buildJobValidThroughDate } from '../jobs/validThrough'
@@ -45,7 +45,8 @@ export function buildJobJsonLd(job: JobWithCompany): any {
   // so we always satisfy Google's requirement of at least one location signal.
   const jobLocationRaw = isRemote && !isHybrid ? undefined : (physicalJobLocation ?? buildCountryFallbackLocation(job))
   const jobLocation = jobLocationRaw
-  const jobLocationType = isRemote || isHybrid ? 'TELECOMMUTE' : undefined
+  // TELECOMMUTE is Google's flag for a job worked remotely 100% of the time; a hybrid job is listed at its office.
+  const jobLocationType = isRemote ? 'TELECOMMUTE' : undefined
 
   // Only emit a value we actually recognised — an unknown type is omitted, never guessed.
   const employmentType = normalizeEmploymentType(job.type || job.employmentType)
@@ -76,10 +77,12 @@ export function buildJobJsonLd(job: JobWithCompany): any {
     ...(baseSalary ? { baseSalary } : {}),
     ...(applicantLocationRequirements ? { applicantLocationRequirements } : {}),
 
+    // Our own id for the job (the suffix of its URL): the stored id and source name where we found the job
+    // ("board:freehire:…") are not published (owner's request, 2026-11-09).
     identifier: {
       '@type': 'PropertyValue',
-      name: job.source || 'SixFigureJobs',
-      value: job.id,
+      name: 'Six Figure Jobs',
+      value: getShortStableIdForJobId(job.id),
     },
   }
 
@@ -531,9 +534,8 @@ export function inferCountryFromJob(job: any): string | null {
   const explicitCountry = normalizeCountryCode(job.countryCode)
   if (explicitCountry) return explicitCountry
 
-  const companyCountry = normalizeCountryCode(job.companyRef?.countryCode)
-  if (companyCountry) return companyCountry
-
+  // The job's own place comes before the employer's: Cohere (Toronto) hires in Berlin, and its Berlin job was tagged
+  // Canada when the company's country was read first (seen live 2026-11-09).
   const rawLocation = typeof job.locationRaw === 'string' ? job.locationRaw : ''
   const locationCountry = inferCountryFromLocationRaw(rawLocation)
   if (locationCountry) return locationCountry
@@ -550,6 +552,13 @@ export function inferCountryFromJob(job: any): string | null {
   ) {
     return 'US'
   }
+
+  // "Berlin" on its own: a city we have a page for.
+  const byRawCity = countryFromCity(rawLocation.trim())
+  if (byRawCity) return byRawCity
+
+  const companyCountry = normalizeCountryCode(job.companyRef?.countryCode)
+  if (companyCountry) return companyCountry
 
   const currency = String(job.salaryCurrency || job.currency || '').toUpperCase()
   const currencyCountryMap: Record<string, string> = {

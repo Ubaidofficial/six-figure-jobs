@@ -179,11 +179,11 @@ describe('home description', () => {
   it('is 130-155 characters and uses the live counts', () => {
     const d = buildHomeDescription(2813, 95)
     expect(d).toBe(
-      '2,813+ jobs paying $100k+ from 95+ companies. Salary shown upfront, no entry-level noise. Remote and on-site roles. Updated daily on Six Figure Jobs.',
+      '2,813+ high-paying 6-figure jobs ($100k+) from 95+ companies. Salary shown upfront, no entry-level noise. Updated daily on Six Figure Jobs.',
     )
     expect(d.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
     expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
-    expect(d.startsWith('2,813+ jobs paying $100k+ from 95+ companies.')).toBe(true)
+    expect(d.startsWith('2,813+ high-paying 6-figure jobs ($100k+) from 95+ companies.')).toBe(true)
     expect(d.endsWith(FRESHNESS)).toBe(true)
   })
 

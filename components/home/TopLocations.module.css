@@ -8,7 +8,7 @@
 }
 
 .header {
-  text-align: center;
+  text-align: left; /* every homepage section heading starts at the left edge, like the job lists */
   margin-bottom: var(--space-24);
 }
 
@@ -68,6 +68,12 @@
 .flag {
   font-size: 48px;
   line-height: 1;
+}
+
+.globe {
+  display: block;
+  font-size: 34px;
+  line-height: 48px; /* the flags sit in a 48px line, so the names line up */
 }
 
 .name {

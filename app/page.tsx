@@ -17,13 +17,15 @@ import { HomeFAQ } from './pageFAQ'
 import { CATEGORY_LINKS } from '@/lib/constants/category-links'
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { SALARY_TIERS, tierQueryInput, type SalaryTierId } from '@/lib/jobs/salaryTiers'
-import { countryCodeToSlug } from '@/lib/seo/countrySlug'
+import { countryCodeToSlug, slugToCountryCode } from '@/lib/seo/countrySlug'
 import { Hero } from '@/components/home/Hero'
 import { HeroFilters } from '@/components/home/HeroFilters'
 import { loadSalarySnapshot } from '@/lib/jobs/salarySnapshot'
 import { loadSiteCounts } from '@/lib/jobs/siteCounts'
 import { loadBandSamples } from '@/lib/jobs/salaryBandSamples'
 import { loadNewRolesByCompany } from '@/lib/jobs/newRolesByCompany'
+import { loadFreehireCatalog } from '@/lib/jobs/freehireCatalog'
+import { REMOTE_REGIONS } from '@/lib/jobs/remoteRegions'
 import { LiveJobFeed } from '@/components/home/LiveJobFeed'
 import { NewRolesStrip } from '@/components/home/NewRolesStrip'
 import { SiteStatsStrip } from '@/components/home/SiteStatsStrip'
@@ -153,15 +155,8 @@ function roleSlugToName(slug: string): string {
     .join(' ')
 }
 
-const REMOTE_REGIONS = [
-  { value: '', label: 'Any remote region' },
-  { value: 'global', label: 'Global' },
-  { value: 'us-only', label: 'US only' },
-  { value: 'canada', label: 'Canada' },
-  { value: 'emea', label: 'EMEA' },
-  { value: 'apac', label: 'APAC' },
-  { value: 'uk-ireland', label: 'UK & Ireland' },
-] as const
+// The same regions, labels and meaning as the /jobs sidebar and the Remote hub ("global" = can be done from anywhere).
+const HERO_REMOTE_REGIONS = REMOTE_REGIONS.filter((r) => r.slug !== 'emea').map((r) => ({ value: r.slug, label: r.label }))
 
 function HomepageSchemas({
   jobCount,
@@ -299,6 +294,7 @@ export default async function HomePage() {
       siteCounts,
       bandSamples,
       newRolesCompanies,
+      freehireCatalog,
     ] = await Promise.all([
       queryJobs({
         isHundredKLocal: true,
@@ -415,6 +411,8 @@ export default async function HomePage() {
         .catch(() => null),
       // Companies with new roles in the last 24 hours, for the strip under the live feed; a failure hides the strip.
       loadNewRolesByCompany(publicJobWhere, stats.eligibleCompanyIds).catch(() => []),
+      // freehire's catalogue size for the stats strip, read live and cached an hour; a failure only hides that line.
+      loadFreehireCatalog(),
     ])
 
     const priorityCompanySlugs = priorityCompanyCandidates.map((candidate) => candidate.slug)
@@ -537,7 +535,7 @@ export default async function HomePage() {
     topCityByCode.set(code, row.city.trim())
   }
 
-  const topLocations: TopLocationCard[] = TOP_LOCATION_DEFS.map((def) => {
+  const countryCards: TopLocationCard[] = TOP_LOCATION_DEFS.map((def) => {
     const slug = countryCodeToSlug(def.code) ?? def.code.toLowerCase()
     const name = TARGET_COUNTRIES.find((c) => c.code === def.code)?.label ?? slug
     return {
@@ -549,10 +547,32 @@ export default async function HomePage() {
       topCity: topCityByCode.get(def.code) ?? null,
     }
   })
+  // Countries with no jobs are left out, and remote jobs open to every country get their own card after the US
+  // (people outside the listed countries asked where those are); six cards fill the 3-column grid.
+  const worldwideCount = siteCounts?.remoteWorldwide ?? 0
+  const withJobs = countryCards.filter((c) => c.jobCount > 0)
+  const topLocations: TopLocationCard[] = (
+    worldwideCount > 0
+      ? [
+          ...withJobs.slice(0, 1),
+          {
+            slug: 'anywhere',
+            name: 'Anywhere in the world',
+            countryCode: null,
+            jobCount: worldwideCount,
+            thresholdLabel: '$100k+',
+            topCity: null,
+            href: '/remote?remoteRegion=global',
+            detail: 'Remote, open to every country',
+          },
+          ...withJobs.slice(1),
+        ]
+      : withJobs
+  ).slice(0, 6)
 
     return (
     <>
-      <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
+      <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10 lg:pt-4">
         <HomepageSchemas
           jobCount={stats.totalJobs}
           companyCount={stats.totalCompaniesHiring}
@@ -568,10 +588,27 @@ export default async function HomePage() {
       >
         <HeroFilters
           roles={ROLE_OPTIONS.map((o) => ({ value: o.slug, label: o.label }))}
-          locations={LOCATIONS.map((l) => ({ value: l.code, label: l.label }))}
-          remoteRegions={REMOTE_REGIONS.map((r) => ({ value: r.value, label: r.label }))}
+          // /jobs filters on ISO codes (`country=US`); the slugs sent before were ignored there. "Remote Only" is covered
+          // by the Remote group of the same list.
+          locations={LOCATIONS.flatMap((l) => {
+            const code = slugToCountryCode(l.code)
+            return code ? [{ value: code, label: l.label }] : []
+          })}
+          remoteRegions={HERO_REMOTE_REGIONS}
         />
       </Hero>
+
+      {/* Company trust strip right under the hero (docs/DESIGN_UX_SPEC.md §10, homepage order step 2). */}
+      <FeaturedCompaniesCarousel companies={featuredCompanies} />
+
+      {/* The numbers band right after the employers (moved up from the foot of the page and made compact, 2026-11-10). */}
+      <SiteStatsStrip
+        jobs={stats.totalJobs}
+        companies={stats.totalCompaniesHiring}
+        newThisWeek={stats.newThisWeek}
+        countries={siteCounts ? siteCounts.byCountry.filter((c) => c.count > 0).length : null}
+        catalog={freehireCatalog}
+      />
 
       <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} />
 
@@ -579,16 +616,6 @@ export default async function HomePage() {
 
       {/* Jobs already in the live feed above are left out, so no job appears twice with two different times. */}
       <LatestOpportunities jobs={jobs.filter((job) => !feedItemIds.has(job.id))} totalJobs={stats.totalJobs} />
-
-      <FeaturedCompaniesCarousel companies={featuredCompanies} />
-
-      <SiteStatsStrip
-        jobs={stats.totalJobs}
-        companies={stats.totalCompaniesHiring}
-        newThisWeek={stats.newThisWeek}
-        countries={siteCounts ? siteCounts.byCountry.filter((c) => c.count > 0).length : null}
-        medianUsd={salarySnapshot?.median ?? null}
-      />
 
       {priorityFeaturedCompanies.length > 0 && (
         <section className="mb-8 rounded-2xl border border-border bg-card p-5">
@@ -613,8 +640,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      <section className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">
+      <section className="my-12">
+        <h2 className="mb-4 [font-family:var(--font-display)] text-xl font-extrabold tracking-tight text-foreground">
           Explore Six Figure Jobs by Role
         </h2>
           <div className="flex flex-wrap gap-2">
@@ -622,7 +649,7 @@ export default async function HomePage() {
               <Link
                 key={role.href}
                 href={role.href}
-                className="group inline-flex items-center gap-1.5 max-md:min-h-11 rounded-full border border-border bg-card px-4 py-2 text-sm transition-colors hover:border-primary hover:bg-card"
+                className="group inline-flex items-center gap-1.5 max-md:min-h-11 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:border-primary hover:shadow-glow"
               >
                 <span className="text-foreground group-hover:text-foreground">
                   {role.name}
@@ -730,6 +757,15 @@ export default async function HomePage() {
             </Link>
             <Link href="/jobs/400k-plus" className="block hover:text-foreground">
               $400k+ Jobs
+            </Link>
+            <Link href="/high-paying-jobs" className="block hover:text-foreground">
+              High-Paying Jobs Ranked by Pay
+            </Link>
+            <Link href="/jobs/no-degree" className="block hover:text-foreground">
+              Six-Figure Jobs Without a Degree
+            </Link>
+            <Link href="/jobs/4-day-week" className="block hover:text-foreground">
+              4-Day Work Week Jobs
             </Link>
           </div>
           <div className="space-y-2">

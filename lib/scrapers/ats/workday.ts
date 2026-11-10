@@ -4,7 +4,9 @@ import { fetchWithBackoff } from '../utils/fetchWithBackoff'
 
 const USER_AGENT = 'SixFigureJobs/1.0 (+job-board-scraper)'
 const TIMEOUT_MS = 15000
-const PAGE_SIZE = 100
+// Workday's job search answers 400 Bad Request above 20 per page (checked 2026-11-09 on zoom.wd5: 20 -> 200, 21 -> 400),
+// so with 100 every Workday board failed on its first request.
+const PAGE_SIZE = 20
 const DETAIL_CONCURRENCY = 4
 
 type WorkdayContext = {
@@ -222,7 +224,9 @@ function parseSalaryRangeFromText(
   salaryInterval: string | null
   salaryRaw: string | null
 } {
-  const salarySnippet = extractSalarySnippet(text) ?? text
+  // Retirement plans ("401k", "401(k)", "403(b)", "457(b)") are not pay: "401k" was read as $401,000 on Chewy's
+  // vet-care postings (2026-11-09). Remove them before reading numbers.
+  const salarySnippet = (extractSalarySnippet(text) ?? text).replace(/\b(?:401|403|457)\s*\(?\s*[kb]\s*\)?/gi, ' ')
   const lower = salarySnippet.toLowerCase()
   const interval =
     /\/\s*hour|per\s*hour|\bhr\b/.test(lower)
@@ -358,14 +362,17 @@ function mapWorkdayDetailToJob(
     parsePostedOn(summary.postedOn) ||
     null
 
+  // Requisition numbers ("R1005314", "JR19876") are counted per employer, so two Workday employers can share one;
+  // without the tenant the second employer's job would land on the first one's row (job id is source + externalId).
+  const reqId =
+    detail?.jobReqId ||
+    detail?.jobPostingId ||
+    detail?.id ||
+    summary.externalPath ||
+    summary.title ||
+    'unknown'
   return {
-    externalId:
-      detail?.jobReqId ||
-      detail?.jobPostingId ||
-      detail?.id ||
-      summary.externalPath ||
-      summary.title ||
-      'unknown',
+    externalId: `${context.tenant}:${reqId}`,
     title: detail?.title || summary.title || 'Untitled',
     url:
       detail?.externalUrl ||
@@ -423,7 +430,11 @@ export async function scrapeWorkday(atsUrl: string): Promise<AtsJob[]> {
       )
 
       const jobPostings = Array.isArray(page.jobPostings) ? page.jobPostings : []
-      total = Number(page.total ?? jobPostings.length)
+      // Workday reports the real total on the first page only and `total: 0` on later ones (offset 20 -> 0 on zoom.wd5),
+      // which ended the loop after the second page: keep the first non-zero total.
+      const reported = Number(page.total ?? 0)
+      if (reported > 0) total = reported
+      else if (!Number.isFinite(total)) total = jobPostings.length
       if (!jobPostings.length) break
 
       summaries.push(...jobPostings)

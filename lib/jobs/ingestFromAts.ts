@@ -739,6 +739,7 @@ export async function upsertJobsForCompanyFromAts(
 
         locationText,
         isRemote,
+        workplaceType: (raw as any).workplaceType ?? null,
 
         // Pass structured salary fields from the ATS scraper when available.
         // Greenhouse leaves these null (salary is in raw.metadata / description HTML);

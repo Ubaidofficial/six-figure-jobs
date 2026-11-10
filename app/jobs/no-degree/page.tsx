@@ -1,10 +1,18 @@
 // app/jobs/no-degree/page.tsx
-// pSEO landing page: $100k+ tech jobs that don't require a college degree.
-// Targets: "6 figure jobs no degree", "high paying jobs without degree", "100k jobs no college"
+// Six-figure jobs whose posting does not ask for a college degree, or accepts equivalent experience instead.
+// Targets "six figure jobs without a degree" (about 1,600 US searches a month per DataForSEO, 2026-11-09).
+//
+// Until 2026-11-09 this page listed every software, DevOps, data and sales job as "jobs that don't require a college
+// degree" without reading them. It now reads each posting (lib/jobs/degreeRequirement.ts): a job is listed when its
+// description names no degree, or names one and accepts equivalent experience.
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { memoAsync } from '../../../lib/cache/memo'
+import { loadDegreeRequiredJobIds } from '../../../lib/jobs/degreeRequirement'
+import { buildWhere, queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { prisma } from '../../../lib/prisma'
+import { rankTopRolePages } from '../../../lib/roles/topRolePages'
 import JobList from '../../components/JobList'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
 import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
@@ -14,6 +22,7 @@ export const revalidate = 600
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
+const TITLE = 'Six-Figure Jobs Without a Degree ($100k+) | Six Figure Jobs'
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -21,42 +30,56 @@ function parsePage(sp: SearchParams): number {
   return Math.max(1, Number((sp.page as string) || '1') || 1)
 }
 
-// Roles that are well-known to hire without degree requirements
-const NO_DEGREE_ROLES = [
-  { slug: 'software-engineer', label: 'Software Engineer', note: 'Portfolio + skills matter more than degrees' },
-  { slug: 'devops-engineer', label: 'DevOps / SRE', note: 'Certifications (AWS, GCP) often replace degrees' },
-  { slug: 'data-engineer', label: 'Data Engineer', note: 'Strong SQL/Python skills open doors without a degree' },
-  { slug: 'full-stack-engineer', label: 'Full-Stack Engineer', note: 'Open source contributions & side projects count' },
-  { slug: 'sales-development-representative', label: 'Sales (SDR/AE)', note: 'Track record beats formal education in sales' },
-  { slug: 'product-manager', label: 'Product Manager', note: 'Product sense + domain expertise matters most' },
-  { slug: 'customer-success', label: 'Customer Success', note: 'Communication skills + domain knowledge lead to $100k+' },
-  { slug: 'account-executive', label: 'Account Executive', note: 'Performance-based; top AEs earn $150k–$300k+ without degrees' },
-]
+/** How many no-degree jobs there are, out of how many six-figure jobs in all; cached with the degree pass. */
+async function loadCounts() {
+  const pass = await loadDegreeRequiredJobIds()
+  return memoAsync(`no-degree-counts:${pass.classifiedAt.toISOString()}`, 60 * 60 * 1000, async () => {
+    const [open, all, groups] = await Promise.all([
+      prisma.job.count({ where: buildWhere({ noDegreeRequired: pass }) }),
+      prisma.job.count({ where: buildWhere({}) }),
+      prisma.job.groupBy({
+        by: ['roleSlug'],
+        where: { AND: [buildWhere({ noDegreeRequired: pass }), { roleSlug: { not: null } }] },
+        _count: { _all: true },
+        orderBy: { _count: { roleSlug: 'desc' } },
+        take: 60,
+      }),
+    ])
+    const roles = rankTopRolePages(groups.map((g) => ({ roleSlug: g.roleSlug, count: g._count._all })), { limit: 8, minJobs: 5 })
+    return { open, all, roles }
+  })
+}
 
-const FAQ = [
-  {
-    q: 'Can you really earn $100k+ in tech without a college degree?',
-    a: 'Yes. Software engineering, DevOps, sales, and customer success roles routinely pay $100k–$200k+ and many companies (including top tech firms) have removed degree requirements. Google, Apple, IBM, and thousands of startups hire purely based on skills, portfolio, and experience.',
-  },
-  {
-    q: 'Which six-figure tech jobs are most accessible without a degree?',
-    a: 'Software engineering (bootcamp graduates hired regularly), DevOps/SRE (AWS/GCP certifications respected), sales/AE roles (quota attainment is the only metric), and customer success roles. Data engineering and product management are increasingly accessible too.',
-  },
-  {
-    q: 'How do I compete against degree holders for $100k+ roles?',
-    a: 'Build a strong portfolio on GitHub, contribute to open source projects, earn cloud certifications (AWS Solutions Architect, Google Cloud Professional), and accumulate verifiable results (shipped projects, quota performance, uptime numbers). These outweigh a degree at most companies.',
-  },
-  {
-    q: 'Do all companies on Six Figure Jobs hire without degrees?',
-    a: 'Not all — some enterprise companies still list degrees as preferred. However, many postings treat degrees as a soft preference, not a hard requirement. Apply even if the listing says "BS preferred." Tech hiring is skills-first.',
-  },
-]
+function buildFaq(open: number, all: number) {
+  const share = all > 0 ? Math.round((open / all) * 100) : 0
+  return [
+    {
+      q: 'Can you earn $100k+ without a college degree?',
+      a:
+        open > 0
+          ? `Yes. Right now ${open.toLocaleString('en-US')} of the ${all.toLocaleString('en-US')} six-figure jobs on ${SITE_NAME} (about ${share}%) either don't ask for a degree in the posting or accept equivalent experience instead. Every one publishes a salary of $100k or more (or the local equivalent).`
+          : `Some do. This page lists the six-figure jobs on ${SITE_NAME} whose posting doesn't ask for a degree or accepts equivalent experience instead.`,
+    },
+    {
+      q: 'How do you know a job does not require a degree?',
+      a: `We read each posting. A job is listed here when its description doesn't ask for a degree at all, or asks for one "or equivalent experience" (or says no degree is required). Jobs that ask for a degree with no alternative are left out. It is a reading of the posting text, so check the full description before you apply.`,
+    },
+    {
+      q: 'How do I compete against degree holders for $100k+ roles?',
+      a: 'Show the work: a portfolio or GitHub profile, open source contributions, relevant certifications (for example in cloud platforms) and results you can point to, such as shipped projects or quota attainment. When a posting accepts equivalent experience, describe yours in the terms the posting uses.',
+    },
+    {
+      q: 'Do all employers on Six Figure Jobs hire without degrees?',
+      a: 'No. Many postings still ask for a degree, and those are not listed here. Some postings say a degree is "preferred" rather than required; it is usually worth applying to those if you meet the other requirements.',
+    },
+  ]
+}
 
 const PATHS = [
-  { title: 'Coding bootcamp', desc: 'Full-stack, web dev, or data science bootcamps. 3–6 months. Average bootcamp grad salary: $70k–$120k first job.', icon: '💻' },
-  { title: 'Cloud certifications', desc: 'AWS, Google Cloud, Azure certifications are valued as much as (or more than) CS degrees for DevOps and cloud roles.', icon: '☁️' },
-  { title: 'Self-taught + portfolio', desc: 'Open source contributions, side projects, and a strong GitHub profile can land $100k+ roles at top tech companies.', icon: '🛠️' },
-  { title: 'Sales career path', desc: 'SDR → AE → Enterprise AE. Top enterprise AEs earn $200k–$400k+ total comp. No degree required — quota attainment is king.', icon: '📈' },
+  { title: 'Coding bootcamp', desc: 'Full-stack, web development or data science bootcamps, then a portfolio of projects that shows the skills a posting asks for.', icon: '💻' },
+  { title: 'Cloud certifications', desc: 'AWS, Google Cloud and Azure certifications are a common way to show cloud and DevOps skills without a computer science degree.', icon: '☁️' },
+  { title: 'Self-taught + portfolio', desc: 'Open source contributions, side projects and a strong GitHub profile give employers something concrete to judge.', icon: '🛠️' },
+  { title: 'Sales career path', desc: 'SDR to account executive to enterprise AE: sales roles are usually judged on results such as quota attainment.', icon: '📈' },
 ]
 
 export async function generateMetadata({
@@ -67,28 +90,26 @@ export async function generateMetadata({
   const sp = (await searchParams) || {}
   const page = parsePage(sp)
 
-  let total = 0
+  let open = 0
   try {
-    const result = await queryJobs({ page: 1, pageSize: 1, roleSlugs: NO_DEGREE_ROLES.map((r) => r.slug) })
-    total = result.total
+    open = (await loadCounts()).open
   } catch (error) {
     void error
   }
 
-  const title = `$100k+ Jobs Without a Degree | Six Figure Jobs`
-  const description = `${total > 0 ? `${total.toLocaleString()} ` : ''}$100k+ jobs that don't require a college degree: software engineer, DevOps, sales and data roles, with salary shown upfront and links to apply.`
+  const description = `${open > 0 ? `${open.toLocaleString('en-US')} ` : ''}six-figure jobs whose posting doesn't ask for a college degree or accepts equivalent experience. Salary shown on every listing.`
   const canonical = page > 1 ? `${SITE_URL}/jobs/no-degree?page=${page}` : `${SITE_URL}/jobs/no-degree`
 
-  // Specialty pages aren't in the Phase 1 allowlist — noindex until phase 2.
-  const allowIndex = isPhaseIndexable({ pathname: '/jobs/no-degree' })
+  // Indexable when the phase allows it (it is listed in ALWAYS_INDEXABLE_HUBS) and the list is not empty.
+  const allowIndex = isPhaseIndexable({ pathname: '/jobs/no-degree' }) && open > 0
 
   return {
-    title,
+    title: TITLE,
     description,
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: { images: defaultOgImages(), title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
-    twitter: { card: 'summary_large_image', title, description },
+    openGraph: { images: defaultOgImages(), title: TITLE, description, url: canonical, siteName: SITE_NAME, type: 'website' },
+    twitter: { card: 'summary_large_image', title: TITLE, description },
   }
 }
 
@@ -100,17 +121,19 @@ export default async function NoDegreeJobsPage({
   const sp = (await searchParams) || {}
   const page = parsePage(sp)
 
-  // Filter to roles well-known for skills-first hiring (the same list shown in the cards above).
-  // This prevents a topical mismatch where Google sees "no degree" content but an unfiltered feed.
-  const noDegreeRoleSlugs = NO_DEGREE_ROLES.map((r) => r.slug)
-  const result = await queryJobs({ page, pageSize: PAGE_SIZE, sortBy: 'date', roleSlugs: noDegreeRoleSlugs })
+  const pass = await loadDegreeRequiredJobIds()
+  const [result, counts] = await Promise.all([
+    queryJobs({ page, pageSize: PAGE_SIZE, sortBy: 'date', noDegreeRequired: pass }),
+    loadCounts(),
+  ])
 
   const jobs = result.jobs as JobWithCompany[]
   const total = result.total
   const totalPages = result.totalPages
+  const faq = buildFaq(counts.open, counts.all)
 
   const itemListJsonLd = buildItemListJsonLd({
-    name: `$100k+ Jobs Without a Degree on ${SITE_NAME}`,
+    name: `Six-figure jobs without a degree on ${SITE_NAME}`,
     jobs: jobs.map((j) => ({ id: j.id, title: j.title })),
     page,
     pageSize: PAGE_SIZE,
@@ -119,7 +142,7 @@ export default async function NoDegreeJobsPage({
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: FAQ.map(({ q, a }) => ({
+    mainEntity: faq.map(({ q, a }) => ({
       '@type': 'Question',
       name: q,
       acceptedAnswer: { '@type': 'Answer', text: a },
@@ -132,7 +155,7 @@ export default async function NoDegreeJobsPage({
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
       { '@type': 'ListItem', position: 2, name: 'Jobs', item: `${SITE_URL}/jobs` },
-      { '@type': 'ListItem', position: 3, name: '$100k+ Jobs Without a Degree', item: `${SITE_URL}/jobs/no-degree` },
+      { '@type': 'ListItem', position: 3, name: 'Six-figure jobs without a degree', item: `${SITE_URL}/jobs/no-degree` },
     ],
   }
 
@@ -160,47 +183,38 @@ export default async function NoDegreeJobsPage({
           </span>
         </div>
         <h1 style={{ fontSize: 42, fontWeight: 800, margin: '0 0 12px', lineHeight: 1.15 }}>
-          <span style={{ color: 'var(--color-primary-text)' }}>$100k+</span> Tech Jobs{' '}
-          <span style={{ color: 'var(--color-text-0)' }}>Without a Degree</span>
+          <span style={{ color: 'var(--color-primary-text)' }}>Six-figure</span> jobs{' '}
+          <span style={{ color: 'var(--color-text-0)' }}>without a degree</span>
         </h1>
-        <p style={{ fontSize: 18, color: 'var(--color-text-1)', margin: '0 0 20px' }}>
-          {total.toLocaleString()} six-figure jobs at companies that hire based on skills,
-          not diplomas. Software engineering, DevOps, sales, and data roles paying $100k–$300k+.
+        <p style={{ fontSize: 18, color: 'var(--color-text-1)', margin: 0 }}>
+          {total.toLocaleString('en-US')} jobs paying $100k+ whose posting doesn&apos;t ask for a college degree, or
+          accepts equivalent experience instead. We read every posting; check the full description before you apply.
         </p>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ background: '#84cc1618', border: '1px solid #84cc1640', borderRadius: 100, color: '#3f6212', fontSize: 14, fontWeight: 700, padding: '8px 18px' }}>
-            No degree filter required
-          </span>
-          <span style={{ background: '#3b82f618', border: '1px solid #3b82f640', borderRadius: 100, color: '#1e40af', fontSize: 14, fontWeight: 700, padding: '8px 18px' }}>
-            Verified salaries
-          </span>
-          <span style={{ background: '#6366f118', border: '1px solid #6366f140', borderRadius: 100, color: '#3730a3', fontSize: 14, fontWeight: 700, padding: '8px 18px' }}>
-            Direct apply
-          </span>
-        </div>
       </header>
 
-      {/* Best roles for non-degree holders */}
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 16 }}>Best $100k+ roles for non-degree holders</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-          {NO_DEGREE_ROLES.map((r) => (
-            <Link
-              key={r.slug}
-              href={`/jobs/${r.slug}`}
-              style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '16px 20px', textDecoration: 'none', display: 'block' }}
-            >
-              <div style={{ color: 'var(--color-text-0)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{r.label}</div>
-              <div style={{ color: 'var(--color-text-1)', fontSize: 13 }}>{r.note}</div>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* Roles with the most of these jobs right now */}
+      {counts.roles.length > 0 ? (
+        <section style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 16 }}>Roles with the most six-figure jobs that don&apos;t require a degree</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+            {counts.roles.map((r) => (
+              <Link
+                key={r.slug}
+                href={`/jobs/${r.slug}`}
+                style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '16px 20px', textDecoration: 'none', display: 'block' }}
+              >
+                <div style={{ color: 'var(--color-text-0)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{r.label}</div>
+                <div style={{ color: 'var(--color-text-1)', fontSize: 13 }}>{r.count.toLocaleString('en-US')} open jobs here</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* Job listings */}
       <section aria-label="Job listings">
         <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>
-          Live $100k+ jobs — {total.toLocaleString()} openings
+          Live $100k+ jobs — {total.toLocaleString('en-US')} openings
         </h2>
         <JobList jobs={jobs} />
       </section>
@@ -236,7 +250,7 @@ export default async function NoDegreeJobsPage({
       <section style={{ marginTop: 48 }}>
         <h2 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 24px' }}>Frequently asked questions</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {FAQ.map(({ q, a }) => (
+          {faq.map(({ q, a }) => (
             <div key={q} style={{ background: 'var(--color-bg-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '20px 24px' }}>
               <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>{q}</h3>
               <p style={{ color: 'var(--color-text-1)', margin: 0, lineHeight: 1.7 }}>{a}</p>
@@ -250,8 +264,10 @@ export default async function NoDegreeJobsPage({
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>More high-paying job searches</h2>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {[
+            { href: '/high-paying-jobs', label: 'High-paying jobs ranked by pay' },
             { href: '/remote', label: 'Remote $100k+ jobs' },
             { href: '/jobs/visa-sponsorship', label: 'Visa sponsorship jobs' },
+            { href: '/jobs/4-day-week', label: '4-day work week jobs' },
             { href: '/jobs/100k-plus', label: 'All $100k+ jobs' },
             { href: '/jobs/200k-plus', label: '$200k+ jobs' },
             { href: '/salary', label: 'Salary guides' },

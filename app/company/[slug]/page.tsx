@@ -30,13 +30,6 @@ import {
 import { CompanyJobsMore } from '@/components/companies/CompanyJobsMore'
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
-import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
-import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
-
-// Per-job JobPosting count emitted on the company page. Capped to avoid HTML
-// bloat while still exposing the highest-value jobs to Google's job-search
-// surfaces from the company hub.
-const COMPANY_JOB_POSTING_JSON_LD_LIMIT = 10
 
 export const revalidate = 3600
 
@@ -188,10 +181,6 @@ export default async function CompanyPage({
       const itemListJsonLd = buildCompanyJobsItemListJsonLd(company, pageJobs, jobsWindow.start)
       const collectionPageJsonLd = buildCompanyCollectionPageJsonLd(company, qualifiedJobs.length, pageJobs, jobsWindow.start, stats)
       const faqJsonLd = buildCompanyFaqJsonLd(company, qualifiedJobs)
-      const jobPostingJsonLds = qualifiedJobs
-        .filter((job) => evaluateJobIndexability(job).indexable)
-        .slice(0, COMPANY_JOB_POSTING_JSON_LD_LIMIT)
-        .map((job) => buildJobJsonLd(job))
 
       const tags = parseTags(company.tagsJson)
       const heroLogo = buildLogoUrl(company.logoUrl ?? null, company.website ?? null, company.name)
@@ -218,13 +207,6 @@ export default async function CompanyPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      {jobPostingJsonLds.map((jsonLd, index) => (
-        <script
-          key={`job-posting-jsonld-${index}`}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-      ))}
 
           <header className="flex flex-col gap-5 rounded-[22px] bg-[color-mix(in_srgb,var(--color-primary)_16%,var(--color-bg-1))] p-5 sm:flex-row sm:items-start sm:gap-7 sm:rounded-[28px] sm:p-9">
             <CompanyLogo name={company.name} src={heroLogo} size="xl" priority className="size-20 flex-shrink-0 rounded-2xl text-2xl sm:size-24" />

@@ -1,4 +1,6 @@
 import { normalizeLocationRaw, hasMultiLocationSignals } from '../location/locationRaw'
+import { countryName } from '../location/country'
+import { countryFromCity } from '../location/jobLocation'
 
 export type LocationKind = 'remote' | 'hybrid' | 'onsite'
 
@@ -284,14 +286,16 @@ function splitLocationParts(text: string): {
   const country = normalizeCountry(last)
 
   if (parts.length === 1) {
-    if (country) return { city: null, region: null, country }
+    // A known city first: any single word was otherwise read as a country ("Berlin" stored as the country "Berlin").
     const inferred = inferCountryFromCity(last)
     if (inferred) return { city: inferred.city, region: null, country: inferred.country }
+    if (country) return { city: null, region: null, country }
     return { city: last, region: null, country: null }
   }
 
   if (parts.length === 2) {
     const [p1, p2] = parts
+    if (isStateOrCountryCode(p2)) return { city: p1, region: p2, country: countryOfKnownCity(p1) }
     const c2 = normalizeCountry(p2)
     if (c2) return { city: p1, region: null, country: c2 }
     const inferred = inferCountryFromCity(p1)
@@ -310,6 +314,20 @@ function splitLocationParts(text: string): {
   if (isUsState(p2)) return { city: p1, region: p2, country: 'United States' }
 
   return { city: p1, region: p2, country: null }
+}
+
+// "CA", "DE" and "IN" are US states (California, Delaware, Indiana) as well as country codes. After a city they were
+// read as the country, so every "San Francisco, CA" job was stored as Canadian (seen live 2026-11-09). They name a country
+// only for a city we know ("Toronto, CA", "Berlin, DE"); otherwise the country is left unknown for the caller to settle
+// from the pay currency, and never guessed.
+const STATE_OR_COUNTRY_CODES = new Set(['CA', 'DE', 'IN'])
+
+function isStateOrCountryCode(token: string): boolean {
+  return STATE_OR_COUNTRY_CODES.has(token.trim().toUpperCase())
+}
+
+function countryOfKnownCity(city: string): string | null {
+  return inferCountryFromCity(city)?.country ?? countryName(countryFromCity(city))
 }
 
 const US_STATE_CODES = new Set([
@@ -508,6 +526,11 @@ function normalizeCountry(raw: string): string | null {
     }
 
     return null
+  }
+
+  // "US-CA-Menlo Park" (country, state, city): the state code is not a country of its own.
+  if (tokens.length >= 3 && /^usa?$/i.test(tokens[0]) && US_STATE_CODES.has(tokens[1].toUpperCase())) {
+    return 'United States'
   }
 
   for (let i = tokens.length - 1; i >= 0; i--) {

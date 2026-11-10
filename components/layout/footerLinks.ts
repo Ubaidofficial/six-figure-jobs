@@ -24,11 +24,11 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
     title: 'Remote Jobs',
     links: [
-      ['Worldwide', '/remote?region=global'],
-      ['United States', '/remote?region=us-only'],
-      ['Canada', '/remote?region=canada'],
-      ['Europe', '/remote?region=europe'],
-      ['Australia', '/remote?region=australia'],
+      ['Worldwide', '/remote?remoteRegion=global'],
+      ['United States', '/remote?remoteRegion=us-only'],
+      ['Canada', '/remote?remoteRegion=canada'],
+      ['Europe', '/remote?remoteRegion=europe'],
+      ['Australia', '/remote?remoteRegion=australia'],
     ],
   },
   {
@@ -77,6 +77,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       ['Career Blog', '/blog'],
       ['Visa Sponsorship Jobs', '/jobs/visa-sponsorship'],
       ['No-Degree Tech Jobs', '/jobs/no-degree'],
+      ['4-Day Work Week Jobs', '/jobs/4-day-week'],
       ['Senior-Level Jobs', '/jobs/level/senior'],
     ],
   },

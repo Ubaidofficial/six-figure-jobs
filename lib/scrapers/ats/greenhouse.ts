@@ -13,6 +13,8 @@ interface GreenhouseJob {
   absolute_url: string
   location?: GreenhouseLocation
   updated_at?: string
+  /** When the job was first published: the board API's field is `first_published` (no `_at`). */
+  first_published?: string
   first_published_at?: string
   // when content=true there are more fields; we treat them as "raw"
   [key: string]: any
@@ -129,9 +131,10 @@ export async function scrapeGreenhouse(atsUrl: string): Promise<AtsJob[]> {
       const url = job.absolute_url
       const locationText = job.location?.name ?? null
 
-      const postedAt = job.first_published_at
-        ? new Date(job.first_published_at)
-        : null
+      // `first_published_at` does not exist on the board API, so every Greenhouse job had no posting date and its
+      // JobPosting datePosted fell back to the day we first stored it (seen live 2026-11-09).
+      const firstPublished = job.first_published ?? job.first_published_at
+      const postedAt = firstPublished ? new Date(firstPublished) : null
       const updatedAt = job.updated_at ? new Date(job.updated_at) : postedAt
 
       // Light "remote" hint; true normalization happens later.

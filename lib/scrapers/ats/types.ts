@@ -26,6 +26,8 @@ export interface AtsJob {
   url: string
   locationText?: string | null
   remote?: boolean | null
+  /** The board's structured workplace type, when it has one (Ashby). */
+  workplaceType?: 'remote' | 'hybrid' | 'onsite' | null
 
   salaryMin?: number | null
   salaryMax?: number | null
