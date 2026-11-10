@@ -19,6 +19,13 @@ filtered out of the main public feeds.
 - /salary/[role] - Salary guides and role salary context
 - /company/[slug] - Company profiles
 
+## AI assistants (MCP)
+- Server: https://www.6figjobs.com/api/mcp (Model Context Protocol, streamable HTTP, no authentication, read-only)
+- Tools: search_jobs (search open six-figure jobs), get_job (one job's full posting and apply link),
+  salary_benchmark (what a role pays in live six-figure listings, and how an offer compares),
+  list_filters (roles, countries and remote regions that have jobs)
+- Setup for Claude, ChatGPT, Cursor, Claude Code, Codex and Gemini CLI: https://www.6figjobs.com/mcp
+
 ## Structured Data
 - Job detail pages use JobPosting JSON-LD.
 - Listing pages use crawlable internal links and ItemList/CollectionPage context.

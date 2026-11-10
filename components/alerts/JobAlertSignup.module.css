@@ -1,0 +1,175 @@
+/* Email alert signup: a compact block at the top of listing results, and the footer's "Follow new jobs" panel. */
+
+.box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 20px;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-bg-1));
+}
+
+.footer {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  width: 100%;
+}
+
+.text {
+  min-width: 0;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-text-0);
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--color-primary-text);
+}
+
+.label {
+  margin: 2px 0 0;
+  font-size: 0.875rem;
+  color: var(--color-text-1);
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input,
+.select {
+  height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-0, #fff);
+  color: var(--color-text-0);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.input {
+  width: 15rem;
+  padding: 0 12px;
+}
+
+.select {
+  padding: 0 8px;
+}
+
+.input:focus-visible,
+.select:focus-visible,
+.button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.button {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: #0a0a0a;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.fine,
+.error,
+.done {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-2, var(--color-text-1));
+}
+
+.error {
+  color: #b42318;
+}
+
+.done {
+  grid-column: auto;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-0);
+}
+
+.suggestion {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-0);
+}
+
+.suggestionButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-primary-text);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 767px) {
+  .box {
+    grid-template-columns: 1fr;
+  }
+
+  .form {
+    flex-wrap: wrap;
+  }
+
+  .input {
+    flex: 1 1 12rem;
+    width: auto;
+  }
+
+  .done {
+    grid-column: 1 / -1;
+  }
+}

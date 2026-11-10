@@ -3,12 +3,14 @@ import Link from 'next/link'
 
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '@/lib/seo/site'
 
+import { CopyPrompt } from './CopyPrompt'
+
 const SITE_URL = getSiteUrl()
 const MCP_URL = `${SITE_URL}/api/mcp`
 const TITLE = 'Search six-figure jobs in Claude, ChatGPT and Cursor (MCP)'
 const DESCRIPTION =
-  'Connect your AI assistant to Six Figure Jobs: search jobs with published $100k+ pay from Claude, ChatGPT, Cursor, ' +
-  'Claude Code, Codex or Gemini CLI. Free, read-only, no account.'
+  'Connect your AI assistant to Six Figure Jobs: search jobs with published $100k+ pay and check salaries from Claude, ' +
+  'ChatGPT, Cursor, Claude Code, Codex or Gemini CLI. Free, read-only, no account.'
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -23,6 +25,13 @@ export const metadata: Metadata = {
     type: 'website',
   },
 }
+
+const SETUP_PROMPT = [
+  `Add the Six Figure Jobs MCP server to your MCP configuration: name "6figjobs", URL ${MCP_URL},`,
+  'transport streamable HTTP, no authentication.',
+  'Then call its search_jobs tool once with the query "senior software engineer remote" to check it works,',
+  'and tell me when it is ready.',
+].join(' ')
 
 const code = 'block overflow-x-auto rounded-lg border border-border bg-muted px-4 py-3 font-mono text-sm text-foreground'
 const h2 = 'mt-10 text-xl font-semibold text-foreground'
@@ -55,7 +64,8 @@ export default function McpPage() {
         Search six-figure jobs from your AI assistant
       </h1>
       <p className={p}>
-        Ask Claude, ChatGPT or Cursor things like <em>“find remote staff backend jobs paying over $200k”</em> and get
+        Ask Claude, ChatGPT or Cursor things like <em>“find remote staff backend jobs paying over $200k”</em> or{' '}
+        <em>“what does a product manager make in London?”</em> and get
         answers from {SITE_NAME}: only jobs whose employer publishes the pay, and only six-figure pay (or the local
         equivalent). Free, read-only, no account and no key.
       </p>
@@ -63,6 +73,10 @@ export default function McpPage() {
       <h2 className={h2}>Server address</h2>
       <p className={p}>Streamable HTTP, no authentication:</p>
       <code className={`${code} mt-3`}>{MCP_URL}</code>
+
+      <h2 className={h2}>Quickest: let your agent set it up</h2>
+      <p className={p}>Paste this into Claude Code, Codex, Cursor or Gemini CLI:</p>
+      <CopyPrompt prompt={SETUP_PROMPT} />
 
       <h2 className={h2}>Connect your assistant</h2>
       <div className="mt-4 space-y-6">
@@ -85,6 +99,14 @@ export default function McpPage() {
         <li>
           <strong>get_job</strong>: one job’s full posting, when it was last confirmed open, and the employer’s apply
           link.
+        </li>
+        <li>
+          <strong>salary_benchmark</strong>: what a role pays in live six-figure listings (middle range and median, by
+          country and remote), and how an offer compares, e.g. <em>“is $185k good for a senior data engineer in the
+          US?”</em>
+        </li>
+        <li>
+          <strong>list_filters</strong>: the roles, countries and remote regions that currently have jobs, with counts.
         </li>
       </ul>
       <p className={p}>

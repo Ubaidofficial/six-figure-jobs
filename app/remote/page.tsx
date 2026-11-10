@@ -520,7 +520,7 @@ export default async function RemoteJobsPage({
           related={topRolesRow('Top remote roles', topRemoteRoles, '/remote')}
         />
 
-        <ListingLayout>
+        <ListingLayout alert={{ remoteOnly: true, remoteRegion: activeRemoteRegion || undefined }}>
           <JobRows
             jobs={recentJobs}
             empty={{

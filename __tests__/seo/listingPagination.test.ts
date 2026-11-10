@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 jest.mock('@/components/listing/Listing.module.css', () => new Proxy({}, { get: (_t, key) => String(key) }))
 jest.mock('@/components/jobs/JobRow', () => ({ JobRow: () => null, JobRowList: () => null }))
 jest.mock('@/components/layout/Breadcrumb', () => ({ Breadcrumb: () => null }))
+jest.mock('@/components/alerts/JobAlertBox', () => ({ JobAlertBox: () => null }))
 
 import { Pagination } from '@/components/listing/ListingParts'
 import { clicksFromFirstPage, pageLinkNumbers } from '@/lib/listing/pageNumbers'
