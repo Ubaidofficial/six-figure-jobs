@@ -4,6 +4,8 @@ import * as React from 'react'
 import { ReadonlyURLSearchParams } from 'next/navigation';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
+import { RegionMark } from '@/components/ui/RegionMark'
+import { remoteRegionDef } from '@/lib/jobs/remoteRegions'
 import { CountryFlag } from '@/components/ui/CountryFlag'
 import { countryName } from '@/lib/location/country'
 
@@ -362,7 +364,10 @@ export function JobsFiltersPanel({
                           <span className={`${styles.check} ${active ? styles.checked : ''}`}>
                             {active ? <span className={styles.checkMark}>✓</span> : null}
                           </span>
-                          <span className={styles.name}>{r.label}</span>
+                          <span className={styles.name}>
+                            <RegionMark mark={remoteRegionDef(r.value)?.mark} className="mr-1.5" />
+                            {r.label}
+                          </span>
                         </span>
                         <span className={styles.count}>{r.count.toLocaleString()}</span>
                       </button>

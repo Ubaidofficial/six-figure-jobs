@@ -4,7 +4,7 @@
 // summary, pills and skills. Used by the listing pages; the homepage, company pages and search keep JobCard.
 import { useId, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ChevronDown } from 'lucide-react'
+import { ArrowRight, ChevronDown, Gift } from 'lucide-react'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { CountryFlag } from '@/components/ui/CountryFlag'
@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
+import { extractBenefits } from '@/lib/jobs/jobSummary'
 import { buildSalaryText } from '@/lib/jobs/salary'
 import { getJobCardSnippet } from '@/lib/jobs/snippet'
 import { skillLabel } from '@/lib/jobs/skillLabel'
@@ -75,6 +76,9 @@ export function JobRow({
       : typeof rawSummary === 'string'
         ? rawSummary
         : ''
+  // Read on the server for listing pages (cardBenefits); pages that load whole jobs (company pages) have the description.
+  const benefits =
+    job.cardBenefits ?? (typeof (job as any).descriptionHtml === 'string' ? extractBenefits((job as any).descriptionHtml) : [])
   const skills = uniqStrings([...parseJsonArray((job as any)?.techStack), ...parseJsonArray((job as any)?.skillsJson)])
   const shownSkills = skills.slice(0, MAX_SKILLS)
 
@@ -135,6 +139,20 @@ export function JobRow({
       {/* Kept in the page when closed (hidden, not removed) so nothing about the job is lost to crawlers. */}
       <div id={panelId} className={styles.panel} hidden={!open}>
         {summary ? <p className={styles.summary}>{summary}</p> : null}
+
+        {benefits.length > 0 ? (
+          <ul className={styles.benefits} aria-label="Benefits">
+            <li className={styles.benefitsLabel}>
+              <Gift size={14} aria-hidden="true" />
+              Benefits
+            </li>
+            {benefits.map((b) => (
+              <li key={b} className={styles.benefit}>
+                {b}
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         {workType || seniority ? (
           <div className={styles.pills}>

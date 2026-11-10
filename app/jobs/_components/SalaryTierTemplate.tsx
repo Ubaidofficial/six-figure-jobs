@@ -14,6 +14,7 @@ import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { LISTING_REMOTE_REGIONS, normalizeRemoteRegionSlug } from '@/lib/jobs/remoteRegions'
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
 import { buildSalaryTierDescription, buildSalaryTierTitle } from '@/lib/seo/metaText'
@@ -162,6 +163,8 @@ export async function SalaryTierTemplate({
     rawRemoteMode === 'remote' || rawRemoteMode === 'hybrid' || rawRemoteMode === 'onsite'
       ? rawRemoteMode
       : ''
+  // Remote jobs in a region, or "global" for jobs that can be done from anywhere (the sidebar's "Anywhere in the world").
+  const remoteRegion = normalizeRemoteRegionSlug(firstParam(sp, 'remoteRegion')) ?? undefined
 
   const rawSort = (firstParam(sp, 'sort') || 'recent').trim()
   const sort = rawSort === 'recent' || rawSort === 'salary' || rawSort === 'relevant' ? rawSort : 'recent'
@@ -180,6 +183,7 @@ export async function SalaryTierTemplate({
     roleSlugs: roles.length ? roles : undefined,
     countryCode: country || undefined,
     remoteMode: remoteMode || undefined,
+    remoteRegion,
     seniorityLevels: seniority.length ? seniority : undefined,
     companySizeBuckets: companySizes.length ? companySizes : undefined,
     ...tierQueryInput(tierId),
@@ -188,6 +192,7 @@ export async function SalaryTierTemplate({
   const scopeLabels = [
     country ? `country ${country}` : null,
     remoteMode ? `${remoteMode} roles` : null,
+    remoteRegion ? `remote region ${remoteRegion}` : null,
   ].filter(Boolean)
   const scopedSuffix = scopeLabels.length ? ` for ${scopeLabels.join(' and ')}` : ''
   const fallbackTitle = `${tier.rangeLabel} jobs are temporarily unavailable`
@@ -216,7 +221,7 @@ export async function SalaryTierTemplate({
     pageSize: 1,
   }
 
-  const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount] = await memoAsync(stableKey('tier-facets', tierId, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
+  const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount, regionCounts] = await memoAsync(stableKey('tier-facets', tierId, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
     (prisma.job.groupBy as any)({
       by: ['roleSlug'],
       where: {
@@ -246,6 +251,9 @@ export async function SalaryTierTemplate({
     prisma.job.count({
       where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
     }),
+    Promise.all(
+      LISTING_REMOTE_REGIONS.map((r) => prisma.job.count({ where: buildWhere({ ...baseFacetInput, remoteRegion: r.slug }) })),
+    ),
   ]))
 
   const facets: JobsFacets = {
@@ -266,6 +274,7 @@ export async function SalaryTierTemplate({
       hybrid: hybridCount,
       onsite: onsiteCount,
     },
+    remoteRegions: LISTING_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
   }
 
   const avgAgg = await memoAsync(stableKey('tier-avg', tierId, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () =>

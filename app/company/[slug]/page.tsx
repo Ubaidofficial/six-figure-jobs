@@ -1,5 +1,6 @@
 // app/company/[slug]/page.tsx
 
+import { CountryFlag } from '@/components/ui/CountryFlag'
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
@@ -379,10 +380,14 @@ export default async function CompanyPage({
                         <li key={location.key} className="flex items-center justify-between gap-3">
                           {location.href ? (
                             <Link href={location.href} className="text-primary hover:underline underline-offset-4">
+                              <CountryFlag code={location.countryCode} className="mr-1.5" />
                               {location.label}
                             </Link>
                           ) : (
-                            <span className="text-foreground">{location.label}</span>
+                            <span className="text-foreground">
+                              <CountryFlag code={location.countryCode} className="mr-1.5" />
+                              {location.label}
+                            </span>
                           )}
                           <span className="font-mono text-xs text-muted-foreground">{location.count}</span>
                         </li>
@@ -564,7 +569,7 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
   const roleCounts = new Map<string, number>()
   const roleSalary = new Map<string, RoleSalarySample>()
   const locationCounts = new Map<string, number>()
-  const locationMeta = new Map<string, { label: string; href: string | null }>()
+  const locationMeta = new Map<string, { label: string; href: string | null; countryCode: string | null }>()
   const workModeCounts = {
     remote: 0,
     hybrid: 0,
@@ -624,6 +629,7 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
       incrementMap(locationCounts, locationKey)
       if (!locationMeta.has(locationKey)) {
         locationMeta.set(locationKey, {
+          countryCode: mode === 'remote' ? null : job.countryCode ?? null,
           label: mode === 'remote'
             ? 'Remote'
             : job.city
@@ -683,6 +689,7 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
       ...location,
       label: meta?.label ?? location.key,
       href: meta?.href ?? null,
+      countryCode: meta?.countryCode ?? null,
     }
   })
 

@@ -49,6 +49,7 @@ describe('hasFlag', () => {
   it('has an image in public/flags for every country in the table, and no stray images', () => {
     const dir = path.join(__dirname, '../../../public/flags')
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.svg')).map((f) => f.replace('.svg', '').toUpperCase())
-    expect(files.sort()).toEqual(Object.keys(COUNTRY_NAMES).sort())
+    // EU: the "Europe" market and remote region (CountryFlag accepts it); not a country, so not in the table.
+    expect(files.sort()).toEqual([...Object.keys(COUNTRY_NAMES), 'EU'].sort())
   })
 })

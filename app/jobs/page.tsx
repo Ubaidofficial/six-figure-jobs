@@ -26,7 +26,7 @@ import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
 import { CategoryRow, type CategoryRowItem } from '@/components/listing/CategoryRow'
 import { loadListingSalaryStats } from '@/lib/jobs/listingSalaryStats'
 import { countryName } from '@/lib/location/country'
-import { REMOTE_REGIONS, normalizeRemoteRegionSlug } from '@/lib/jobs/remoteRegions'
+import { LISTING_REMOTE_REGIONS as JOBS_REMOTE_REGIONS, normalizeRemoteRegionSlug } from '@/lib/jobs/remoteRegions'
 import { countryCodeToSlug } from '@/lib/seo/countrySlug'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import { buildJobsHubDescription, buildJobsHubTitle } from '@/lib/seo/metaText'
@@ -49,9 +49,6 @@ import {
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
 export const revalidate = 600
-
-// Regions offered in the sidebar: the Remote hub's set plus UK & Ireland (EMEA stays reachable by URL only).
-const JOBS_REMOTE_REGIONS = REMOTE_REGIONS.filter((r) => r.slug !== 'emea')
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 24

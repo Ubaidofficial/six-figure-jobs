@@ -13,10 +13,15 @@ import { skillStoredTokens } from '../seo/pseoTargets'
 import { remoteRegionWhere } from './remoteRegions'
 import { noDegreeRequiredWhere, type DegreeRequiredJobs } from './degreeRequirement'
 import { fourDayWeekWhere, type FourDayWeekListing } from './fourDayWeek'
+import { extractBenefits, summarizeRole } from './jobSummary'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
   roleInference?: RoleInference | null
+  /** What the job is, read from its description (see lib/jobs/jobSummary.ts); the listing query does not load descriptions. */
+  cardSummary?: string | null
+  /** Benefits the description names ("Equity", "401(k)", "Unlimited PTO"...). */
+  cardBenefits?: string[]
 }
 
 export type JobQueryInput = {
@@ -153,6 +158,24 @@ const jobFullSelect = {
   roleInference: true,
 } satisfies Prisma.JobSelect
 
+/**
+ * Adds `cardSummary` and `cardBenefits` to a page of listing jobs: one extra query for just these jobs' descriptions,
+ * read on the server so the descriptions themselves never reach the browser. A failure leaves the jobs as they were.
+ */
+async function withCardSummaries<T extends { id: string; company?: string | null }>(jobs: T[]): Promise<T[]> {
+  if (jobs.length === 0) return jobs
+  try {
+    const rows = await prisma.job.findMany({ where: { id: { in: jobs.map((j) => j.id) } }, select: { id: true, descriptionHtml: true } })
+    const html = new Map(rows.map((r) => [r.id, r.descriptionHtml]))
+    return jobs.map((j) => {
+      const d = html.get(j.id)
+      return d ? { ...j, cardSummary: summarizeRole(d, { company: j.company }), cardBenefits: extractBenefits(d) } : j
+    })
+  } catch {
+    return jobs
+  }
+}
+
 /** Most matches ranked per search; beyond this, results are ordered by recency instead of score. */
 const RELEVANCE_CANDIDATE_CAP = 1500
 
@@ -189,7 +212,7 @@ async function queryByRelevance(args: {
   const jobs = pageIds.map((id) => byId.get(id)).filter(Boolean)
 
   return {
-    jobs: jobs as unknown as JobWithCompany[],
+    jobs: (pageSize > 1 ? await withCardSummaries(jobs as any[]) : jobs) as unknown as JobWithCompany[],
     total,
     page,
     pageSize,
@@ -305,7 +328,7 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   }
 
   return {
-    jobs: jobs as JobWithCompany[],
+    jobs: (pageSize > 1 ? await withCardSummaries(jobs) : jobs) as JobWithCompany[],
     total,
     page,
     pageSize,

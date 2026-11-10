@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Search } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { CountryFlag } from '@/components/ui/CountryFlag'
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import type { SalarySnapshot } from '@/lib/jobs/salarySnapshot'
@@ -33,11 +34,11 @@ type HeroProps = {
 // Pay floors shown in the panel come from the same table the site filters with, so they cannot drift.
 // `href` is where each market's row goes. There is no page for all Europe jobs yet, so Europe opens its remote jobs.
 const FLOORS = [
-  { market: 'United States', currency: 'USD', href: '/jobs/location/united-states' },
-  { market: 'United Kingdom', currency: 'GBP', href: '/jobs/location/united-kingdom' },
-  { market: 'Europe', currency: 'EUR', href: '/remote?remoteRegion=europe', title: 'Remote jobs in Europe' },
-  { market: 'Canada', currency: 'CAD', href: '/jobs/location/canada' },
-  { market: 'Australia', currency: 'AUD', href: '/jobs/location/australia' },
+  { market: 'United States', flag: 'US', currency: 'USD', href: '/jobs/location/united-states' },
+  { market: 'United Kingdom', flag: 'GB', currency: 'GBP', href: '/jobs/location/united-kingdom' },
+  { market: 'Europe', flag: 'EU', currency: 'EUR', href: '/remote?remoteRegion=europe', title: 'Remote jobs in Europe' },
+  { market: 'Canada', flag: 'CA', currency: 'CAD', href: '/jobs/location/canada' },
+  { market: 'Australia', flag: 'AU', currency: 'AUD', href: '/jobs/location/australia' },
 ] as const
 
 /**
@@ -71,9 +72,11 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
     <section className={styles.hero}>
       <div className={styles.main}>
       <p className={styles.eyebrow}>
-        <Link href="/jobs/location/united-states">US</Link> · <Link href="/jobs/location/united-kingdom">UK</Link> ·{' '}
-        <Link href="/remote?remoteRegion=europe" title="Remote jobs in Europe">EU</Link> · <Link href="/jobs/location/canada">Canada</Link> ·{' '}
-        <Link href="/jobs/location/australia">Australia</Link>
+        <Link href="/jobs/location/united-states"><CountryFlag code="US" className="mr-1.5" />US</Link> ·{' '}
+        <Link href="/jobs/location/united-kingdom"><CountryFlag code="GB" className="mr-1.5" />UK</Link> ·{' '}
+        <Link href="/remote?remoteRegion=europe" title="Remote jobs in Europe"><CountryFlag code="EU" className="mr-1.5" />EU</Link> ·{' '}
+        <Link href="/jobs/location/canada"><CountryFlag code="CA" className="mr-1.5" />Canada</Link> ·{' '}
+        <Link href="/jobs/location/australia"><CountryFlag code="AU" className="mr-1.5" />Australia</Link>
       </p>
 
       <h1 className={styles.headline}>
@@ -177,12 +180,13 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
         <h2 className={`${styles.panelTitle} ${styles.panelTitleSpaced}`}>Pay floor by market</h2>
         <ul className={styles.floors}>
           {FLOORS.map((floor) => {
-            const { market, currency, href } = floor
+            const { market, flag, currency, href } = floor
             const jobs = siteCounts ? countInCountries(siteCounts.byCountry, FLOOR_MARKET_COUNTRIES[currency] ?? []) : null
             return (
               <li key={currency}>
                 <Link href={href} className={styles.floor} title={'title' in floor ? floor.title : undefined}>
                   <span>
+                    <CountryFlag code={flag} className="mr-2" />
                     {market}
                     {jobs !== null ? (
                       <span className={styles.floorJobs}>

@@ -31,22 +31,27 @@ export type RemoteRegionDef = {
   heading: string
   /** Countries whose remote jobs belong to this region; null for the "no country" bucket. */
   countries: readonly string[] | null
+  /** Shown before the label: a flag code (ISO, or EU) or an emoji for regions with no single flag. */
+  mark: string
 }
 
 export const REMOTE_REGIONS: readonly RemoteRegionDef[] = [
-  { slug: 'global', label: 'Anywhere in the world', heading: 'Worldwide Remote Jobs', countries: null },
-  { slug: 'us-only', label: 'US', heading: 'US Remote Jobs', countries: ['US'] },
-  { slug: 'canada', label: 'Canada', heading: 'Canada Remote Jobs', countries: ['CA'] },
-  { slug: 'australia', label: 'Australia', heading: 'Australia Remote Jobs', countries: ['AU'] },
-  { slug: 'uk-ireland', label: 'UK & Ireland', heading: 'UK & Ireland Remote Jobs', countries: ['GB', 'IE'] },
-  { slug: 'europe', label: 'Europe', heading: 'Europe Remote Jobs', countries: EUROPE },
-  { slug: 'middle-east', label: 'Middle East', heading: 'Middle East Remote Jobs', countries: MIDDLE_EAST },
-  { slug: 'apac', label: 'Asia-Pacific', heading: 'Asia-Pacific Remote Jobs', countries: APAC },
+  { slug: 'global', label: 'Anywhere in the world', heading: 'Worldwide Remote Jobs', countries: null, mark: '🌍' },
+  { slug: 'us-only', label: 'US', heading: 'US Remote Jobs', countries: ['US'], mark: 'US' },
+  { slug: 'canada', label: 'Canada', heading: 'Canada Remote Jobs', countries: ['CA'], mark: 'CA' },
+  { slug: 'australia', label: 'Australia', heading: 'Australia Remote Jobs', countries: ['AU'], mark: 'AU' },
+  { slug: 'uk-ireland', label: 'UK & Ireland', heading: 'UK & Ireland Remote Jobs', countries: ['GB', 'IE'], mark: 'GB' },
+  { slug: 'europe', label: 'Europe', heading: 'Europe Remote Jobs', countries: EUROPE, mark: 'EU' },
+  { slug: 'middle-east', label: 'Middle East', heading: 'Middle East Remote Jobs', countries: MIDDLE_EAST, mark: '🌍' },
+  { slug: 'apac', label: 'Asia-Pacific', heading: 'Asia-Pacific Remote Jobs', countries: APAC, mark: '🌏' },
   // Kept so existing links and the homepage / search dropdowns keep working. Not shown as a chip.
-  { slug: 'emea', label: 'EMEA', heading: 'EMEA Remote Jobs', countries: [...EUROPE, ...MIDDLE_EAST, ...AFRICA] },
+  { slug: 'emea', label: 'EMEA', heading: 'EMEA Remote Jobs', countries: [...EUROPE, ...MIDDLE_EAST, ...AFRICA], mark: '🌍' },
 ]
 
 /** The regions shown as chips on the Remote hub, in order. */
+/** Regions offered in the listing sidebars (/jobs, role and salary pages): all but EMEA, which stays reachable by URL only. */
+export const LISTING_REMOTE_REGIONS = REMOTE_REGIONS.filter((r) => r.slug !== 'emea')
+
 export const REMOTE_HUB_CHIP_SLUGS = ['global', 'us-only', 'canada', 'australia', 'europe', 'middle-east', 'apac'] as const
 
 /**
