@@ -1,5 +1,6 @@
 // lib/seo/jobJsonLd.ts
 
+import { buildLogoUrl } from '../companies/logo'
 import type { Job, Company } from '@prisma/client'
 import { normalizePublicCompanyWebsite } from '../companies/website'
 import { getSiteUrl } from './site'
@@ -22,8 +23,12 @@ export function buildJobJsonLd(job: JobWithCompany): any {
 
   const companyName = company?.name || job.company || 'Company'
   const companyUrl = normalizePublicCompanyWebsite(company?.website) || undefined
+  // The logo the site shows for the company, from its stored logo or its website's domain. Never a lookup by name: a
+  // name can match another company (the 2026-11-10 logo audit found several), and a wrong logo in markup is worse
+  // than none. Same-origin /logo/... URLs are made absolute.
+  const shownLogo = buildLogoUrl(company?.logoUrl, company?.website, null)
   const logo =
-    (company?.logoUrl && normalizeUrl(company.logoUrl)) ||
+    (shownLogo && (shownLogo.startsWith('/') ? `${SITE_URL}${shownLogo}` : normalizeUrl(shownLogo))) ||
     (job.companyLogo && normalizeUrl(job.companyLogo)) ||
     undefined
 

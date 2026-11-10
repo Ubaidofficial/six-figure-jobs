@@ -552,4 +552,24 @@ describe('buildJobJsonLd', () => {
     expect(job(new Date('2020-01-01T00:00:00.000Z')).validThrough).toBeUndefined()
     expect(job(null).validThrough).toBeUndefined()
   })
+
+  it('gives the hiring organization the logo the site shows, from its domain, never from a name lookup', () => {
+    const job = (companyRef: any) =>
+      buildJobJsonLd({
+        id: 'ats:test:10',
+        title: 'Staff Engineer',
+        company: 'Acme',
+        descriptionHtml: '<p>Build things.</p>',
+        locationRaw: 'New York, US',
+        countryCode: 'US',
+        remote: false,
+        remoteMode: 'onsite',
+        postedAt: new Date('2026-01-01T00:00:00.000Z'),
+        companyRef,
+      } as any)
+    const withSite = job({ name: 'Acme', website: 'https://acme.com', logoUrl: null })
+    expect(withSite.hiringOrganization.logo).toMatch(/^https?:\/\/[^/]+\/logo\/domain\/acme\.com$/)
+    expect(withSite.hiringOrganization.sameAs).toBe('https://acme.com')
+    expect(job({ name: 'Acme', website: null, logoUrl: null }).hiringOrganization.logo).toBeUndefined()
+  })
 })
