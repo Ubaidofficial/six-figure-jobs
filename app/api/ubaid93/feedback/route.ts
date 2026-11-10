@@ -15,6 +15,7 @@ export async function GET(req: Request) {
   const [items, total] = await Promise.all([
     prisma.feedback.findMany({
       where,
+      select: { id: true, type: true, message: true, url: true, hasScreenshot: true, userAgent: true, status: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -29,6 +30,6 @@ export async function PATCH(req: Request) {
   if (!(await getAdminSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id, status } = await req.json()
   if (!id || !status) return NextResponse.json({ error: 'Missing id or status' }, { status: 400 })
-  const item = await prisma.feedback.update({ where: { id }, data: { status } })
+  const item = await prisma.feedback.update({ where: { id }, data: { status }, select: { id: true, status: true } })
   return NextResponse.json({ ok: true, item })
 }

@@ -11,7 +11,7 @@ const links = [
   { href: '/ubaid93/config', label: 'Site Config', icon: '⚙️' },
 ]
 
-export default function AdminNav() {
+export default function AdminNav({ newFeedback = 0 }: { newFeedback?: number }) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -45,6 +45,17 @@ export default function AdminNav() {
             >
               <span style={{ fontSize: 16 }}>{l.icon}</span>
               {l.label}
+              {l.href === '/ubaid93/feedback' && newFeedback > 0 ? (
+                <span
+                  aria-label={`${newFeedback} new`}
+                  style={{
+                    marginLeft: 'auto', minWidth: 20, padding: '1px 7px', borderRadius: 100, background: '#ef4444',
+                    color: '#fff', fontSize: 11, fontWeight: 700, textAlign: 'center',
+                  }}
+                >
+                  {newFeedback}
+                </span>
+              ) : null}
             </Link>
           )
         })}
