@@ -1,7 +1,7 @@
 import { buildJobJsonLd } from '../../lib/seo/jobJsonLd'
 
 describe('buildJobJsonLd', () => {
-  it('sets a future validThrough and preserves cleaned HTML descriptions', () => {
+  it('publishes no invented validThrough and preserves cleaned HTML descriptions', () => {
     const lastSeenAt = new Date('2026-03-20T00:00:00.000Z')
 
     const jsonLd = buildJobJsonLd({
@@ -110,10 +110,8 @@ describe('buildJobJsonLd', () => {
     } as any)
 
     expect(jsonLd['@type']).toBe('JobPosting')
-    expect(new Date(jsonLd.validThrough).getTime()).toBeGreaterThan(Date.now())
-    expect(new Date(jsonLd.validThrough).getTime()).toBeGreaterThan(
-      new Date(jsonLd.datePosted).getTime(),
-    )
+    // No expiry from the source, so none is published (Google: leave validThrough out when it is not known).
+    expect(jsonLd.validThrough).toBeUndefined()
     expect(jsonLd.description).toContain('<p>Build platform systems.</p>')
     expect(jsonLd.description).toContain('<li>Own backend services.</li>')
     expect(jsonLd.description).not.toContain('<script>')
@@ -529,5 +527,29 @@ describe('buildJobJsonLd', () => {
       const withCity = buildJobJsonLd({ ...base, city: 'Austin', locationRaw: 'Austin, TX; Remote' } as any)
       expect(Array.isArray(withCity.jobLocation)).toBe(false)
     })
+  })
+
+  it('publishes the source’s own expiry date while it is in the future, and nothing once it has passed', () => {
+    const job = (expiresAt: Date | null) =>
+      buildJobJsonLd({
+        id: 'ats:test:9',
+        title: 'Staff Engineer',
+        company: 'Acme',
+        descriptionHtml: '<p>Build things.</p>',
+        locationRaw: 'New York, US',
+        city: 'New York',
+        countryCode: 'US',
+        remote: false,
+        remoteMode: 'onsite',
+        postedAt: new Date('2026-01-01T00:00:00.000Z'),
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        validThrough: new Date('2099-01-01T00:00:00.000Z'), // an estimate stored by ingest: never published
+        expiresAt,
+        companyRef: null,
+      } as any)
+    const future = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+    expect(job(future).validThrough).toBe(future.toISOString())
+    expect(job(new Date('2020-01-01T00:00:00.000Z')).validThrough).toBeUndefined()
+    expect(job(null).validThrough).toBeUndefined()
   })
 })

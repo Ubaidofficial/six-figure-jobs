@@ -6,7 +6,6 @@ import { getSiteUrl } from './site'
 import { buildJobSlug, getShortStableIdForJobId } from '../jobs/jobSlug'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 import { resolveSalaryCurrency } from '../jobs/salary'
-import { buildJobValidThroughDate } from '../jobs/validThrough'
 import { countryName, normalizeCountryCode } from '../location/country'
 import { countryFromCity, countryFromText } from '../location/jobLocation'
 import {
@@ -153,11 +152,16 @@ function buildBaseSalary(job: any): any | undefined {
   }
 }
 
+/**
+ * The expiry date the source itself gave (`expiresAt`), while it is in the future; otherwise nothing. Google: "If a job
+ * posting never expires, or you do not know when the job will expire, do not include this property." The stored
+ * `validThrough` column is not used: when a source gives no date it holds an estimate (posting date + 45 days), and the
+ * old fallback here also moved that estimate to today + 45 days for older jobs. Expired jobs are handled by the 410
+ * response and Indexing API URL_DELETED, not by this date.
+ */
 function buildValidThrough(job: any): string | undefined {
-  const explicit = readDateField(job, 'validThrough') ?? readDateField(job, 'expiresAt')
-  const posted = readDateField(job, 'postedAt') ?? readDateField(job, 'createdAt') ?? readDateField(job, 'updatedAt')
-  if (explicit && explicit.getTime() > Date.now()) return explicit.toISOString()
-  return buildJobValidThroughDate(posted ?? new Date()).toISOString()
+  const fromSource = readDateField(job, 'expiresAt')
+  return fromSource && fromSource.getTime() > Date.now() ? fromSource.toISOString() : undefined
 }
 
 function buildApplicantLocationRequirements(job: any): any | undefined {
