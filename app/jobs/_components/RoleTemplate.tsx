@@ -17,6 +17,7 @@ import { buildLogoUrl } from '@/lib/companies/logo'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { LISTING_REMOTE_REGIONS, normalizeRemoteRegionSlug } from '@/lib/jobs/remoteRegions'
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
@@ -247,6 +248,8 @@ export async function RoleTemplate({
     rawRemoteMode === 'remote' || rawRemoteMode === 'hybrid' || rawRemoteMode === 'onsite'
       ? rawRemoteMode
       : ''
+  // Remote jobs in a region, or "global" for jobs that can be done from anywhere (the sidebar's "Anywhere in the world").
+  const remoteRegion = normalizeRemoteRegionSlug(firstParam(sp, 'remoteRegion')) ?? undefined
 
   const rawSort = (firstParam(sp, 'sort') || 'recent').trim()
   const sort = rawSort === 'recent' || rawSort === 'salary' || rawSort === 'relevant' ? rawSort : 'recent'
@@ -270,6 +273,7 @@ export async function RoleTemplate({
     roleSlugs: [roleSlug],
     countryCode: country || undefined,
     remoteMode: remoteMode || undefined,
+    remoteRegion,
     seniorityLevels: seniority.length ? seniority : undefined,
     companySizeBuckets: companySizes.length ? companySizes : undefined,
     skillSlugs: selectedSkills.length ? selectedSkills : undefined,
@@ -279,6 +283,7 @@ export async function RoleTemplate({
   const scopeLabels = [
     country ? `country ${country}` : null,
     remoteMode ? `${remoteMode} roles` : null,
+    remoteRegion ? `remote region ${remoteRegion}` : null,
     selectedSkills.length ? `${selectedSkills.length} skill filters` : null,
   ].filter(Boolean)
   const scopedSuffix = scopeLabels.length ? ` for ${scopeLabels.join(' and ')}` : ''
@@ -308,7 +313,7 @@ export async function RoleTemplate({
     pageSize: 1,
   }
 
-  const [countryRows, remoteCount, hybridCount, onsiteCount] = await memoAsync(stableKey('role-facets', roleSlug, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
+  const [countryRows, remoteCount, hybridCount, onsiteCount, regionCounts] = await memoAsync(stableKey('role-facets', roleSlug, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
     (prisma.job.groupBy as any)({
       by: ['countryCode'],
       where: {
@@ -328,6 +333,9 @@ export async function RoleTemplate({
     prisma.job.count({
       where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
     }),
+    Promise.all(
+      LISTING_REMOTE_REGIONS.map((r) => prisma.job.count({ where: buildWhere({ ...baseFacetInput, remoteRegion: r.slug }) })),
+    ),
   ]))
 
   const facets: JobsFacets = {
@@ -339,6 +347,7 @@ export async function RoleTemplate({
       }))
       .filter((r: any) => r.value),
     workTypes: { remote: remoteCount, hybrid: hybridCount, onsite: onsiteCount },
+    remoteRegions: LISTING_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
   }
 
   // Insights are computed for the role overall (USD-only where needed), independent of sidebar filters.

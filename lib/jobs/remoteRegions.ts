@@ -47,6 +47,9 @@ export const REMOTE_REGIONS: readonly RemoteRegionDef[] = [
 ]
 
 /** The regions shown as chips on the Remote hub, in order. */
+/** Regions offered in the listing sidebars (/jobs, role and salary pages): all but EMEA, which stays reachable by URL only. */
+export const LISTING_REMOTE_REGIONS = REMOTE_REGIONS.filter((r) => r.slug !== 'emea')
+
 export const REMOTE_HUB_CHIP_SLUGS = ['global', 'us-only', 'canada', 'australia', 'europe', 'middle-east', 'apac'] as const
 
 /**
