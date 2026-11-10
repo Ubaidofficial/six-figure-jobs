@@ -4,12 +4,15 @@
 const originalSiteUrl = process.env.SITE_URL
 let getHubs: typeof import('../../app/sitemap-hubs.xml/route').GET
 let getIndex: typeof import('../../app/sitemap.xml/route').GET
+let clearMemo: () => void
 
 beforeAll(async () => {
   process.env.SITE_URL = 'https://www.6figjobs.com'
   jest.resetModules()
   ;({ GET: getHubs } = await import('../../app/sitemap-hubs.xml/route'))
   ;({ GET: getIndex } = await import('../../app/sitemap.xml/route'))
+  // The same module instance the routes use (imported after resetModules): the hubs entries are cached in it.
+  ;({ __clearMemoForTests: clearMemo } = await import('../../lib/cache/memo'))
 })
 
 afterAll(() => {
@@ -23,6 +26,7 @@ jest.mock('../../lib/prisma', () => ({ prisma: { job: { aggregate: (...a: unknow
 describe('sitemap routes', () => {
   beforeEach(() => {
     aggregate.mockReset()
+    clearMemo()
     process.env.NEXT_PUBLIC_SITE_URL = 'https://www.6figjobs.com'
     process.env.INDEXING_PHASE = '1'
   })
