@@ -574,21 +574,21 @@ export default async function HomePage() {
       {/* Company trust strip right under the hero (docs/DESIGN_UX_SPEC.md §10, homepage order step 2). */}
       <FeaturedCompaniesCarousel companies={featuredCompanies} />
 
+      {/* The numbers band right after the employers (moved up from the foot of the page and made compact, 2026-11-10). */}
+      <SiteStatsStrip
+        jobs={stats.totalJobs}
+        companies={stats.totalCompaniesHiring}
+        newThisWeek={stats.newThisWeek}
+        countries={siteCounts ? siteCounts.byCountry.filter((c) => c.count > 0).length : null}
+        catalog={freehireCatalog}
+      />
+
       <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} />
 
       <NewRolesStrip companies={newRolesCompanies} />
 
       {/* Jobs already in the live feed above are left out, so no job appears twice with two different times. */}
       <LatestOpportunities jobs={jobs.filter((job) => !feedItemIds.has(job.id))} totalJobs={stats.totalJobs} />
-
-      <SiteStatsStrip
-        jobs={stats.totalJobs}
-        companies={stats.totalCompaniesHiring}
-        newThisWeek={stats.newThisWeek}
-        countries={siteCounts ? siteCounts.byCountry.filter((c) => c.count > 0).length : null}
-        medianUsd={salarySnapshot?.median ?? null}
-        catalog={freehireCatalog}
-      />
 
       {priorityFeaturedCompanies.length > 0 && (
         <section className="mb-8 rounded-2xl border border-border bg-card p-5">
