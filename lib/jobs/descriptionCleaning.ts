@@ -19,6 +19,26 @@ const DESCRIPTION_NOISE_RULES = [
   },
 ] as const
 
+/**
+ * Local job-search lists that some job boards (WhatJobs) paste into a posting after the salary line: a lead-in such as
+ * "The 10 cities near North Cowichan, BC that have the most job openings are:" and then up to ten one-line items
+ * (city names or search terms), one per `<br><br>`-separated line or `<p>`. They are not part of the job, so the
+ * lead-in and its items are removed and the rest of the description is kept (the noise rules above drop a whole
+ * description, which would lose the job). An item is a whole line of at most 30 characters with no sentence punctuation.
+ */
+const LINE_BREAK = String.raw`\s*(?:(?:<br\s*\/?>|<\/?p\b[^>]*>|\n)\s*)+`
+const LOCAL_SEARCH_LIST = new RegExp(
+  String.raw`(?:<br\s*\/?>\s*)*(?:<p\b[^>]*>\s*)?` +
+    String.raw`The (?:\d+ )?(?:cities near [^<\n]{1,80}? that (?:boast the highest number of [^<\n]{1,60}? jobs|have the most job openings)|most popular job searches in [^<\n]{1,80}?) are:` +
+    String.raw`(?:${LINE_BREAK}(?!The (?:\d+ )?(?:cities|most popular))[^<.!?:\n]{1,30}(?=\s*(?:<|\n|$))){0,10}` +
+    String.raw`(?:\s*<\/p>)?`,
+  'gi',
+)
+
+export function stripLocalSearchLists(html: string): string {
+  return html.replace(LOCAL_SEARCH_LIST, '')
+}
+
 export type JobDescriptionNoiseId = (typeof DESCRIPTION_NOISE_RULES)[number]['id']
 
 export type SanitizedJobDescription = {
@@ -70,11 +90,12 @@ export function cleanJobDescriptionText(input: string): string {
 }
 
 export function cleanJobDescriptionHtml(input: string): string {
-  let html = decodeJobHtmlEntities(input || '')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .trim()
+  let html = stripLocalSearchLists(
+    decodeJobHtmlEntities(input || '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<!--[\s\S]*?-->/g, ''),
+  ).trim()
 
   let changed = true
   while (changed) {

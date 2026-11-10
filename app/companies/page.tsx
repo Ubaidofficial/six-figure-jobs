@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '@/lib/seo/site'
-import { buildCompaniesIndexDescription } from '@/lib/seo/metaText'
+import { buildCompaniesIndexDescription, buildCompaniesIndexTitle } from '@/lib/seo/metaText'
 import {
   loadEligibleCompaniesDirectory,
   type PublicCompanyDirectoryEntry,
@@ -99,12 +99,14 @@ function buildCompaniesCollectionPageJsonLd(totalCompanies: number, totalEligibl
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
-    const { totalCompanies, totalEligibleJobs } = await loadEligibleCompaniesDirectory()
-    const title =
-      totalCompanies > 0
-        ? `${totalCompanies.toLocaleString()} Companies Hiring $100k+ Roles | ${SITE_NAME}`
-        : `Companies hiring $100k+ roles | ${SITE_NAME}`
-    const description = buildCompaniesIndexDescription(totalCompanies, totalEligibleJobs)
+    const { totalCompanies, totalEligibleJobs, totalCompaniesHiring } = await loadEligibleCompaniesDirectory()
+    const title = buildCompaniesIndexTitle(totalCompanies, MIN_COMPANY_INDEXABLE_JOBS)
+    const description = buildCompaniesIndexDescription(
+      totalCompanies,
+      totalEligibleJobs,
+      totalCompaniesHiring,
+      MIN_COMPANY_INDEXABLE_JOBS,
+    )
     return {
       title,
       description,

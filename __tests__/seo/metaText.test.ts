@@ -4,6 +4,7 @@ import {
   FRESHNESS,
   TITLE_MAX,
   buildCompaniesIndexDescription,
+  buildCompaniesIndexTitle,
   buildCompanyPageDescription,
   buildCategoryTitle,
   buildCityTitle,
@@ -240,15 +241,39 @@ describe('company page metadata', () => {
 })
 
 describe('companies index description', () => {
-  it('is 130-155 characters with the live counts', () => {
-    const d = buildCompaniesIndexDescription(1234, 5678)
-    expect(d.startsWith('1,234 companies hiring for 5,678 $100k+ tech jobs.')).toBe(true)
+  it('is 130-155 characters and says which companies it counts, next to every company hiring', () => {
+    const d = buildCompaniesIndexDescription(402, 16684, 2557, 5)
+    expect(d.startsWith('402 companies with 5+ open $100k+ jobs (16,684 jobs between them), out of 2,557 companies hiring.')).toBe(
+      true,
+    )
     expect(d.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
     expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
   })
 
+  it('stays within limits with large counts', () => {
+    const d = buildCompaniesIndexDescription(12345, 123456, 123456, 5)
+    expect(d.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
+    expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
+  })
+
+  it('leaves out the site-wide count when it adds nothing', () => {
+    expect(buildCompaniesIndexDescription(402, 16684, 402, 5)).not.toContain('out of')
+    expect(buildCompaniesIndexDescription(402, 16684, 0, 5)).not.toContain('out of')
+  })
+
   it('works without counts', () => {
-    expect(buildCompaniesIndexDescription(0, 0).length).toBeLessThanOrEqual(DESCRIPTION_MAX)
+    expect(buildCompaniesIndexDescription(0, 0, 0, 5).length).toBeLessThanOrEqual(DESCRIPTION_MAX)
+  })
+})
+
+describe('companies index title', () => {
+  it('names the job threshold so it is not read as every company hiring', () => {
+    expect(buildCompaniesIndexTitle(402, 5)).toBe('402 Companies With 5+ Open $100k+ Jobs | Six Figure Jobs')
+  })
+
+  it('stays within the title limit', () => {
+    expect(buildCompaniesIndexTitle(123456, 5).length).toBeLessThanOrEqual(TITLE_MAX)
+    expect(buildCompaniesIndexTitle(0, 5).length).toBeLessThanOrEqual(TITLE_MAX)
   })
 })
 
