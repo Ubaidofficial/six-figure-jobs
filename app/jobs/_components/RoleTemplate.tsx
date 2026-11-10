@@ -583,7 +583,7 @@ export async function RoleTemplate({
         toolbar={<JobsToolbar facets={facets} rolePreset={{ label: roleTitle, emoji }} />}
       />
 
-      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />}>
+      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />} alert={queryInput}>
         <JobRows
           jobs={jobs}
           empty={{

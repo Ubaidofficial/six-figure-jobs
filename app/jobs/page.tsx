@@ -681,7 +681,7 @@ export default async function JobsIndexPage({
 
         <CategoryRow items={categoryItems} />
 
-        <ListingLayout sidebar={<JobsFiltersPanel facets={facets} />}>
+        <ListingLayout sidebar={<JobsFiltersPanel facets={facets} />} alert={queryInput}>
           {techFilter ? (
             <LinkChips
               label="Active technology filter"

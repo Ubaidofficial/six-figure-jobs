@@ -566,3 +566,42 @@ model AutoApplication {
   @@index([userId, createdAt])
   @@index([status])
 }
+
+// An email job alert: a saved search (the listing page's own job query) mailed daily or weekly. No account needed:
+// double opt-in, and every link carries the alert's random token (confirm, change frequency, unsubscribe).
+model JobAlert {
+  id             String         @id @default(cuid())
+  email          String
+  // 32 random bytes, hex. The only secret in the alert's links; never derived from the email.
+  token          String         @unique
+  // The saved search: a whitelisted subset of JobQueryInput (lib/alerts/filters.ts), run through buildWhere.
+  filters        Json
+  // Canonical JSON of `filters`, so the same email cannot hold the same search twice.
+  filtersKey     String
+  // 'daily' | 'weekly'
+  frequency      String         @default("weekly")
+  // 'pending' (not confirmed) | 'active' | 'unsubscribed'
+  status         String         @default("pending")
+  confirmedAt    DateTime?
+  lastSentAt     DateTime?
+  unsubscribedAt DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  sent           JobAlertSent[]
+
+  @@unique([email, filtersKey])
+  @@index([status, lastSentAt])
+  @@index([email, createdAt])
+}
+
+// Which jobs an alert has already mailed, so a job is never sent twice to the same alert. jobId has no foreign key on
+// purpose: the record must outlive an expired or deleted job.
+model JobAlertSent {
+  alertId String
+  jobId   String
+  sentAt  DateTime @default(now())
+  alert   JobAlert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  @@id([alertId, jobId])
+  @@index([sentAt])
+}

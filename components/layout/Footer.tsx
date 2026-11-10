@@ -3,6 +3,9 @@ import { Linkedin, MessageCircle, Twitter } from 'lucide-react'
 
 import { RegionMark } from '@/components/ui/RegionMark'
 
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
+import { alertsEnabled } from '@/lib/alerts/config'
+
 import { FooterNewsletter } from './FooterNewsletter'
 import { FOOTER_COLUMNS } from './footerLinks'
 import styles from './Footer.module.css'
@@ -12,15 +15,21 @@ export function Footer() {
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>
-        <section className={styles.newsletter} aria-label="Follow new jobs">
-          <div>
-            <div className={styles.newsletterTitle}>Follow new six-figure jobs</div>
-            <div className={styles.newsletterSub}>
-              Email alerts are coming. Until then, add a feed to any RSS reader, Slack or Feedly: new jobs with pay ranges.
+        {alertsEnabled() ? (
+          <section className={styles.newsletter} aria-label="Follow new jobs">
+            <JobAlertBox query={{}} variant="footer" />
+          </section>
+        ) : (
+          <section className={styles.newsletter} aria-label="Follow new jobs">
+            <div>
+              <div className={styles.newsletterTitle}>Follow new six-figure jobs</div>
+              <div className={styles.newsletterSub}>
+                Email alerts are coming. Until then, add a feed to any RSS reader, Slack or Feedly: new jobs with pay ranges.
+              </div>
             </div>
-          </div>
-          <FooterNewsletter />
-        </section>
+            <FooterNewsletter />
+          </section>
+        )}
 
         <div className={styles.columnsDesktop} aria-label="Footer links">
           <div className={styles.brand}>

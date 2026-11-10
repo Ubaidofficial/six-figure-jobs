@@ -381,7 +381,7 @@ export async function SalaryTierTemplate({
         toolbar={<JobsToolbar facets={facets} salaryPresetLabel={tier.rangeLabel} />}
       />
 
-      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />}>
+      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />} alert={queryInput}>
         <JobRows
           jobs={jobs}
           empty={{

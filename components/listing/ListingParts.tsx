@@ -4,7 +4,8 @@ import Link from 'next/link'
 
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
 import { JobRow, JobRowList } from '@/components/jobs/JobRow'
-import type { JobWithCompany } from '@/lib/jobs/queryJobs'
+import type { JobQueryInput, JobWithCompany } from '@/lib/jobs/queryJobs'
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import { pageLinkNumbers } from '@/lib/listing/pageNumbers'
 
 import styles from './Listing.module.css'
@@ -141,7 +142,16 @@ export function ListingHeader({
 }
 
 /** Left filters + results column. */
-export function ListingLayout({ sidebar, children }: { sidebar?: ReactNode; children: ReactNode }) {
+export function ListingLayout({
+  sidebar,
+  alert,
+  children,
+}: {
+  sidebar?: ReactNode
+  /** The page's job query: offers an email alert for it above the results (nothing while alerts are off). */
+  alert?: JobQueryInput
+  children: ReactNode
+}) {
   return (
     <div className={sidebar ? styles.layout : undefined}>
       {sidebar ? (
@@ -150,6 +160,7 @@ export function ListingLayout({ sidebar, children }: { sidebar?: ReactNode; chil
         </aside>
       ) : null}
       <div id="jobs" className={styles.results}>
+        {alert ? <JobAlertBox query={alert} /> : null}
         {children}
       </div>
     </div>

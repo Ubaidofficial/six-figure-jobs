@@ -470,6 +470,7 @@ export async function CountryLocationTemplate({
 
       <ListingLayout
         sidebar={<JobsFiltersPanel facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />}
+        alert={queryInput}
       >
         <JobRows
           jobs={jobs}

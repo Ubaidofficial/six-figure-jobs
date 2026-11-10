@@ -1,0 +1,63 @@
+name: job alerts
+
+# Emails every due job alert (daily and weekly digests) the new matching jobs since its last email
+# (scripts/send-job-alerts.ts). Runs after the daily freehire sync has added the day's jobs. Does nothing until the
+# repository secrets ALERTS_ENABLED (true), EMAIL_SERVER, EMAIL_FROM and ALERTS_POSTAL_ADDRESS are all set.
+# A manual run is a dry run by default: it builds every email and prints the counts; it sends nothing and records
+# nothing. The emails themselves are not uploaded: they hold each subscriber's address and private alert link.
+
+on:
+  schedule:
+    - cron: "43 8 * * *" # 08:43 UTC daily, after the 05:17 sync
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build the emails and print the counts; send nothing"
+        type: boolean
+        default: true
+
+concurrency:
+  group: job-alerts
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      ALERTS_ENABLED: ${{ secrets.ALERTS_ENABLED }}
+      EMAIL_SERVER: ${{ secrets.EMAIL_SERVER }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      ALERTS_POSTAL_ADDRESS: ${{ secrets.ALERTS_POSTAL_ADDRESS }}
+      SITE_URL: https://www.6figjobs.com
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Send due alerts
+        if: ${{ github.event_name == 'schedule' || !inputs.dry_run }}
+        run: npx tsx scripts/send-job-alerts.ts
+
+      - name: Build alert previews (dry run)
+        if: ${{ github.event_name != 'schedule' && inputs.dry_run }}
+        run: npx tsx scripts/send-job-alerts.ts --dry-run
+
