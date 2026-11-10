@@ -1,4 +1,4 @@
-import { descriptionBlocks, extractBenefits, isCompanyBio, summarizeRole } from '@/lib/jobs/jobSummary'
+import { descriptionBlocks, extractBenefits, extractExperience, isCompanyBio, summarizeRole } from '@/lib/jobs/jobSummary'
 
 describe('summarizeRole', () => {
   it('takes the role section, not the company introduction before it', () => {
@@ -59,5 +59,20 @@ describe('extractBenefits', () => {
   it('shows Unlimited PTO instead of Paid time off when both match', () => {
     expect(extractBenefits('<p>Unlimited PTO plus 10 paid holidays.</p>')).toEqual(['Unlimited PTO'])
     expect(extractBenefits('<p>25 days of annual leave.</p>')).toEqual(['Paid time off'])
+  })
+})
+
+describe('extractExperience', () => {
+  it('reads "N+ years", ranges and "at least N years" of experience', () => {
+    expect(extractExperience('<li>7+ years experience in Sales Engineering</li>')).toBe('7+ years')
+    expect(extractExperience('<li>3-5 years of experience in Big 4 Audit</li>')).toBe('3–5 years')
+    expect(extractExperience('<p>At least 2 years of software engineering experience</p>')).toBe('2+ years')
+    expect(extractExperience('<li>10+ years of growth marketing experience, with at least 4 years leading teams</li>')).toBe('10+ years')
+  })
+
+  it('ignores years that are not an experience requirement', () => {
+    expect(extractExperience('<p>Founded 10 years ago, we have grown to 500 people.</p>')).toBeNull()
+    expect(extractExperience('<p>A 4-year degree in computer science.</p>')).toBeNull()
+    expect(extractExperience('')).toBeNull()
   })
 })

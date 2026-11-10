@@ -177,6 +177,29 @@
   background: color-mix(in srgb, var(--color-text-0) 6%, var(--color-bg-1));
 }
 
+/* Key facts: pay position, experience, degree, visa, contract type, where Apply goes. Plain text with an icon. */
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-1);
+  font-size: 0.8125rem;
+}
+
+.factStrong {
+  color: var(--color-primary-text, var(--color-text-0));
+  font-weight: 600;
+}
+
 /* Benefits the posting names: a label, then one quiet chip per benefit. */
 .benefits {
   display: flex;

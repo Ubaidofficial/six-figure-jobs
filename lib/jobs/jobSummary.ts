@@ -145,3 +145,22 @@ export function extractBenefits(html: string | null | undefined): string[] {
   const found = BENEFITS.filter(([, re]) => re.test(text)).map(([label]) => label)
   return found.includes('Unlimited PTO') ? found.filter((b) => b !== 'Paid time off') : found
 }
+
+// Years of experience: "5+ years of experience", "at least 7 years in…", "3-5 years of product management experience".
+// The word "experience" must follow within a few words, so "founded 10 years ago" or "a 4-year degree" do not count.
+const YEARS =
+  /\b(at least|minimum of|min\.?|over|more than)?\s*(\d{1,2})\s*(\+|plus)?\s*(?:(?:-|–|—|to)\s*(\d{1,2})\s*\+?)?\s*years?(?:'|’)?\s+(?:of\s+)?(?:[a-z/&,()-]+\s+){0,6}?(?:experience|exp\b)/i
+
+/** The experience a posting asks for, as "5+ years" or "3–5 years"; null when it states none. */
+export function extractExperience(html: string | null | undefined): string | null {
+  for (const b of descriptionBlocks(html ?? '')) {
+    const m = b.text.match(YEARS)
+    if (!m) continue
+    const lo = Number(m[2])
+    const hi = m[4] ? Number(m[4]) : null
+    if (lo < 1 || lo > 25 || (hi !== null && (hi <= lo || hi > 30))) continue
+    if (hi !== null) return `${lo}–${hi} years`
+    return `${lo}+ years`
+  }
+  return null
+}
