@@ -1,4 +1,4 @@
-import { REWARM_EVERY_MS, WARM_PATHS, WARM_USER_AGENT, hubPaths, sitemapPaths, warmPages } from '../../lib/runtime/warmPages'
+import { EMPTY_SITEMAP_RETRY_MS, REWARM_EVERY_MS, WARM_PATHS, WARM_USER_AGENT, hubPaths, sitemapPaths, warmPages } from '../../lib/runtime/warmPages'
 import { DEFAULT_TTL_MS, MAX_STALE_MS } from '../../lib/cache/memo'
 
 const ok = () => ({ status: 200, arrayBuffer: async () => new ArrayBuffer(0) }) as unknown as Response
@@ -81,7 +81,37 @@ describe('keeping hub pages warm', () => {
   })
 
   it('never throws when the sitemaps fail', async () => {
-    expect(await hubPaths('http://x', async () => Promise.reject(new Error('down')))).toEqual([])
+    expect(await hubPaths('http://x', async () => Promise.reject(new Error('down')), noWait)).toEqual([])
+  })
+
+  it('tries a sitemap again when it comes back empty, as the batch sitemap can just after a restart', async () => {
+    const site = 'https://www.6figjobs.com'
+    let batchReads = 0
+    const waits: number[] = []
+    const fetchImpl = jest.fn(async (url: string) => {
+      const path = new URL(url).pathname
+      if (path === '/sitemap.xml') return text(xml([`${site}/sitemap-hubs.xml`, `${site}/sitemap-batch/1.xml`], 'sitemap'))
+      if (path === '/sitemap-hubs.xml') return text(xml([`${site}/jobs`]))
+      batchReads++
+      return text(batchReads < 3 ? xml([]) : xml([`${site}/jobs/skills/python`, `${site}/jobs/city/austin`]))
+    })
+    const paths = await hubPaths('http://x', fetchImpl, async (ms) => void waits.push(ms))
+    expect(paths).toEqual(['/jobs', '/jobs/skills/python', '/jobs/city/austin'])
+    expect(batchReads).toBe(3)
+    expect(waits).toEqual([...EMPTY_SITEMAP_RETRY_MS])
+  })
+
+  it('gives up on a sitemap that stays empty and keeps the others', async () => {
+    const site = 'https://www.6figjobs.com'
+    const waits: number[] = []
+    const fetchImpl = jest.fn(async (url: string) => {
+      const path = new URL(url).pathname
+      if (path === '/sitemap.xml') return text(xml([`${site}/sitemap-batch/1.xml`, `${site}/sitemap-hubs.xml`], 'sitemap'))
+      if (path === '/sitemap-hubs.xml') return text(xml([`${site}/jobs`]))
+      return text(xml([]))
+    })
+    expect(await hubPaths('http://x', fetchImpl, async (ms) => void waits.push(ms))).toEqual(['/jobs'])
+    expect(waits).toEqual([...EMPTY_SITEMAP_RETRY_MS])
   })
 
   it('pauses between pages when asked, not before the first', async () => {
