@@ -26,7 +26,8 @@ export function getSeoPhase(): number {
 
 export function shouldAdvertiseSitemapFamily(family: CoreSitemapFamily): boolean {
   const phase = getSeoPhase()
-  const p1 = new Set(['jobs', 'company', 'salary', 'country'])
+  // Phase 1 submits hub pages only; job sitemaps wait for phase 2 (see PHASE_1_ENABLED_SITEMAP_FAMILIES).
+  const p1 = new Set(['company', 'salary', 'country'])
   
   if (p1.has(family)) return true
   return phase >= 2

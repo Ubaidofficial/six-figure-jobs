@@ -17,6 +17,7 @@ import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../../../lib/job
 import { getMaxJobUrlsPerShard } from '../../../lib/seo/sitemapPolicy'
 import { jobSitemapLastmod } from '../../../lib/seo/jobLastmod'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../../lib/seo/sitemapResponseMeta'
+import { buildPhase1SilencedSitemapResponse, isSitemapFamilyEnabled } from '../../../lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
@@ -75,6 +76,8 @@ export async function GET(
   _req: Request,
   ctx: { params: Promise<{ page: string }> },
 ) {
+  // Phase 1 submits hub pages only (lib/seo/indexingPhase.ts); Google still has /sitemap-jobs/1 from earlier reads.
+  if (!isSitemapFamilyEnabled('sitemap-jobs')) return buildPhase1SilencedSitemapResponse('sitemap-jobs')
   const params = await ctx.params
   const page = params.page || '1'
   const pageNum = Number(page)

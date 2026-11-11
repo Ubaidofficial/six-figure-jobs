@@ -46,7 +46,7 @@ Loop until verified. Don't stop at "should work."
 - Google Jobs requires `JobPosting` JSON-LD with: `title`, `description`, `datePosted`, `hiringOrganization`, `jobLocation` OR `applicantLocationRequirements + remoteJob`.
 - `isRemoteJob()` must NOT scan `descriptionHtml` or `title` — only structured fields (`remoteMode`, `workArrangementNormalized`, `locationRaw`, `remoteRegion`).
 
-**Sitemap**: The sitemap index at `/sitemap.xml` references child sitemaps. `robots.txt` should only list `sitemap.xml` (+ `sitemap-jobs.xml` for Google Jobs discovery). Do not list all child sitemaps in `robots.txt`.
+**Sitemap**: The sitemap index at `/sitemap.xml` references child sitemaps. `robots.txt` should only list `sitemap.xml` (+ `sitemap-jobs.xml` for Google Jobs discovery, from `INDEXING_PHASE=2`). Do not list all child sitemaps in `robots.txt`. In phase 1 the sitemaps submit hub pages only (home, hubs, salary bands, released pSEO batch, salary guides, countries, published companies); job sitemaps return an empty `<urlset>` until phase 2 (`lib/seo/indexingPhase.ts`, `lib/seo/sitemapPolicy.ts`).
 
 **Component patterns**:
 - `JobCard` uses `variant` prop: `'listing'` | `'homepage'` | `'grid'`

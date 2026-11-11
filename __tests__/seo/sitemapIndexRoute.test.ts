@@ -101,8 +101,15 @@ describe('sitemap.xml route', () => {
     expect(xml).toContain('/sitemap-slices/priority')
   })
 
-  it('never lists another sitemap index: child indexes are expanded to their urlset files', async () => {
+  it('submits hub pages only in phase 1: no job sitemap (2026-11-11)', async () => {
     process.env.INDEXING_PHASE = '1'
+    const xml = await (await GET()).text()
+    expect(xml).toContain('/sitemap-hubs.xml')
+    expect(xml).not.toContain('sitemap-jobs')
+  })
+
+  it('never lists another sitemap index: child indexes are expanded to their urlset files', async () => {
+    process.env.INDEXING_PHASE = '2'
     const xml = await (await GET()).text()
     expect(xml).toContain('<loc>https://www.6figjobs.com/sitemap-jobs/1</loc>')
     expect(xml).toContain('<lastmod>2026-11-05T10:00:00.000Z</lastmod>')

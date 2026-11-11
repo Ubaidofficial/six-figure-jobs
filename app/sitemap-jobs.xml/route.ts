@@ -12,6 +12,7 @@ import { buildIndexableJobStructureWhere } from '../../lib/jobs/qualityGate'
 import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../../lib/jobs/freshness'
 import { getMaxJobSitemapShards } from '../../lib/seo/sitemapPolicy'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
+import { buildPhase1SilencedSitemapResponse, isSitemapFamilyEnabled } from '../../lib/seo/indexingPhase'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 20000
@@ -48,6 +49,8 @@ function encodeCursor(cursor: Cursor): string {
 }
 
 export async function GET() {
+  // Phase 1 submits hub pages only (lib/seo/indexingPhase.ts); Google still has this URL from earlier reads.
+  if (!isSitemapFamilyEnabled('sitemap-jobs')) return buildPhase1SilencedSitemapResponse('sitemap-jobs')
   try {
     const baseWhere = buildHundredKWhereBase()
     const maxShards = getMaxJobSitemapShards()

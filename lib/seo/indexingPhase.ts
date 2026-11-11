@@ -97,9 +97,11 @@ export const ALWAYS_INDEXABLE_HUBS = new Set<string>([
 //
 // Why this list:
 //   - Hubs are the four pillar URLs (handled inline, no family).
-//   - sitemap-jobs ships ONLY the freshest jobs (we still want Google Jobs
-//     surfaces, and individual job pages have the strongest unique content).
-//     The sitemap itself is the family — the route caps & gates inside.
+//   - sitemap-jobs is NOT listed (2026-11-11): Phase 1 asks Google to index the
+//     ~100 hub pages first. The jobs sitemap had 5,000 URLs (50 times the hubs)
+//     while Google indexed only the homepage and left the hubs "Crawled -
+//     currently not indexed". Job pages stay indexable and linked from the hubs
+//     (Google can still find them), but are not submitted until phase 2.
 //   - sitemap-salary ships salary-tier hubs (/jobs/100k-plus etc.), which are
 //     already gated at 5 jobs.
 //   - sitemap-company ships only the manifest-unlocked companies (already
@@ -108,7 +110,6 @@ export const ALWAYS_INDEXABLE_HUBS = new Set<string>([
 // Everything else (city, country, level, skills, remote, browse, category,
 // blog, slices, etc.) is silenced in Phase 1.
 export const PHASE_1_ENABLED_SITEMAP_FAMILIES = new Set<string>([
-  'sitemap-jobs',
   'sitemap-company',
   'sitemap-salary',
   // Only the phase-1 countries are listed in phase 1 (see lib/seo/countrySitemap.ts).
