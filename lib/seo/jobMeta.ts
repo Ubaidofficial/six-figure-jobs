@@ -11,7 +11,11 @@ export type JobWithCompany = Job & { companyRef: Company | null }
 
 const SITE_URL = getSiteUrl()
 
-export function buildJobMetadata(job: JobWithCompany): Metadata {
+/**
+ * `sameTitleElsewhere`: the company has another open job with exactly this title (usually the same role posted per
+ * city). The title then names the place, so the pages do not share one title in search results.
+ */
+export function buildJobMetadata(job: JobWithCompany, opts: { sameTitleElsewhere?: boolean } = {}): Metadata {
   const companyName = job.companyRef?.name || job.company || 'Company'
 
   const salary = buildSalary(job)
@@ -20,7 +24,7 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
       ? buildLocation(job) || 'Remote'
       : buildLocation(job) || 'Location not specified'
 
-  const title = fitTitle(job.title, companyName, salary)
+  const title = fitTitle(job.title, companyName, salary, opts.sameTitleElsewhere ? jobTitlePlace(job) : null)
 
   const bits: string[] = []
   bits.push(`Apply for ${job.title} at ${companyName}.`)
@@ -88,18 +92,34 @@ export function buildJobMetadata(job: JobWithCompany): Metadata {
 const MAX_TITLE_LENGTH = TITLE_MAX
 const MAX_DESCRIPTION_LENGTH = 160
 
+/** The place a title can name: "Remote", or the job's city ("Redlands"). Null when the job has neither. */
+export function jobTitlePlace(job: { remote?: boolean | null; remoteMode?: string | null; city?: string | null }): string | null {
+  if (job.remote === true || job.remoteMode === 'remote') return 'Remote'
+  const city = humanizeLocationText(String(job.city ?? '')).split(',')[0].trim()
+  return city || null
+}
+
 /**
  * First that fits: full title, without the brand suffix, with the salary's "/yr" dropped, without the company.
  * The salary is the click reason, so a role too long for even that is shortened rather than the salary dropped.
+ * `place` (see jobTitlePlace) is tried first when given, to tell apart one company's postings with the same title.
  */
-export function fitTitle(role: string, company: string, salary: string | null): string {
+export function fitTitle(role: string, company: string, salary: string | null, place: string | null = null): string {
   if (!salary) {
-    const candidates = [`${role} at ${company} | ${SITE_NAME}`, `${role} at ${company}`, role]
+    const candidates = [
+      ...(place ? [`${role} at ${company} (${place}) | ${SITE_NAME}`, `${role} at ${company} (${place})`, `${role} (${place})`] : []),
+      `${role} at ${company} | ${SITE_NAME}`,
+      `${role} at ${company}`,
+      role,
+    ]
     const fits = candidates.find((c) => c.length <= MAX_TITLE_LENGTH)
     return fits ?? truncateAtWord(role, MAX_TITLE_LENGTH)
   }
   const short = salary.replace(/\/yr$/, '')
   const candidates = [
+    ...(place
+      ? [`${role} at ${company} (${place}) — ${salary}`, `${role} at ${company} (${place}) — ${short}`, `${role} (${place}) — ${short}`]
+      : []),
     `${role} at ${company} — ${salary} | ${SITE_NAME}`,
     `${role} at ${company} — ${salary}`,
     `${role} at ${company} — ${short}`,
