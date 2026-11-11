@@ -66,8 +66,9 @@ export function HeroSalaryBands({ bands }: { bands: HeroBand[] }) {
               ))}
             </ul>
           ) : null}
-          <Link href={band.href} className={styles.panelLink}>
-            See all {band.label} roles <span aria-hidden="true">→</span>
+          <Link href={band.href} className={`arrow-link ${styles.panelLink}`}>
+            <span className="arrow-link-label">See all {band.label} roles</span>
+            <span className="arrow-chip arrow-chip-muted" aria-hidden="true">&#8599;</span>
           </Link>
         </div>
       ))}

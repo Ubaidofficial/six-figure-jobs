@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 
 import styles from './BrowseBySalaryTier.module.css'
+import { SectionHeading } from '@/components/ui/SectionHeading'
 
 export type SalaryTier = {
   slug: '100k-plus' | '200k-plus' | '300k-plus' | '400k-plus'
@@ -23,11 +24,11 @@ export function BrowseBySalaryTier({ tiers }: { tiers: SalaryTier[] }) {
   return (
     <section className={styles.section} aria-label="Browse by salary tier">
       <header className={styles.header}>
-        <h2 className={styles.title}>Browse by Salary Tier</h2>
+        <SectionHeading eyebrow="Salary" light="Browse by" strong="Salary Tier" />
         <p className={styles.subtitle}>US-dollar salaries, grouped by the top of each job&apos;s pay range</p>
       </header>
 
-      <div className={styles.grid}>
+      <div className={styles.grid} data-reveal="" data-reveal-stagger="">
         {tiers.map((tier) => {
           // Each tier's share of the US-dollar jobs, drawn as a bar so the four cards compare at a glance.
           const share = total > 0 ? Math.round((tier.count / total) * 100) : 0

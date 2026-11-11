@@ -160,7 +160,7 @@ export default async function FourDayWeekJobsPage({ searchParams }: { searchPara
       </nav>
 
       <header className={styles.hero}>
-        <p className={styles.eyebrow}>Reduced hours · full pay</p>
+        <p className={`eyebrow-pill ${styles.eyebrow}`}>Reduced hours · full pay</p>
         <h1 className={styles.title}>
           4-day work week jobs <span className={styles.accent}>paying $100k+</span>
         </h1>

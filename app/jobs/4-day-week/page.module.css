@@ -25,32 +25,28 @@
   text-decoration: underline;
 }
 
+/* 2026-11 refresh: header on the page (no tinted block), light H1 with the accent words semibold. */
 .hero {
-  padding: 32px;
-  border-radius: 28px;
-  background: color-mix(in srgb, var(--color-primary) 16%, var(--color-bg-1));
+  padding: 20px 0 28px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .eyebrow {
-  margin: 0 0 12px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-1);
+  margin: 0 0 14px;
 }
 
 .title {
   margin: 0;
-  font-size: clamp(2rem, 4.5vw, 3rem);
-  line-height: 1.08;
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4.4vw, 3.5rem);
+  line-height: 1.04;
+  font-weight: 300;
+  letter-spacing: -0.035em;
   color: var(--color-text-0);
 }
 
 .accent {
-  color: var(--color-primary-text);
+  font-weight: 600;
 }
 
 .lede {

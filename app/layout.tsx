@@ -9,6 +9,7 @@ import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
 import ErrorTracker from '@/components/ErrorTracker'
+import { ScrollReveal } from '@/components/ui/ScrollReveal'
 import { getSiteUrl } from '../lib/seo/site'
 import { PreloadResources } from './preload-resources'
 
@@ -88,7 +89,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Light only: no dark theme. colorScheme keeps native form controls and scrollbars light too.
   colorScheme: 'light',
-  themeColor: '#f7f7f4',
+  themeColor: '#f4f6f5',
 }
 
 export default function RootLayout({
@@ -119,6 +120,7 @@ export default function RootLayout({
         </div>
         <FeedbackWidget />
         <ErrorTracker />
+        <ScrollReveal />
         {/* Google Analytics 4: loads only when NEXT_PUBLIC_GA_MEASUREMENT_ID is set to a G- id (inlined at build time) */}
         {GA_MEASUREMENT_ID ? (
           <>

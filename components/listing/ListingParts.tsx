@@ -258,7 +258,7 @@ export function Pagination({
 
 export function ListingSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className={styles.section} aria-label={title}>
+    <section className={styles.section} aria-label={title} data-reveal="">
       <h2 className={styles.sectionTitle}>{title}</h2>
       {children}
     </section>

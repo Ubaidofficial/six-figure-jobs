@@ -6,6 +6,7 @@ import { dedupeLatest } from '@/lib/jobs/latestSelection'
 
 import styles from './LatestOpportunities.module.css'
 import { toPublicJob } from '@/lib/jobs/publicJob'
+import { SectionHeading } from '@/components/ui/SectionHeading'
 
 export function LatestOpportunities({
   jobs,
@@ -20,10 +21,11 @@ export function LatestOpportunities({
     <section className={styles.section} aria-label="Latest opportunities">
       <header className={styles.header}>
         <div>
-          <h2 className={styles.title}>Latest Six Figure Opportunities</h2>
+          <SectionHeading eyebrow="Latest jobs" light="Latest" strong="Six Figure Opportunities" />
         </div>
-        <Link href="/jobs" className={styles.headerLink}>
-          Explore all opportunities <span aria-hidden="true">→</span>
+        <Link href="/jobs" className={`arrow-link ${styles.headerLink}`}>
+          <span className="arrow-link-label">Explore all opportunities</span>
+          <span className="arrow-chip" aria-hidden="true">&#8599;</span>
         </Link>
       </header>
 
@@ -32,9 +34,9 @@ export function LatestOpportunities({
           <p>No jobs found. Try adjusting your filters or explore all six-figure opportunities.</p>
         </div>
       ) : (
-        <JobRowList>
+        <JobRowList reveal="stagger">
           {latest.map(toPublicJob).map((job) => (
-            <JobRow key={job.id} job={job} className="reveal-on-scroll" />
+            <JobRow key={job.id} job={job} />
           ))}
         </JobRowList>
       )}

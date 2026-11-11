@@ -180,7 +180,7 @@ export default async function RemoteCompaniesPage() {
     await skipPrerenderWhileBuilding()
     return (
       <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{HEADING}</h1>
+        <h1 className="text-4xl font-normal tracking-[-0.035em] text-foreground">{HEADING}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           The list is temporarily unavailable while the production database reconnects.{' '}
           <Link href="/remote">Browse remote jobs</Link>.

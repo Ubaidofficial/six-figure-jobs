@@ -224,7 +224,7 @@ Almost all of its motion (149 files) is built on the `motion` library (`motion/r
 |---|---|
 | `whileHover` card lift | `components/jobs/JobCard.module.css` `.card:hover` (lift, accent bar, sheen, CTA arrow nudge); homepage rows get a border + background tint |
 | `whileTap` press | `.card:active { scale: 0.99 }` |
-| `whileInView` reveal / staggered list | `.reveal-on-scroll` in `app/globals.css`: CSS scroll-driven animation (`animation-timeline: view()`) inside `@supports`; zero JS. Used on homepage job rows and the discovery modules below the jobs feed |
+| `whileInView` reveal / staggered list | `components/ui/ScrollReveal.tsx` + `[data-reveal]` rules in `app/globals.css` (since 2026-11-11, replacing the CSS-only `.reveal-on-scroll`). Server HTML is never hidden: the script hides only elements still below the viewport, then reveals each as it scrolls in (fade + 10px lift, 260/340ms). `data-reveal-stagger` = children in sequence (55ms apart, capped at 10); `data-reveal-each` = each child on its own (`JobRowList` default). Off under reduced motion |
 | Animated list (items arriving) | `components/home/LiveJobFeed.module.css` `arrive` / `pulse` keyframes |
 | `layoutId` sliding indicator | Not used. Candidate for `motion` only if we add tabs/segmented filters |
 | `@number-flow/react` counters | Not used (extra dependency). `components/ui/AnimatedNumber.tsx` instead: a leaf client component; the server renders the final number, it counts up only when a number that starts below the fold scrolls into view (or when its text changes), and never under `reduce` |
@@ -244,3 +244,30 @@ A scheduled Claude Code task runs on the 1st and 15th of each month to keep the 
 
 ### Refresh log
 - 2026-11-07: Motion pass from shadcnspace review: JobCard press feedback, homepage row hover tint, CSS scroll reveal on homepage job rows and discovery modules.
+- 2026-11-11: Owner-requested refresh after workflows.io (§13), outside the scheduled runs: tokens, homepage, scroll reveals, then the rest of the public pages.
+
+---
+
+## 13) Visual Language (Added 2026-11-11, workflows.io reference)
+
+The owner asked to borrow the premium feel of workflows.io (structure and motion only; no copied assets, copy or brand).
+
+### Tokens
+- Page `--color-bg-0: #f4f6f5` (cool off-white); cards white; hairlines `--color-border` (`rgba(12,13,14,0.09)`).
+- Fill lime `--color-primary: #a3e635` with near-black text (~13:1). Never as text; text accents stay `--color-primary-text` (#4d7c0f).
+- `--font-display` = Outfit (variable 100-900, self-hosted). Headlines mix weights: light (300) for the lead-in, semibold (600) for the key words. Body stays Instrument Sans; salary figures JetBrains Mono.
+
+### Primitives (`app/globals.css`, `@layer components`)
+| Class / component | Use |
+|---|---|
+| `.eyebrow-pill` (+ `.eyebrow-pill-icon`) | Small uppercase label in a white pill above a heading |
+| `SectionHeading` (`components/ui/SectionHeading.tsx`) | Pill + `<h2 class="section-heading">` with `light` then `strong` words, revealed word by word. Text = `${light} ${strong}` |
+| `.arrow-link` / `.arrow-link-label` / `.arrow-chip` (`-muted`) | "See all" links: underlined label + square chip with ↗ |
+| `.panel-hairline` | White panel, 20px radius, 1px hairline ring. Split content with hairlines, not separate floating cards |
+| Buttons | Lime fill, black text, 10px radius, hover = `--color-primary-light`. No gradients or glows |
+
+### Rules
+- No lime-tinted page blocks; headers sit on the page with a bottom hairline, or in a white hairline panel.
+- Card hover: ≤3px lift, darker hairline, soft neutral shadow. No coloured glow.
+- Motion follows §11 (ScrollReveal). H1, job title, salary block and apply CTA are never animated on load.
+

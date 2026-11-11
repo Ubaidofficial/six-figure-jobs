@@ -11,9 +11,9 @@
 .button {
   height: 44px;
   padding: 0 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(132, 204, 22, 0.25);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border-radius: 10px;
+  border: 0;
+  background: var(--color-primary);
   color: #0a0a0a;
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
@@ -22,13 +22,11 @@
   justify-content: center;
   text-decoration: none;
   white-space: nowrap;
-  transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
+  transition: background-color 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .button:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md-glow);
-  filter: brightness(1.04);
+  background: var(--color-primary-light);
 }
 
 @media (max-width: 767px) {

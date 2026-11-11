@@ -319,29 +319,44 @@
   }
 }
 
-/* Scroll reveal ("whileInView") with no JS: the fade is driven by the element's position in the
-   viewport. Anything already on screen at load is at its end state, and browsers without
-   scroll-driven animations show the content as is, so server HTML is never hidden. It animates
-   `translate`, not `transform`, so it does not override hover transforms (e.g. JobCard lift).
-   See docs/DESIGN_UX_SPEC.md §11. */
-@keyframes reveal-on-scroll {
-  from {
-    opacity: 0;
-    translate: 0 16px;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
+/* Scroll reveal (workflows.io-style, components/ui/ScrollReveal.tsx). Elements carry `data-reveal`; the script marks
+   only those still below the viewport as "pending" (hidden) and flips them to "in" as they scroll into view, so the
+   server HTML is never hidden. Fade + small lift, 260-340ms, cubic-bezier(0.22, 1, 0.36, 1). It animates `translate`,
+   not `transform`, so it does not override hover transforms (e.g. JobCard lift). See docs/DESIGN_UX_SPEC.md §11. */
+[data-reveal='pending']:not([data-reveal-stagger]),
+[data-reveal='pending'][data-reveal-stagger] > * {
+  opacity: 0;
+  translate: 0 10px;
 }
 
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .reveal-on-scroll {
-      animation: reveal-on-scroll linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 60%;
-    }
+[data-reveal='in']:not([data-reveal-stagger]),
+[data-reveal='in'][data-reveal-stagger] > * {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    translate 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-reveal='in'][data-reveal-stagger] > * {
+  transition-delay: calc(var(--reveal-i, 0) * 55ms);
+}
+
+/* Heading words (RevealWords): inline-block so each word can lift on its own. */
+.reveal-word {
+  display: inline-block;
+}
+
+[data-reveal='pending'][data-reveal-stagger] > .reveal-word {
+  translate: 0 0.35em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] > *,
+  [data-reveal] {
+    opacity: 1 !important;
+    translate: none !important;
+    transition: none !important;
   }
 }
 
@@ -411,22 +426,143 @@
 
 @layer base {
   html.light {
-    --background: 60 17% 96%;
-    --foreground: 90 12% 5%;
+    --background: 150 10% 96%; /* #f4f6f5, matches --color-bg-0 */
+    --foreground: 210 8% 5%;
     --card: 0 0% 100%;
-    --card-foreground: 90 12% 5%;
+    --card-foreground: 210 8% 5%;
     --popover: 0 0% 100%;
-    --popover-foreground: 90 12% 5%;
+    --popover-foreground: 210 8% 5%;
     --primary: 85 79% 27%; /* #4d7c0f: safe as text and as a button fill with white text */
     --primary-foreground: 0 0% 100%;
-    --secondary: 60 9% 93%;
-    --secondary-foreground: 90 12% 5%;
-    --muted: 60 9% 93%;
-    --muted-foreground: 60 4% 35%;
-    --accent: 60 9% 93%;
-    --accent-foreground: 90 12% 5%;
-    --border: 60 6% 87%;
-    --input: 60 6% 87%;
+    --secondary: 160 10% 94%;
+    --secondary-foreground: 210 8% 5%;
+    --muted: 160 10% 94%;
+    --muted-foreground: 189 7% 35%;
+    --accent: 160 10% 94%;
+    --accent-foreground: 210 8% 5%;
+    --border: 160 10% 88%;
+    --input: 160 10% 88%;
     --ring: 85 79% 27%;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* 2026-11 REFRESH PRIMITIVES (workflows.io reference, DESIGN_UX_SPEC §13)     */
+/* -------------------------------------------------------------------------- */
+
+@layer components {
+  /* Small uppercase label in a white pill, above a section heading. Optional round icon: .eyebrow-pill-icon. */
+  .eyebrow-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px 5px 6px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-1);
+    background: var(--color-bg-1);
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(12, 13, 14, 0.05);
+  }
+
+  .eyebrow-pill:not(:has(.eyebrow-pill-icon)) {
+    padding-left: 12px;
+  }
+
+  .eyebrow-pill-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    flex: none;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: var(--color-primary);
+    background: var(--color-text-0);
+  }
+
+  /* Underlined text followed by a small square chip holding an arrow ("See all ↗"). */
+  .arrow-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-0);
+    text-decoration: none;
+  }
+
+  .arrow-link:hover {
+    color: var(--color-text-0);
+  }
+
+  .arrow-link-label {
+    padding-bottom: 1px;
+    border-bottom: 1px solid currentColor;
+  }
+
+  .arrow-chip {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border-radius: 7px;
+    font-size: 13px;
+    line-height: 1;
+    color: #0a0a0a;
+    background: var(--color-primary);
+    transition: background-color 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .arrow-chip-muted {
+    color: var(--color-text-0);
+    background: var(--color-bg-2);
+    box-shadow: 0 0 0 1px var(--color-border);
+  }
+
+  .arrow-link:hover .arrow-chip,
+  a:hover > .arrow-chip {
+    background: var(--color-primary-light);
+    transform: scale(1.08);
+  }
+
+  /* Section heading (components/ui/SectionHeading.tsx): light words then semibold words, Outfit. */
+  .section-heading {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.625rem, 2.6vw, 2.375rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--color-text-0);
+  }
+
+  .section-eyebrow {
+    margin: 0 0 14px;
+  }
+
+  /* White panel with a hairline border; children split by hairlines instead of separate floating cards. */
+  .panel-hairline {
+    background: var(--color-bg-1);
+    border-radius: 20px;
+    box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(12, 13, 14, 0.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrow-chip {
+    transition: none;
+  }
+
+  .arrow-link:hover .arrow-chip,
+  a:hover > .arrow-chip {
+    transform: none;
   }
 }

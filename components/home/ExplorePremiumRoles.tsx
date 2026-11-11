@@ -4,6 +4,7 @@ import { ArrowUpRight } from 'lucide-react'
 import { RoleIllustration } from '@/components/roles/RoleIllustration'
 import { pluralize } from '@/lib/utils/number'
 import styles from './ExplorePremiumRoles.module.css'
+import { SectionHeading } from '@/components/ui/SectionHeading'
 
 export type PremiumRoleCard = {
   slug: string
@@ -25,11 +26,11 @@ export function ExplorePremiumRoles({ roles }: { roles: PremiumRoleCard[] }) {
   return (
     <section className={styles.section} aria-label="Explore premium roles">
       <header className={styles.header}>
-        <h2 className={styles.title}>Explore Premium Roles</h2>
+        <SectionHeading eyebrow="Roles" light="Explore" strong="Premium Roles" />
         <p className={styles.subtitle}>Explore six-figure opportunities by position</p>
       </header>
 
-      <div className={styles.grid}>
+      <div className={styles.grid} data-reveal="" data-reveal-stagger="">
         {roles.map((role) => (
           <Link key={role.slug} href={`/jobs/${role.slug}`} className={styles.card}>
             <div className={styles.content}>

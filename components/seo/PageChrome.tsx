@@ -21,9 +21,9 @@ export function PageHero({
   return (
     <header className="border-b border-border pb-8">
       {eyebrow ? (
-        <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">{eyebrow}</p>
+        <p className="eyebrow-pill">{eyebrow}</p>
       ) : null}
-      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h1>
+      <h1 className="mt-4 text-4xl font-normal leading-[1.05] tracking-[-0.035em] text-foreground sm:text-5xl">{title}</h1>
       <div className="mt-3 max-w-3xl text-base leading-relaxed text-muted-foreground">{description}</div>
       {helper ? <div className="mt-3 text-sm text-muted-foreground">{helper}</div> : null}
       {actions ? <div className="mt-4 flex flex-wrap gap-2">{actions}</div> : null}
@@ -42,7 +42,7 @@ export function PageStatGrid({
   }>
 }) {
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-5 border-y border-border py-5 xl:grid-cols-4">
+    <dl className="panel-hairline grid grid-cols-2 gap-x-6 gap-y-5 px-6 py-5 xl:grid-cols-4">
       {items.map((item) => (
         <div key={item.label}>
           <dt className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</dt>
@@ -64,8 +64,8 @@ export function PageSection({
   children: ReactNode
 }) {
   return (
-    <section className="mt-12">
-      <h2 className="text-xl font-semibold tracking-tight text-foreground">{title}</h2>
+    <section className="mt-12" data-reveal="">
+      <h2 className="text-2xl font-medium tracking-[-0.025em] text-foreground">{title}</h2>
       {description ? (
         <div className="mt-2 max-w-3xl text-[15px] leading-relaxed text-muted-foreground">{description}</div>
       ) : null}

@@ -29,7 +29,8 @@ describe('NewRolesStrip', () => {
     const html = render(Array.from({ length: 5 }, (_, i) => company(i)))
     expect(html).toContain('href="/company/company-0"')
     expect(html).toMatch(/<span class="name">Company 4<\/span><span class="badge">\+5<\/span>/)
-    expect(html).toContain('Added in the last 24 hours')
+    // The heading's words are separate spans (word-by-word reveal); its text is unchanged.
+    expect(html.replace(/<[^>]+>/g, '')).toContain('Added in the last 24 hours')
   })
 
   it('says "role" for one and "roles" for more in the link title', () => {

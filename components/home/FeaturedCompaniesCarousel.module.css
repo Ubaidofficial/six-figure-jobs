@@ -17,14 +17,6 @@
   margin-bottom: var(--space-12);
 }
 
-.title {
-  font-family: var(--font-display);
-  font-weight: var(--font-weight-extrabold);
-  letter-spacing: -0.02em;
-  color: var(--color-text-0);
-  font-size: clamp(1.25rem, 2vw, 1.6rem);
-  line-height: var(--line-height-tight);
-}
 
 .subtitle {
   margin-top: var(--space-4, 4px);
@@ -35,15 +27,7 @@
 
 .allLink {
   flex: none;
-  font-size: var(--text-sm, 0.875rem);
-  font-weight: 600;
-  color: var(--color-primary-text);
   white-space: nowrap;
-}
-
-.allLink:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 .card {

@@ -9,6 +9,7 @@ import { buildLogoUrl } from '@/lib/companies/logo'
 import type { NewRolesCompany } from '@/lib/jobs/newRolesByCompany'
 
 import styles from './NewRolesStrip.module.css'
+import { SectionHeading } from '@/components/ui/SectionHeading'
 
 /** Fewer companies than this and a moving strip looks empty; the section is left out. */
 export const MIN_STRIP_COMPANIES = 4
@@ -44,9 +45,7 @@ export function NewRolesStrip({ companies }: { companies: NewRolesCompany[] }) {
   return (
     <section className={styles.section} aria-labelledby="new-roles-heading">
       <header className={styles.header}>
-        <h2 id="new-roles-heading" className={styles.title}>
-          Added in the last 24 hours
-        </h2>
+        <SectionHeading id="new-roles-heading" light="Added in the" strong="last 24 hours" />
         <p className={styles.sub}>Companies with new roles on the site today. Tap a name to see their jobs.</p>
       </header>
       <div className={styles.viewport}>

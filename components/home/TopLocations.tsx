@@ -4,6 +4,7 @@ import { ArrowUpRight } from 'lucide-react'
 import { CountryFlag } from '@/components/ui/CountryFlag'
 import { pluralize } from '@/lib/utils/number'
 import styles from './TopLocations.module.css'
+import { SectionHeading } from '@/components/ui/SectionHeading'
 
 export type TopLocationCard = {
   slug: string
@@ -25,11 +26,11 @@ export function TopLocations({ locations }: { locations: TopLocationCard[] }) {
   return (
     <section className={styles.section} aria-label="Top locations for high-paying jobs">
       <header className={styles.header}>
-        <h2 className={styles.title}>Top Locations for Six Figure Jobs</h2>
+        <SectionHeading eyebrow="Locations" light="Top Locations for" strong="Six Figure Jobs" />
         <p className={styles.subtitle}>Global opportunities with verified salary ranges</p>
       </header>
 
-      <div className={styles.grid}>
+      <div className={styles.grid} data-reveal="" data-reveal-stagger="">
         {locations.map((loc) => (
           <Link key={loc.slug} href={loc.href ?? `/jobs/location/${loc.slug}`} className={styles.card}>
             <div className={styles.flag} aria-hidden="true">

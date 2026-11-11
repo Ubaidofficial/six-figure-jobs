@@ -70,7 +70,8 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
   return (
     <section className={styles.hero}>
       <div className={styles.main}>
-      <p className={styles.eyebrow}>
+      <p className={`eyebrow-pill ${styles.eyebrow}`}>
+        <span className="eyebrow-pill-icon" aria-hidden="true">$</span>
         <Link href="/jobs/location/united-states"><CountryFlag code="US" className="mr-1.5" />US</Link> ·{' '}
         <Link href="/jobs/location/united-kingdom"><CountryFlag code="GB" className="mr-1.5" />UK</Link> ·{' '}
         <Link href="/remote?remoteRegion=europe" title="Remote jobs in Europe"><CountryFlag code="EU" className="mr-1.5" />EU</Link> ·{' '}
@@ -78,9 +79,12 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
         <Link href="/jobs/location/australia"><CountryFlag code="AU" className="mr-1.5" />Australia</Link>
       </p>
 
+      {/* Light + semibold weights in one headline (2026-11 refresh). The text is unchanged: "Six-figure jobs.No salary guessing." */}
       <h1 className={styles.headline}>
-        Six-figure jobs.
-        <span className={styles.accent}>No salary guessing.</span>
+        <span className={styles.thin}>Six-figure</span> jobs.
+        <span className={styles.accent}>
+          <span className={styles.thin}>No salary</span> guessing.
+        </span>
       </h1>
 
       <p className={styles.subheadline}>
@@ -97,7 +101,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
           <Search className={styles.searchIcon} aria-hidden="true" />
           <HeroSearchInput id="hero-q" name="q" placeholder="Job title, company or keyword" className={styles.searchInput} shortcut shortcutHint />
           <Button variant="primary" size="lg" type="submit" className={styles.cta}>
-            Search jobs
+            Search jobs<span aria-hidden="true" className="ml-2">&rarr;</span>
           </Button>
         </div>
 
@@ -134,7 +138,15 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
       ) : null}
       </div>
 
-      <aside className={styles.panel} aria-label="Typical salary and pay floors">
+      <aside className={`panel-hairline ${styles.panel}`} aria-label="Typical salary and pay floors">
+        <div className={styles.panelHead}>
+          <p className={styles.panelHeadTitle}>Salary snapshot</p>
+          <Link href="/salary" className="arrow-link">
+            <span className="arrow-link-label">Salary guides by role</span>
+            <span className="arrow-chip" aria-hidden="true">&#8599;</span>
+          </Link>
+        </div>
+        <div className={styles.panelGrid}>
         <div className={styles.panelCol}>
         {salarySnapshot ? (
           <>
@@ -175,8 +187,8 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
         )}
         </div>
 
-        <div className={`${styles.panelCol} ${styles.panelColSide}`}>
-        <h2 className={`${styles.panelTitle} ${styles.panelTitleSpaced}`}>Pay floor by market</h2>
+        <div className={styles.panelCol}>
+        <h2 className={styles.panelTitle}>Pay floor by market</h2>
         <ul className={styles.floors}>
           {FLOORS.map((floor) => {
             const { market, flag, currency, href } = floor
@@ -202,10 +214,11 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
             )
           })}
         </ul>
+        </div>
 
         {siteCounts ? (
-          <>
-            <h2 className={`${styles.panelTitle} ${styles.panelTitleSpaced}`}>Jobs by type</h2>
+          <div className={styles.panelCol}>
+            <h2 className={styles.panelTitle}>Jobs by type</h2>
             <ul className={styles.types}>
               {(
                 [
@@ -225,11 +238,8 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
             <p className={styles.panelNote}>
               Counted {formatCounted(siteCounts.computedAt)}; recounted about every hour.
             </p>
-          </>
+          </div>
         ) : null}
-        <Link href="/salary" className={styles.panelLink}>
-          Salary guides by role <span aria-hidden="true">→</span>
-        </Link>
         </div>
       </aside>
     </section>
