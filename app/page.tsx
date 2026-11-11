@@ -49,6 +49,7 @@ import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fa
 import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
 import { getPriorityPublishedCompanyCandidates } from '@/lib/seo/companyPublishing'
 import { TOP_COMPANY_SLUGS } from '@/lib/constants/topCompanies'
+import { SectionHeading } from '@/components/ui/SectionHeading'
 
 export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dynamic
 
@@ -621,7 +622,7 @@ export default async function HomePage() {
       <LatestOpportunities jobs={jobs.filter((job) => !feedItemIds.has(job.id))} totalJobs={stats.totalJobs} />
 
       {priorityFeaturedCompanies.length > 0 && (
-        <section className="mb-8 rounded-2xl border border-border bg-card p-5">
+        <section className="panel-hairline mb-8 p-5">
           <h2 className="text-sm font-semibold text-foreground">
             Priority company pages
           </h2>
@@ -644,9 +645,9 @@ export default async function HomePage() {
       )}
 
       <section className="my-12">
-        <h2 className="mb-4 [font-family:var(--font-display)] text-xl font-extrabold tracking-tight text-foreground">
-          Explore Six Figure Jobs by Role
-        </h2>
+        <div className="mb-5">
+          <SectionHeading eyebrow="Browse" light="Explore Six Figure Jobs by" strong="Role" />
+        </div>
           <div className="flex flex-wrap gap-2">
             {CATEGORY_LINKS.roles.map((role) => (
               <Link
@@ -674,17 +675,13 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div className="reveal-on-scroll">
-        <TopLocations locations={topLocations} />
-      </div>
+      <TopLocations locations={topLocations} />
 
-      <section className="reveal-on-scroll mb-10">
+      <section className="mb-10">
         <BrowseBySalaryTier tiers={salaryTiers} />
       </section>
 
-      <div className="reveal-on-scroll">
-        <ExplorePremiumRoles roles={premiumRoles} />
-      </div>
+      <ExplorePremiumRoles roles={premiumRoles} />
 
       <HomeFAQ />
 

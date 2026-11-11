@@ -2,58 +2,64 @@
    The right-hand panel answers clicks only: picking a salary band changes which band is highlighted and what it lists. */
 
 .hero {
-  /* A large rounded block in a pale tint of the brand lime: the one colour moment on the light page. */
-  padding: 40px;
-  background: color-mix(in srgb, var(--color-primary) 16%, var(--color-bg-1));
-  border-radius: 28px;
-  margin-bottom: 40px;
+  /* 2026-11 refresh (workflows.io reference): no tinted block; a centred headline on the page background, then one
+     white hairline panel under the search. */
+  padding: 48px 0 0;
+  margin-bottom: 56px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 32px;
+  gap: 48px;
 }
 
 .main {
   min-width: 0;
+  max-width: 860px;
+  margin: 0 auto;
+  text-align: center;
 }
 
-/* Right-hand panel: real numbers and the per-market pay floors. Desktop only; the copy already says the same. */
+/* Salary snapshot: header row, then three cells split by hairlines. Desktop only; the copy already says the same. */
 .panel {
   display: none;
 }
 
-/* Desktop: the panel is split in two halves (salary snapshot | pay floors and job types). In one narrow column beside
-   the copy it was about twice as tall as the copy, which left a band of empty green above and below the headline (seen
-   at 70% zoom on a 13" MacBook Air, 2026-11-09). Below 1360px it sits under the search at full width; from 1360px it
-   sits beside the copy, and the two columns of the hero end up about the same height. */
 @media (min-width: 1024px) {
   .panel {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 28px;
-    padding: 24px 28px;
-    background: var(--color-bg-1);
-    border-radius: 20px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  }
-
-  /* The right half starts at the top: no rule above its first heading, a hairline between the halves instead. */
-  .panelColSide {
-    padding-left: 28px;
-    border-left: 1px solid var(--color-border);
-  }
-
-  .panelColSide > .panelTitleSpaced:first-child {
-    padding-top: 0;
-    border-top: 0;
+    display: block;
+    width: 100%;
   }
 }
 
-@media (min-width: 1360px) {
-  .hero {
-    grid-template-columns: minmax(0, 1fr) clamp(600px, 40vw, 680px);
-    gap: 48px;
-    align-items: center;
-  }
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panelHeadTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-text-0);
+}
+
+.panelGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.panelCol {
+  min-width: 0;
+  padding: 24px 28px 26px;
+}
+
+.panelCol + .panelCol {
+  border-left: 1px solid var(--color-border);
 }
 
 .stats {
@@ -171,9 +177,9 @@
   color: var(--color-text-1);
 }
 
-/* Beside the copy (1360px+) the column is too narrow for flag, market, count and floor on one line: the count goes on
-   its own line under the market name (indented past the flag) on every row, instead of some rows wrapping "jobs". */
-@media (min-width: 1360px) {
+/* A panel cell is too narrow for flag, market, count and floor on one line: the count goes on its own line under the
+   market name (indented past the flag) on every row, instead of some rows wrapping "jobs". */
+@media (min-width: 1024px) {
   .floor {
     align-items: center;
   }
@@ -192,20 +198,6 @@
   color: var(--color-text-1);
 }
 
-.panelLink {
-  display: inline-block;
-  margin-top: 14px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-primary-text);
-  text-decoration: none;
-}
-
-.panelLink:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 .eyebrow a {
   color: inherit;
   text-decoration: none;
@@ -217,40 +209,55 @@
 }
 
 .eyebrow {
-  margin: 0 0 16px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-1);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0 0 24px;
+}
+
+/* Phones: keep the five markets on one line inside the pill. */
+@media (max-width: 480px) {
+  .eyebrow {
+    gap: 6px;
+    padding: 5px 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .eyebrow > :global(.eyebrow-pill-icon) {
+    display: none;
+  }
 }
 
 .headline {
   margin: 0;
-  max-width: 780px;
-  font-size: clamp(2rem, 5vw, 3.5rem);
-  line-height: 1.05;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6.2vw, 4.75rem);
+  line-height: 1.02;
+  font-weight: 600;
+  letter-spacing: -0.035em;
   color: var(--color-text-0);
+}
+
+/* The light half of each line ("Six-figure", "No salary"). */
+.thin {
+  font-weight: 300;
 }
 
 .accent {
   display: block; /* the two halves of the headline each get their own line */
-  color: var(--color-primary-text);
 }
 
 .subheadline {
-  margin: 20px 0 0;
-  max-width: 600px;
+  margin: 22px auto 0;
+  max-width: 640px;
   font-size: 1.0625rem;
   line-height: 1.55;
   color: var(--color-text-1);
 }
 
 .searchForm {
-  margin-top: 28px;
-  max-width: 860px;
+  margin: 32px auto 0;
+  max-width: 760px;
+  text-align: left;
 }
 
 .searchBar {
@@ -258,14 +265,15 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 6px 6px 14px;
+  padding: 8px 8px 8px 18px;
   background: var(--color-bg-1);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 16%, transparent);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(12, 13, 14, 0.05), 0 14px 36px -16px rgba(12, 13, 14, 0.18);
+  transition: box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .searchBar:focus-within {
-  border-color: var(--color-primary-text);
+  box-shadow: 0 0 0 2px var(--color-primary-text), 0 14px 36px -16px rgba(12, 13, 14, 0.22);
 }
 
 .searchIcon {
@@ -292,6 +300,7 @@
 
 .cta {
   flex: none;
+  border-radius: 10px;
 }
 
 .filters {
@@ -299,10 +308,11 @@
 }
 
 .quick {
-  margin: 18px 0 0;
+  margin: 20px 0 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 8px 18px;
   font-size: 0.875rem;
 }
@@ -351,9 +361,8 @@
 
 @media (max-width: 640px) {
   .hero {
-    padding: 24px 18px 24px;
-    margin-bottom: 24px;
-    border-radius: 22px;
+    padding: 24px 0 0;
+    margin-bottom: 32px;
   }
 
   .subheadline {
@@ -376,10 +385,10 @@
 
 
 .bigNumber {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   font-family: var(--font-display);
-  font-size: 2.75rem;
-  font-weight: 800;
+  font-size: 3rem;
+  font-weight: 600;
   line-height: 1;
   letter-spacing: -0.03em;
   color: var(--color-text-0);
@@ -453,9 +462,8 @@
   color: var(--color-text-0);
 }
 
-.panelTitleSpaced {
-  padding-top: 14px;
-  border-top: 1px solid var(--color-border);
+.panelLink {
+  margin-top: 14px;
 }
 
 /* The picked salary band: its count, three real roles, and the link to all of them. */

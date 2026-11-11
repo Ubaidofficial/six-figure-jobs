@@ -438,54 +438,65 @@
     grid-template-areas: 'brand nav search';
     grid-template-rows: 64px;
     column-gap: 20px;
-    border: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-bg-1) 84%, transparent);
-    backdrop-filter: saturate(1.4) blur(16px);
-    -webkit-backdrop-filter: saturate(1.4) blur(16px);
-    box-shadow: 0 1px 2px rgba(20, 20, 10, 0.04);
+    /* 2026-11 refresh: flat on the page at the top (no capsule), a white hairline capsule once content scrolls under. */
+    border-radius: 18px;
+    background: transparent;
+    box-shadow: 0 0 0 1px transparent;
     transition:
-      background-color 200ms ease,
-      box-shadow 200ms ease;
+      background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .scrolled .inner {
     /* Nearly opaque once content passes under it: headings behind a glassier capsule read as clutter. */
-    background: color-mix(in srgb, var(--color-bg-1) 97%, transparent);
-    box-shadow: 0 1px 2px rgba(20, 20, 10, 0.05), 0 12px 32px rgba(20, 20, 10, 0.1);
+    background: color-mix(in srgb, var(--color-bg-1) 96%, transparent);
+    backdrop-filter: saturate(1.4) blur(16px);
+    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    box-shadow: 0 0 0 1px var(--color-border), 0 12px 32px -12px rgba(12, 13, 14, 0.16);
   }
 
   .logo {
     font-size: 24px;
   }
 
-  /* The five links as one segmented control: a tinted track, the current page raised on it. */
+  /* Plain text links (2026-11 refresh); the current page gets a short lime underline. */
   .nav {
     display: inline-flex;
-    gap: 2px;
-    padding: 4px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-fg) 5%, transparent);
+    gap: 4px;
   }
 
   .navLink {
+    position: relative;
     min-height: 36px;
-    padding: 6px 15px;
+    padding: 6px 12px;
     border: 0;
     font-size: 15px;
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text-0);
   }
 
   .navLink:hover {
-    background: color-mix(in srgb, var(--color-bg-1) 75%, transparent);
+    background: transparent;
     border-color: transparent;
+    color: var(--color-text-1);
   }
 
   .navLink.navLinkActive,
   .navLink.navLinkActive:hover {
-    background: var(--color-bg-1);
-    box-shadow:
-      0 1px 2px rgba(20, 20, 10, 0.1),
-      0 0 0 1px color-mix(in srgb, var(--color-fg) 6%, transparent);
+    background: transparent;
+    border-color: transparent;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .navLink.navLinkActive::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 2px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--color-primary);
   }
 
   .search {
@@ -502,9 +513,10 @@
   .searchInput {
     height: 44px;
     padding-right: 40px;
-    background: var(--color-bg-0);
+    background: var(--color-bg-1);
     border-color: transparent;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 7%, transparent);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--color-border);
   }
 
   /* The "/" shortcut hint (HeroSearchInput), drawn inside the field's right edge. */

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import styles from './FeaturedCompaniesCarousel.module.css'
+import { SectionHeading } from '@/components/ui/SectionHeading'
 
 export type FeaturedCompany = {
   id: string
@@ -43,13 +44,12 @@ export function FeaturedCompaniesCarousel({ companies }: { companies: FeaturedCo
     <section className={styles.section} aria-labelledby="featured-companies-title">
       <div className={styles.header}>
         <div>
-          <h2 id="featured-companies-title" className={styles.title}>
-            Top Companies Hiring Now
-          </h2>
+          <SectionHeading id="featured-companies-title" eyebrow="Companies" light="Top Companies" strong="Hiring Now" />
           <p className={styles.subtitle}>$100k+ roles at the companies hiring most</p>
         </div>
-        <Link href="/companies" className={styles.allLink}>
-          See all companies <span aria-hidden="true">→</span>
+        <Link href="/companies" className={`arrow-link ${styles.allLink}`}>
+          <span className="arrow-link-label">See all companies</span>
+          <span className="arrow-chip" aria-hidden="true">&#8599;</span>
         </Link>
       </div>
 

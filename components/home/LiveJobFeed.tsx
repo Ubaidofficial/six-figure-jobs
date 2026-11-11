@@ -85,7 +85,9 @@ export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedIte
         <div>
           <h2 id="live-feed-heading" className={styles.title}>
             <span className={styles.dot} aria-hidden="true" />
-            New jobs, live
+            <span>
+              <span className="font-light">New jobs,</span> live
+            </span>
           </h2>
           <p className={styles.sub}>
             {newest ? `Latest job added ${formatAgo(newest, now)}.` : 'Updated continuously.'} This list refreshes while you
@@ -101,8 +103,9 @@ export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedIte
               </button>
             ) : null}
           </span>
-          <Link href="/jobs?sort=recent" className={styles.all}>
-            All new jobs <span aria-hidden="true">→</span>
+          <Link href="/jobs?sort=recent" className={`arrow-link ${styles.all}`}>
+            <span className="arrow-link-label">All new jobs</span>
+            <span className="arrow-chip" aria-hidden="true">&#8599;</span>
           </Link>
         </div>
       </header>

@@ -1,6 +1,8 @@
 // app/pageFAQ.tsx
 // Home page FAQ component (exported for reuse/testing)
 
+import { SectionHeading } from '@/components/ui/SectionHeading'
+
 export function HomeFAQ() {
   const items = [
     {
@@ -28,10 +30,10 @@ export function HomeFAQ() {
   // An accordion: questions scan in one glance and each answer opens in place (it stays in the HTML for search engines).
   return (
     <section className="mt-12" aria-labelledby="home-faq-heading">
-      <h2 id="home-faq-heading" className="mb-4 [font-family:var(--font-display)] text-xl font-bold tracking-tight text-foreground">
-        Questions people ask
-      </h2>
-      <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="mb-5">
+        <SectionHeading id="home-faq-heading" eyebrow="FAQ" light="Questions" strong="people ask" />
+      </div>
+      <div className="panel-hairline divide-y divide-border overflow-hidden">
         {items.map((item) => (
           <details key={item.q} className="group">
             <summary className="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold text-foreground hover:bg-muted/40 [&::-webkit-details-marker]:hidden">

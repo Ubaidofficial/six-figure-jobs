@@ -301,7 +301,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     return (
       <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-14 pt-10">
         <header className="mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+          <h1 className="text-4xl font-normal tracking-[-0.035em] text-foreground">
             Companies hiring $100k+ roles
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">

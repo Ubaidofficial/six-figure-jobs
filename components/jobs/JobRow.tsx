@@ -35,9 +35,20 @@ const NEW_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 const MAX_SUMMARY_CHARS = 320
 const MAX_SKILLS = 8
 
-/** Bordered container the rows sit in, separated by thin dividers. */
-export function JobRowList({ children }: { children: ReactNode }) {
-  return <div className={styles.list}>{children}</div>
+/**
+ * Bordered container the rows sit in, separated by thin dividers. Rows below the fold fade in as they scroll into view
+ * (ScrollReveal): one by one by default, or all together in sequence with `reveal="stagger"` (short lists).
+ */
+export function JobRowList({ children, reveal = 'each' }: { children: ReactNode; reveal?: 'each' | 'stagger' }) {
+  return reveal === 'stagger' ? (
+    <div className={styles.list} data-reveal="" data-reveal-stagger="">
+      {children}
+    </div>
+  ) : (
+    <div className={styles.list} data-reveal-each="">
+      {children}
+    </div>
+  )
 }
 
 export function JobRow({

@@ -43,7 +43,7 @@ export function SiteStatsStrip({
 
   return (
     <section className={styles.band} aria-labelledby="site-stats-title">
-      <h2 id="site-stats-title" className={styles.eyebrow}>
+      <h2 id="site-stats-title" className={`eyebrow-pill ${styles.eyebrow}`}>
         6figjobs today
       </h2>
       <div className={`${styles.row} ${catalog ? '' : styles.noScreen}`}>
