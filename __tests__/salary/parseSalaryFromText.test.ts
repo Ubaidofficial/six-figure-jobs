@@ -20,6 +20,18 @@ describe('parseSalaryFromText – interval proximity hardening', () => {
   })
 })
 
+describe('parseSalaryFromText – small counts next to an annual range', () => {
+  // Mastercard's Workday postings, 2026-11-11: the snippet starts in the benefits paragraph, so "10 annual paid U.S.
+  // observed holidays" was read as $10 (a currency is in the text) and 225 jobs were rejected with salaryMin=10.
+  it('ignores sub-1,000 numbers when the text has an annual figure', () => {
+    const parsed = parseSalaryFromText(
+      "5 personal days; 10 annual paid U.S. observed holidays; 401k with a company match; 56 hours of Paid Sick Time. Pay Ranges O'Fallon, Missouri: $121,000 - $182,000 USD",
+    )
+    expect(parsed?.min).toBe(121_000)
+    expect(parsed?.max).toBe(182_000)
+  })
+})
+
 describe('validateHighSalaryEligibility – description cap', () => {
   it('rejects description-derived salaries above $600k USD', () => {
     const normalized = normalizeSalary({

@@ -543,7 +543,9 @@ function extractNumbers(text: string, currency: SupportedCurrency | null): numbe
     }
   }
 
-  return numbers
+  // An annual figure outranks small ones: with "$61,000 - $102,000" in the text, "10 annual paid holidays" is not pay.
+  // Mastercard's benefits paragraph made 225 of its jobs read as "$10 - $102,000" on 2026-11-11, all rejected as $10.
+  return numbers.some((n) => n >= 1000) ? numbers.filter((n) => n >= 1000) : numbers
 }
 
 function detectInterval(text: string): SalaryInterval {
