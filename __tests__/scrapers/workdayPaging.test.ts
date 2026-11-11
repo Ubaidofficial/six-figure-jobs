@@ -66,3 +66,30 @@ describe('scrapeWorkday salary text', () => {
     expect(job.salaryMax).toBe(190000)
   })
 })
+
+// Intel's board on 2026-11-11: one job page answered 404 (taken down between the list and the detail request) and the
+// whole board failed with it, after 135 s of work.
+describe('scrapeWorkday job page failures', () => {
+  const realFetch = global.fetch
+  afterEach(() => {
+    global.fetch = realFetch
+    jest.restoreAllMocks()
+  })
+
+  it('skips a job whose page fails and keeps the rest of the board', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+    global.fetch = jest.fn(async (url: any, init: any) => {
+      if (init?.method === 'POST') {
+        const body = JSON.parse(init.body)
+        const jobPostings = body.offset === 0 ? [1, 2, 3].map((n) => ({ title: `Job ${n}`, externalPath: `/job/x/Job_${n}` })) : []
+        return new Response(JSON.stringify({ total: 3, jobPostings }), { status: 200 })
+      }
+      const id = String(url).split('Job_')[1]
+      if (id === '2') return new Response('gone', { status: 404, statusText: 'Not Found' })
+      return new Response(JSON.stringify({ jobPostingInfo: { id, title: `Job ${id}`, jobDescription: '<p>$150,000 - $200,000</p>', location: 'Remote, US' } }), { status: 200 })
+    }) as any
+
+    const jobs = await scrapeWorkday('https://acme.wd5.myworkdayjobs.com/wday/cxs/acme/External/jobs')
+    expect(jobs.map((j) => j.title)).toEqual(['Job 1', 'Job 3'])
+  })
+})

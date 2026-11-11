@@ -477,6 +477,7 @@ export async function scrapeWorkday(atsUrl: string): Promise<AtsJob[]> {
     ]
   }
 
+  const failedDetails: string[] = []
   const details = await mapLimit(
     summaries.filter(
       (job): job is WorkdayListingJob & { externalPath: string } =>
@@ -484,21 +485,24 @@ export async function scrapeWorkday(atsUrl: string): Promise<AtsJob[]> {
     ),
     DETAIL_CONCURRENCY,
     async (job) => {
-      const detail = await fetchJsonWithRetry<WorkdayDetailResponse>(
-        `${apiBase}${job.externalPath}`,
-        {
-          method: 'GET',
-        },
-      )
-
-      return {
-        summary: job,
-        detail: detail.jobPostingInfo ?? null,
+      // One job's page failing (taken down between the list and this request: HTTP 404, or a timeout) skips that job.
+      // It used to fail the whole board: Intel's 2026-11-11 sync lost 135 s of work to one 404.
+      try {
+        const detail = await fetchJsonWithRetry<WorkdayDetailResponse>(`${apiBase}${job.externalPath}`, { method: 'GET' })
+        return { summary: job, detail: detail.jobPostingInfo ?? null }
+      } catch (error) {
+        failedDetails.push(`${job.externalPath}: ${error instanceof Error ? error.message : String(error)}`)
+        return null
       }
     },
   )
+  if (failedDetails.length) {
+    console.warn(`[Workday] ${context.tenant}: skipped ${failedDetails.length} job page(s) that failed, e.g. ${failedDetails[0]}`)
+  }
 
-  return details.map((mapped): AtsJob => mapWorkdayDetailToJob(context, mapped))
+  return details
+    .filter((mapped): mapped is NonNullable<typeof mapped> => mapped !== null)
+    .map((mapped): AtsJob => mapWorkdayDetailToJob(context, mapped))
 }
 
 export async function scrapeWorkdayResult(atsUrl: string): Promise<ATSResult> {
