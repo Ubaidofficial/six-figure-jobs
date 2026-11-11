@@ -8,6 +8,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { queryJobs } from '../../../../lib/jobs/queryJobs'
 import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
+import { buildCountryTitle, buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
 
 import { CountryLocationTemplate } from '../_components/CountryLocationTemplate'
 import { isCountryPageIndexable } from '../../../../lib/seo/indexabilityGates'
@@ -75,11 +76,13 @@ export async function generateMetadata({
 
   const title = loc.remoteOnly
     ? `Remote ${salaryLabel} jobs (${total.toLocaleString()}) | ${SITE_NAME}`
-    : `${salaryLabel} jobs in ${loc.label} (${total.toLocaleString()}) | ${SITE_NAME}`
+    : buildCountryTitle(loc.label, salaryLabel, total)
 
   const description = loc.remoteOnly
     ? `Browse ${total.toLocaleString()} remote ${salaryLabel} jobs with published salary ranges, and fresh listings across engineering, product, and data.`
-    : `Browse ${total.toLocaleString()} ${salaryLabel} jobs in ${loc.label}. Find high paying ${loc.label} roles, six figure jobs, direct apply links, and verified salary ranges.`
+    : buildListingDescription(`${countPrefix(total)}high-paying jobs in ${loc.label} paying ${salaryLabel}.`, [
+        ['Six-figure roles across engineering, product, data and sales.', 'Remote, hybrid and on-site roles.'],
+      ])
 
   const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
   // In phase 1 only the allowlisted countries (US, GB, CA, DE, AU) are indexable; the rest wait for phase 2.

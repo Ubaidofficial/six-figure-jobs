@@ -22,7 +22,7 @@ export const revalidate = 600
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
-const TITLE = 'Six-Figure Jobs Without a Degree ($100k+) | Six Figure Jobs'
+const TITLE = 'High-Paying Jobs Without a Degree ($100k+) | Six Figure Jobs'
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -183,7 +183,7 @@ export default async function NoDegreeJobsPage({
           </span>
         </div>
         <h1 style={{ fontSize: 42, fontWeight: 800, margin: '0 0 12px', lineHeight: 1.15 }}>
-          <span style={{ color: 'var(--color-primary-text)' }}>Six-figure</span> jobs{' '}
+          <span style={{ color: 'var(--color-primary-text)' }}>High-paying</span> jobs{' '}
           <span style={{ color: 'var(--color-text-0)' }}>without a degree</span>
         </h1>
         <p style={{ fontSize: 18, color: 'var(--color-text-1)', margin: 0 }}>

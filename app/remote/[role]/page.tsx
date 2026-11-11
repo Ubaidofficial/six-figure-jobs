@@ -276,10 +276,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         isRemoteRolePageIndexable(jobCount) &&
         isPhaseIndexable({ roleSlug, pathname: `/remote/${roleSlug}` })
 
-      // Keeps the established "N Remote Role $100k+ Jobs | brand" wording whenever it fits; long role names drop the brand.
+      // "N Remote Role Jobs Paying $100k+", the same shape as /jobs/<role>; long role names drop the brand.
       const title = fitTitle([
-        `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs | ${SITE_NAME}`,
-        `${jobCount.toLocaleString()} Remote ${roleName} $100k+ Jobs`,
+        `${jobCount.toLocaleString()} Remote ${roleName} Jobs Paying $100k+ | ${SITE_NAME}`,
+        `${jobCount.toLocaleString()} Remote ${roleName} Jobs Paying $100k+`,
         `${jobCount.toLocaleString()} Remote ${roleName} Jobs`,
       ])
       const description = buildListingDescription(`${countPrefix(jobCount)}remote ${roleName} jobs paying $100k+.`, [
@@ -297,7 +297,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
           ? { index: true, follow: true }
           : { index: false, follow: true },
         openGraph: { images: defaultOgImages(),
-          title: `Remote ${roleName} $100k+ Jobs`,
+          title: `Remote ${roleName} Jobs Paying $100k+`,
           description: `${jobCount.toLocaleString()} remote ${roleName} jobs with $100k+ salaries.`,
           url: `${SITE_URL}${canonicalPath}`,
           siteName: SITE_NAME,

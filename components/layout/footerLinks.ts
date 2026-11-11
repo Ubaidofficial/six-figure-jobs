@@ -16,6 +16,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       ['New Jobs', '/jobs?sort=recent'],
       ['Remote Jobs', '/remote'],
       ['Top Companies', '/companies'],
+      ['Highest-Paying Jobs', '/high-paying-jobs'],
       ['$100k+ Jobs', '/jobs/100k-plus'],
       ['$200k+ Jobs', '/jobs/200k-plus'],
       ['$300k+ Jobs', '/jobs/300k-plus'],
@@ -77,7 +78,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     links: [
       ['Career Blog', '/blog'],
       ['Visa Sponsorship Jobs', '/jobs/visa-sponsorship'],
-      ['No-Degree Tech Jobs', '/jobs/no-degree'],
+      ['Jobs Without a Degree', '/jobs/no-degree'],
       ['4-Day Work Week Jobs', '/jobs/4-day-week'],
       ['Senior-Level Jobs', '/jobs/level/senior'],
       ['Search in Claude & ChatGPT', '/mcp'],

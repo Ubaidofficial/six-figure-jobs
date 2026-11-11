@@ -274,7 +274,7 @@ function JobsIndexFallback({ techFilter }: { techFilter?: string }) {
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
           Live job data temporarily unavailable
         </p>
-        <h1 className="mt-3 text-3xl font-semibold text-foreground">All $100k+ Jobs</h1>
+        <h1 className="mt-3 text-3xl font-semibold text-foreground">All six-figure jobs ($100k+)</h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           The production database is reconnecting. Search metadata is still live, but the full job
           feed is temporarily unavailable.
@@ -636,7 +636,7 @@ export default async function JobsIndexPage({
               )
             ) : (
               <>
-                All <Accent>$100k+</Accent> Jobs
+                All <Accent>six-figure</Accent> jobs ($100k+)
               </>
             )
           }

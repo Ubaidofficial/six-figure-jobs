@@ -8,6 +8,9 @@ import {
   buildCompanyPageDescription,
   buildCategoryTitle,
   buildCityTitle,
+  buildCountryTitle,
+  buildSalaryGuideTitle,
+  buildSkillTitle,
   buildCompanyPageTitle,
   buildDescription,
   buildHomeDescription,
@@ -195,8 +198,9 @@ describe('home description', () => {
 })
 
 describe('company page metadata', () => {
-  it('keeps the established title when it fits', () => {
-    expect(buildCompanyPageTitle('Stripe', 12)).toBe('Stripe $100k+ Jobs - 12 Open Positions | Six Figure Jobs')
+  it('leads with "<Company> Jobs", the way people search for an employer', () => {
+    expect(buildCompanyPageTitle('Stripe', 12)).toBe('Stripe Jobs: 12 Openings Paying $100k+ | Six Figure Jobs')
+    expect(buildCompanyPageTitle('OpenAI', 1234)).toBe('OpenAI Jobs: 1,234 Openings Paying $100k+ | Six Figure Jobs')
   })
 
   it('never exceeds 60 characters, including very long company names', () => {
@@ -360,9 +364,10 @@ describe('job page fitTitle (jobMeta)', () => {
 })
 
 describe('/jobs hub title and description', () => {
-  it('leads with the live count and keeps the six-figure wording', () => {
-    expect(buildJobsHubTitle(3874)).toBe('3,874 Six-Figure Tech Jobs — $100k+ Openings')
-    expect(buildJobsHubDescription(3874).startsWith('3,874 $100k+ tech jobs open now.')).toBe(true)
+  it('leads with the live count and says six-figure and high-paying, not "tech"', () => {
+    expect(buildJobsHubTitle(3874)).toBe('3,874 Six-Figure Jobs — High-Paying $100k+ Roles')
+    expect(buildJobsHubDescription(3874).startsWith('3,874 high-paying $100k+ jobs open now.')).toBe(true)
+    expect(buildJobsHubDescription(3874)).not.toMatch(/tech/i)
   })
 
   it('stays within the limits for every count, with or without a page suffix', () => {
@@ -376,9 +381,9 @@ describe('/jobs hub title and description', () => {
   })
 
   it('has no count when it is unknown or zero', () => {
-    expect(buildJobsHubTitle(null)).toBe('Six-Figure Tech Jobs — $100k+ Openings | Six Figure Jobs')
-    expect(buildJobsHubTitle(0)).toBe('Six-Figure Tech Jobs — $100k+ Openings | Six Figure Jobs')
-    expect(buildJobsHubDescription(0).startsWith('$100k+ tech jobs open now.')).toBe(true)
+    expect(buildJobsHubTitle(null)).toBe('Six-Figure Jobs — High-Paying $100k+ Roles | Six Figure Jobs')
+    expect(buildJobsHubTitle(0)).toBe('Six-Figure Jobs — High-Paying $100k+ Roles | Six Figure Jobs')
+    expect(buildJobsHubDescription(0).startsWith('high-paying $100k+ jobs open now.')).toBe(true)
   })
 })
 
@@ -394,11 +399,11 @@ describe('salary tier title and description', () => {
     }
   })
 
-  it('puts the live count first and names the range', () => {
+  it('puts the live count first and reads "jobs that pay <range> a year"', () => {
     const { rangeLabel } = SALARY_TIERS['100k-plus']
-    expect(buildSalaryTierTitle(rangeLabel, 1234).startsWith(`1,234 ${rangeLabel} Jobs`)).toBe(true)
-    expect(buildSalaryTierDescription(rangeLabel, 1234).startsWith(`1,234 ${rangeLabel} jobs open now.`)).toBe(true)
-    expect(buildSalaryTierTitle(rangeLabel, 0).startsWith(rangeLabel)).toBe(true)
+    expect(buildSalaryTierTitle(rangeLabel, 1234)).toBe(`1,234 Jobs That Pay ${rangeLabel} a Year | Six Figure Jobs`)
+    expect(buildSalaryTierDescription(rangeLabel, 1234).startsWith(`1,234 jobs that pay ${rangeLabel} a year, open now.`)).toBe(true)
+    expect(buildSalaryTierTitle(rangeLabel, 0).startsWith(`Jobs That Pay ${rangeLabel} a Year`)).toBe(true)
   })
 })
 
@@ -413,8 +418,29 @@ describe('city and category titles', () => {
         }
       }
     }
-    expect(buildCityTitle('Austin', '$100k+', 1234)).toBe('1,234 $100k+ Jobs in Austin | Six Figure Jobs')
-    expect(buildCityTitle('Austin', '$100k+', 0)).toBe('$100k+ Jobs in Austin | Six Figure Jobs')
+    expect(buildCityTitle('Austin', '$100k+', 1234)).toBe('1,234 High-Paying Jobs in Austin ($100k+) | Six Figure Jobs')
+    expect(buildCityTitle('Austin', '$100k+', 0)).toBe('High-Paying Jobs in Austin ($100k+) | Six Figure Jobs')
+  })
+
+  it('country titles say high-paying, name the local floor and stay within the limit', () => {
+    for (const country of ['United States', 'United Kingdom', 'Canada', 'Germany', 'Australia', 'United Arab Emirates']) {
+      for (const label of SALARY_LABELS) {
+        for (const count of COUNTS) {
+          expect(buildCountryTitle(country, label, count).length).toBeLessThanOrEqual(TITLE_MAX)
+        }
+      }
+    }
+    expect(buildCountryTitle('Canada', 'C$120k+', 1637)).toBe('1,637 High-Paying Jobs in Canada (C$120k+) | Six Figure Jobs')
+    expect(buildCountryTitle('United States', '$100k+', 14942)).toBe('14,942 High-Paying Jobs in United States ($100k+)')
+  })
+
+  it('skill titles match the role-page shape and stay within the limit', () => {
+    for (const label of ['Python', 'AWS', 'Machine Learning', 'Natural Language Processing', 'Kubernetes']) {
+      for (const count of COUNTS) {
+        expect(buildSkillTitle(label, count).length).toBeLessThanOrEqual(TITLE_MAX)
+      }
+    }
+    expect(buildSkillTitle('Python', 674)).toBe('674 Python Jobs Paying $100k+ | Six Figure Jobs')
   })
 
   it('category titles match the role-page shape and stay within the limit', () => {
@@ -424,5 +450,21 @@ describe('city and category titles', () => {
       }
     }
     expect(buildCategoryTitle('Engineering', 1420)).toBe('1,420 Engineering Jobs Paying $100k+ | Six Figure Jobs')
+  })
+})
+
+describe('salary guide titles', () => {
+  it('lead with "<Role> Salary" and the median when there is one', () => {
+    expect(buildSalaryGuideTitle('Software Engineer', '$100k+', 229_400)).toBe('Software Engineer Salary: $229k Median | Six Figure Jobs')
+    expect(buildSalaryGuideTitle('Backend Engineer', '$100k+', null)).toBe('Backend Engineer Salary Guide ($100k+) | Six Figure Jobs')
+  })
+
+  it('stay within the limit for long role names', () => {
+    for (const role of ['Machine Learning Engineer', 'Senior Site Reliability Engineer', 'Principal Machine Learning Infrastructure Engineer']) {
+      for (const median of [null, 95_000, 252_000, 1_250_000]) {
+        expect(buildSalaryGuideTitle(role, '$400k+', median).length).toBeLessThanOrEqual(TITLE_MAX)
+      }
+    }
+    expect(buildSalaryGuideTitle('Machine Learning Engineer', '$100k+', 252_000)).toBe('Machine Learning Engineer Salary: $252k Median')
   })
 })

@@ -219,7 +219,7 @@ export default async function CompanyPage({
                   { label: company.name },
                 ]}
               />
-              <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl">{company.name}</h1>
+              <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl">{company.name} jobs</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 <strong className="font-semibold text-foreground">{jobs.length}</strong> open $100k+{' '}
                 {jobs.length === 1 ? 'job' : 'jobs'}

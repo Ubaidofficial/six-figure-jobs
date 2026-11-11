@@ -137,13 +137,13 @@ export async function generateMetadata({
         `${regionLabel} Remote $100k+ Jobs`,
       ])
     : fitTitle([
-        `Remote $100k+ Jobs — ${total.toLocaleString()} Six-Figure Openings | ${SITE_NAME}`,
-        `Remote $100k+ Jobs — ${total.toLocaleString()} Six-Figure Openings`,
-        `Remote $100k+ Jobs`,
+        `${total.toLocaleString()} High-Paying Remote Jobs ($100k+) | ${SITE_NAME}`,
+        `${total.toLocaleString()} High-Paying Remote Jobs ($100k+)`,
+        `High-Paying Remote Jobs ($100k+)`,
       ])
   const description = regionLabel
     ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs in engineering, product, data and more, with published salaries and fresh listings.`
-    : `Browse ${total.toLocaleString()} remote six-figure jobs with published salaries and links to apply. Engineering, product, data and more, new jobs added daily.`
+    : `Browse ${total.toLocaleString()} high-paying remote jobs ($100k+) with published salaries and links to apply. Engineering, product, data and more, added daily.`
 
   return {
     title,
@@ -505,8 +505,8 @@ export default async function RemoteJobsPage({
             />
           }
           breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Remote Jobs' }]}
-          accent={regionPill ? regionPill.replace(' Jobs', '') : 'Remote'}
-          title="$100k+ Jobs"
+          accent={regionPill ? regionPill.replace(' Jobs', '') : 'High-paying remote'}
+          title={regionPill ? '$100k+ Jobs' : 'jobs ($100k+)'}
           summary={
             <>
               <strong>{remoteJobCount.toLocaleString()}</strong> remote {remoteJobCount === 1 ? 'job' : 'jobs'} from{' '}

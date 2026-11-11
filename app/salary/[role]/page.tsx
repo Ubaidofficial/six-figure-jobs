@@ -11,10 +11,11 @@ import JobList from '../../components/JobList'
 import type { Job } from '@prisma/client'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
 import { capDescription } from '../../../lib/seo/jobMeta'
+import { buildSalaryGuideTitle } from '../../../lib/seo/metaText'
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 import { isCanonicalSlug } from '../../../lib/roles/canonicalSlugs'
-import { findBestMatchingRole } from '../../../lib/roles/slugMatcher'
+import { findBestMatchingRole, slugToLabel } from '../../../lib/roles/slugMatcher'
 import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
 import { RoleSalarySections } from '@/components/salary/RoleSalaryGuide'
 import { loadRoleSalaryGuide } from '../../../lib/salary/roleGuide'
@@ -88,10 +89,9 @@ function parsePage(searchParams?: SearchParams): number {
   return Math.max(1, n)
 }
 
+// Same labels as the rest of the site ("DevOps Engineer", "ML Engineer"), not plain title case ("Devops Engineer").
 function prettyRole(slug: string): string {
-  return slug
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+  return slugToLabel(slug)
 }
 
 function buildPageHref(
@@ -165,7 +165,7 @@ export async function generateMetadata({
 
   description = capDescription(description)
   const allowIndex = guide.listings >= 1
-  const title = `${salaryBand} ${roleName} salary guide | Six Figure Jobs`
+  const title = buildSalaryGuideTitle(roleName, salaryBand, guide.usd?.median ?? null)
   // Canonical always points to the base salary page — band filter is a view
   // variant, not a separate indexable page. Query params in canonicals confuse
   // Google and fragment the PageRank across variants.

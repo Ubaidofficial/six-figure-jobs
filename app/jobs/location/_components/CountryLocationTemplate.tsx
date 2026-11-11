@@ -455,8 +455,8 @@ export async function CountryLocationTemplate({
       <ListingHeader
         aside={<ListingSalaryAside input={queryInput} scope={`roles in ${loc.label}`} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: loc.label }]}
-        accent="$100k+"
-        title={`Jobs in ${loc.label}`}
+        accent="High-paying"
+        title={`jobs in ${loc.label}`}
         summary={
           <>
             Every job in {loc.label} shows a published salary of at least {thresholdLabel}, from{' '}

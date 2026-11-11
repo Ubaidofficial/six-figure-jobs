@@ -52,6 +52,9 @@ import { TOP_COMPANY_SLUGS } from '@/lib/constants/topCompanies'
 
 export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dynamic
 
+// The brand ("six figure jobs", "6 figure jobs") and the biggest related search ("high paying jobs") in one title.
+const HOME_TITLE = 'Six Figure Jobs | High-Paying $100k+ Jobs, Salary Shown'
+
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const stats = await loadPublicSiteStats()
@@ -61,7 +64,7 @@ export async function generateMetadata(): Promise<Metadata> {
       `Pay thresholds set per currency. $100k+ remote & on-site roles from ${stats.totalCompaniesHiring.toLocaleString()}+ companies.`
 
     return {
-      title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
+      title: HOME_TITLE,
       description,
       keywords:
         '6 figure jobs, six figure jobs, 6 figure salary jobs, six-figure jobs, high paying jobs, easy 6 figure jobs, 6 figure remote jobs, 6 figure jobs no degree, 6 figure jobs without college degree, six-figure salary jobs, best 6 figure jobs',
@@ -69,7 +72,7 @@ export async function generateMetadata(): Promise<Metadata> {
         canonical: getSiteUrl(),
       },
       openGraph: {
-        title: 'Six Figure Jobs & High Paying $100k+ Positions',
+        title: HOME_TITLE,
         description: ogDescription,
         url: getSiteUrl(),
         siteName: '6FigJobs - Six Figure Jobs',
@@ -85,7 +88,7 @@ export async function generateMetadata(): Promise<Metadata> {
       },
       twitter: {
         card: 'summary_large_image',
-        title: 'Six Figure Jobs | High Paying $100k+ Positions',
+        title: HOME_TITLE,
         description: `Find six-figure jobs with salaries. Explore ${stats.totalJobs.toLocaleString()}+ high-paying opportunities.`,
         images: [`${getSiteUrl()}/og-image.png`],
       },
@@ -103,7 +106,7 @@ export async function generateMetadata(): Promise<Metadata> {
     }
   } catch {
     return {
-      title: 'Six Figure Jobs | Verified $100k+ Remote & On-Site Roles',
+      title: HOME_TITLE,
       description:
         'Find $100k+ jobs with published salary ranges. Premium roles from verified companies.',
       alternates: {

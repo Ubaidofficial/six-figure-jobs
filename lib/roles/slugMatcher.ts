@@ -247,6 +247,9 @@ export function slugToLabel(slug: string): string {
     sre: 'SRE',
     hr: 'HR',
     seo: 'SEO',
+    devops: 'DevOps',
+    mlops: 'MLOps',
+    devsecops: 'DevSecOps',
   }
 
   return slug
