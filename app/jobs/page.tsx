@@ -19,9 +19,10 @@ import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
 import { parseSliceFilters } from '../../lib/slices/types'
 import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
+import { salaryFilterCurrency } from '@/lib/jobs/salaryFilter'
+import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { displayKeyword } from '@/lib/search/displayKeyword'
-import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
 import { CategoryRow, type CategoryRowItem } from '@/components/listing/CategoryRow'
 import { loadListingSalaryStats } from '@/lib/jobs/listingSalaryStats'
@@ -35,6 +36,7 @@ import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fa
 
 import { JobsFiltersPanel, type JobsFacets } from './_components/JobsFilters'
 import { JobsToolbar } from './_components/JobsToolbar'
+import { ActiveFilters } from './_components/ActiveFilters'
 import {
   Accent,
   Faq,
@@ -47,6 +49,7 @@ import {
   Pagination,
 } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { toPublicJob } from '@/lib/jobs/publicJob'
 
 export const revalidate = 600
 
@@ -179,20 +182,6 @@ function buildPageHref(basePath: string, sp: SearchParams, page: number): string
   if (page > 1) params.set('page', String(page))
   const qs = params.toString()
   return qs ? `${basePath}?${qs}` : basePath
-}
-
-function resolveCurrencyFromCountryCode(code?: string | null): string | null {
-  const cc = (code || '').toUpperCase()
-  if (!cc) return null
-  const map: Record<string, string> = {
-    US: 'USD',
-    GB: 'GBP',
-    CA: 'CAD',
-    DE: 'EUR',
-    NL: 'EUR',
-    AU: 'AUD',
-  }
-  return map[cc] ?? null
 }
 
 function prettyRoleAndCountryFromSlug(slug: string): string {
@@ -365,7 +354,7 @@ export default async function JobsIndexPage({
     minSalaryRaw && Number.isFinite(minSalaryRaw)
       ? Math.min(450_000, Math.max(100_000, minSalaryRaw))
       : null
-  const salaryCurrency = minSalary ? resolveCurrencyFromCountryCode(country) ?? 'USD' : null
+  const salaryCurrency = minSalary ? salaryFilterCurrency(country) : null
   const activeFilterCount =
     roles.length +
     seniority.length +
@@ -445,6 +434,9 @@ export default async function JobsIndexPage({
       ]))
 
   const vocabulary = await getSearchVocabulary().catch(() => null)
+  const levelSize = await memoAsync(stableKey('jobs-hub-level-size', baseFacetInput), DEFAULT_TTL_MS, () =>
+    loadLevelSizeCounts(baseFacetInput),
+  )
 
   const facets: JobsFacets = {
     roles: roleRows
@@ -467,6 +459,7 @@ export default async function JobsIndexPage({
     techs: vocabulary?.topSkills.map((t) => ({ value: t.term, count: t.count })),
     visaFilter: true,
     remoteRegions: JOBS_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
+    ...levelSize,
   }
 
   // ✅ UI dedupe: collapse identical ATS duplicates (same company + title + comp)
@@ -602,11 +595,6 @@ export default async function JobsIndexPage({
         })
       : []
 
-  const workTypeLinks = workTypeStats(
-    facets.workTypes,
-    (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1),
-    rawRemoteMode,
-  )
 
     return (
       <ListingPage>
@@ -674,21 +662,13 @@ export default async function JobsIndexPage({
               </>
             )
           }
-          cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${jobsWord}` : undefined}
-          stats={workTypeLinks}
-          toolbar={<JobsToolbar facets={facets} />}
         />
 
-        <CategoryRow items={categoryItems} />
-
-        <ListingLayout sidebar={<JobsFiltersPanel facets={facets} />} alert={queryInput}>
-          {techFilter ? (
-            <LinkChips
-              label="Active technology filter"
-              items={[{ label: `Technology: ${techFilter} ✕`, href: '/jobs', active: true }]}
-            />
-          ) : null}
-
+        <ListingLayout
+          sidebar={<JobsFiltersPanel facets={facets} />}
+          bar={<ActiveFilters total={data.total} actions={<JobsToolbar facets={facets} total={data.total} />} />}
+          alert={queryInput}
+        >
           {data.search?.corrections.length && keyword ? (
             <p className="mb-3 text-sm text-muted-foreground" role="status">
               Showing results for{' '}
@@ -717,13 +697,16 @@ export default async function JobsIndexPage({
             />
           ) : (
             <>
-              <InfiniteJobsList initialJobs={dedupedJobs} initialPage={page} totalPages={totalPages} />
+              <InfiniteJobsList initialJobs={dedupedJobs.map(toPublicJob)} initialPage={page} totalPages={totalPages} />
               {/* Server-rendered pagination links so Google can crawl pages beyond 1; the client list above
                   appends pages for people. */}
               <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} numbered />
             </>
           )}
         </ListingLayout>
+
+        {/* Below the results, so the jobs are the first thing under the header (they sat under these tiles). */}
+        <CategoryRow items={categoryItems} />
 
         {countryPay.length > 0 ? (
           <ListingSection title="Where the six-figure jobs are">

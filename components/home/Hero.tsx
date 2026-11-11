@@ -14,6 +14,7 @@ import type { FeedItem } from '@/lib/jobs/latestFeed'
 import { HeroSalaryBands } from './HeroSalaryBands'
 import { HeroSearchInput } from './HeroSearchInput'
 import styles from './Hero.module.css'
+import { formatRelativeTime } from '@/lib/utils/time'
 
 type HeroProps = {
   jobCount?: number
@@ -50,11 +51,9 @@ function bandHref(min: number): string {
   return [100_000, 200_000, 400_000].includes(min) ? `/jobs/${min / 1000}k-plus` : `/jobs?minSalary=${min}`
 }
 
+/** "3h ago", the same style as the job rows. The newest job is the first of the "Most Recent" list (by posting date). */
 function formatNewest(iso: string | null | undefined): string | null {
-  if (!iso) return null
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  return iso ? formatRelativeTime(iso) : null
 }
 
 function formatCounted(iso: string): string {
@@ -130,7 +129,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
             ? `${newThisWeek.toLocaleString()} new this week`
             : null}
           {typeof newThisWeek === 'number' && newThisWeek > 0 && newest ? ' · ' : null}
-          {newest ? `Newest listing posted ${newest}` : null}
+          {newest ? `newest posted ${newest}` : null}
         </p>
       ) : null}
       </div>

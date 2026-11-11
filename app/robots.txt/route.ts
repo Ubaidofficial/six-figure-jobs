@@ -8,6 +8,8 @@ const SITE_URL = getSiteUrl()
 
 export const revalidate = 86400
 
+const SLOW_CRAWLERS = ['AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'PetalBot'] as const
+
 // Only the index plus the jobs sitemap (for Google Jobs discovery). Child sitemaps are discovered through the index.
 function buildSitemapLines(): string[] {
   return [
@@ -39,6 +41,22 @@ export async function GET() {
     '',
     'User-agent: ClaudeBot',
     'Disallow: /api/',
+    '',
+    // SEO-tool crawlers bring no visitors; a crowd of them right after a deploy (empty caches) ran the server out of
+    // memory on 2026-11-11. They honour Crawl-delay (seconds between requests); Googlebot ignores it and is not listed.
+    // A crawler with its own group skips the `*` group, so the disallows are repeated.
+    ...SLOW_CRAWLERS.map((bot) => `User-agent: ${bot}`),
+    'Crawl-delay: 5',
+    'Disallow: /search',
+    'Disallow: /api/',
+    'Disallow: /ubaid93/',
+    '',
+    // AI answer engine (sends visitors): slowed, not blocked.
+    'User-agent: PerplexityBot',
+    'Crawl-delay: 2',
+    'Disallow: /search',
+    'Disallow: /api/',
+    'Disallow: /ubaid93/',
     '',
     ...buildSitemapLines(),
     '',

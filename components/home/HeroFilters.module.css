@@ -76,65 +76,6 @@
   gap: 16px 32px;
 }
 
-.pills {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.pillRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.pill {
-  position: relative;
-  cursor: pointer;
-}
-
-/* The real radio stays in the accessibility tree and keyboard order; only its look is hidden. */
-.pillInput {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.pillText {
-  display: inline-flex;
-  align-items: center;
-  height: 36px;
-  padding: 0 16px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-0);
-  background: var(--color-bg-1);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 16%, transparent);
-  border-radius: 999px;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-
-.pill:hover .pillText {
-  border-color: color-mix(in srgb, var(--color-fg) 32%, transparent);
-}
-
-.pillInput:checked + .pillText {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #0a0a0a;
-  font-weight: 600;
-}
-
-.pillInput:focus-visible + .pillText {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
 @media (max-width: 640px) {
   .selects {
     grid-template-columns: minmax(0, 1fr);
@@ -225,12 +166,7 @@
     display: grid;
   }
 
-  /* 44 px touch targets */
-  .pillText {
-    height: 44px;
-    padding: 0 18px;
-  }
-
+  /* 44 px touch targets (the pills set their own in FilterPills.module.css) */
   .select {
     height: 48px;
   }

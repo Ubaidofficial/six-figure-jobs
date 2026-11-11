@@ -2,6 +2,7 @@ const mockQuery = jest.fn()
 jest.mock('@/lib/jobs/queryJobs', () => ({ queryJobs: (...a: unknown[]) => mockQuery(...a) }))
 
 import { __clearMemoForTests } from '@/lib/cache/memo'
+import { publicJobId } from '@/lib/jobs/publicJob'
 import {
   FEED_SIZE,
   LATEST_FEED_TTL_MS,
@@ -42,7 +43,7 @@ describe('buildFeedItems', () => {
   it('maps a job to what the feed shows, timed by when WE added it', () => {
     const [item] = buildFeedItems([job()])
     expect(item).toMatchObject({
-      id: 'j1',
+      id: publicJobId('j1'), // the code in the job's URL, never the internal id
       title: 'Senior Engineer',
       company: 'Acme',
       countryCode: 'US',
@@ -72,14 +73,14 @@ describe('buildFeedItems', () => {
       job({ id: 'a4', title: 'Role A', companyId: 'c2', company: 'Other' }),
       job({ id: 'a5', title: 'Role A', companyId: 'c2', company: 'Other' }), // same company + title: skipped
     ]
-    expect(buildFeedItems(jobs).map((i) => i.id)).toEqual(['a1', 'a2', 'a4'])
+    expect(buildFeedItems(jobs).map((i) => i.id)).toEqual(['a1', 'a2', 'a4'].map(publicJobId))
   })
 
   it('stops at the limit, and skips jobs with no date or no title', () => {
     const many = Array.from({ length: 40 }, (_, i) => job({ id: `x${i}`, title: `T${i}`, companyId: `c${i}` }))
     expect(buildFeedItems(many)).toHaveLength(FEED_SIZE)
     const bad = [job({ id: 'n1', createdAt: null, postedAt: null, updatedAt: null }), job({ id: 'n2', title: '  ' }), job({ id: 'ok' })]
-    expect(buildFeedItems(bad).map((i) => i.id)).toEqual(['ok'])
+    expect(buildFeedItems(bad).map((i) => i.id)).toEqual([publicJobId('ok')])
   })
 })
 
@@ -112,7 +113,7 @@ describe('loadLatestFeed', () => {
     mockQuery.mockResolvedValue({ jobs: [job({ id: 'n', createdAt: new Date('2026-11-06T12:00:00Z') }), job({ id: 'o', title: 'Older' })] })
     const first = await loadLatestFeed()
     expect(first.newestAt).toBe('2026-11-06T12:00:00.000Z')
-    expect(first.items.map((i) => i.id)).toEqual(['n', 'o'])
+    expect(first.items.map((i) => i.id)).toEqual(['n', 'o'].map(publicJobId))
     expect(mockQuery).toHaveBeenCalledWith(expect.objectContaining({ isHundredKLocal: true, sortBy: 'date', excludeInternships: true }))
     expect(await loadLatestFeed()).toBe(first)
     expect(mockQuery).toHaveBeenCalledTimes(1)
@@ -130,6 +131,6 @@ describe('buildFeedItems: featured jobs first', () => {
       job({ id: `en${i}`, title: `Data Engineer ${i}`, companyId: `e${i}`, roleSlug: 'data-engineer', createdAt: new Date(`2026-11-08T0${i}:00:00Z`) }),
     )
     const items = buildFeedItems([...ads, ...roles] as never, 4)
-    expect(items.map((i) => i.id)).toEqual(['de2', 'en2', 'en1', 'en0'])
+    expect(items.map((i) => i.id)).toEqual(['de2', 'en2', 'en1', 'en0'].map(publicJobId))
   })
 })

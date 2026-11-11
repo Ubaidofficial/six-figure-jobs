@@ -13,6 +13,7 @@ import {
   validateJobReport,
 } from '../../../lib/jobs/jobReport'
 import { getSiteUrl } from '../../../lib/seo/site'
+import { jobByClientId } from '../../../lib/jobs/publicJob'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,8 +43,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    const job = await prisma.job.findUnique({
-      where: { id: report.jobId },
+    // The page sends the job's public id (the code in its URL), or the internal id from an older page.
+    const job = await prisma.job.findFirst({
+      where: jobByClientId(report.jobId),
       select: { id: true, title: true, company: true },
     })
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 })

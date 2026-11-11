@@ -9,6 +9,7 @@ import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import { pageLinkNumbers } from '@/lib/listing/pageNumbers'
 
 import styles from './Listing.module.css'
+import { toPublicJob } from '@/lib/jobs/publicJob'
 
 export type ListingChip = {
   label: string
@@ -144,10 +145,13 @@ export function ListingHeader({
 /** Left filters + results column. */
 export function ListingLayout({
   sidebar,
+  bar,
   alert,
   children,
 }: {
   sidebar?: ReactNode
+  /** Above the results: the match count and active filters (ActiveFilters). */
+  bar?: ReactNode
   /** The page's job query: offers an email alert for it above the results (nothing while alerts are off). */
   alert?: JobQueryInput
   children: ReactNode
@@ -160,6 +164,7 @@ export function ListingLayout({
         </aside>
       ) : null}
       <div id="jobs" className={styles.results}>
+        {bar}
         {alert ? <JobAlertBox query={alert} /> : null}
         {children}
       </div>
@@ -195,7 +200,7 @@ export function JobRows({
   }
   return (
     <JobRowList>
-      {jobs.map((job) => (
+      {jobs.map(toPublicJob).map((job) => (
         <JobRow key={job.id} job={job} />
       ))}
     </JobRowList>

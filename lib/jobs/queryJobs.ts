@@ -259,6 +259,83 @@ async function queryByRelevance(args: {
   }
 }
 
+/**
+ * Pure: the ids of one page in "Most Recent" order, newest posting date first. A job's posting date is postedAt (the
+ * employer's date) or, when the source gave none, createdAt (the day we first saw it), the same rule as "new this
+ * week" (lib/jobs/postedRecently.ts). Each list is already newest first; ties keep the dated job first, then id.
+ */
+export function mergeByPostingDate(
+  dated: Array<{ id: string; at: Date }>,
+  undated: Array<{ id: string; at: Date }>,
+  skip: number,
+  take: number,
+): string[] {
+  const out: string[] = []
+  let i = 0
+  let j = 0
+  while (out.length < skip + take && (i < dated.length || j < undated.length)) {
+    const a = dated[i]
+    const b = undated[j]
+    if (b === undefined || (a !== undefined && a.at.getTime() >= b.at.getTime())) {
+      out.push(a.id)
+      i++
+    } else {
+      out.push(b.id)
+      j++
+    }
+  }
+  return out.slice(skip)
+}
+
+/**
+ * "Most Recent": newest posting date first. It used to order by createdAt (when we first saw a job) while rows show the
+ * posting date, so a 2023 posting found yesterday led the list. Prisma cannot order by COALESCE(postedAt, createdAt),
+ * so the newest dated and undated jobs are read separately (ids and dates only) and merged.
+ */
+async function queryByPostingDate(args: {
+  where: Prisma.JobWhereInput
+  select: typeof jobListingSelect | typeof jobFullSelect
+  page: number
+  pageSize: number
+}): Promise<JobQueryResult> {
+  const { where, select, page, pageSize } = args
+  const skip = (page - 1) * pageSize
+  const need = skip + pageSize
+  const [total, dated, undated] = await Promise.all([
+    prisma.job.count({ where }),
+    prisma.job.findMany({
+      where: { AND: [where, { postedAt: { not: null } }] },
+      select: { id: true, postedAt: true },
+      orderBy: [{ postedAt: 'desc' }, { id: 'asc' }],
+      take: need,
+    }),
+    prisma.job.findMany({
+      where: { AND: [where, { postedAt: null }] },
+      select: { id: true, createdAt: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      take: need,
+    }),
+  ])
+
+  const pageIds = mergeByPostingDate(
+    dated.map((r) => ({ id: r.id, at: r.postedAt as Date })),
+    undated.map((r) => ({ id: r.id, at: r.createdAt })),
+    skip,
+    pageSize,
+  )
+  const rows = pageIds.length ? await prisma.job.findMany({ where: { id: { in: pageIds } }, select }) : []
+  const byId = new Map(rows.map((r) => [r.id, r]))
+  const jobs = pageIds.map((id) => byId.get(id)).filter(Boolean)
+
+  return {
+    jobs: (pageSize > 1 ? await withCardSummaries(jobs as any[]) : jobs) as unknown as JobWithCompany[],
+    total,
+    page,
+    pageSize,
+    totalPages: total === 0 ? 1 : Math.ceil(total / pageSize),
+  }
+}
+
 export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   const debugTiming =
     process.env.DEBUG_DB_TIMING === '1' ||
@@ -291,30 +368,21 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   const select =
     normalizedInput.selectMode === 'full' ? jobFullSelect : jobListingSelect
 
-  let orderBy: Prisma.JobOrderByWithRelationInput[]
-
   if (sortBy === 'relevant' && keywordPlan) {
     return queryByRelevance({ where, select, keywordPlan, page, pageSize })
   }
 
   if (sortBy === 'date') {
-    // ✅ Date-first ranking - prioritize when WE scraped it (createdAt)
-    orderBy = [
-      { createdAt: 'desc' }, // FIRST: When we scraped it (most accurate)
-      { updatedAt: 'desc' }, // SECOND: When job was updated
-      { postedAt: 'desc' }, // THIRD: Company's post date (fallback)
-      { maxAnnual: 'desc' },
-      { minAnnual: 'desc' },
-    ]
-  } else {
-    // Salary-first ranking
-    orderBy = [
-      { maxAnnual: 'desc' },
-      { minAnnual: 'desc' },
-      { postedAt: 'desc' },
-      { createdAt: 'desc' },
-    ]
+    return queryByPostingDate({ where, select, page, pageSize })
   }
+
+  // Salary-first ranking
+  const orderBy: Prisma.JobOrderByWithRelationInput[] = [
+    { maxAnnual: 'desc' },
+    { minAnnual: 'desc' },
+    { postedAt: 'desc' },
+    { createdAt: 'desc' },
+  ]
 
   const t0 = debugTiming ? Date.now() : 0
   let countMs = 0

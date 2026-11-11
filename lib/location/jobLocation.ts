@@ -96,6 +96,19 @@ const COUNTRY_ALIASES: Record<string, string> = {
 const FILLER = /\b(?:remote|virtual|hybrid|in|the|only|based|work from home|wfh)\b/g
 
 /**
+ * Location text that says nothing about a place: hiring systems fill the field with instructions or placeholders
+ * ("Defer to Job Opening Location", "See job description", "TBD", "N/A"). Shown as a location it reads as broken data,
+ * so callers treat it as empty and fall back to the stored city or country.
+ */
+const PLACEHOLDER_LOCATION =
+  /^(?:defer to (?:the )?job (?:opening|posting) location|see (?:the )?job (?:description|posting)|location:?\s*(?:tbd|tba)|tbd|tba|to be (?:determined|announced)|n\/?a|none|not specified|unspecified|-+)$/i
+
+export function isPlaceholderLocation(text: unknown): boolean {
+  const t = String(text ?? '').trim().replace(/[.\s]+$/, '')
+  return t.length > 0 && PLACEHOLDER_LOCATION.test(t)
+}
+
+/**
  * The country a location text names, only when unambiguous: its last comma/dash-separated part is a country name or
  * alias ("Winnipeg, Canada", "Remote - US", "United States (Remote)"), or a state/province/Land that belongs to one
  * country ("Kleve, Nordrhein-Westfalen"). Two-letter codes such as CA or DE are never read as countries, and a text
@@ -200,10 +213,10 @@ function remoteScope(job: LocationFields, cc: string | null, raw: string): strin
 }
 
 export function describeJobLocation(job: LocationFields): JobLocationView {
-  const raw = String(job.locationRaw ?? '').trim()
+  const raw = isPlaceholderLocation(job.locationRaw) ? '' : String(job.locationRaw ?? '').trim()
   const isRemote = job.remote === true || job.remoteMode === 'remote'
   const stored = normalizeCountryCode(job.countryCode)
-  const city = job.city ? tidy(String(job.city)) : null
+  const city = job.city && !isPlaceholderLocation(job.city) ? tidy(String(job.city)) : null
   const none = { compact: null, count: 1, first: '', city: null, region: null, countryName: null }
 
   const places = Array.from(new Set(raw.split(';').map((p) => p.trim()).filter(Boolean)))

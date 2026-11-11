@@ -3,6 +3,8 @@
 // radio inputs, so they submit with the form and work without JavaScript. Long lists (role, location, remote region)
 // stay native <select>s, which keeps the phone pickers and screen-reader behaviour, with one consistent style.
 
+import { FilterPills } from '@/components/filters/FilterPills'
+
 import styles from './HeroFilters.module.css'
 
 type Option = { value: string; label: string }
@@ -60,38 +62,6 @@ function SelectField({
   )
 }
 
-function Pills({
-  legend,
-  name,
-  options,
-  defaultValue,
-}: {
-  legend: string
-  name: string
-  options: Option[]
-  defaultValue: string
-}) {
-  return (
-    <fieldset className={styles.pills}>
-      <legend className={styles.label}>{legend}</legend>
-      <div className={styles.pillRow}>
-        {options.map((o) => (
-          <label key={o.value || 'any'} className={styles.pill}>
-            <input
-              type="radio"
-              name={name}
-              value={o.value}
-              defaultChecked={o.value === defaultValue}
-              className={styles.pillInput}
-            />
-            <span className={styles.pillText}>{o.label}</span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  )
-}
-
 /**
  * One Location list: remote regions first ("Anywhere in the world" at the top), then countries (ISO codes). Both submit as `country`;
  * /jobs reads a region slug there as a remote region. Replaced a separate "Remote region" select (2026-11-10): asked for
@@ -143,8 +113,8 @@ export function HeroFilters({ roles, locations, remoteRegions }: HeroFiltersProp
         <LocationField locations={locations} regions={regions} />
       </div>
       <div className={styles.pillGroups}>
-        <Pills legend="Work arrangement" name="remoteMode" options={WORK} defaultValue="" />
-        <Pills legend="Minimum salary" name="minSalary" options={SALARY} defaultValue="100000" />
+        <FilterPills legend="Work arrangement" name="remoteMode" options={WORK} defaultValue="" />
+        <FilterPills legend="Minimum salary" name="minSalary" options={SALARY} defaultValue="100000" />
       </div>
       </div>
     </div>

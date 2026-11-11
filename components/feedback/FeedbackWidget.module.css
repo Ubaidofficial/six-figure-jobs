@@ -66,6 +66,49 @@
   }
 }
 
+/* Desktop: a slim tab on the right edge, half way down, in the page's own colours. The lime pill in the bottom-right
+   corner sat on the salary column of job rows (the first thing a reader looks at); the edge tab stays in the gutter. */
+@media (min-width: 1024px) and (min-height: 501px) {
+  .toggle {
+    top: 50%;
+    bottom: auto;
+    right: 0;
+    transform: translateY(-50%);
+    writing-mode: vertical-rl;
+    gap: 6px;
+    padding: 14px 7px;
+    border-radius: 10px 0 0 10px;
+    border: 1px solid var(--color-border);
+    border-right: 0;
+    background: var(--color-bg-1);
+    color: var(--color-text-1);
+    font-size: 12px;
+    box-shadow: -2px 4px 14px rgba(0, 0, 0, 0.06);
+    backdrop-filter: none;
+  }
+
+  .toggle:hover {
+    transform: translateY(-50%);
+    color: var(--color-text-0);
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg-1));
+    box-shadow: -2px 4px 18px rgba(0, 0, 0, 0.1);
+  }
+
+  .toggle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .toggleIcon {
+    transform: rotate(90deg);
+  }
+
+  .toggleLabel {
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toggle {
     transition: none;

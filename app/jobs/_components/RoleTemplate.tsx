@@ -15,6 +15,7 @@ import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
+import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { LISTING_REMOTE_REGIONS, normalizeRemoteRegionSlug } from '@/lib/jobs/remoteRegions'
@@ -31,8 +32,8 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
+import { ActiveFilters } from './ActiveFilters'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
-import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
@@ -338,6 +339,10 @@ export async function RoleTemplate({
     ),
   ]))
 
+  const levelSize = await memoAsync(stableKey('role-level-size', roleSlug, baseFacetInput), DEFAULT_TTL_MS, () =>
+    loadLevelSizeCounts(baseFacetInput),
+  )
+
   const facets: JobsFacets = {
     roles: [],
     countries: countryRows
@@ -348,6 +353,7 @@ export async function RoleTemplate({
       .filter((r: any) => r.value),
     workTypes: { remote: remoteCount, hybrid: hybridCount, onsite: onsiteCount },
     remoteRegions: LISTING_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
+    ...levelSize,
   }
 
   // Insights are computed for the role overall (USD-only where needed), independent of sidebar filters.
@@ -576,14 +582,20 @@ export async function RoleTemplate({
             {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
           </>
         }
-        cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${data.total === 1 ? 'job' : 'jobs'}` : undefined}
-        stats={workTypeStats(facets.workTypes, (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1), remoteMode)}
         chips={seniorityChips}
         related={relatedChips}
-        toolbar={<JobsToolbar facets={facets} rolePreset={{ label: roleTitle, emoji }} />}
       />
 
-      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />} alert={queryInput}>
+      <ListingLayout
+        sidebar={<JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />}
+        bar={
+          <ActiveFilters
+            total={data.total}
+            actions={<JobsToolbar facets={facets} total={data.total} rolePreset={{ label: roleTitle, emoji }} />}
+          />
+        }
+        alert={queryInput}
+      >
         <JobRows
           jobs={jobs}
           empty={{

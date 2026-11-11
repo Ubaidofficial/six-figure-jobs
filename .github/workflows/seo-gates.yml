@@ -123,7 +123,9 @@ jobs:
           for attempt in $(seq 1 "$ATTEMPTS"); do
             echo "Production SEO proof attempt ${attempt}/${ATTEMPTS}"
 
-            if SEO_BASE_URL="${PRODUCTION_SITE_URL}" SEO_SAMPLE_PER_SITEMAP=1000 SEO_STRICT=1 npm run seo:validate:strict; then
+            # 4 requests at a time, not the default 12: this runs while Railway is starting the new deploy with empty
+            # caches, and 12 parallel cold renders on top of crawler traffic helped run it out of memory (2026-11-11).
+            if SEO_BASE_URL="${PRODUCTION_SITE_URL}" SEO_SAMPLE_PER_SITEMAP=1000 SEO_STRICT=1 SEO_CONCURRENCY=4 npm run seo:validate:strict; then
               echo "Production SEO proof passed."
               exit 0
             fi

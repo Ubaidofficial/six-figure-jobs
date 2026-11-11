@@ -32,6 +32,8 @@ function useScrolled(thresholdPx: number = 10): boolean {
 export function SiteHeader() {
   const pathname = usePathname()
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
+  // The homepage and /search open with their own large search box; a second one in the header read as a duplicate.
+  const pageHasSearch = pathname === '/' || pathname === '/search'
   const scrolled = useScrolled(8)
   const router = useRouter()
 
@@ -72,34 +74,36 @@ export function SiteHeader() {
           <AuthNav className={styles.navLink} />
         </nav>
 
-        {/* Always-visible search. Same destination the old search dialog used: /search?q=... */}
-        <form
-          role="search"
-          method="get"
-          action="/search"
-          className={styles.search}
-          onSubmit={(e) => {
-            e.preventDefault()
-            submitSearch(String(new FormData(e.currentTarget).get('q') ?? ''))
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') (e.target as HTMLElement).blur()
-          }}
-        >
-          <label htmlFor="site-search" className={styles.srOnly}>
-            Find roles, companies, or skills
-          </label>
-          <Search className={styles.searchGlyph} aria-hidden="true" />
-          {/* Live suggestions (roles, jobs) as you type. "/" focuses it, except on the homepage where the hero box takes it. */}
-          <HeroSearchInput
-            id="site-search"
-            name="q"
-            className={styles.searchInput}
-            placeholder="Find roles, companies, or skills"
-            shortcut={pathname !== '/'}
-            shortcutHint={pathname !== '/'}
-          />
-        </form>
+        {/* Search on every page except the two that open with their own. Same destination as the old dialog: /search?q=... */}
+        {pageHasSearch ? null : (
+          <form
+            role="search"
+            method="get"
+            action="/search"
+            className={styles.search}
+            onSubmit={(e) => {
+              e.preventDefault()
+              submitSearch(String(new FormData(e.currentTarget).get('q') ?? ''))
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') (e.target as HTMLElement).blur()
+            }}
+          >
+            <label htmlFor="site-search" className={styles.srOnly}>
+              Find roles, companies, or skills
+            </label>
+            <Search className={styles.searchGlyph} aria-hidden="true" />
+            {/* Live suggestions (roles, jobs) as you type. "/" focuses it. */}
+            <HeroSearchInput
+              id="site-search"
+              name="q"
+              className={styles.searchInput}
+              placeholder="Find roles, companies, or skills"
+              shortcut
+              shortcutHint
+            />
+          </form>
+        )}
 
         <div className={styles.right}>
           <AuthNav className={styles.mobileAuth} />

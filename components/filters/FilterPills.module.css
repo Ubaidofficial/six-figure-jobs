@@ -1,0 +1,79 @@
+/* Pill toggles for GET forms (FilterPills.tsx). Same look as the listing sidebar's pills (JobsFilters.module.css). */
+
+.pills {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  display: block;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-1);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  position: relative;
+  cursor: pointer;
+}
+
+/* The real radio stays in the accessibility tree and keyboard order; only its look is hidden. */
+.input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.text {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-0);
+  background: var(--color-bg-1);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 16%, transparent);
+  border-radius: 999px;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.pill:hover .text {
+  border-color: color-mix(in srgb, var(--color-fg) 32%, transparent);
+}
+
+.input:checked + .text {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #0a0a0a;
+  font-weight: 600;
+}
+
+.input:focus-visible + .text {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 44px touch targets on phones */
+@media (max-width: 640px) {
+  .text {
+    height: 44px;
+    padding: 0 18px;
+  }
+}

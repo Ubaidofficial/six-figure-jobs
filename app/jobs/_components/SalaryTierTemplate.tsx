@@ -12,6 +12,7 @@ import {
 
 import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
+import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { LISTING_REMOTE_REGIONS, normalizeRemoteRegionSlug } from '@/lib/jobs/remoteRegions'
@@ -25,8 +26,8 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
+import { ActiveFilters } from './ActiveFilters'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
-import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const SITE_URL = getSiteUrl()
@@ -256,6 +257,10 @@ export async function SalaryTierTemplate({
     ),
   ]))
 
+  const levelSize = await memoAsync(stableKey('tier-level-size', tierId, baseFacetInput), DEFAULT_TTL_MS, () =>
+    loadLevelSizeCounts(baseFacetInput),
+  )
+
   const facets: JobsFacets = {
     roles: roleRows
       .map((r: any) => ({
@@ -275,6 +280,7 @@ export async function SalaryTierTemplate({
       onsite: onsiteCount,
     },
     remoteRegions: LISTING_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
+    ...levelSize,
   }
 
   const avgAgg = await memoAsync(stableKey('tier-avg', tierId, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () =>
@@ -375,13 +381,20 @@ export async function SalaryTierTemplate({
             {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
           </>
         }
-        cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${data.total === 1 ? 'job' : 'jobs'}` : undefined}
-        stats={workTypeStats(facets.workTypes, (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1), remoteMode)}
         related={topRolesRow(`Top roles at ${tier.rangeLabel}`, topRoles)}
-        toolbar={<JobsToolbar facets={facets} salaryPresetLabel={tier.rangeLabel} />}
       />
 
-      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />} alert={queryInput}>
+      <ListingLayout
+        sidebar={<JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />}
+        bar={
+          <ActiveFilters
+            total={data.total}
+            pinned={['minSalary']}
+            actions={<JobsToolbar facets={facets} total={data.total} salaryPresetLabel={tier.rangeLabel} />}
+          />
+        }
+        alert={queryInput}
+      >
         <JobRows
           jobs={jobs}
           empty={{

@@ -4,6 +4,8 @@ jest.mock('../../lib/prisma', () => ({ prisma: { job: { findMany: (...a: unknown
 
 import { GET } from '../../app/api/company/[slug]/jobs/route'
 import { __clearMemoForTests } from '../../lib/cache/memo'
+import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
+import { publicJobId } from '../../lib/jobs/publicJob'
 import { buildCompanyJobsWhere, COMPANY_JOBS_ORDER_BY } from '../../lib/companies/companyJobs'
 
 const job = (id: string) => ({ id, title: `Job ${id}`, minAnnual: BigInt(150_000), maxAnnual: BigInt(190_000), createdAt: new Date('2026-11-01T00:00:00Z') })
@@ -44,7 +46,8 @@ describe('GET /api/company/[slug]/jobs', () => {
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 10 }))
     expect(body).toMatchObject({ total: 37, page: 1, pageSize: 10, totalPages: 4 })
     expect(body.jobs).toHaveLength(2)
-    expect(body.jobs[0]).toMatchObject({ id: 'a', maxAnnual: 190000, minAnnual: 150000 })
+    // Public id and link only (lib/jobs/publicJob.ts): the internal id never leaves the server.
+    expect(body.jobs[0]).toMatchObject({ id: publicJobId('a'), href: buildJobSlugHref({ id: 'a', title: 'Job a' }), maxAnnual: 190000, minAnnual: 150000 })
     expect(cache).toContain('s-maxage=300')
   })
 

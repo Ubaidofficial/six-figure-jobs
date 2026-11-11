@@ -24,9 +24,10 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from '../../_components/JobsFilters'
 import { JobsToolbar } from '../../_components/JobsToolbar'
+import { ActiveFilters } from '../../_components/ActiveFilters'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
+import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
-import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const PAGE_SIZE = 24
@@ -404,6 +405,10 @@ export async function CountryLocationTemplate({
     }),
   ]))
 
+  const levelSize = await memoAsync(stableKey('country-level-size', countryCode, baseFacetInput), DEFAULT_TTL_MS, () =>
+    loadLevelSizeCounts(baseFacetInput),
+  )
+
   const facets: JobsFacets = {
     roles: roleRows
       .map((r: any) => ({
@@ -417,6 +422,7 @@ export async function CountryLocationTemplate({
       hybrid: hybridCount,
       onsite: onsiteCount,
     },
+    ...levelSize,
   }
 
   const jsonLd = buildItemListJsonLd({
@@ -460,16 +466,20 @@ export async function CountryLocationTemplate({
             {lastUpdatedLabel ? <> · updated {lastUpdatedLabel}</> : null}
           </>
         }
-        cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${data.total === 1 ? 'job' : 'jobs'}` : undefined}
-        stats={workTypeStats(facets.workTypes, (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1), remoteMode)}
         related={topRolesRow(`Top roles in ${loc.label}`, topRoles)}
-        toolbar={
-          <JobsToolbar facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />
-        }
       />
 
       <ListingLayout
         sidebar={<JobsFiltersPanel facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />}
+        bar={
+          <ActiveFilters
+            total={data.total}
+            pinned={['country', 'minSalary']}
+            actions={
+              <JobsToolbar facets={facets} total={data.total} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />
+            }
+          />
+        }
         alert={queryInput}
       >
         <JobRows
