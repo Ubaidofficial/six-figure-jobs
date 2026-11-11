@@ -3,6 +3,8 @@ import { prisma } from '../../lib/prisma'
 import { getShortStableIdForJobId } from '../../lib/jobs/jobSlug'
 import { MAX_INDEXABLE_JOB_AGE_DAYS } from '../../lib/jobs/freshness'
 import { __clearMemoForTests } from '../../lib/cache/memo'
+import { __resetIndexingPhaseCacheForTests } from '../../lib/seo/indexingPhase'
+import { GET as getJobsIndex } from '../../app/sitemap-jobs.xml/route'
 
 jest.mock('../../lib/prisma', () => ({
   prisma: {
@@ -44,6 +46,23 @@ describe('sitemap-jobs/[page] route', () => {
     remote: true,
   })
   const urlCount = (xml: string) => (xml.match(/<url>/g) ?? []).length
+
+  it('lists no job in phase 1, which submits hub pages only; the index lists no shard either', async () => {
+    process.env.INDEXING_PHASE = '1'
+    __resetIndexingPhaseCacheForTests()
+    try {
+      findManyMock.mockResolvedValue([listable(1)] as any)
+      const shard = await GET({} as any, { params: Promise.resolve({ page: '1' }) })
+      expect(urlCount(await shard.text())).toBe(0)
+      expect(shard.headers.get('X-Indexing-Phase-Silenced')).toBe('1')
+      const index = await getJobsIndex()
+      expect(await index.text()).not.toContain('/sitemap-jobs/1')
+      expect(findManyMock).not.toHaveBeenCalled()
+    } finally {
+      process.env.INDEXING_PHASE = '2'
+      __resetIndexingPhaseCacheForTests()
+    }
+  })
 
   it('lists at most SEO_CORE_JOB_URLS_PER_SHARD jobs, keeping the newest', async () => {
     process.env.SEO_CORE_JOB_URLS_PER_SHARD = '3'

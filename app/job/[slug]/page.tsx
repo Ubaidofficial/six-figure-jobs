@@ -338,6 +338,9 @@ export default async function JobPage({
             queryJobs({
               roleSlugs: canonicalRoleSlug ? [canonicalRoleSlug] : undefined,
               keyword: similarKeyword ?? undefined,
+              // Title words in the title only: matching them in skills and tech stack as well (long text fields)
+              // made this the slowest part of the page, ~1.8 s on average (2026-11-11).
+              keywordFields: similarKeyword ? ['title'] : undefined,
               sortBy: similarKeyword ? 'relevant' : undefined,
               countryCode: typedJob.countryCode || undefined,
               isHundredKLocal: true,

@@ -84,6 +84,8 @@ export type JobQueryInput = {
   keyword?: string
   /** Set by queryJobs from `keyword` (aliases + typo corrections); callers normally leave it unset. */
   keywordPlan?: KeywordPlan
+  /** Fields the keyword is matched in (default: all of KEYWORD_FIELDS). The job page's similar jobs use the title only. */
+  keywordFields?: readonly KeywordField[]
 }
 
 export type JobQueryResult = {
@@ -445,6 +447,7 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
 
 /** The fields a keyword is searched in. */
 const KEYWORD_FIELDS = ['title', 'company', 'locationRaw', 'techStack', 'skillsJson'] as const
+export type KeywordField = (typeof KEYWORD_FIELDS)[number]
 
 export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
@@ -685,7 +688,7 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
       for (const variants of terms) {
         addAnd({
           OR: variants.flatMap((term) =>
-            KEYWORD_FIELDS.flatMap((field) =>
+            (filters.keywordFields?.length ? filters.keywordFields : KEYWORD_FIELDS).flatMap((field) =>
               wordStartPatterns(term).map((pattern) => ({ [field]: { ...pattern, mode: 'insensitive' as const } }) as Prisma.JobWhereInput),
             ),
           ),

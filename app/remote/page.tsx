@@ -1,14 +1,14 @@
 import type { Metadata } from 'next'
 import { RegionMark } from '@/components/ui/RegionMark'
 import Link from 'next/link'
-import { unstable_rethrow } from 'next/navigation'
+import { notFound, unstable_rethrow } from 'next/navigation'
 import { cache } from 'react'
 import { queryJobs, buildWhere, type JobWithCompany } from '../../lib/jobs/queryJobs'
 import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 import { prisma } from '../../lib/prisma'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
 import { fitTitle } from '../../lib/seo/metaText'
-import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '../../lib/seo/listingSearchParams'
+import { buildNormalizedListingPath, hasNonPaginationQueryParams, readListingPageParam } from '../../lib/seo/listingSearchParams'
 import { collectRemoteRoleRows } from '../../lib/seo/remoteSitemap'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
 import { buildJobSlugHref } from '../../lib/jobs/jobSlug'
@@ -26,6 +26,7 @@ import {
   ListingHeader,
   ListingPage,
   ListingSection,
+  Pagination,
 } from '@/components/listing/ListingParts'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { formatRelativeTime } from '@/lib/utils/time'
@@ -82,6 +83,8 @@ type RemoteHubCountry = {
   jobCount: number
 }
 
+const REMOTE_PAGE_SIZE = 24
+
 type RemoteHubSnapshot = {
   remoteJobCount: number
   companyCount: number
@@ -89,7 +92,6 @@ type RemoteHubSnapshot = {
   avgSalaryUsd: number
   newThisWeek: number
   roleList: Array<{ slug: string; count: number; title: string }>
-  recentJobs: JobWithCompany[]
   topCompanies: RemoteHubCompany[]
   topCountries: RemoteHubCountry[]
 }
@@ -128,6 +130,8 @@ export async function generateMetadata({
   const canonicalPath = buildNormalizedListingPath('/remote', sp)
   const canonical = `${SITE_URL}${canonicalPath}`
   const noindexUtilityState = hasNonPaginationQueryParams(sp)
+  const listPage = readListingPageParam(sp)
+  const pageSuffix = listPage > 1 ? ` (Page ${listPage})` : ''
   const regionLabel = prettyRemoteRegion(activeRemoteRegion)
   // Same wording as before; the brand, then the count, drop out when the title would pass TITLE_MAX.
   const title = regionLabel
@@ -137,9 +141,9 @@ export async function generateMetadata({
         `${regionLabel} Remote $100k+ Jobs`,
       ])
     : fitTitle([
-        `${total.toLocaleString()} High-Paying Remote Jobs ($100k+) | ${SITE_NAME}`,
-        `${total.toLocaleString()} High-Paying Remote Jobs ($100k+)`,
-        `High-Paying Remote Jobs ($100k+)`,
+        `${total.toLocaleString()} High-Paying Remote Jobs ($100k+)${pageSuffix} | ${SITE_NAME}`,
+        `${total.toLocaleString()} High-Paying Remote Jobs ($100k+)${pageSuffix}`,
+        `High-Paying Remote Jobs ($100k+)${pageSuffix}`,
       ])
   const description = regionLabel
     ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs in engineering, product, data and more, with published salaries and fresh listings.`
@@ -301,7 +305,7 @@ const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null): Pr
   })
   const freshWhere = addAndClause(where, newThisWeekClause())
 
-  const [remoteJobCount, companyGroups, countryGroups, avg, roleRows, newThisWeek, recentData] =
+  const [remoteJobCount, companyGroups, countryGroups, avg, roleRows, newThisWeek] =
     await memoAsync(stableKey('remote-snapshot', activeRemoteRegion), DEFAULT_TTL_MS, () => Promise.all([
       prisma.job.count({ where }),
       prisma.job.groupBy({
@@ -323,14 +327,6 @@ const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null): Pr
       }),
       collectRemoteRoleRows({ remoteRegion: activeRemoteRegion }),
       prisma.job.count({ where: freshWhere }),
-      queryJobs({
-        remoteOnly: true,
-        remoteRegion: activeRemoteRegion || undefined,
-        excludeInternships: true,
-        sortBy: 'date',
-        page: 1,
-        pageSize: 12,
-      }),
     ]))
 
   const topCompanyGroups = companyGroups
@@ -398,7 +394,6 @@ const getRemoteHubSnapshot = cache(async (activeRemoteRegion: string | null): Pr
       count: row.total,
       title: toTitleCase(row.roleSlug),
     })),
-    recentJobs: dedupeJobs(recentData.jobs as JobWithCompany[]).slice(0, 12),
     topCompanies,
     topCountries,
   }
@@ -449,10 +444,22 @@ export default async function RemoteJobsPage({
       avgSalaryUsd,
       newThisWeek,
       roleList,
-      recentJobs,
       topCompanies,
       topCountries,
     } = await getRemoteHubSnapshot(activeRemoteRegion)
+    const listPage = readListingPageParam(sp)
+    const list = await memoAsync(stableKey('remote-list', activeRemoteRegion, listPage), DEFAULT_TTL_MS, () =>
+      queryJobs({
+        remoteOnly: true,
+        remoteRegion: activeRemoteRegion || undefined,
+        excludeInternships: true,
+        sortBy: 'date',
+        page: listPage,
+        pageSize: REMOTE_PAGE_SIZE,
+      }),
+    )
+    if (listPage > 1 && listPage > list.totalPages) notFound()
+    const recentJobs = dedupeJobs(list.jobs as JobWithCompany[])
     const topRemoteRoles = await loadTopRolePages({
       remoteOnly: true,
       remoteRegion: activeRemoteRegion || undefined,
@@ -464,8 +471,8 @@ export default async function RemoteJobsPage({
     const itemListJsonLd = buildItemListJsonLd({
       name: 'Remote $100k+ jobs',
       jobs: recentJobs.map((job) => ({ id: job.id, title: job.title })),
-      page: 1,
-      pageSize: recentJobs.length || 1,
+      page: listPage,
+      pageSize: REMOTE_PAGE_SIZE,
     })
     const collectionPageJsonLd = buildRemoteCollectionPageJsonLd(remoteJobCount, canonicalPath)
     const faqJsonLd = buildRemoteFaqJsonLd()
@@ -529,6 +536,12 @@ export default async function RemoteJobsPage({
               href: '/jobs',
               hrefLabel: 'Browse all jobs',
             }}
+          />
+          <Pagination
+            page={listPage}
+            totalPages={list.totalPages}
+            hrefFor={(n) => buildNormalizedListingPath('/remote', { ...sp, page: String(n) })}
+            numbered
           />
           {remoteJobCount > recentJobs.length ? (
             <p style={{ marginTop: 16 }}>

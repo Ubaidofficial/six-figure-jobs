@@ -25,13 +25,24 @@ describe('robots route sitemap declarations', () => {
 
     expect(response.status).toBe(200)
     expect(body).toMatch(/Sitemap: .*\/sitemap\.xml/)
-    expect(body).toMatch(/Sitemap: .*\/sitemap-jobs\.xml/)
-    // Child sitemaps are discovered through the index; only sitemap.xml and sitemap-jobs.xml are declared.
+    // Phase 1 submits hub pages only: sitemap-jobs.xml is declared from phase 2 (2026-11-11).
+    expect(body).not.toContain('sitemap-jobs.xml')
+    // Child sitemaps are discovered through the index.
     expect(body).not.toContain('sitemap-company.xml')
     expect(body).not.toContain('sitemap-salary.xml')
-    expect((body.match(/^Sitemap:/gm) || []).length).toBe(2)
+    expect((body.match(/^Sitemap:/gm) || []).length).toBe(1)
     expect(body).not.toContain('sitemap-blog.xml')
     expect(body).not.toContain('fallback_used=1')
+  })
+
+  it('declares sitemap-jobs.xml for Google Jobs discovery from phase 2', async () => {
+    process.env.INDEXING_PHASE = '2'
+    process.env.SEO_INDEXATION_PHASE = '2'
+    const body = await (await GET()).text()
+    expect(body).toMatch(/Sitemap: .*\/sitemap-jobs\.xml/)
+    expect((body.match(/^Sitemap:/gm) || []).length).toBe(2)
+    process.env.INDEXING_PHASE = '1'
+    process.env.SEO_INDEXATION_PHASE = '1'
   })
 
   it('slows SEO-tool crawlers and PerplexityBot, never Googlebot or Bingbot, and keeps their disallows', async () => {
