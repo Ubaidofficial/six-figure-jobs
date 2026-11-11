@@ -2,9 +2,12 @@
 // The /search form. A plain GET form (same field names as before: q, location, remoteMode, minSalary, remoteRegion,
 // seniority). The search box and button are always visible; the five selects sit in a <details> named "Filters",
 // which works without JavaScript: closed on phones (it shows how many filters are active), always open on desktop
-// (see SearchForm.module.css). Closed or not, the selects are still submitted with the form.
+// (see SearchForm.module.css). Closed or not, the fields are still submitted with the form. Location and remote region are
+// selects; work arrangement, minimum salary and seniority are pills (FilterPills), as on the homepage.
 
 import Link from 'next/link'
+
+import { FilterPills } from '@/components/filters/FilterPills'
 
 import styles from './SearchForm.module.css'
 
@@ -135,12 +138,17 @@ export function SearchForm({
             {activeCount > 0 ? `${activeCount} active` : 'location, work type, salary'}
           </span>
         </summary>
+        {/* Long lists stay native selects; short ones are pills, as on the homepage and the listing sidebar. */}
         <div className={styles.panel}>
-          <Select id="location" label="Location" options={LOCATIONS} value={location} />
-          <Select id="remoteMode" label="Work arrangement" options={WORK} value={remoteMode} />
-          <Select id="minSalary" label="Minimum salary" options={SALARY} value={minSalary} />
-          <Select id="remoteRegion" label="Remote region" options={REGIONS} value={remoteRegion} />
-          <Select id="seniority" label="Seniority" options={SENIORITY} value={seniority} />
+          <div className={styles.selects}>
+            <Select id="location" label="Location" options={LOCATIONS} value={location} />
+            <Select id="remoteRegion" label="Remote region" options={REGIONS} value={remoteRegion} />
+          </div>
+          <div className={styles.pillGroups}>
+            <FilterPills legend="Work arrangement" name="remoteMode" options={WORK} defaultValue={remoteMode} />
+            <FilterPills legend="Minimum salary" name="minSalary" options={SALARY} defaultValue={String(minSalary)} />
+            <FilterPills legend="Seniority" name="seniority" options={SENIORITY} defaultValue={seniority} />
+          </div>
         </div>
       </details>
 

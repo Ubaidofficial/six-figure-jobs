@@ -245,6 +245,15 @@
   min-width: 0;
   /* The header's "Browse N jobs" button jumps here; leave room for the sticky site header. */
   scroll-margin-top: 96px;
+  transition: opacity 150ms ease;
+}
+
+/* While a filter change loads (useListingNavigation sets the attribute), the old results fade back so the click visibly
+   did something; they return at full strength when the new list arrives. */
+:global(html[data-listing-pending]) .results {
+  opacity: 0.45;
+  pointer-events: none;
+  transition-delay: 80ms;
 }
 
 .count {

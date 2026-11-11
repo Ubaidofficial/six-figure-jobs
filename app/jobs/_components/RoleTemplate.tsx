@@ -31,6 +31,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
+import { ActiveFilters } from './ActiveFilters'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
@@ -580,10 +581,14 @@ export async function RoleTemplate({
         stats={workTypeStats(facets.workTypes, (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1), remoteMode)}
         chips={seniorityChips}
         related={relatedChips}
-        toolbar={<JobsToolbar facets={facets} rolePreset={{ label: roleTitle, emoji }} />}
+        toolbar={<JobsToolbar facets={facets} total={data.total} rolePreset={{ label: roleTitle, emoji }} />}
       />
 
-      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />} alert={queryInput}>
+      <ListingLayout
+        sidebar={<JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />}
+        bar={<ActiveFilters total={data.total} />}
+        alert={queryInput}
+      >
         <JobRows
           jobs={jobs}
           empty={{

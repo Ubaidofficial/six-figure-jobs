@@ -25,6 +25,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
+import { ActiveFilters } from './ActiveFilters'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
@@ -378,10 +379,14 @@ export async function SalaryTierTemplate({
         cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${data.total === 1 ? 'job' : 'jobs'}` : undefined}
         stats={workTypeStats(facets.workTypes, (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1), remoteMode)}
         related={topRolesRow(`Top roles at ${tier.rangeLabel}`, topRoles)}
-        toolbar={<JobsToolbar facets={facets} salaryPresetLabel={tier.rangeLabel} />}
+        toolbar={<JobsToolbar facets={facets} total={data.total} salaryPresetLabel={tier.rangeLabel} />}
       />
 
-      <ListingLayout sidebar={<JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />} alert={queryInput}>
+      <ListingLayout
+        sidebar={<JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />}
+        bar={<ActiveFilters total={data.total} pinned={['minSalary']} />}
+        alert={queryInput}
+      >
         <JobRows
           jobs={jobs}
           empty={{

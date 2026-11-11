@@ -24,6 +24,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from '../../_components/JobsFilters'
 import { JobsToolbar } from '../../_components/JobsToolbar'
+import { ActiveFilters } from '../../_components/ActiveFilters'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { workTypeStats } from '@/lib/listing/workTypeStats'
@@ -464,12 +465,13 @@ export async function CountryLocationTemplate({
         stats={workTypeStats(facets.workTypes, (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1), remoteMode)}
         related={topRolesRow(`Top roles in ${loc.label}`, topRoles)}
         toolbar={
-          <JobsToolbar facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />
+          <JobsToolbar facets={facets} total={data.total} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />
         }
       />
 
       <ListingLayout
         sidebar={<JobsFiltersPanel facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />}
+        bar={<ActiveFilters total={data.total} pinned={['country', 'minSalary']} />}
         alert={queryInput}
       >
         <JobRows

@@ -19,6 +19,7 @@ import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
 import { parseSliceFilters } from '../../lib/slices/types'
 import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
+import { salaryFilterCurrency } from '@/lib/jobs/salaryFilter'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { displayKeyword } from '@/lib/search/displayKeyword'
 import { workTypeStats } from '@/lib/listing/workTypeStats'
@@ -35,6 +36,7 @@ import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fa
 
 import { JobsFiltersPanel, type JobsFacets } from './_components/JobsFilters'
 import { JobsToolbar } from './_components/JobsToolbar'
+import { ActiveFilters } from './_components/ActiveFilters'
 import {
   Accent,
   Faq,
@@ -179,20 +181,6 @@ function buildPageHref(basePath: string, sp: SearchParams, page: number): string
   if (page > 1) params.set('page', String(page))
   const qs = params.toString()
   return qs ? `${basePath}?${qs}` : basePath
-}
-
-function resolveCurrencyFromCountryCode(code?: string | null): string | null {
-  const cc = (code || '').toUpperCase()
-  if (!cc) return null
-  const map: Record<string, string> = {
-    US: 'USD',
-    GB: 'GBP',
-    CA: 'CAD',
-    DE: 'EUR',
-    NL: 'EUR',
-    AU: 'AUD',
-  }
-  return map[cc] ?? null
 }
 
 function prettyRoleAndCountryFromSlug(slug: string): string {
@@ -365,7 +353,7 @@ export default async function JobsIndexPage({
     minSalaryRaw && Number.isFinite(minSalaryRaw)
       ? Math.min(450_000, Math.max(100_000, minSalaryRaw))
       : null
-  const salaryCurrency = minSalary ? resolveCurrencyFromCountryCode(country) ?? 'USD' : null
+  const salaryCurrency = minSalary ? salaryFilterCurrency(country) : null
   const activeFilterCount =
     roles.length +
     seniority.length +
@@ -676,19 +664,16 @@ export default async function JobsIndexPage({
           }
           cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${jobsWord}` : undefined}
           stats={workTypeLinks}
-          toolbar={<JobsToolbar facets={facets} />}
+          toolbar={<JobsToolbar facets={facets} total={data.total} />}
         />
 
         <CategoryRow items={categoryItems} />
 
-        <ListingLayout sidebar={<JobsFiltersPanel facets={facets} />} alert={queryInput}>
-          {techFilter ? (
-            <LinkChips
-              label="Active technology filter"
-              items={[{ label: `Technology: ${techFilter} ✕`, href: '/jobs', active: true }]}
-            />
-          ) : null}
-
+        <ListingLayout
+          sidebar={<JobsFiltersPanel facets={facets} />}
+          bar={<ActiveFilters total={data.total} />}
+          alert={queryInput}
+        >
           {data.search?.corrections.length && keyword ? (
             <p className="mb-3 text-sm text-muted-foreground" role="status">
               Showing results for{' '}

@@ -141,9 +141,20 @@
 
 .panel {
   display: grid;
+  gap: 16px;
+  padding-top: 12px;
+}
+
+.selects {
+  display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-  padding-top: 12px;
+}
+
+.pillGroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 32px;
 }
 
 .field {
@@ -198,7 +209,7 @@
 }
 
 @media (min-width: 640px) {
-  .panel {
+  .selects {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -210,8 +221,6 @@
   }
 
   .panel {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: end;
     padding-top: 0;
   }
 
@@ -225,12 +234,5 @@
     .filters::details-content {
       content-visibility: visible;
     }
-  }
-}
-
-/* Five filters in a row only where they fit without "Work arrangement" wrapping or "All locations" truncating. */
-@media (min-width: 1024px) {
-  .panel {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
