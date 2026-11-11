@@ -34,6 +34,22 @@ describe('robots route sitemap declarations', () => {
     expect(body).not.toContain('fallback_used=1')
   })
 
+  it('slows SEO-tool crawlers and PerplexityBot, never Googlebot or Bingbot, and keeps their disallows', async () => {
+    const body = await (await GET()).text()
+    const groups = body.split(/\n\s*\n/)
+    const seoTools = groups.find((g) => g.includes('User-agent: AhrefsBot'))!
+    for (const bot of ['AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'PetalBot']) expect(seoTools).toContain(`User-agent: ${bot}`)
+    expect(seoTools).toContain('Crawl-delay: 5')
+    const perplexity = groups.find((g) => g.includes('User-agent: PerplexityBot'))!
+    expect(perplexity).toContain('Crawl-delay: 2')
+    for (const g of [seoTools, perplexity]) {
+      for (const rule of ['Disallow: /search', 'Disallow: /api/', 'Disallow: /ubaid93/']) expect(g).toContain(rule)
+    }
+    expect(body).not.toMatch(/Googlebot|bingbot/i)
+    // The default group is unchanged: no delay for everyone else.
+    expect(groups[0]).not.toContain('Crawl-delay')
+  })
+
   it('returns a full disallow on staging', async () => {
     process.env.NEXT_PUBLIC_SITE_URL = 'https://staging.6figjobs.com'
 
