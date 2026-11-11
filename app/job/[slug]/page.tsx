@@ -142,7 +142,20 @@ export async function generateMetadata({
 
       const canonicalSlug = buildJobSlug(job)
       const canonicalUrl = `${SITE_URL}/job/${canonicalSlug}`
-      const base = buildJobMetadata(job)
+      // One company often posts the same role once per city; those pages shared one title in search results
+      // (213 titles on 605 of the 5,000 sitemap job pages, 2026-11-11). Name the place when that happens.
+      const sameTitleElsewhere =
+        (await prisma.job
+          .count({
+            where: {
+              isExpired: false,
+              title: job.title,
+              id: { not: job.id },
+              ...(job.companyId ? { companyId: job.companyId } : { company: job.company }),
+            },
+          })
+          .catch(() => 0)) > 0
+      const base = buildJobMetadata(job, { sameTitleElsewhere })
       const qualityGate = evaluateJobIndexability(job)
 
       return {

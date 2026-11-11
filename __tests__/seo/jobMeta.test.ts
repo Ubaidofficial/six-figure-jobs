@@ -1,4 +1,4 @@
-import { capDescription, fitTitle } from '../../lib/seo/jobMeta'
+import { capDescription, fitTitle, jobTitlePlace } from '../../lib/seo/jobMeta'
 
 describe('fitTitle', () => {
   it('keeps the full title with brand when it fits', () => {
@@ -32,6 +32,36 @@ describe('fitTitle', () => {
 
   it('works without a salary', () => {
     expect(fitTitle('Staff Engineer', 'Acme', null)).toBe('Staff Engineer at Acme | Six Figure Jobs')
+  })
+  it('names the place when one company posts the same title per city, so the titles differ', () => {
+    const titles = ['Redlands', 'Vienna', 'Denver'].map((city) => fitTitle('Account Manager - Native Nations', 'Esri', '$104k–$187k/yr', city))
+    expect(titles).toEqual([
+      'Account Manager - Native Nations (Redlands) — $104k–$187k',
+      'Account Manager - Native Nations (Vienna) — $104k–$187k',
+      'Account Manager - Native Nations (Denver) — $104k–$187k',
+    ])
+    expect(fitTitle('Accounting Manager', 'Ripple', '$132k–$160k/yr', 'New York')).toBe('Accounting Manager at Ripple (New York) — $132k–$160k/yr')
+    expect(fitTitle('Staff Engineer', 'Acme', null, 'Remote')).toBe('Staff Engineer at Acme (Remote) | Six Figure Jobs')
+  })
+
+  it('keeps the usual title when there is no place, and never exceeds 60 characters with one', () => {
+    expect(fitTitle('Staff Engineer', 'Acme', '$200k–$250k/yr', null)).toBe(fitTitle('Staff Engineer', 'Acme', '$200k–$250k/yr'))
+    for (const role of ['AI Engineer', 'Technical Program Manager, Omen Mission Systems', 'A'.repeat(90)]) {
+      for (const place of ['NYC', 'San Francisco', 'Llanfairpwllgwyngyll-gogerychwyrndrobwll']) {
+        expect(fitTitle(role, 'Green Dot Corporation', '$140k–$199k/yr', place).length).toBeLessThanOrEqual(60)
+        expect(fitTitle(role, 'Green Dot Corporation', null, place).length).toBeLessThanOrEqual(60)
+      }
+    }
+  })
+})
+
+describe('jobTitlePlace', () => {
+  it('is Remote for remote jobs, else the city without region, else null', () => {
+    expect(jobTitlePlace({ remote: true, city: 'Denver' })).toBe('Remote')
+    expect(jobTitlePlace({ remoteMode: 'remote' })).toBe('Remote')
+    expect(jobTitlePlace({ city: 'new-york' })).toBe('New York')
+    expect(jobTitlePlace({ city: 'Austin, TX' })).toBe('Austin')
+    expect(jobTitlePlace({ city: null })).toBeNull()
   })
 })
 
