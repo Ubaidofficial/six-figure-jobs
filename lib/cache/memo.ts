@@ -9,11 +9,17 @@
 // at once and one refresh runs in the background. Before this, the first visitor after each expiry waited for every
 // query again (role pages: 1.7-3.3s instead of ~0.3s, measured 2026-11-08).
 
+//
+// Least recently used: a read moves its entry to the back of the eviction order. It used to evict by last write, and
+// with 500 entries a crawl of a few hundred job pages (each adds its own keys) pushed out the entries every hub page
+// reads, so the next visitor to /jobs waited ~16 s for a full rebuild (seen 2026-11-11 after a deploy: 478 distinct
+// pages in 4.5 minutes, then /jobs took 16 s).
+
 type Entry = { at: number; value: unknown }
 
 const store = new Map<string, Entry>()
 const inFlight = new Map<string, Promise<unknown>>()
-const MAX_ENTRIES = 500
+export const MAX_ENTRIES = 2000
 
 export const DEFAULT_TTL_MS = 5 * 60 * 1000
 /** How long past its TTL an entry may still be served while it refreshes; older than this, callers wait. */
@@ -35,6 +41,11 @@ export async function memoAsync<T>(
   now: () => number = Date.now,
 ): Promise<T> {
   const hit = store.get(key)
+  if (hit) {
+    // Mark as recently used: Map keeps insertion order, and eviction takes the first key.
+    store.delete(key)
+    store.set(key, hit)
+  }
   const age = hit ? now() - hit.at : Infinity
   if (hit && age < ttlMs) return hit.value as T
 
@@ -52,7 +63,7 @@ export async function memoAsync<T>(
 function startLoad<T>(key: string, loader: () => Promise<T>, now: () => number): Promise<T> {
   const load = loader()
     .then((value) => {
-      store.delete(key) // re-insert so the eviction order below follows the last write
+      store.delete(key) // re-insert at the back: just written counts as just used
       store.set(key, { at: now(), value })
       if (store.size > MAX_ENTRIES) {
         const oldest = store.keys().next().value

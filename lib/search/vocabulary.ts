@@ -1,6 +1,7 @@
 // The words that appear in active jobs (titles, companies, skills, locations), used to correct typos in searches
 // and to offer the most common skills as filters. Built from the database and cached in memory.
 
+import { memoAsync } from '../cache/memo'
 import { prisma } from '../prisma'
 import type { Vocabulary } from './keywordPlan'
 
@@ -11,8 +12,6 @@ export type SearchVocabulary = Vocabulary & {
   /** Most common skills (whole skill names), for the Technology filter. */
   topSkills: Array<{ term: string; count: number }>
 }
-
-let cache: { at: number; value: SearchVocabulary } | null = null
 
 export function parseSkillList(raw: string | null | undefined): string[] {
   if (!raw) return []
@@ -57,18 +56,23 @@ export function buildVocabulary(
   return { counts, terms: [...counts.keys()], topSkills }
 }
 
+/**
+ * Through the shared cache (lib/cache/memo.ts): one load at a time, and after 30 minutes the old vocabulary is served
+ * while a new one loads in the background. It had its own cache with neither, so at each expiry every request (the
+ * /jobs page, every keyword search) read the same 20,000 rows at once and waited for them.
+ */
 export async function getSearchVocabulary(now: number = Date.now()): Promise<SearchVocabulary> {
-  if (cache && now - cache.at < TTL_MS) return cache.value
-  const rows = await prisma.job.findMany({
-    where: { isExpired: false },
-    select: { title: true, company: true, locationRaw: true, techStack: true, skillsJson: true },
-    take: MAX_ROWS,
-  })
-  const value = buildVocabulary(rows)
-  cache = { at: now, value }
-  return value
-}
-
-export function __resetVocabularyCacheForTests() {
-  cache = null
+  return memoAsync(
+    'search-vocabulary',
+    TTL_MS,
+    async () => {
+      const rows = await prisma.job.findMany({
+        where: { isExpired: false },
+        select: { title: true, company: true, locationRaw: true, techStack: true, skillsJson: true },
+        take: MAX_ROWS,
+      })
+      return buildVocabulary(rows)
+    },
+    () => now,
+  )
 }
