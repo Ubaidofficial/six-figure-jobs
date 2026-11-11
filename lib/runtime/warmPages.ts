@@ -86,11 +86,25 @@ export function sitemapPaths(xml: string): string[] {
 }
 
 /**
+ * Waits before each new try of a sitemap that came back with no URLs. Just after a restart, /sitemap-batch/<n>.xml
+ * builds its page list from the database for the first time, and if that build fails or runs long it answers with an
+ * empty <urlset> (lib/seo/evergreenSitemap.ts, app/sitemap-batch/[batch]/route.ts). On 2026-11-11 the first pass
+ * after a deploy missed its 21 pages that way, and they waited 45 minutes for the next pass. The build keeps running
+ * after the first request, so a later try gets the list.
+ */
+export const EMPTY_SITEMAP_RETRY_MS = [15_000, 30_000] as const
+
+/**
  * The indexable hub pages: every page listed in the sitemap index's children, minus the job and company sitemaps.
  * Read from the running server, so the list follows the sitemaps (and the indexing phase) with no second copy here.
- * Never throws: a sitemap that fails to load adds no paths.
+ * A sitemap with no URLs is tried again (EMPTY_SITEMAP_RETRY_MS). Never throws: a sitemap that still has none adds no
+ * paths.
  */
-export async function hubPaths(base: string, fetchImpl: Fetch = fetch): Promise<string[]> {
+export async function hubPaths(
+  base: string,
+  fetchImpl: Fetch = fetch,
+  wait: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<string[]> {
   const read = async (path: string) => {
     try {
       const res = await fetchImpl(`${base}${path}`, {
@@ -102,8 +116,17 @@ export async function hubPaths(base: string, fetchImpl: Fetch = fetch): Promise<
       return ''
     }
   }
-  const children = sitemapPaths(await read('/sitemap.xml')).filter((p) => !NON_HUB_SITEMAP.test(p))
+  const readPaths = async (path: string) => {
+    let found = sitemapPaths(await read(path))
+    for (const ms of EMPTY_SITEMAP_RETRY_MS) {
+      if (found.length > 0) break
+      await wait(ms)
+      found = sitemapPaths(await read(path))
+    }
+    return found
+  }
+  const children = (await readPaths('/sitemap.xml')).filter((p) => !NON_HUB_SITEMAP.test(p))
   const paths: string[] = []
-  for (const child of children) paths.push(...sitemapPaths(await read(child)))
+  for (const child of children) paths.push(...(await readPaths(child)))
   return [...new Set(paths.map((p) => (p === '' ? '/' : p)))]
 }
