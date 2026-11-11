@@ -20,7 +20,9 @@ const PUBLIC_PATHS = [`${ADMIN_ROOT}/login`, `${ADMIN_ROOT}/setup`]
 // Canonical host — ensure apex redirects to www for consistent PageRank consolidation
 const WWW_HOST = 'www.6figjobs.com'
 const APEX_HOST = '6figjobs.com'
-const LEGACY_ROLE_QUERY_KEYS = ['seniority', 'skill', 'tech'] as const
+// `seniority` and `tech` were here too, but the filter panel on role pages writes them, so the 308 silently undid those
+// filters (2026-11-11). Filtered views are noindex, so they need no redirect.
+const LEGACY_ROLE_QUERY_KEYS = ['skill'] as const
 
 function normalizeLegacyRoleQuery(request: NextRequest): NextResponse | null {
   const url = request.nextUrl.clone()
@@ -42,9 +44,14 @@ function normalizeLegacyRoleQuery(request: NextRequest): NextResponse | null {
   return NextResponse.redirect(url, { status: 308 })
 }
 
+// Every parameter the listing filters write must be here: an unknown one is removed with a 301. `role`, `seniority` and
+// `companySize` were missing, so those filters always fell back to the unfiltered page (2026-11-11).
 const ALLOWED_PUBLIC_QUERY_PARAMS = new Set([
   'page',
   'q',
+  'role',
+  'seniority',
+  'companySize',
   'tech',
   'visa',
   'exact',
