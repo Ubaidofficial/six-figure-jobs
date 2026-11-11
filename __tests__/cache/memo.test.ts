@@ -1,4 +1,4 @@
-import { MAX_STALE_MS, __clearMemoForTests, memoAsync, stableKey } from '../../lib/cache/memo'
+import { MAX_ENTRIES, MAX_STALE_MS, __clearMemoForTests, memoAsync, stableKey } from '../../lib/cache/memo'
 
 describe('memoAsync', () => {
   beforeEach(() => __clearMemoForTests())
@@ -72,6 +72,22 @@ describe('memoAsync', () => {
     const loader = jest.fn().mockRejectedValueOnce(new Error('db down')).mockResolvedValueOnce('ok')
     await expect(memoAsync('k', 1000, loader)).rejects.toThrow('db down')
     expect(await memoAsync('k', 1000, loader)).toBe('ok')
+  })
+
+  it('keeps entries that are read and evicts the least recently used (a crawl of job pages no longer pushes out /jobs)', async () => {
+    const hub = jest.fn(async () => 'hub')
+    const once = jest.fn(async () => 'once')
+    await memoAsync('jobs-hub', 60_000, hub)
+    await memoAsync('read-once', 60_000, once)
+    // A crawler adds more entries than the cache holds; the hub page is read now and then along the way.
+    for (let i = 0; i < MAX_ENTRIES + 50; i++) {
+      await memoAsync(`job-page-${i}`, 60_000, async () => i)
+      if (i % 100 === 0) await memoAsync('jobs-hub', 60_000, hub)
+    }
+    await memoAsync('jobs-hub', 60_000, hub)
+    expect(hub).toHaveBeenCalledTimes(1) // never evicted, never reloaded
+    await memoAsync('read-once', 60_000, once)
+    expect(once).toHaveBeenCalledTimes(2) // evicted, so loaded again
   })
 
   it('keeps different keys apart', async () => {
