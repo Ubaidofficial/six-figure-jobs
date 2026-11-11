@@ -8,7 +8,7 @@ import { buildJobSlug, getShortStableIdForJobId } from '../jobs/jobSlug'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 import { resolveSalaryCurrency } from '../jobs/salary'
 import { countryName, normalizeCountryCode } from '../location/country'
-import { countryFromCity, countryFromText } from '../location/jobLocation'
+import { countryFromCity, countryFromText, isPlaceholderLocation } from '../location/jobLocation'
 import {
   cleanJobDescriptionHtml,
   cleanJobDescriptionText,
@@ -324,7 +324,8 @@ function buildJobLocation(job: any): any {
   const region = job.stateCode ? String(job.stateCode).toUpperCase() : undefined
   // The stored country wins; the text is read only when it clearly names a country; then the company and the currency.
   const country = normalizeCountryCode(job.countryCode) ?? undefined
-  const locationRaw = job.locationRaw ? String(job.locationRaw).trim() : ''
+  // A placeholder ("Defer to Job Opening Location") is no place: never an addressLocality.
+  const locationRaw = job.locationRaw && !isPlaceholderLocation(job.locationRaw) ? String(job.locationRaw).trim() : ''
 
   if (!country && !locationRaw && !city) {
     return undefined

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
 import { countryName, normalizeCountryCode } from '@/lib/location/country'
-import { describeJobLocation } from '@/lib/location/jobLocation'
+import { describeJobLocation, isPlaceholderLocation } from '@/lib/location/jobLocation'
 import { skillLabel } from '@/lib/jobs/skillLabel'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
@@ -182,8 +182,8 @@ export function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: a
   const isRemote = job.remote === true || job.remoteMode === 'remote'
   const stored = normalizeCountryCode(job.countryCode)
 
-  // Use primaryLocation if available
-  if (job.primaryLocation) {
+  // Use primaryLocation if available (not when it is a placeholder such as "Defer to Job Opening Location")
+  if (job.primaryLocation && !isPlaceholderLocation(job.primaryLocation)) {
     const locations = parseJsonArray(job.locationsJson)
     const multi = { hasMultiple: locations.length > 1, count: locations.length }
     const value = String(job.primaryLocation).trim()
@@ -220,7 +220,7 @@ export function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: a
     return { label: name, countryCode: stored, hasMultiple: false, count: 1 }
   }
 
-  if (job.locationRaw) {
+  if (job.locationRaw && !isPlaceholderLocation(job.locationRaw)) {
     // "A; B; C" is several places. "City, State" is one: its commas are not a count.
     const multiple = view.count > 1
     return {
@@ -289,7 +289,8 @@ export function JobCard({ job, onClick, className, variant = 'listing', headingL
     ;(window as any).__debugSkills = true
   }
 
-  const postedLabel = formatRelativeTime(job.postedAt ?? job.updatedAt ?? job.createdAt ?? null)
+  // The posting date, as the "New" tag and the "Most Recent" order use; updatedAt is touched by every daily sync.
+  const postedLabel = formatRelativeTime(job.postedAt ?? job.createdAt ?? null)
   const jobHref = buildJobSlugHref(job as any)
 
   // "NEW" badge: show for jobs posted within the last 3 days
