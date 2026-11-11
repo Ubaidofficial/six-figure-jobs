@@ -413,6 +413,38 @@
     border-radius: 22px;
     margin-bottom: 20px;
   }
+
+  /* Phones: header chip rows (top roles, related pages) are one row that scrolls sideways instead of three or four
+     wrapped rows, and the salary card keeps its number and range but not the bars, so the jobs start on the first
+     screen (they started about 1,350px down on /jobs). */
+  .headerMain .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-right: -18px;
+    padding-right: 18px;
+    scrollbar-width: none;
+  }
+
+  .headerMain .chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .headerMain .chips > li {
+    flex: 0 0 auto;
+  }
+
+  .headerRelated {
+    margin-top: 14px;
+  }
+
+  .salaryAside {
+    margin-top: 16px;
+    padding: 16px 18px;
+  }
+
+  .salaryAside .asideBars {
+    display: none;
+  }
 }
 
 

@@ -1,5 +1,7 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 import { CountryFlag } from '@/components/ui/CountryFlag'
 import { FILTER_PARAMS, activeFilterChips } from '@/lib/jobs/activeFilters'
 
@@ -8,18 +10,30 @@ import styles from './ActiveFilters.module.css'
 
 /**
  * The bar above the results: how many jobs match, each active filter as a chip that removes it, and "Clear all".
- * `pinned` names parameters the page fixes itself (a country page's country), which get no chip.
+ * `pinned` names parameters the page fixes itself (a country page's country), which get no chip. `actions` (the sort
+ * control, and the Filters button on phones) sits at the right of the count, next to the list it orders.
  */
-export function ActiveFilters({ total, pinned = [] }: { total: number; pinned?: string[] }) {
+export function ActiveFilters({
+  total,
+  pinned = [],
+  actions,
+}: {
+  total: number
+  pinned?: string[]
+  actions?: ReactNode
+}) {
   const { update, searchParams } = useListingNavigation()
   const chips = activeFilterChips(searchParams, pinned)
   const word = total === 1 ? 'job' : 'jobs'
 
   return (
     <div className={styles.bar}>
-      <p className={styles.count} aria-live="polite">
-        Showing <strong>{total.toLocaleString()}</strong> {word}
-      </p>
+      <div className={styles.top}>
+        <p className={styles.count} aria-live="polite">
+          Showing <strong>{total.toLocaleString()}</strong> {word}
+        </p>
+        {actions ? <div className={styles.actions}>{actions}</div> : null}
+      </div>
       {chips.length > 0 ? (
         <ul className={styles.chips} aria-label="Active filters">
           {chips.map((chip) => (

@@ -6,15 +6,45 @@
   flex-wrap: wrap;
 }
 
+/* The sort control, at the right of "Showing N jobs". A chevron is drawn on the wrapper (.sort::after). */
+.sort {
+  position: relative;
+}
+
+.sort::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--color-text-1);
+  border-bottom: 1.5px solid var(--color-text-1);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
 .select {
   appearance: none;
-  min-height: 44px;
-  padding: 10px 12px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  -webkit-appearance: none;
+  min-height: 38px;
+  padding: 0 32px 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-fg) 14%, transparent);
   background: var(--color-bg-1);
   color: var(--color-text-0);
-  font-size: var(--text-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.select:hover {
+  border-color: color-mix(in srgb, var(--color-fg) 30%, transparent);
+}
+
+.select:focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 2px;
 }
 
 .mobileOnly {
@@ -25,9 +55,10 @@
   .mobileOnly {
     display: inline-flex;
   }
+}
 
-  .toolbar {
-    justify-content: flex-start;
-    width: 100%;
+@media (max-width: 768px), (pointer: coarse) {
+  .select {
+    min-height: 44px;
   }
 }

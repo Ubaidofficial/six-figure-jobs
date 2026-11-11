@@ -1,11 +1,25 @@
 /* "Showing 412 jobs" and the active filters as removable chips, above the job list. */
 
 .bar {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.top {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 8px 14px;
-  margin: 0 0 12px;
+  min-height: 40px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .count {

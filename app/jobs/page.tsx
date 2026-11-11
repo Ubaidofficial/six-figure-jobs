@@ -20,9 +20,9 @@ import { parseSliceFilters } from '../../lib/slices/types'
 import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { salaryFilterCurrency } from '@/lib/jobs/salaryFilter'
+import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { displayKeyword } from '@/lib/search/displayKeyword'
-import { workTypeStats } from '@/lib/listing/workTypeStats'
 import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
 import { CategoryRow, type CategoryRowItem } from '@/components/listing/CategoryRow'
 import { loadListingSalaryStats } from '@/lib/jobs/listingSalaryStats'
@@ -433,6 +433,9 @@ export default async function JobsIndexPage({
       ]))
 
   const vocabulary = await getSearchVocabulary().catch(() => null)
+  const levelSize = await memoAsync(stableKey('jobs-hub-level-size', baseFacetInput), DEFAULT_TTL_MS, () =>
+    loadLevelSizeCounts(baseFacetInput),
+  )
 
   const facets: JobsFacets = {
     roles: roleRows
@@ -455,6 +458,7 @@ export default async function JobsIndexPage({
     techs: vocabulary?.topSkills.map((t) => ({ value: t.term, count: t.count })),
     visaFilter: true,
     remoteRegions: JOBS_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
+    ...levelSize,
   }
 
   // ✅ UI dedupe: collapse identical ATS duplicates (same company + title + comp)
@@ -590,11 +594,6 @@ export default async function JobsIndexPage({
         })
       : []
 
-  const workTypeLinks = workTypeStats(
-    facets.workTypes,
-    (mode) => buildPageHref(basePath, { ...sp, remoteMode: mode }, 1),
-    rawRemoteMode,
-  )
 
     return (
       <ListingPage>
@@ -662,16 +661,11 @@ export default async function JobsIndexPage({
               </>
             )
           }
-          cta={data.total > 0 ? `Browse ${data.total.toLocaleString()} ${jobsWord}` : undefined}
-          stats={workTypeLinks}
-          toolbar={<JobsToolbar facets={facets} total={data.total} />}
         />
-
-        <CategoryRow items={categoryItems} />
 
         <ListingLayout
           sidebar={<JobsFiltersPanel facets={facets} />}
-          bar={<ActiveFilters total={data.total} />}
+          bar={<ActiveFilters total={data.total} actions={<JobsToolbar facets={facets} total={data.total} />} />}
           alert={queryInput}
         >
           {data.search?.corrections.length && keyword ? (
@@ -709,6 +703,9 @@ export default async function JobsIndexPage({
             </>
           )}
         </ListingLayout>
+
+        {/* Below the results, so the jobs are the first thing under the header (they sat under these tiles). */}
+        <CategoryRow items={categoryItems} />
 
         {countryPay.length > 0 ? (
           <ListingSection title="Where the six-figure jobs are">

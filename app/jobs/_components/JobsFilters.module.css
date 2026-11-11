@@ -159,6 +159,15 @@
   border-color: color-mix(in srgb, var(--color-fg) 30%, transparent);
 }
 
+.pill:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.pill:disabled:hover {
+  border-color: color-mix(in srgb, var(--color-fg) 14%, transparent);
+}
+
 .pillOn,
 .pillOn:hover {
   border-color: var(--color-primary);

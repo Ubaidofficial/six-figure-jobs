@@ -24,6 +24,9 @@ export type JobsFacets = {
   visaFilter?: boolean
   /** Remote jobs per region ("global" = can be done from anywhere). When present, the panel shows a Remote region filter. */
   remoteRegions?: Array<{ value: string; label: string; count: number }>
+  /** Jobs per seniority level and company size with the other filters on (lib/jobs/levelSizeFacets.ts). */
+  seniority?: Record<string, number>
+  companySizes?: Record<string, number>
 }
 
 export type LocationPreset = {
@@ -85,8 +88,16 @@ function Pill({
   children: React.ReactNode
   count?: number | null
 }) {
+  // An option that would show nothing is disabled (unless it is on, so it can be turned off).
+  const empty = count === 0 && !on
   return (
-    <button type="button" className={`${styles.pill} ${on ? styles.pillOn : ''}`} aria-pressed={on} onClick={onClick}>
+    <button
+      type="button"
+      className={`${styles.pill} ${on ? styles.pillOn : ''}`}
+      aria-pressed={on}
+      onClick={onClick}
+      disabled={empty}
+    >
       <span>{children}</span>
       {typeof count === 'number' ? <span className={styles.pillCount}>{count.toLocaleString()}</span> : null}
     </button>
@@ -358,7 +369,12 @@ export function JobsFiltersPanel({
             {SENIORITY.map((opt) => {
               const on = selectedSeniority.includes(opt.value)
               return (
-                <Pill key={opt.value} on={on} onClick={() => toggleMulti('seniority', opt.value, on)}>
+                <Pill
+                  key={opt.value}
+                  on={on}
+                  count={facets.seniority ? (facets.seniority[opt.value] ?? 0) : undefined}
+                  onClick={() => toggleMulti('seniority', opt.value, on)}
+                >
                   {opt.label}
                 </Pill>
               )
@@ -391,7 +407,12 @@ export function JobsFiltersPanel({
             {COMPANY_SIZES.map((opt) => {
               const on = selectedCompanySizes.includes(opt.value)
               return (
-                <Pill key={opt.value} on={on} onClick={() => toggleMulti('companySize', opt.value, on)}>
+                <Pill
+                  key={opt.value}
+                  on={on}
+                  count={facets.companySizes ? (facets.companySizes[opt.value] ?? 0) : undefined}
+                  onClick={() => toggleMulti('companySize', opt.value, on)}
+                >
                   {opt.label}
                 </Pill>
               )

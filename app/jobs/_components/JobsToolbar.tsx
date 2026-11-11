@@ -87,16 +87,18 @@ export function JobsToolbar({
         </SheetContent>
       </Sheet>
 
-      <select
-        className={styles.select}
-        aria-label="Sort jobs"
-        value={sort}
-        onChange={(e) => update((next) => next.set('sort', e.target.value))}
-      >
-        <option value="recent">Most Recent</option>
-        <option value="salary">Highest Salary</option>
-        <option value="relevant">Most Relevant</option>
-      </select>
+      <div className={styles.sort}>
+        <select
+          className={styles.select}
+          aria-label="Sort jobs"
+          value={sort}
+          onChange={(e) => update((next) => next.set('sort', e.target.value))}
+        >
+          <option value="recent">Most recent</option>
+          <option value="salary">Highest salary</option>
+          <option value="relevant">Most relevant</option>
+        </select>
+      </div>
     </div>
   )
 }
