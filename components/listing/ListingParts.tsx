@@ -9,6 +9,7 @@ import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import { pageLinkNumbers } from '@/lib/listing/pageNumbers'
 
 import styles from './Listing.module.css'
+import { toPublicJob } from '@/lib/jobs/publicJob'
 
 export type ListingChip = {
   label: string
@@ -199,7 +200,7 @@ export function JobRows({
   }
   return (
     <JobRowList>
-      {jobs.map((job) => (
+      {jobs.map(toPublicJob).map((job) => (
         <JobRow key={job.id} job={job} />
       ))}
     </JobRowList>

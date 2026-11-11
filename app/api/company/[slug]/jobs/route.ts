@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server'
 import { memoAsync, stableKey } from '@/lib/cache/memo'
 import { getCompanyJobsChunk } from '@/lib/companies/companyJobs'
 import { COMPANY_JOBS_PAGE_SIZE, companyJobsTotalPages, parseCompanyJobsPage } from '@/lib/companies/jobsPaging'
+import { toPublicJob } from '@/lib/jobs/publicJob'
 
 const TTL_MS = 5 * 60 * 1000
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,149}$/
@@ -27,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     // The salary columns are BigInt, which JSON cannot carry. They go out as numbers, not strings: buildSalaryText (used
     // by JobCard) only reads number | bigint, so a string would make the appended cards lose their salary.
     const body = {
-      jobs: jobs.map((job) => ({
+      jobs: jobs.map(toPublicJob).map((job) => ({
         ...job,
         minAnnual: toNumber(job.minAnnual),
         maxAnnual: toNumber(job.maxAnnual),

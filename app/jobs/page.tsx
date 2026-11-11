@@ -49,6 +49,7 @@ import {
   Pagination,
 } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { toPublicJob } from '@/lib/jobs/publicJob'
 
 export const revalidate = 600
 
@@ -696,7 +697,7 @@ export default async function JobsIndexPage({
             />
           ) : (
             <>
-              <InfiniteJobsList initialJobs={dedupedJobs} initialPage={page} totalPages={totalPages} />
+              <InfiniteJobsList initialJobs={dedupedJobs.map(toPublicJob)} initialPage={page} totalPages={totalPages} />
               {/* Server-rendered pagination links so Google can crawl pages beyond 1; the client list above
                   appends pages for people. */}
               <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} numbered />

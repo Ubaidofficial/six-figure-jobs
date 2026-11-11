@@ -11,6 +11,7 @@ import { queryJobs, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildSalaryText } from '@/lib/jobs/salary'
 import { describeJobLocation } from '@/lib/location/jobLocation'
 import { isHomepageFeatured } from '@/lib/jobs/latestSelection'
+import { publicJobId } from './publicJob'
 
 export const LATEST_FEED_TTL_MS = 60 * 1000
 export const FEED_SIZE = 12
@@ -55,7 +56,7 @@ export function buildFeedItems(jobs: JobWithCompany[], limit = FEED_SIZE): FeedI
     const salary = buildSalaryText(job)
     const where = describeJobLocation(job)
     out.push({
-      id: job.id,
+      id: publicJobId(job.id),
       href: buildJobSlugHref(job),
       title,
       company,

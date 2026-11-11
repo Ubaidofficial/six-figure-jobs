@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { queryJobs, type JobQueryInput } from '@/lib/jobs/queryJobs'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
+import { toPublicJob } from '@/lib/jobs/publicJob'
 const PAGE_SIZE = 24
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -41,9 +42,9 @@ export async function GET(request: Request) {
 
   const data = await queryJobs(queryInput)
 
-  // Convert BigInt to string for JSON serialization
+  // Public ids and precomputed links, no source fields (lib/jobs/publicJob.ts); BigInt becomes a string for JSON.
   const serializedData = JSON.parse(
-    JSON.stringify(data, (key, value) =>
+    JSON.stringify({ ...data, jobs: data.jobs.map(toPublicJob) }, (key, value) =>
       typeof value === 'bigint' ? value.toString() : value
     )
   )

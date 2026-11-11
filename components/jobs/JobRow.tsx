@@ -65,7 +65,8 @@ export function JobRow({
   const location = buildLocationDisplay(job)
   const workType = getWorkType(job)
   const seniority = inferSeniority(job)
-  const href = buildJobSlugHref(job as any)
+  // Server-rendered rows get `href` precomputed (toPublicJob): their `id` is the public one, not the one the URL hashes.
+  const href = (job as { href?: string }).href ?? buildJobSlugHref(job as any)
 
   const posted = job.postedAt ?? job.createdAt ?? null
   const isNew = posted ? Date.now() - new Date(posted).getTime() < NEW_WINDOW_MS : false

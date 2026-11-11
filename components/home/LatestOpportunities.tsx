@@ -5,6 +5,7 @@ import { JobRow, JobRowList } from '@/components/jobs/JobRow'
 import { dedupeLatest } from '@/lib/jobs/latestSelection'
 
 import styles from './LatestOpportunities.module.css'
+import { toPublicJob } from '@/lib/jobs/publicJob'
 
 export function LatestOpportunities({
   jobs,
@@ -32,7 +33,7 @@ export function LatestOpportunities({
         </div>
       ) : (
         <JobRowList>
-          {latest.map((job) => (
+          {latest.map(toPublicJob).map((job) => (
             <JobRow key={job.id} job={job} className="reveal-on-scroll" />
           ))}
         </JobRowList>

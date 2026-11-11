@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto'
 import { prisma } from '../../../lib/prisma'
 import { isBotUserAgent, validateApplyClick } from '../../../lib/analytics/applyClick'
 import { createRateLimiter } from '../../../lib/jobs/jobReport'
+import { jobByClientId } from '../../../lib/jobs/publicJob'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,10 +28,11 @@ export async function POST(req: Request) {
     const key = createHash('sha256').update(`sfj-apply:${ip}|${userAgent}|${click.jobId}`).digest('hex').slice(0, 24)
     if (!limiter.allow(key, 1, TEN_MINUTES)) return noContent()
 
-    const job = await prisma.job.findUnique({ where: { id: click.jobId }, select: { id: true } })
+    // The page sends the job's public id (the code in its URL); clicks are stored against the internal id.
+    const job = await prisma.job.findFirst({ where: jobByClientId(click.jobId), select: { id: true } })
     if (!job) return noContent()
 
-    await prisma.applyClick.create({ data: { jobId: click.jobId, surface: click.surface, device: click.device } })
+    await prisma.applyClick.create({ data: { jobId: job.id, surface: click.surface, device: click.device } })
   } catch (err) {
     // Includes "table does not exist" before the migration has been applied. Never surface it to the visitor.
     console.error('[apply-click]', err instanceof Error ? err.message.split('\n').pop() : err)

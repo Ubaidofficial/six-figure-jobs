@@ -1,5 +1,6 @@
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { JobRow, JobRowList } from '@/components/jobs/JobRow'
+import { toPublicJob } from '@/lib/jobs/publicJob'
 
 export type JobListProps = {
   jobs: JobWithCompany[]
@@ -31,8 +32,8 @@ export default function JobList({ jobs, headingLevel }: JobListProps) {
 
   return (
     <JobRowList>
-      {dedupedJobs.map((job) => (
-        <JobRow key={job.id} job={job as JobWithCompany} headingLevel={headingLevel} />
+      {dedupedJobs.map((j) => toPublicJob(j as JobWithCompany)).map((job) => (
+        <JobRow key={job.id} job={job} headingLevel={headingLevel} />
       ))}
     </JobRowList>
   )

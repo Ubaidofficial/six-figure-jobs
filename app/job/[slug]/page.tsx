@@ -58,6 +58,7 @@ import { loadPeerSalaries, rankSalary, type SalaryRank } from '@/lib/jobs/salary
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { salaryMidpoint } from '@/lib/jobs/salarySnapshot'
 import { structureDescription } from '@/lib/jobs/descriptionStructure'
+import { publicJobId, toPublicJob } from '../../../lib/jobs/publicJob'
 
 const SKILL_SLUG_SET = new Set(SKILL_TARGETS.map((s) => s.slug))
 const SKILL_LABEL_MAP = new Map(SKILL_TARGETS.map((s) => [s.slug, s.label]))
@@ -266,6 +267,8 @@ export default async function JobPage({
   const descriptionLang = foreignLanguage && foreignLanguage !== 'other' ? foreignLanguage : undefined
 
   const jsonLd = buildJobJsonLd(typedJob)
+  // The id the apply, save and report buttons send: the code in this page's URL, not the internal id (publicJob.ts).
+  const publicId = publicJobId(typedJob.id)
   const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
   const internalLinks = buildInternalLinks(typedJob)
 
@@ -516,7 +519,7 @@ export default async function JobPage({
           roleLabel={salaryRank?.scope === 'role' && canonicalRoleSlug ? prettyRole(canonicalRoleSlug).toLowerCase() : 'six-figure'}
           currency={typedJob.currency || null}
           applyHref={applyHref}
-          jobId={typedJob.id}
+          jobId={publicId}
         />
       </section>
 
@@ -616,7 +619,7 @@ export default async function JobPage({
             </JobSection>
           ) : null}
 
-          {hasDescription ? <DescriptionApply applyHref={applyHref} companyName={companyName} jobId={typedJob.id} /> : null}
+          {hasDescription ? <DescriptionApply applyHref={applyHref} companyName={companyName} jobId={publicId} /> : null}
         </article>
 
         <aside className="space-y-4 lg:sticky lg:top-[72px] lg:self-start min-[1360px]:top-[96px]">
@@ -624,7 +627,7 @@ export default async function JobPage({
             applyHref={applyHref}
             companyName={companyName}
             facts={jobFacts}
-            jobId={typedJob.id}
+            jobId={publicId}
             shareUrl={`${SITE_URL}/job/${canonicalSlug}`}
           />
           <ApplicationKitLink slug={canonicalSlug} />
@@ -655,8 +658,8 @@ export default async function JobPage({
             ) : null}
           </div>
           <div className="grid gap-2">
-            {similarJobs.map((sj) => (
-              <JobCard key={sj.id} job={sj as JobWithCompany} variant="homepage" />
+            {similarJobs.map((sj) => toPublicJob(sj as JobWithCompany)).map((sj) => (
+              <JobCard key={sj.id} job={sj} variant="homepage" />
             ))}
           </div>
         </section>
@@ -681,7 +684,7 @@ export default async function JobPage({
         </section>
       ) : null}
 
-      <MobileApplyBar salaryText={salaryText || null} applyHref={applyHref} jobId={typedJob.id} />
+      <MobileApplyBar salaryText={salaryText || null} applyHref={applyHref} jobId={publicId} />
 
       {/* JSON-LD (keep existing schema) */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />

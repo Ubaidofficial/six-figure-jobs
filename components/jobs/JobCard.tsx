@@ -291,7 +291,8 @@ export function JobCard({ job, onClick, className, variant = 'listing', headingL
 
   // The posting date, as the "New" tag and the "Most Recent" order use; updatedAt is touched by every daily sync.
   const postedLabel = formatRelativeTime(job.postedAt ?? job.createdAt ?? null)
-  const jobHref = buildJobSlugHref(job as any)
+  // Server-rendered cards get `href` precomputed (toPublicJob): their `id` is the public one, not the one the URL hashes.
+  const jobHref = (job as { href?: string }).href ?? buildJobSlugHref(job as any)
 
   // "NEW" badge: show for jobs posted within the last 3 days
   const postedDate = job.postedAt ?? job.createdAt ?? null
