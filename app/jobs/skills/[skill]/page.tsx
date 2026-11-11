@@ -12,7 +12,7 @@ import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
-import { buildListingDescription, countPrefix, fitTitle } from '../../../../lib/seo/metaText'
+import { buildListingDescription, buildSkillTitle, countPrefix } from '../../../../lib/seo/metaText'
 import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
@@ -53,19 +53,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const allowIndex =
     total >= 5 &&
     (isPhaseIndexable({ pathname: `/jobs/skills/${resolved.slug}` }) || isPseoHubUnlocked(total, `/jobs/skills/${resolved.slug}`))
-  const titleBase = `$100k+ ${resolved.label} jobs`
-  // Same wording as before; the brand, then the count, drop out when the title would pass TITLE_MAX.
-  const title =
-    total > 0
-      ? fitTitle([
-          `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`,
-          `${titleBase} (${total.toLocaleString()} openings)`,
-          `${titleBase} | ${SITE_NAME}`,
-          titleBase,
-        ])
-      : fitTitle([`${titleBase} | ${SITE_NAME}`, titleBase])
+  const title = buildSkillTitle(resolved.label, total)
   const description = buildListingDescription(
-    `${countPrefix(total)}$100k+ ${resolved.label} jobs.`,
+    `${countPrefix(total)}${resolved.label} jobs paying $100k+.`,
     [['High-paying roles at top tech companies.']],
   )
   const canonical = `${SITE_URL}/jobs/skills/${resolved.slug}`
@@ -167,7 +157,7 @@ export default async function SkillPage({ params }: { params: Params }) {
           { label: resolved.label },
         ]}
         accent={resolved.label}
-        title={`$100k+ jobs (${total.toLocaleString()})`}
+        title={`jobs paying $100k+ (${total.toLocaleString()})`}
         summary={
           <>
             <strong>{total.toLocaleString()}</strong> {total === 1 ? 'role' : 'roles'} that list {resolved.label} and pay

@@ -113,7 +113,10 @@ export default async function FourDayWeekJobsPage({ searchParams }: { searchPara
   const listings = await loadFourDayWeekListings()
   const [result, counts] = await Promise.all([
     // Highest pay first: stable, and the first import adds every job at once, so "newest added" would mean nothing.
-    queryJobs({ page, pageSize: PAGE_SIZE, sortBy: 'salary', fourDayWeek: listings }),
+    // Cached like the counts: matching our jobs against every listing took ~3.5 s on each visit (2026-11-11).
+    memoAsync(`four-day-week-page:${listings.length}:${page}`, 10 * 60 * 1000, () =>
+      queryJobs({ page, pageSize: PAGE_SIZE, sortBy: 'salary', fourDayWeek: listings }),
+    ),
     loadCounts(listings),
   ])
 

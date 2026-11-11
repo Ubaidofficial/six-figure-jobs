@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import {
   Faq,
   JobRows,
+  Accent,
   ListingHeader,
   ListingLayout,
   ListingPage,
@@ -372,8 +373,11 @@ export async function SalaryTierTemplate({
       <ListingHeader
         aside={<ListingSalaryAside input={queryInput} scope={`${tier.rangeLabel} roles`} compare={false} />}
         breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs', href: '/jobs' }, { label: tier.rangeLabel }]}
-        accent={tier.rangeLabel}
-        title="Jobs"
+        title={
+          <>
+            Jobs that pay <Accent>{tier.rangeLabel}</Accent> a year
+          </>
+        }
         summary={
           <>
             Every job here shows a published salary in the {tier.rangeLabel} range

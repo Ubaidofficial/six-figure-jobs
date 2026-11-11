@@ -24,10 +24,17 @@ const money = (v: number) => `$${Math.round(v / 1000)}k`
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const { roles, listings } = await loadHighPayingJobs()
-    const title = fitTitle([`High-Paying Jobs Ranked by Real Pay | ${SITE_NAME}`, 'High-Paying Jobs Ranked by Real Pay'])
+    const title =
+      roles.length > 0
+        ? fitTitle([
+            `High-Paying Jobs: ${roles.length} Highest-Paying Roles | ${SITE_NAME}`,
+            `High-Paying Jobs: ${roles.length} Highest-Paying Roles by Real Pay`,
+            `High-Paying Jobs: ${roles.length} Highest-Paying Roles`,
+          ])
+        : fitTitle([`High-Paying Jobs Ranked by Real Pay | ${SITE_NAME}`, 'High-Paying Jobs Ranked by Real Pay'])
     const description =
       roles.length > 0
-        ? `High-paying jobs: ${roles.length} roles ranked by median salary from ${listings.toLocaleString('en-US')} live listings with published pay. ${roles[0].label} leads at ${money(roles[0].median)}.`
+        ? `High-paying jobs: the ${roles.length} highest-paying roles, ranked by median salary from ${listings.toLocaleString('en-US')} live listings with published pay. ${roles[0].label} leads at ${money(roles[0].median)}.`
         : 'High-paying jobs ranked by the median salary of live listings that publish their pay.'
     return {
       title,
