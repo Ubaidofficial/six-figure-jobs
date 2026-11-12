@@ -42,7 +42,11 @@ describe('lookupFreehireJob', () => {
   it('reports an error at once on a long rate limit instead of waiting hours (once Retry-After was 49611 s)', async () => {
     get.mockRejectedValue({ response: { status: 429, headers: { 'retry-after': '49611' } } })
     const t0 = Date.now()
-    expect(await lookupFreehireJob('a')).toEqual({ state: 'error', message: 'rate limited for 49611s' })
+    expect(await lookupFreehireJob('a')).toEqual({
+      state: 'error',
+      quota: true,
+      message: 'rate limited for 49611s (limit=- remaining=- reset=-)',
+    })
     expect(get).toHaveBeenCalledTimes(1)
     expect(Date.now() - t0).toBeLessThan(1000)
   })
@@ -115,6 +119,35 @@ describe('checkClosedFreehireJobs', () => {
     const r = await run(many, { 'slug-1': { state: 'gone' }, 'slug-2': { state: 'error', message: 'x' } })
     expect(r.gone).toBe(1)
     expect(r.errors).toBe(1)
+    expect(r.closed).toHaveLength(0)
+    expect(expireJobsByIds).not.toHaveBeenCalled()
+  })
+
+  it('looks up at most maxLookups jobs, the least recently refreshed first', async () => {
+    const dated = Array.from({ length: 6 }, (_, i) => ({ ...job(i), updatedAt: new Date(Date.UTC(2026, 10, 10 - i)) }))
+    const seen: string[] = []
+    await run(dated, {}, { maxLookups: 3, lookup: async (slug: string) => (seen.push(slug), { state: 'open' }) })
+    expect(seen.sort()).toEqual(['slug-3', 'slug-4', 'slug-5'])
+  })
+
+  it('stops at the first lookup refused for the daily quota and expires nothing', async () => {
+    let calls = 0
+    const r = await run(many, {}, {
+      concurrency: 1,
+      lookup: async (slug: string): Promise<Lookup> => {
+        calls++
+        if (slug === 'slug-0') return { state: 'closed', closedAt: 'x' }
+        return { state: 'error', quota: true, message: 'rate limited for 40000s' }
+      },
+    })
+    expect(calls).toBe(2)
+    expect(r.status).toBe('skipped')
+    expect(r.reason).toMatch(/daily quota/)
+    expect(expireJobsByIds).not.toHaveBeenCalled()
+  })
+
+  it('keeps a job reported closed when the confirming search fails (unknown is never "closed")', async () => {
+    const r = await run(many, { 'slug-3': { state: 'closed', closedAt: 'x' } }, { stillListed: async () => null })
     expect(r.closed).toHaveLength(0)
     expect(expireJobsByIds).not.toHaveBeenCalled()
   })

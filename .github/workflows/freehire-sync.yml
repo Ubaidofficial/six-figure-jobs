@@ -1,7 +1,8 @@
 name: freehire daily sync
 
 # Pulls the last ~36 hours of fresh six-figure jobs from freehire (US, UK, EU, Canada, Australia) through
-# the normal ingest path, then expires jobs not refreshed in 7 days. Runs daily; can also be started by hand.
+# the normal ingest path, then expires jobs not refreshed in 7 days. Runs daily in full, plus three light runs (freehire
+# sync of the last 18 hours, self-heal, slices) 6 hours apart; can also be started by hand.
 # New/removed URLs are queued in the database (JobIndexingQueue) during the sync, never sent in a burst; after the
 # sync, the queue is drained at most INDEXING_API_DAILY_LIMIT URLs a day (only that step gets the Google credentials).
 # It also refreshes the listing slices and runs the data-quality self-heal: the three steps that used to run in the
@@ -10,7 +11,11 @@ name: freehire daily sync
 
 on:
   schedule:
-    - cron: "17 5 * * *" # 05:17 UTC daily
+    - cron: "17 5 * * *" # 05:17 UTC daily: the full run (every step below)
+    # Light runs, 6 hours apart (owner's request 2026-11-12: new jobs within hours, not once a day): only the freehire
+    # sync over the last 18 hours (overlaps the previous run even when GitHub starts one hours late), the self-heal
+    # and the slices. ~10 search requests and a few hundred company lookups each, well inside the key's daily quota.
+    - cron: "17 11,17,23 * * *"
   workflow_dispatch:
     inputs:
       closed_apply:
@@ -36,7 +41,9 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       FREEHIRE_API_KEY: ${{ secrets.FREEHIRE_API_KEY }}
-      FREEHIRE_LOOKBACK_DAYS: ${{ inputs.lookback_days || '1.5' }}
+      # 'true' on the 6-hourly light runs (the second cron above); the full-run-only steps check it.
+      LIGHT_RUN: ${{ github.event.schedule == '17 11,17,23 * * *' }}
+      FREEHIRE_LOOKBACK_DAYS: ${{ inputs.lookback_days || (github.event.schedule == '17 11,17,23 * * *' && '0.75') || '1.5' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -75,7 +82,7 @@ jobs:
         run: npm run check-closed:freehire -- --dry-run
 
       - name: Expire jobs freehire has closed
-        if: ${{ success() && (github.event_name == 'schedule' || inputs.closed_apply) }}
+        if: ${{ success() && env.LIGHT_RUN != 'true' && (github.event_name == 'schedule' || inputs.closed_apply) }}
         timeout-minutes: 20
         run: npm run check-closed:freehire
 
@@ -84,21 +91,21 @@ jobs:
       # the freehire sync failed (for example on freehire's daily quota), and the steps below run if either succeeded.
       - name: Sync direct employers
         id: employers
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && env.LIGHT_RUN != 'true' }}
         timeout-minutes: 90
         run: npx tsx scripts/sync-direct-employers.ts
       # 4dayweek.io's four-day-week listings (reduced hours at full pay) from its public API, for /jobs/4-day-week.
       # Independent of the steps above; a failure here does not stop the steps below. Seen jobs are refreshed daily, so
       # a listing 4dayweek.io drops expires with the 7-day rule below.
       - name: Sync 4-day-week jobs
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && env.LIGHT_RUN != 'true' }}
         continue-on-error: true
         timeout-minutes: 10
         run: npm run sync:fourdayweek
       # Worldwide-remote jobs from We Work Remotely (RSS) and Himalayas (search API), which freehire barely carries.
       # Independent of the steps above; a failure here does not stop the steps below.
       - name: Sync worldwide remote boards
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && env.LIGHT_RUN != 'true' }}
         continue-on-error: true
         timeout-minutes: 10
         run: npm run sync:worldwide-boards
@@ -123,8 +130,9 @@ jobs:
           npx tsx scripts/bootstrapCountrySalarySlices.ts
       # Send queued new/updated/removed job URLs to the Google Indexing API, at most 180 a day (Google's default
       # quota is 200). Expired jobs in the queue are skipped by the worker.
+      # Full run only: the queue's 180-a-day cap is per run, so draining four times a day would overrun Google's quota.
       - name: Drain Google Indexing queue
-        if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
+        if: ${{ !cancelled() && env.LIGHT_RUN != 'true' && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
         timeout-minutes: 10
         env:
           GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON }}

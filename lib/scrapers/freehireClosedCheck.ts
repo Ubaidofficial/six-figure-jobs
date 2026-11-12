@@ -33,10 +33,20 @@ const SEARCH_URL = 'https://freehire.me/api/v1/jobs/search'
 
 export const MAX_ERROR_FRACTION = 0.05
 export const MAX_CLOSE_FRACTION = 0.4
+/**
+ * Most jobs looked up per run. Each lookup is one request against the API key's daily quota (10,000 when last seen,
+ * 2026-11-05), shared with the syncs. Checking all ~6,000 active jobs every run used the quota up and every later
+ * lookup failed (2026-11-11: 4,985 errors, nothing expired). Least recently confirmed first, so every job is still
+ * looked at every few days; the 7-day expiry catches anything not confirmed open meanwhile.
+ */
+export const MAX_LOOKUPS_PER_RUN = 2000
 
+/** `quota`: freehire refused with a long Retry-After, i.e. the key's daily quota is used up; no lookup will work now. */
 export type Lookup =
   | { state: 'open'; description?: string | null; reality?: FreehireJob['reality'] }
-  | { state: 'closed'; closedAt: string } | { state: 'gone' } | { state: 'error'; message: string }
+  | { state: 'closed'; closedAt: string }
+  | { state: 'gone' }
+  | { state: 'error'; message: string; quota?: boolean }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -55,35 +65,64 @@ export async function lookupFreehireJob(slug: string): Promise<Lookup> {
       const response = (error as { response?: { status?: number; headers?: Record<string, string> } }).response
       if (response?.status === 404) return { state: 'gone' }
       if (response?.status === 429) {
-        const decision = decideRateLimitWait(response.headers?.['retry-after'])
+        const h = response.headers ?? {}
+        const decision = decideRateLimitWait(h['retry-after'])
         // A long Retry-After means the quota is used up: report an error now instead of waiting hours per lookup.
-        if (decision.action === 'give-up') return { state: 'error', message: `rate limited for ${decision.seconds}s` }
+        if (decision.action === 'give-up') {
+          return {
+            state: 'error',
+            quota: true,
+            message: `rate limited for ${decision.seconds}s (limit=${h['x-ratelimit-limit'] ?? '-'} remaining=${h['x-ratelimit-remaining'] ?? '-'} reset=${h['x-ratelimit-reset'] ?? '-'})`,
+          }
+        }
         if (attempt < 3) {
           await sleep(decision.seconds * 1000)
           continue
         }
       }
-      return { state: 'error', message: error instanceof Error ? error.message : String(error) }
+      const message = error instanceof Error ? error.message : String(error)
+      return { state: 'error', message: response?.status ? `HTTP ${response.status}: ${message}` : message }
     }
   }
   return { state: 'error', message: 'rate limited' }
 }
 
-/** Find a job's freehire slug by searching its title and matching the external id. Null when not found. */
+/** Search freehire for a job by title; its slug when a result has the external id, null when none does. Throws on failure. */
+async function searchFreehireSlug(title: string, externalId: string): Promise<string | null> {
+  const res = await axios.get<{ data?: Array<Pick<FreehireJob, 'public_slug' | 'external_id'>> }>(SEARCH_URL, {
+    headers: freehireHeaders(),
+    timeout: 30_000,
+    params: { q: title, limit: 50 },
+  })
+  return res.data?.data?.find((j) => j.external_id === externalId)?.public_slug ?? null
+}
+
+/** Find a job's freehire slug by searching its title and matching the external id. Null when not found or on failure. */
 export async function resolveFreehireSlug(title: string, externalId: string): Promise<string | null> {
+  return searchFreehireSlug(title, externalId).catch(() => null)
+}
+
+/**
+ * Whether freehire's open search still lists a posting: true, false, or null when the search failed. A failure must
+ * never count as "no longer listed": that would expire an open job (for instance once the quota is used up).
+ */
+export async function isStillListed(title: string, externalId: string): Promise<boolean | null> {
   try {
-    const res = await axios.get<{ data?: Array<Pick<FreehireJob, 'public_slug' | 'external_id'>> }>(SEARCH_URL, {
-      headers: freehireHeaders(),
-      timeout: 30_000,
-      params: { q: title, limit: 50 },
-    })
-    return res.data?.data?.find((j) => j.external_id === externalId)?.public_slug ?? null
+    return (await searchFreehireSlug(title, externalId)) !== null
   } catch {
     return null
   }
 }
 
-export type ActiveJob = { id: string; title: string; externalId: string | null; sourceRef: string | null; descriptionHtml?: string | null }
+export type ActiveJob = {
+  id: string
+  title: string
+  externalId: string | null
+  sourceRef: string | null
+  descriptionHtml?: string | null
+  /** Last refresh (sync or a confirmed-open check): the least recently refreshed are looked up first. */
+  updatedAt?: Date | null
+}
 
 export type ClosedCheckOptions = {
   dryRun?: boolean
@@ -94,11 +133,16 @@ export type ClosedCheckOptions = {
   maxCloseFraction?: number
   /** Total time the check may take. When exceeded it stops and expires NOTHING (status `skipped`). */
   deadlineMs?: number
+  /** Most jobs to look up this run, least recently refreshed first (default MAX_LOOKUPS_PER_RUN). */
+  maxLookups?: number
   /** Progress lines (phase and counts), so a stalled run is visible in the log. */
   onProgress?: (message: string) => void
   /** Injected in tests. */
   lookup?: (slug: string) => Promise<Lookup>
   resolve?: (title: string, externalId: string) => Promise<string | null>
+  /** Second opinion before expiring: true/false, or null when unknown (kept). Defaults to isStillListed, or, when only
+   *  `resolve` is injected (tests), to whether it finds a slug. */
+  stillListed?: (title: string, externalId: string) => Promise<boolean | null>
   saveSlug?: (jobId: string, slug: string) => Promise<void>
   /** Writes the outcome for jobs freehire confirmed open: refresh these, replace these descriptions. Injected in tests. */
   applyRefresh?: (refresh: { keepAliveIds: string[]; descriptions: Array<{ id: string; html: string }> }) => Promise<void>
@@ -178,14 +222,21 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     (() =>
       prisma.job.findMany({
         where: { source: makeBoardSource('freehire'), isExpired: false },
-        select: { id: true, title: true, externalId: true, sourceRef: true, descriptionHtml: true },
+        select: { id: true, title: true, externalId: true, sourceRef: true, descriptionHtml: true, updatedAt: true },
       }))
   const applyRefresh = options.applyRefresh ?? applyRefreshToDatabase
+  const stillListed =
+    options.stillListed ??
+    (options.resolve ? async (t: string, e: string) => (await resolve(t, e)) !== null : isStillListed)
+  const maxLookups = options.maxLookups ?? MAX_LOOKUPS_PER_RUN
   const concurrency = options.concurrency ?? 3
   const paceMs = options.paceMs ?? 350
   const started = Date.now()
   const deadline = options.deadlineMs ? started + options.deadlineMs : Number.POSITIVE_INFINITY
   const timedOut = () => Date.now() > deadline
+  // Set by the first lookup refused for the daily quota: every request after it would fail too, so stop asking.
+  let quotaMessage: string | null = null
+  const stopped = () => timedOut() || quotaMessage !== null
   const say = (message: string) => options.onProgress?.(`[${Math.round((Date.now() - started) / 1000)}s] ${message}`)
 
   const active = await loadActive()
@@ -212,8 +263,14 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     { stop: timedOut },
   )
 
-  const toCheck = active.filter((j) => slugOf.has(j.id))
+  // Least recently refreshed first (no date first), at most maxLookups of them.
+  const identifiable = active.filter((j) => slugOf.has(j.id))
+  const toCheck = [...identifiable]
+    .sort((a, b) => (a.updatedAt?.getTime() ?? 0) - (b.updatedAt?.getTime() ?? 0))
+    .slice(0, maxLookups)
+  if (toCheck.length < identifiable.length) say(`checking the ${toCheck.length} least recently refreshed of ${identifiable.length}`)
   const counts = { open: 0, gone: 0, errors: 0 }
+  const errorSamples = new Set<string>()
   const reportedClosed: ActiveJob[] = []
   const keepAliveIds: string[] = []
   const descriptions: Array<{ id: string; html: string }> = []
@@ -231,15 +288,23 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
         const html = upgradedDescription(j.descriptionHtml, r.description)
         if (html) descriptions.push({ id: j.id, html })
       } else if (r.state === 'gone') counts.gone++
-      else counts.errors++
+      else {
+        counts.errors++
+        if (r.quota && quotaMessage === null) quotaMessage = r.message
+        if (errorSamples.size < 3 && !errorSamples.has(r.message)) {
+          errorSamples.add(r.message)
+          say(`lookup error: ${r.message}`)
+        }
+      }
     },
     {
-      stop: timedOut,
+      stop: stopped,
       onProgress: (done, total) => say(`checked ${done}/${total} (open ${counts.open}, errors ${counts.errors}, reported closed ${reportedClosed.length})`),
     },
   )
 
-  // Second opinion: freehire's open search must no longer list a posting we are about to expire.
+  // Second opinion: freehire's open search must no longer list a posting we are about to expire. A failed search is
+  // "unknown" and keeps the job.
   const closed: ActiveJob[] = []
   const conflicts: ActiveJob[] = []
   await pool(
@@ -247,11 +312,12 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     concurrency,
     paceMs,
     async (j) => {
-      const stillListed = await resolve(j.title, j.externalId as string)
-      if (stillListed) conflicts.push(j)
-      else closed.push(j)
+      const listed = await stillListed(j.title, j.externalId as string)
+      if (listed === false) closed.push(j)
+      else if (listed === true) conflicts.push(j)
+      else counts.errors++
     },
-    { stop: timedOut },
+    { stop: stopped },
   )
 
   // Confirmed-open jobs are refreshed even when the run is later skipped or aborted: that says nothing about them.
@@ -273,6 +339,10 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
   }
 
   say(`done: open ${counts.open}, gone ${counts.gone}, errors ${counts.errors}, confirmed closed ${closed.length}`)
+  // The quota ran out: what was not looked at is unknown, so nothing is expired. The next run starts again.
+  if (quotaMessage !== null) {
+    return { ...base, status: 'skipped', reason: `freehire's daily quota is used up (${quotaMessage}); nothing was expired` }
+  }
   // Out of time: whatever was not looked at is unknown, so nothing is expired. The next run starts again.
   if (timedOut()) {
     return { ...base, status: 'skipped', reason: `time budget of ${Math.round((options.deadlineMs ?? 0) / 60000)} minutes exceeded; nothing was expired` }

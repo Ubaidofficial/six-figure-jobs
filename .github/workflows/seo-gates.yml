@@ -100,7 +100,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: seo-local-gates
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - name: Checkout repository
@@ -120,12 +120,18 @@ jobs:
           ATTEMPTS=8
           DELAY_SECONDS=90
 
+          # Railway builds the merge for about 4 minutes and starts with empty page caches (the cache lives on its disk),
+          # then warms the busiest pages. Checking during that window met crawlers on cold pages and helped push job
+          # pages to 26 s (2026-11-12). Start after the new deploy is up and warm.
+          echo "Waiting 6 minutes for the deploy to finish and warm up..."
+          sleep 360
+
           for attempt in $(seq 1 "$ATTEMPTS"); do
             echo "Production SEO proof attempt ${attempt}/${ATTEMPTS}"
 
-            # 4 requests at a time, not the default 12: this runs while Railway is starting the new deploy with empty
-            # caches, and 12 parallel cold renders on top of crawler traffic helped run it out of memory (2026-11-11).
-            if SEO_BASE_URL="${PRODUCTION_SITE_URL}" SEO_SAMPLE_PER_SITEMAP=1000 SEO_STRICT=1 SEO_CONCURRENCY=4 npm run seo:validate:strict; then
+            # 2 requests at a time, not the default 12: right after a deploy most pages are cold, and parallel cold
+            # renders on top of crawler traffic ran it out of memory (2026-11-11) and slowed visitors' pages (2026-11-12).
+            if SEO_BASE_URL="${PRODUCTION_SITE_URL}" SEO_SAMPLE_PER_SITEMAP=1000 SEO_STRICT=1 SEO_CONCURRENCY=2 npm run seo:validate:strict; then
               echo "Production SEO proof passed."
               exit 0
             fi
