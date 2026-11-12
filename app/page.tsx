@@ -1,7 +1,7 @@
 // app/page.tsx
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { unstable_rethrow } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
@@ -50,6 +50,7 @@ import { loadPublicSiteStats } from '@/lib/jobs/publicStats'
 import { getPriorityPublishedCompanyCandidates } from '@/lib/seo/companyPublishing'
 import { TOP_COMPANY_SLUGS } from '@/lib/constants/topCompanies'
 import { SectionHeading } from '@/components/ui/SectionHeading'
+import { SectionIndicator } from '@/components/home/SectionIndicator'
 
 export const revalidate = 300 // 5min ISR — allows CDN caching unlike force-dynamic
 
@@ -581,6 +582,7 @@ export default async function HomePage() {
           jobCount={stats.totalJobs}
           companyCount={stats.totalCompaniesHiring}
         />
+        <SectionIndicator />
       <Hero
         jobCount={stats.totalJobs}
         companyCount={stats.totalCompaniesHiring}

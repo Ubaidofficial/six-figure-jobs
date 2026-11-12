@@ -6,7 +6,7 @@
 // ones the bars showed before. Counts use 'en-US' so the server and the browser print them alike.
 
 import * as React from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { cn } from '@/lib/utils'

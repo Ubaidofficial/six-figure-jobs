@@ -6,7 +6,7 @@
 // reader's thumb. Polling stops after 30 minutes of one visit and resumes when the tab is shown again.
 
 import * as React from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { CountryFlag } from '@/components/ui/CountryFlag'

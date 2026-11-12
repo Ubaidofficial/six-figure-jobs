@@ -1,7 +1,8 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
+import { useLinkStatus } from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Menu, Search, X } from 'lucide-react'
 
@@ -13,6 +14,12 @@ import { Wordmark } from './Wordmark'
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 
 import styles from './SiteHeader.module.css'
+
+/** A lime bar that sweeps under a menu link while its page loads, so a click answers at once (useLinkStatus). */
+function NavPending() {
+  const { pending } = useLinkStatus()
+  return <span aria-hidden="true" className={pending ? `${styles.navPending} ${styles.navPendingOn}` : styles.navPending} />
+}
 
 function useScrolled(thresholdPx: number = 10): boolean {
   const [scrolled, setScrolled] = React.useState(false)
@@ -66,11 +73,11 @@ export function SiteHeader() {
         </div>
 
         <nav className={styles.nav} aria-label="Primary">
-          <Link href="/jobs" className={`${styles.navLink} ${isActive("/jobs") ? styles.navLinkActive : ''}`} aria-current={isActive("/jobs") ? 'page' : undefined}>Jobs</Link>
-          <Link href="/remote" className={`${styles.navLink} ${isActive("/remote") ? styles.navLinkActive : ''}`} aria-current={isActive("/remote") ? 'page' : undefined}>Remote</Link>
-          <Link href="/companies" className={`${styles.navLink} ${isActive("/companies") ? styles.navLinkActive : ''}`} aria-current={isActive("/companies") ? 'page' : undefined}>Companies</Link>
-          <Link href="/salary" className={`${styles.navLink} ${isActive("/salary") ? styles.navLinkActive : ''}`} aria-current={isActive("/salary") ? 'page' : undefined}>Salaries</Link>
-          <Link href="/blog" className={`${styles.navLink} ${isActive("/blog") ? styles.navLinkActive : ''}`} aria-current={isActive("/blog") ? 'page' : undefined}>Blog</Link>
+          <Link href="/jobs" className={`${styles.navLink} ${isActive("/jobs") ? styles.navLinkActive : ''}`} aria-current={isActive("/jobs") ? 'page' : undefined}>Jobs<NavPending /></Link>
+          <Link href="/remote" className={`${styles.navLink} ${isActive("/remote") ? styles.navLinkActive : ''}`} aria-current={isActive("/remote") ? 'page' : undefined}>Remote<NavPending /></Link>
+          <Link href="/companies" className={`${styles.navLink} ${isActive("/companies") ? styles.navLinkActive : ''}`} aria-current={isActive("/companies") ? 'page' : undefined}>Companies<NavPending /></Link>
+          <Link href="/salary" className={`${styles.navLink} ${isActive("/salary") ? styles.navLinkActive : ''}`} aria-current={isActive("/salary") ? 'page' : undefined}>Salaries<NavPending /></Link>
+          <Link href="/blog" className={`${styles.navLink} ${isActive("/blog") ? styles.navLinkActive : ''}`} aria-current={isActive("/blog") ? 'page' : undefined}>Blog<NavPending /></Link>
           <AuthNav className={styles.navLink} />
         </nav>
 

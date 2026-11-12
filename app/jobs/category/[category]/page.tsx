@@ -4,7 +4,7 @@
 export const revalidate = 600
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '../../../../lib/jobs/queryJobs'

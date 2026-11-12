@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'

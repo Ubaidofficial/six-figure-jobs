@@ -3,7 +3,7 @@
 // adjacent to six-figure job listings.
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { getAllPosts } from '@/lib/blog/posts'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '@/lib/seo/site'
 

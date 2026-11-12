@@ -1,6 +1,6 @@
 // Building blocks shared by every listing page. Server components; the toolbar/filters passed in are client components.
 import type { ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
 import { JobRow, JobRowList } from '@/components/jobs/JobRow'
@@ -169,7 +169,11 @@ export function ListingLayout({
       ) : null}
       <div id="jobs" className={styles.results}>
         {bar}
-        {alert ? <JobAlertBox query={alert} /> : null}
+        {alert ? (
+          <div id="job-alert" className={styles.alertAnchor}>
+            <JobAlertBox query={alert} />
+          </div>
+        ) : null}
         {children}
       </div>
     </div>

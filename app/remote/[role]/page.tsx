@@ -2,7 +2,7 @@
 export const revalidate = 3600
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { remoteRegionDef } from '../../../lib/jobs/remoteRegions'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { RemoteUnavailablePage } from '@/components/runtime/FallbackPresets'

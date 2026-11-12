@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { JobRow, JobRowList } from '@/components/jobs/JobRow'

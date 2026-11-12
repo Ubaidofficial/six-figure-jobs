@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { redirect, unstable_rethrow } from 'next/navigation'
 import { InfiniteJobsList } from './_components/InfiniteJobsList'
 
@@ -49,6 +49,7 @@ import {
   Pagination,
 } from '@/components/listing/ListingParts'
 import { ListingSearch } from '@/components/listing/ListingSearch'
+import { SavedSearchChip } from '@/components/listing/SavedSearchChip'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { toPublicJob } from '@/lib/jobs/publicJob'
 
@@ -606,7 +607,12 @@ export default async function JobsIndexPage({
 
         <ListingHeader
           aside={<ListingSalaryAside input={queryInput} />}
-          search={<ListingSearch action="/jobs" defaultValue={keyword} />}
+          search={
+            <>
+              <ListingSearch action="/jobs" defaultValue={keyword} />
+              {keyword ? <SavedSearchChip keyword={keyword} /> : null}
+            </>
+          }
           related={topRolesRow('Top roles', topRoles)}
           breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs' }]}
           title={

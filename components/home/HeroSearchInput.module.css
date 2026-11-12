@@ -166,3 +166,60 @@
     display: inline-block;
   }
 }
+
+/* Placeholder rows while suggestions load (shimmer sweeps left to right; still under reduced motion). */
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.skeletonLogo {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 8px;
+}
+
+.skeletonText {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+}
+
+.skeletonLine {
+  display: block;
+  height: 10px;
+  border-radius: 6px;
+}
+
+.skeletonLineShort {
+  width: 35%;
+  height: 8px;
+}
+
+.skeletonLogo,
+.skeletonLine {
+  background: linear-gradient(90deg, var(--color-bg-2) 0%, var(--color-bg-3) 40%, var(--color-bg-2) 80%);
+  background-size: 200% 100%;
+  animation: suggest-shimmer 1.1s linear infinite;
+}
+
+@keyframes suggest-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonLogo,
+  .skeletonLine {
+    animation: none;
+  }
+}
+

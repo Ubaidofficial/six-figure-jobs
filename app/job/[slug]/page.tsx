@@ -1,7 +1,7 @@
 // app/job/[slug]/page.tsx
 
 import type { Metadata } from 'next'
-import NextLink from 'next/link'
+import NextLink from '@/components/ui/Link'
 import NextImage from 'next/image'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { cache, type ReactNode } from 'react'
@@ -534,6 +534,8 @@ export default async function JobPage({
           rank={salaryRank}
           roleLabel={salaryRank?.scope === 'role' && canonicalRoleSlug ? prettyRole(canonicalRoleSlug).toLowerCase() : 'six-figure'}
           currency={typedJob.currency || null}
+          jobMin={typedJob.minAnnual != null ? Number(typedJob.minAnnual) : null}
+          jobMax={typedJob.maxAnnual != null ? Number(typedJob.maxAnnual) : null}
           applyHref={applyHref}
           jobId={publicId}
         />

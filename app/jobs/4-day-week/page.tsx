@@ -4,7 +4,7 @@
 // four-day weeks and are not listed.
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { memoAsync } from '../../../lib/cache/memo'
 import {

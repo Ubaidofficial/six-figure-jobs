@@ -1,6 +1,6 @@
 // app/salary/page.tsx
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { PageHero, PageSection, PageStatGrid } from '@/components/seo/PageChrome'
 import { getSiteUrl, defaultOgImages } from '@/lib/seo/site'
 import { countryCodeToSlug } from '@/lib/seo/countrySlug'

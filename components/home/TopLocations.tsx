@@ -1,10 +1,11 @@
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { ArrowUpRight } from 'lucide-react'
 
 import { CountryFlag } from '@/components/ui/CountryFlag'
 import { pluralize } from '@/lib/utils/number'
 import styles from './TopLocations.module.css'
 import { SectionHeading } from '@/components/ui/SectionHeading'
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 
 export type TopLocationCard = {
   slug: string
@@ -40,7 +41,9 @@ export function TopLocations({ locations }: { locations: TopLocationCard[] }) {
             <div className={styles.name}>{loc.name}</div>
 
             <div className={styles.meta}>
-              <div className={styles.count}>{loc.jobCount.toLocaleString()} {pluralize(loc.jobCount, 'job')}</div>
+              <div className={styles.count}>
+                <AnimatedNumber text={loc.jobCount.toLocaleString('en-US')} reveal /> {pluralize(loc.jobCount, 'job')}
+              </div>
               <div className={styles.threshold}>{loc.thresholdLabel}</div>
               {loc.detail ? (
                 <div className={styles.city}>{loc.detail}</div>

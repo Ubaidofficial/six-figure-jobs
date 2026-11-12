@@ -222,30 +222,104 @@
   color: var(--color-text-0);
 }
 
-.rankTrack {
+/* Pay range bar: the grey band is where most comparable listings pay (25th-75th percentile), the dark tick is the
+   typical (median) pay, the lime bar is this job's own range. The track runs from their 5th to 95th percentile. */
+.rangeTrack {
   position: relative;
-  height: 8px;
-  margin: 12px 0 8px;
+  height: 12px;
+  margin: 14px 0 6px;
   border-radius: 999px;
   background: var(--color-bg-2);
+  box-shadow: inset 0 0 0 1px var(--color-border);
 }
 
-.rankFill {
+.rangeMiddle {
   position: absolute;
-  inset: 0 auto 0 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-fg) 14%, var(--color-bg-2));
+}
+
+.rangeMedian {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--color-text-0);
+}
+
+.rangeJob {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  min-width: 8px;
   border-radius: 999px;
   background: var(--color-primary);
+  box-shadow: 0 0 0 1.5px var(--color-primary-text);
 }
 
-.rankMarker {
-  position: absolute;
-  top: 50%;
-  width: 16px;
-  height: 16px;
-  transform: translate(-50%, -50%);
+.rangeScale {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--color-text-2);
+}
+
+.rangeLegend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.rangeLegend dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  color: var(--color-text-1);
+}
+
+.rangeLegend dd {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text-0);
+  white-space: nowrap;
+}
+
+.keyJob,
+.keyMedian,
+.keyMiddle {
+  display: inline-block;
+  flex: none;
+}
+
+.keyJob {
+  width: 12px;
+  height: 6px;
   border-radius: 999px;
-  background: var(--color-bg-1);
-  border: 3px solid var(--color-primary-text);
+  background: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary-text);
+}
+
+.keyMedian {
+  width: 2px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-text-0);
+}
+
+.keyMiddle {
+  width: 12px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-fg) 14%, var(--color-bg-2));
 }
 
 .insightNote {

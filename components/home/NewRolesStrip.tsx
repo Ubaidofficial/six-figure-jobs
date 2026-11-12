@@ -2,7 +2,7 @@
 // Plain server markup and CSS motion (no JavaScript): the list is rendered twice, side by side, and the pair slides
 // left by half its width, so it loops without a seam. The second copy is `inert` (out of the tab order and from screen
 // readers). It pauses on hover and focus; under prefers-reduced-motion it stops and the strip scrolls sideways by hand.
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'

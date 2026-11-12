@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '@/lib/seo/site'
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { MAX_DISPLAY_AGE_DAYS } from '@/lib/ingest/jobAgeFilter'

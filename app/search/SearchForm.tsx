@@ -5,7 +5,7 @@
 // (see SearchForm.module.css). Closed or not, the fields are still submitted with the form. Location and remote region are
 // selects; work arrangement, minimum salary and seniority are pills (FilterPills), as on the homepage.
 
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { FilterPills } from '@/components/filters/FilterPills'
 

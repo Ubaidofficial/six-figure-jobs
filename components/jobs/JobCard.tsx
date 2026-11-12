@@ -2,7 +2,7 @@
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { CountryFlag } from '@/components/ui/CountryFlag'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { useRouter } from 'next/navigation'
 
 import { cn } from '@/lib/utils'

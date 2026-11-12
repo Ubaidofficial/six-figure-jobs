@@ -37,6 +37,8 @@ export type JobWithCompany = Job & {
 }
 
 export type JobQueryInput = {
+  /** 'relevant' order only: jobs tagged New first (default). The instant search turns it off so title matches lead. */
+  newFirst?: boolean
   page?: number
   pageSize?: number
   selectMode?: 'listing' | 'full'
@@ -225,9 +227,13 @@ const RELEVANCE_CANDIDATE_CAP = 1500
  * match is not buried mid-list under older ones (owner's request, 2026-11-12); within each group the higher keyword score
  * leads, then the newer posting date, then id.
  */
-export function rankByRelevance(rows: Array<{ id: string; score: number; posted: number }>, now: number): string[] {
+export function rankByRelevance(
+  rows: Array<{ id: string; score: number; posted: number }>,
+  now: number,
+  newFirst = true,
+): string[] {
   return rows
-    .map((r) => ({ ...r, fresh: now - r.posted < NEW_TAG_WINDOW_MS ? 1 : 0 }))
+    .map((r) => ({ ...r, fresh: newFirst && now - r.posted < NEW_TAG_WINDOW_MS ? 1 : 0 }))
     .sort((a, b) => b.fresh - a.fresh || b.score - a.score || b.posted - a.posted || (a.id < b.id ? -1 : 1))
     .map((r) => r.id)
 }
@@ -243,8 +249,9 @@ async function queryByRelevance(args: {
   keywordPlan: KeywordPlan
   page: number
   pageSize: number
+  newFirst: boolean
 }): Promise<JobQueryResult> {
-  const { where, select, keywordPlan, page, pageSize } = args
+  const { where, select, keywordPlan, page, pageSize, newFirst } = args
   const [total, candidates] = await Promise.all([
     prisma.job.count({ where }),
     prisma.job.findMany({
@@ -267,6 +274,7 @@ async function queryByRelevance(args: {
   const ranked = rankByRelevance(
     candidates.map((c) => ({ id: c.id, score: scoreJob(keywordPlan, c), posted: (c.postedAt ?? c.createdAt).getTime() })),
     Date.now(),
+    newFirst,
   )
   const pageIds = ranked.slice((page - 1) * pageSize, page * pageSize)
 
@@ -394,7 +402,7 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
     normalizedInput.selectMode === 'full' ? jobFullSelect : jobListingSelect
 
   if (sortBy === 'relevant' && keywordPlan) {
-    return queryByRelevance({ where, select, keywordPlan, page, pageSize })
+    return queryByRelevance({ where, select, keywordPlan, page, pageSize, newFirst: input.newFirst !== false })
   }
 
   if (sortBy === 'date') {

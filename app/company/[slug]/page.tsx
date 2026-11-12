@@ -3,7 +3,7 @@
 import { CountryFlag } from '@/components/ui/CountryFlag'
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { notFound, redirect } from 'next/navigation'
 import { CompanyUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { prisma } from '../../../lib/prisma'

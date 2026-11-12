@@ -1,10 +1,11 @@
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { ArrowUpRight } from 'lucide-react'
 
 import { RoleIllustration } from '@/components/roles/RoleIllustration'
 import { pluralize } from '@/lib/utils/number'
 import styles from './ExplorePremiumRoles.module.css'
 import { SectionHeading } from '@/components/ui/SectionHeading'
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 
 export type PremiumRoleCard = {
   slug: string
@@ -38,7 +39,9 @@ export function ExplorePremiumRoles({ roles }: { roles: PremiumRoleCard[] }) {
                 {role.name}
                 {role.trending ? <span className={styles.trending}>Trending</span> : null}
               </div>
-              <div className={styles.count}>{role.count.toLocaleString()} {pluralize(role.count, 'job')}</div>
+              <div className={styles.count}>
+                <AnimatedNumber text={role.count.toLocaleString('en-US')} reveal /> {pluralize(role.count, 'job')}
+              </div>
               <div className={styles.avg}>{formatUsdAvg(role.avgUsdAnnual)}</div>
             </div>
 

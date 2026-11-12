@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { PageSection } from '@/components/seo/PageChrome'
 import { CountryFlag } from '@/components/ui/CountryFlag'

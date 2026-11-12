@@ -154,3 +154,19 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Share bars grow when the cards scroll in (ScrollReveal marks the grid "pending" until then; never in server HTML). */
+:global([data-reveal='pending']) .barFill {
+  transform: scaleX(0);
+}
+
+.barFill {
+  transform-origin: left center;
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1) 250ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barFill {
+    transition: none;
+  }
+}

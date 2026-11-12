@@ -1,4 +1,4 @@
-import NextLink from 'next/link'
+import NextLink from '@/components/ui/Link'
 
 import { cn } from '@/lib/utils'
 

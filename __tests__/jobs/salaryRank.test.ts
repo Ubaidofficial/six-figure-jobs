@@ -1,4 +1,5 @@
 import { rankSalary } from '../../lib/jobs/salaryRank'
+import { summarizeSalaries } from '../../lib/jobs/salarySnapshot'
 
 jest.mock('../../lib/prisma', () => ({ prisma: {} }))
 jest.mock('../../lib/jobs/queryJobs', () => ({ buildWhere: () => ({}) }))
@@ -32,5 +33,16 @@ describe('rankSalary', () => {
     expect(rankSalary(NaN, peers(30))).toBeNull()
     expect(rankSalary(0, peers(30))).toBeNull()
     expect(rankSalary(150_000, [...peers(20), NaN, -1, 0])!.peers).toBe(20)
+  })
+
+  it('gives the same median as the homepage snapshot for the same listings, plus the quartiles', () => {
+    const values = peers(101)
+    const r = rankSalary(150_000, values)!
+    const snapshot = summarizeSalaries(values)!
+    expect(r.median).toBe(snapshot.median)
+    expect(r.p25).toBe(snapshot.p25)
+    expect(r.p75).toBe(snapshot.p75)
+    expect(r.p5).toBeLessThan(r.p25)
+    expect(r.p95).toBeGreaterThan(r.p75)
   })
 })

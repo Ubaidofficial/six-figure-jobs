@@ -6,6 +6,9 @@ import { prisma } from '../../../lib/prisma'
 import { buildWhere } from '../../../lib/jobs/queryJobs'
 
 export const runtime = 'nodejs'
+// Cached for a day: crawlers and link previews fetch these often, and drawing the PNG blocks the server's single
+// thread for seconds (12-48 s seen in production while busy, 2026-11-12).
+export const revalidate = 86400
 export const alt = 'Company jobs on Six Figure Jobs'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'

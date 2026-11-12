@@ -1,6 +1,6 @@
 // app/jobs/_components/SlicePage.tsx
 
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import type { JobSlice } from '../../../lib/slices/types'
 import type { JobQueryResult } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'

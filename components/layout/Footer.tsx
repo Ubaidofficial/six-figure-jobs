@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { Linkedin, MessageCircle, Twitter } from 'lucide-react'
 
 import { RegionMark } from '@/components/ui/RegionMark'

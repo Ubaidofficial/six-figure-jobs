@@ -3,7 +3,7 @@
 // Actions are buttons (POST), never plain links: mail scanners open every link in an email, and a GET that confirmed
 // or unsubscribed would be triggered by them.
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 
 import { alertsEnabled } from '@/lib/alerts/config'

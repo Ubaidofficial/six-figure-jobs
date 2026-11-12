@@ -1,8 +1,9 @@
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { ArrowUpRight } from 'lucide-react'
 
 import styles from './BrowseBySalaryTier.module.css'
 import { SectionHeading } from '@/components/ui/SectionHeading'
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 
 export type SalaryTier = {
   slug: '100k-plus' | '200k-plus' | '300k-plus' | '400k-plus'
@@ -40,7 +41,7 @@ export function BrowseBySalaryTier({ tiers }: { tiers: SalaryTier[] }) {
             >
               <div className={styles.tierLabel}>{tier.label}</div>
               <div className={styles.count}>
-                {tier.count.toLocaleString()}
+                <AnimatedNumber text={tier.count.toLocaleString('en-US')} reveal />
                 <span className={styles.countSuffix}> jobs</span>
               </div>
               <div className={styles.bar} aria-hidden="true">

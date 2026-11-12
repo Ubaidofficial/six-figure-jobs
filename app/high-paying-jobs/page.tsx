@@ -4,7 +4,7 @@
 // open jobs right now. Targets "high paying jobs" (about 201,000 US searches a month per DataForSEO, 2026-11-09), a
 // search mostly answered by listicles; this page answers it from live published salaries (lib/jobs/highPayingJobs.ts).
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { unstable_rethrow } from 'next/navigation'
 
 import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Prose } from '@/components/listing/ListingParts'

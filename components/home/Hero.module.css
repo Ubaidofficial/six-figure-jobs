@@ -41,8 +41,19 @@
     align-items: start;
   }
 
-  .panel {
-    margin-top: 12px;
+  /* Beside the copy the card has to stay about as tall as it (it was ~300px taller, cut off at 90% zoom, 2026-11-12):
+     two sample jobs (all three stay in the HTML) and one-line pay floors. */
+  .panel .bandJobs > li:nth-child(n + 3) {
+    display: none;
+  }
+
+  .panel .floor {
+    align-items: baseline;
+  }
+
+  .panel .floorJobs {
+    display: inline;
+    margin: 0 0 0 6px;
   }
 }
 
@@ -51,7 +62,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 24px 18px;
+  padding: 18px 22px 14px;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -106,7 +117,7 @@
 }
 
 .panelBody {
-  padding: 16px 24px 4px;
+  padding: 14px 22px 2px;
 }
 
 .panelSplit {
@@ -117,7 +128,7 @@
 
 .panelSplit > div {
   min-width: 0;
-  padding: 16px 24px 14px;
+  padding: 12px 22px 10px;
 }
 
 .panelSplit > div + div {
@@ -129,7 +140,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 24px;
+  padding: 10px 22px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -248,19 +259,6 @@
   color: var(--color-text-1);
 }
 
-/* A panel cell is too narrow for flag, market, count and floor on one line: the count goes on its own line under the
-   market name (indented past the flag) on every row, instead of some rows wrapping "jobs". */
-@media (min-width: 1024px) {
-  .floor {
-    align-items: center;
-  }
-
-  .floorJobs {
-    display: block;
-    margin: 1px 0 0 26px;
-    line-height: 1.2;
-  }
-}
 
 .panelNote {
   margin: 0;
@@ -525,5 +523,49 @@
 @media (prefers-reduced-motion: reduce) {
   .barFill {
     transition: none;
+  }
+}
+
+/* The salary-band bars grow in on load, one after another (decorative: aria-hidden; the counts are text). */
+@keyframes hero-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .barFill {
+    transform-origin: left center;
+    animation: hero-bar-grow 900ms cubic-bezier(0.22, 1, 0.36, 1) 150ms backwards;
+  }
+
+  .bars > li:nth-child(2) .barFill {
+    animation-delay: 230ms;
+  }
+
+  .bars > li:nth-child(3) .barFill {
+    animation-delay: 310ms;
+  }
+
+  .bars > li:nth-child(4) .barFill {
+    animation-delay: 390ms;
+  }
+}
+
+/* Depth on scroll: beside the copy, the card drifts up a little faster than the page over the first 700px. CSS
+   scroll-driven animation only (no JS); browsers without it, phones and reduced motion keep a still card. */
+@keyframes hero-card-parallax {
+  to {
+    translate: 0 -40px;
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) and (min-width: 1180px) {
+    .panel {
+      animation: hero-card-parallax linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 700px;
+    }
   }
 }

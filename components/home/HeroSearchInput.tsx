@@ -10,7 +10,7 @@
 // "/" key focuses the box from anywhere on the page. When a role, location or remote region is chosen in the form the
 // box shows no instant jobs (they are not filtered by those), and the submit applies everything as usual.
 
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
 
@@ -97,6 +97,8 @@ export function HeroSearchInput({
   const [active, setActive] = useState(-1)
   const [formVersion, setFormVersion] = useState(0)
   const [examplePlaceholder, setExamplePlaceholder] = useState<string | null>(null)
+  // The query whose suggestions are on their way: the list shows placeholder rows until they arrive.
+  const [loadingQuery, setLoadingQuery] = useState<string | null>(null)
   const lastTyped = useRef('')
 
   // The typing placeholder starts after load (the server HTML has the plain one) and only runs while the box is empty,
@@ -179,25 +181,34 @@ export function HeroSearchInput({
     const params = formParams(inputRef.current?.form ?? null)
     if (q.length < MIN_CHARS || !params) {
       setResults(null)
+      setLoadingQuery(null)
       if (q.length > 0 || !params) setOpen(false)
       return
     }
     params.set('q', q)
     const controller = new AbortController()
     const timer = setTimeout(async () => {
+      setLoadingQuery(q)
+      if (typed) setOpen(true)
       try {
         const res = await fetch(`/api/jobs/suggest?${params}`, { signal: controller.signal })
-        if (!res.ok) return
+        if (!res.ok) {
+          setLoadingQuery(null)
+          return
+        }
         const data = (await res.json()) as { total?: number; jobs?: Job[]; roles?: Role[] }
         const jobs = Array.isArray(data.jobs) ? data.jobs : []
         const roles = Array.isArray(data.roles) ? data.roles : []
         setResults({ query: q, total: Number(data.total) || jobs.length, jobs, roles })
+        setLoadingQuery(null)
         setActive(-1)
         const any = jobs.length > 0 || roles.length > 0
         if (typed) setOpen(any)
         else if (!any) setOpen(false)
-      } catch {
-        // aborted by the next keystroke, or offline: keep whatever the box showed, the search itself still works
+      } catch (error) {
+        // aborted by the next keystroke (whose own request shows the placeholders), or offline: keep whatever the box
+        // showed, the search itself still works
+        if (!(error instanceof DOMException && error.name === 'AbortError')) setLoadingQuery(null)
       }
     }, DEBOUNCE_MS)
     return () => {
@@ -233,7 +244,9 @@ export function HeroSearchInput({
     ...jobs.map((job) => ({ kind: 'job' as const, job })),
     ...(!showingPopular && results && results.total > 0 ? [{ kind: 'all' as const }] : []),
   ]
-  const listOpen = open && rows.length > 0
+  // Placeholder rows while a new query's suggestions load (instead of the previous query's, or nothing).
+  const skeleton = open && !showingPopular && loadingQuery !== null && results?.query !== loadingQuery
+  const listOpen = open && (rows.length > 0 || skeleton)
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!listOpen) {
@@ -314,7 +327,19 @@ export function HeroSearchInput({
           ? `${roles.length} matching roles, ${results.total} matching ${results.total === 1 ? 'job' : 'jobs'}`
           : ''}
       </span>
-      {listOpen ? (
+      {listOpen && skeleton ? (
+        <ul id={listId} role="listbox" aria-label="Loading suggestions" aria-busy="true" className={styles.list}>
+          {[0, 1, 2, 3].map((i) => (
+            <li key={i} role="presentation" className={styles.skeletonRow} aria-hidden="true">
+              <span className={styles.skeletonLogo} />
+              <span className={styles.skeletonText}>
+                <span className={styles.skeletonLine} style={{ width: `${70 - i * 10}%` }} />
+                <span className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : listOpen ? (
         <ul id={listId} role="listbox" aria-label={showingPopular ? 'Popular roles' : 'Search suggestions'} className={styles.list}>
           {roles.length > 0 ? (
             <li role="presentation" className={styles.group}>

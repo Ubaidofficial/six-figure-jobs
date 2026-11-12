@@ -10,6 +10,7 @@ import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
 import ErrorTracker from '@/components/ErrorTracker'
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
+import { RouteTransition } from '@/components/ui/RouteTransition'
 import { getSiteUrl } from '../lib/seo/site'
 import { PreloadResources } from './preload-resources'
 
@@ -121,6 +122,7 @@ export default function RootLayout({
         <FeedbackWidget />
         <ErrorTracker />
         <ScrollReveal />
+        <RouteTransition />
         {/* Google Analytics 4: loads only when NEXT_PUBLIC_GA_MEASUREMENT_ID is set to a G- id (inlined at build time) */}
         {GA_MEASUREMENT_ID ? (
           <>
