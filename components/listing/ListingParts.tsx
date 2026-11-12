@@ -74,6 +74,7 @@ export function ListingHeader({
   related,
   toolbar,
   aside,
+  search,
 }: {
   breadcrumb: Array<{ label: string; href?: string }>
   title: ReactNode
@@ -90,6 +91,8 @@ export function ListingHeader({
   toolbar?: ReactNode
   /** A white card at the right of the header, e.g. <ListingSalaryAside />. Renders nothing when it has no data. */
   aside?: ReactNode
+  /** A search form shown centred under the header, across its full width (e.g. <ListingSearch />, its own file). */
+  search?: ReactNode
 }) {
   return (
     <header className={`${styles.header} ${aside ? styles.headerWithAside : ''}`}>
@@ -138,6 +141,7 @@ export function ListingHeader({
         ) : null}
       </div>
       {aside}
+      {search ? <div className={styles.headerSearch}>{search}</div> : null}
     </header>
   )
 }

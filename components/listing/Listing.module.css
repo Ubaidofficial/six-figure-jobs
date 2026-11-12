@@ -457,6 +457,14 @@
   min-width: 0;
 }
 
+/* The live search under the header, centred across the full width (also under the salary card). */
+.headerSearch {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: 760px;
+  margin: 28px auto 0;
+}
+
 .headerRelated {
   margin-top: 18px;
 }

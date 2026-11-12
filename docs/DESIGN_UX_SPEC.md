@@ -228,7 +228,7 @@ Almost all of its motion (149 files) is built on the `motion` library (`motion/r
 | Animated list (items arriving) | `components/home/LiveJobFeed.module.css` `arrive` / `pulse` keyframes |
 | `layoutId` sliding indicator | Not used. Candidate for `motion` only if we add tabs/segmented filters |
 | `@number-flow/react` counters | Not used (extra dependency). `components/ui/AnimatedNumber.tsx` instead: a leaf client component; the server renders the final number, it counts up only when a number that starts below the fold scrolls into view (or when its text changes), and never under `reduce` |
-| Marquee / logo strip | `components/home/NewRolesStrip.tsx`: CSS-only (two equal lists, `translateX(-50%)`), the second copy `inert`, pauses on hover/focus, stops under `reduce`. The "Top Companies Hiring Now" row does not move |
+| Marquee / logo strip | `components/home/NewRolesStrip.tsx`: CSS-only (two equal lists, `translateX(-50%)`), the second copy `inert`, pauses on hover/focus, stops under `reduce`. Since 2026-11-12 "Top Companies Hiring Now" (`FeaturedCompaniesCarousel`) uses the same pattern in two rows moving in opposite directions, each row repeated to at least 24 logos per half |
 | Interactive panel (tabs) | `components/home/HeroSalaryBands.tsx`: buttons with `aria-pressed`; every panel stays in the server HTML (`hidden`, not removed) so its links stay crawlable |
 
 ---
@@ -245,6 +245,7 @@ A scheduled Claude Code task runs on the 1st and 15th of each month to keep the 
 ### Refresh log
 - 2026-11-07: Motion pass from shadcnspace review: JobCard press feedback, homepage row hover tint, CSS scroll reveal on homepage job rows and discovery modules.
 - 2026-11-11: Owner-requested refresh after workflows.io (§13), outside the scheduled runs: tokens, homepage, scroll reveals, then the rest of the public pages.
+- 2026-11-12: Owner follow-ups: typing search placeholder, salary card on the right of the hero, live search on /jobs and /remote, two-row sliding logo wall, larger band figures.
 
 ---
 

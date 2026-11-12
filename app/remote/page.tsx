@@ -28,6 +28,7 @@ import {
   ListingSection,
   Pagination,
 } from '@/components/listing/ListingParts'
+import { ListingSearch } from '@/components/listing/ListingSearch'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
@@ -525,6 +526,7 @@ export default async function RemoteJobsPage({
           cta={remoteJobCount > 0 ? `Browse ${remoteJobCount.toLocaleString()} remote ${remoteJobCount === 1 ? 'job' : 'jobs'}` : undefined}
           chips={buildRegionChips(activeRemoteRegion, regionCounts)}
           related={topRolesRow('Top remote roles', topRemoteRoles, '/remote')}
+          search={<ListingSearch action="/jobs" hidden={{ remoteMode: 'remote' }} />}
         />
 
         <ListingLayout alert={{ remoteOnly: true, remoteRegion: activeRemoteRegion || undefined }}>

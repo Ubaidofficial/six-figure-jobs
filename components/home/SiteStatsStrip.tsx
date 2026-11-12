@@ -75,7 +75,9 @@ export function SiteStatsStrip({
         <ul className={styles.facts}>
           {facts.map(([value, label]) => (
             <li key={label}>
-              <span className={styles.factValue}>{n(value)}</span>
+              <span className={styles.factValue}>
+                <AnimatedNumber text={n(value)} reveal />
+              </span>
               <span className={styles.factLabel}>{label}</span>
             </li>
           ))}

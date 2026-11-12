@@ -2,23 +2,20 @@
    The right-hand panel answers clicks only: picking a salary band changes which band is highlighted and what it lists. */
 
 .hero {
-  /* 2026-11 refresh (workflows.io reference): no tinted block; a centred headline on the page background, then one
-     white hairline panel under the search. */
-  padding: 48px 0 0;
+  /* 2026-11 refresh (workflows.io / SourceTrack-style reference): copy, search and filters on the left, the salary
+     snapshot as a framed card on the right from 1280px. No tinted block behind either. */
+  padding: 32px 0 0;
   margin-bottom: 56px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 48px;
+  gap: 40px;
 }
 
 .main {
   min-width: 0;
-  max-width: 860px;
-  margin: 0 auto;
-  text-align: center;
 }
 
-/* Salary snapshot: header row, then three cells split by hairlines. Desktop only; the copy already says the same. */
+/* Salary snapshot card. Desktop only; the copy already says the same on phones. Below 1180px it sits under the copy. */
 .panel {
   display: none;
 }
@@ -27,39 +24,113 @@
   .panel {
     display: block;
     width: 100%;
+    border-radius: 24px;
+    /* A white card inside a soft translucent frame. */
+    box-shadow:
+      0 0 0 1px var(--color-border),
+      0 0 0 9px color-mix(in srgb, var(--color-bg-1) 55%, transparent),
+      0 0 0 10px var(--color-border),
+      0 28px 56px -28px rgba(12, 13, 14, 0.22);
+  }
+}
+
+@media (min-width: 1180px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) minmax(500px, 580px);
+    gap: 48px;
+    align-items: start;
+  }
+
+  .panel {
+    margin-top: 12px;
   }
 }
 
 .panelHead {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 28px;
+  padding: 22px 24px 18px;
   border-bottom: 1px solid var(--color-border);
 }
 
 .panelHeadTitle {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--color-text-0);
 }
 
-.panelGrid {
+.panelHeadSub {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text-1);
+}
+
+/* Two headline numbers as small boxed tiles: label under the figure (dt stays first in the markup). */
+.tiles {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  margin: 0;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--color-bg-1);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.tile dt {
+  font-size: 0.75rem;
+  color: var(--color-text-1);
+  white-space: nowrap;
+}
+
+.tile dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--color-text-0);
+  white-space: nowrap;
+}
+
+.panelBody {
+  padding: 16px 24px 4px;
+}
+
+.panelSplit {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  border-top: 1px solid var(--color-border);
 }
 
-.panelCol {
+.panelSplit > div {
   min-width: 0;
-  padding: 24px 28px 26px;
+  padding: 16px 24px 14px;
 }
 
-.panelCol + .panelCol {
+.panelSplit > div + div {
   border-left: 1px solid var(--color-border);
+}
+
+.panelFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--color-border);
 }
 
 .stats {
@@ -106,7 +177,7 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 7px 0;
+  padding: 5px 0;
   font-size: 0.9375rem;
   color: var(--color-text-0);
   text-decoration: none;
@@ -130,33 +201,33 @@
   border-radius: 6px;
 }
 
-/* Job types: three small tiles in one row instead of three list rows. */
+/* Job types: rows like the pay floors (label left, count right). */
 .types {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
 }
 
 .type {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 7px 0;
+  font-size: 0.9375rem;
   text-decoration: none;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--color-fg) 12%, transparent);
 }
 
-.type:hover {
-  border-color: var(--color-primary-text);
+.types > li:last-child .type {
+  border-bottom: 0;
+}
+
+.type:hover .typeLabel {
+  text-decoration: underline;
 }
 
 .typeLabel {
-  font-size: 0.75rem;
-  color: var(--color-text-1);
+  color: var(--color-text-0);
 }
 
 .typeCount {
@@ -173,7 +244,7 @@
 
 .floorJobs {
   margin-left: 4px;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--color-text-1);
 }
 
@@ -192,7 +263,7 @@
 }
 
 .panelNote {
-  margin: 10px 0 0;
+  margin: 0;
   font-size: 0.75rem;
   line-height: 1.4;
   color: var(--color-text-1);
@@ -210,7 +281,6 @@
 
 .eyebrow {
   flex-wrap: wrap;
-  justify-content: center;
   margin: 0 0 24px;
 }
 
@@ -230,7 +300,7 @@
 .headline {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(2.5rem, 6.2vw, 4.75rem);
+  font-size: clamp(2.5rem, 5.4vw, 4.5rem);
   line-height: 1.02;
   font-weight: 600;
   letter-spacing: -0.035em;
@@ -247,61 +317,23 @@
 }
 
 .subheadline {
-  margin: 22px auto 0;
-  max-width: 640px;
+  margin: 22px 0 0;
+  max-width: 620px;
   font-size: 1.0625rem;
   line-height: 1.55;
   color: var(--color-text-1);
 }
 
 .searchForm {
-  margin: 32px auto 0;
+  margin: 32px 0 0;
   max-width: 760px;
-  text-align: left;
 }
 
-.searchBar {
-  position: relative; /* the live role suggestions (HeroSearchInput) are positioned against the bar */
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 8px 8px 18px;
-  background: var(--color-bg-1);
-  border-radius: 14px;
-  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(12, 13, 14, 0.05), 0 14px 36px -16px rgba(12, 13, 14, 0.18);
-  transition: box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
-}
 
-.searchBar:focus-within {
-  box-shadow: 0 0 0 2px var(--color-primary-text), 0 14px 36px -16px rgba(12, 13, 14, 0.22);
-}
 
-.searchIcon {
-  width: 18px;
-  height: 18px;
-  flex: none;
-  color: var(--color-text-1);
-}
 
-.searchInput {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: 0;
-  outline: none;
-  color: var(--color-text-0);
-  font-size: 1rem;
-  padding: 10px 0;
-}
 
-.searchInput::placeholder {
-  color: var(--color-text-2);
-}
 
-.cta {
-  flex: none;
-  border-radius: 10px;
-}
 
 .filters {
   margin-top: 12px;
@@ -312,7 +344,6 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
   gap: 8px 18px;
   font-size: 0.875rem;
 }
@@ -347,17 +378,6 @@
   color: var(--color-text-1);
 }
 
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
 
 @media (max-width: 640px) {
   .hero {
@@ -368,45 +388,17 @@
   .subheadline {
     font-size: 1rem;
   }
-
-  .searchBar {
-    flex-wrap: wrap;
-    padding: 8px 10px;
-  }
-
-  .searchInput {
-    flex-basis: calc(100% - 40px);
-  }
-
-  .cta {
-    width: 100%;
-  }
 }
 
 
-.bigNumber {
-  margin: 6px 0 0;
-  font-family: var(--font-display);
-  font-size: 3rem;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.03em;
-  color: var(--color-text-0);
-}
 
-.bigNote {
-  margin: 8px 0 14px;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  color: var(--color-text-1);
-}
 
 .bars {
   list-style: none;
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   padding: 0;
   display: grid;
-  gap: 9px;
+  gap: 4px;
 }
 
 /* A button (it picks the band), reset to look like the row it replaced. */
@@ -493,7 +485,7 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 6px 0;
+  padding: 5px 0;
   text-decoration: none;
   border-bottom: 1px dashed color-mix(in srgb, var(--color-fg) 12%, transparent);
 }

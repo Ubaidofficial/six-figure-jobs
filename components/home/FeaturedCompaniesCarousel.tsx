@@ -14,19 +14,21 @@ export type FeaturedCompany = {
   activeHighPayingJobs: number
 }
 
-function LogoItem({ company, index }: { company: FeaturedCompany; index: number }) {
+const SECONDS_PER_LOGO = 3
+
+function LogoItem({ company, index, clone }: { company: FeaturedCompany; index: number; clone: boolean }) {
   const href = `/company/${company.slug}`
   const tooltip = `${company.name} • ${company.activeHighPayingJobs.toLocaleString()} active $100k+ jobs`
 
   return (
     <li className={styles.item}>
-      <Link href={href} className={styles.logoLink} aria-label={tooltip} title={tooltip}>
+      <Link href={href} className={styles.logoLink} aria-label={tooltip} title={tooltip} tabIndex={clone ? -1 : undefined}>
         <div className={styles.logoBox}>
           <CompanyLogo
             name={company.name}
             src={buildLogoUrl(company.logoUrl, company.website, company.name)}
             size="fill"
-            priority={index < 4}
+            priority={!clone && index < 4}
           />
         </div>
         <span className="sr-only">{company.name}</span>
@@ -35,11 +37,51 @@ function LogoItem({ company, index }: { company: FeaturedCompany; index: number 
   )
 }
 
+// Each half of a rail holds at least this many logos, so it is wider than the widest screens and the loop never shows
+// a gap; a short row is repeated to reach it.
+const MIN_LOGOS_PER_HALF = 24
+
+/** One sliding row: two equal halves side by side; moving by half the rail is one half, so the loop has no seam. Only
+ *  the first list is real; the repeats are `inert` (out of the tab order and hidden from screen readers), so each
+ *  company is listed once. */
+function LogoRow({ companies, offset, reverse }: { companies: FeaturedCompany[]; offset: number; reverse?: boolean }) {
+  const repeats = Math.max(1, Math.ceil(MIN_LOGOS_PER_HALF / companies.length))
+  const duration = `${Math.max(20, companies.length * repeats * SECONDS_PER_LOGO)}s`
+  return (
+    <div className={styles.viewport}>
+      <div
+        className={reverse ? `${styles.rail} ${styles.railReverse}` : styles.rail}
+        style={{ '--marquee-duration': duration } as React.CSSProperties}
+      >
+        {Array.from({ length: repeats * 2 }, (_, copy) => {
+          const clone = copy > 0
+          return (
+            <ul
+              key={copy}
+              className={clone ? `${styles.track} ${styles.clone}` : styles.track}
+              aria-label={clone ? undefined : 'Featured companies'}
+              aria-hidden={clone || undefined}
+              inert={clone || undefined}
+            >
+              {companies.map((company, i) => (
+                <LogoItem key={company.id} company={company} index={offset + i} clone={clone} />
+              ))}
+            </ul>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function FeaturedCompaniesCarousel({ companies }: { companies: FeaturedCompany[] }) {
   if (!companies || companies.length === 0) return null
 
-  // One list, each company once: two rows that wrap on wide screens, one row to swipe on phones (2026-11-09; the phone
-  // layout used to repeat every logo in a second copy of the list and grew to seven rows under the hero).
+  // Two rows sliding in opposite directions (2026-11-12, owner's request), each company in one row only. Pauses on
+  // hover or keyboard focus; under reduced motion the rows stand still and scroll sideways by hand.
+  const half = Math.ceil(companies.length / 2)
+  const rows = companies.length > 8 ? [companies.slice(0, half), companies.slice(half)] : [companies]
+
   return (
     <section className={styles.section} aria-labelledby="featured-companies-title">
       <div className={styles.header}>
@@ -54,11 +96,9 @@ export function FeaturedCompaniesCarousel({ companies }: { companies: FeaturedCo
       </div>
 
       <div className={styles.card}>
-        <ul className={styles.track} aria-label="Featured companies">
-          {companies.map((company, idx) => (
-            <LogoItem key={company.id} company={company} index={idx} />
-          ))}
-        </ul>
+        {rows.map((row, i) => (
+          <LogoRow key={i} companies={row} offset={i === 0 ? 0 : half} reverse={i === 1} />
+        ))}
       </div>
     </section>
   )
