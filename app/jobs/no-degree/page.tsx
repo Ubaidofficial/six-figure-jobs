@@ -7,7 +7,7 @@
 // description names no degree, or names one and accepts equivalent experience.
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { memoAsync } from '../../../lib/cache/memo'
 import { loadDegreeRequiredJobIds } from '../../../lib/jobs/degreeRequirement'
 import { buildWhere, queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'

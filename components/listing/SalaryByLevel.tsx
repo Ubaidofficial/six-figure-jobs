@@ -3,7 +3,7 @@
 // its own page. An async server component that renders nothing when fewer than two levels have enough listings, so a
 // page never shows a comparison it cannot back up.
 
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { loadSalaryByLevel } from '@/lib/jobs/listingSalaryStats'
 import type { JobQueryInput } from '@/lib/jobs/queryJobs'

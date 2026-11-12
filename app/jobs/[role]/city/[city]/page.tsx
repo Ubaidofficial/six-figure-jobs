@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { permanentRedirect } from 'next/navigation'
 import { CITY_TARGETS } from '../../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJobs'

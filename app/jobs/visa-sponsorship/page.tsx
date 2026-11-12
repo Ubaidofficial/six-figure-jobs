@@ -3,7 +3,7 @@
 // Targets: "tech jobs visa sponsorship", "h1b visa sponsorship jobs", "software engineer visa sponsorship"
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { prisma } from '../../../lib/prisma'
 import { queryJobs, buildWhere, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'

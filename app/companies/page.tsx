@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { unstable_rethrow } from 'next/navigation'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '@/lib/seo/site'

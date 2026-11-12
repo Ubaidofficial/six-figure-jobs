@@ -1,5 +1,5 @@
 // "Browse by category" icon row for the jobs hub. Server component; each tile links to the category page.
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { BarChart3, Brain, Code2, Handshake, Megaphone, Package, PenTool, Server, type LucideIcon } from 'lucide-react'
 
 import styles from './Listing.module.css'

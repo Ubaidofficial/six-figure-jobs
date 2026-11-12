@@ -1,7 +1,7 @@
 // app/page.tsx
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { unstable_rethrow } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'

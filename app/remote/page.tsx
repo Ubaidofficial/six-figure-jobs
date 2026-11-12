@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { RegionMark } from '@/components/ui/RegionMark'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { notFound, unstable_rethrow } from 'next/navigation'
 import { cache } from 'react'
 import { queryJobs, buildWhere, type JobWithCompany } from '../../lib/jobs/queryJobs'

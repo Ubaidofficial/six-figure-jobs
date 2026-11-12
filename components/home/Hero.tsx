@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { SearchBar } from '@/components/search/SearchBar'
 import { CountryFlag } from '@/components/ui/CountryFlag'

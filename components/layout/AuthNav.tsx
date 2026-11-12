@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 // Renders nothing unless accounts were switched on when the site was built (next.config.js inlines this from
 // lib/accounts/enabled.js), so with accounts off the header HTML is exactly what it was before.

@@ -2,7 +2,7 @@
 // Programmatic salary guides by role + country + optional city, band-aware.
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
 import {

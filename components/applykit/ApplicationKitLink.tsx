@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 // Renders nothing unless accounts were switched on when the site was built (next.config.js inlines the flag), so with
 // accounts off the job page HTML is exactly what it was. It is a plain link to a private, noindex page: nofollow, no prefetch.

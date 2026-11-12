@@ -1,7 +1,7 @@
 // app/search/page.tsx
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { redirect } from 'next/navigation'
 import { SearchUnavailablePage } from '@/components/runtime/FallbackPresets'
 import {

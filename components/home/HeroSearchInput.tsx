@@ -10,7 +10,7 @@
 // "/" key focuses the box from anywhere on the page. When a role, location or remote region is chosen in the form the
 // box shows no instant jobs (they are not filtered by those), and the submit applies everything as usual.
 
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
 

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { redirect, unstable_rethrow } from 'next/navigation'
 import { InfiniteJobsList } from './_components/InfiniteJobsList'
 

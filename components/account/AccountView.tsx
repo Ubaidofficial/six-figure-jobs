@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { CheckoutButton, PortalButton } from './BillingButtons'
 import { SignOutButton } from './SignInForm'

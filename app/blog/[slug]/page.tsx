@@ -2,7 +2,7 @@
 // Individual blog post — Article + FAQPage + BreadcrumbList JSON-LD
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 import { getPostBySlug, getAllPosts } from '@/lib/blog/posts'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'

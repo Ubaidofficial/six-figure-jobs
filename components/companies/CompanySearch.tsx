@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { Search, X } from 'lucide-react'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'

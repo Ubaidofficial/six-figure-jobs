@@ -3,7 +3,7 @@
 // One job as a single calm line (logo, title, company · posted, salary, location) that opens in place to show the
 // summary, pills and skills. Used by the listing pages; the homepage, company pages and search keep JobCard.
 import { useId, useState, type ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { ArrowRight, Briefcase, ChevronDown, ExternalLink, FileText, Gift, GraduationCap, Plane, TrendingUp } from 'lucide-react'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'

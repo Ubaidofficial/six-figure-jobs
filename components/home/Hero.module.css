@@ -41,8 +41,19 @@
     align-items: start;
   }
 
-  .panel {
-    margin-top: 12px;
+  /* Beside the copy the card has to stay about as tall as it (it was ~300px taller, cut off at 90% zoom, 2026-11-12):
+     two sample jobs (all three stay in the HTML) and one-line pay floors. */
+  .panel .bandJobs > li:nth-child(n + 3) {
+    display: none;
+  }
+
+  .panel .floor {
+    align-items: baseline;
+  }
+
+  .panel .floorJobs {
+    display: inline;
+    margin: 0 0 0 6px;
   }
 }
 
@@ -51,7 +62,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 24px 18px;
+  padding: 18px 22px 14px;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -106,7 +117,7 @@
 }
 
 .panelBody {
-  padding: 16px 24px 4px;
+  padding: 14px 22px 2px;
 }
 
 .panelSplit {
@@ -117,7 +128,7 @@
 
 .panelSplit > div {
   min-width: 0;
-  padding: 16px 24px 14px;
+  padding: 12px 22px 10px;
 }
 
 .panelSplit > div + div {
@@ -129,7 +140,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 24px;
+  padding: 10px 22px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -248,19 +259,6 @@
   color: var(--color-text-1);
 }
 
-/* A panel cell is too narrow for flag, market, count and floor on one line: the count goes on its own line under the
-   market name (indented past the flag) on every row, instead of some rows wrapping "jobs". */
-@media (min-width: 1024px) {
-  .floor {
-    align-items: center;
-  }
-
-  .floorJobs {
-    display: block;
-    margin: 1px 0 0 26px;
-    line-height: 1.2;
-  }
-}
 
 .panelNote {
   margin: 0;

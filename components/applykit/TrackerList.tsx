@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 
 import { KIT_STATUSES } from '@/lib/applykit/config'
 

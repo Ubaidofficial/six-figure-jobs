@@ -1,7 +1,7 @@
 // Building blocks for the job detail page. Server components on shadcn's Card/Badge/Separator, styled with
 // the site's theme tokens. The page keeps rendering on the server; only the logo and save/share buttons hydrate.
 import type { ReactNode } from 'react'
-import NextLink from 'next/link'
+import NextLink from '@/components/ui/Link'
 import { BadgeCheck, ExternalLink, Globe } from 'lucide-react'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
@@ -287,12 +287,19 @@ export function ApplyCard({
 }
 
 /** The white card inside the hero: the salary, how it compares with similar roles, and the Apply button. */
+/** Where `value` sits between `lo` and `hi`, as a percent clamped to the track. */
+function trackPos(value: number, lo: number, hi: number): number {
+  return Math.min(100, Math.max(0, ((value - lo) / (hi - lo)) * 100))
+}
+
 export function PayCard({
   salaryText,
   salaryIsFromEmployer,
   rank,
   roleLabel,
   currency,
+  jobMin,
+  jobMax,
   applyHref,
   jobId,
 }: {
@@ -302,9 +309,36 @@ export function PayCard({
   /** Who the rank is among: "software engineer", or "six-figure" when it is every listing. */
   roleLabel: string | null
   currency: string | null
+  /** This job's own annual range (one end may be missing), drawn on the bar against the peers. */
+  jobMin: number | null
+  jobMax: number | null
   applyHref: string | null
   jobId: string
 }) {
+  const lowEnd = jobMin ?? jobMax
+  const highEnd = jobMax ?? jobMin
+  // The bar runs from the 5th to the 95th percentile of comparable listings, widened to include this job's range.
+  const chart =
+    rank && currency && lowEnd != null && highEnd != null
+      ? (() => {
+          const lo = Math.floor(Math.min(rank.p5, lowEnd) / 10_000) * 10_000
+          const hi = Math.ceil(Math.max(rank.p95, highEnd) / 10_000) * 10_000
+          if (hi <= lo) return null
+          const f = (n: number) => formatCurrencyShort(Math.round(n / 1000) * 1000, currency)
+          return {
+            lo,
+            hi,
+            f,
+            middleLeft: trackPos(rank.p25, lo, hi),
+            middleWidth: trackPos(rank.p75, lo, hi) - trackPos(rank.p25, lo, hi),
+            median: trackPos(rank.median, lo, hi),
+            jobLeft: trackPos(lowEnd, lo, hi),
+            jobWidth: Math.max(1.5, trackPos(highEnd, lo, hi) - trackPos(lowEnd, lo, hi)),
+          }
+        })()
+      : null
+  const peersLabel = roleLabel === 'six-figure' ? 'six-figure listings' : 'this role'
+
   return (
     <div id="job-pay-card" className={styles.payCard}>
       <h2 className={styles.payLabel}>Salary</h2>
@@ -321,13 +355,54 @@ export function PayCard({
           <p className={styles.insightText}>
             Pays more than <strong>{rank.percent}%</strong> of {rank.peers.toLocaleString()} {roleLabel} listings in {currency}.
           </p>
-          <div className={styles.rankTrack} role="img" aria-label={`Higher than ${rank.percent} percent of comparable listings`}>
-            <span className={styles.rankFill} style={{ width: `${Math.max(3, rank.percent)}%` }} />
-            <span className={styles.rankMarker} style={{ left: `${Math.min(97, Math.max(3, rank.percent))}%` }} />
-          </div>
-          <p className={styles.insightNote}>
-            Typical for {roleLabel === 'six-figure' ? 'six-figure listings' : 'this role'}: {formatCurrencyShort(Math.round(rank.median / 1000) * 1000, currency)}
-          </p>
+          {chart ? (
+            <>
+              <div
+                className={styles.rangeTrack}
+                role="img"
+                aria-label={`This job pays ${chart.f(lowEnd!)} to ${chart.f(highEnd!)}. Most ${peersLabel} pay ${chart.f(rank.p25)} to ${chart.f(rank.p75)}; typical ${chart.f(rank.median)}.`}
+              >
+                <span className={styles.rangeMiddle} style={{ left: `${chart.middleLeft}%`, width: `${chart.middleWidth}%` }} />
+                <span className={styles.rangeMedian} style={{ left: `${chart.median}%` }} />
+                <span className={styles.rangeJob} style={{ left: `${chart.jobLeft}%`, width: `${chart.jobWidth}%` }} />
+              </div>
+              <div className={styles.rangeScale} aria-hidden="true">
+                <span>{chart.f(chart.lo)}</span>
+                <span>{chart.f(chart.hi)}</span>
+              </div>
+              <dl className={styles.rangeLegend}>
+                <div>
+                  <dt>
+                    <span className={styles.keyJob} aria-hidden="true" />
+                    This job
+                  </dt>
+                  <dd>{lowEnd === highEnd ? chart.f(lowEnd!) : `${chart.f(lowEnd!)}\u2013${chart.f(highEnd!)}`}</dd>
+                </div>
+                <div>
+                  <dt>
+                    <span className={styles.keyMedian} aria-hidden="true" />
+                    Typical
+                  </dt>
+                  <dd>{chart.f(rank.median)}</dd>
+                </div>
+                <div>
+                  <dt>
+                    <span className={styles.keyMiddle} aria-hidden="true" />
+                    Most pay
+                  </dt>
+                  <dd>
+                    {chart.f(rank.p25)}
+                    {'\u2013'}
+                    {chart.f(rank.p75)}
+                  </dd>
+                </div>
+              </dl>
+            </>
+          ) : (
+            <p className={styles.insightNote}>
+              Typical for {peersLabel}: {formatCurrencyShort(Math.round(rank.median / 1000) * 1000, currency)}
+            </p>
+          )}
         </div>
       ) : null}
 

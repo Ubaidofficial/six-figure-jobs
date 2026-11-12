@@ -4,7 +4,7 @@
 // publishing six-figure pay, most remote jobs first. Asked for by the owner (2026-11-09), modelled on the remote-company
 // directories of remote100k.com and others, with live counts from our own jobs (lib/jobs/remoteCompanies.ts).
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { unstable_rethrow } from 'next/navigation'
 
 import { CompanySearch } from '@/components/companies/CompanySearch'
