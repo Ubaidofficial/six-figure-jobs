@@ -2,9 +2,8 @@ import * as cheerio from 'cheerio/slim'
 
 import { validateJobPostingEligibility } from '../lib/seo/jobPostingEligibility'
 
-const SITEMAP_URL = process.env.SEO_BASE_URL
-  ? `${process.env.SEO_BASE_URL}/sitemap-jobs.xml`
-  : 'http://localhost:3000/sitemap-jobs.xml'
+const BASE_URL = process.env.SEO_BASE_URL || 'http://localhost:3000'
+const SITEMAP_URL = `${BASE_URL}/sitemap-jobs.xml`
 
 async function fetchUrlsFromSitemap(url: string): Promise<string[]> {
   const res = await fetch(url)
@@ -30,7 +29,22 @@ async function fetchUrlsFromSitemap(url: string): Promise<string[]> {
   return urls
 }
 
-async function validateJobPage(url: string): Promise<string[]> {
+/**
+ * In indexing phase 1 sitemap-jobs.xml is an empty <urlset> (lib/seo/indexingPhase.ts), so the sample comes from the
+ * job links on the listing pages instead.
+ */
+async function fetchUrlsFromListings(): Promise<string[]> {
+  const urls = new Set<string>()
+  for (const path of ['/jobs', '/remote']) {
+    const res = await fetch(`${BASE_URL}${path}`)
+    if (!res.ok) throw new Error(`Failed to fetch ${BASE_URL}${path}: ${res.status}`)
+    for (const match of (await res.text()).matchAll(/href="(\/job\/[^"?#]+)"/g)) urls.add(`${BASE_URL}${match[1]}`)
+  }
+  return [...urls]
+}
+
+/** Returns the errors, or null for a noindex page when `skipNoindex` (a listed job we do not offer to Google). */
+async function validateJobPage(url: string, skipNoindex = false): Promise<string[] | null> {
   const errors: string[] = []
   
   try {
@@ -46,6 +60,7 @@ async function validateJobPage(url: string): Promise<string[]> {
     // Check noindex
     const robots = $('meta[name="robots"]').attr('content')
     if (robots && robots.includes('noindex')) {
+      if (skipNoindex) return null
       errors.push('Page has noindex')
     }
 
@@ -98,16 +113,22 @@ async function run() {
 
   console.log(`Fetching jobs sitemap: ${SITEMAP_URL}`)
   let urls: string[] = []
-  
+  let fromListings = false
+
   try {
     urls = await fetchUrlsFromSitemap(SITEMAP_URL)
+    if (urls.length === 0) {
+      console.log('No URLs in the jobs sitemap (indexing phase 1); sampling job links from /jobs and /remote.')
+      urls = await fetchUrlsFromListings()
+      fromListings = true
+    }
   } catch (err: any) {
     console.error(err.message)
     process.exit(1)
   }
 
   if (urls.length === 0) {
-    console.error('No URLs found in sitemap.')
+    console.error('No job URLs found.')
     process.exit(1)
   }
 
@@ -118,11 +139,15 @@ async function run() {
   console.log(`Validating ${samples.length} sampled job URLs...`)
   
   let failed = 0
+  let skipped = 0
 
   for (const url of samples) {
     process.stdout.write(`- ${url} ... `)
-    const errors = await validateJobPage(url)
-    if (errors.length > 0) {
+    const errors = await validateJobPage(url, fromListings)
+    if (errors === null) {
+      console.log('skipped (noindex: not offered to Google)')
+      skipped++
+    } else if (errors.length > 0) {
       console.log(`❌ FAIL\n    ${errors.join('\n    ')}`)
       failed++
     } else {
@@ -135,7 +160,12 @@ async function run() {
     process.exit(1)
   }
 
-  console.log(`\nAll ${samples.length} jobs passed schema validation.`)
+  if (skipped === samples.length) {
+    console.error('\nEvery sampled job page is noindex; nothing was validated.')
+    process.exit(1)
+  }
+
+  console.log(`\nAll ${samples.length - skipped} indexable jobs passed schema validation${skipped ? ` (${skipped} noindex skipped)` : ''}.`)
   process.exit(0)
 }
 

@@ -1,8 +1,8 @@
 name: freehire daily sync
 
 # Pulls the last ~36 hours of fresh six-figure jobs from freehire (US, UK, EU, Canada, Australia) through
-# the normal ingest path, then expires jobs not refreshed in 7 days. Runs daily in full, plus three light runs (freehire
-# sync of the last 18 hours, self-heal, slices) 6 hours apart; can also be started by hand.
+# the normal ingest path, then expires jobs not refreshed in 7 days. Runs about daily in full, plus light runs (freehire
+# sync of the last 18 hours, self-heal, slices) about 6 hours apart; can also be started by hand.
 # New/removed URLs are queued in the database (JobIndexingQueue) during the sync, never sent in a burst; after the
 # sync, the queue is drained at most INDEXING_API_DAILY_LIMIT URLs a day (only that step gets the Google credentials).
 # It also refreshes the listing slices and runs the data-quality self-heal: the three steps that used to run in the
@@ -11,11 +11,14 @@ name: freehire daily sync
 
 on:
   schedule:
-    - cron: "17 5 * * *" # 05:17 UTC daily: the full run (every step below)
-    # Light runs, 6 hours apart (owner's request 2026-11-12: new jobs within hours, not once a day): only the freehire
-    # sync over the last 18 hours (overlaps the previous run even when GitHub starts one hours late), the self-heal
-    # and the slices. ~10 search requests and a few hundred company lookups each, well inside the key's daily quota.
-    - cron: "17 11,17,23 * * *"
+    # Every hour; the plan job below decides what runs (scripts/freehire-plan.js). GitHub starts scheduled runs hours
+    # late and drops some (2026-11-12: the 11:17 and 17:17 runs never started), so fixed times were not reliable.
+    # - full run (every step below): when no full run started in the last 20 hours
+    # - light run, 5.5+ hours after the last sync (owner's request 2026-11-12: new jobs within hours, not once a day):
+    #   only the freehire sync over the last 18 hours, the self-heal and the slices. ~10 search requests and a few
+    #   hundred company lookups each, well inside the key's daily quota.
+    # - otherwise nothing (the run takes a few seconds)
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       closed_apply:
@@ -33,7 +36,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Scheduled runs only: 'full', 'light' or 'skip' from the start times of earlier runs. A manual run skips this step
+  # (mode empty) and runs every step, as before.
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v6
+        if: ${{ github.event_name == 'schedule' }}
+        with:
+          sparse-checkout: scripts/freehire-plan.js
+          sparse-checkout-cone-mode: false
+      - id: plan
+        if: ${{ github.event_name == 'schedule' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/freehire-plan.js
+
   sync:
+    needs: plan
+    if: ${{ needs.plan.outputs.mode != 'skip' }}
+    # The plan job reads this name back from earlier runs: keep the "sync (<mode>)" form.
+    name: sync (${{ needs.plan.outputs.mode || 'manual' }})
     runs-on: ubuntu-latest
     timeout-minutes: 150
     permissions:
@@ -41,9 +70,9 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       FREEHIRE_API_KEY: ${{ secrets.FREEHIRE_API_KEY }}
-      # 'true' on the 6-hourly light runs (the second cron above); the full-run-only steps check it.
-      LIGHT_RUN: ${{ github.event.schedule == '17 11,17,23 * * *' }}
-      FREEHIRE_LOOKBACK_DAYS: ${{ inputs.lookback_days || (github.event.schedule == '17 11,17,23 * * *' && '0.75') || '1.5' }}
+      # 'true' on the light runs; the full-run-only steps check it.
+      LIGHT_RUN: ${{ needs.plan.outputs.mode == 'light' }}
+      FREEHIRE_LOOKBACK_DAYS: ${{ inputs.lookback_days || (needs.plan.outputs.mode == 'light' && '0.75') || '1.5' }}
 
     steps:
       - uses: actions/checkout@v6
