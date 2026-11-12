@@ -525,3 +525,47 @@
     transition: none;
   }
 }
+
+/* The salary-band bars grow in on load, one after another (decorative: aria-hidden; the counts are text). */
+@keyframes hero-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .barFill {
+    transform-origin: left center;
+    animation: hero-bar-grow 900ms cubic-bezier(0.22, 1, 0.36, 1) 150ms backwards;
+  }
+
+  .bars > li:nth-child(2) .barFill {
+    animation-delay: 230ms;
+  }
+
+  .bars > li:nth-child(3) .barFill {
+    animation-delay: 310ms;
+  }
+
+  .bars > li:nth-child(4) .barFill {
+    animation-delay: 390ms;
+  }
+}
+
+/* Depth on scroll: beside the copy, the card drifts up a little faster than the page over the first 700px. CSS
+   scroll-driven animation only (no JS); browsers without it, phones and reduced motion keep a still card. */
+@keyframes hero-card-parallax {
+  to {
+    translate: 0 -40px;
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) and (min-width: 1180px) {
+    .panel {
+      animation: hero-card-parallax linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 700px;
+    }
+  }
+}

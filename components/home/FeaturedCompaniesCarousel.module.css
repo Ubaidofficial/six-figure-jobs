@@ -164,3 +164,25 @@
     height: 46px;
   }
 }
+
+/* Depth on scroll: the logo card drifts from 24px below to 24px above its place as it crosses the screen. CSS
+   scroll-driven animation only; still where unsupported and under reduced motion. */
+@keyframes logo-card-parallax {
+  from {
+    translate: 0 24px;
+  }
+
+  to {
+    translate: 0 -24px;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .card {
+      animation: logo-card-parallax linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+  }
+}

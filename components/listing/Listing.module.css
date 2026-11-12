@@ -630,3 +630,91 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* "Get alerts for “seo” jobs" / "Follow “seo” jobs" under the search bar after a search (SavedSearchChip). */
+.savedSearch {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 0;
+}
+
+.savedSearchChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 999px;
+  background: var(--color-bg-1);
+  box-shadow: 0 0 0 1px var(--color-border);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-0);
+  text-decoration: none;
+  transition: box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.savedSearchChip:hover {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-fg) 22%, transparent), 0 8px 18px -10px rgba(12, 13, 14, 0.3);
+  transform: translateY(-1px);
+}
+
+.savedSearchIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #0a0a0a;
+  background: var(--color-primary);
+}
+
+.savedSearchNote {
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-1);
+  background: var(--color-bg-2);
+}
+
+/* The header is sticky: leave room above the alert box when the chip jumps to it. */
+.alertAnchor {
+  scroll-margin-top: 96px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .savedSearchChip {
+    transition: none;
+  }
+
+  .savedSearchChip:hover {
+    transform: none;
+  }
+}
+
+/* The typical-salary card's bars grow in on load, one after another (decorative: the counts are text). */
+@keyframes aside-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .asideBarFill {
+    transform-origin: left center;
+    animation: aside-bar-grow 900ms cubic-bezier(0.22, 1, 0.36, 1) 150ms backwards;
+  }
+
+  .asideBars > li:nth-child(2) .asideBarFill {
+    animation-delay: 230ms;
+  }
+
+  .asideBars > li:nth-child(3) .asideBarFill {
+    animation-delay: 310ms;
+  }
+
+  .asideBars > li:nth-child(4) .asideBarFill {
+    animation-delay: 390ms;
+  }
+}

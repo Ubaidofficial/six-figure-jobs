@@ -169,7 +169,11 @@ export function ListingLayout({
       ) : null}
       <div id="jobs" className={styles.results}>
         {bar}
-        {alert ? <JobAlertBox query={alert} /> : null}
+        {alert ? (
+          <div id="job-alert" className={styles.alertAnchor}>
+            <JobAlertBox query={alert} />
+          </div>
+        ) : null}
         {children}
       </div>
     </div>

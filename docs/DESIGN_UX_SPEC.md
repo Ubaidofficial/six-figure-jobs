@@ -247,6 +247,7 @@ A scheduled Claude Code task runs on the 1st and 15th of each month to keep the 
 - 2026-11-11: Owner-requested refresh after workflows.io (§13), outside the scheduled runs: tokens, homepage, scroll reveals, then the rest of the public pages.
 - 2026-11-12: Owner follow-ups: typing search placeholder, salary card on the right of the hero, live search on /jobs and /remote, two-row sliding logo wall, larger band figures.
 - 2026-11-12: Navigation: links prefetch on intent only (`components/ui/Link.tsx`, use it instead of `next/link` on public pages); header links show a loading bar while their page loads. Job pay card shows the job's range against the market.
+- 2026-11-12: Motion set: bars grow and counts count up on scroll, homepage section indicator, CSS scroll-driven parallax (hero card, logo wall), page transition on client navigations (`RouteTransition`), saved-search chip, search skeleton rows.
 
 ---
 
