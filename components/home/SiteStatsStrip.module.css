@@ -137,20 +137,24 @@
 .facts li {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 4px 0 4px 16px;
+  gap: 4px;
+  padding: 4px 0 4px 20px;
   border-left: 1px solid color-mix(in srgb, var(--color-text-0) 12%, transparent);
 }
 
+/* The same display size as the main figure (was 1.25rem mono, too small beside it). */
 .factValue {
-  font-family: var(--font-mono);
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+  color: var(--color-text-0);
 }
 
 .factLabel {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--color-text-1);
 }
 

@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { Search } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
+import { SearchBar } from '@/components/search/SearchBar'
 import { CountryFlag } from '@/components/ui/CountryFlag'
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
@@ -12,7 +11,6 @@ import { countInCountries, type SiteCounts } from '@/lib/jobs/siteCounts'
 import type { FeedItem } from '@/lib/jobs/latestFeed'
 
 import { HeroSalaryBands } from './HeroSalaryBands'
-import { HeroSearchInput } from './HeroSearchInput'
 import styles from './Hero.module.css'
 import { formatRelativeTime } from '@/lib/utils/time'
 
@@ -94,16 +92,7 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
       </p>
 
       <form className={styles.searchForm} method="GET" action="/jobs">
-        <div className={styles.searchBar}>
-          <label className={styles.srOnly} htmlFor="hero-q">
-            Search six-figure jobs
-          </label>
-          <Search className={styles.searchIcon} aria-hidden="true" />
-          <HeroSearchInput id="hero-q" name="q" placeholder="Job title, company or keyword" className={styles.searchInput} shortcut shortcutHint />
-          <Button variant="primary" size="lg" type="submit" className={styles.cta}>
-            Search jobs<span aria-hidden="true" className="ml-2">&rarr;</span>
-          </Button>
-        </div>
+        <SearchBar id="hero-q" />
 
         {children ? <div className={styles.filters}>{children}</div> : null}
       </form>
@@ -138,108 +127,129 @@ export function Hero({ jobCount = 0, companyCount = 0, newThisWeek, newestPosted
       ) : null}
       </div>
 
+      {/* Salary snapshot card on the right of the copy from 1180px (under it at 1024-1179px, hidden on phones). */}
       <aside className={`panel-hairline ${styles.panel}`} aria-label="Typical salary and pay floors">
         <div className={styles.panelHead}>
-          <p className={styles.panelHeadTitle}>Salary snapshot</p>
+          <div>
+            <p className={styles.panelHeadTitle}>Salary snapshot</p>
+            <p className={styles.panelHeadSub}>
+              {salarySnapshot
+                ? `Median of ${salarySnapshot.count.toLocaleString()} listings paid in USD`
+                : `${jobCount.toLocaleString()} roles in ${FLOORS.length} markets`}
+            </p>
+          </div>
+          {salarySnapshot ? (
+            <dl className={styles.tiles}>
+              <div className={styles.tile}>
+                <dt>Typical salary</dt>
+                <dd>{formatCurrencyShort(Math.round(salarySnapshot.median / 1000) * 1000, 'USD')}</dd>
+              </div>
+              <div className={styles.tile}>
+                <dt>Most roles pay</dt>
+                <dd>
+                  {formatCurrencyShort(Math.round(salarySnapshot.p25 / 1000) * 1000, 'USD')}
+                  {'\u2013'}
+                  {formatCurrencyShort(Math.round(salarySnapshot.p75 / 1000) * 1000, 'USD')}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
+        </div>
+
+        <div className={styles.panelBody}>
+          {salarySnapshot ? (
+            <>
+              <h2 className={styles.panelTitle}>Jobs by salary band</h2>
+              <HeroSalaryBands
+                bands={salarySnapshot.bands.map((band, i) => ({
+                  label: band.label,
+                  count: band.count,
+                  href: bandHref(band.min),
+                  samples: bandSamples?.[i] ?? [],
+                }))}
+              />
+            </>
+          ) : (
+            <dl className={styles.stats}>
+              <div className={styles.stat}>
+                <dt>Roles</dt>
+                <dd>{jobCount.toLocaleString()}</dd>
+              </div>
+              {companyCount > 0 ? (
+                <div className={styles.stat}>
+                  <dt>Companies</dt>
+                  <dd>{companyCount.toLocaleString()}</dd>
+                </div>
+              ) : null}
+              <div className={styles.stat}>
+                <dt>Markets</dt>
+                <dd>{FLOORS.length}</dd>
+              </div>
+            </dl>
+          )}
+        </div>
+
+        <div className={styles.panelSplit}>
+          <div>
+            <h2 className={styles.panelTitle}>Pay floor by market</h2>
+            <ul className={styles.floors}>
+              {FLOORS.map((floor) => {
+                const { market, flag, currency, href } = floor
+                const jobs = siteCounts ? countInCountries(siteCounts.byCountry, FLOOR_MARKET_COUNTRIES[currency] ?? []) : null
+                return (
+                  <li key={currency}>
+                    <Link href={href} className={styles.floor} title={'title' in floor ? floor.title : undefined}>
+                      <span>
+                        <CountryFlag code={flag} className="mr-2" />
+                        {market}
+                        {jobs !== null ? (
+                          <span className={styles.floorJobs}>
+                            {' '}
+                            {jobs.toLocaleString()} {jobs === 1 ? 'job' : 'jobs'}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className={styles.floorValue}>
+                        {formatCurrencyShort(Number(HIGH_SALARY_THRESHOLDS[currency]), currency)}+
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          {siteCounts ? (
+            <div>
+              <h2 className={styles.panelTitle}>Jobs by type</h2>
+              <ul className={styles.types}>
+                {(
+                  [
+                    ['Remote', siteCounts.byWorkType.remote, '/remote'],
+                    ['Hybrid', siteCounts.byWorkType.hybrid, '/jobs?remoteMode=hybrid'],
+                    ['On-site', siteCounts.byWorkType.onsite, '/jobs?remoteMode=onsite'],
+                  ] as const
+                ).map(([label, count, href]) => (
+                  <li key={label}>
+                    <Link href={href} className={styles.type}>
+                      <span className={styles.typeLabel}>{label}</span>
+                      <span className={styles.typeCount}>{count.toLocaleString()}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+
+        <div className={styles.panelFoot}>
+          <p className={styles.panelNote}>
+            {siteCounts ? `Counted ${formatCounted(siteCounts.computedAt)}; recounted about every hour.` : null}
+          </p>
           <Link href="/salary" className="arrow-link">
             <span className="arrow-link-label">Salary guides by role</span>
             <span className="arrow-chip" aria-hidden="true">&#8599;</span>
           </Link>
-        </div>
-        <div className={styles.panelGrid}>
-        <div className={styles.panelCol}>
-        {salarySnapshot ? (
-          <>
-            <h2 className={styles.panelTitle}>Typical salary</h2>
-            <p className={styles.bigNumber}>{formatCurrencyShort(Math.round(salarySnapshot.median / 1000) * 1000, 'USD')}</p>
-            <p className={styles.bigNote}>
-              Most roles pay {formatCurrencyShort(Math.round(salarySnapshot.p25 / 1000) * 1000, 'USD')}
-              {'\u2013'}
-              {formatCurrencyShort(Math.round(salarySnapshot.p75 / 1000) * 1000, 'USD')}. Median of{' '}
-              {salarySnapshot.count.toLocaleString()} listings paid in USD.
-            </p>
-            <HeroSalaryBands
-              bands={salarySnapshot.bands.map((band, i) => ({
-                label: band.label,
-                count: band.count,
-                href: bandHref(band.min),
-                samples: bandSamples?.[i] ?? [],
-              }))}
-            />
-          </>
-        ) : (
-          <dl className={styles.stats}>
-            <div className={styles.stat}>
-              <dt>Roles</dt>
-              <dd>{jobCount.toLocaleString()}</dd>
-            </div>
-            {companyCount > 0 ? (
-              <div className={styles.stat}>
-                <dt>Companies</dt>
-                <dd>{companyCount.toLocaleString()}</dd>
-              </div>
-            ) : null}
-            <div className={styles.stat}>
-              <dt>Markets</dt>
-              <dd>{FLOORS.length}</dd>
-            </div>
-          </dl>
-        )}
-        </div>
-
-        <div className={styles.panelCol}>
-        <h2 className={styles.panelTitle}>Pay floor by market</h2>
-        <ul className={styles.floors}>
-          {FLOORS.map((floor) => {
-            const { market, flag, currency, href } = floor
-            const jobs = siteCounts ? countInCountries(siteCounts.byCountry, FLOOR_MARKET_COUNTRIES[currency] ?? []) : null
-            return (
-              <li key={currency}>
-                <Link href={href} className={styles.floor} title={'title' in floor ? floor.title : undefined}>
-                  <span>
-                    <CountryFlag code={flag} className="mr-2" />
-                    {market}
-                    {jobs !== null ? (
-                      <span className={styles.floorJobs}>
-                        {' '}
-                        {jobs.toLocaleString()} {jobs === 1 ? 'job' : 'jobs'}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className={styles.floorValue}>
-                    {formatCurrencyShort(Number(HIGH_SALARY_THRESHOLDS[currency]), currency)}+
-                  </span>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-        </div>
-
-        {siteCounts ? (
-          <div className={styles.panelCol}>
-            <h2 className={styles.panelTitle}>Jobs by type</h2>
-            <ul className={styles.types}>
-              {(
-                [
-                  ['Remote', siteCounts.byWorkType.remote, '/remote'],
-                  ['Hybrid', siteCounts.byWorkType.hybrid, '/jobs?remoteMode=hybrid'],
-                  ['On-site', siteCounts.byWorkType.onsite, '/jobs?remoteMode=onsite'],
-                ] as const
-              ).map(([label, count, href]) => (
-                <li key={label}>
-                  <Link href={href} className={styles.type}>
-                    <span className={styles.typeLabel}>{label}</span>
-                    <span className={styles.typeCount}>{count.toLocaleString()}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <p className={styles.panelNote}>
-              Counted {formatCounted(siteCounts.computedAt)}; recounted about every hour.
-            </p>
-          </div>
-        ) : null}
         </div>
       </aside>
     </section>

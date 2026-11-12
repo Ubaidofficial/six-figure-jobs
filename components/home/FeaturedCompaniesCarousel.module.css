@@ -31,21 +31,49 @@
 }
 
 .card {
-  border-radius: var(--radius-2xl);
-  background: color-mix(in srgb, var(--color-bg-1) 62%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-12) var(--space-16);
+  display: grid;
+  gap: 12px;
+  border-radius: 20px;
+  background: var(--color-bg-1);
+  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(12, 13, 14, 0.04);
+  padding: 16px 0;
+  overflow: hidden;
+}
+
+/* One sliding row. The edges fade so logos slide in and out instead of being cut. */
+.viewport {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+
+.rail {
+  display: flex;
+  width: max-content;
+  animation: logo-marquee var(--marquee-duration, 60s) linear infinite;
+}
+
+.railReverse {
+  animation-direction: reverse;
+}
+
+.viewport:hover .rail,
+.viewport:focus-within .rail {
+  animation-play-state: paused;
+}
+
+@keyframes logo-marquee {
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .track {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
   gap: var(--space-12);
   margin: 0;
-  padding: var(--space-4, 4px) 0;
+  padding: 4px var(--space-12) 4px 0; /* the right padding is the gap between the two copies */
   list-style: none;
 }
 
@@ -62,9 +90,8 @@
   width: 72px;
   height: 72px;
   border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--color-bg-2) 55%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 6%, transparent);
-  box-shadow: var(--shadow-sm);
+  background: #fff; /* white tile so dark or transparent logos stay readable */
+  border: 1px solid var(--color-border);
   transition:
     transform 200ms ease,
     border-color 200ms ease,
@@ -74,9 +101,8 @@
 
 .logoLink:hover {
   transform: translateY(-2px);
-  border-color: rgba(132, 204, 22, 0.35);
-  box-shadow: var(--shadow-sm-glow);
-  background: color-mix(in srgb, var(--color-bg-2) 75%, transparent);
+  border-color: color-mix(in srgb, var(--color-fg) 18%, transparent);
+  box-shadow: 0 10px 20px -12px rgba(12, 13, 14, 0.3);
 }
 
 .logoBox {
@@ -94,9 +120,26 @@
   .logoLink:hover {
     transform: none;
   }
+
+  .rail {
+    animation: none;
+  }
+
+  .clone {
+    display: none;
+  }
+
+  .viewport {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .track {
+    padding-left: var(--space-12);
+  }
 }
 
-/* Phones: one row to swipe, with the edges faded so it reads as scrollable. */
 @media (max-width: 767px) {
   .header {
     align-items: flex-start;
@@ -107,26 +150,8 @@
   }
 
   .card {
-    padding: var(--space-8) 0;
-  }
-
-  .track {
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-    padding: var(--space-4, 4px) var(--space-12);
-    mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 24px), transparent);
-    -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 24px), transparent);
-  }
-
-  .track::-webkit-scrollbar {
-    display: none;
-  }
-
-  .item {
-    scroll-snap-align: start;
+    padding: 12px 0;
+    gap: 8px;
   }
 
   .logoLink {

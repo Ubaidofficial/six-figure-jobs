@@ -25,6 +25,23 @@ type Row = { kind: 'role'; role: Role } | { kind: 'job'; job: Job } | { kind: 'a
 
 const MIN_CHARS = 2
 const DEBOUNCE_MS = 150
+// Example searches typed into the empty box's placeholder one after another (like freehire's search box), so visitors
+// see what they can search for. Role names that have their own pages, so each one finds jobs.
+const EXAMPLES = [
+  'Staff software engineer',
+  'Product manager',
+  'Data scientist',
+  'Machine learning engineer',
+  'Engineering manager',
+  'DevOps engineer',
+  'Account executive',
+]
+const EXAMPLE_PREFIX = 'Search: '
+const TYPE_MS = 70
+const DELETE_MS = 35
+const HOLD_MS = 1600
+const GAP_MS = 400
+const START_MS = 1200
 // Form fields the instant results are not filtered by: with one of these set, the list would not match the search.
 const UNFILTERED_FIELDS = ['role', 'country', 'remoteRegion']
 
@@ -53,6 +70,8 @@ export function HeroSearchInput({
   className,
   shortcut = false,
   shortcutHint = false,
+  typingExamples = false,
+  defaultValue = '',
 }: {
   id: string
   name: string
@@ -62,18 +81,58 @@ export function HeroSearchInput({
   shortcut?: boolean
   /** Show a "/" key cap after the input (desktop pointers only). */
   shortcutHint?: boolean
+  /** Type example searches into the placeholder while the box is empty and not focused. */
+  typingExamples?: boolean
+  /** Text the box opens with (the current search on a results page). */
+  defaultValue?: string
 }) {
   const router = useRouter()
   const listId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(defaultValue)
   const [results, setResults] = useState<Results | null>(null)
   const [popular, setPopular] = useState<Role[] | null>(null)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
   const [formVersion, setFormVersion] = useState(0)
+  const [examplePlaceholder, setExamplePlaceholder] = useState<string | null>(null)
   const lastTyped = useRef('')
+
+  // The typing placeholder starts after load (the server HTML has the plain one) and only runs while the box is empty,
+  // not focused and the tab is visible; focusing the box shows the plain placeholder. Off under reduced motion.
+  useEffect(() => {
+    if (!typingExamples || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let word = 0
+    let chars = 0
+    let deleting = false
+    let timer = 0
+    const tick = () => {
+      const input = inputRef.current
+      if (!input || document.activeElement === input || input.value !== '' || document.hidden) {
+        chars = 0
+        deleting = false
+        setExamplePlaceholder(null)
+        timer = window.setTimeout(tick, 500)
+        return
+      }
+      const text = EXAMPLES[word]
+      chars += deleting ? -1 : 1
+      setExamplePlaceholder(EXAMPLE_PREFIX + text.slice(0, chars))
+      if (!deleting && chars === text.length) {
+        deleting = true
+        timer = window.setTimeout(tick, HOLD_MS)
+      } else if (deleting && chars === 0) {
+        deleting = false
+        word = (word + 1) % EXAMPLES.length
+        timer = window.setTimeout(tick, GAP_MS)
+      } else {
+        timer = window.setTimeout(tick, deleting ? DELETE_MS : TYPE_MS)
+      }
+    }
+    timer = window.setTimeout(tick, START_MS)
+    return () => window.clearTimeout(timer)
+  }, [typingExamples])
 
   // A change to the salary or work arrangement pills (or a role/location choice) refreshes the results in the
   // background; it never opens the list, which would cover the very controls being used.
@@ -230,7 +289,7 @@ export function HeroSearchInput({
         name={name}
         type="text"
         enterKeyHint="search"
-        placeholder={placeholder}
+        placeholder={examplePlaceholder ?? placeholder}
         className={className}
         autoComplete="off"
         spellCheck={false}

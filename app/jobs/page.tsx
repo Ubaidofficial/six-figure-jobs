@@ -48,6 +48,7 @@ import {
   ListingSection,
   Pagination,
 } from '@/components/listing/ListingParts'
+import { ListingSearch } from '@/components/listing/ListingSearch'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { toPublicJob } from '@/lib/jobs/publicJob'
 
@@ -605,6 +606,7 @@ export default async function JobsIndexPage({
 
         <ListingHeader
           aside={<ListingSalaryAside input={queryInput} />}
+          search={<ListingSearch action="/jobs" defaultValue={keyword} />}
           related={topRolesRow('Top roles', topRoles)}
           breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Jobs' }]}
           title={

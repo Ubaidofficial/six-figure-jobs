@@ -1,0 +1,71 @@
+/* The big white search bar with a lime button (moved from Hero.module.css, 2026-11-12, to share with /jobs, /remote). */
+
+.bar {
+  position: relative; /* the live role suggestions (HeroSearchInput) are positioned against the bar */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 18px;
+  background: var(--color-bg-1);
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(12, 13, 14, 0.05), 0 14px 36px -16px rgba(12, 13, 14, 0.18);
+  transition: box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bar:focus-within {
+  box-shadow: 0 0 0 2px var(--color-primary-text), 0 14px 36px -16px rgba(12, 13, 14, 0.22);
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--color-text-1);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--color-text-0);
+  font-size: 1rem;
+  padding: 10px 0;
+}
+
+.input::placeholder {
+  color: var(--color-text-2);
+}
+
+/* The bar draws the focus ring (:focus-within above); the global input ring would draw a second box inside it. */
+.input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.cta {
+  flex: none;
+  border-radius: 10px;
+}
+
+@media (max-width: 640px) {
+  .bar {
+    flex-wrap: wrap;
+    padding: 8px 10px;
+  }
+
+  .input {
+    flex-basis: calc(100% - 40px);
+  }
+
+  .cta {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}

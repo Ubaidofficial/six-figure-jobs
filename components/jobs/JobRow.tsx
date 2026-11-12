@@ -24,6 +24,7 @@ import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { degreeRequirement } from '@/lib/jobs/degreeRequirement'
 import { extractBenefits, extractExperience } from '@/lib/jobs/jobSummary'
 import { boardNameFor } from '@/lib/scrapers/utils/boardHosts'
+import { NEW_TAG_WINDOW_MS } from '@/lib/jobs/postedRecently'
 import { buildSalaryText } from '@/lib/jobs/salary'
 import { getJobCardSnippet } from '@/lib/jobs/snippet'
 import { skillLabel } from '@/lib/jobs/skillLabel'
@@ -31,7 +32,6 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import styles from './JobRow.module.css'
 
-const NEW_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 const MAX_SUMMARY_CHARS = 320
 const MAX_SKILLS = 8
 
@@ -80,7 +80,7 @@ export function JobRow({
   const href = (job as { href?: string }).href ?? buildJobSlugHref(job as any)
 
   const posted = job.postedAt ?? job.createdAt ?? null
-  const isNew = posted ? Date.now() - new Date(posted).getTime() < NEW_WINDOW_MS : false
+  const isNew = posted ? Date.now() - new Date(posted).getTime() < NEW_TAG_WINDOW_MS : false
   // The posting date, as the "New" tag and the "Most Recent" order use; updatedAt is touched by every daily sync.
   const postedLabel = formatRelativeTime(job.postedAt ?? job.createdAt ?? null)
 
@@ -142,10 +142,10 @@ export function JobRow({
           </TitleTag>
           <p className={styles.sub}>
             {companyName}
-            {isNew ? (
-              <span className={styles.newTag}>New</span>
-            ) : postedLabel ? (
-              // Relative to the clock at render, so cached server HTML can differ from the browser's.
+            {isNew ? <span className={styles.newTag}>New</span> : null}
+            {postedLabel ? (
+              // Shown with the "New" tag too ("New · 4h ago"). Relative to the clock at render, so cached server HTML
+              // can differ from the browser's.
               <span suppressHydrationWarning> · {postedLabel}</span>
             ) : null}
           </p>

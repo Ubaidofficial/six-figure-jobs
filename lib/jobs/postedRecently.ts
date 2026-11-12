@@ -6,6 +6,9 @@
 
 export const NEW_THIS_WEEK_DAYS = 7
 
+/** A job carries the "New" tag on rows and cards for this long after its posting date (postedAt, else createdAt). */
+export const NEW_TAG_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
+
 /** Prisma filter: the job was posted (or, with no posting date, first seen) at or after `since`. */
 export function postedSinceClause(since: Date) {
   return {

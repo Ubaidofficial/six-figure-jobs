@@ -32,8 +32,8 @@ function useScrolled(thresholdPx: number = 10): boolean {
 export function SiteHeader() {
   const pathname = usePathname()
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
-  // The homepage and /search open with their own large search box; a second one in the header read as a duplicate.
-  const pageHasSearch = pathname === '/' || pathname === '/search'
+  // These pages open with their own large search box; a second one in the header read as a duplicate.
+  const pageHasSearch = ['/', '/search', '/jobs', '/remote'].includes(pathname)
   const scrolled = useScrolled(8)
   const router = useRouter()
 

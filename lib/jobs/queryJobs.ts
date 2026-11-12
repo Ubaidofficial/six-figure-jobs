@@ -19,6 +19,7 @@ import { loadPeerSalaries, rankSalary } from './salaryRank'
 import { salaryMidpoint } from './salarySnapshot'
 import { resolveJobRoleSlug } from '../roles/indexableRole'
 import { roleLabelFor } from '../roles/relatedRoles'
+import { NEW_TAG_WINDOW_MS } from './postedRecently'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -220,6 +221,18 @@ async function withCardSummaries<
 const RELEVANCE_CANDIDATE_CAP = 1500
 
 /**
+ * Pure: "Most relevant" order. Jobs that carry the "New" tag (posted within NEW_TAG_WINDOW_MS) come first, so a fresh
+ * match is not buried mid-list under older ones (owner's request, 2026-11-12); within each group the higher keyword score
+ * leads, then the newer posting date, then id.
+ */
+export function rankByRelevance(rows: Array<{ id: string; score: number; posted: number }>, now: number): string[] {
+  return rows
+    .map((r) => ({ ...r, fresh: now - r.posted < NEW_TAG_WINDOW_MS ? 1 : 0 }))
+    .sort((a, b) => b.fresh - a.fresh || b.score - a.score || b.posted - a.posted || (a.id < b.id ? -1 : 1))
+    .map((r) => r.id)
+}
+
+/**
  * Keyword results ordered by relevance. Prisma cannot order by a computed score, so the matching rows' searchable
  * fields are scored here (cheap: only a few short columns, capped at RELEVANCE_CANDIDATE_CAP newest matches), the
  * requested page is cut from the ranking, and just those jobs are loaded in full.
@@ -236,16 +249,26 @@ async function queryByRelevance(args: {
     prisma.job.count({ where }),
     prisma.job.findMany({
       where,
-      select: { id: true, title: true, company: true, locationRaw: true, techStack: true, skillsJson: true, createdAt: true },
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        locationRaw: true,
+        techStack: true,
+        skillsJson: true,
+        createdAt: true,
+        postedAt: true,
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       take: RELEVANCE_CANDIDATE_CAP,
     }),
   ])
 
-  const ranked = candidates
-    .map((c) => ({ id: c.id, created: c.createdAt.getTime(), score: scoreJob(keywordPlan, c) }))
-    .sort((a, b) => b.score - a.score || b.created - a.created)
-  const pageIds = ranked.slice((page - 1) * pageSize, page * pageSize).map((r) => r.id)
+  const ranked = rankByRelevance(
+    candidates.map((c) => ({ id: c.id, score: scoreJob(keywordPlan, c), posted: (c.postedAt ?? c.createdAt).getTime() })),
+    Date.now(),
+  )
+  const pageIds = ranked.slice((page - 1) * pageSize, page * pageSize)
 
   const rows = pageIds.length ? await prisma.job.findMany({ where: { id: { in: pageIds } }, select }) : []
   const byId = new Map(rows.map((r) => [r.id, r]))
