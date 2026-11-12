@@ -9,6 +9,13 @@ const SITE_URL = getSiteUrl()
 export const revalidate = 86400
 
 const SLOW_CRAWLERS = ['AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'PetalBot'] as const
+// AI answer engines (they send visitors): slowed, not blocked.
+const AI_ANSWER_CRAWLERS = ['PerplexityBot', 'OAI-SearchBot'] as const
+// Social preview images (/job/<slug>/opengraph-image, /company/..., /jobs/<role>/...) are drawn on the server and each
+// one blocks it for seconds: PerplexityBot fetched 160 in 5 minutes after the 2026-11-12 deploy and visitors' pages took
+// 26 s. Only link previews (Facebook, X, LinkedIn, Slack: the default group) and Google need them, so the crawlers
+// named here skip them. Pages themselves are not affected.
+const NO_PREVIEW_IMAGES = 'Disallow: /*/opengraph-image'
 
 // Only the index plus the jobs sitemap (for Google Jobs discovery). Child sitemaps are discovered through the index.
 function buildSitemapLines(): string[] {
@@ -35,12 +42,15 @@ export async function GET() {
     '',
     'User-agent: GPTBot',
     'Disallow: /api/',
+    NO_PREVIEW_IMAGES,
     '',
     'User-agent: anthropic-ai',
     'Disallow: /api/',
+    NO_PREVIEW_IMAGES,
     '',
     'User-agent: ClaudeBot',
     'Disallow: /api/',
+    NO_PREVIEW_IMAGES,
     '',
     // SEO-tool crawlers bring no visitors; a crowd of them right after a deploy (empty caches) ran the server out of
     // memory on 2026-11-11. They honour Crawl-delay (seconds between requests); Googlebot ignores it and is not listed.
@@ -50,13 +60,14 @@ export async function GET() {
     'Disallow: /search',
     'Disallow: /api/',
     'Disallow: /ubaid93/',
+    NO_PREVIEW_IMAGES,
     '',
-    // AI answer engine (sends visitors): slowed, not blocked.
-    'User-agent: PerplexityBot',
+    ...AI_ANSWER_CRAWLERS.map((bot) => `User-agent: ${bot}`),
     'Crawl-delay: 2',
     'Disallow: /search',
     'Disallow: /api/',
     'Disallow: /ubaid93/',
+    NO_PREVIEW_IMAGES,
     '',
     ...buildSitemapLines(),
     '',

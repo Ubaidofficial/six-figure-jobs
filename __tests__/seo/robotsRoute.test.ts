@@ -61,6 +61,20 @@ describe('robots route sitemap declarations', () => {
     expect(groups[0]).not.toContain('Crawl-delay')
   })
 
+  it('keeps SEO-tool and AI crawlers off the server-drawn preview images, never Google or link-preview bots', async () => {
+    const body = await (await GET()).text()
+    const groups = body.split(/\n\s*\n/)
+    for (const bot of ['AhrefsBot', 'PerplexityBot', 'OAI-SearchBot', 'GPTBot', 'ClaudeBot']) {
+      const g = groups.find((x) => x.includes(`User-agent: ${bot}`))!
+      expect(g).toContain('Disallow: /*/opengraph-image')
+    }
+    // The default group (Googlebot, Bingbot, Facebook, X, LinkedIn, Slack) still fetches them.
+    expect(groups[0]).not.toContain('opengraph-image')
+    const ai = groups.find((x) => x.includes('User-agent: OAI-SearchBot'))!
+    expect(ai).toContain('Crawl-delay: 2')
+    for (const rule of ['Disallow: /search', 'Disallow: /api/', 'Disallow: /ubaid93/']) expect(ai).toContain(rule)
+  })
+
   it('returns a full disallow on staging', async () => {
     process.env.NEXT_PUBLIC_SITE_URL = 'https://staging.6figjobs.com'
 
