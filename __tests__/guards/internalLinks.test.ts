@@ -90,7 +90,7 @@ describe('internal links', () => {
   })
 
   it('can tell a redirect-only page from a real one (checked on pages we know)', () => {
-    expect(isRedirectOnly(routeFor('/post-a-job')!.file)).toBe(true)
+    expect(isRedirectOnly(path.join(ROOT, 'app/jobs/usa/page.tsx'))).toBe(true) // a file, not a route: /jobs/[role] matches first
     expect(isRedirectOnly(routeFor('/about')!.file)).toBe(false)
     expect(routeFor('/job/some-title-j-abc12')).toBeDefined() // dynamic segments match
     expect(routeFor('/definitely/not/a/page')).toBeUndefined()

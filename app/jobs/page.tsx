@@ -21,6 +21,8 @@ import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { salaryFilterCurrency } from '@/lib/jobs/salaryFilter'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
+import { SponsorStrip } from '@/components/sponsors/SponsorStrip'
+import { loadSponsorSlots } from '@/lib/sponsors/slots'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { displayKeyword } from '@/lib/search/displayKeyword'
 import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
@@ -598,6 +600,9 @@ export default async function JobsIndexPage({
       : []
 
 
+    // Placed by hand in the admin Site Config; none when unset, expired or unreadable. First page only.
+    const sponsors = page === 1 ? await loadSponsorSlots() : []
+
     return (
       <ListingPage>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
@@ -705,6 +710,7 @@ export default async function JobsIndexPage({
             />
           ) : (
             <>
+              <SponsorStrip slots={sponsors} />
               <InfiniteJobsList initialJobs={dedupedJobs.map(toPublicJob)} initialPage={page} totalPages={totalPages} />
               {/* Server-rendered pagination links so Google can crawl pages beyond 1; the client list above
                   appends pages for people. */}

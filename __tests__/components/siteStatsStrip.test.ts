@@ -5,7 +5,7 @@ const mockClassNames = () => ({ __esModule: true, default: new Proxy({}, { get: 
 jest.mock('@/components/home/SiteStatsStrip.module.css', () => mockClassNames())
 jest.mock('@/components/ui/AnimatedNumber.module.css', () => mockClassNames())
 
-import { SiteStatsStrip, screenRatio } from '@/components/home/SiteStatsStrip'
+import { SiteStatsStrip, formatRefreshedAt, screenRatio } from '@/components/home/SiteStatsStrip'
 import { DIRECT_EMPLOYERS } from '@/lib/constants/directEmployers'
 
 const base = { jobs: 14597, companies: 2140, newThisWeek: 8656, countries: 23 }
@@ -54,5 +54,32 @@ describe('screenRatio', () => {
     expect(screenRatio(100, 100)).toBeNull()
     expect(screenRatio(0, 10)).toBeNull()
     expect(screenRatio(100, 0)).toBeNull()
+  })
+})
+
+describe('SiteStatsStrip refresh time', () => {
+  const refreshedAt = new Date('2026-11-13T08:10:00Z')
+
+  it('shows when the list was last refreshed, as an absolute UTC time, and links to how it works', () => {
+    const html = renderToStaticMarkup(createElement(SiteStatsStrip, { ...base, catalog: null, refreshedAt }))
+    expect(text(html)).toContain('Job list last refreshed Nov 13, 2026, 08:10 UTC')
+    expect(html).toContain('dateTime="2026-11-13T08:10:00.000Z"')
+    expect(html).toContain('href="/method"')
+  })
+
+  it('leaves the line out when the time could not be read', () => {
+    for (const value of [null, undefined, new Date('nope')]) {
+      const t = text(renderToStaticMarkup(createElement(SiteStatsStrip, { ...base, catalog: null, refreshedAt: value })))
+      expect(t).not.toContain('last refreshed')
+    }
+  })
+})
+
+describe('formatRefreshedAt', () => {
+  it('formats in UTC whatever the server time zone is, and rejects bad dates', () => {
+    expect(formatRefreshedAt(new Date('2026-11-13T23:05:00Z'))).toBe('Nov 13, 2026, 23:05 UTC')
+    expect(formatRefreshedAt(new Date('2026-01-02T00:00:00Z'))).toBe('Jan 2, 2026, 00:00 UTC')
+    expect(formatRefreshedAt(null)).toBeNull()
+    expect(formatRefreshedAt(new Date('nope'))).toBeNull()
   })
 })

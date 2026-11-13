@@ -88,6 +88,8 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     title: 'Company',
     links: [
       ['About Us', '/about'],
+      ['How It Works', '/method'],
+      ['Advertise', '/post-a-job'],
       ['Contact', '/about#contact'],
       ['Privacy Policy', '/privacy'],
       ['Terms of Service', '/terms'],

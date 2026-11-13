@@ -5,6 +5,7 @@
 // now one band (~150 px) right after "Top Companies Hiring Now". The typical salary is left out: the hero shows it.
 // A number that is missing (its query failed) is left out rather than shown as 0; without the catalogue only the listed
 // side shows.
+import Link from '@/components/ui/Link'
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { DIRECT_EMPLOYERS } from '@/lib/constants/directEmployers'
 import type { FreehireCatalog } from '@/lib/jobs/freehireCatalog'
@@ -19,12 +20,32 @@ export function screenRatio(screened: number, listed: number): number | null {
   return Math.round(screened / listed)
 }
 
+/**
+ * "Nov 13, 2026, 08:10 UTC": an absolute time, because the page is cached for minutes and "5 minutes ago" would be wrong
+ * by the time anyone reads it. Null for a missing or invalid date.
+ */
+export function formatRefreshedAt(date: Date | null | undefined): string | null {
+  if (!date || Number.isNaN(date.getTime())) return null
+  const text = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    // h23, not hour12:false: some ICU builds print midnight as "24:00" with hour12:false (seen in CI, 2026-11-13).
+    hourCycle: 'h23',
+    timeZone: 'UTC',
+  }).format(date)
+  return `${text} UTC`
+}
+
 export function SiteStatsStrip({
   jobs,
   companies,
   newThisWeek,
   countries,
   catalog,
+  refreshedAt,
 }: {
   jobs: number
   companies: number
@@ -32,8 +53,11 @@ export function SiteStatsStrip({
   countries: number | null
   /** The live catalogue's size; the "We screen" side is left out when it could not be read. */
   catalog: FreehireCatalog | null
+  /** When the daily sync last refreshed the listings; the "Updated" line is left out when it could not be read. */
+  refreshedAt?: Date | null
 }) {
   if (jobs <= 0) return null
+  const refreshed = formatRefreshedAt(refreshedAt)
   const ratio = catalog ? screenRatio(catalog.jobs, jobs) : null
   const facts: Array<[number, string]> = [
     [companies, 'companies hiring'],
@@ -87,6 +111,15 @@ export function SiteStatsStrip({
         {catalog
           ? 'Screened jobs counted across the sources and hiring platforms we read; listed jobs counted from our own database, refreshed every few minutes.'
           : 'Counted from our own job database, refreshed every few minutes.'}
+        {refreshed && refreshedAt ? (
+          <>
+            {' '}
+            Job list last refreshed <time dateTime={refreshedAt.toISOString()}>{refreshed}</time>.
+          </>
+        ) : null}{' '}
+        <Link href="/method" className={styles.noteLink}>
+          How it works
+        </Link>
       </p>
     </section>
   )
