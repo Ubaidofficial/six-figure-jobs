@@ -9,6 +9,7 @@ import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 import { resolveSalaryCurrency } from '../jobs/salary'
 import { countryName, normalizeCountryCode } from '../location/country'
 import { countryFromCity, countryFromText, isPlaceholderLocation } from '../location/jobLocation'
+import { remoteRegionDef } from '../jobs/remoteRegions'
 import {
   cleanJobDescriptionHtml,
   cleanJobDescriptionText,
@@ -186,6 +187,10 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
     return buildCountryRequirement(locationCountry)
   }
 
+  // "Remote - Europe" is open across Europe: not Germany (the company's or the euro's country) and not a short sample.
+  const regionFromText = regionFromLocationText(job.locationRaw ? String(job.locationRaw) : '')
+  if (regionFromText) return regionFromText
+
   if (remoteRegion) {
     const parsedRemoteRegion = parseApplicantLocationRequirement(remoteRegion)
     if (parsedRemoteRegion) return parsedRemoteRegion
@@ -214,10 +219,12 @@ function parseRemoteRegionApplicantRequirements(raw: string): any | undefined {
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
 
+  // Europe, EMEA, APAC, the Middle East and UK & Ireland come from the site's own region table, so the markup and the
+  // /remote region pages agree on which countries a region is (a short sample of 8 stood in for Europe and EMEA before).
+  const fromTable = regionCountryRequirements(normalized.replace(/ /g, '-'))
+  if (fromTable) return fromTable
+
   const regionMap: Record<string, string[]> = {
-    emea: ['GB', 'IE', 'DE', 'FR', 'NL', 'ES', 'IT', 'SE'],
-    europe: ['GB', 'IE', 'DE', 'FR', 'NL', 'ES', 'IT', 'SE'],
-    apac: ['AU', 'SG', 'IN', 'JP'],
     asia: ['SG', 'IN', 'JP'],
     latam: ['MX', 'BR'],
     'latin america': ['MX', 'BR'],
@@ -229,6 +236,37 @@ function parseRemoteRegionApplicantRequirements(raw: string): any | undefined {
   const codes = regionMap[normalized]
   if (!codes) return undefined
   return codes.map(buildCountryRequirement)
+}
+
+/**
+ * One Country per member of a multi-country region in lib/jobs/remoteRegions.ts, minus codes that are not ISO countries
+ * (Kosovo's XK has no ISO code, so no name Google would know). Undefined for a single country or an unknown region.
+ */
+function regionCountryRequirements(slug: string): any[] | undefined {
+  const countries = remoteRegionDef(slug)?.countries
+  if (!countries || countries.length < 2) return undefined
+  const codes = countries.filter((code) => normalizeCountryCode(code))
+  return codes.length >= 2 ? codes.map(buildCountryRequirement) : undefined
+}
+
+const TEXT_REGIONS: ReadonlyArray<readonly [slug: string, pattern: RegExp]> = [
+  ['emea', /\bemea\b/i],
+  ['europe', /\beurope(?:an)?\b/i],
+  ['apac', /\bapac\b|\basia[\s-]pacific\b/i],
+  ['middle-east', /\bmiddle[\s-]east\b/i],
+]
+// Text that narrows or widens the region, so the whole region would overstate (or understate) where applicants may live:
+// "Eastern Europe", "US or Europe", "Europe and Asia". Read loosely on purpose, like WORLDWIDE_WORDS/LIMITING_WORDS in
+// lib/jobs/remoteRegions.ts: no list beats a wrong one.
+const REGION_TEXT_NARROWERS =
+  /\b(?:eastern|western|northern|southern|central|nordics?|baltics?|dach|benelux|us|usa|u\.s\.?|uk|canada|latam|americas?|north america|asia(?![\s-]*pacific)|africa|australia|india|worldwide|global|anywhere)\b/i
+
+/** The countries of the one region a remote job's location text names, or undefined (a named country is more specific). */
+function regionFromLocationText(raw: string): any[] | undefined {
+  const text = raw.trim()
+  if (!text || countryFromText(text) || REGION_TEXT_NARROWERS.test(text)) return undefined
+  const hits = TEXT_REGIONS.filter(([, pattern]) => pattern.test(text))
+  return hits.length === 1 ? regionCountryRequirements(hits[0][0]) : undefined
 }
 
 function parseApplicantLocationRequirement(raw: string): any | undefined {
