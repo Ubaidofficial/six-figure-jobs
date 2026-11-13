@@ -18,9 +18,15 @@ on:
     #   only the freehire sync over the last 18 hours, the self-heal and the slices. ~10 search requests and a few
     #   hundred company lookups each, well inside the key's daily quota.
     # - otherwise nothing (the run takes a few seconds)
+    # On 2026-11-13 GitHub created only one of these hourly runs in 13 hours, so a cron job outside GitHub (the
+    # owner's VPS) also starts this workflow every hour through the API with planned=true; see that input below.
     - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
+      planned:
+        description: "Behave like a scheduled run: the plan picks full, light or skip. Set by the outside hourly cron."
+        type: boolean
+        default: false
       closed_apply:
         description: "Expire jobs freehire reports as closed. Scheduled (daily) runs always do; a manual run only does if ticked."
         type: boolean
@@ -36,8 +42,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Scheduled runs only: 'full', 'light' or 'skip' from the start times of earlier runs. A manual run skips this step
-  # (mode empty) and runs every step, as before.
+  # Scheduled and planned runs: 'full', 'light' or 'skip' from the start times of earlier runs. A manual run skips
+  # this step (mode empty) and runs every step, as before.
   plan:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -48,12 +54,12 @@ jobs:
       mode: ${{ steps.plan.outputs.mode }}
     steps:
       - uses: actions/checkout@v6
-        if: ${{ github.event_name == 'schedule' }}
+        if: ${{ github.event_name == 'schedule' || inputs.planned }}
         with:
           sparse-checkout: scripts/freehire-plan.js
           sparse-checkout-cone-mode: false
       - id: plan
-        if: ${{ github.event_name == 'schedule' }}
+        if: ${{ github.event_name == 'schedule' || inputs.planned }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/freehire-plan.js
@@ -72,7 +78,7 @@ jobs:
       FREEHIRE_API_KEY: ${{ secrets.FREEHIRE_API_KEY }}
       # 'true' on the light runs; the full-run-only steps check it.
       LIGHT_RUN: ${{ needs.plan.outputs.mode == 'light' }}
-      FREEHIRE_LOOKBACK_DAYS: ${{ inputs.lookback_days || (needs.plan.outputs.mode == 'light' && '0.75') || '1.5' }}
+      FREEHIRE_LOOKBACK_DAYS: ${{ (needs.plan.outputs.mode == 'light' && '0.75') || inputs.lookback_days || '1.5' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -98,20 +104,20 @@ jobs:
         run: npm run sync:freehire
 
       # Asks freehire about each active job individually and expires those it reports as closed AND that its open
-      # search no longer lists (lib/scrapers/freehireClosedCheck.ts). LIVE on the daily schedule; a manual run is
-      # report-only unless closed_apply is ticked. The check skips itself with a warning if more than 5% of lookups
+      # search no longer lists (lib/scrapers/freehireClosedCheck.ts). LIVE on scheduled and planned full runs; a manual
+      # run is report-only unless closed_apply is ticked. The check skips itself with a warning if more than 5% of lookups
       # fail, and aborts (failing the run, so the owner is emailed) if it would expire more than 40% of what it
       # checked. To switch it off, change the schedule condition below to report-only.
       # Both closed-check steps stop themselves after 15 minutes (nothing is expired) and the step timeout is a second
       # guard, so a stall here can no longer eat the whole job (on 2026-11-05 the scheduled run sat 42 minutes in this
       # step with no output, hit the job timeout and never reached the 7-day expiry below).
       - name: Closed-job check (report only)
-        if: ${{ success() && github.event_name != 'schedule' && !inputs.closed_apply }}
+        if: ${{ success() && github.event_name != 'schedule' && !inputs.planned && !inputs.closed_apply }}
         timeout-minutes: 20
         run: npm run check-closed:freehire -- --dry-run
 
       - name: Expire jobs freehire has closed
-        if: ${{ success() && env.LIGHT_RUN != 'true' && (github.event_name == 'schedule' || inputs.closed_apply) }}
+        if: ${{ success() && env.LIGHT_RUN != 'true' && (github.event_name == 'schedule' || inputs.planned || inputs.closed_apply) }}
         timeout-minutes: 20
         run: npm run check-closed:freehire
 
