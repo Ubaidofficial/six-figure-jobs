@@ -8,9 +8,10 @@ import { buildJobSlug, getShortStableIdForJobId } from '../jobs/jobSlug'
 import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 import { resolveSalaryCurrency } from '../jobs/salary'
 import { countryName, normalizeCountryCode } from '../location/country'
-import { countryFromCity, countryFromText, isPlaceholderLocation } from '../location/jobLocation'
+import { countriesFromText, countryFromCity, countryFromText, isPlaceholderLocation } from '../location/jobLocation'
 import { isWorldwideLocationText, remoteRegionDef } from '../jobs/remoteRegions'
-import { WORLDWIDE_COUNTRY_CODES } from '../location/worldwideCountries'
+import { WORLDWIDE_COUNTRY_CODES, EXCLUDED_ELIGIBLE_COUNTRIES } from '../location/worldwideCountries'
+import { AMERICAS, NORTH_AMERICA_REMOTE } from '../location/regionCountries'
 import {
   cleanJobDescriptionHtml,
   cleanJobDescriptionText,
@@ -183,6 +184,11 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
     return buildCountryRequirement(explicitCountry)
   }
 
+  // "Remote, Canada; Remote, United States" and "US, CA, Remote" list the countries the job is open to: all of them, not
+  // the one the single-place reader (or the company) would pick.
+  const listedCountries = countriesFromText(job.locationRaw)
+  if (listedCountries.length >= 2) return listedCountries.map(buildCountryRequirement)
+
   const locationCountry = inferCountryFromLocationRaw(job.locationRaw ? String(job.locationRaw) : '')
   if (locationCountry) {
     return buildCountryRequirement(locationCountry)
@@ -243,8 +249,6 @@ function parseRemoteRegionApplicantRequirements(raw: string): any | undefined {
     asia: ['SG', 'IN', 'JP'],
     latam: ['MX', 'BR'],
     'latin america': ['MX', 'BR'],
-    americas: ['US', 'CA', 'MX', 'BR'],
-    'north america': ['US', 'CA'],
     na: ['US', 'CA'],
   }
 
@@ -258,23 +262,28 @@ function parseRemoteRegionApplicantRequirements(raw: string): any | undefined {
  * (Kosovo's XK has no ISO code, so no name Google would know). Undefined for a single country or an unknown region.
  */
 function regionCountryRequirements(slug: string): any[] | undefined {
-  const countries = remoteRegionDef(slug)?.countries
+  const countries = remoteRegionDef(slug)?.countries ?? EXTRA_REGIONS[slug]
   if (!countries || countries.length < 2) return undefined
-  const codes = countries.filter((code) => normalizeCountryCode(code))
+  // Not the countries an employer cannot lawfully hire in (EXCLUDED_ELIGIBLE_COUNTRIES), the same rule as a worldwide job.
+  const codes = countries.filter((code) => normalizeCountryCode(code) && !EXCLUDED_ELIGIBLE_COUNTRIES.has(code))
   return codes.length >= 2 ? codes.map(buildCountryRequirement) : undefined
 }
+
+const EXTRA_REGIONS: Record<string, readonly string[]> = { 'north-america': NORTH_AMERICA_REMOTE, americas: AMERICAS }
 
 const TEXT_REGIONS: ReadonlyArray<readonly [slug: string, pattern: RegExp]> = [
   ['emea', /\bemea\b/i],
   ['europe', /\beurope(?:an)?\b/i],
   ['apac', /\bapac\b|\basia[\s-]pacific\b/i],
   ['middle-east', /\bmiddle[\s-]east\b/i],
+  ['north-america', /\bnorth america\b/i],
+  ['americas', /\bamericas\b/i],
 ]
 // Text that narrows or widens the region, so the whole region would overstate (or understate) where applicants may live:
 // "Eastern Europe", "US or Europe", "Europe and Asia". Read loosely on purpose, like WORLDWIDE_WORDS/LIMITING_WORDS in
 // lib/jobs/remoteRegions.ts: no list beats a wrong one.
 const REGION_TEXT_NARROWERS =
-  /\b(?:eastern|western|northern|southern|central|nordics?|baltics?|dach|benelux|us|usa|u\.s\.?|uk|canada|latam|americas?|north america|asia(?![\s-]*pacific)|africa|australia|india|worldwide|global|anywhere)\b/i
+  /\b(?:eastern|western|northern|southern|central|nordics?|baltics?|dach|benelux|us|usa|u\.s\.?|uk|canada|latam|asia(?![\s-]*pacific)|africa|australia|india|worldwide|global|anywhere)\b/i
 
 /** The countries of the one region a remote job's location text names, or undefined (a named country is more specific). */
 function regionFromLocationText(raw: string): any[] | undefined {

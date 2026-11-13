@@ -53,14 +53,16 @@ export const UN_MEMBER_STATES: ReadonlyArray<readonly [code: string, unName: str
 ]
 
 /**
- * Countries left out of a "worldwide" job's eligible list because an employer cannot lawfully hire there: the owner's
- * call, to be confirmed with counsel or against OFAC's country list FAQ (https://ofac.treasury.gov). Cuba, Iran and North
- * Korea are the starting set. Syria, and the Crimea and other occupied regions of Ukraine (part of Ukraine here), are
- * NOT excluded until that is decided: OFAC's program page does not say which programs are comprehensive.
+ * Countries left out of the lists the site builds for a job (a worldwide job, and the regions Europe, EMEA, APAC, the
+ * Middle East, North America and the Americas) because an employer cannot lawfully hire there: the owner's call, to be
+ * confirmed with counsel or against OFAC's country list FAQ (https://ofac.treasury.gov). Cuba, Iran and North Korea are
+ * the starting set. Syria, and the Crimea and other occupied regions of Ukraine (part of Ukraine here), are NOT excluded
+ * until that is decided: OFAC's program page does not say which programs are comprehensive. A country the posting names
+ * itself ("US, Canada") is never removed.
  */
-export const WORLDWIDE_EXCLUDED_COUNTRIES: ReadonlySet<string> = new Set(['CU', 'IR', 'KP'])
+export const EXCLUDED_ELIGIBLE_COUNTRIES: ReadonlySet<string> = new Set(['CU', 'IR', 'KP'])
 
 /** ISO codes of the countries a worldwide remote job is open to, in the UN's order. */
 export const WORLDWIDE_COUNTRY_CODES: readonly string[] = UN_MEMBER_STATES.map(([code]) => code).filter(
-  (code) => !WORLDWIDE_EXCLUDED_COUNTRIES.has(code),
+  (code) => !EXCLUDED_ELIGIBLE_COUNTRIES.has(code),
 )

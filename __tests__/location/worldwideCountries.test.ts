@@ -1,5 +1,5 @@
 import { ISO_COUNTRY_CODES } from '@/lib/location/country'
-import { UN_MEMBER_STATES, WORLDWIDE_COUNTRY_CODES, WORLDWIDE_EXCLUDED_COUNTRIES } from '@/lib/location/worldwideCountries'
+import { EXCLUDED_ELIGIBLE_COUNTRIES, UN_MEMBER_STATES, WORLDWIDE_COUNTRY_CODES } from '@/lib/location/worldwideCountries'
 
 describe('UN member states', () => {
   it('are the 193 members, each with a distinct, real ISO code and a name', () => {
@@ -20,13 +20,13 @@ describe('UN member states', () => {
 describe('worldwide eligible countries', () => {
   it('are the UN members minus the excluded ones, which must all be members', () => {
     const members = new Set(UN_MEMBER_STATES.map(([code]) => code))
-    for (const code of WORLDWIDE_EXCLUDED_COUNTRIES) expect(members.has(code)).toBe(true)
-    expect(WORLDWIDE_COUNTRY_CODES).toHaveLength(193 - WORLDWIDE_EXCLUDED_COUNTRIES.size)
-    for (const code of WORLDWIDE_EXCLUDED_COUNTRIES) expect(WORLDWIDE_COUNTRY_CODES).not.toContain(code)
+    for (const code of EXCLUDED_ELIGIBLE_COUNTRIES) expect(members.has(code)).toBe(true)
+    expect(WORLDWIDE_COUNTRY_CODES).toHaveLength(193 - EXCLUDED_ELIGIBLE_COUNTRIES.size)
+    for (const code of EXCLUDED_ELIGIBLE_COUNTRIES) expect(WORLDWIDE_COUNTRY_CODES).not.toContain(code)
   })
 
   it('start with the owner-approved exclusions only: Cuba, Iran, North Korea (Syria is still undecided)', () => {
-    expect([...WORLDWIDE_EXCLUDED_COUNTRIES].sort()).toEqual(['CU', 'IR', 'KP'])
+    expect([...EXCLUDED_ELIGIBLE_COUNTRIES].sort()).toEqual(['CU', 'IR', 'KP'])
     expect(WORLDWIDE_COUNTRY_CODES).toContain('SY')
   })
 })
