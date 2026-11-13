@@ -7,6 +7,7 @@ import { format as __format } from 'node:util'
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 import { enrichCompanyWithAI } from '../lib/ai/companyEnricher'
+import { toSiteSizeBucket } from '../lib/companies/sizeBucket'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + "\n")
 const __serr = (...args: any[]) => process.stderr.write(__format(...args) + "\n")
@@ -152,7 +153,8 @@ async function main() {
         jobDescription: description,
       })
 
-      const nextSize = company.sizeBucket ?? enrichment.size
+      // The enricher's ranges ('1001-5000', '5000+') are not the buckets the size filter matches; map them to the site's.
+      const nextSize = company.sizeBucket ?? toSiteSizeBucket(enrichment.size)
       const nextIndustry = company.industry ?? enrichment.industry
 
       const existingTags = parseTagsJson(company.tagsJson)
