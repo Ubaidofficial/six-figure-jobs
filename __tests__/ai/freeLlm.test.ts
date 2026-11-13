@@ -7,7 +7,7 @@ import {
   isCloudflareModel,
   isFreeOpenRouterModel,
   parseJsonObject,
-  pickFreeOpenRouterModel,
+  rankFreeOpenRouterModels,
 } from '@/lib/ai/freeLlm'
 
 const reply = (status: number, body: unknown) => async () => ({
@@ -114,18 +114,18 @@ describe('DailyCap', () => {
   })
 })
 
-describe('pickFreeOpenRouterModel', () => {
+describe('rankFreeOpenRouterModels', () => {
   const m = (id: string, price = '0', modality = 'text->text') => ({ id, pricing: { prompt: price, completion: price }, architecture: { modality } })
 
-  it('prefers the first preferred model on the free list', () => {
-    expect(pickFreeOpenRouterModel([m('nvidia/nemotron-3-ultra-550b-a55b:free'), m('google/gemma-4-31b-it:free', '0', 'text+image->text')])).toBe('google/gemma-4-31b-it:free')
-    expect(pickFreeOpenRouterModel([m('nvidia/nemotron-3-ultra-550b-a55b:free'), m('x/other:free')])).toBe('nvidia/nemotron-3-ultra-550b-a55b:free')
-    expect(pickFreeOpenRouterModel([m('google/gemma-4-26b-a4b-it:free'), m('google/gemma-4-31b-it:free')])).toBe('google/gemma-4-31b-it:free')
+  it('lists preferred models first, in order, then the rest by id', () => {
+    expect(
+      rankFreeOpenRouterModels([m('z/zed:free'), m('nvidia/nemotron-3-ultra-550b-a55b:free'), m('google/gemma-4-31b-it:free', '0', 'text+image->text'), m('a/alpha:free')]),
+    ).toEqual(['google/gemma-4-31b-it:free', 'nvidia/nemotron-3-ultra-550b-a55b:free', 'a/alpha:free', 'z/zed:free'])
   })
 
-  it('never picks a paid, non-:free, priced, code, preview or non-text-output model', () => {
+  it('never lists a paid, non-:free, priced, code, preview or non-text-output model', () => {
     expect(
-      pickFreeOpenRouterModel([
+      rankFreeOpenRouterModels([
         m('meta-llama/llama-3.3-70b-instruct', '0'),
         m('vendor/priced:free', '0.000001'),
         { id: 'vendor/no-pricing:free' },
@@ -133,11 +133,19 @@ describe('pickFreeOpenRouterModel', () => {
         m('baidu/ernie-5.5-flash-preview:free'),
         m('vendor/images:free', '0', 'text->image'),
       ]),
-    ).toBeNull()
+    ).toEqual([])
   })
+})
 
-  it('falls back to any other free text model, deterministically', () => {
-    expect(pickFreeOpenRouterModel([m('z/zed:free'), m('a/alpha:free')])).toBe('a/alpha:free')
-    expect(pickFreeOpenRouterModel([])).toBeNull()
+describe('chatOpenRouter 429', () => {
+  it('names the model and carries the provider message, so a model-level limit is not mistaken for a daily cap', async () => {
+    const err = await chatOpenRouter({
+      apiKey: 'k',
+      model: 'google/gemma-4-31b-it:free',
+      messages: [{ role: 'user', content: 'hi' }],
+      fetchImpl: reply(429, { error: { message: 'temporarily rate-limited upstream' } }),
+    }).catch((e) => e)
+    expect(err).toBeInstanceOf(QuotaExhausted)
+    expect(err.message).toMatch(/google\/gemma-4-31b-it:free.*rate-limited upstream/)
   })
 })

@@ -14,20 +14,22 @@ import { buildAiEnrichPrompt, parseAiEnrichJson } from '../lib/ai/aiEnrichPrompt
 import { estimateTokens, parseSampleSize, pickProvider, stripHtml } from '../lib/ai/enrichDryRun'
 import { MAX_JOB_AGE_DAYS, isEnrichable, selectJobsToEnrich, type EnrichCandidate } from '../lib/ai/enrichSelection'
 import { validateEnrichment } from '../lib/ai/enrichValidate'
-import { DailyCap, FreeOnlyViolation, QuotaExhausted, chatCloudflare, chatOpenRouter, parseJsonObject, pickFreeOpenRouterModel, type OpenRouterModelInfo } from '../lib/ai/freeLlm'
+import { DailyCap, FreeOnlyViolation, QuotaExhausted, chatCloudflare, chatOpenRouter, parseJsonObject, rankFreeOpenRouterModels, type OpenRouterModelInfo } from '../lib/ai/freeLlm'
 import { isPriorityCompanySlug } from '../lib/seo/priorityCompanies'
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1]
 
-// Free models on OpenRouter come and go: OPENROUTER_MODEL (must end in ":free") wins, else today's free list decides.
-async function resolveOpenRouterModel(): Promise<string> {
+// Free models on OpenRouter come and go and are often rate-limited: OPENROUTER_MODEL (must end in ":free") wins, else
+// today's free list gives the models to try in order (at most MAX_MODELS, so a bad day cannot burn many requests).
+const MAX_MODELS = 4
+async function resolveOpenRouterModels(): Promise<string[]> {
   const set = process.env.OPENROUTER_MODEL?.trim()
-  if (set) return set
+  if (set) return [set]
   const res = await fetch('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(30_000) })
   if (!res.ok) throw new Error(`OpenRouter model list answered ${res.status}`)
-  const picked = pickFreeOpenRouterModel(((await res.json()) as { data?: OpenRouterModelInfo[] }).data ?? [])
-  if (!picked) throw new Error('OpenRouter lists no free text model today; set OPENROUTER_MODEL or use provider=cloudflare')
-  return picked
+  const ranked = rankFreeOpenRouterModels(((await res.json()) as { data?: OpenRouterModelInfo[] }).data ?? [])
+  if (!ranked.length) throw new Error('OpenRouter lists no free text model today; set OPENROUTER_MODEL or use provider=cloudflare')
+  return ranked.slice(0, MAX_MODELS)
 }
 const CLOUDFLARE_MODEL = process.env.CLOUDFLARE_MODEL?.trim() || '@cf/meta/llama-3.1-8b-instruct'
 
@@ -36,7 +38,9 @@ async function main() {
   const { prisma } = await import('../lib/prisma')
   const limit = parseSampleSize(arg('limit'))
   const provider = pickProvider(process.env, arg('provider'))
-  const openRouterModel = provider === 'openrouter' ? await resolveOpenRouterModel() : ''
+  const openRouterModels = provider === 'openrouter' ? await resolveOpenRouterModels() : []
+  let modelIndex = 0
+  if (openRouterModels.length) out(`OpenRouter free models to try, in order: ${openRouterModels.join(', ')}`)
   const lines: string[] = ['## Free-LLM enrichment dry run', '', 'Nothing is written to the database.', '']
   const out = (s = '') => lines.push(s)
 
@@ -90,9 +94,21 @@ async function main() {
     if (provider === 'none') { out(); continue }
     if (!cap.take()) { out('Stopped: sample limit reached.'); break }
     try {
+      // A 429 on one free model moves to the next; the run stops only when every model has refused.
+      const askOpenRouter = async () => {
+        for (;;) {
+          try {
+            return await chatOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY!, model: openRouterModels[modelIndex], messages: [{ role: 'user', content: prompt }], maxTokens: 1500 })
+          } catch (e) {
+            if (!(e instanceof QuotaExhausted) || modelIndex + 1 >= openRouterModels.length) throw e
+            out(`Rate-limited, trying the next free model: ${e.message}`)
+            modelIndex++
+          }
+        }
+      }
       const res =
         provider === 'openrouter'
-          ? await chatOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY!, model: openRouterModel, messages: [{ role: 'user', content: prompt }], maxTokens: 1500 })
+          ? await askOpenRouter()
           : await chatCloudflare({ accountId: process.env.CLOUDFLARE_ACCOUNT_ID!, apiToken: process.env.CLOUDFLARE_API_TOKEN!, model: CLOUDFLARE_MODEL, messages: [{ role: 'user', content: prompt }], maxTokens: 1500 })
       const obj = parseJsonObject(res.text)
       if (!obj) throw new Error('the model did not return a JSON object')
@@ -110,7 +126,7 @@ async function main() {
       if (parsed.techStack?.length) out(`- Tech: ${parsed.techStack.join(', ')}`)
     } catch (e) {
       if (e instanceof FreeOnlyViolation) { out(`**STOPPED (free-only guard):** ${e.message}`); failed++; process.exitCode = 1; break }
-      if (e instanceof QuotaExhausted) { out(`**STOPPED (free quota used up):** ${e.message}`); break }
+      if (e instanceof QuotaExhausted) { out(`**STOPPED (free quota used up on every model tried):** ${e.message}`); break }
       failed++; consecutiveFailures++
       out(`FAILED: ${e instanceof Error ? e.message : String(e)}`)
       if (consecutiveFailures >= 3) { out('Stopped after 3 failures in a row.'); break }

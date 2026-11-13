@@ -37,21 +37,23 @@ const PREFERRED_FREE_MODELS = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b
 /**
  * Free models come and go (meta-llama/llama-3.3-70b-instruct:free was dropped), so the run asks OpenRouter's public model
  * list (GET /api/v1/models, no key) what is free today. Free means the id ends in ":free" AND both prices are exactly 0.
- * Returns the id to use, or null if nothing text-only is free right now. chatOpenRouter still re-checks the ":free" suffix.
+ * Returns every such text model, best first (preferred ones, then the rest by id), so a caller can move to the next one
+ * when a free model is rate-limited. chatOpenRouter still re-checks the ":free" suffix.
  */
-export function pickFreeOpenRouterModel(models: readonly OpenRouterModelInfo[]): string | null {
-  const free = models.filter((m) => {
-    const price = (v: string | undefined) => (v === undefined ? NaN : Number(v))
-    return (
-      isFreeOpenRouterModel(m.id) &&
-      price(m.pricing?.prompt) === 0 &&
-      price(m.pricing?.completion) === 0 &&
-      (m.architecture?.modality ?? '').toLowerCase().split('->')[1]?.trim() === 'text' &&
-      !/code|preview/.test(m.id)
+export function rankFreeOpenRouterModels(models: readonly OpenRouterModelInfo[]): string[] {
+  const price = (v: string | undefined) => (v === undefined ? NaN : Number(v))
+  const ids = models
+    .filter(
+      (m) =>
+        isFreeOpenRouterModel(m.id) &&
+        price(m.pricing?.prompt) === 0 &&
+        price(m.pricing?.completion) === 0 &&
+        (m.architecture?.modality ?? '').toLowerCase().split('->')[1]?.trim() === 'text' &&
+        !/code|preview/.test(m.id),
     )
-  })
-  const ids = free.map((m) => m.id)
-  return PREFERRED_FREE_MODELS.find((id) => ids.includes(id)) ?? ids.sort()[0] ?? null
+    .map((m) => m.id)
+  const preferred = PREFERRED_FREE_MODELS.filter((id) => ids.includes(id))
+  return [...preferred, ...ids.filter((id) => !preferred.includes(id)).sort()]
 }
 
 /** Cloudflare Workers AI model ids look like "@cf/meta/llama-3.1-8b-instruct"; their free allowance is a daily neuron count. */
@@ -94,7 +96,7 @@ export async function chatOpenRouter(opts: {
     opts.timeoutMs ?? 60_000,
   )
   if (status === 402) throw new FreeOnlyViolation('OpenRouter answered 402 (payment required): stopping so no credits are used.')
-  if (status === 429) throw new QuotaExhausted('openrouter', 'OpenRouter free-model rate or daily limit reached (429).')
+  if (status === 429) throw new QuotaExhausted('openrouter', `OpenRouter 429 for ${opts.model}: ${raw.slice(0, 300)}`)
   if (!ok) throw new Error(`OpenRouter ${status}: ${raw.slice(0, 200)}`)
   const text = JSON.parse(raw)?.choices?.[0]?.message?.content
   if (typeof text !== 'string' || !text.trim()) throw new Error('OpenRouter returned no text')
