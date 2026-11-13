@@ -7,6 +7,7 @@ import {
   isCloudflareModel,
   isFreeOpenRouterModel,
   parseJsonObject,
+  pickFreeOpenRouterModel,
 } from '@/lib/ai/freeLlm'
 
 const reply = (status: number, body: unknown) => async () => ({
@@ -110,5 +111,33 @@ describe('DailyCap', () => {
     expect(cap.remaining).toBe(0)
     expect(new DailyCap(0).take()).toBe(false)
     expect(new DailyCap(5, 99).remaining).toBe(0)
+  })
+})
+
+describe('pickFreeOpenRouterModel', () => {
+  const m = (id: string, price = '0', modality = 'text->text') => ({ id, pricing: { prompt: price, completion: price }, architecture: { modality } })
+
+  it('prefers the first preferred model on the free list', () => {
+    expect(pickFreeOpenRouterModel([m('nvidia/nemotron-3-ultra-550b-a55b:free'), m('google/gemma-4-31b-it:free', '0', 'text+image->text')])).toBe('google/gemma-4-31b-it:free')
+    expect(pickFreeOpenRouterModel([m('nvidia/nemotron-3-ultra-550b-a55b:free'), m('x/other:free')])).toBe('nvidia/nemotron-3-ultra-550b-a55b:free')
+    expect(pickFreeOpenRouterModel([m('google/gemma-4-26b-a4b-it:free'), m('google/gemma-4-31b-it:free')])).toBe('google/gemma-4-31b-it:free')
+  })
+
+  it('never picks a paid, non-:free, priced, code, preview or non-text-output model', () => {
+    expect(
+      pickFreeOpenRouterModel([
+        m('meta-llama/llama-3.3-70b-instruct', '0'),
+        m('vendor/priced:free', '0.000001'),
+        { id: 'vendor/no-pricing:free' },
+        m('cohere/north-mini-code:free'),
+        m('baidu/ernie-5.5-flash-preview:free'),
+        m('vendor/images:free', '0', 'text->image'),
+      ]),
+    ).toBeNull()
+  })
+
+  it('falls back to any other free text model, deterministically', () => {
+    expect(pickFreeOpenRouterModel([m('z/zed:free'), m('a/alpha:free')])).toBe('a/alpha:free')
+    expect(pickFreeOpenRouterModel([])).toBeNull()
   })
 })

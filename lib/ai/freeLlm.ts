@@ -29,6 +29,31 @@ export function isFreeOpenRouterModel(model: string): boolean {
   return /^[\w.-]+\/[\w.:-]+:free$/.test(model)
 }
 
+export type OpenRouterModelInfo = { id: string; pricing?: { prompt?: string; completion?: string }; architecture?: { modality?: string } }
+
+/** Models tried first when they are on the free list, best instruction-followers first (checked against the list on 2026-11-13). */
+const PREFERRED_FREE_MODELS = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-ultra-550b-a55b:free']
+
+/**
+ * Free models come and go (meta-llama/llama-3.3-70b-instruct:free was dropped), so the run asks OpenRouter's public model
+ * list (GET /api/v1/models, no key) what is free today. Free means the id ends in ":free" AND both prices are exactly 0.
+ * Returns the id to use, or null if nothing text-only is free right now. chatOpenRouter still re-checks the ":free" suffix.
+ */
+export function pickFreeOpenRouterModel(models: readonly OpenRouterModelInfo[]): string | null {
+  const free = models.filter((m) => {
+    const price = (v: string | undefined) => (v === undefined ? NaN : Number(v))
+    return (
+      isFreeOpenRouterModel(m.id) &&
+      price(m.pricing?.prompt) === 0 &&
+      price(m.pricing?.completion) === 0 &&
+      (m.architecture?.modality ?? '').toLowerCase().split('->')[1]?.trim() === 'text' &&
+      !/code|preview/.test(m.id)
+    )
+  })
+  const ids = free.map((m) => m.id)
+  return PREFERRED_FREE_MODELS.find((id) => ids.includes(id)) ?? ids.sort()[0] ?? null
+}
+
 /** Cloudflare Workers AI model ids look like "@cf/meta/llama-3.1-8b-instruct"; their free allowance is a daily neuron count. */
 export function isCloudflareModel(model: string): boolean {
   return /^@cf\/[\w.-]+\/[\w.-]+$/.test(model)

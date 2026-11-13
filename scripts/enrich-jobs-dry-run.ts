@@ -14,13 +14,21 @@ import { buildAiEnrichPrompt, parseAiEnrichJson } from '../lib/ai/aiEnrichPrompt
 import { estimateTokens, parseSampleSize, pickProvider, stripHtml } from '../lib/ai/enrichDryRun'
 import { MAX_JOB_AGE_DAYS, isEnrichable, selectJobsToEnrich, type EnrichCandidate } from '../lib/ai/enrichSelection'
 import { validateEnrichment } from '../lib/ai/enrichValidate'
-import { DailyCap, FreeOnlyViolation, QuotaExhausted, chatCloudflare, chatOpenRouter, parseJsonObject } from '../lib/ai/freeLlm'
+import { DailyCap, FreeOnlyViolation, QuotaExhausted, chatCloudflare, chatOpenRouter, parseJsonObject, pickFreeOpenRouterModel, type OpenRouterModelInfo } from '../lib/ai/freeLlm'
 import { isPriorityCompanySlug } from '../lib/seo/priorityCompanies'
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1]
 
-// Free models on OpenRouter come and go; override with OPENROUTER_MODEL (it must still end in ":free").
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.trim() || 'meta-llama/llama-3.3-70b-instruct:free'
+// Free models on OpenRouter come and go: OPENROUTER_MODEL (must end in ":free") wins, else today's free list decides.
+async function resolveOpenRouterModel(): Promise<string> {
+  const set = process.env.OPENROUTER_MODEL?.trim()
+  if (set) return set
+  const res = await fetch('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(30_000) })
+  if (!res.ok) throw new Error(`OpenRouter model list answered ${res.status}`)
+  const picked = pickFreeOpenRouterModel(((await res.json()) as { data?: OpenRouterModelInfo[] }).data ?? [])
+  if (!picked) throw new Error('OpenRouter lists no free text model today; set OPENROUTER_MODEL or use provider=cloudflare')
+  return picked
+}
 const CLOUDFLARE_MODEL = process.env.CLOUDFLARE_MODEL?.trim() || '@cf/meta/llama-3.1-8b-instruct'
 
 async function main() {
@@ -28,6 +36,7 @@ async function main() {
   const { prisma } = await import('../lib/prisma')
   const limit = parseSampleSize(arg('limit'))
   const provider = pickProvider(process.env, arg('provider'))
+  const openRouterModel = provider === 'openrouter' ? await resolveOpenRouterModel() : ''
   const lines: string[] = ['## Free-LLM enrichment dry run', '', 'Nothing is written to the database.', '']
   const out = (s = '') => lines.push(s)
 
@@ -83,7 +92,7 @@ async function main() {
     try {
       const res =
         provider === 'openrouter'
-          ? await chatOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY!, model: OPENROUTER_MODEL, messages: [{ role: 'user', content: prompt }], maxTokens: 1500 })
+          ? await chatOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY!, model: openRouterModel, messages: [{ role: 'user', content: prompt }], maxTokens: 1500 })
           : await chatCloudflare({ accountId: process.env.CLOUDFLARE_ACCOUNT_ID!, apiToken: process.env.CLOUDFLARE_API_TOKEN!, model: CLOUDFLARE_MODEL, messages: [{ role: 'user', content: prompt }], maxTokens: 1500 })
       const obj = parseJsonObject(res.text)
       if (!obj) throw new Error('the model did not return a JSON object')
