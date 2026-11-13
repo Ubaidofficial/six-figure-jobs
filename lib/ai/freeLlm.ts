@@ -15,6 +15,8 @@ export type FreeLlmResult = { text: string; provider: FreeProvider; model: strin
 
 /** The run would (or might) cost money; stop everything. */
 export class FreeOnlyViolation extends Error {}
+/** The model answered 200 but with no text (a reasoning model can spend its whole budget thinking); try another model. */
+export class EmptyAnswer extends Error {}
 /** The provider's free allowance for the day is used up; stop this provider until tomorrow. */
 export class QuotaExhausted extends Error {
   constructor(
@@ -30,6 +32,9 @@ export function isFreeOpenRouterModel(model: string): boolean {
 }
 
 export type OpenRouterModelInfo = { id: string; pricing?: { prompt?: string; completion?: string }; architecture?: { modality?: string } }
+
+/** Under 10 billion parameters ("lfm-3-1.7b"): too weak to rewrite a posting without inventing things. */
+const TINY_MODEL = /(^|[-/])\d(\.\d)?b[-:]/
 
 /** Models tried first when they are on the free list, best instruction-followers first (checked against the list on 2026-11-13). */
 const PREFERRED_FREE_MODELS = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-ultra-550b-a55b:free']
@@ -49,7 +54,8 @@ export function rankFreeOpenRouterModels(models: readonly OpenRouterModelInfo[])
         price(m.pricing?.prompt) === 0 &&
         price(m.pricing?.completion) === 0 &&
         (m.architecture?.modality ?? '').toLowerCase().split('->')[1]?.trim() === 'text' &&
-        !/code|preview/.test(m.id),
+        !/code|preview/.test(m.id) &&
+        !TINY_MODEL.test(m.id),
     )
     .map((m) => m.id)
   const preferred = PREFERRED_FREE_MODELS.filter((id) => ids.includes(id))
@@ -99,7 +105,7 @@ export async function chatOpenRouter(opts: {
   if (status === 429) throw new QuotaExhausted('openrouter', `OpenRouter 429 for ${opts.model}: ${raw.slice(0, 300)}`)
   if (!ok) throw new Error(`OpenRouter ${status}: ${raw.slice(0, 200)}`)
   const text = JSON.parse(raw)?.choices?.[0]?.message?.content
-  if (typeof text !== 'string' || !text.trim()) throw new Error('OpenRouter returned no text')
+  if (typeof text !== 'string' || !text.trim()) throw new EmptyAnswer(`OpenRouter returned no text for ${opts.model}`)
   return { text, provider: 'openrouter', model: opts.model }
 }
 

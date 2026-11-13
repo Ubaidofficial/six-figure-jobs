@@ -1,6 +1,7 @@
 import {
   DailyCap,
   FreeOnlyViolation,
+  EmptyAnswer,
   QuotaExhausted,
   chatCloudflare,
   chatOpenRouter,
@@ -134,6 +135,22 @@ describe('rankFreeOpenRouterModels', () => {
         m('vendor/images:free', '0', 'text->image'),
       ]),
     ).toEqual([])
+  })
+})
+
+describe('empty answers and tiny models', () => {
+  it('an empty OpenRouter answer is an EmptyAnswer naming the model', async () => {
+    const err = await chatOpenRouter({ apiKey: 'k', model: 'nvidia/nemotron-3-ultra-550b-a55b:free', messages: [{ role: 'user', content: 'hi' }], fetchImpl: reply(200, { choices: [{ message: { content: null } }] }) }).catch((e) => e)
+    expect(err).toBeInstanceOf(EmptyAnswer)
+    expect(err.message).toMatch(/nemotron-3-ultra-550b-a55b:free/)
+  })
+
+  it('leaves out models under 10B parameters but keeps big ones whose name has a small "a3b"', () => {
+    const m = (id: string) => ({ id, pricing: { prompt: '0', completion: '0' }, architecture: { modality: 'text->text' } })
+    expect(rankFreeOpenRouterModels([m('liquid/lfm-3-1.7b:free'), m('x/small-7b-instruct:free'), m('nvidia/nemotron-3-ultra-550b-a55b:free'), m('google/gemma-4-26b-a4b-it:free')])).toEqual([
+      'google/gemma-4-26b-a4b-it:free',
+      'nvidia/nemotron-3-ultra-550b-a55b:free',
+    ])
   })
 })
 
