@@ -164,6 +164,11 @@
   color: var(--color-text-2, var(--color-text-1));
 }
 
+.noteLink {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 @media (max-width: 1100px) {
   .row,
   .noScreen {

@@ -64,6 +64,17 @@ async function loadPublicSiteStatsUncached() {
   }
 }
 
+/**
+ * When the daily sync last touched a live job. The sync sets lastSeenAt on every job it still sees (see postedRecently.ts),
+ * so the newest value is when the list was last refreshed; null when no live job has one or the query fails.
+ */
+export const loadLastRefreshedAt = cache(() =>
+  memoAsync('last-refreshed-at', DEFAULT_TTL_MS, async (): Promise<Date | null> => {
+    const row = await prisma.job.aggregate({ where: { isExpired: false }, _max: { lastSeenAt: true } })
+    return row._max.lastSeenAt ?? null
+  }),
+)
+
 export const loadEligibleCompaniesDirectory = cache(() => memoAsync('companies-directory', DEFAULT_TTL_MS, loadEligibleCompaniesDirectoryUncached))
 
 async function loadEligibleCompaniesDirectoryUncached() {

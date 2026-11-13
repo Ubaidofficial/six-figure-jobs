@@ -140,6 +140,11 @@ export default function AboutPage() {
         converted to a yearly figure when it is quoted per hour or per month.
       </p>
 
+      <p className="mt-4 text-muted-foreground">
+        The full rules, including how duplicates and old jobs are handled, are on{' '}
+        <Link className="text-primary underline" href="/method">how it works</Link>.
+      </p>
+
       <h2 className="mt-10 text-xl font-semibold text-foreground">What counts as $100k+</h2>
       <p className="mt-4 text-muted-foreground">
         &ldquo;Six figures&rdquo; means different things in different currencies, so each market has its own floor. A
