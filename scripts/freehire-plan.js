@@ -1,4 +1,5 @@
-// Picks what a scheduled freehire-sync run does: 'full', 'light' or 'skip' (.github/workflows/freehire-sync.yml).
+// Picks what a scheduled or planned (API-started, planned=true) freehire-sync run does: 'full', 'light' or 'skip'
+// (.github/workflows/freehire-sync.yml).
 //
 // GitHub starts this workflow's scheduled runs hours late and sometimes not at all (2026-11-12: the 05:17 run started
 // at 13:43; the 11:17 and 17:17 light runs never started). So the workflow is scheduled every hour and this script
