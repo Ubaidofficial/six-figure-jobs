@@ -40,9 +40,9 @@ async function main() {
   const provider = pickProvider(process.env, arg('provider'))
   const openRouterModels = provider === 'openrouter' ? await resolveOpenRouterModels() : []
   let modelIndex = 0
-  if (openRouterModels.length) out(`OpenRouter free models to try, in order: ${openRouterModels.join(', ')}`)
   const lines: string[] = ['## Free-LLM enrichment dry run', '', 'Nothing is written to the database.', '']
   const out = (s = '') => lines.push(s)
+  if (openRouterModels.length) out(`OpenRouter free models to try, in order: ${openRouterModels.join(', ')}`)
 
   const since = new Date(Date.now() - (MAX_JOB_AGE_DAYS + 1) * 86_400_000)
   const rows = await prisma
