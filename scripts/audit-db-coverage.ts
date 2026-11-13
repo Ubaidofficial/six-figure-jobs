@@ -103,6 +103,39 @@ export const AUDITS: Audit[] = [
     FROM "Job" WHERE ${LIVE} AND ${REMOTE} GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
   },
   {
+    title: 'Remote jobs by source: is a country stored?',
+    note: 'Which sources leave remote jobs without a country, and how many of those say just "Remote".',
+    sql: `SELECT source, count(*) AS remote_jobs,
+      count(*) FILTER (WHERE "countryCode" IS NOT NULL) AS with_country,
+      count(*) FILTER (WHERE "countryCode" IS NULL) AS without_country,
+      count(*) FILTER (WHERE "countryCode" IS NULL AND lower(btrim("locationRaw")) = 'remote') AS just_remote_no_country
+    FROM "Job" WHERE ${LIVE} AND ${REMOTE} GROUP BY 1 ORDER BY 2 DESC LIMIT 12`,
+  },
+  {
+    title: 'Remote jobs whose description says worldwide',
+    note: 'Phrases in the description, not the location field. "worldwide" alone is noisy (it can describe customers); the anywhere phrases are the stronger signal.',
+    sql: `SELECT count(*) AS remote_jobs,
+      count(*) FILTER (WHERE "descriptionHtml" ~* '(work from anywhere|anywhere in the world|work remotely from anywhere|globally distributed)') AS anywhere_phrases,
+      count(*) FILTER (WHERE "descriptionHtml" ~* 'worldwide') AS says_worldwide,
+      count(*) FILTER (WHERE "countryCode" IS NULL AND "descriptionHtml" ~* '(work from anywhere|anywhere in the world|work remotely from anywhere|globally distributed)') AS anywhere_phrases_no_country
+    FROM "Job" WHERE ${LIVE} AND ${REMOTE}`,
+  },
+  {
+    title: 'AI enrichment and description length by source',
+    note: 'How many live jobs already carry AI fields (aiEnrichedAt, summary, snippet, one-liner) and how long their descriptions are.',
+    sql: `SELECT source, count(*) AS live_jobs, count("aiEnrichedAt") AS ai_enriched, count("aiSummaryJson") AS has_ai_summary,
+      count("aiSnippet") AS has_ai_snippet, count("aiOneLiner") AS has_one_liner,
+      coalesce(round(avg(length("descriptionHtml")))::int, 0) AS avg_description_chars,
+      count(*) FILTER (WHERE "descriptionHtml" IS NULL OR length("descriptionHtml") < 400) AS short_or_missing_description
+    FROM "Job" WHERE ${LIVE} GROUP BY 1 ORDER BY 2 DESC LIMIT 12`,
+  },
+  {
+    title: 'Live freehire jobs by currency',
+    note: 'To set against freehire\'s own count for the same markets and window.',
+    sql: `SELECT coalesce(currency, '(none)') AS currency, count(*) AS jobs
+    FROM "Job" WHERE ${LIVE} AND source = 'board:freehire' GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
+  },
+  {
     title: 'Real expiry dates from sources',
     note: 'expiresAt is only set when the source gave an expiry; the page publishes validThrough from it and nothing else.',
     sql: `SELECT source, count(*) AS live_jobs, count("expiresAt") AS with_expires_at, count("validThrough") AS with_valid_through
