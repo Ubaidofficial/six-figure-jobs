@@ -1,4 +1,6 @@
-import { freehireCountryCodes, freehireRemoteScope } from '@/lib/scrapers/freehireStructured'
+import { freehireCountryCodes, freehireRemoteScope, freehireStructuredLocationText } from '@/lib/scrapers/freehireStructured'
+import { processLocation } from '@/lib/ingest'
+import { buildJobJsonLd } from '@/lib/seo/jobJsonLd'
 
 // Shapes taken from freehire's API on 2026-11-13 (regions=global sample of 100 and the newest 100 remote USD jobs).
 describe('freehireRemoteScope', () => {
@@ -55,5 +57,54 @@ describe('freehireCountryCodes', () => {
     expect(freehireCountryCodes(['us', 'CA', 'uk', 'xx', 'usa', '', 7, 'us'])).toEqual(['US', 'CA', 'GB'])
     expect(freehireCountryCodes(null)).toEqual([])
     expect(freehireCountryCodes('us')).toEqual([])
+  })
+})
+
+describe('freehireStructuredLocationText (what mapFreehireJob stores for a bare "Remote")', () => {
+  it('worldwide, one country, several countries and one region become text the site reads', () => {
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: 'Remote', regions: ['global'] })).toBe('Remote - Worldwide')
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: 'Remote', countries: ['us'], regions: ['north_america'] })).toBe(
+      'Remote - United States',
+    )
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: '', countries: ['us', 'ca'] })).toBe(
+      'Remote - United States; Remote - Canada',
+    )
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: null, regions: ['eu'] })).toBe('Remote - Europe')
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: 'Remote', regions: ['eu', 'uk'] })).toBe('Remote - Europe')
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: 'Remote', regions: ['north_america'] })).toBe('Remote - North America')
+  })
+
+  it("keeps freehire's text when it names a place, the job is not remote, or the fields say too little", () => {
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: 'Remote - US only', countries: ['us'] })).toBeNull()
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: 'Город Москва', countries: ['ru'] })).toBeNull()
+    expect(freehireStructuredLocationText({ work_mode: 'hybrid', location: 'Remote', countries: ['us'] })).toBeNull()
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: 'Remote', countries: [], regions: [] })).toBeNull()
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: 'Remote', regions: ['latam'] })).toBeNull()
+    expect(freehireStructuredLocationText({ work_mode: 'remote', location: 'Remote', regions: ['eu', 'apac'] })).toBeNull()
+    expect(
+      freehireStructuredLocationText({ work_mode: 'remote', location: 'Remote', countries: ['us', 'ca', 'gb', 'de', 'fr', 'es', 'it'] }),
+    ).toBeNull()
+  })
+
+  // The texts above go through the normal ingest and JobPosting markup: check what a remote job ends up with.
+  it.each([
+    ['Remote - Worldwide', null, 190],
+    ['Remote - United States', 'US', ['United States']],
+    ['Remote - United States; Remote - Canada', null, ['United States', 'Canada']],
+    ['Remote - Europe', null, 45],
+    ['Remote - North America', null, ['United States', 'Canada']],
+  ] as const)('%s: stored country %s, JobPosting applicantLocationRequirements %j', (text, country, expected) => {
+    const loc = processLocation({ locationText: text, isRemote: true, salaryCurrency: 'USD' } as any)
+    expect(loc.countryCode).toBe(country)
+    expect(loc.remoteMode).toBe('remote')
+    const ld = buildJobJsonLd({
+      id: 'job_1', title: 'Engineer', descriptionHtml: '<p>Build things.</p>', postedAt: new Date(), createdAt: new Date(),
+      locationRaw: text, countryCode: loc.countryCode, remoteMode: loc.remoteMode, remote: true, isRemote: true,
+      remoteRegion: 'Global', salaryCurrency: 'USD', company: 'Acme', companyRef: { name: 'Acme' },
+    } as any)
+    const req = ld.applicantLocationRequirements
+    const names = (Array.isArray(req) ? req : [req]).map((r: any) => r.name)
+    if (typeof expected === 'number') expect(names).toHaveLength(expected)
+    else expect(names).toEqual(expected)
   })
 })
