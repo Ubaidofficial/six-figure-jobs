@@ -175,17 +175,59 @@ const jobFullSelect = {
   roleInference: true,
 } satisfies Prisma.JobSelect
 
+type CardFields = Pick<JobWithCompany, 'cardSummary' | 'cardBenefits' | 'cardExperience' | 'cardDegree'>
+
 /**
- * Adds `cardSummary` and `cardBenefits` to a page of listing jobs: one extra query for just these jobs' descriptions,
- * read on the server so the descriptions themselves never reach the browser. A failure leaves the jobs as they were.
+ * The card details read from each job's description, per job id. A listing page used to download the full description
+ * of every job it showed, on every uncached view: on 2026-11-13 the database sent about 1 GB an hour to the site, over
+ * the internet. Descriptions rarely change, so a job's card details are kept for a few hours and only jobs not seen in
+ * that time are read. Bounded: the oldest entries go first. A job with no description is remembered too.
  */
-async function withCardSummaries<
+const CARD_FIELDS_TTL_MS = 6 * 60 * 60 * 1000
+const CARD_FIELDS_MAX = 40_000
+const cardFieldsCache = new Map<string, { at: number; fields: CardFields | null }>()
+
+function cardFieldsFrom(descriptionHtml: string | null, company: string | null | undefined): CardFields | null {
+  if (!descriptionHtml) return null
+  return {
+    cardSummary: summarizeRole(descriptionHtml, { company }),
+    cardBenefits: extractBenefits(descriptionHtml),
+    cardExperience: extractExperience(descriptionHtml),
+    cardDegree: degreeRequirement(descriptionHtml),
+  }
+}
+
+/**
+ * Adds `cardSummary` and `cardBenefits` to a page of listing jobs: one extra query for the descriptions of the jobs not
+ * read in the last few hours, on the server so the descriptions themselves never reach the browser. A failure leaves
+ * the jobs as they were.
+ */
+export async function withCardSummaries<
   T extends { id: string; title?: string | null; company?: string | null; roleSlug?: string | null; currency?: string | null; minAnnual?: bigint | number | null; maxAnnual?: bigint | number | null },
 >(jobs: T[]): Promise<T[]> {
   if (jobs.length === 0) return jobs
   try {
-    const rows = await prisma.job.findMany({ where: { id: { in: jobs.map((j) => j.id) } }, select: { id: true, descriptionHtml: true } })
-    const html = new Map(rows.map((r) => [r.id, r.descriptionHtml]))
+    const now = Date.now()
+    const fields = new Map<string, CardFields | null>()
+    for (const j of jobs) {
+      const hit = cardFieldsCache.get(j.id)
+      if (hit && now - hit.at < CARD_FIELDS_TTL_MS) fields.set(j.id, hit.fields)
+    }
+    const missing = jobs.filter((j) => !fields.has(j.id))
+    if (missing.length > 0) {
+      const rows = await prisma.job.findMany({ where: { id: { in: missing.map((j) => j.id) } }, select: { id: true, descriptionHtml: true } })
+      const html = new Map(rows.map((r) => [r.id, r.descriptionHtml]))
+      for (const j of missing) {
+        const f = cardFieldsFrom(html.get(j.id) ?? null, j.company)
+        fields.set(j.id, f)
+        cardFieldsCache.delete(j.id) // re-insert at the end, so the oldest entries are the ones dropped
+        cardFieldsCache.set(j.id, { at: now, fields: f })
+      }
+      for (const key of cardFieldsCache.keys()) {
+        if (cardFieldsCache.size <= CARD_FIELDS_MAX) break
+        cardFieldsCache.delete(key)
+      }
+    }
     // Peer salaries per role and currency are cached for 10 minutes (loadPeerSalaries), so a page costs at most one
     // query per role it shows, and usually none.
     const ranks = await Promise.all(
@@ -199,21 +241,7 @@ async function withCardSummaries<
         return rank ? { percent: rank.percent, peers: rank.peers, role: roleLabelFor(role) } : null
       }),
     )
-    return jobs.map((j, i) => {
-      const d = html.get(j.id)
-      return {
-        ...j,
-        cardPayRank: ranks[i],
-        ...(d
-          ? {
-              cardSummary: summarizeRole(d, { company: j.company }),
-              cardBenefits: extractBenefits(d),
-              cardExperience: extractExperience(d),
-              cardDegree: degreeRequirement(d),
-            }
-          : {}),
-      }
-    })
+    return jobs.map((j, i) => ({ ...j, cardPayRank: ranks[i], ...(fields.get(j.id) ?? {}) }))
   } catch {
     return jobs
   }
