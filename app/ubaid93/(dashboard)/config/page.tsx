@@ -9,6 +9,15 @@ const DEFAULT_CONFIGS = [
   { key: 'banner.link', label: 'Announcement Banner Link', value: '' },
   { key: 'footer.tagline', label: 'Footer Tagline', value: 'The job board for six-figure remote careers.' },
   { key: 'seo.siteDescription', label: 'Site Meta Description', value: 'Discover $100k+ remote jobs with salaries published upfront. No recruiter middlemen.' },
+  // Sponsored placements (shown above the job list on /jobs and on the home page). A slot shows only while its name,
+  // https link and last day are all filled and that day has not passed. Clear the name to hide one at once.
+  ...[1, 2].flatMap((n) => [
+    { key: `sponsor.${n}.name`, label: `Sponsor ${n}: name`, value: '' },
+    { key: `sponsor.${n}.text`, label: `Sponsor ${n}: one line of text (max 140 characters)`, value: '' },
+    { key: `sponsor.${n}.url`, label: `Sponsor ${n}: link (must start with https://)`, value: '' },
+    { key: `sponsor.${n}.logo`, label: `Sponsor ${n}: logo image link (https, optional)`, value: '' },
+    { key: `sponsor.${n}.until`, label: `Sponsor ${n}: last day shown (YYYY-MM-DD, UTC)`, value: '' },
+  ]),
 ]
 
 export default async function ConfigPage() {

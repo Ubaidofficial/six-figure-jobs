@@ -47,6 +47,8 @@ import { buildHomeDescription } from '@/lib/seo/metaText'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { loadLastRefreshedAt, loadPublicSiteStats } from '@/lib/jobs/publicStats'
+import { SponsorStrip } from '@/components/sponsors/SponsorStrip'
+import { loadSponsorSlots } from '@/lib/sponsors/slots'
 import { getPriorityPublishedCompanyCandidates } from '@/lib/seo/companyPublishing'
 import { TOP_COMPANY_SLUGS } from '@/lib/constants/topCompanies'
 import { SectionHeading } from '@/components/ui/SectionHeading'
@@ -422,6 +424,8 @@ export default async function HomePage() {
 
     // When the daily sync last refreshed the listings, for the stats strip; a failure only leaves that line out.
     const refreshedAt = await loadLastRefreshedAt().catch(() => null)
+    // Sponsored placements set by hand in the admin Site Config; none when unset or expired.
+    const sponsors = await loadSponsorSlots()
 
     const priorityCompanySlugs = priorityCompanyCandidates.map((candidate) => candidate.slug)
 
@@ -632,6 +636,8 @@ export default async function HomePage() {
       <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} />
 
       <NewRolesStrip companies={newRolesCompanies} />
+
+      <SponsorStrip slots={sponsors} />
 
       {/* Jobs already in the live feed above are left out, so no job appears twice with two different times. */}
       <LatestOpportunities jobs={jobs.filter((job) => !feedItemIds.has(job.id))} totalJobs={stats.totalJobs} />
