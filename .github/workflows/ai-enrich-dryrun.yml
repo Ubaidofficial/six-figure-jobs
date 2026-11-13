@@ -1,0 +1,52 @@
+name: ai enrich dry run
+
+# Manual only. Reads recent jobs, picks the day's sample, and (if a FREE provider key is set as a repository secret) asks the
+# free model for the rewrite and checks it against the posting. WRITES NOTHING: the database is read in a READ ONLY
+# transaction (scripts/enrich-jobs-dry-run.ts). Free only: OpenRouter ":free" models and Cloudflare Workers AI's free daily
+# allowance; the code refuses anything that could use credits (lib/ai/freeLlm.ts). Without keys it is a prompt-only run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "How many jobs to try (1 to 20)"
+        default: "10"
+      provider:
+        description: "auto, openrouter, cloudflare or none (none = prompt-only)"
+        default: "auto"
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_MODEL: ${{ vars.CLOUDFLARE_MODEL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Dry run (no writes)
+        run: npm run ai:enrich:dry-run -- --limit="${{ inputs.limit }}" --provider="${{ inputs.provider }}"
