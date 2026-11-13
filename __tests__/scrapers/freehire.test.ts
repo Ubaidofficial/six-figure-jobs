@@ -65,6 +65,13 @@ describe('mapFreehireJob', () => {
     expect(mapFreehireJob({ ...job, work_mode: 'remote' })?.isRemote).toBe(true)
   })
 
+  it("fills a bare \"Remote\" from freehire's own geography and keeps text that names a place", () => {
+    expect(mapFreehireJob({ ...job, work_mode: 'remote', location: 'Remote', countries: ['us'] })?.locationText).toBe('Remote - United States')
+    expect(mapFreehireJob({ ...job, work_mode: 'remote', location: 'Remote', regions: ['global'] })?.locationText).toBe('Remote - Worldwide')
+    expect(mapFreehireJob({ ...job, work_mode: 'remote', location: 'Austin, TX', countries: ['us'] })?.locationText).toBe('Austin, TX')
+    expect(mapFreehireJob({ ...job, work_mode: 'remote', location: 'Remote' })?.locationText).toBe('Remote')
+  })
+
   it('skips stale, evergreen and fake-fresh postings (old jobs with a bumped posted_at)', () => {
     expect(mapFreehireJob({ ...job, reality: { class: 'stale', age_days: 95, fake_freshness: false } })).toBeNull()
     expect(mapFreehireJob({ ...job, reality: { class: 'likely-evergreen', age_days: 40 } })).toBeNull()

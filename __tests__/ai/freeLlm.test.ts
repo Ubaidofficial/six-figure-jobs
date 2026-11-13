@@ -73,6 +73,27 @@ describe('reading the answers', () => {
     expect(out).toEqual({ text: '{"ok":true}', provider: 'openrouter', model: 'google/gemma-3-27b-it:free' })
   })
 
+  it('returns a good Cloudflare answer even when it reports the neurons it used', async () => {
+    const body = { success: true, result: { response: 'hello', usage: { neurons: 42 } }, errors: [], messages: [] }
+    const out = await chatCloudflare({ accountId: 'a', apiToken: 't', model: '@cf/meta/llama-3.1-8b-instruct', messages, fetchImpl: reply(200, body) })
+    expect(out.text).toBe('hello')
+  })
+
+  it('says what Cloudflare answered when it calls the allowance used up', async () => {
+    const body = { success: false, errors: [{ code: 4006, message: 'you have used up your daily free allocation of 10,000 neurons' }] }
+    await expect(
+      chatCloudflare({ accountId: 'a', apiToken: 't', model: '@cf/meta/llama-3.1-8b-instruct', messages, fetchImpl: reply(400, body) }),
+    ).rejects.toThrow(/400: .*daily free allocation/)
+  })
+
+  it('reads a Cloudflare answer given as a parsed JSON object or in the OpenAI form', async () => {
+    const call = (body: unknown) =>
+      chatCloudflare({ accountId: 'a', apiToken: 't', model: '@cf/meta/llama-3.1-8b-instruct', messages, fetchImpl: reply(200, body) })
+    expect(JSON.parse((await call({ success: true, result: { response: { title: 'X' } } })).text)).toEqual({ title: 'X' })
+    expect((await call({ success: true, result: { choices: [{ message: { content: 'hi' } }] } })).text).toBe('hi')
+    await expect(call({ success: true, result: { response: '' } })).rejects.toThrow(/no text: \{/)
+  })
+
   it('returns the text of a good Cloudflare answer', async () => {
     const out = await chatCloudflare({
       accountId: 'a',

@@ -10,6 +10,7 @@ import { normalizePublicCompanyWebsite } from '../companies/website'
 import { repairCompanyName } from '../companies/repairCompanyName'
 import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
+import { freehireStructuredLocationText } from './freehireStructured'
 
 const BOARD = 'freehire'
 // The /agent/ variant takes the same filters and returns the same jobs, but each carries its description in full.
@@ -63,6 +64,9 @@ export type FreehireJob = {
   location?: string | null
   description?: string | null
   work_mode?: string | null
+  /** freehire's structured geography: lower-case country codes and region codes ('global', 'eu', 'north_america', ...). */
+  countries?: string[] | null
+  regions?: string[] | null
   posted_at?: string | null
   updated_at?: string | null
   closed_at?: string | null
@@ -186,7 +190,9 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     rawCompanyName: companyName,
     // The slug is only used to look the company's website up at freehire; an id-named company has none to find.
     companyRef: repaired ? null : job.company_slug || null,
-    locationText: job.location ?? null,
+    // freehire's text is often a bare "Remote" while its own fields say where (worldwide, which countries, which region);
+    // without them a remote job's country was guessed from the company or the pay currency.
+    locationText: freehireStructuredLocationText(job) ?? job.location ?? null,
     isRemote: job.work_mode === 'remote',
     employmentType: e.employment_type ?? null,
     salaryMin: e.salary_min,

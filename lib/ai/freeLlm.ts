@@ -128,12 +128,20 @@ export async function chatCloudflare(opts: {
     { messages: opts.messages, ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}) },
     opts.timeoutMs ?? 60_000,
   )
-  if (status === 429 || /daily free allocation|neurons/i.test(raw)) {
-    throw new QuotaExhausted('cloudflare', 'Cloudflare Workers AI free daily allowance used up.')
+  // Only a refusal can mean the allowance is used up: a good answer may report the neurons it used. Say what Cloudflare
+  // answered, so a wrong account id or token is not mistaken for the day's quota.
+  if (!ok) {
+    if (status === 429 || /daily free allocation|neurons/i.test(raw)) {
+      throw new QuotaExhausted('cloudflare', `Cloudflare Workers AI free daily allowance used up (${status}: ${raw.slice(0, 200)})`)
+    }
+    throw new Error(`Cloudflare ${status}: ${raw.slice(0, 200)}`)
   }
-  if (!ok) throw new Error(`Cloudflare ${status}: ${raw.slice(0, 200)}`)
-  const text = JSON.parse(raw)?.result?.response
-  if (typeof text !== 'string' || !text.trim()) throw new Error('Cloudflare returned no text')
+  // Workers AI gives the answer as `result.response`: a string, or the parsed object when the model answered in JSON.
+  // Newer models answer in the OpenAI form (`result.choices[0].message.content`).
+  const result = JSON.parse(raw)?.result
+  const answer = result?.response ?? result?.choices?.[0]?.message?.content
+  const text = typeof answer === 'string' ? answer : answer && typeof answer === 'object' ? JSON.stringify(answer) : null
+  if (!text || !text.trim()) throw new Error(`Cloudflare returned no text: ${raw.slice(0, 200)}`)
   return { text, provider: 'cloudflare', model: opts.model }
 }
 
