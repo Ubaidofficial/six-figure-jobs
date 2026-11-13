@@ -14,7 +14,7 @@ import { buildAiEnrichPrompt, parseAiEnrichJson } from '../lib/ai/aiEnrichPrompt
 import { estimateTokens, parseSampleSize, pickProvider, stripHtml } from '../lib/ai/enrichDryRun'
 import { MAX_JOB_AGE_DAYS, isEnrichable, selectJobsToEnrich, type EnrichCandidate } from '../lib/ai/enrichSelection'
 import { validateEnrichment } from '../lib/ai/enrichValidate'
-import { DailyCap, FreeOnlyViolation, QuotaExhausted, chatCloudflare, chatOpenRouter, parseJsonObject, rankFreeOpenRouterModels, type OpenRouterModelInfo } from '../lib/ai/freeLlm'
+import { DailyCap, EmptyAnswer, FreeOnlyViolation, QuotaExhausted, chatCloudflare, chatOpenRouter, parseJsonObject, rankFreeOpenRouterModels, type OpenRouterModelInfo } from '../lib/ai/freeLlm'
 import { isPriorityCompanySlug } from '../lib/seo/priorityCompanies'
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1]
@@ -94,15 +94,24 @@ async function main() {
     if (provider === 'none') { out(); continue }
     if (!cap.take()) { out('Stopped: sample limit reached.'); break }
     try {
-      // A 429 on one free model moves to the next; the run stops only when every model has refused.
+      // A free model that is rate-limited (429) is retried twice after a pause, then the next model is tried; one that
+      // answers with no text moves on at once. The run stops only when every model has refused.
       const askOpenRouter = async () => {
+        let waits = 0
         for (;;) {
           try {
             return await chatOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY!, model: openRouterModels[modelIndex], messages: [{ role: 'user', content: prompt }], maxTokens: 1500 })
           } catch (e) {
-            if (!(e instanceof QuotaExhausted) || modelIndex + 1 >= openRouterModels.length) throw e
-            out(`Rate-limited, trying the next free model: ${e.message}`)
+            if (e instanceof QuotaExhausted && waits < 2) {
+              waits++
+              out(`Rate-limited, waiting 20s then retrying ${openRouterModels[modelIndex]} (${waits} of 2).`)
+              await new Promise((r) => setTimeout(r, 20_000))
+              continue
+            }
+            if (!(e instanceof QuotaExhausted || e instanceof EmptyAnswer) || modelIndex + 1 >= openRouterModels.length) throw e
+            out(`Moving to the next free model: ${e.message.slice(0, 200)}`)
             modelIndex++
+            waits = 0
           }
         }
       }
