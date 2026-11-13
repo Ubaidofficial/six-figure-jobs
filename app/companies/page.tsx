@@ -14,6 +14,7 @@ import { getPriorityCompanyRank } from '@/lib/seo/priorityCompanies'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '@/lib/seo/indexabilityGates'
 import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Pagination, Prose } from '@/components/listing/ListingParts'
 import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
+import { loadCompanyHiringStats } from '@/lib/jobs/companyHiringStats'
 
 export const revalidate = 600 // 10m ISR
 const SITE_URL = getSiteUrl()
@@ -177,6 +178,9 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     const pageStart = (currentPage - 1) * COMPANIES_PAGE_SIZE
     const pagedCompanies = orderedCompanies.slice(pageStart, pageStart + COMPANIES_PAGE_SIZE)
 
+    // New-this-week and median pay for the companies on this page; a failure only leaves them off the tiles.
+    const hiringStats = await loadCompanyHiringStats(pagedCompanies.map((c) => c.id)).catch(() => ({}))
+
     const topRoles = await loadTopRolePages({})
     // The biggest employers right now, for the text under the grid (live counts, so the page says something specific).
     const largestEmployers = [...companies]
@@ -248,7 +252,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
           />
         ) : (
           <>
-            <CompanySearch companies={pagedCompanies} />
+            <CompanySearch companies={pagedCompanies} stats={hiringStats} />
             <Pagination
               page={currentPage}
               totalPages={totalPages}
