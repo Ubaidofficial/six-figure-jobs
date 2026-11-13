@@ -32,7 +32,8 @@ export function formatRefreshedAt(date: Date | null | undefined): string | null 
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
+    // h23, not hour12:false: some ICU builds print midnight as "24:00" with hour12:false (seen in CI, 2026-11-13).
+    hourCycle: 'h23',
     timeZone: 'UTC',
   }).format(date)
   return `${text} UTC`
