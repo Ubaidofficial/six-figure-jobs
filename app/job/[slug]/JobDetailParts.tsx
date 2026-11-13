@@ -471,6 +471,61 @@ export function CompanyCard({
   )
 }
 
+/** Up to three other open roles at the same employer, so a reader who likes the company can keep going from here. */
+export function CompanyRolesCard({
+  companyName,
+  companySlug,
+  total,
+  roles,
+}: {
+  companyName: string
+  companySlug: string
+  total: number
+  roles: { href: string; title: string; pay: string | null }[]
+}) {
+  if (roles.length === 0) return null
+  return (
+    <Card className="rounded-3xl p-6">
+      <h2 className={styles.sideTitle}>More at {companyName}</h2>
+      <ul className="mt-3 space-y-3 text-sm">
+        {roles.map((r) => (
+          <li key={r.href}>
+            <NextLink href={r.href} className="block font-medium text-foreground underline-offset-4 hover:underline">
+              {r.title}
+            </NextLink>
+            {r.pay ? <span className="text-muted-foreground">{r.pay}</span> : null}
+          </li>
+        ))}
+      </ul>
+      <NextLink
+        href={`/company/${companySlug}`}
+        className="mt-4 inline-block text-sm text-primary underline-offset-4 hover:underline"
+      >
+        All {total.toLocaleString('en-US')} jobs at {companyName} →
+      </NextLink>
+    </Card>
+  )
+}
+
+/** A short list of pages about this job's role, country and skills (never more than a handful). */
+export function RelatedSearchesCard({ links }: { links: { href: string; label: string }[] }) {
+  if (links.length === 0) return null
+  return (
+    <Card className="rounded-3xl p-6">
+      <h2 className={styles.sideTitle}>Related searches</h2>
+      <ul className="mt-3 space-y-2 text-sm">
+        {links.map((l) => (
+          <li key={l.href}>
+            <NextLink href={l.href} className="text-primary underline-offset-4 hover:underline">
+              {l.label}
+            </NextLink>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+
 /** Sticky bar for phones: salary plus the Apply button. Shown once the hero's own Apply button has scrolled away. */
 export function MobileApplyBar({
   salaryText,

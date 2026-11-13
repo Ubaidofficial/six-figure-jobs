@@ -46,11 +46,13 @@ import {
   PayCard,
   BulletList,
   CompanyCard,
+  CompanyRolesCard,
   DescriptionApply,
   DescriptionSections,
   JobLocationText,
   JobSection,
   MobileApplyBar,
+  RelatedSearchesCard,
   TranslateNotice,
 } from './JobDetailParts'
 import styles from './JobDetail.module.css'
@@ -284,6 +286,10 @@ export default async function JobPage({
   const publicId = publicJobId(typedJob.id)
   const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
   const internalLinks = buildInternalLinks(typedJob)
+  // The sidebar shows the few links that are about this job; "Explore more" below keeps the rest, minus those.
+  const railLinks = internalLinks.filter((l) => l.contextual).slice(0, 5)
+  const railHrefs = new Set(railLinks.map((l) => l.href))
+  const moreLinks = internalLinks.filter((l) => !railHrefs.has(l.href))
 
   // AI snippet / score (feature flagged)
   const aiSnippet =
@@ -359,6 +365,22 @@ export default async function JobPage({
   )
 
   const similarJobs = filterSimilarJobs(typedJob, similarResult.jobs, 6)
+
+  // Other open roles at the same employer for the sidebar: the best-paid first, at most three, never this job.
+  const companyRolesResult = company?.slug
+    ? await withRuntimeFallback<JobQueryResult>(
+        `job.${typedJob.id}.company-roles`,
+        () =>
+          memoAsync(stableKey('job-company-roles', company.slug), DEFAULT_TTL_MS, () =>
+            queryJobs({ companySlug: company.slug, page: 1, pageSize: 4 }),
+          ),
+        () => ({ jobs: [], total: 0, page: 1, pageSize: 4, totalPages: 1 }),
+      )
+    : null
+  const companyRoles = (companyRolesResult?.jobs ?? [])
+    .filter((j) => j.id !== typedJob.id)
+    .slice(0, 3)
+    .map((j) => ({ href: `/job/${buildJobSlug(j)}`, title: j.title, pay: buildSalaryText(j) || null }))
 
   const companyCountry = normalizeCountryCode(company?.countryCode) ?? normalizeCountryCode(typedJob.countryCode)
   const isSalaryVerified =
@@ -657,6 +679,15 @@ export default async function JobPage({
             facts={companyFacts}
             websiteHref={websiteHref}
           />
+          {company?.slug ? (
+            <CompanyRolesCard
+              companyName={companyName}
+              companySlug={company.slug}
+              total={companyRolesResult?.total ?? 0}
+              roles={companyRoles}
+            />
+          ) : null}
+          <RelatedSearchesCard links={railLinks} />
         </aside>
       </div>
 
@@ -683,13 +714,13 @@ export default async function JobPage({
         </section>
       ) : null}
 
-      {internalLinks.length > 0 ? (
+      {moreLinks.length > 0 ? (
         <section className="mt-10" aria-labelledby="explore-more">
           <h2 id="explore-more" className="mb-3 text-sm font-medium text-muted-foreground">
             Explore more
           </h2>
           <div className="flex flex-wrap gap-2">
-            {internalLinks.slice(0, 8).map((link) => (
+            {moreLinks.slice(0, 8).map((link) => (
               <NextLink
                 key={link.href}
                 href={link.href}
@@ -838,7 +869,8 @@ function extractBenefitsFromAi(raw: any): string[] {
   return []
 }
 
-type InternalLink = { href: string; label: string }
+/** `contextual` links are about this job (its role, country, skills); the rest are hubs every job page carries. */
+type InternalLink = { href: string; label: string; contextual?: boolean }
 
 function prettyRole(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -857,17 +889,17 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   const roleSlug = resolveJobRoleSlug(job)
   const roleLabel = roleSlug ? prettyRole(roleSlug) : ''
 
-  if (roleSlug && isCountryRecognized && countrySlug) {
-    links.push({
-      href: `/jobs/${roleSlug}`,
-      label: `${roleLabel} jobs in ${countryName ?? countryCode ?? 'this country'}`,
-    })
+  // /jobs/<role>/country/<country> only redirects to the country page, so there is no role-in-country page to link:
+  // the role link says what it is (every country) and the country link is separate.
+  if (roleSlug) {
+    links.push({ href: `/jobs/${roleSlug}`, label: `All ${roleLabel} jobs`, contextual: true })
   }
 
   if (isCountryRecognized && countrySlug) {
     links.push({
       href: `/jobs/location/${countrySlug}`,
       label: `$100k+ jobs in ${countryName}`,
+      contextual: true,
     })
   }
 
@@ -875,6 +907,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
     links.push({
       href: `/remote/${roleSlug}`,
       label: `Remote $100k+ ${roleLabel} jobs`,
+      contextual: true,
     })
   }
 
@@ -891,7 +924,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   }
 
   if (roleSlug) {
-    links.push({ href: `/salary/${roleSlug}`, label: `${roleLabel} salary guide` })
+    links.push({ href: `/salary/${roleSlug}`, label: `${roleLabel} salary guide`, contextual: true })
   }
 
   if (job.companyRef?.slug) {
@@ -901,10 +934,10 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   // Skill pages — link to the first 3 matched canonical skills
   const rawSkills = parseSkillsFromJob(job)
   const matchedSkillLinks = rawSkills
-    .map((s) => {
+    .map((s): InternalLink | null => {
       const slug = s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
       if (SKILL_SLUG_SET.has(slug)) {
-        return { href: `/jobs/skills/${slug}`, label: `$100k+ ${SKILL_LABEL_MAP.get(slug) ?? s} jobs` }
+        return { href: `/jobs/skills/${slug}`, label: `$100k+ ${SKILL_LABEL_MAP.get(slug) ?? s} jobs`, contextual: true }
       }
       return null
     })
@@ -917,6 +950,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
     links.push({
       href: `/jobs/city/${job.citySlug}`,
       label: `$100k+ jobs in ${job.city ?? job.citySlug}`,
+      contextual: true,
     })
   }
 
