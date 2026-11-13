@@ -136,8 +136,12 @@ export async function chatCloudflare(opts: {
     }
     throw new Error(`Cloudflare ${status}: ${raw.slice(0, 200)}`)
   }
-  const text = JSON.parse(raw)?.result?.response
-  if (typeof text !== 'string' || !text.trim()) throw new Error('Cloudflare returned no text')
+  // Workers AI gives the answer as `result.response`: a string, or the parsed object when the model answered in JSON.
+  // Newer models answer in the OpenAI form (`result.choices[0].message.content`).
+  const result = JSON.parse(raw)?.result
+  const answer = result?.response ?? result?.choices?.[0]?.message?.content
+  const text = typeof answer === 'string' ? answer : answer && typeof answer === 'object' ? JSON.stringify(answer) : null
+  if (!text || !text.trim()) throw new Error(`Cloudflare returned no text: ${raw.slice(0, 200)}`)
   return { text, provider: 'cloudflare', model: opts.model }
 }
 

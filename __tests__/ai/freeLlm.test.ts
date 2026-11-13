@@ -86,6 +86,14 @@ describe('reading the answers', () => {
     ).rejects.toThrow(/400: .*daily free allocation/)
   })
 
+  it('reads a Cloudflare answer given as a parsed JSON object or in the OpenAI form', async () => {
+    const call = (body: unknown) =>
+      chatCloudflare({ accountId: 'a', apiToken: 't', model: '@cf/meta/llama-3.1-8b-instruct', messages, fetchImpl: reply(200, body) })
+    expect(JSON.parse((await call({ success: true, result: { response: { title: 'X' } } })).text)).toEqual({ title: 'X' })
+    expect((await call({ success: true, result: { choices: [{ message: { content: 'hi' } }] } })).text).toBe('hi')
+    await expect(call({ success: true, result: { response: '' } })).rejects.toThrow(/no text: \{/)
+  })
+
   it('returns the text of a good Cloudflare answer', async () => {
     const out = await chatCloudflare({
       accountId: 'a',
