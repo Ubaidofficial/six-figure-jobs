@@ -9,7 +9,8 @@ import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 import { resolveSalaryCurrency } from '../jobs/salary'
 import { countryName, normalizeCountryCode } from '../location/country'
 import { countryFromCity, countryFromText, isPlaceholderLocation } from '../location/jobLocation'
-import { remoteRegionDef } from '../jobs/remoteRegions'
+import { isWorldwideLocationText, remoteRegionDef } from '../jobs/remoteRegions'
+import { WORLDWIDE_COUNTRY_CODES } from '../location/worldwideCountries'
 import {
   cleanJobDescriptionHtml,
   cleanJobDescriptionText,
@@ -196,12 +197,26 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
     if (parsedRemoteRegion) return parsedRemoteRegion
   }
 
+  // A posting that says "Worldwide" or "Anywhere" and names nothing that limits it is open in every country. Google wants at
+  // least one eligible country on a 100% remote job and has no "anywhere" value, so list them all: never the company's
+  // or the currency's country, which told Google a worldwide job was open only there. The stored `remoteRegion` cannot say
+  // this (ingest writes "Global" on every remote job), so the text decides, as on the job page (describeJobLocation).
+  if (isWorldwideLocationText(job.locationRaw ? String(job.locationRaw) : '')) {
+    return worldwideApplicantRequirements()
+  }
+
   const fallbackCountry = inferCountryFromJob(job)
   if (fallbackCountry) {
     return buildCountryRequirement(fallbackCountry)
   }
 
   return undefined
+}
+
+let worldwideRequirements: any[] | undefined
+/** One Country per eligible country of a worldwide job (lib/location/worldwideCountries.ts), built once. */
+function worldwideApplicantRequirements(): any[] {
+  return (worldwideRequirements ??= WORLDWIDE_COUNTRY_CODES.map(buildCountryRequirement))
 }
 
 function buildCountryRequirement(countryCode: string): any {

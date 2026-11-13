@@ -34,7 +34,9 @@ export const AUDITS: Audit[] = [
     sql: `SELECT count(*) AS companies,
       count("employeeCount") AS has_employee_count, count("fundingStage") AS has_funding_stage,
       count(headquarters) AS has_headquarters, count(industry) AS has_industry, count("logoUrl") AS has_logo,
-      count(description) AS has_description, count(website) AS has_website, count("foundedYear") AS has_founded_year
+      count(description) AS has_description, count(website) AS has_website, count("foundedYear") AS has_founded_year,
+      count("sizeBucket") AS has_size_bucket, count("tagsJson") AS has_tags, count("linkedinUrl") AS has_linkedin,
+      count("countryCode") AS has_country, count("atsProvider") AS has_ats_provider, count("fundingSummary") AS has_funding_summary
     FROM "Company"`,
   },
   {
@@ -68,6 +70,26 @@ export const AUDITS: Audit[] = [
     title: 'Remote jobs without a country: most common location texts',
     sql: `SELECT coalesce(btrim("locationRaw"), '(none)') AS location_text, count(*) AS jobs
     FROM "Job" WHERE ${LIVE} AND ${REMOTE} AND "countryCode" IS NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 25`,
+  },
+  {
+    title: 'Remote jobs without a country: country words in the text',
+    note: 'Rough word matches (a job can be in several buckets): how many name the US and Canada together, one of them, the UK, or a continent.',
+    sql: `SELECT
+      count(*) FILTER (WHERE "locationRaw" ~* '(united states|u\\.s\\.?|\\musa?\\M)' AND "locationRaw" ~* 'canada') AS us_and_canada,
+      count(*) FILTER (WHERE "locationRaw" ~* '(united states|u\\.s\\.?|\\musa?\\M)' AND "locationRaw" !~* 'canada') AS us_not_canada,
+      count(*) FILTER (WHERE "locationRaw" ~* 'canada' AND "locationRaw" !~* '(united states|u\\.s\\.?|\\musa?\\M)') AS canada_not_us,
+      count(*) FILTER (WHERE "locationRaw" ~* '(united kingdom|\\muk\\M|britain)') AS mentions_uk,
+      count(*) FILTER (WHERE "locationRaw" ~* 'north america') AS north_america,
+      count(*) FILTER (WHERE "locationRaw" ~* 'americas') AS americas,
+      count(*) FILTER (WHERE "locationRaw" ~* 'latam|latin america') AS latam
+    FROM "Job" WHERE ${LIVE} AND ${REMOTE} AND "countryCode" IS NULL`,
+  },
+  {
+    title: 'Remote jobs with a stored country whose text says worldwide',
+    note: 'The page lists the stored country for these, not every country. If it is mostly the company\'s country, the stored value may be a guess.',
+    sql: `SELECT btrim("locationRaw") AS location_text, "countryCode" AS stored_country, count(*) AS jobs
+    FROM "Job" WHERE ${LIVE} AND ${REMOTE} AND "countryCode" IS NOT NULL AND "locationRaw" ~* '(worldwide|anywhere|global)'
+    GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 15`,
   },
   {
     title: 'Remote jobs with a country: top countries',
