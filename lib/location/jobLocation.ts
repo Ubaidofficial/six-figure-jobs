@@ -148,6 +148,35 @@ export function countryFromText(text: unknown): string | null {
   return code
 }
 
+// Two-letter codes read as a country only when EVERY part of the text is a country ("US, CA, Remote"): the CA in
+// "San Francisco, CA" is California. Left out: IN, IT, OR, ES, PL and the like, which are also words or states.
+const CODE_AS_COUNTRY: Record<string, string> = {
+  us: 'US', ca: 'CA', gb: 'GB', uk: 'GB', au: 'AU', nz: 'NZ', ie: 'IE', de: 'DE', fr: 'FR', nl: 'NL',
+}
+const LIST_FILLER = /\b(?:remote|virtual|hybrid|in|the|only|based|work from home|wfh|within|across|from)\b/g
+
+/**
+ * Every country a location text names, in order, without repeats: "Remote, Canada; Remote, United States", "United States &
+ * Canada", "Remote (US/Canada)" and "US, CA, Remote" each give two. A state code beside a city is not a country, so
+ * "San Francisco, CA, US" gives just the US. For remote jobs, where the text lists the countries the job is open to;
+ * countryFromText stays the reader for one place (it gives null for two). Only the countries we have names for are found.
+ */
+export function countriesFromText(text: unknown): string[] {
+  if (typeof text !== 'string') return []
+  const parts = text
+    .toLowerCase()
+    .replace(/\./g, '')
+    .replace(/[()[\]]/g, ',')
+    .replace(LIST_FILLER, ' ')
+    .split(/[,;|/–—&]|\s-\s|\b(?:or|and)\b/)
+    .map((p) => p.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+  const named = parts.map((p) => COUNTRY_ALIASES[p] ?? null)
+  const everyPartIsACountry = parts.every((p, i) => named[i] || CODE_AS_COUNTRY[p])
+  const codes = parts.map((p, i) => named[i] ?? (everyPartIsACountry ? CODE_AS_COUNTRY[p] : null))
+  return Array.from(new Set(codes.filter((c): c is string => Boolean(c))))
+}
+
 export type JobLocationView = {
   /** Everything the reader sees in the chip, as plain text (also its tooltip). */
   text: string

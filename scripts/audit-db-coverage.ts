@@ -34,7 +34,9 @@ export const AUDITS: Audit[] = [
     sql: `SELECT count(*) AS companies,
       count("employeeCount") AS has_employee_count, count("fundingStage") AS has_funding_stage,
       count(headquarters) AS has_headquarters, count(industry) AS has_industry, count("logoUrl") AS has_logo,
-      count(description) AS has_description, count(website) AS has_website, count("foundedYear") AS has_founded_year
+      count(description) AS has_description, count(website) AS has_website, count("foundedYear") AS has_founded_year,
+      count("sizeBucket") AS has_size_bucket, count("tagsJson") AS has_tags, count("linkedinUrl") AS has_linkedin,
+      count("countryCode") AS has_country, count("atsProvider") AS has_ats_provider, count("fundingSummary") AS has_funding_summary
     FROM "Company"`,
   },
   {
@@ -70,6 +72,26 @@ export const AUDITS: Audit[] = [
     FROM "Job" WHERE ${LIVE} AND ${REMOTE} AND "countryCode" IS NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 25`,
   },
   {
+    title: 'Remote jobs without a country: country words in the text',
+    note: 'Rough word matches (a job can be in several buckets): how many name the US and Canada together, one of them, the UK, or a continent.',
+    sql: `SELECT
+      count(*) FILTER (WHERE "locationRaw" ~* '(united states|u\\.s\\.?|\\musa?\\M)' AND "locationRaw" ~* 'canada') AS us_and_canada,
+      count(*) FILTER (WHERE "locationRaw" ~* '(united states|u\\.s\\.?|\\musa?\\M)' AND "locationRaw" !~* 'canada') AS us_not_canada,
+      count(*) FILTER (WHERE "locationRaw" ~* 'canada' AND "locationRaw" !~* '(united states|u\\.s\\.?|\\musa?\\M)') AS canada_not_us,
+      count(*) FILTER (WHERE "locationRaw" ~* '(united kingdom|\\muk\\M|britain)') AS mentions_uk,
+      count(*) FILTER (WHERE "locationRaw" ~* 'north america') AS north_america,
+      count(*) FILTER (WHERE "locationRaw" ~* 'americas') AS americas,
+      count(*) FILTER (WHERE "locationRaw" ~* 'latam|latin america') AS latam
+    FROM "Job" WHERE ${LIVE} AND ${REMOTE} AND "countryCode" IS NULL`,
+  },
+  {
+    title: 'Remote jobs with a stored country whose text says worldwide',
+    note: 'The page lists the stored country for these, not every country. If it is mostly the company\'s country, the stored value may be a guess.',
+    sql: `SELECT btrim("locationRaw") AS location_text, "countryCode" AS stored_country, count(*) AS jobs
+    FROM "Job" WHERE ${LIVE} AND ${REMOTE} AND "countryCode" IS NOT NULL AND "locationRaw" ~* '(worldwide|anywhere|global)'
+    GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 15`,
+  },
+  {
     title: 'Remote jobs with a country: top countries',
     sql: `SELECT "countryCode" AS country, count(*) AS jobs
     FROM "Job" WHERE ${LIVE} AND ${REMOTE} AND "countryCode" IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 12`,
@@ -79,6 +101,39 @@ export const AUDITS: Audit[] = [
     note: 'Ingest writes "Global" when a source gives none, so "Global" is not evidence that a job is worldwide.',
     sql: `SELECT coalesce("remoteRegion", '(none)') AS remote_region, count(*) AS jobs
     FROM "Job" WHERE ${LIVE} AND ${REMOTE} GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
+  },
+  {
+    title: 'Remote jobs by source: is a country stored?',
+    note: 'Which sources leave remote jobs without a country, and how many of those say just "Remote".',
+    sql: `SELECT source, count(*) AS remote_jobs,
+      count(*) FILTER (WHERE "countryCode" IS NOT NULL) AS with_country,
+      count(*) FILTER (WHERE "countryCode" IS NULL) AS without_country,
+      count(*) FILTER (WHERE "countryCode" IS NULL AND lower(btrim("locationRaw")) = 'remote') AS just_remote_no_country
+    FROM "Job" WHERE ${LIVE} AND ${REMOTE} GROUP BY 1 ORDER BY 2 DESC LIMIT 12`,
+  },
+  {
+    title: 'Remote jobs whose description says worldwide',
+    note: 'Phrases in the description, not the location field. "worldwide" alone is noisy (it can describe customers); the anywhere phrases are the stronger signal.',
+    sql: `SELECT count(*) AS remote_jobs,
+      count(*) FILTER (WHERE "descriptionHtml" ~* '(work from anywhere|anywhere in the world|work remotely from anywhere|globally distributed)') AS anywhere_phrases,
+      count(*) FILTER (WHERE "descriptionHtml" ~* 'worldwide') AS says_worldwide,
+      count(*) FILTER (WHERE "countryCode" IS NULL AND "descriptionHtml" ~* '(work from anywhere|anywhere in the world|work remotely from anywhere|globally distributed)') AS anywhere_phrases_no_country
+    FROM "Job" WHERE ${LIVE} AND ${REMOTE}`,
+  },
+  {
+    title: 'AI enrichment and description length by source',
+    note: 'How many live jobs already carry AI fields (aiEnrichedAt, summary, snippet, one-liner) and how long their descriptions are.',
+    sql: `SELECT source, count(*) AS live_jobs, count("aiEnrichedAt") AS ai_enriched, count("aiSummaryJson") AS has_ai_summary,
+      count("aiSnippet") AS has_ai_snippet, count("aiOneLiner") AS has_one_liner,
+      coalesce(round(avg(length("descriptionHtml")))::int, 0) AS avg_description_chars,
+      count(*) FILTER (WHERE "descriptionHtml" IS NULL OR length("descriptionHtml") < 400) AS short_or_missing_description
+    FROM "Job" WHERE ${LIVE} GROUP BY 1 ORDER BY 2 DESC LIMIT 12`,
+  },
+  {
+    title: 'Live freehire jobs by currency',
+    note: 'To set against freehire\'s own count for the same markets and window.',
+    sql: `SELECT coalesce(currency, '(none)') AS currency, count(*) AS jobs
+    FROM "Job" WHERE ${LIVE} AND source = 'board:freehire' GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
   },
   {
     title: 'Real expiry dates from sources',
