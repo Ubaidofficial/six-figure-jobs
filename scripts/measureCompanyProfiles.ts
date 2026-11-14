@@ -5,11 +5,15 @@
 // each homepage once (honest User-Agent, 1.5 s apart; a 403 or 429 skips that company, since each is a different site), parses it
 // with lib/companies/profileFromSite.ts and prints fill rates and samples, so the owner can decide whether to build the writer.
 //
+// It also asks Wikidata (by official website, never by name) for founding year and headcount for the same companies, to see
+// whether that fills what homepages cannot.
+//
 // Usage: npx tsx scripts/measureCompanyProfiles.ts [--limit=150] [--report=company-profiles.json]
 import { writeFileSync } from 'node:fs'
 import { format as __format } from 'node:util'
 
 import { parseSiteProfile, type SiteProfile } from '../lib/companies/profileFromSite'
+import { buildWikidataQuery, parseWikidataBindings, siteKey, type WikidataProfile } from '../lib/companies/wikidataProfile'
 import { prisma } from '../lib/prisma'
 import { isKnownBoardHost } from '../lib/scrapers/utils/boardHosts'
 import { makePoliteGetter, SourceBlocked } from '../lib/scrapers/utils/politeFetch'
@@ -68,12 +72,42 @@ async function main() {
     rows.push({ name: company.name, site: url, ...p })
   }
 
+  // Wikidata, one request per 40 companies. A rate limit or error ends the lookup, never retried.
+  const wiki = { asked: 0, matched: 0, foundingYear: 0, employees: 0, stopped: null as string | null }
+  const wikiByHost = new Map<string, WikidataProfile>()
+  const hosts = [...new Set(rows.map((r) => siteKey(r.site)).filter((h): h is string => Boolean(h)))]
+  wiki.asked = hosts.length
+  for (let i = 0; i < hosts.length; i += 40) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 3000))
+    try {
+      const res = await fetch(`https://query.wikidata.org/sparql?${new URLSearchParams({ query: buildWikidataQuery(hosts.slice(i, i + 40)), format: 'json' })}`, {
+        headers: { 'User-Agent': 'SixFigureJobsBot/1.0 (+https://www.6figjobs.com)', Accept: 'application/sparql-results+json' },
+        signal: AbortSignal.timeout(90_000),
+      })
+      if (!res.ok) {
+        wiki.stopped = `HTTP ${res.status}`
+        break
+      }
+      for (const [h, p] of parseWikidataBindings((await res.json()).results.bindings)) wikiByHost.set(h, p)
+    } catch (err) {
+      wiki.stopped = err instanceof Error ? err.message : String(err)
+      break
+    }
+  }
+  for (const p of wikiByHost.values()) {
+    wiki.matched++
+    if (p.foundingYear) wiki.foundingYear++
+    if (p.employees) wiki.employees++
+  }
+
   const pct = (n: number) => (counts.fetched ? `${((n / counts.fetched) * 100).toFixed(0)}%` : 'n/a')
   __slog('MEASUREMENT ONLY, nothing written')
   __slog(JSON.stringify(counts))
   __slog(`of ${counts.fetched} homepages read: description ${pct(counts.description)}, founding year ${pct(counts.foundingYear)}, size ${pct(counts.size)}, LinkedIn ${pct(counts.linkedin)}, country ${pct(counts.country)}, any field ${pct(counts.anyField)}`)
+  const wp = (n: number) => (wiki.asked ? `${((n / wiki.asked) * 100).toFixed(0)}%` : 'n/a')
+  __slog(`Wikidata (by website) for ${wiki.asked} companies: matched ${wp(wiki.matched)}, founding year ${wp(wiki.foundingYear)}, headcount ${wp(wiki.employees)}${wiki.stopped ? `; STOPPED: ${wiki.stopped}` : ''}`)
   for (const r of rows.slice(0, 12)) __slog(`  ${r.name} | ${r.site} | ${r.foundingYear ?? '-'} | ${r.employeeMin ?? '-'} | "${(r.description ?? '').slice(0, 110)}"`)
-  if (reportPath) writeFileSync(reportPath, JSON.stringify({ counts, rows }, null, 1))
+  if (reportPath) writeFileSync(reportPath, JSON.stringify({ counts, wiki, rows }, null, 1))
 }
 
 main()
