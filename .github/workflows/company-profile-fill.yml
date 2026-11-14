@@ -1,0 +1,73 @@
+name: company profile fill
+
+# Manual. Fills EMPTY company profile fields (scripts/fill-company-profiles.ts): founding year (the company's own page, else
+# Wikidata by official website), a LinkedIn page the company's own page links, and a neutral description (a free model restates the
+# page's tagline; kept only if it adds nothing the tagline did not say). A dry run unless "apply" is ticked: the dry run prints what
+# would be written and writes nothing. Never overwrites a stored value. Free only. No schedule on purpose. Same production-database
+# fingerprint guard as the other manual workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Companies to look at (most live jobs first; each costs one homepage request, 1.5 s apart)"
+        type: string
+        required: false
+        default: "50"
+      apply:
+        description: "Write the changes (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+      provider:
+        description: "Free model for descriptions: auto (Cloudflare first), cloudflare, openrouter or none"
+        type: string
+        required: false
+        default: "auto"
+
+concurrency:
+  group: company-profile-fill
+  cancel-in-progress: false
+
+jobs:
+  fill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_MODEL: ${{ vars.CLOUDFLARE_MODEL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Fill profiles
+        env:
+          LIMIT: ${{ inputs.limit }}
+          APPLY: ${{ inputs.apply }}
+          PROVIDER: ${{ inputs.provider }}
+        run: |
+          args="--limit=$LIMIT --provider=$PROVIDER"
+          [ "$APPLY" = "true" ] && args="$args --apply"
+          npx tsx scripts/fill-company-profiles.ts $args

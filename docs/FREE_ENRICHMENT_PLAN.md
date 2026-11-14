@@ -83,3 +83,11 @@ most 80 jobs per UTC day, one call per distinct description, saves only answers 
 "Preferred:", and never overwrites an existing summary or the original description. A free-tier job count is an estimate from the
 first run's token use (about 5,700 input tokens for 3 jobs) and Cloudflare's published per-token rates as remembered: check
 Cloudflare's pricing page, and raise `AI_FREE_DAILY_MAX` only after watching a week of real usage.
+
+## Tier 2 built (2026-11-14, night): company profiles
+
+Measured on a random sample of 119 company homepages (2026-11-14): meta description 86% but mostly marketing taglines, founding year
+14%, headcount 3%, LinkedIn page 52%, country 22%. Wikidata matched by official website (never by name): 39% matched, founding year
+29%, headcount 4%. Headcount stays unfilled (no free source tested gets past about 4%). `company profile fill` (manual workflow,
+`scripts/fill-company-profiles.ts`, rules in `lib/companies/profileFill.ts`) fills only empty `foundedYear`, `linkedinUrl` and
+`description`; dry run by default. Wikidata values are not spot-checked for age or error: review a dry run before the first apply.
