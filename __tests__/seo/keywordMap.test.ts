@@ -47,7 +47,7 @@ describe('keyword map', () => {
     const { titleHas } = KEYWORD_MAP[type as KeywordPageType]
     for (const title of titles ?? []) {
       expect(norm(title)).toContain(titleHas)
-      expect(title.length).toBeLessThanOrEqual(TITLE_MAX)
+      expect([...title].length).toBeLessThanOrEqual(TITLE_MAX)
     }
   })
 })
@@ -90,6 +90,6 @@ describe('inCountry', () => {
   })
 
   it('reads naturally in the country title', () => {
-    expect(buildCountryTitle('United Kingdom', '£75k+')).toBe('High-Paying Jobs in the United Kingdom (£75k+) [2026]')
+    expect(buildCountryTitle('United Kingdom', '£75k+')).toBe('High-Paying Jobs in the United Kingdom (£75k+) [Nov 2026]')
   })
 })

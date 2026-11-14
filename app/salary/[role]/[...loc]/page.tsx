@@ -16,7 +16,7 @@ import { formatSalaryBandLabel } from '../../../../lib/utils/salaryLabels'
 import { formatNumberCompact } from '../../../../lib/utils/number'
 import type { Job } from '@prisma/client'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../../lib/seo/site'
-import { countryFlag, fitTitle, titleYearTag } from '../../../../lib/seo/metaText'
+import { countryFlag, fitTitle, titleDateTag } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { isCanonicalSlug } from '../../../../lib/roles/canonicalSlugs'
@@ -233,8 +233,8 @@ export async function generateMetadata({
   const flag = countryFlag(countryCode)
   const flagLead = flag ? `${flag} ` : ''
   const title = fitTitle([
-    `${flagLead}${roleName} Salary in ${locationLabel} (${bandLabel}) ${titleYearTag()} | ${SITE_NAME}`,
-    `${flagLead}${roleName} Salary in ${locationLabel} (${bandLabel}) ${titleYearTag()}`,
+    `${flagLead}${roleName} Salary in ${locationLabel} (${bandLabel}) ${titleDateTag()} | ${SITE_NAME}`,
+    `${flagLead}${roleName} Salary in ${locationLabel} (${bandLabel}) ${titleDateTag()}`,
     `${flagLead}${roleName} Salary in ${locationLabel} (${bandLabel})`,
     `${flagLead}${roleName} Salary in ${locationLabel}`,
   ])
