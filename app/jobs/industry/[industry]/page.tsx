@@ -8,7 +8,7 @@ import { INDUSTRY_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
-import { buildListingDescription, countPrefix, fitTitle } from '../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -48,17 +48,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   // Industry pages aren't in the Phase 1 allowlist — noindex until phase 2.
   const allowIndex =
     total >= 1 && isPhaseIndexable({ pathname: `/jobs/industry/${resolved.slug}` })
-  const titleBase = `$100k+ ${resolved.label} jobs`
-  // Same wording as before; the brand, then the count, drop out when the title would pass TITLE_MAX.
-  const title =
-    total > 0
-      ? fitTitle([
-          `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`,
-          `${titleBase} (${total.toLocaleString()} openings)`,
-          `${titleBase} | ${SITE_NAME}`,
-          titleBase,
-        ])
-      : fitTitle([`${titleBase} | ${SITE_NAME}`, titleBase])
+  // Same shape as the category and skill titles ("5,197 Engineering Jobs Paying $100k+ | Six Figure Jobs").
+  const title = buildListingTitle({ topic: `${resolved.label} Jobs`, count: total, qualifier: 'Paying $100k+' })
   const description = buildListingDescription(`${countPrefix(total)}$100k+ ${resolved.label} jobs.`, [
     ['Six-figure roles at top companies, with remote, hybrid and on-site options.', 'Six-figure roles at top companies.'],
   ])

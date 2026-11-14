@@ -8,7 +8,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { queryJobs } from '../../../../lib/jobs/queryJobs'
 import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
-import { buildCountryTitle, buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
+import { buildCountryTitle, buildListingDescription, countPrefix, inCountry } from '../../../../lib/seo/metaText'
 
 import { CountryLocationTemplate } from '../_components/CountryLocationTemplate'
 import { isCountryPageIndexable } from '../../../../lib/seo/indexabilityGates'
@@ -80,7 +80,7 @@ export async function generateMetadata({
 
   const description = loc.remoteOnly
     ? `Browse ${total.toLocaleString()} remote ${salaryLabel} jobs with published salary ranges, and fresh listings across engineering, product, and data.`
-    : buildListingDescription(`${countPrefix(total)}high-paying jobs in ${loc.label} paying ${salaryLabel}.`, [
+    : buildListingDescription(`${countPrefix(total)}high-paying jobs in ${inCountry(loc.label)} paying ${salaryLabel}.`, [
         ['Six-figure roles across engineering, product, data and sales.', 'Remote, hybrid and on-site roles.'],
       ])
 

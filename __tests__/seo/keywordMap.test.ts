@@ -1,0 +1,65 @@
+import { KEYWORD_MAP, type KeywordPageType } from '../../lib/seo/keywordMap'
+import {
+  buildCategoryTitle,
+  buildCityTitle,
+  buildCompanyPageTitle,
+  buildCountryTitle,
+  buildJobsHubTitle,
+  buildListingTitle,
+  buildSalaryGuideTitle,
+  buildSalaryTierTitle,
+  buildSkillTitle,
+  inCountry,
+  TITLE_MAX,
+} from '../../lib/seo/metaText'
+
+// Hyphens read as spaces ("High-Paying" is "high paying"), case is ignored.
+const norm = (s: string) => s.toLowerCase().replace(/-/g, ' ')
+
+// Real title builders (or the same buildListingTitle call the page makes), one per page type that has one.
+const TITLES: Partial<Record<KeywordPageType, string[]>> = {
+  jobsHub: [buildJobsHubTitle(28025), buildJobsHubTitle(null)],
+  remoteHub: [buildListingTitle({ topic: 'High-Paying Remote Jobs', count: 5670, qualifier: '($100k+)' })],
+  remoteRole: [
+    buildListingTitle({ topic: 'Remote Software Engineer Jobs', count: 602, qualifier: 'Paying $100k+' }),
+    buildListingTitle({ topic: 'Remote Machine Learning Engineer Jobs', count: 75, qualifier: 'Paying $100k+' }),
+  ],
+  role: [buildListingTitle({ topic: 'Software Engineer Jobs', count: 3277, qualifier: 'Paying $100k+' })],
+  salaryGuide: [buildSalaryGuideTitle('Software Engineer', '$100k+', 222000), buildSalaryGuideTitle('DevOps Engineer', '$100k+', null)],
+  salaryTier: [buildSalaryTierTitle('$100k–$199k', 8573), buildSalaryTierTitle('$400k+', 1129)],
+  country: [buildCountryTitle('United States', '$100k+', 22021), buildCountryTitle('Canada', 'C$120k+', 1865)],
+  city: [buildCityTitle('San Francisco', '$100k+', 2454), buildCityTitle('London', '£75k+', 255)],
+  skill: [buildSkillTitle('Python', 897), buildSkillTitle('Kubernetes', 349)],
+  category: [buildCategoryTitle('Engineering', 5197)],
+  company: [buildCompanyPageTitle('Adobe', 132), buildCompanyPageTitle('Capital One', 1402)],
+}
+
+describe('keyword map', () => {
+  it.each(Object.entries(KEYWORD_MAP))('%s has a primary keyword, secondary keywords and a title fragment', (_type, kw) => {
+    expect(kw.primary.length).toBeGreaterThan(0)
+    expect(kw.secondary.length).toBeGreaterThanOrEqual(2)
+    expect(kw.titleHas).toBe(kw.titleHas.toLowerCase())
+  })
+
+  it.each(Object.entries(TITLES))('%s titles keep the primary keyword fragment and fit TITLE_MAX', (type, titles) => {
+    const { titleHas } = KEYWORD_MAP[type as KeywordPageType]
+    for (const title of titles ?? []) {
+      expect(norm(title)).toContain(titleHas)
+      expect(title.length).toBeLessThanOrEqual(TITLE_MAX)
+    }
+  })
+})
+
+describe('inCountry', () => {
+  it('adds "the" for the countries that take it, and only those', () => {
+    expect(inCountry('United States')).toBe('the United States')
+    expect(inCountry('United Kingdom')).toBe('the United Kingdom')
+    expect(inCountry('Netherlands')).toBe('the Netherlands')
+    expect(inCountry('Canada')).toBe('Canada')
+    expect(inCountry('Germany')).toBe('Germany')
+  })
+
+  it('reads naturally in the country title', () => {
+    expect(buildCountryTitle('United Kingdom', '£75k+', 673)).toBe('673 High-Paying Jobs in the United Kingdom (£75k+)')
+  })
+})

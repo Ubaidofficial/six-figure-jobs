@@ -7,6 +7,7 @@ import JobList from '../../../components/JobList'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
+import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../lib/seo/metaText'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
 import { LEVEL_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
@@ -90,15 +91,12 @@ export async function generateMetadata({
     (isPhaseIndexable({ pathname: `/jobs/level/${level}` }) || isPseoHubUnlocked(total, `/jobs/level/${level}`))
   const canonical = `${SITE_URL}/jobs/level/${level}`
 
-  const title =
-    total > 0
-      ? `${info.label} $100k+ Jobs - ${total.toLocaleString()} Positions | ${SITE_NAME}`
-      : `${info.label} $100k+ Jobs | ${SITE_NAME}`
+  // Same shape as the role, skill and category titles ("8,148 Senior Jobs Paying $100k+ | Six Figure Jobs").
+  const title = buildListingTitle({ topic: `${info.label} Jobs`, count: total, qualifier: 'Paying $100k+' })
 
-  const description =
-    total > 0
-      ? `Find ${total.toLocaleString()} ${info.label.toLowerCase()} tech jobs paying $100k+. ${info.description} at top companies. Updated daily.`
-      : `${info.description} paying $100k+ at top tech companies.`
+  const description = buildListingDescription(`${countPrefix(total)}${info.label.toLowerCase()} jobs paying $100k+.`, [
+    [`${info.description} at top companies.`],
+  ])
 
   return {
     title,

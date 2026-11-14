@@ -8,7 +8,7 @@ import { STATE_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
-import { buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -48,12 +48,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   // State pages aren't in the Phase 1 allowlist — noindex until phase 2.
   const allowIndex =
     total >= 1 && isPhaseIndexable({ pathname: `/jobs/state/${resolved.slug}` })
-  const titleBase = `$100k+ ${resolved.name} jobs`
-  const title =
-    total > 0
-      ? `${titleBase} (${total.toLocaleString()} openings) | ${SITE_NAME}`
-      : `${titleBase} | ${SITE_NAME}`
-  const description = buildListingDescription(`${countPrefix(total)}$100k+ jobs in ${resolved.name}.`, [
+  // Same shape as the city and country titles ("1,234 High-Paying Jobs in Texas ($100k+) | Six Figure Jobs").
+  const title = buildListingTitle({ topic: `High-Paying Jobs in ${resolved.name}`, count: total, qualifier: '($100k+)' })
+  const description = buildListingDescription(`${countPrefix(total)}high-paying $100k+ jobs in ${resolved.name}.`, [
     ['Remote, hybrid and on-site roles.'],
   ])
   const canonical = `${SITE_URL}/jobs/state/${resolved.slug}`

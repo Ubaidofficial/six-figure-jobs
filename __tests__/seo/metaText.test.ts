@@ -431,7 +431,7 @@ describe('city and category titles', () => {
       }
     }
     expect(buildCountryTitle('Canada', 'C$120k+', 1637)).toBe('1,637 High-Paying Jobs in Canada (C$120k+) | Six Figure Jobs')
-    expect(buildCountryTitle('United States', '$100k+', 14942)).toBe('14,942 High-Paying Jobs in United States ($100k+)')
+    expect(buildCountryTitle('United States', '$100k+', 14942)).toBe('14,942 High-Paying Jobs in the United States ($100k+)')
   })
 
   it('skill titles match the role-page shape and stay within the limit', () => {

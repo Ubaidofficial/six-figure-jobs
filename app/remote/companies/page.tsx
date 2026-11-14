@@ -12,7 +12,7 @@ import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Pr
 import { loadRemoteCompaniesDirectory } from '@/lib/jobs/remoteCompanies'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { MIN_COMPANY_INDEXABLE_JOBS } from '@/lib/seo/indexabilityGates'
-import { buildListingTitle } from '@/lib/seo/metaText'
+import { buildDescription, buildListingTitle } from '@/lib/seo/metaText'
 import { SITE_NAME, defaultOgImages, getSiteUrl } from '@/lib/seo/site'
 
 export const revalidate = 600
@@ -23,7 +23,10 @@ const HEADING = 'Remote companies hiring $100k+ roles'
 
 function describe(companies: number, jobs: number): string {
   if (companies === 0) return 'Companies hiring remotely for six-figure roles, with published salaries and links to apply.'
-  return `${companies.toLocaleString()} companies hiring remotely for $100k+ roles, with ${jobs.toLocaleString()} open remote jobs that publish their pay. Updated daily.`
+  return buildDescription(
+    `${companies.toLocaleString()} companies hiring remotely for $100k+ roles, with ${jobs.toLocaleString()} open remote jobs that publish their pay.`,
+    [['Salary shown upfront, with direct links to apply.', 'Salary shown upfront.']],
+  )
 }
 
 export async function generateMetadata(): Promise<Metadata> {

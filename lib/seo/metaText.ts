@@ -244,9 +244,21 @@ export function buildCityTitle(cityLabel: string, salaryLabel: string, total: nu
   return buildListingTitle({ topic: `High-Paying Jobs in ${cityLabel}`, count: total, qualifier: `(${salaryLabel})` })
 }
 
+/** Countries whose name takes "the" in running text ("jobs in the United States", not "jobs in United States"). */
+const COUNTRIES_WITH_THE = new Set(['United States', 'United Kingdom', 'Netherlands', 'United Arab Emirates', 'Philippines'])
+
+/** "the United States" for the countries that take "the", else the label as is. For "jobs in ${...}" phrases. */
+export function inCountry(countryLabel: string): string {
+  return COUNTRIES_WITH_THE.has(countryLabel) ? `the ${countryLabel}` : countryLabel
+}
+
 /** Country page title ("1,637 High-Paying Jobs in Canada (C$120k+) | Six Figure Jobs"). */
 export function buildCountryTitle(countryLabel: string, salaryLabel: string, total: number): string {
-  return buildListingTitle({ topic: `High-Paying Jobs in ${countryLabel}`, count: total, qualifier: `(${salaryLabel})` })
+  return buildListingTitle({
+    topic: `High-Paying Jobs in ${inCountry(countryLabel)}`,
+    count: total,
+    qualifier: `(${salaryLabel})`,
+  })
 }
 
 /** Skill page title ("674 Python Jobs Paying $100k+ | Six Figure Jobs"), the same shape as role pages. */
