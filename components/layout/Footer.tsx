@@ -152,6 +152,10 @@ export function Footer() {
             <span className={styles.dot} aria-hidden="true">•</span>
             <a className={styles.link} href="https://logo.dev" target="_blank" rel="noopener">Logos provided by Logo.dev</a>
           </div>
+          <a className={styles.badge} href="https://webspot.app" target="_blank" rel="noopener noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+            <img className={styles.badgeImg} src="https://webspot.app/featured-dark.svg" alt="Featured on Webspot" loading="lazy" />
+          </a>
           <div className={styles.made}>Made with 💚 for high earners</div>
         </div>
       </div>
