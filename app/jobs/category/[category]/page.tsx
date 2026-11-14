@@ -4,6 +4,7 @@
 export const revalidate = 600
 
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
@@ -13,7 +14,7 @@ import { Faq, JobRows, LinkChips, ListingHeader, ListingLayout, ListingPage, Lis
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
-import { buildCategoryTitle, buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
+import { buildCategoryTitle, buildListingDescription } from '../../../../lib/seo/metaText'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
 import { newThisWeekClause } from '../../../../lib/jobs/postedRecently'
@@ -112,14 +113,15 @@ export async function generateMetadata({
     total >= 5 && isPhaseIndexable({ pathname: `/jobs/category/${category}` })
   const canonical = `${SITE_URL}/jobs/category/${category}`
   const shouldIndex = allowIndex && page === 1
-  const title = buildCategoryTitle(cfg.label, total)
-  const description = buildListingDescription(`${countPrefix(total)}$100k+ ${cfg.label.toLowerCase()} jobs.`, [
+  const title = buildCategoryTitle(cfg.label)
+  const description = buildListingDescription(`$100k+ ${cfg.label.toLowerCase()} jobs.`, [
     ['Remote, hybrid and on-site roles.'],
-  ])
+  ], total)
 
   return {
     title,
     description,
+    keywords: keywordsFor('category', { category: cfg.label }),
     alternates: { canonical },
     robots: shouldIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: { images: defaultOgImages(),

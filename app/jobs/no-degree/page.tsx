@@ -7,6 +7,7 @@
 // description names no degree, or names one and accepts equivalent experience.
 
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { memoAsync } from '../../../lib/cache/memo'
 import { loadDegreeRequiredJobIds } from '../../../lib/jobs/degreeRequirement'
@@ -16,13 +17,13 @@ import { rankTopRolePages } from '../../../lib/roles/topRolePages'
 import JobList from '../../components/JobList'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
 import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
+import { buildDescription, buildListingTitle, freshnessClosing } from '../../../lib/seo/metaText'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 
 export const revalidate = 600
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
-const TITLE = 'High-Paying Jobs Without a Degree ($100k+) | Six Figure Jobs'
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -97,19 +98,25 @@ export async function generateMetadata({
     void error
   }
 
-  const description = `${open > 0 ? `${open.toLocaleString('en-US')} ` : ''}six-figure jobs whose posting doesn't ask for a college degree or accepts equivalent experience. Salary shown on every listing.`
+  const title = buildListingTitle({ topic: 'High-Paying Jobs Without a Degree', qualifier: '($100k+)' })
+  const description = buildDescription(
+    "Six-figure jobs whose posting doesn't ask for a college degree or accepts equivalent experience.",
+    [['Salary shown on every listing.']],
+    freshnessClosing(open),
+  )
   const canonical = page > 1 ? `${SITE_URL}/jobs/no-degree?page=${page}` : `${SITE_URL}/jobs/no-degree`
 
   // Indexable when the phase allows it (it is listed in ALWAYS_INDEXABLE_HUBS) and the list is not empty.
   const allowIndex = isPhaseIndexable({ pathname: '/jobs/no-degree' }) && open > 0
 
   return {
-    title: TITLE,
+    title,
     description,
+    keywords: keywordsFor('noDegree'),
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: { images: defaultOgImages(), title: TITLE, description, url: canonical, siteName: SITE_NAME, type: 'website' },
-    twitter: { card: 'summary_large_image', title: TITLE, description },
+    openGraph: { images: defaultOgImages(), title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
+    twitter: { card: 'summary_large_image', title, description },
   }
 }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { redirect, unstable_rethrow } from 'next/navigation'
 import { InfiniteJobsList } from './_components/InfiniteJobsList'
@@ -131,12 +132,13 @@ export async function generateMetadata({
       logRuntimeFallback('jobs.page.metadata', error)
     }
   }
-  const title = buildJobsHubTitle(total, pageSuffix)
+  const title = buildJobsHubTitle(pageSuffix)
   const description = buildJobsHubDescription(total)
 
   return {
     title,
     description,
+    keywords: keywordsFor('jobsHub'),
     alternates: {
       canonical,
     },

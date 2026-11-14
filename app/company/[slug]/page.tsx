@@ -31,6 +31,7 @@ import {
 import { CompanyJobsMore } from '@/components/companies/CompanyJobsMore'
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
+import { roleLabelFor } from '../../../lib/roles/relatedRoles'
 
 export const revalidate = 3600
 
@@ -97,7 +98,7 @@ export async function generateMetadata({
         publishingDecision.ready &&
         publishingDecision.unlocked
 
-      const baseTitle = buildCompanyPageTitle(company.name, jobCount)
+      const baseTitle = buildCompanyPageTitle(company.name)
       // Pages 2+ are noindex but still get a distinct title
       const title = pageNumber > 1 ? `${baseTitle} (page ${pageNumber})` : baseTitle
       const stats = buildCompanySeoStats(jobs)
@@ -514,14 +515,6 @@ function cleanUrl(url: string): string {
   return `https://${s}`
 }
 
-function toTitleCaseSlug(slug: string): string {
-  return slug
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
-}
-
 function asAnnualNumber(value: unknown): number | null {
   if (value == null) return null
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -672,7 +665,7 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
     const maxMedian = sortedMax.length > 0 ? sortedMax[Math.floor(sortedMax.length / 2)] : null
     return {
       ...role,
-      label: toTitleCaseSlug(role.key),
+      label: roleLabelFor(role.key),
       salary:
         minMedian != null || maxMedian != null
           ? {

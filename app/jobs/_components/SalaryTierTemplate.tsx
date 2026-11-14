@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import {
   Faq,
   JobRows,
@@ -121,13 +122,14 @@ export function buildSalaryTierMetadata(
   options?: { canonicalPath?: string },
 ): Metadata {
   const tier = SALARY_TIERS[tierId]
-  const title = buildSalaryTierTitle(tier.rangeLabel, total)
+  const title = buildSalaryTierTitle(tier.rangeLabel)
   const description = buildSalaryTierDescription(tier.rangeLabel, total)
 
   const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${tierId}`
   return {
     title,
     description,
+    keywords: keywordsFor('salaryTier', { amount: tier.rangeLabel }),
     alternates: { canonical },
     openGraph: {
       title,

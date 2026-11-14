@@ -16,6 +16,7 @@ import { formatSalaryBandLabel } from '../../../../lib/utils/salaryLabels'
 import { formatNumberCompact } from '../../../../lib/utils/number'
 import type { Job } from '@prisma/client'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../../lib/seo/site'
+import { countryFlag, fitTitle, titleYearTag } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { countryCodeToSlug, countrySlugToCode } from '../../../../lib/seo/countrySlug'
 import { isCanonicalSlug } from '../../../../lib/roles/canonicalSlugs'
@@ -228,7 +229,15 @@ export async function generateMetadata({
     bandSlug && BAND_MAP[bandSlug] ? BAND_MAP[bandSlug] : 100_000
   const bandLabel = formatSalaryBandLabel(minAnnual, countryCode)
 
-  const title = `${bandLabel} ${roleName} salary in ${locationLabel} | ${SITE_NAME}`
+  // "🇬🇧 Software Engineer Salary in London, United Kingdom ($100k+)": the search ("<role> salary in <place>") first, the band after.
+  const flag = countryFlag(countryCode)
+  const flagLead = flag ? `${flag} ` : ''
+  const title = fitTitle([
+    `${flagLead}${roleName} Salary in ${locationLabel} (${bandLabel}) ${titleYearTag()} | ${SITE_NAME}`,
+    `${flagLead}${roleName} Salary in ${locationLabel} (${bandLabel}) ${titleYearTag()}`,
+    `${flagLead}${roleName} Salary in ${locationLabel} (${bandLabel})`,
+    `${flagLead}${roleName} Salary in ${locationLabel}`,
+  ])
   const canonicalBase = `${SITE_URL}/salary/${roleSlug}/${normalizedLoc.canonicalSegments.join('/')}`
   const canonical = `${canonicalBase}${bandSlug ? `?band=${bandSlug}` : ''}`
 

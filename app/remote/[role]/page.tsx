@@ -2,6 +2,7 @@
 export const revalidate = 3600
 
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { remoteRegionDef } from '../../../lib/jobs/remoteRegions'
 import { notFound, permanentRedirect } from 'next/navigation'
@@ -19,7 +20,7 @@ import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime
 import JobList from '../../components/JobList'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams, notFoundPastLastPage } from '../../../lib/seo/listingSearchParams'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
-import { buildListingDescription, countPrefix, fitTitle } from '../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle } from '../../../lib/seo/metaText'
 import { isRemoteRolePageIndexable } from '../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
 
@@ -276,19 +277,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         isRemoteRolePageIndexable(jobCount) &&
         isPhaseIndexable({ roleSlug, pathname: `/remote/${roleSlug}` })
 
-      // "N Remote Role Jobs Paying $100k+", the same shape as /jobs/<role>; long role names drop the brand.
-      const title = fitTitle([
-        `${jobCount.toLocaleString()} Remote ${roleName} Jobs Paying $100k+ | ${SITE_NAME}`,
-        `${jobCount.toLocaleString()} Remote ${roleName} Jobs Paying $100k+`,
-        `${jobCount.toLocaleString()} Remote ${roleName} Jobs`,
-      ])
-      const description = buildListingDescription(`${countPrefix(jobCount)}remote ${roleName} jobs paying $100k+.`, [
+      // "Remote Role Jobs Paying $100k+ – N Open Roles", the same shape as /jobs/<role>; long role names drop the brand.
+      const title = buildListingTitle({ topic: `Remote ${roleName} Jobs`, qualifier: 'Paying $100k+' })
+      const description = buildListingDescription(`Remote ${roleName} jobs paying $100k+.`, [
         ['Verified six-figure salaries at top companies.'],
-      ])
+      ], jobCount)
 
       return {
         title,
         description,
+        keywords: keywordsFor('remoteRole', { role: roleName }),
         alternates: {
           canonical: `${SITE_URL}${canonicalPath}`,
         },

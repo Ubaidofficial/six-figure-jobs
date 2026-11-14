@@ -11,7 +11,7 @@ import {
 import { buildJobSlugHref } from '../../../../../lib/jobs/jobSlug'
 import JobList from '../../../../components/JobList'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../../../lib/seo/site'
-import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle, countryFlag } from '../../../../../lib/seo/metaText'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
 
@@ -187,16 +187,16 @@ export async function generateMetadata({
   const totalJobs = result.total
   const title = buildListingTitle({
     topic: `Remote ${roleName} Jobs in ${countryCode}`,
-    count: totalJobs,
     qualifier: 'Paying $100k+',
+    flag: countryFlag(countryCode),
   })
   const canonicalUrl = `${SITE_URL}${canonicalPathname}`
 
   return {
     title,
-    description: buildListingDescription(`${countPrefix(totalJobs)}remote ${roleName} jobs in ${countryCode} paying $100k+.`, [
+    description: buildListingDescription(`Remote ${roleName} jobs in ${countryCode} paying $100k+.`, [
       ['Roles at top companies, open to remote workers.'],
-    ]),
+    ], totalJobs),
     alternates: {
       canonical: canonicalUrl,
     },

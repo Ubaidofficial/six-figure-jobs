@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { permanentRedirect } from 'next/navigation'
 import { CITY_TARGETS } from '../../../../lib/seo/pseoTargets'
@@ -12,7 +13,7 @@ import { formatCurrencyShort, getThresholdLabelForCountry } from '../../../../li
 import { isCityPageIndexable } from '../../../../lib/seo/indexabilityGates'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
-import { buildCityTitle, buildListingDescription, countPrefix } from '../../../../lib/seo/metaText'
+import { buildCityTitle, buildListingDescription } from '../../../../lib/seo/metaText'
 import { Faq, JobRows, ListingHeader, ListingLayout, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
@@ -61,16 +62,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       pathname: `/jobs/city/${resolved.slug}`,
     }) ||
       isPseoHubUnlocked(total, `/jobs/city/${resolved.slug}`))
-  const title = buildCityTitle(resolved.label, salaryLabel, total)
+  const title = buildCityTitle(resolved.label, salaryLabel, resolved.countryCode)
   const description = buildListingDescription(
-    `${countPrefix(total)}${salaryLabel} jobs in ${resolved.label}.`,
-    [['Remote, hybrid and on-site roles.']],
-  )
+    `${salaryLabel} jobs in ${resolved.label}.`,
+    [['Remote, hybrid and on-site roles.']], total)
   const canonical = `${SITE_URL}/jobs/city/${resolved.slug}`
 
   return {
     title,
     description,
+    keywords: keywordsFor('city', { city: resolved.label }),
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: { images: defaultOgImages(),
@@ -175,8 +176,8 @@ export default async function CityPage({ params }: { params: Params }) {
           { label: 'Jobs', href: '/jobs/100k-plus' },
           { label: resolved.label },
         ]}
-        accent={salaryLabel}
-        title={`jobs in ${resolved.label} (${total.toLocaleString()})`}
+        accent="High-paying"
+        title={`jobs in ${resolved.label} (${salaryLabel})`}
         summary={
           <>
             <strong>{total.toLocaleString()}</strong> {total === 1 ? 'role' : 'roles'} in {resolved.label} paying{' '}

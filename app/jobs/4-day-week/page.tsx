@@ -4,6 +4,7 @@
 // four-day weeks and are not listed.
 
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 
 import { memoAsync } from '../../../lib/cache/memo'
@@ -17,6 +18,7 @@ import { buildWhere, queryJobs, type JobWithCompany } from '../../../lib/jobs/qu
 import { prisma } from '../../../lib/prisma'
 import { rankTopRolePages } from '../../../lib/roles/topRolePages'
 import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
+import { buildDescription, buildListingTitle, freshnessClosing } from '../../../lib/seo/metaText'
 import { buildItemListJsonLd } from '../../../lib/seo/itemListJsonLd'
 import { SITE_NAME, defaultOgImages, getSiteUrl } from '../../../lib/seo/site'
 import JobList from '../../components/JobList'
@@ -26,7 +28,6 @@ export const revalidate = 600
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
-const TITLE = '4-Day Work Week Jobs Paying $100k+ | Six Figure Jobs'
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -89,7 +90,12 @@ export async function generateMetadata({ searchParams }: { searchParams?: Promis
     void error
   }
 
-  const description = `${open > 0 ? `${open.toLocaleString('en-US')} ` : ''}four-day work week jobs paying $100k+: reduced hours at full pay, with the salary on every listing. Remote and on-site roles.`
+  const title = buildListingTitle({ topic: '4-Day Work Week Jobs', qualifier: 'Paying $100k+' })
+  const description = buildDescription(
+    'Four-day work week jobs paying $100k+: reduced hours at full pay, with the salary on every listing.',
+    [['Remote and on-site roles.']],
+    freshnessClosing(open),
+  )
   const canonical = page > 1 ? `${SITE_URL}${FOUR_DAY_WEEK_PATH}?page=${page}` : `${SITE_URL}${FOUR_DAY_WEEK_PATH}`
 
   // Indexable when the phase allows it (ALWAYS_INDEXABLE_HUBS), it has enough jobs not to be thin, and it is page 1.
@@ -97,12 +103,13 @@ export async function generateMetadata({ searchParams }: { searchParams?: Promis
     page === 1 && isPhaseIndexable({ pathname: FOUR_DAY_WEEK_PATH }) && open >= FOUR_DAY_WEEK_MIN_JOBS_TO_INDEX
 
   return {
-    title: TITLE,
+    title,
     description,
+    keywords: keywordsFor('fourDayWeek'),
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: { images: defaultOgImages(), title: TITLE, description, url: canonical, siteName: SITE_NAME, type: 'website' },
-    twitter: { card: 'summary_large_image', title: TITLE, description },
+    openGraph: { images: defaultOgImages(), title, description, url: canonical, siteName: SITE_NAME, type: 'website' },
+    twitter: { card: 'summary_large_image', title, description },
   }
 }
 
