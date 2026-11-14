@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     topic: `${roleName} Jobs in ${flagged(cityInfo.label, cityInfo.countryCode)}`,
     qualifier: 'Paying $100k+',
   })
-  const description = buildListingDescription(`$100k+ ${roleName} jobs in ${cityInfo.label}.`, [
+  const description = buildListingDescription(`${roleName} jobs in ${cityInfo.label} paying $100k+.`, [
     ['Remote, hybrid and on-site roles.'],
   ], total)
   const canonical = `${SITE_URL}/jobs/${role}/city/${cityInfo.slug}`

@@ -92,7 +92,7 @@ export async function generateMetadata({ searchParams }: { searchParams?: Promis
 
   const title = buildListingTitle({ topic: '4-Day Work Week Jobs', qualifier: 'Paying $100k+' })
   const description = buildDescription(
-    'Four-day work week jobs paying $100k+: reduced hours at full pay, with the salary on every listing.',
+    '4-day work week jobs paying $100k+: reduced hours at full pay, salary on every listing.',
     [['Remote and on-site roles.']],
     freshnessClosing(open),
   )

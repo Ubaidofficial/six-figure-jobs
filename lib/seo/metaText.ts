@@ -15,8 +15,22 @@ export const TITLE_MAX = 60
 export const DESCRIPTION_MIN = 130
 export const DESCRIPTION_MAX = 155
 
-/** Closing phrase for listing descriptions. Only used on pages whose listings are refreshed by the daily ingest. */
-export const FRESHNESS = `Updated daily on ${SITE_NAME}.`
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "Nov 2026", in UTC. */
+export function monthYear(now: Date = new Date()): string {
+  return `${MONTHS[now.getUTCMonth()]} ${now.getUTCFullYear()}`
+}
+
+/**
+ * Closing line of a listing description: freshness with the month and year, then what the page counts, last
+ * ("Updated daily on Six Figure Jobs (Nov 2026): 897 open roles."). Only for pages whose listings the daily ingest
+ * refreshes. `detail` ends in its own full stop.
+ */
+export function updatedLine(detail?: string): string {
+  const base = `Updated daily on ${SITE_NAME} (${monthYear()})`
+  return detail ? `${base}: ${detail}` : `${base}.`
+}
 
 /** Cut `text` to at most `max` characters at a word boundary and add an ellipsis. A single over-long word is hard-cut. */
 export function truncateAtWord(text: string, max: number): string {
@@ -46,8 +60,6 @@ export function countryFlag(code: string | null | undefined): string {
   return String.fromCodePoint(...[...c].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65))
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 /**
  * The bracketed month and year that close a listing title ("[Nov 2026]"): a freshness cue for the reader, true because
  * the listings are refreshed daily. It is not a keyword (US searches for "software engineer salary 2026" are about 20
@@ -56,7 +68,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
  * place to change it.
  */
 export function titleDateTag(now: Date = new Date()): string {
-  return `[${MONTHS[now.getUTCMonth()]} ${now.getUTCFullYear()}]`
+  return `[${monthYear(now)}]`
 }
 
 /** A place name with its flag emoji before it ("🇬🇧 London"); the bare name when the country code is not known. */
@@ -89,7 +101,7 @@ export function buildListingTitle(parts: { topic: string; qualifier?: string; br
 export function buildDescription(
   lead: string,
   slots: Array<Array<string | null | undefined>>,
-  closing: string = FRESHNESS,
+  closing: string = updatedLine(),
   max: number = DESCRIPTION_MAX,
 ): string {
   const chosen: string[] = []
@@ -112,9 +124,9 @@ export const SALARY_SHOWN: string[] = [
   'Salary shown upfront.',
 ]
 
-/** Closing line of a listing description: freshness, then the live job count last ("Updated daily on X: 897 open roles."). */
+/** `updatedLine` with the live job count last, or the bare freshness line when there is none. */
 export function freshnessClosing(count?: number | null): string {
-  return count && count > 0 ? `Updated daily on ${SITE_NAME}: ${count.toLocaleString()} open roles.` : FRESHNESS
+  return count && count > 0 ? updatedLine(`${count.toLocaleString()} open roles.`) : updatedLine()
 }
 
 /**
@@ -142,7 +154,7 @@ export function buildHomeDescription(totalJobs: number, totalCompanies: number):
         'Salary shown upfront.',
       ],
     ],
-    `Updated daily on ${SITE_NAME}: ${totalJobs.toLocaleString()}+ jobs at ${totalCompanies.toLocaleString()}+ companies.`,
+    updatedLine(`${totalJobs.toLocaleString()}+ jobs at ${totalCompanies.toLocaleString()}+ companies.`),
   )
 }
 
@@ -153,7 +165,7 @@ export function buildRoleDescription(roleTitle: string, total: number, avgUsd: n
   }
   const avg = avgUsd ? Math.round(avgUsd / 1000) : null
   return buildDescription(
-    `${roleTitle} jobs paying $100k+${avg ? `, ~$${avg}k average USD salary where listed` : ''}.`,
+    `High-paying ${roleTitle} jobs ($100k+)${avg ? `, ~$${avg}k average salary` : ''}.`,
     [SALARY_SHOWN],
     freshnessClosing(total),
   )
@@ -186,7 +198,7 @@ export function buildCompanyPageDescription(
   const rolesShort = roles.length ? `Roles: ${roles.slice(0, 2).join(', ')}.` : null
   const pay = highestSalaryLabel ? `Highest listed pay ${highestSalaryLabel}.` : null
   return buildDescription(
-    `$100k+ jobs at ${name}.`,
+    `${name} jobs paying $100k+.`,
     [[pay], [rolesText, rolesShort], ['Salary shown upfront, with direct links to apply.', 'Salary shown upfront.']],
     freshnessClosing(jobCount),
   )
@@ -216,10 +228,9 @@ export function buildCompaniesIndexDescription(
       ['Six-figure roles at top startups and high-growth companies, salary shown upfront.'],
     ])
   }
-  const outOf =
-    totalCompaniesHiring > totalCompanies ? `, out of ${totalCompaniesHiring.toLocaleString()} companies hiring` : ''
+  const of = totalCompaniesHiring > totalCompanies ? ` of ${totalCompaniesHiring.toLocaleString()}` : ''
   return buildDescription(
-    `Companies with ${minJobs}+ open $100k+ jobs${outOf}.`,
+    `Top companies hiring $100k+ jobs, with ${minJobs}+ open roles each.`,
     [
       [
         'Six-figure roles at top startups and high-growth companies, salary shown upfront.',
@@ -227,7 +238,7 @@ export function buildCompaniesIndexDescription(
         'Salary shown upfront.',
       ],
     ],
-    `Updated daily on ${SITE_NAME}: ${totalCompanies.toLocaleString()} companies, ${totalEligibleJobs.toLocaleString()} jobs.`,
+    updatedLine(`${totalCompanies.toLocaleString()}${of} companies, ${totalEligibleJobs.toLocaleString()} jobs.`),
   )
 }
 
@@ -246,8 +257,8 @@ export function buildJobsHubTitle(pageSuffix = ''): string {
 /** /jobs hub description with the live count. Pass the same total the page shows, so the two never disagree. */
 export function buildJobsHubDescription(total: number | null): string {
   return buildListingDescription(
-    'High-paying $100k+ jobs open now.',
-    [['Filter by role, country, remote work or seniority.', 'Filter by role, country or seniority.']],
+    'High-paying six-figure jobs paying $100k+, open now.',
+    [['Filter by role, country or seniority.']],
     total,
   )
 }
@@ -281,12 +292,17 @@ export function buildCityTitle(cityLabel: string, salaryLabel: string, countryCo
 /** Countries whose name takes "the" in running text ("jobs in the United States", not "jobs in United States"). */
 const COUNTRIES_WITH_THE = new Set(['United States', 'United Kingdom', 'Netherlands', 'United Arab Emirates', 'Philippines'])
 
+/** How people search for these two ("high paying jobs in us" is about 8.1k US searches a month, OpenSEO 2026-11-14). */
+const COUNTRY_SHORT: Record<string, string> = { 'United States': 'US', 'United Kingdom': 'UK' }
+
 /**
- * "the United States" for the countries that take "the", else the label as is. For "jobs in ${...}" phrases; with a
- * country code the flag goes right before the name ("the 🇺🇸 United States", "🇨🇦 Canada").
+ * "the US" / "the UK" for the two countries searched by their short name, "the Netherlands" for the others that take
+ * "the", else the label as is. For "jobs in ${...}" phrases; with a country code the flag goes right before the name
+ * ("the 🇺🇸 US", "🇨🇦 Canada"). `short: false` keeps the full name ("the United States") for body text.
  */
-export function inCountry(countryLabel: string, countryCode?: string | null): string {
-  const name = flagged(countryLabel, countryCode)
+export function inCountry(countryLabel: string, countryCode?: string | null, short = true): string {
+  const label = short ? (COUNTRY_SHORT[countryLabel] ?? countryLabel) : countryLabel
+  const name = flagged(label, countryCode)
   return COUNTRIES_WITH_THE.has(countryLabel) ? `the ${name}` : name
 }
 

@@ -100,7 +100,7 @@ export async function generateMetadata({
 
   const title = buildListingTitle({ topic: 'High-Paying Jobs Without a Degree', qualifier: '($100k+)' })
   const description = buildDescription(
-    "Six-figure jobs whose posting doesn't ask for a college degree or accepts equivalent experience.",
+    "High-paying jobs without a degree: six-figure roles that don't require a college degree.",
     [['Salary shown on every listing.']],
     freshnessClosing(open),
   )
