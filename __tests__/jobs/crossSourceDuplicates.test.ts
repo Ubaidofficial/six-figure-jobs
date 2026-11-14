@@ -1,3 +1,4 @@
+import { normalizeTitle, normalizeTitleForMatch } from '../../lib/ingest/dedupeHelpers'
 import { atsTenantKey, duplicateJobIdsToExpire, type DuplicateCandidate } from '../../lib/jobs/crossSourceDuplicates'
 
 const job = (over: Partial<DuplicateCandidate>): DuplicateCandidate => ({
@@ -18,6 +19,14 @@ describe('duplicateJobIdsToExpire', () => {
     const ats = job({ id: 'ats', locationRaw: 'London', applyUrl: 'https://jobs.ashbyhq.com/iwoca.co.uk/e00f2ee1' })
     const board = job({ id: 'board', locationRaw: 'London, UK', applyUrl: 'https://www.adzuna.co.uk/jobs/details/5957977760', postedAt: new Date('2026-11-08T00:00:00Z') })
     expect(duplicateJobIdsToExpire([board, ats])).toEqual(['board'])
+  })
+
+  it('treats a title with a gender note, "(m/f/d)", and the same title without one as one opening', () => {
+    const plain = job({ id: 'plain', title: 'Senior Backend Engineer', locationRaw: 'Berlin', applyUrl: 'https://jobs.lever.co/acme/1' })
+    const noted = job({ id: 'noted', title: 'Senior Backend Engineer (m/f/d)', locationRaw: 'Berlin', applyUrl: 'https://www.adzuna.de/details/2', postedAt: new Date('2026-11-08T00:00:00Z') })
+    expect(duplicateJobIdsToExpire([plain, noted])).toEqual(['noted'])
+    const wmx = job({ id: 'wmx', title: 'Senior Backend Engineer [w/m/x]', locationRaw: 'Berlin', applyUrl: 'https://www.adzuna.de/details/3' })
+    expect(duplicateJobIdsToExpire([plain, wmx])).toEqual(['wmx'])
   })
 
   it('keeps the newest when both copies are on the same kind of site', () => {
@@ -78,5 +87,18 @@ describe('atsTenantKey', () => {
     expect(atsTenantKey('https://careers.example.com/jobs/1')).toBeNull()
     expect(atsTenantKey('not a url')).toBeNull()
     expect(atsTenantKey(null)).toBeNull()
+  })
+})
+
+describe('normalizeTitleForMatch', () => {
+  it('drops gender notes but nothing that defines the role', () => {
+    expect(normalizeTitleForMatch('Product Manager (m/f/d)')).toBe('product manager')
+    expect(normalizeTitleForMatch('Product Manager (all genders)')).toBe('product manager')
+    expect(normalizeTitleForMatch('Product Manager m/w/d')).toBe('product manager')
+    expect(normalizeTitleForMatch('Senior Product Manager (I/O Platform)')).toBe('senior product manager i o platform')
+  })
+
+  it('leaves the stored dedupe key alone', () => {
+    expect(normalizeTitle('Product Manager (m/f/d)')).toBe('product manager m f d')
   })
 })
