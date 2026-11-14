@@ -25,6 +25,12 @@ describe('planProfileFill', () => {
     expect(plan).toEqual({})
   })
 
+  it('does not offer a careers-site line as a tagline to restate', () => {
+    expect(planProfileFill(empty, { description: 'Join the team putting AI to work for people. Explore ServiceNow careers.' }, undefined).taglineForDescription).toBeUndefined()
+    expect(planProfileFill(empty, { description: 'We are hiring! Work with us to build the future of payments.' }, undefined).taglineForDescription).toBeUndefined()
+    expect(planProfileFill(empty, { description: 'Stripe is a financial services platform that helps businesses accept payments.' }, undefined).taglineForDescription).toBeDefined()
+  })
+
   it('rejects a year outside 1800..now and a non-company LinkedIn link', () => {
     expect(planProfileFill(empty, { foundingYear: 1500 }, { foundingYear: 3000 }).foundedYear).toBeUndefined()
     expect(planProfileFill(empty, { linkedinUrl: 'https://www.linkedin.com/in/someone' }, undefined).linkedinUrl).toBeUndefined()
@@ -58,6 +64,7 @@ describe('validateCompanyDescription', () => {
     expect(validateCompanyDescription('Run payments and offer financial products in one platform.', 'Adyen', 'Run payments, manage your data, and offer financial products in one platform. Adyen is purpose-built.').ok).toBe(false)
     expect(validateCompanyDescription('Affirm provides flexible payment options with longer plans and no fees.', 'Affirm', 'Buy now pay later without the fees. Flexible payment options with longer plans, lower payments, and no fees.').ok).toBe(false)
     expect(validateCompanyDescription('Robinhood provides commission-free investing and advanced trading tools.', 'Robinhood', 'Trade stocks on Robinhood with commission-free investing & advanced trading tools.').ok).toBe(false)
+    expect(validateCompanyDescription('Rocket Lab delivers reliable launch services, spacecraft, and satellite components.', 'Rocket Lab', 'The end-to-end space company delivering reliable launch services, spacecraft, satellite components.').ok).toBe(false)
     expect(validateCompanyDescription('Scale AI delivers proven data, evaluations, and outcomes to AI labs.', 'Scale AI', 'Scale delivers proven data, evaluations, and outcomes to AI labs, governments, and the Fortune 500.').ok).toBe(false)
     const adCopy = 'Legora is the collaborative AI powering lawyers to review and research faster, draft smarter, and advise with precision.'
     expect(validateCompanyDescription(adCopy, 'Legora', `${adCopy} Legora adapts to your ways of working.`).ok).toBe(false)
