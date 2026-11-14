@@ -39,6 +39,10 @@ export function homepageOf(website: string | null | undefined): string | null {
 
 const validYear = (y: unknown): y is number => typeof y === 'number' && Number.isInteger(y) && y >= 1800 && y <= new Date().getUTCFullYear()
 
+// A careers site's meta line ("Join the team putting AI to work for people. Explore ServiceNow careers.") is recruiting copy: it
+// does not say what the company does, and a model asked to restate it invents a vague sentence.
+const RECRUITING = /\b(?:join (?:the|our|us)|careers?|we(?:'|’)re hiring|we are hiring|open positions?|openings|work with us|apply now)\b/i
+
 export function planProfileFill(now: CompanyProfileNow, site: SiteProfile | null, wiki: WikidataProfile | undefined): ProfilePlan {
   const plan: ProfilePlan = {}
   if (!now.foundedYear) {
@@ -48,7 +52,7 @@ export function planProfileFill(now: CompanyProfileNow, site: SiteProfile | null
   if (!now.linkedinUrl && site?.linkedinUrl && /^https:\/\/(?:[a-z]+\.)?linkedin\.com\/company\/[\w%.-]+\/?$/i.test(site.linkedinUrl)) {
     plan.linkedinUrl = { value: site.linkedinUrl, source: 'site' }
   }
-  if (!now.description?.trim() && site?.description) plan.taglineForDescription = site.description
+  if (!now.description?.trim() && site?.description && !RECRUITING.test(site.description)) plan.taglineForDescription = site.description
   return plan
 }
 
@@ -67,7 +71,7 @@ export function buildCompanyDescriptionPrompt(name: string, tagline: string): st
   ].join('\n')
 }
 
-const PROMO = /\b(?:leading|best|world[- ]class|innovative|cutting[- ]edge|revolutionary|#1|number one|award[- ]winning|unmatched|proven|seamless(?:ly)?|effortless(?:ly)?|smarter|faster|powerful|trusted)\b/i
+const PROMO = /\b(?:leading|best|world[- ]class|innovative|cutting[- ]edge|revolutionary|#1|number one|award[- ]winning|unmatched|reliable|reliably|proven|seamless(?:ly)?|effortless(?:ly)?|smarter|faster|powerful|trusted)\b/i
 // Prices and offers ("no fees", "commission-free", "$0") are an advertisement's claim, not a fact about the company, and may not hold.
 const OFFER = /\b(?:free|no fees?|fee[- ]free|commission[- ]free|zero fees?|\$0|lowest|cheapest)\b/i
 const normalize = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
