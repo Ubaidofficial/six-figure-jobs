@@ -151,6 +151,10 @@ export function Footer() {
             <Link className={styles.link} href="/sitemap.xml">Sitemap</Link>
             <span className={styles.dot} aria-hidden="true">•</span>
             <a className={styles.link} href="https://logo.dev" target="_blank" rel="noopener">Logos provided by Logo.dev</a>
+            <span className={styles.dot} aria-hidden="true">•</span>
+            <a className={styles.link} href="https://newtools.site/item/six-figure-jobs" target="_blank" rel="noopener noreferrer">
+              Listed on NewTools
+            </a>
           </div>
           <div className={styles.badges}>
             <a className={styles.badge} href="https://webspot.app" target="_blank" rel="noopener noreferrer">
