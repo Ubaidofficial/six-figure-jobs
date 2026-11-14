@@ -58,7 +58,7 @@ export function planProfileFill(now: CompanyProfileNow, site: SiteProfile | null
 
 export function buildCompanyDescriptionPrompt(name: string, tagline: string): string {
   return [
-    `Restate what the company "${name}" does in one or two plain, factual sentences, using ONLY the text below.`,
+    `Restate what the company "${name}" does in ONE plain, factual sentence, using ONLY the text below.`,
     'RULES:',
     '- Use only facts stated in the text. Do not add any number, place, product, customer or claim that is not in it.',
     '- No marketing language ("leading", "best", "world-class", "innovative"), no exclamation marks, no "we", "our" or "you".',
@@ -93,7 +93,8 @@ export function validateCompanyDescription(answer: unknown, name: string, taglin
   if (firstWord && firstWord.length >= 3 && !text.toLowerCase().includes(firstWord)) return { ok: false, reason: 'does not name the company' }
   // A sentence copied word for word from the tagline is the company's advertising, not a description.
   if (normalize(tagline).includes(normalize(text))) return { ok: false, reason: 'copied from the tagline' }
-  if ((text.match(/[.!?](?:\s|$)/g) ?? []).length > 2) return { ok: false, reason: 'more than two sentences' }
+  // One sentence: a second one tends to be the tagline's ad line ("Simplify ETL, data warehousing, governance and AI on the Data + AI Platform.") with no company name.
+  if ((text.match(/[.!?](?:\s|$)/g) ?? []).length > 1) return { ok: false, reason: 'more than one sentence' }
   const source = `${name} ${tagline}`.toLowerCase()
   const invented = claims(text).filter((w) => !source.includes(w.toLowerCase().replace(/[.,;:]+$/, '')))
   if (invented.length) return { ok: false, reason: `not in the tagline: ${invented.slice(0, 4).join(', ')}` }

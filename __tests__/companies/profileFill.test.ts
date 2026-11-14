@@ -72,6 +72,12 @@ describe('validateCompanyDescription', () => {
     expect(validateCompanyDescription(copied, 'Legora', `${copied} Legora adapts to your ways of working.`)).toEqual({ ok: false, reason: 'copied from the tagline' })
     expect(validateCompanyDescription('Datadog provides cloud monitoring as a service solution.', 'Datadog', 'See metrics from all of your apps, tools & services in one place with Datadog’s cloud monitoring as a service solution. Try it for free.').ok).toBe(true)
   })
+  it('rejects a second sentence: the tagline\'s ad line with no company name', () => {
+    const tagline = 'Databricks offers a unified platform for data, analytics and AI. Build better AI with a data-centric approach. Simplify ETL, data warehousing, governance and AI on the Data + AI Platform.'
+    const r = validateCompanyDescription('Databricks offers a unified platform for data, analytics and AI. Simplify ETL, data warehousing, governance and AI on the Data + AI Platform.', 'Databricks', tagline)
+    expect(r).toEqual({ ok: false, reason: 'more than one sentence' })
+    expect(validateCompanyDescription('Databricks provides a unified platform for data, analytics and AI.', 'Databricks', tagline).ok).toBe(true)
+  })
   it('builds a prompt that carries the rules and the text', () => {
     const p = buildCompanyDescriptionPrompt('Prefect', tagline)
     expect(p).toContain('ONLY the text below')
