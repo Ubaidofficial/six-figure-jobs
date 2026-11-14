@@ -6,6 +6,7 @@ import { BadgeCheck, ExternalLink, Globe } from 'lucide-react'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { CountryFlag } from '@/components/ui/CountryFlag'
+import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -14,6 +15,8 @@ import { groupDescription, type DescriptionSection } from '@/lib/jobs/descriptio
 import type { ApplySurface } from '@/lib/analytics/applyClick'
 import { JOB_LANGUAGE_NAMES, type JobLanguage } from '@/lib/jobs/language'
 import { boardNameFor } from '@/lib/scrapers/utils/boardHosts'
+import { resolveSkillSlug } from '@/lib/jobs/skillSlug'
+import { skillLabel } from '@/lib/jobs/skillLabel'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 import type { JobLocationView } from '@/lib/location/jobLocation'
 
@@ -110,9 +113,9 @@ export function TranslateNotice({ language, pageUrl }: { language: JobLanguage; 
   )
 }
 
-export function JobSection({ title, children }: { title: string; children: ReactNode }) {
+export function JobSection({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
   return (
-    <section className="space-y-3">
+    <section id={id} className="scroll-mt-32 space-y-3">
       <h2 className={styles.sectionTitle}>{title}</h2>
       {children}
     </section>
@@ -219,6 +222,28 @@ export function DescriptionApply({ applyHref, companyName, jobId }: { applyHref:
       <ApplyButton href={applyHref} label={applyLabel(applyHref)} jobId={jobId} surface="description-end" />
       <p>{applyNote(applyHref, companyName)}</p>
     </div>
+  )
+}
+
+/** A skill badge that links to our page for that skill when there is one (the same rule the job cards use). */
+export function SkillChip({ skill, variant }: { skill: string; variant: 'required' | 'nice' }) {
+  const badge =
+    variant === 'required' ? (
+      <Badge variant="secondary" className="rounded-md px-2.5 py-1 font-medium">
+        {skillLabel(skill)}
+      </Badge>
+    ) : (
+      <Badge variant="outline" className="rounded-md px-2.5 py-1 font-normal">
+        {skillLabel(skill)}
+      </Badge>
+    )
+  const slug = resolveSkillSlug(skill)
+  return slug ? (
+    <NextLink href={`/jobs/skills/${slug}`} title={`Browse ${skillLabel(skill)} jobs`}>
+      {badge}
+    </NextLink>
+  ) : (
+    badge
   )
 }
 
