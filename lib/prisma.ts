@@ -14,11 +14,26 @@ function addUrlParam(url: string, key: string, value: string | undefined): strin
 }
 
 const isProductionRuntime = process.env.NODE_ENV === 'production'
-const preferDatabaseUrl = !isProductionRuntime || process.env.PRISMA_PREFER_DATABASE_URL === '1'
 
-const baseUrl = preferDatabaseUrl
-  ? process.env.DATABASE_URL || process.env.POSTGRES_PRISMA_URL || ''
-  : process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL || ''
+/**
+ * The database address to use. Production prefers POSTGRES_PRISMA_URL, development DATABASE_URL.
+ *
+ * While `next build` runs, BUILD_DATABASE_URL wins when set. The database lives on the same VPS as the app (Openship,
+ * since 2026-11-14) and the app reaches it at its private address, but Openship's builder is not on that network: with
+ * no database at build time, pages that fall back call `connection()` (lib/runtime/fallback.ts), which makes them
+ * render on every request instead of from the ISR cache (the homepage lost its cache that way). The build therefore
+ * reads through the database's public port, and the running app keeps the private address.
+ */
+export function pickDatabaseUrl(env: Record<string, string | undefined>): string {
+  const buildUrl = env.NEXT_PHASE === 'phase-production-build' ? env.BUILD_DATABASE_URL?.trim() : ''
+  if (buildUrl) return buildUrl
+  const preferDatabaseUrl = env.NODE_ENV !== 'production' || env.PRISMA_PREFER_DATABASE_URL === '1'
+  return preferDatabaseUrl
+    ? env.DATABASE_URL || env.POSTGRES_PRISMA_URL || ''
+    : env.POSTGRES_PRISMA_URL || env.DATABASE_URL || ''
+}
+
+const baseUrl = pickDatabaseUrl(process.env)
 
 const pooledUrl = addUrlParam(
   addUrlParam(
