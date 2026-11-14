@@ -46,24 +46,28 @@ export function countryFlag(code: string | null | undefined): string {
   return String.fromCodePoint(...[...c].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65))
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 /**
- * The bracketed year that closes a listing title ("[2026]"): a freshness cue for the reader. It is not a keyword
- * (US searches for "software engineer salary 2026" are about 20 a month, OpenSEO 2026-11-14), so it is the first
- * thing to change if Search Console shows it does not lift clicks. The one place to change it.
+ * The bracketed month and year that close a listing title ("[Nov 2026]"): a freshness cue for the reader, true because
+ * the listings are refreshed daily. It is not a keyword (US searches for "software engineer salary 2026" are about 20
+ * a month, OpenSEO 2026-11-14), so it is the first thing to change if Search Console shows it does not lift clicks. It
+ * is not "Today": Google recrawls a page every few days or weeks, so a day-level label would show out of date. The one
+ * place to change it.
  */
-export function titleYearTag(now: Date = new Date()): string {
-  return `[${now.getFullYear()}]`
+export function titleDateTag(now: Date = new Date()): string {
+  return `[${MONTHS[now.getUTCMonth()]} ${now.getUTCFullYear()}]`
 }
 
 /**
- * Topic-first title that ends with the year tag and the brand ("Python Jobs Paying $100k+ [2026] | Six Figure
+ * Topic-first title that ends with the date tag and the brand ("Python Jobs Paying $100k+ [Nov 2026] | Six Figure
  * Jobs"). A `flag` (countryFlag) goes first. A qualifier that starts with ":" attaches without a space. When it is
- * too long the brand drops first, then the qualifier ("Paying $100k+"), then the year tag.
+ * too long the brand drops first, then the qualifier ("Paying $100k+"), then the date tag.
  */
 export function buildListingTitle(parts: { topic: string; qualifier?: string; brand?: string; flag?: string }): string {
   const brand = parts.brand ?? SITE_NAME
   const flag = parts.flag ? `${parts.flag} ` : ''
-  const tag = ` ${titleYearTag()}`
+  const tag = ` ${titleDateTag()}`
   const joiner = parts.qualifier?.startsWith(':') ? '' : ' '
   const full = `${flag}${parts.topic}${parts.qualifier ? `${joiner}${parts.qualifier}` : ''}`
   const short = `${flag}${parts.topic}`
@@ -154,7 +158,7 @@ export function buildRoleDescription(roleTitle: string, total: number, avgUsd: n
  * long names fall back, never overflow.
  */
 export function buildCompanyPageTitle(name: string): string {
-  const tag = titleYearTag()
+  const tag = titleDateTag()
   return fitTitle([
     `${name} Jobs Paying $100k+ ${tag} | ${SITE_NAME}`,
     `${name} Jobs Paying $100k+ ${tag}`,
@@ -229,7 +233,7 @@ export function buildCompaniesIndexDescription(
 export function buildJobsHubTitle(pageSuffix = ''): string {
   return buildListingTitle({
     topic: 'Jobs Paying $100k+',
-    qualifier: `: Browse by Role, Country & Remote${pageSuffix}`,
+    qualifier: `: Browse by Role & Country${pageSuffix}`,
   })
 }
 
@@ -297,7 +301,7 @@ export function buildSkillTitle(skillLabel: string): string {
  */
 export function buildSalaryGuideTitle(roleName: string, bandLabel: string, medianUsd: number | null): string {
   const median = medianUsd ? `$${Math.round(medianUsd / 1000)}k Median` : null
-  const tag = titleYearTag()
+  const tag = titleDateTag()
   return fitTitle([
     ...(median
       ? [`${roleName} Salary: ${median} ${tag} | ${SITE_NAME}`, `${roleName} Salary: ${median} ${tag}`, `${roleName} Salary: ${median}`]
