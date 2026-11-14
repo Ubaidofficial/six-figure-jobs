@@ -48,6 +48,7 @@
     "scrape:wellfound": "tsx scripts/dailyScrapeV2.ts --mode=boards --source=wellfound",
     "scrape:otta": "tsx scripts/dailyScrapeV2.ts --mode=boards --source=otta",
     "scrape:builtin": "tsx scripts/dailyScrapeV2.ts --mode=boards --source=builtin",
+    "scrape:linkedin": "LINKEDIN_SCRAPER_ENABLED=1 BOARD_SCRAPE_TIMEOUT_MS=2400000 tsx scripts/dailyScrapeV2.ts --mode=boards --source=linkedin",
     "publish:pseo-batch": "tsx scripts/publish-pseo-batch.ts",
     "pseo:generate:playbook-batch": "tsx scripts/generate-playbook-batch.ts",
     "dashboard:pseo": "tsx scripts/monitoring-dashboard.ts",
