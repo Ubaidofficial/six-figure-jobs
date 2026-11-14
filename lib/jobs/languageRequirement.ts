@@ -64,7 +64,11 @@ const SOFTENER = new RegExp(
     'preferably',
     'desirable',
     'desired',
-    '\\basset\\b',
+    '\\bassets?\\b',
+    'priority (?:for|given)',
+    'extra points?',
+    'bonus points?',
+    'secondary language',
     'beneficial',
     'ideally',
     'appreciated',
@@ -115,8 +119,10 @@ export function findLanguageRequirements(
   }
 
   const title = String(posting.title ?? '').trim()
-  const titleSpeaking = title.match(new RegExp(`\\b(${otherNames.join('|')})[- ][Ss]peak(?:ing|er)s?\\b`))
-  if (titleSpeaking) add(titleSpeaking[1], title)
+  // "German-speaking", "Spanish / Portuguese Speaking": every language named in the list before "speaking".
+  const names = otherNames.join('|')
+  const titleSpeaking = title.match(new RegExp(`\\b((?:${names})(?:\\s*[/&,]\\s*(?:${names}))*)[- ][Ss]peak(?:ing|er)s?\\b`))
+  if (titleSpeaking) for (const name of titleSpeaking[1].match(new RegExp(`\\b(?:${names})\\b`, 'g')) ?? []) add(name, title)
 
   const sentences = splitSentences(plainPostingText(posting.descriptionHtml)).flatMap((s) => s.split(';'))
   for (const sentence of sentences) {

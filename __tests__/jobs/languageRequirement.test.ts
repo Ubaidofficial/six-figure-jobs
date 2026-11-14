@@ -28,6 +28,18 @@ describe('findLanguageRequirements', () => {
     expect(codes('<p>We are an AI-native company with German customers.</p>')).toEqual([])
   })
 
+  // Found on 1,482 real Lever postings (2026-11-14): these were flagged as requirements and are not.
+  it('ignores "strong assets", "priority for" and "extra points", which are preferences', () => {
+    expect(codes('<p>Bilingualism in French and English are considered strong assets.</p>')).toEqual([])
+    expect(codes('<p>Priority for a candidate who speaks fluent German, regardless of location.</p>')).toEqual([])
+    expect(codes('<p>You speak English fluently - extra points for fluent German!</p>')).toEqual([])
+    expect(codes('<p>Fluent in English with German or Dutch as a secondary language.</p>')).toEqual([])
+  })
+
+  it('reads every language in "Spanish / Portuguese Speaking" in a title', () => {
+    expect(codes('<p>Great team.</p>', 'Account Executive (Spanish / Portuguese Speaking)').sort()).toEqual(['es', 'pt'])
+  })
+
   it('lets the candidate qualify with the ignored language', () => {
     expect(codes('<p>Fluent in German or English.</p>')).toEqual([])
     expect(codes('<p>Either German or English is required.</p>')).toEqual([])

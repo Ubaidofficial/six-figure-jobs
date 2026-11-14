@@ -36,23 +36,27 @@ const NEGATED_REMOTE = new RegExp(
   'i',
 )
 
+// What the ROLE is, not what the company is. "Our fully remote, global team" and "remote-first culture" describe the
+// employer (measured on 1,482 Lever postings, 2026-11-14: those readings were most of the wrong "remote" answers), so only
+// sentences about this role, the person hired, or a labelled field count.
 const REMOTE = new RegExp(
   [
-    '\\b(?:fully|100 ?%|completely|entirely|totally)[- ]remote\\b',
-    '\\bremote[- ]first\\b',
-    '\\b(?:this|the|our) (?:role|position|job|opportunity) is (?:a )?(?:fully |100 ?% |completely )?remote\\b',
-    '\\b(?:is|are|be) (?:a )?(?:fully |100 ?% )?remote[- ](?:role|position|job|company|team|opportunity)\\b',
+    '\\b(?:this|the) (?:\\w+ ){0,3}?(?:role|position|job|opportunity) is (?:a )?(?:fully |100 ?% |completely )?remote\\b',
+    '\\bthis is (?:a )?(?:fully |100 ?% |completely )?remote (?:role|position|job|opportunity)\\b',
     '\\bremote[- ](?:role|position|job|opportunity)\\b',
-    '\\bwork(?:ing)? (?:fully |100 ?% |completely )?remotely\\b',
-    '\\bwork from anywhere\\b',
+    "\\b(?:you(?:[’']ll| will| can| may)?|candidates?|the (?:successful )?(?:candidate|hire)) (?:work|working) (?:fully |100 ?% |completely )?remotely\\b",
+    '\\b(?:location|work ?(?:place|location|model|arrangement|type)) ?[:–-] ?(?:fully |100 ?% )?remote\\b',
     '\\bremote within\\b',
   ].join('|'),
   'i',
 )
 
+// A remote claim softened by "most roles", "where possible", "depending on"... is not a fact about this role.
+const HEDGED = /\b(?:most|some|many|certain|select)\s+(?:of\s+)?(?:our\s+|the\s+)?(?:roles|positions|jobs|teams|employees)\b|\bfor most\b|\bwhere possible\b|\bdepending on\b|\bmay be\b|\boccasional(?:ly)?\b/i
+
 const HYBRID = new RegExp(
   [
-    '\\bhybrid (?:work|role|position|model|schedule|working|arrangement|set-?up|environment|policy|basis)\\b',
+    '\\bhybrid (?:work|role|position|schedule|working|arrangement|set-?up|policy|basis)\\b',
     '\\b(?:this|the|our) (?:role|position|job|opportunity) is (?:a )?hybrid\\b',
     '\\bhybrid\\b[^.;]{0,40}\\b(?:office|days?|on-?site|in[- ]person)\\b',
     '\\b\\d(?:\\s*[-–]\\s*\\d)?\\s*days?\\s*(?:a|per|each|/)\\s*week\\b[^.;]{0,40}\\b(?:office|on-?site|in[- ]person)\\b',
@@ -62,9 +66,13 @@ const HYBRID = new RegExp(
   'i',
 )
 
+// "5 days a week in the office" is full-time on-site, not hybrid.
+const EVERY_WORKDAY = /\b(?:[5-7]|five|six|seven)\s*days?\s*(?:a|per|each|\/)\s*week\b/i
+
 const ONSITE = new RegExp(
   [
     '\\b(?:this|the|our) (?:role|position|job) is (?:a )?(?:fully |100 ?% )?(?:on-?site|in[- ]office|in[- ]person)\\b',
+    '\\bthis is (?:an? )?(?:fully |100 ?% )?(?:on-?site|in[- ]office|in[- ]person) (?:role|position|job)\\b',
     '\\bon-?site (?:role|position|only|presence is required|attendance is required)\\b',
     '\\b(?:required|expected|must) (?:to )?(?:work|be) (?:on-?site|in the office|in[- ]person)\\b',
     '\\b(?:fully|100 ?%) (?:on-?site|in[- ]office)\\b',
@@ -87,9 +95,11 @@ export function findRemoteEvidence(descriptionHtml: string | null | undefined): 
       negated ??= sentence
       continue // "not remote" must never count as "remote"
     }
-    if (HYBRID.test(sentence)) hits.hybrid ??= sentence
-    else if (ONSITE.test(sentence)) hits.onsite ??= sentence
-    else if (REMOTE.test(sentence)) hits.remote ??= sentence
+    if (HYBRID.test(sentence)) {
+      if (EVERY_WORKDAY.test(sentence)) hits.onsite ??= sentence
+      else hits.hybrid ??= sentence
+    } else if (ONSITE.test(sentence)) hits.onsite ??= sentence
+    else if (REMOTE.test(sentence) && !HEDGED.test(sentence)) hits.remote ??= sentence
   }
 
   const modes = (Object.keys(hits) as RemoteMode[]).filter((m) => hits[m])
