@@ -38,6 +38,8 @@ export const KNOWN_BOARD_HOSTS = new Set([
   'remotive.com',
   'trawle.com',
   'weworkremotely.com',
+  'jobicy.com',
+  'workingnomads.com',
   'wellfound.com',
   'ycombinator.com',
   // Boards and public job portals that freehire jobs link to (found as the "website" of dozens of unrelated
@@ -91,6 +93,8 @@ export const BOARD_SOURCE_HOSTS: Record<string, string> = {
   himalayayas: 'himalayas.app',
   justjoin: 'justjoin.it',
   linkedin: 'linkedin.com',
+  jobicy: 'jobicy.com',
+  workingnomads: 'workingnomads.com',
   nodesk: 'nodesk.co',
   otta: 'otta.com',
   realworkfromanywhere: 'realworkfromanywhere.com',
@@ -146,6 +150,8 @@ const BOARD_NAMES: Record<string, string> = {
   'ycombinator.com': 'Y Combinator',
   'rocket-match.de': 'rocket match',
   'jobs.ch': 'jobs.ch',
+  'jobicy.com': 'Jobicy',
+  'workingnomads.com': 'Working Nomads',
   'jobup.ch': 'jobup.ch',
 }
 
