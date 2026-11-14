@@ -152,10 +152,29 @@ export function Footer() {
             <span className={styles.dot} aria-hidden="true">•</span>
             <a className={styles.link} href="https://logo.dev" target="_blank" rel="noopener">Logos provided by Logo.dev</a>
           </div>
-          <a className={styles.badge} href="https://webspot.app" target="_blank" rel="noopener noreferrer">
-            {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
-            <img className={styles.badgeImg} src="https://webspot.app/featured-dark.svg" alt="Featured on Webspot" loading="lazy" />
-          </a>
+          <div className={styles.badges}>
+            <a className={styles.badge} href="https://webspot.app" target="_blank" rel="noopener noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img className={styles.badgeImg} src="https://webspot.app/featured-dark.svg" alt="Featured on Webspot" loading="lazy" />
+            </a>
+            <a
+              className={styles.badge}
+              href="https://confettisaas.com/saas/6figjobs-com?ref=badge"
+              target="_blank"
+              rel="noopener"
+              aria-label="View Six Figure Jobs on ConfettiSaaS"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://confettisaas.com/badge-dark.svg"
+                width={250}
+                height={54}
+                alt="Six Figure Jobs on ConfettiSaaS"
+                loading="lazy"
+              />
+            </a>
+          </div>
           <div className={styles.made}>Made with 💚 for high earners</div>
         </div>
       </div>

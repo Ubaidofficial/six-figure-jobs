@@ -205,6 +205,13 @@
   color: var(--color-text-1);
 }
 
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 .badge {
   display: inline-flex;
 }
