@@ -205,6 +205,23 @@
   color: var(--color-text-1);
 }
 
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge {
+  display: inline-flex;
+}
+
+.badgeImg {
+  display: block;
+  height: 54px;
+  width: auto;
+}
+
 @media (max-width: 1023px) {
   .inner {
     padding: var(--space-64) var(--space-24) var(--space-40);
