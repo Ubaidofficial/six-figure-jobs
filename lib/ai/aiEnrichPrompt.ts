@@ -41,6 +41,7 @@ RULES:
 - Return ONLY valid JSON. No markdown, no code blocks, no extra text.
 - Every bullet must be a complete phrase (not a fragment). Active voice, present tense.
 - Do NOT invent anything not stated: no fake salary, benefits, remote policy, or tech stack.
+- A qualification the posting calls preferred, a plus or nice to have must be written as a bullet starting "Preferred:". Never present it as required.
 - description and requirements MUST always have content if the job posting has responsibilities or qualifications.
 - Scan the FULL job content including the bottom — requirements and benefits are often listed after the intro.
 - No emojis or special characters.`

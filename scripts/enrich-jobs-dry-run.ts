@@ -14,35 +14,20 @@ import { buildAiEnrichPrompt, parseAiEnrichJson } from '../lib/ai/aiEnrichPrompt
 import { estimateTokens, parseSampleSize, pickProvider, stripHtml } from '../lib/ai/enrichDryRun'
 import { MAX_JOB_AGE_DAYS, isEnrichable, selectJobsToEnrich, type EnrichCandidate } from '../lib/ai/enrichSelection'
 import { validateEnrichment } from '../lib/ai/enrichValidate'
-import { DailyCap, EmptyAnswer, FreeOnlyViolation, QuotaExhausted, chatCloudflare, chatOpenRouter, parseJsonObject, rankFreeOpenRouterModels, type OpenRouterModelInfo } from '../lib/ai/freeLlm'
+import { createFreeAsker } from '../lib/ai/freeEnrichRunner'
+import { DailyCap, FreeOnlyViolation, QuotaExhausted, parseJsonObject } from '../lib/ai/freeLlm'
 import { isPriorityCompanySlug } from '../lib/seo/priorityCompanies'
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1]
-
-// Free models on OpenRouter come and go and are often rate-limited: OPENROUTER_MODEL (must end in ":free") wins, else
-// today's free list gives the models to try in order (at most MAX_MODELS, so a bad day cannot burn many requests).
-const MAX_MODELS = 4
-async function resolveOpenRouterModels(): Promise<string[]> {
-  const set = process.env.OPENROUTER_MODEL?.trim()
-  if (set) return [set]
-  const res = await fetch('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(30_000) })
-  if (!res.ok) throw new Error(`OpenRouter model list answered ${res.status}`)
-  const ranked = rankFreeOpenRouterModels(((await res.json()) as { data?: OpenRouterModelInfo[] }).data ?? [])
-  if (!ranked.length) throw new Error('OpenRouter lists no free text model today; set OPENROUTER_MODEL or use provider=cloudflare')
-  return ranked.slice(0, MAX_MODELS)
-}
-const CLOUDFLARE_MODEL = process.env.CLOUDFLARE_MODEL?.trim() || '@cf/meta/llama-3.1-8b-instruct'
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set')
   const { prisma } = await import('../lib/prisma')
   const limit = parseSampleSize(arg('limit'))
   const provider = pickProvider(process.env, arg('provider'))
-  const openRouterModels = provider === 'openrouter' ? await resolveOpenRouterModels() : []
-  let modelIndex = 0
   const lines: string[] = ['## Free-LLM enrichment dry run', '', 'Nothing is written to the database.', '']
   const out = (s = '') => lines.push(s)
-  if (openRouterModels.length) out(`OpenRouter free models to try, in order: ${openRouterModels.join(', ')}`)
+  const ask = provider === 'none' ? null : await createFreeAsker({ provider, env: process.env, log: (line) => out(line) })
 
   const since = new Date(Date.now() - (MAX_JOB_AGE_DAYS + 1) * 86_400_000)
   const rows = await prisma
@@ -94,31 +79,7 @@ async function main() {
     if (provider === 'none') { out(); continue }
     if (!cap.take()) { out('Stopped: sample limit reached.'); break }
     try {
-      // A free model that is rate-limited (429) is retried twice after a pause, then the next model is tried; one that
-      // answers with no text moves on at once. The run stops only when every model has refused.
-      const askOpenRouter = async () => {
-        let waits = 0
-        for (;;) {
-          try {
-            return await chatOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY!, model: openRouterModels[modelIndex], messages: [{ role: 'user', content: prompt }], maxTokens: 1500 })
-          } catch (e) {
-            if (e instanceof QuotaExhausted && waits < 2) {
-              waits++
-              out(`Rate-limited, waiting 20s then retrying ${openRouterModels[modelIndex]} (${waits} of 2).`)
-              await new Promise((r) => setTimeout(r, 20_000))
-              continue
-            }
-            if (!(e instanceof QuotaExhausted || e instanceof EmptyAnswer) || modelIndex + 1 >= openRouterModels.length) throw e
-            out(`Moving to the next free model: ${e.message.slice(0, 200)}`)
-            modelIndex++
-            waits = 0
-          }
-        }
-      }
-      const res =
-        provider === 'openrouter'
-          ? await askOpenRouter()
-          : await chatCloudflare({ accountId: process.env.CLOUDFLARE_ACCOUNT_ID!, apiToken: process.env.CLOUDFLARE_API_TOKEN!, model: CLOUDFLARE_MODEL, messages: [{ role: 'user', content: prompt }], maxTokens: 1500 })
+      const res = await ask!(prompt)
       const obj = parseJsonObject(res.text)
       if (!obj) throw new Error('the model did not return a JSON object')
       const parsed = parseAiEnrichJson(JSON.stringify(obj))

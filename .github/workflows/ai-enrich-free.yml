@@ -1,0 +1,79 @@
+name: ai enrich free
+
+# Manual. The FREE enrichment writer (scripts/enrich-jobs-free.ts): asks a free model (Cloudflare Workers AI's free daily
+# allowance first, OpenRouter ":free" models as the fallback) to summarise the day's best new jobs, checks each answer against the
+# posting, and, only with "apply" ticked, saves it where the job page already shows AI summaries. A dry run (the default) calls the
+# model and checks the answer but writes nothing. Free only: lib/ai/freeLlm.ts refuses anything that could cost money, and the day's
+# total is capped (AI_FREE_DAILY_MAX, default 80 jobs per UTC day, counted from the database, so repeated runs cannot exceed it).
+#
+# It has no schedule on purpose. To run it daily once its output has been reviewed, add under `on:`
+#   schedule:
+#     - cron: "17 6 * * *"
+# and set the "apply" default to true, in a reviewed change. Same production-database fingerprint guard as the other manual workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Jobs to summarise this run (the day's maximum still applies)"
+        type: string
+        required: false
+        default: "40"
+      apply:
+        description: "Save the summaries (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+      provider:
+        description: "auto (Cloudflare first), cloudflare or openrouter"
+        type: string
+        required: false
+        default: "auto"
+
+concurrency:
+  group: ai-enrich-free
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_MODEL: ${{ vars.CLOUDFLARE_MODEL }}
+      AI_FREE_DAILY_MAX: ${{ vars.AI_FREE_DAILY_MAX }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Summarise
+        env:
+          LIMIT: ${{ inputs.limit }}
+          APPLY: ${{ inputs.apply }}
+          PROVIDER: ${{ inputs.provider }}
+        run: |
+          args="--limit=$LIMIT --provider=$PROVIDER"
+          [ "$APPLY" = "true" ] && args="$args --apply"
+          npx tsx scripts/enrich-jobs-free.ts $args
