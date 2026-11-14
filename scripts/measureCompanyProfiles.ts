@@ -72,15 +72,15 @@ async function main() {
     rows.push({ name: company.name, site: url, ...p })
   }
 
-  // Wikidata, one request per 40 companies. A rate limit or error ends the lookup, never retried.
+  // Wikidata, one request per 10 companies (a 40-company query of ~320 website spellings got HTTP 503). A rate limit or error ends the lookup, never retried.
   const wiki = { asked: 0, matched: 0, foundingYear: 0, employees: 0, stopped: null as string | null }
   const wikiByHost = new Map<string, WikidataProfile>()
   const hosts = [...new Set(rows.map((r) => siteKey(r.site)).filter((h): h is string => Boolean(h)))]
   wiki.asked = hosts.length
-  for (let i = 0; i < hosts.length; i += 40) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 3000))
+  for (let i = 0; i < hosts.length; i += 10) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 2000))
     try {
-      const res = await fetch(`https://query.wikidata.org/sparql?${new URLSearchParams({ query: buildWikidataQuery(hosts.slice(i, i + 40)), format: 'json' })}`, {
+      const res = await fetch(`https://query.wikidata.org/sparql?${new URLSearchParams({ query: buildWikidataQuery(hosts.slice(i, i + 10)), format: 'json' })}`, {
         headers: { 'User-Agent': 'SixFigureJobsBot/1.0 (+https://www.6figjobs.com)', Accept: 'application/sparql-results+json' },
         signal: AbortSignal.timeout(90_000),
       })
