@@ -13,25 +13,15 @@ import { writeFileSync } from 'node:fs'
 import { format as __format } from 'node:util'
 
 import { parseSiteProfile, type SiteProfile } from '../lib/companies/profileFromSite'
+import { homepageOf } from '../lib/companies/profileFill'
 import { buildWikidataQuery, parseWikidataBindings, siteKey, type WikidataProfile } from '../lib/companies/wikidataProfile'
 import { prisma } from '../lib/prisma'
-import { isKnownBoardHost } from '../lib/scrapers/utils/boardHosts'
 import { makePoliteGetter, SourceBlocked } from '../lib/scrapers/utils/politeFetch'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + '\n')
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3)
 const limit = Number(arg('limit') ?? 150) || 150
 const reportPath = arg('report')
-
-function homepage(website: string): string | null {
-  try {
-    const url = new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`)
-    if (isKnownBoardHost(url.hostname) || /(^|\.)linkedin\.com$/i.test(url.hostname)) return null
-    return `${url.protocol}//${url.host}/`
-  } catch {
-    return null
-  }
-}
 
 async function main() {
   const pool = await prisma.company.findMany({
@@ -46,7 +36,7 @@ async function main() {
   const counts = { sampled: sample.length, skippedHost: 0, fetched: 0, blockedOrFailed: 0, description: 0, foundingYear: 0, size: 0, linkedin: 0, country: 0, anyField: 0 }
   const rows: Array<{ name: string; site: string } & SiteProfile> = []
   for (const company of sample) {
-    const url = homepage(company.website!)
+    const url = homepageOf(company.website)
     if (!url) {
       counts.skippedHost++
       continue
