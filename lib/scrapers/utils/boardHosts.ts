@@ -38,7 +38,6 @@ export const KNOWN_BOARD_HOSTS = new Set([
   'remotive.com',
   'trawle.com',
   'weworkremotely.com',
-  'linkedin.com', // LinkedIn job pages (lib/scrapers/linkedin.ts): a board, never the employer's own site
   'wellfound.com',
   'ycombinator.com',
   // Boards and public job portals that freehire jobs link to (found as the "website" of dozens of unrelated
@@ -147,7 +146,6 @@ const BOARD_NAMES: Record<string, string> = {
   'ycombinator.com': 'Y Combinator',
   'rocket-match.de': 'rocket match',
   'jobs.ch': 'jobs.ch',
-  'linkedin.com': 'LinkedIn',
   'jobup.ch': 'jobup.ch',
 }
 
@@ -158,6 +156,10 @@ const BOARD_NAMES: Record<string, string> = {
  */
 export function boardNameFor(url: string | null | undefined): string | null {
   const host = hostOf(url)
+  // A LinkedIn link in an apply position is LinkedIn's listing (lib/scrapers/linkedin.ts). linkedin.com is NOT in
+  // KNOWN_BOARD_HOSTS: that set also decides which hosts can never be an employer's website, and companies do link
+  // their own LinkedIn page (see __tests__/companies/portalHosts.test.ts).
+  if (host === 'linkedin.com' || host?.endsWith('.linkedin.com')) return 'LinkedIn'
   if (!host || !isKnownBoardHost(host)) return null
   for (const [known, name] of Object.entries(BOARD_NAMES)) {
     if (host === known || host.endsWith(`.${known}`)) return name
