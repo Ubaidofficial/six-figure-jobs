@@ -615,6 +615,9 @@ export default async function JobPage({
 
           {hasStructuredSections ? (
             <>
+              <p className="text-xs text-muted-foreground">
+                Summary written by AI from the employer’s posting. The full original text is further down.
+              </p>
               {aiStructured.description.length > 0 ? (
                 <JobSection id="job-about" title="About the role">
                   <div className="max-w-[68ch] space-y-3 text-[15px] leading-relaxed text-foreground/90">

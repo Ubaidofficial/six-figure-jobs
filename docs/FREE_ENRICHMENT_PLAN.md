@@ -73,3 +73,13 @@ rate. 4. Add `experienceRequirements` to JSON-LD only after reviewing accuracy (
   founding year 0/8; size 0/8; LinkedIn link 1/8. Size and founding year probably need another source (Wikidata, for notable
   companies). `company profile measurement` measures this on a random sample of real companies before anything is written.
 - `enrichment backfill` (manual, dry run by default) fills tech stack on existing jobs, without overwriting stored skills.
+
+## Tier 4 built (2026-11-14, late)
+
+First real runs of the free dry run: Cloudflare `@cf/meta/llama-3.1-8b-instruct` summarised 3 of 3 jobs in about 10 s and all passed
+the check against the posting; OpenRouter's free models managed 1 of 5 in 6 minutes (upstream 429s, empty answers, timeouts).
+`ai enrich free` (manual workflow, `scripts/enrich-jobs-free.ts`) uses Cloudflare first and OpenRouter as the fallback, enriches at
+most 80 jobs per UTC day, one call per distinct description, saves only answers that pass the check, labels preferred requirements
+"Preferred:", and never overwrites an existing summary or the original description. A free-tier job count is an estimate from the
+first run's token use (about 5,700 input tokens for 3 jobs) and Cloudflare's published per-token rates as remembered: check
+Cloudflare's pricing page, and raise `AI_FREE_DAILY_MAX` only after watching a week of real usage.
