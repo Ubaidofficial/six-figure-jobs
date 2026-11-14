@@ -9,7 +9,7 @@ import { STATE_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
-import { buildListingDescription, buildListingTitle, countryFlag } from '../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle, flagged } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -50,8 +50,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const allowIndex =
     total >= 1 && isPhaseIndexable({ pathname: `/jobs/state/${resolved.slug}` })
   // Same shape as the city and country titles ("1,234 High-Paying Jobs in Texas ($100k+) | Six Figure Jobs").
-  const title = buildListingTitle({ topic: `High-Paying Jobs in ${resolved.name}`, qualifier: '($100k+)', flag: countryFlag('US') })
-  const description = buildListingDescription(`High-paying $100k+ jobs in ${resolved.name}.`, [
+  const title = buildListingTitle({ topic: `High-Paying Jobs in ${flagged(resolved.name, 'US')}`, qualifier: '($100k+)' })
+  const description = buildListingDescription(`High-paying jobs in ${resolved.name} ($100k+).`, [
     ['Remote, hybrid and on-site roles.'],
   ], total)
   const canonical = `${SITE_URL}/jobs/state/${resolved.slug}`

@@ -2,17 +2,31 @@ import { KEYWORD_MAP, keywordsFor, type KeywordPageType } from '../../lib/seo/ke
 import {
   buildCategoryTitle,
   buildCityTitle,
+  buildCompaniesIndexDescription,
+  buildCompanyPageDescription,
   buildCompanyPageTitle,
   buildCompaniesIndexTitle,
   buildCountryTitle,
+  buildHomeDescription,
+  buildJobsHubDescription,
   buildJobsHubTitle,
   buildListingTitle,
+  buildRoleDescription,
   buildSalaryGuideTitle,
+  buildSalaryTierDescription,
   buildSalaryTierTitle,
   buildSkillTitle,
-  inCountry,
+  DESCRIPTION_MAX,
   TITLE_MAX,
 } from '../../lib/seo/metaText'
+
+// Titles and descriptions carry the month and year, so pin the clock.
+beforeAll(() => {
+  jest.useFakeTimers({ now: new Date('2026-11-14T12:00:00Z') })
+})
+afterAll(() => {
+  jest.useRealTimers()
+})
 
 // Hyphens read as spaces ("High-Paying" is "high paying"), case is ignored.
 const norm = (s: string) => s.toLowerCase().replace(/-/g, ' ')
@@ -80,16 +94,53 @@ describe('keywordsFor', () => {
   })
 })
 
-describe('inCountry', () => {
-  it('adds "the" for the countries that take it, and only those', () => {
-    expect(inCountry('United States')).toBe('the United States')
-    expect(inCountry('United Kingdom')).toBe('the United Kingdom')
-    expect(inCountry('Netherlands')).toBe('the Netherlands')
-    expect(inCountry('Canada')).toBe('Canada')
-    expect(inCountry('Germany')).toBe('Germany')
+// Real description builders, one or more per page type that has one (the other page types build theirs inline).
+// Built inside the tests, after the clock is pinned.
+const DESCRIPTION_TYPES = ['home', 'jobsHub', 'role', 'salaryTier', 'companies', 'company'] as const
+function descriptionsFor(type: (typeof DESCRIPTION_TYPES)[number]): string[] {
+  switch (type) {
+    case 'home':
+      return [buildHomeDescription(2813, 95), buildHomeDescription(123456, 12345)]
+    case 'jobsHub':
+      return [buildJobsHubDescription(3874), buildJobsHubDescription(null)]
+    case 'role':
+      return [
+        buildRoleDescription('Software Engineer', 72, 199_000),
+        buildRoleDescription('DevOps & Site Reliability Engineer (SRE)', 1234, null),
+      ]
+    case 'salaryTier':
+      return [buildSalaryTierDescription('$100k–$199k', 1234), buildSalaryTierDescription('$400k+', 0)]
+    case 'companies':
+      return [buildCompaniesIndexDescription(402, 16684, 2557, 5)]
+    case 'company':
+      return [
+        buildCompanyPageDescription('Stripe', 12, ['Engineering', 'Product'], '$310k'),
+        buildCompanyPageDescription('Acme', 3, [], null),
+      ]
+  }
+}
+
+describe('descriptions keep the page keywords', () => {
+  it.each(DESCRIPTION_TYPES)('%s descriptions carry their keyword fragments, the month and year, and fit 155', (type) => {
+    const { descHas } = KEYWORD_MAP[type]
+    for (const d of descriptionsFor(type)) {
+      for (const fragment of descHas) expect(norm(d)).toContain(fragment)
+      expect(d).toContain('(Nov 2026)')
+      expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
+    }
   })
 
-  it('reads naturally in the country title', () => {
-    expect(buildCountryTitle('United Kingdom', '£75k+')).toBe('High-Paying Jobs in the United Kingdom (£75k+) [Nov 2026]')
+  it('every page type lists at least one description fragment, in lowercase', () => {
+    for (const kw of Object.values(KEYWORD_MAP)) {
+      expect(kw.descHas.length).toBeGreaterThan(0)
+      for (const f of kw.descHas) expect(f).toBe(f.toLowerCase())
+    }
+  })
+})
+
+describe('country names in titles', () => {
+  it('say "the UK" and "the US", the way people search for them', () => {
+    expect(buildCountryTitle('United Kingdom', '£75k+')).toBe('High-Paying Jobs in the UK (£75k+) [Nov 2026]')
+    expect(buildCountryTitle('United States', '$100k+')).toBe('High-Paying Jobs in the US ($100k+) [Nov 2026]')
   })
 })

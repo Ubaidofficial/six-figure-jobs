@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       isPseoHubUnlocked(total, `/jobs/city/${resolved.slug}`))
   const title = buildCityTitle(resolved.label, salaryLabel, resolved.countryCode)
   const description = buildListingDescription(
-    `${salaryLabel} jobs in ${resolved.label}.`,
+    `High-paying jobs in ${resolved.label} (${salaryLabel}).`,
     [['Remote, hybrid and on-site roles.']], total)
   const canonical = `${SITE_URL}/jobs/city/${resolved.slug}`
 

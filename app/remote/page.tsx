@@ -141,8 +141,8 @@ export async function generateMetadata({
     : buildListingTitle({ topic: 'High-Paying Remote Jobs', qualifier: `($100k+)${pageSuffix}` })
   const description = regionLabel
     ? buildDescription(
-        `Six-figure remote jobs in ${regionLabel} in engineering, product, data and more, with published salaries.`,
-        [['Fresh listings, direct apply links.']],
+        `Six-figure remote jobs in ${regionLabel} with published salaries.`,
+        [['Engineering, product, data and more, with direct apply links.']],
         freshnessClosing(total),
       )
     : buildDescription(

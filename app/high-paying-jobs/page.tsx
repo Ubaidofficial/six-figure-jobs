@@ -11,7 +11,7 @@ import { unstable_rethrow } from 'next/navigation'
 import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Prose } from '@/components/listing/ListingParts'
 import { HIGH_PAYING_MIN_ROLES_TO_INDEX, highPayingFaq, loadHighPayingJobs, MIN_LISTINGS } from '@/lib/jobs/highPayingJobs'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
-import { buildDescription, fitTitle, titleDateTag } from '@/lib/seo/metaText'
+import { buildDescription, fitTitle, titleDateTag, updatedLine } from '@/lib/seo/metaText'
 import { SITE_NAME, defaultOgImages, getSiteUrl } from '@/lib/seo/site'
 
 export const revalidate = 1800
@@ -38,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
         ? buildDescription(
             'High-paying jobs ranked by the median salary of live listings that publish their pay.',
             [[`${roles[0].label} leads at ${money(roles[0].median)}.`]],
-            `Updated daily on ${SITE_NAME}: ${roles.length} roles from ${listings.toLocaleString('en-US')} listings.`,
+            updatedLine(`${roles.length} roles from ${listings.toLocaleString('en-US')} listings.`),
           )
         : 'High-paying jobs ranked by the median salary of live listings that publish their pay.'
     return {

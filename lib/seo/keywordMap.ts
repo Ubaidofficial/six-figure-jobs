@@ -26,6 +26,8 @@ export type PageKeywords = {
   secondary: string[]
   /** Lowercase fragment every title of this page type must contain. */
   titleHas: string
+  /** Lowercase fragments every description of this page type must contain (hyphens read as spaces). */
+  descHas: string[]
 }
 
 export const KEYWORD_MAP = {
@@ -33,97 +35,116 @@ export const KEYWORD_MAP = {
     primary: 'six figure jobs',
     secondary: ['6 figure jobs', 'high paying jobs', '$100k jobs', 'high paying remote jobs'],
     titleHas: 'six figure jobs',
+    descHas: ['6 figure jobs', 'high paying'],
   },
   // Not "six figure jobs": that is the home page's keyword, and two pages on one phrase compete with each other.
   jobsHub: {
     primary: 'jobs paying $100k+',
     secondary: ['100k jobs', '100k a year jobs', 'six figure jobs', 'high paying jobs'],
     titleHas: 'jobs paying $100k+',
+    descHas: ['jobs paying $100k+', 'high paying'],
   },
   highPayingJobs: {
     primary: 'high paying jobs',
     secondary: ['highest paying jobs', 'high paying jobs without a degree'],
     titleHas: 'high paying jobs',
+    descHas: ['high paying jobs'],
   },
   noDegree: {
     primary: 'high paying jobs without a degree',
     secondary: ['six figure jobs without a degree', 'no degree jobs $100k'],
     titleHas: 'without a degree',
+    descHas: ['high paying jobs without a degree'],
   },
   remoteHub: {
     primary: 'high paying remote jobs',
     secondary: ['remote jobs $100k', 'six figure remote jobs', 'work from home $100k jobs'],
     titleHas: 'remote jobs',
+    descHas: ['high paying remote jobs'],
   },
   remoteRole: {
     primary: 'remote [role] jobs',
     secondary: ['high paying remote [role] jobs', '[role] jobs $100k', '[role] work from home'],
     titleHas: 'remote',
+    descHas: ['high paying remote'],
   },
   role: {
     primary: '[role] jobs',
     secondary: ['high paying [role] jobs', '$100k [role] jobs', '[role] salary'],
     titleHas: 'jobs',
+    descHas: ['high paying'],
   },
   salaryGuide: {
     primary: '[role] salary',
     secondary: ['average [role] salary', '[role] salary range', '[role] pay'],
     titleHas: 'salary',
+    descHas: ['salary'],
   },
   salaryTier: {
     primary: 'jobs that pay [amount] a year',
     secondary: ['$100k jobs', '100k jobs', 'six figure jobs'],
     titleHas: 'jobs that pay',
+    descHas: ['jobs that pay'],
   },
   country: {
     primary: 'high paying jobs in [country]',
     secondary: ['$100k jobs in [country]', 'six figure jobs in [country]', 'remote jobs in [country]'],
     titleHas: 'high paying jobs in',
+    descHas: ['high paying jobs in'],
   },
   city: {
     primary: 'high paying jobs in [city]',
     secondary: ['$100k jobs in [city]', '[role] jobs in [city]', 'six figure jobs in [city]'],
     titleHas: 'high paying jobs in',
+    descHas: ['high paying jobs in'],
   },
   state: {
     primary: 'high paying jobs in [state]',
     secondary: ['$100k jobs in [state]', 'six figure jobs in [state]'],
     titleHas: 'high paying jobs in',
+    descHas: ['high paying jobs in'],
   },
   skill: {
     primary: '[skill] jobs',
     secondary: ['$100k [skill] jobs', '[skill] developer jobs', 'high paying [skill] jobs'],
     titleHas: 'jobs',
+    descHas: ['jobs paying $100k+'],
   },
   level: {
     primary: '[level] jobs',
     secondary: ['$100k [level] jobs', 'high paying [level] jobs'],
     titleHas: 'jobs',
+    descHas: ['jobs paying $100k+'],
   },
   category: {
     primary: '[category] jobs',
     secondary: ['$100k [category] jobs', 'high paying [category] jobs'],
     titleHas: 'jobs',
+    descHas: ['jobs paying $100k+'],
   },
   companies: {
     primary: 'companies hiring $100k+ jobs',
     secondary: ['high paying companies', 'six figure jobs companies', 'top companies hiring'],
     titleHas: 'companies hiring',
+    descHas: ['companies hiring $100k+ jobs'],
   },
   remoteCompanies: {
     primary: 'remote companies hiring $100k+ roles',
     secondary: ['remote companies', 'high paying remote jobs', 'work from home companies'],
     titleHas: 'remote companies',
+    descHas: ['remote companies hiring $100k+ roles'],
   },
   fourDayWeek: {
     primary: '4 day work week jobs',
     secondary: ['4 day work week jobs $100k', '32 hour work week jobs', 'four day week remote jobs'],
     titleHas: '4 day work week jobs',
+    descHas: ['4 day work week jobs'],
   },
   company: {
     primary: '[company] jobs',
     secondary: ['[company] careers', '[company] salary', '[company] $100k jobs'],
     titleHas: 'jobs',
+    descHas: ['jobs paying $100k+'],
   },
 } as const satisfies Record<string, PageKeywords>
 

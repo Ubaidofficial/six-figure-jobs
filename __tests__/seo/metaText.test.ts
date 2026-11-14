@@ -1,7 +1,6 @@
 import {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
-  FRESHNESS,
   TITLE_MAX,
   buildCompaniesIndexDescription,
   buildCompaniesIndexTitle,
@@ -23,9 +22,13 @@ import {
   buildSalaryTierTitle,
   countryFlag,
   fitTitle,
+  flagged,
   freshnessClosing,
+  inCountry,
+  monthYear,
   titleDateTag,
   truncateAtWord,
+  updatedLine,
 } from '../../lib/seo/metaText'
 import { fitTitle as fitJobTitle } from '../../lib/seo/jobMeta'
 import { SEARCH_ROLE_OPTIONS } from '../../lib/roles/searchRoles'
@@ -107,9 +110,9 @@ describe('buildListingTitle', () => {
     }
   })
 
-  it('puts a flag first, counts it as two characters and drops the brand to fit', () => {
-    const t = buildListingTitle({ topic: 'High-Paying Jobs in Austin', qualifier: '($100k+)', flag: countryFlag('US') })
-    expect(t).toBe('🇺🇸 High-Paying Jobs in Austin ($100k+) [Nov 2026]')
+  it('keeps a flag next to its place, counts it as two characters and drops the brand to fit', () => {
+    const t = buildListingTitle({ topic: `High-Paying Jobs in ${flagged('Austin', 'US')}`, qualifier: '($100k+)' })
+    expect(t).toBe('High-Paying Jobs in 🇺🇸 Austin ($100k+) [Nov 2026]')
     expect([...t].length).toBeLessThanOrEqual(TITLE_MAX)
   })
 
@@ -170,21 +173,22 @@ describe('role listing description', () => {
         const d = buildRoleDescription(role, total, avg)
         expect(d.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
         expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
-        expect(d.startsWith(`${role} jobs`)).toBe(true)
+        expect(d.startsWith(`High-paying ${role} jobs`)).toBe(true)
         expect(d.endsWith(`${total.toLocaleString()} open roles.`)).toBe(true)
+        expect(d).toContain('(Nov 2026)')
       }
     }
   })
 
   it('matches the example from the live site', () => {
     expect(buildRoleDescription('Software Engineer', 72, 199_000)).toBe(
-      'Software Engineer jobs paying $100k+, ~$199k average USD salary where listed. Salary shown upfront. Updated daily on Six Figure Jobs: 72 open roles.',
+      'High-paying Software Engineer jobs ($100k+), ~$199k average salary. Salary shown upfront. Updated daily on Six Figure Jobs (Nov 2026): 72 open roles.',
     )
   })
 
   it('only mentions an average when the page computed one', () => {
     expect(buildRoleDescription('Data Engineer', 10, null)).not.toMatch(/average/)
-    expect(buildRoleDescription('Data Engineer', 10, 180_000)).toMatch(/~\$180k average USD/)
+    expect(buildRoleDescription('Data Engineer', 10, 180_000)).toMatch(/~\$180k average salary/)
   })
 
   it('is unique per role', () => {
@@ -197,7 +201,7 @@ describe('home description', () => {
   it('is 130-155 characters and ends with the live counts', () => {
     const d = buildHomeDescription(2813, 95)
     expect(d).toBe(
-      'High-paying 6-figure jobs ($100k+) at top companies. Salary shown upfront. Updated daily on Six Figure Jobs: 2,813+ jobs at 95+ companies.',
+      'High-paying 6-figure jobs ($100k+) at top companies. Salary shown upfront. Updated daily on Six Figure Jobs (Nov 2026): 2,813+ jobs at 95+ companies.',
     )
     expect(d.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
     expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
@@ -235,7 +239,7 @@ describe('company page metadata', () => {
   it('builds a 130-155 character description from values the page computed', () => {
     const d = buildCompanyPageDescription('Stripe', 12, ['Engineering', 'Product', 'Data', 'Design'], '$310k')
     expect(d).toBe(
-      '$100k+ jobs at Stripe. Highest listed pay $310k. Top roles: Engineering, Product, Data. Updated daily on Six Figure Jobs: 12 open roles.',
+      'Stripe jobs paying $100k+. Highest listed pay $310k. Top roles: Engineering, Product, Data. Updated daily on Six Figure Jobs (Nov 2026): 12 open roles.',
     )
     expect(d.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
     expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
@@ -244,7 +248,7 @@ describe('company page metadata', () => {
   it('does not invent figures when the page has no salary or roles', () => {
     const d = buildCompanyPageDescription('Acme', 3, [], null)
     expect(d).not.toMatch(/Highest|Top roles/)
-    expect(d.startsWith('$100k+ jobs at Acme.')).toBe(true)
+    expect(d.startsWith('Acme jobs paying $100k+.')).toBe(true)
     expect(d.endsWith('3 open roles.')).toBe(true)
     expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
   })
@@ -259,8 +263,8 @@ describe('company page metadata', () => {
 describe('companies index description', () => {
   it('is 130-155 characters and says which companies it counts, next to every company hiring', () => {
     const d = buildCompaniesIndexDescription(402, 16684, 2557, 5)
-    expect(d.startsWith('Companies with 5+ open $100k+ jobs, out of 2,557 companies hiring.')).toBe(true)
-    expect(d.endsWith('402 companies, 16,684 jobs.')).toBe(true)
+    expect(d.startsWith('Top companies hiring $100k+ jobs, with 5+ open roles each.')).toBe(true)
+    expect(d.endsWith('402 of 2,557 companies, 16,684 jobs.')).toBe(true)
     expect(d.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
     expect(d.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
   })
@@ -272,8 +276,8 @@ describe('companies index description', () => {
   })
 
   it('leaves out the site-wide count when it adds nothing', () => {
-    expect(buildCompaniesIndexDescription(402, 16684, 402, 5)).not.toContain('out of')
-    expect(buildCompaniesIndexDescription(402, 16684, 0, 5)).not.toContain('out of')
+    expect(buildCompaniesIndexDescription(402, 16684, 402, 5)).toContain('402 companies, 16,684 jobs.')
+    expect(buildCompaniesIndexDescription(402, 16684, 0, 5)).toContain('402 companies, 16,684 jobs.')
   })
 
   it('works without counts', () => {
@@ -359,9 +363,33 @@ describe('countryFlag', () => {
   })
 })
 
+describe('flagged and inCountry', () => {
+  it('puts the flag right before the place name, and leaves the name alone without a code', () => {
+    expect(flagged('London', 'GB')).toBe('🇬🇧 London')
+    expect(flagged('London', null)).toBe('London')
+    expect(flagged('London', 'Remote')).toBe('London')
+  })
+
+  it('says "the UK" and "the US", keeps "the" before the flag, and leaves other countries alone', () => {
+    expect(inCountry('United Kingdom', 'GB')).toBe('the 🇬🇧 UK')
+    expect(inCountry('United States', 'US')).toBe('the 🇺🇸 US')
+    expect(inCountry('United States')).toBe('the US')
+    expect(inCountry('Canada', 'CA')).toBe('🇨🇦 Canada')
+    expect(inCountry('Netherlands')).toBe('the Netherlands')
+  })
+
+  it('keeps the full name when asked, for body text', () => {
+    expect(inCountry('United States', null, false)).toBe('the United States')
+    expect(inCountry('United Kingdom', 'GB', false)).toBe('the 🇬🇧 United Kingdom')
+  })
+})
+
 describe('buildDescription', () => {
   it('skips slots that do not fit and cuts an over-long lead at a word boundary', () => {
-    expect(buildDescription('Lead.', [['x'.repeat(200)]])).toBe(`Lead. ${FRESHNESS}`)
+    expect(buildDescription('Lead.', [['x'.repeat(200)]])).toBe(`Lead. ${updatedLine()}`)
+    expect(updatedLine()).toBe('Updated daily on Six Figure Jobs (Nov 2026).')
+    expect(updatedLine('72 open roles.')).toBe('Updated daily on Six Figure Jobs (Nov 2026): 72 open roles.')
+    expect(monthYear(new Date('2027-01-02T00:00:00Z'))).toBe('Jan 2027')
     const out = buildDescription('word '.repeat(60).trim() + '.', [])
     expect(out.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
     expect(out.endsWith('…')).toBe(true)
@@ -391,7 +419,7 @@ describe('/jobs hub title and description', () => {
   it('targets "jobs paying $100k+", not the home page\'s "six figure jobs", and ends the description with the live count', () => {
     expect(buildJobsHubTitle()).toBe('Jobs Paying $100k+: Browse by Role & Country [Nov 2026]')
     expect(buildJobsHubTitle()).not.toMatch(/six.figure/i)
-    expect(buildJobsHubDescription(3874).startsWith('High-paying $100k+ jobs open now.')).toBe(true)
+    expect(buildJobsHubDescription(3874).startsWith('High-paying six-figure jobs paying $100k+, open now.')).toBe(true)
     expect(buildJobsHubDescription(3874).endsWith('3,874 open roles.')).toBe(true)
     expect(buildJobsHubDescription(3874)).not.toMatch(/tech/i)
   })
@@ -408,7 +436,7 @@ describe('/jobs hub title and description', () => {
   })
 
   it('has no count in the description when it is unknown or zero', () => {
-    expect(buildJobsHubDescription(0).startsWith('High-paying $100k+ jobs open now.')).toBe(true)
+    expect(buildJobsHubDescription(0).startsWith('High-paying six-figure jobs paying $100k+, open now.')).toBe(true)
     expect(buildJobsHubDescription(null)).not.toMatch(/open roles/)
   })
 })
@@ -436,13 +464,13 @@ describe('salary tier title and description', () => {
 describe('city and category titles', () => {
   const SALARY_LABELS = ['$100k+', '£75k+', '€80k+', 'C$120k+', 'A$140k+']
 
-  it('start with the flag, end with the date tag and stay within the limit for every city and label', () => {
+  it('put the flag before the city, end with the date tag and stay within the limit for every city and label', () => {
     for (const city of CITY_TARGETS) {
       for (const label of SALARY_LABELS) {
         expect([...buildCityTitle(city.label, label, city.countryCode)].length).toBeLessThanOrEqual(TITLE_MAX)
       }
     }
-    expect(buildCityTitle('Austin', '$100k+', 'US')).toBe('🇺🇸 High-Paying Jobs in Austin ($100k+) [Nov 2026]')
+    expect(buildCityTitle('Austin', '$100k+', 'US')).toBe('High-Paying Jobs in 🇺🇸 Austin ($100k+) [Nov 2026]')
     expect(buildCityTitle('Austin', '$100k+')).toBe('High-Paying Jobs in Austin ($100k+) [Nov 2026]')
   })
 
@@ -453,8 +481,9 @@ describe('city and category titles', () => {
       }
     }
     expect(buildCountryTitle('Canada', 'C$120k+')).toBe('High-Paying Jobs in Canada (C$120k+) [Nov 2026]')
-    expect(buildCountryTitle('Canada', 'C$120k+', 'CA')).toBe('🇨🇦 High-Paying Jobs in Canada (C$120k+) [Nov 2026]')
-    expect(buildCountryTitle('United States', '$100k+', 'US')).toBe('🇺🇸 High-Paying Jobs in the United States ($100k+) [Nov 2026]')
+    expect(buildCountryTitle('Canada', 'C$120k+', 'CA')).toBe('High-Paying Jobs in 🇨🇦 Canada (C$120k+) [Nov 2026]')
+    expect(buildCountryTitle('United States', '$100k+', 'US')).toBe('High-Paying Jobs in the 🇺🇸 US ($100k+) [Nov 2026]')
+    expect(buildCountryTitle('United Kingdom', '£75k+', 'GB')).toBe('High-Paying Jobs in the 🇬🇧 UK (£75k+) [Nov 2026]')
   })
 
   it('skill titles match the role-page shape and stay within the limit', () => {
