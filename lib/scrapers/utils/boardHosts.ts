@@ -40,6 +40,8 @@ export const KNOWN_BOARD_HOSTS = new Set([
   'weworkremotely.com',
   'jobicy.com',
   'workingnomads.com',
+  'spainjobs.io',
+  'uiuxjobsboard.com',
   'wellfound.com',
   'ycombinator.com',
   // Boards and public job portals that freehire jobs link to (found as the "website" of dozens of unrelated
@@ -95,6 +97,8 @@ export const BOARD_SOURCE_HOSTS: Record<string, string> = {
   linkedin: 'linkedin.com',
   jobicy: 'jobicy.com',
   workingnomads: 'workingnomads.com',
+  spainjobs: 'spainjobs.io',
+  uiuxjobsboard: 'uiuxjobsboard.com',
   nodesk: 'nodesk.co',
   otta: 'otta.com',
   realworkfromanywhere: 'realworkfromanywhere.com',
@@ -152,6 +156,8 @@ const BOARD_NAMES: Record<string, string> = {
   'jobs.ch': 'jobs.ch',
   'jobicy.com': 'Jobicy',
   'workingnomads.com': 'Working Nomads',
+  'spainjobs.io': 'SpainJobs.io',
+  'uiuxjobsboard.com': 'UI/UX Jobs Board',
   'jobup.ch': 'jobup.ch',
 }
 

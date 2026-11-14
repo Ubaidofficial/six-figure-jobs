@@ -12,18 +12,20 @@ const TECH_PATTERNS: TechPattern[] = [
   { name: 'JavaScript', re: /\bjavascript\b/i },
   { name: 'Python', re: /\bpython\b/i },
   { name: 'Java', re: /\bjava\b/i },
-  { name: 'Go', slug: 'go', re: /\bgo(lang)?\b/i },
-  { name: 'Rust', re: /\brust\b/i },
-  { name: 'Ruby', re: /\bruby\b/i },
+  // Ambiguous with plain English ("go", "rust", "react to", "spring"): only the capitalised name counts, and "Go" only
+  // in a list or after a tech preposition. "golang" is unambiguous.
+  { name: 'Go', slug: 'go', re: /\b[Gg]olang\b|\bGo(?=\s*(?:[,/;)]|\b(?:and|or|programming|language|developer|engineer|services?)\b))|\b(?:in|with|using|of|and|or|plus)\s+Go\b(?!\s+(?:to|beyond|above|live|ahead|through|from)\b)|[,/(]\s*Go\b/ },
+  { name: 'Rust', re: /\bRust\b/ },
+  { name: 'Ruby', re: /\bRuby\b/ },
   { name: 'PHP', slug: 'php', re: /\bphp\b/i },
   { name: 'C#', slug: 'csharp', re: /\bc#\b/i },
   { name: 'C++', slug: 'cpp', re: /\bc\+\+\b/i },
   { name: '.NET', slug: 'dotnet', re: /\b\.net\b|\bdotnet\b/i },
-  { name: 'Swift', re: /\bswift\b/i },
+  { name: 'Swift', re: /\bSwift(?:UI)?\b/ },
   { name: 'Kotlin', re: /\bkotlin\b/i },
 
   // Frontend
-  { name: 'React', re: /\breact\b/i },
+  { name: 'React', re: /\b[Rr]eact\.?js\b|\bReact\b(?!\s+to\b)/ },
   { name: 'Next.js', slug: 'nextjs', re: /\bnext\.?js\b/i },
   { name: 'Vue', re: /\bvue(\.js)?\b/i },
   { name: 'Angular', re: /\bangular\b/i },
@@ -33,21 +35,21 @@ const TECH_PATTERNS: TechPattern[] = [
   { name: 'Flutter', re: /\bflutter\b/i },
 
   // Backend / frameworks
-  { name: 'Node.js', slug: 'nodejs', re: /\bnode(\.js)?\b/i },
-  { name: 'Express', re: /\bexpress\b/i },
+  { name: 'Node.js', slug: 'nodejs', re: /\b[Nn]ode\.?js\b|\bNode\b/ },
+  { name: 'Express', re: /\b[Ee]xpress\.?js\b|(?<!American\s)\bExpress\b(?=\s*(?:[,/;)]|\b(?:and|or)\b))/ },
   { name: 'NestJS', slug: 'nestjs', re: /\bnestjs\b|\bnest\s?js\b/i },
   { name: 'Django', re: /\bdjango\b/i },
   { name: 'FastAPI', slug: 'fastapi', re: /\bfastapi\b/i },
   { name: 'Flask', re: /\bflask\b/i },
-  { name: 'Rails', slug: 'rails', re: /\brails\b|\bruby on rails\b/i },
-  { name: 'Spring', re: /\bspring\b/i },
+  { name: 'Rails', slug: 'rails', re: /\bRails\b|\b[Rr]uby on [Rr]ails\b/ },
+  { name: 'Spring', re: /\bSpring(?:\s(?:Boot|Framework|MVC|Cloud))\b|\bSpring\b(?!\s+(?:20\d\d|semester|term|quarter|season|break)\b)/ },
 
   // Data / infra
   { name: 'PostgreSQL', slug: 'postgresql', re: /\bpostgres(ql)?\b/i },
   { name: 'MySQL', slug: 'mysql', re: /\bmysql\b/i },
   { name: 'MongoDB', slug: 'mongodb', re: /\bmongo(db)?\b/i },
   { name: 'Redis', re: /\bredis\b/i },
-  { name: 'Elasticsearch', slug: 'elasticsearch', re: /\belastic(search)?\b/i },
+  { name: 'Elasticsearch', slug: 'elasticsearch', re: /\b[Ee]lasticsearch\b|\bElastic\b/ },
   { name: 'Kafka', re: /\bkafka\b/i },
 
   // Cloud / devops
