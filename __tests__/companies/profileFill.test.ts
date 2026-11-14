@@ -54,6 +54,17 @@ describe('validateCompanyDescription', () => {
     expect(validateCompanyDescription('x'.repeat(301), 'Prefect', tagline).ok).toBe(false)
     expect(validateCompanyDescription(null, 'Prefect', tagline).ok).toBe(false)
   })
+  it('rejects what the first dry run let through: ad lines, offers, copied taglines, no company name', () => {
+    expect(validateCompanyDescription('Run payments and offer financial products in one platform.', 'Adyen', 'Run payments, manage your data, and offer financial products in one platform. Adyen is purpose-built.').ok).toBe(false)
+    expect(validateCompanyDescription('Affirm provides flexible payment options with longer plans and no fees.', 'Affirm', 'Buy now pay later without the fees. Flexible payment options with longer plans, lower payments, and no fees.').ok).toBe(false)
+    expect(validateCompanyDescription('Robinhood provides commission-free investing and advanced trading tools.', 'Robinhood', 'Trade stocks on Robinhood with commission-free investing & advanced trading tools.').ok).toBe(false)
+    expect(validateCompanyDescription('Scale AI delivers proven data, evaluations, and outcomes to AI labs.', 'Scale AI', 'Scale delivers proven data, evaluations, and outcomes to AI labs, governments, and the Fortune 500.').ok).toBe(false)
+    const adCopy = 'Legora is the collaborative AI powering lawyers to review and research faster, draft smarter, and advise with precision.'
+    expect(validateCompanyDescription(adCopy, 'Legora', `${adCopy} Legora adapts to your ways of working.`).ok).toBe(false)
+    const copied = 'Legora is a collaborative AI platform for lawyers who review and research documents.'
+    expect(validateCompanyDescription(copied, 'Legora', `${copied} Legora adapts to your ways of working.`)).toEqual({ ok: false, reason: 'copied from the tagline' })
+    expect(validateCompanyDescription('Datadog provides cloud monitoring as a service solution.', 'Datadog', 'See metrics from all of your apps, tools & services in one place with Datadog’s cloud monitoring as a service solution. Try it for free.').ok).toBe(true)
+  })
   it('builds a prompt that carries the rules and the text', () => {
     const p = buildCompanyDescriptionPrompt('Prefect', tagline)
     expect(p).toContain('ONLY the text below')
