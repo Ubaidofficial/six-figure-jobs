@@ -54,6 +54,13 @@ describe('findRemoteEvidence', () => {
     expect(mode('<p>Manage our hybrid environment of cloud and data center.</p>')).toBeNull()
   })
 
+  // Found in the production dry run, 2026-11-14.
+  it('does not read a company statement or a kind of job as how this role is worked', () => {
+    expect(mode('<p>While we prioritize a hybrid work environment for most roles, we are open to flexibility.</p>')).toBeNull()
+    expect(mode('<p>Experience as a customer-facing engineer or in a similar hybrid role.</p>')).toBeNull()
+    expect(mode('<p>Location: This position is a hybrid-based role (office and remote).</p>')).toBe('hybrid') // a real statement about this role
+  })
+
   it('says nothing about perks, technology and passing mentions', () => {
     expect(mode('<p>We offer a remote work stipend and a home office budget.</p>')).toBeNull()
     expect(mode('<p>Experience with hybrid cloud and remote desktop tools.</p>')).toBeNull()

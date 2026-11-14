@@ -1,0 +1,63 @@
+name: enrichment backfill
+
+# Manual. Fills the tech stack of EXISTING live jobs from their descriptions with the free, deterministic extractor
+# (scripts/backfill-tech-stack.ts), so jobs scraped before enrichment-at-ingest also carry it. A dry run unless "apply" is
+# ticked. Only empty fields are written: a job's stored skills (from freehire, Ashby...) are never overwritten. Newest jobs
+# first, "limit" at a time. Same production-database fingerprint guard as the other manual workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Jobs to look at this run (newest first)"
+        type: string
+        required: false
+        default: "2000"
+      apply:
+        description: "Write the changes (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: enrichment-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Tech stack backfill
+        env:
+          BACKFILL_TECHSTACK_LIMIT: ${{ inputs.limit }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          if [ "$APPLY" = "true" ]; then
+            npx tsx scripts/backfill-tech-stack.ts
+          else
+            npx tsx scripts/backfill-tech-stack.ts --dry-run
+          fi

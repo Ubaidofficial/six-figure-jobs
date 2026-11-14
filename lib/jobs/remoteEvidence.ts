@@ -66,6 +66,9 @@ const HYBRID = new RegExp(
   'i',
 )
 
+// "hybrid role" as a kind of job a candidate has done ("experience in a similar hybrid role"), not how this one is worked.
+const HYBRID_ROLE_TYPE = /\b(?:experience|background|similar|worked)\b[^.;]{0,60}\bhybrid (?:role|position)\b/i
+
 // "5 days a week in the office" is full-time on-site, not hybrid.
 const EVERY_WORKDAY = /\b(?:[5-7]|five|six|seven)\s*days?\s*(?:a|per|each|\/)\s*week\b/i
 
@@ -96,6 +99,8 @@ export function findRemoteEvidence(descriptionHtml: string | null | undefined): 
       continue // "not remote" must never count as "remote"
     }
     if (HYBRID.test(sentence)) {
+      // "a hybrid work environment for most roles" is the company; "experience in a similar hybrid role" is a kind of job.
+      if (HEDGED.test(sentence) || HYBRID_ROLE_TYPE.test(sentence)) continue
       if (EVERY_WORKDAY.test(sentence)) hits.onsite ??= sentence
       else hits.hybrid ??= sentence
     } else if (ONSITE.test(sentence)) hits.onsite ??= sentence
