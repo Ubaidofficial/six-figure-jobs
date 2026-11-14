@@ -60,3 +60,16 @@ unmeasured here and need a benchmark before any decision.
 1. Run `evidence audits` (dry run) and review the sentences. 2. Backfill tech stack on existing jobs with
 `scripts/backfill-tech-stack.ts`. 3. Prototype Tier 2 as a dry run on the 2,757 companies with a website and measure the fill
 rate. 4. Add `experienceRequirements` to JSON-LD only after reviewing accuracy (it is an SEO change). 5. Decide on Tier 4.
+
+## Status, 2026-11-14 evening
+
+- `evidence audits` ran (dry run) against production. Remote reader: of 1,688 live jobs with no `remoteMode`, 31 say the role is
+  remote, 599 hybrid, 25 on-site (applied 0). Only 31 would be filled at ingest, so the SEO effect of that reader is small.
+  The sample showed two kinds of wrong "hybrid" (a company statement "for most roles", and "a similar hybrid role" as a kind of
+  job); both are now ignored. Required languages: German and French dominate, then Mandarin, Italian, Portuguese, Japanese;
+  the flags reviewed were genuine except "or another language" lists, now ignored.
+- Board seeding applied: 197 boards added (200 requested, 3 failed the live check); 758 verified-new boards remain.
+- Homepage profile read, 8 well-known companies (small, biased sample): description 8/8 but as marketing taglines;
+  founding year 0/8; size 0/8; LinkedIn link 1/8. Size and founding year probably need another source (Wikidata, for notable
+  companies). `company profile measurement` measures this on a random sample of real companies before anything is written.
+- `enrichment backfill` (manual, dry run by default) fills tech stack on existing jobs, without overwriting stored skills.

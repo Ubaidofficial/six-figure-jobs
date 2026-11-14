@@ -1,0 +1,59 @@
+name: company profile measurement
+
+# Manual, MEASUREMENT ONLY: writes nothing. Reads a random sample of companies that have live jobs and a website, fetches each
+# homepage once (honest User-Agent, 1.5 s apart) and reports how much of a profile (description, founding year, size, LinkedIn,
+# country) the company's own page can fill (scripts/measureCompanyProfiles.ts). Same production-database fingerprint guard as the
+# other manual workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Companies to sample (each costs one homepage request, 1.5 s apart)"
+        type: string
+        required: false
+        default: "150"
+
+concurrency:
+  group: company-profile-measure
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Measure
+        env:
+          LIMIT: ${{ inputs.limit }}
+        run: npx tsx scripts/measureCompanyProfiles.ts --limit="$LIMIT" --report=company-profiles.json
+
+      - name: Keep the report
+        uses: actions/upload-artifact@v4
+        with:
+          name: company-profiles-report
+          path: company-profiles.json
+          retention-days: 14

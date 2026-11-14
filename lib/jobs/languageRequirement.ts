@@ -81,6 +81,9 @@ const SOFTENER = new RegExp(
   'i',
 )
 
+/** "Korean, Hindi, or another language spoken in the communities we serve" asks for some language, not each one named. */
+const OPEN_ENDED = /\b(?:or|and\/or)\s+(?:any\s+)?(?:another|other)\s+languages?\b|\banother language\b/i
+
 /** "the Dutch accounting market" names a place to sell, not a language. */
 const NOT_A_LANGUAGE_NOUN = 'markets?|sector|industry|customers?|clients?|users?|region|law|regulations?|legislation|compan(?:y|ies)|teams?|office|government|authorit(?:y|ies)|entity|subsidiary'
 
@@ -126,7 +129,7 @@ export function findLanguageRequirements(
 
   const sentences = splitSentences(plainPostingText(posting.descriptionHtml)).flatMap((s) => s.split(';'))
   for (const sentence of sentences) {
-    if (SOFTENER.test(sentence) || alternative?.test(sentence)) continue
+    if (SOFTENER.test(sentence) || OPEN_ENDED.test(sentence) || alternative?.test(sentence)) continue
     const cues = [...sentence.matchAll(CUE)].map((m) => [m.index!, m.index! + m[0].length] as const)
     if (!cues.length) continue
     for (const m of sentence.matchAll(other)) {

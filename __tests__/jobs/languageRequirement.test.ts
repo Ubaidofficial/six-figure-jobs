@@ -36,6 +36,11 @@ describe('findLanguageRequirements', () => {
     expect(codes('<p>Fluent in English with German or Dutch as a secondary language.</p>')).toEqual([])
   })
 
+  it('does not read "or another language" as each language named', () => {
+    expect(codes('<p>Proficiency in Korean, Vietnamese, Chinese, Hindi, or another language spoken in the communities we serve.</p>')).toEqual([])
+    expect(codes('<p>Working proficiency in Mandarin or another language relevant to our partner regions.</p>')).toEqual([])
+  })
+
   it('reads every language in "Spanish / Portuguese Speaking" in a title', () => {
     expect(codes('<p>Great team.</p>', 'Account Executive (Spanish / Portuguese Speaking)').sort()).toEqual(['es', 'pt'])
   })
