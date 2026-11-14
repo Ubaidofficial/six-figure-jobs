@@ -67,7 +67,10 @@ export function buildCompanyDescriptionPrompt(name: string, tagline: string): st
   ].join('\n')
 }
 
-const PROMO = /\b(?:leading|best|world[- ]class|innovative|cutting[- ]edge|revolutionary|#1|number one|award[- ]winning|unmatched)\b/i
+const PROMO = /\b(?:leading|best|world[- ]class|innovative|cutting[- ]edge|revolutionary|#1|number one|award[- ]winning|unmatched|proven|seamless(?:ly)?|effortless(?:ly)?|smarter|faster|powerful|trusted)\b/i
+// Prices and offers ("no fees", "commission-free", "$0") are an advertisement's claim, not a fact about the company, and may not hold.
+const OFFER = /\b(?:free|no fees?|fee[- ]free|commission[- ]free|zero fees?|\$0|lowest|cheapest)\b/i
+const normalize = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 const FIRST_PERSON = /\b(?:we|our|ours|us|you|your)\b/i
 
 /** Words with a capital letter or a digit, apart from the first word of the answer: names, products, numbers. */
@@ -80,7 +83,12 @@ export function validateCompanyDescription(answer: unknown, name: string, taglin
   const text = typeof answer === 'string' ? answer.replace(/\s+/g, ' ').trim() : ''
   if (!text) return { ok: false, reason: 'empty answer' }
   if (text.length < 40 || text.length > 300) return { ok: false, reason: `length ${text.length} outside 40-300` }
-  if (/[!]/.test(text) || PROMO.test(text) || FIRST_PERSON.test(text)) return { ok: false, reason: 'marketing or first-person wording' }
+  if (/[!]/.test(text) || PROMO.test(text) || OFFER.test(text) || FIRST_PERSON.test(text)) return { ok: false, reason: 'marketing, offer or first-person wording' }
+  // "Run payments and offer financial products in one platform." is an ad line that never says who the company is.
+  const firstWord = name.trim().split(/\s+/)[0]?.replace(/[^\w]/g, '').toLowerCase()
+  if (firstWord && firstWord.length >= 3 && !text.toLowerCase().includes(firstWord)) return { ok: false, reason: 'does not name the company' }
+  // A sentence copied word for word from the tagline is the company's advertising, not a description.
+  if (normalize(tagline).includes(normalize(text))) return { ok: false, reason: 'copied from the tagline' }
   if ((text.match(/[.!?](?:\s|$)/g) ?? []).length > 2) return { ok: false, reason: 'more than two sentences' }
   const source = `${name} ${tagline}`.toLowerCase()
   const invented = claims(text).filter((w) => !source.includes(w.toLowerCase().replace(/[.,;:]+$/, '')))
