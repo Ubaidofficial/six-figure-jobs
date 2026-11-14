@@ -8,7 +8,7 @@ import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../../lib/seo/s
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
 import { isPseoComboIndexable } from '../../../../../lib/seo/pseoUnlock'
-import { buildListingDescription, buildListingTitle, countryFlag } from '../../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle, flagged } from '../../../../../lib/seo/metaText'
 
 export const revalidate = 600
 
@@ -45,9 +45,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
 
   const title = buildListingTitle({
-    topic: `${roleName} Jobs in ${cityInfo.label}`,
+    topic: `${roleName} Jobs in ${flagged(cityInfo.label, cityInfo.countryCode)}`,
     qualifier: 'Paying $100k+',
-    flag: countryFlag(cityInfo.countryCode),
   })
   const description = buildListingDescription(`$100k+ ${roleName} jobs in ${cityInfo.label}.`, [
     ['Remote, hybrid and on-site roles.'],

@@ -23,7 +23,9 @@ import {
   buildSalaryTierTitle,
   countryFlag,
   fitTitle,
+  flagged,
   freshnessClosing,
+  inCountry,
   titleDateTag,
   truncateAtWord,
 } from '../../lib/seo/metaText'
@@ -107,9 +109,9 @@ describe('buildListingTitle', () => {
     }
   })
 
-  it('puts a flag first, counts it as two characters and drops the brand to fit', () => {
-    const t = buildListingTitle({ topic: 'High-Paying Jobs in Austin', qualifier: '($100k+)', flag: countryFlag('US') })
-    expect(t).toBe('🇺🇸 High-Paying Jobs in Austin ($100k+) [Nov 2026]')
+  it('keeps a flag next to its place, counts it as two characters and drops the brand to fit', () => {
+    const t = buildListingTitle({ topic: `High-Paying Jobs in ${flagged('Austin', 'US')}`, qualifier: '($100k+)' })
+    expect(t).toBe('High-Paying Jobs in 🇺🇸 Austin ($100k+) [Nov 2026]')
     expect([...t].length).toBeLessThanOrEqual(TITLE_MAX)
   })
 
@@ -359,6 +361,20 @@ describe('countryFlag', () => {
   })
 })
 
+describe('flagged and inCountry', () => {
+  it('puts the flag right before the place name, and leaves the name alone without a code', () => {
+    expect(flagged('London', 'GB')).toBe('🇬🇧 London')
+    expect(flagged('London', null)).toBe('London')
+    expect(flagged('London', 'Remote')).toBe('London')
+  })
+
+  it('keeps "the" before the flag for the countries that take it', () => {
+    expect(inCountry('United Kingdom', 'GB')).toBe('the 🇬🇧 United Kingdom')
+    expect(inCountry('Canada', 'CA')).toBe('🇨🇦 Canada')
+    expect(inCountry('United States')).toBe('the United States')
+  })
+})
+
 describe('buildDescription', () => {
   it('skips slots that do not fit and cuts an over-long lead at a word boundary', () => {
     expect(buildDescription('Lead.', [['x'.repeat(200)]])).toBe(`Lead. ${FRESHNESS}`)
@@ -436,13 +452,13 @@ describe('salary tier title and description', () => {
 describe('city and category titles', () => {
   const SALARY_LABELS = ['$100k+', '£75k+', '€80k+', 'C$120k+', 'A$140k+']
 
-  it('start with the flag, end with the date tag and stay within the limit for every city and label', () => {
+  it('put the flag before the city, end with the date tag and stay within the limit for every city and label', () => {
     for (const city of CITY_TARGETS) {
       for (const label of SALARY_LABELS) {
         expect([...buildCityTitle(city.label, label, city.countryCode)].length).toBeLessThanOrEqual(TITLE_MAX)
       }
     }
-    expect(buildCityTitle('Austin', '$100k+', 'US')).toBe('🇺🇸 High-Paying Jobs in Austin ($100k+) [Nov 2026]')
+    expect(buildCityTitle('Austin', '$100k+', 'US')).toBe('High-Paying Jobs in 🇺🇸 Austin ($100k+) [Nov 2026]')
     expect(buildCityTitle('Austin', '$100k+')).toBe('High-Paying Jobs in Austin ($100k+) [Nov 2026]')
   })
 
@@ -453,8 +469,8 @@ describe('city and category titles', () => {
       }
     }
     expect(buildCountryTitle('Canada', 'C$120k+')).toBe('High-Paying Jobs in Canada (C$120k+) [Nov 2026]')
-    expect(buildCountryTitle('Canada', 'C$120k+', 'CA')).toBe('🇨🇦 High-Paying Jobs in Canada (C$120k+) [Nov 2026]')
-    expect(buildCountryTitle('United States', '$100k+', 'US')).toBe('🇺🇸 High-Paying Jobs in the United States ($100k+) [Nov 2026]')
+    expect(buildCountryTitle('Canada', 'C$120k+', 'CA')).toBe('High-Paying Jobs in 🇨🇦 Canada (C$120k+) [Nov 2026]')
+    expect(buildCountryTitle('United States', '$100k+', 'US')).toBe('High-Paying Jobs in the 🇺🇸 United States ($100k+) [Nov 2026]')
   })
 
   it('skill titles match the role-page shape and stay within the limit', () => {

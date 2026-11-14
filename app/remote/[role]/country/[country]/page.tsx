@@ -11,7 +11,7 @@ import {
 import { buildJobSlugHref } from '../../../../../lib/jobs/jobSlug'
 import JobList from '../../../../components/JobList'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../../../lib/seo/site'
-import { buildListingDescription, buildListingTitle, countryFlag } from '../../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle, flagged } from '../../../../../lib/seo/metaText'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
 
@@ -186,9 +186,8 @@ export async function generateMetadata({
 
   const totalJobs = result.total
   const title = buildListingTitle({
-    topic: `Remote ${roleName} Jobs in ${countryCode}`,
+    topic: `Remote ${roleName} Jobs in ${flagged(countryCode, countryCode)}`,
     qualifier: 'Paying $100k+',
-    flag: countryFlag(countryCode),
   })
   const canonicalUrl = `${SITE_URL}${canonicalPathname}`
 

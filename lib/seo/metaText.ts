@@ -59,18 +59,24 @@ export function titleDateTag(now: Date = new Date()): string {
   return `[${MONTHS[now.getUTCMonth()]} ${now.getUTCFullYear()}]`
 }
 
+/** A place name with its flag emoji before it ("🇬🇧 London"); the bare name when the country code is not known. */
+export function flagged(placeLabel: string, countryCode: string | null | undefined): string {
+  const flag = countryFlag(countryCode)
+  return flag ? `${flag} ${placeLabel}` : placeLabel
+}
+
 /**
  * Topic-first title that ends with the date tag and the brand ("Python Jobs Paying $100k+ [Nov 2026] | Six Figure
- * Jobs"). A `flag` (countryFlag) goes first. A qualifier that starts with ":" attaches without a space. When it is
- * too long the brand drops first, then the qualifier ("Paying $100k+"), then the date tag.
+ * Jobs"). A flag belongs next to the place it marks, inside the topic (`flagged()`). A qualifier that starts with ":"
+ * attaches without a space. When it is too long the brand drops first, then the qualifier ("Paying $100k+"), then the
+ * date tag.
  */
-export function buildListingTitle(parts: { topic: string; qualifier?: string; brand?: string; flag?: string }): string {
+export function buildListingTitle(parts: { topic: string; qualifier?: string; brand?: string }): string {
   const brand = parts.brand ?? SITE_NAME
-  const flag = parts.flag ? `${parts.flag} ` : ''
   const tag = ` ${titleDateTag()}`
   const joiner = parts.qualifier?.startsWith(':') ? '' : ' '
-  const full = `${flag}${parts.topic}${parts.qualifier ? `${joiner}${parts.qualifier}` : ''}`
-  const short = `${flag}${parts.topic}`
+  const full = `${parts.topic}${parts.qualifier ? `${joiner}${parts.qualifier}` : ''}`
+  const short = parts.topic
   return fitTitle([`${full}${tag} | ${brand}`, `${full}${tag}`, `${short}${tag} | ${brand}`, `${short}${tag}`, `${short} | ${brand}`, short])
 }
 
@@ -264,29 +270,31 @@ export function buildSalaryTierDescription(rangeLabel: string, total: number): s
   )
 }
 
-/** City page title ("🇺🇸 High-Paying Jobs in Austin ($100k+) – 1,234 Roles"); fits TITLE_MAX for any city. */
+/** City page title ("High-Paying Jobs in 🇺🇸 Austin ($100k+) [Nov 2026]"); fits TITLE_MAX for any city. */
 export function buildCityTitle(cityLabel: string, salaryLabel: string, countryCode?: string | null): string {
   return buildListingTitle({
-    topic: `High-Paying Jobs in ${cityLabel}`,
+    topic: `High-Paying Jobs in ${flagged(cityLabel, countryCode)}`,
     qualifier: `(${salaryLabel})`,
-    flag: countryFlag(countryCode),
   })
 }
 
 /** Countries whose name takes "the" in running text ("jobs in the United States", not "jobs in United States"). */
 const COUNTRIES_WITH_THE = new Set(['United States', 'United Kingdom', 'Netherlands', 'United Arab Emirates', 'Philippines'])
 
-/** "the United States" for the countries that take "the", else the label as is. For "jobs in ${...}" phrases. */
-export function inCountry(countryLabel: string): string {
-  return COUNTRIES_WITH_THE.has(countryLabel) ? `the ${countryLabel}` : countryLabel
+/**
+ * "the United States" for the countries that take "the", else the label as is. For "jobs in ${...}" phrases; with a
+ * country code the flag goes right before the name ("the 🇺🇸 United States", "🇨🇦 Canada").
+ */
+export function inCountry(countryLabel: string, countryCode?: string | null): string {
+  const name = flagged(countryLabel, countryCode)
+  return COUNTRIES_WITH_THE.has(countryLabel) ? `the ${name}` : name
 }
 
-/** Country page title ("🇨🇦 High-Paying Jobs in Canada (C$120k+) – 1,637 Roles"). */
+/** Country page title ("High-Paying Jobs in 🇨🇦 Canada (C$120k+) [Nov 2026]"). */
 export function buildCountryTitle(countryLabel: string, salaryLabel: string, countryCode?: string | null): string {
   return buildListingTitle({
-    topic: `High-Paying Jobs in ${inCountry(countryLabel)}`,
+    topic: `High-Paying Jobs in ${inCountry(countryLabel, countryCode)}`,
     qualifier: `(${salaryLabel})`,
-    flag: countryFlag(countryCode),
   })
 }
 
