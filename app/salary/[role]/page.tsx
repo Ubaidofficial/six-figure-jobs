@@ -1,6 +1,7 @@
 // app/salary/[role]/page.tsx
 
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import {
@@ -174,6 +175,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    keywords: keywordsFor('salaryGuide', { role: roleName }),
     alternates: { canonical },
     robots: allowIndex
       ? { index: true, follow: true }

@@ -4,6 +4,7 @@
 // publishing six-figure pay, most remote jobs first. Asked for by the owner (2026-11-09), modelled on the remote-company
 // directories of remote100k.com and others, with live counts from our own jobs (lib/jobs/remoteCompanies.ts).
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { unstable_rethrow } from 'next/navigation'
 
@@ -24,19 +25,21 @@ const HEADING = 'Remote companies hiring $100k+ roles'
 function describe(companies: number, jobs: number): string {
   if (companies === 0) return 'Companies hiring remotely for six-figure roles, with published salaries and links to apply.'
   return buildDescription(
-    `${companies.toLocaleString()} companies hiring remotely for $100k+ roles, with ${jobs.toLocaleString()} open remote jobs that publish their pay.`,
+    'Companies hiring remotely for $100k+ roles that publish their pay.',
     [['Salary shown upfront, with direct links to apply.', 'Salary shown upfront.']],
+    `Updated daily on ${SITE_NAME}: ${companies.toLocaleString()} companies, ${jobs.toLocaleString()} remote jobs.`,
   )
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const { companies, totalRemoteJobs } = await loadRemoteCompaniesDirectory()
-    const title = buildListingTitle({ topic: 'Remote Companies', count: companies.length, qualifier: 'Hiring $100k+ Roles' })
+    const title = buildListingTitle({ topic: 'Remote Companies', count: companies.length, qualifier: 'Hiring $100k+ Roles', countNoun: 'Companies' })
     const description = describe(companies.length, totalRemoteJobs)
     return {
       title,
       description,
+      keywords: keywordsFor('remoteCompanies'),
       alternates: { canonical: `${SITE_URL}${PATH}` },
       robots: { index: true, follow: true },
       openGraph: { images: defaultOgImages(), title, description, url: `${SITE_URL}${PATH}`, siteName: SITE_NAME, type: 'website' },

@@ -4,13 +4,14 @@
 // open jobs right now. Targets "high paying jobs" (about 201,000 US searches a month per DataForSEO, 2026-11-09), a
 // search mostly answered by listicles; this page answers it from live published salaries (lib/jobs/highPayingJobs.ts).
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { unstable_rethrow } from 'next/navigation'
 
 import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Prose } from '@/components/listing/ListingParts'
 import { HIGH_PAYING_MIN_ROLES_TO_INDEX, highPayingFaq, loadHighPayingJobs, MIN_LISTINGS } from '@/lib/jobs/highPayingJobs'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
-import { fitTitle } from '@/lib/seo/metaText'
+import { buildDescription, fitTitle } from '@/lib/seo/metaText'
 import { SITE_NAME, defaultOgImages, getSiteUrl } from '@/lib/seo/site'
 
 export const revalidate = 1800
@@ -27,18 +28,23 @@ export async function generateMetadata(): Promise<Metadata> {
     const title =
       roles.length > 0
         ? fitTitle([
-            `High-Paying Jobs: ${roles.length} Highest-Paying Roles | ${SITE_NAME}`,
-            `High-Paying Jobs: ${roles.length} Highest-Paying Roles by Real Pay`,
-            `High-Paying Jobs: ${roles.length} Highest-Paying Roles`,
+            `High-Paying Jobs, Ranked by Real Pay – ${roles.length} Roles | ${SITE_NAME}`,
+            `High-Paying Jobs, Ranked by Real Pay – ${roles.length} Roles`,
+            'High-Paying Jobs, Ranked by Real Pay',
           ])
         : fitTitle([`High-Paying Jobs Ranked by Real Pay | ${SITE_NAME}`, 'High-Paying Jobs Ranked by Real Pay'])
     const description =
       roles.length > 0
-        ? `High-paying jobs: the ${roles.length} highest-paying roles, ranked by median salary from ${listings.toLocaleString('en-US')} live listings with published pay. ${roles[0].label} leads at ${money(roles[0].median)}.`
+        ? buildDescription(
+            'High-paying jobs ranked by the median salary of live listings that publish their pay.',
+            [[`${roles[0].label} leads at ${money(roles[0].median)}.`]],
+            `Updated daily on ${SITE_NAME}: ${roles.length} roles from ${listings.toLocaleString('en-US')} listings.`,
+          )
         : 'High-paying jobs ranked by the median salary of live listings that publish their pay.'
     return {
       title,
       description,
+      keywords: keywordsFor('highPayingJobs'),
       alternates: { canonical: `${SITE_URL}${PATH}` },
       robots: roles.length >= HIGH_PAYING_MIN_ROLES_TO_INDEX ? { index: true, follow: true } : { index: false, follow: true },
       openGraph: { images: defaultOgImages(), title, description, url: `${SITE_URL}${PATH}`, siteName: SITE_NAME, type: 'website' },

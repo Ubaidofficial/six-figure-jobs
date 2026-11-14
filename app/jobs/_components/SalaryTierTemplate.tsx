@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import {
   Faq,
   JobRows,
@@ -128,6 +129,7 @@ export function buildSalaryTierMetadata(
   return {
     title,
     description,
+    keywords: keywordsFor('salaryTier', { amount: tier.rangeLabel }),
     alternates: { canonical },
     openGraph: {
       title,

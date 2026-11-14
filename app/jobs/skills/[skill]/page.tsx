@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 
@@ -12,7 +13,7 @@ import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
-import { buildListingDescription, buildSkillTitle, countPrefix } from '../../../../lib/seo/metaText'
+import { buildListingDescription, buildSkillTitle } from '../../../../lib/seo/metaText'
 import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 
@@ -55,14 +56,14 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     (isPhaseIndexable({ pathname: `/jobs/skills/${resolved.slug}` }) || isPseoHubUnlocked(total, `/jobs/skills/${resolved.slug}`))
   const title = buildSkillTitle(resolved.label, total)
   const description = buildListingDescription(
-    `${countPrefix(total)}${resolved.label} jobs paying $100k+.`,
-    [['High-paying roles at top tech companies.']],
-  )
+    `${resolved.label} jobs paying $100k+.`,
+    [['High-paying roles at top tech companies.']], total)
   const canonical = `${SITE_URL}/jobs/skills/${resolved.slug}`
 
   return {
     title,
     description,
+    keywords: keywordsFor('skill', { skill: resolved.label }),
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: { images: defaultOgImages(),

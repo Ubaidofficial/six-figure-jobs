@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 
 import {
   Faq,
@@ -219,6 +220,7 @@ export function buildRoleMetadata(
   return {
     title,
     description,
+    keywords: keywordsFor('role', { role: roleTitle }),
     alternates: { canonical },
     openGraph: {
       title,

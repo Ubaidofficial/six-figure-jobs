@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { unstable_rethrow } from 'next/navigation'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
@@ -111,6 +112,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       title,
       description,
+      keywords: keywordsFor('companies'),
       alternates: { canonical: `${SITE_URL}/companies` },
       robots: { index: true, follow: true },
       openGraph: { images: defaultOgImages(),

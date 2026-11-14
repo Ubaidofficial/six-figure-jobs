@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 
@@ -8,7 +9,7 @@ import { STATE_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
-import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle, countryFlag } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -49,15 +50,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const allowIndex =
     total >= 1 && isPhaseIndexable({ pathname: `/jobs/state/${resolved.slug}` })
   // Same shape as the city and country titles ("1,234 High-Paying Jobs in Texas ($100k+) | Six Figure Jobs").
-  const title = buildListingTitle({ topic: `High-Paying Jobs in ${resolved.name}`, count: total, qualifier: '($100k+)' })
-  const description = buildListingDescription(`${countPrefix(total)}high-paying $100k+ jobs in ${resolved.name}.`, [
+  const title = buildListingTitle({ topic: `High-Paying Jobs in ${resolved.name}`, count: total, qualifier: '($100k+)', flag: countryFlag('US') })
+  const description = buildListingDescription(`High-paying $100k+ jobs in ${resolved.name}.`, [
     ['Remote, hybrid and on-site roles.'],
-  ])
+  ], total)
   const canonical = `${SITE_URL}/jobs/state/${resolved.slug}`
 
   return {
     title,
     description,
+    keywords: keywordsFor('state', { state: resolved.name }),
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: { images: defaultOgImages(),
@@ -152,7 +154,7 @@ export default async function StatePage({ params }: { params: Params }) {
       </nav>
 
       <h1 className="mb-3 text-2xl font-semibold text-foreground">
-        {resolved.name} $100k+ jobs ({total.toLocaleString()})
+        High-paying jobs in {resolved.name} ($100k+)
       </h1>
       <p className="mb-4 text-sm text-muted-foreground">
         Find <strong className="text-foreground">{total.toLocaleString()}</strong>{' '}

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 
@@ -8,7 +9,7 @@ import { INDUSTRY_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import JobList from '../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
-import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -50,14 +51,15 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     total >= 1 && isPhaseIndexable({ pathname: `/jobs/industry/${resolved.slug}` })
   // Same shape as the category and skill titles ("5,197 Engineering Jobs Paying $100k+ | Six Figure Jobs").
   const title = buildListingTitle({ topic: `${resolved.label} Jobs`, count: total, qualifier: 'Paying $100k+' })
-  const description = buildListingDescription(`${countPrefix(total)}$100k+ ${resolved.label} jobs.`, [
+  const description = buildListingDescription(`$100k+ ${resolved.label} jobs.`, [
     ['Six-figure roles at top companies, with remote, hybrid and on-site options.', 'Six-figure roles at top companies.'],
-  ])
+  ], total)
   const canonical = `${SITE_URL}/jobs/industry/${resolved.slug}`
 
   return {
     title,
     description,
+    keywords: keywordsFor('category', { category: resolved.label }),
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: { images: defaultOgImages(),

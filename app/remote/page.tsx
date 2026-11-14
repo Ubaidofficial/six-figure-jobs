@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import { RegionMark } from '@/components/ui/RegionMark'
 import Link from '@/components/ui/Link'
 import { notFound, unstable_rethrow } from 'next/navigation'
@@ -7,7 +8,7 @@ import { queryJobs, buildWhere, type JobWithCompany } from '../../lib/jobs/query
 import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 import { prisma } from '../../lib/prisma'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
-import { fitTitle } from '../../lib/seo/metaText'
+import { buildDescription, buildListingTitle, freshnessClosing } from '../../lib/seo/metaText'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams, readListingPageParam } from '../../lib/seo/listingSearchParams'
 import { collectRemoteRoleRows } from '../../lib/seo/remoteSitemap'
 import { buildItemListJsonLd } from '../../lib/seo/itemListJsonLd'
@@ -134,25 +135,26 @@ export async function generateMetadata({
   const listPage = readListingPageParam(sp)
   const pageSuffix = listPage > 1 ? ` (Page ${listPage})` : ''
   const regionLabel = prettyRemoteRegion(activeRemoteRegion)
-  // Same wording as before; the brand, then the count, drop out when the title would pass TITLE_MAX.
+  // The count comes last; the brand, then the qualifier, drop out when the title would pass TITLE_MAX.
   const title = regionLabel
-    ? fitTitle([
-        `${regionLabel} Remote $100k+ Jobs (${total.toLocaleString()} Open Roles) | ${SITE_NAME}`,
-        `${regionLabel} Remote $100k+ Jobs (${total.toLocaleString()} Open Roles)`,
-        `${regionLabel} Remote $100k+ Jobs`,
-      ])
-    : fitTitle([
-        `${total.toLocaleString()} High-Paying Remote Jobs ($100k+)${pageSuffix} | ${SITE_NAME}`,
-        `${total.toLocaleString()} High-Paying Remote Jobs ($100k+)${pageSuffix}`,
-        `High-Paying Remote Jobs ($100k+)${pageSuffix}`,
-      ])
+    ? buildListingTitle({ topic: `${regionLabel} Remote $100k+ Jobs`, count: total, qualifier: pageSuffix.trim() || undefined })
+    : buildListingTitle({ topic: 'High-Paying Remote Jobs', count: total, qualifier: `($100k+)${pageSuffix}` })
   const description = regionLabel
-    ? `Browse ${total.toLocaleString()} ${regionLabel.toLowerCase()} six-figure remote jobs in engineering, product, data and more, with published salaries and fresh listings.`
-    : `Browse ${total.toLocaleString()} high-paying remote jobs ($100k+) with published salaries and links to apply. Engineering, product, data and more, added daily.`
+    ? buildDescription(
+        `Six-figure remote jobs in ${regionLabel} in engineering, product, data and more, with published salaries.`,
+        [['Fresh listings, direct apply links.']],
+        freshnessClosing(total),
+      )
+    : buildDescription(
+        'High-paying remote jobs ($100k+) with published salaries and links to apply.',
+        [['Engineering, product, data and more.']],
+        freshnessClosing(total),
+      )
 
   return {
     title,
     description,
+    keywords: keywordsFor('remoteHub'),
     alternates: {
       canonical,
     },

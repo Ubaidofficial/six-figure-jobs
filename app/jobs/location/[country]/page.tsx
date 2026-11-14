@@ -2,13 +2,14 @@
 // Programmatic SEO page for country or remote-only high-salary jobs
 
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
 import { countryCodeToSlug } from '../../../../lib/seo/countrySlug'
 import { notFound, redirect } from 'next/navigation'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
 import { queryJobs } from '../../../../lib/jobs/queryJobs'
 import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
-import { buildCountryTitle, buildListingDescription, countPrefix, inCountry } from '../../../../lib/seo/metaText'
+import { buildCountryTitle, buildListingDescription, inCountry } from '../../../../lib/seo/metaText'
 
 import { CountryLocationTemplate } from '../_components/CountryLocationTemplate'
 import { isCountryPageIndexable } from '../../../../lib/seo/indexabilityGates'
@@ -76,13 +77,13 @@ export async function generateMetadata({
 
   const title = loc.remoteOnly
     ? `Remote ${salaryLabel} jobs (${total.toLocaleString()}) | ${SITE_NAME}`
-    : buildCountryTitle(loc.label, salaryLabel, total)
+    : buildCountryTitle(loc.label, salaryLabel, total, loc.countryCode)
 
   const description = loc.remoteOnly
     ? `Browse ${total.toLocaleString()} remote ${salaryLabel} jobs with published salary ranges, and fresh listings across engineering, product, and data.`
-    : buildListingDescription(`${countPrefix(total)}high-paying jobs in ${inCountry(loc.label)} paying ${salaryLabel}.`, [
+    : buildListingDescription(`High-paying jobs in ${inCountry(loc.label)} paying ${salaryLabel}.`, [
         ['Six-figure roles across engineering, product, data and sales.', 'Remote, hybrid and on-site roles.'],
-      ])
+      ], total)
 
   const canonical = `${getSiteUrl()}/jobs/location/${loc.slug ?? country}`
   // In phase 1 only the allowlisted countries (US, GB, CA, DE, AU) are indexable; the rest wait for phase 2.
@@ -97,6 +98,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    keywords: keywordsFor('country', { country: loc.label }),
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: { images: defaultOgImages(),

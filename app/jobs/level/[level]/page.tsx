@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 import { queryJobs, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
@@ -7,7 +8,7 @@ import JobList from '../../../components/JobList'
 import { buildItemListJsonLd as buildSafeItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { getSiteUrl, SITE_NAME } from '../../../../lib/seo/site'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
-import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle } from '../../../../lib/seo/metaText'
 import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
 import { LEVEL_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
@@ -94,13 +95,14 @@ export async function generateMetadata({
   // Same shape as the role, skill and category titles ("8,148 Senior Jobs Paying $100k+ | Six Figure Jobs").
   const title = buildListingTitle({ topic: `${info.label} Jobs`, count: total, qualifier: 'Paying $100k+' })
 
-  const description = buildListingDescription(`${countPrefix(total)}${info.label.toLowerCase()} jobs paying $100k+.`, [
+  const description = buildListingDescription(`${info.label} jobs paying $100k+.`, [
     [`${info.description} at top companies.`],
-  ])
+  ], total)
 
   return {
     title,
     description,
+    keywords: keywordsFor('level', { level: info.label }),
     alternates: { canonical },
     robots: allowIndex ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {

@@ -101,6 +101,21 @@ export const KEYWORD_MAP = {
     secondary: ['$100k [category] jobs', 'high paying [category] jobs'],
     titleHas: 'jobs',
   },
+  companies: {
+    primary: 'companies hiring $100k+ jobs',
+    secondary: ['high paying companies', 'six figure jobs companies', 'top companies hiring'],
+    titleHas: 'companies hiring',
+  },
+  remoteCompanies: {
+    primary: 'remote companies hiring $100k+ roles',
+    secondary: ['remote companies', 'high paying remote jobs', 'work from home companies'],
+    titleHas: 'remote companies',
+  },
+  fourDayWeek: {
+    primary: '4 day work week jobs',
+    secondary: ['4 day work week jobs $100k', '32 hour work week jobs', 'four day week remote jobs'],
+    titleHas: '4 day work week jobs',
+  },
   company: {
     primary: '[company] jobs',
     secondary: ['[company] careers', '[company] salary', '[company] $100k jobs'],
@@ -109,3 +124,16 @@ export const KEYWORD_MAP = {
 } as const satisfies Record<string, PageKeywords>
 
 export type KeywordPageType = keyof typeof KEYWORD_MAP
+
+/**
+ * The page type's keywords for `<meta name="keywords">`, lowercase, with the page's own values filled in
+ * (`{ role: 'Software Engineer' }` turns "[role] jobs" into "software engineer jobs"); a keyword whose value is not
+ * given is left out. Google does not use this tag; it is here for engines and tools that still read it.
+ */
+export function keywordsFor(type: KeywordPageType, values: Record<string, string> = {}): string[] {
+  const { primary, secondary } = KEYWORD_MAP[type]
+  const filled = [primary, ...secondary].map((k) =>
+    k.replace(/\[(\w+)\]/g, (whole, key: string) => (values[key] ? values[key].toLowerCase() : whole)).toLowerCase(),
+  )
+  return [...new Set(filled.filter((k) => !k.includes('[')))]
+}

@@ -1,4 +1,4 @@
-import { KEYWORD_MAP, type KeywordPageType } from '../../lib/seo/keywordMap'
+import { KEYWORD_MAP, keywordsFor, type KeywordPageType } from '../../lib/seo/keywordMap'
 import {
   buildCategoryTitle,
   buildCityTitle,
@@ -50,6 +50,34 @@ describe('keyword map', () => {
   })
 })
 
+describe('keywordsFor', () => {
+  it('fills in the page values, lowercases, and drops keywords it has no value for', () => {
+    expect(keywordsFor('role', { role: 'Software Engineer' })).toEqual([
+      'software engineer jobs',
+      'high paying software engineer jobs',
+      '$100k software engineer jobs',
+      'software engineer salary',
+    ])
+    expect(keywordsFor('city', { city: 'Austin' })).toEqual([
+      'high paying jobs in austin',
+      '$100k jobs in austin',
+      'six figure jobs in austin',
+    ])
+  })
+
+  it('returns fixed keywords for pages with no placeholders, without duplicates', () => {
+    const kws = keywordsFor('highPayingJobs')
+    expect(kws[0]).toBe('high paying jobs')
+    expect(new Set(kws).size).toBe(kws.length)
+  })
+
+  it('never leaves a placeholder in a keyword', () => {
+    for (const type of Object.keys(KEYWORD_MAP) as KeywordPageType[]) {
+      for (const kw of keywordsFor(type)) expect(kw).not.toMatch(/\[|\]/)
+    }
+  })
+})
+
 describe('inCountry', () => {
   it('adds "the" for the countries that take it, and only those', () => {
     expect(inCountry('United States')).toBe('the United States')
@@ -60,6 +88,6 @@ describe('inCountry', () => {
   })
 
   it('reads naturally in the country title', () => {
-    expect(buildCountryTitle('United Kingdom', '£75k+', 673)).toBe('673 High-Paying Jobs in the United Kingdom (£75k+)')
+    expect(buildCountryTitle('United Kingdom', '£75k+', 673)).toBe('High-Paying Jobs in the United Kingdom (£75k+) – 673 Roles')
   })
 })

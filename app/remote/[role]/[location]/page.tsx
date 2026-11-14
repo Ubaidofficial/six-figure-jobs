@@ -12,7 +12,7 @@ import {
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import JobList from '../../../components/JobList'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../../lib/seo/site'
-import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle } from '../../../../lib/seo/metaText'
 import { buildItemListJsonLd } from '../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 
@@ -260,9 +260,8 @@ export async function generateMetadata({
   return {
     title,
     description: buildListingDescription(
-      `${countPrefix(totalJobs)}remote ${prettyRole(roleSlug)} jobs in ${cityName} paying $100k+.`,
-      [['Roles at leading tech and SaaS companies.']],
-    ),
+      `Remote ${prettyRole(roleSlug)} jobs in ${cityName} paying $100k+.`,
+      [['Roles at leading tech and SaaS companies.']], totalJobs),
     alternates: {
       canonical: canonicalUrl,
     },
