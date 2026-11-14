@@ -14,6 +14,7 @@ import { SEARCH_ROLE_OPTIONS } from '../lib/roles/searchRoles'
 import { TARGET_COUNTRIES } from '../lib/seo/regions'
 import { buildSliceCanonicalPath } from '../lib/seo/canonical'
 import { HomeFAQ } from './pageFAQ'
+import { DEFAULT_TTL_MS, memoAsync } from '@/lib/cache/memo'
 import { CATEGORY_LINKS } from '@/lib/constants/category-links'
 import { LOCATIONS } from '@/lib/constants/homepage'
 import { SALARY_TIERS, tierQueryInput, type SalaryTierId } from '@/lib/jobs/salaryTiers'
@@ -286,8 +287,13 @@ function addAndClause(where: any, clause: any): any {
   }
 }
 
-export default async function HomePage() {
-  try {
+/**
+ * Everything the homepage shows that comes from the database, kept 5 minutes in memory (lib/cache/memo.ts: then served
+ * stale while one refresh runs; concurrent visitors share one load; a failed load is never kept). Openship builds
+ * without database access, so the homepage cannot be prerendered (skipPrerenderWhileBuilding makes it a per-request
+ * page) and every visit ran these queries again: 3-11 s per view on 2026-11-14.
+ */
+async function loadHomePageData() {
     const stats = await loadPublicSiteStats()
     const publicJobWhere = stats.publicJobWhere
     const [
@@ -581,6 +587,13 @@ export default async function HomePage() {
         ]
       : withJobs
   ).slice(0, 6)
+
+  return { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, feedItemIds, newRolesCompanies, sponsors, jobs, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles }
+}
+
+export default async function HomePage() {
+  try {
+    const { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, feedItemIds, newRolesCompanies, sponsors, jobs, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles } = await memoAsync('home.page.data', DEFAULT_TTL_MS, loadHomePageData)
 
     return (
     <>
