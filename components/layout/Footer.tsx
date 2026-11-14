@@ -178,6 +178,17 @@ export function Footer() {
                 loading="lazy"
               />
             </a>
+            <a className={styles.badge} href="https://www.submithunt.com" target="_blank" rel="noopener">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://www.submithunt.com/badge-dark.svg"
+                width={240}
+                height={66}
+                alt="Featured on Submit Hunt"
+                loading="lazy"
+              />
+            </a>
           </div>
           <div className={styles.made}>Made with 💚 for high earners</div>
         </div>
