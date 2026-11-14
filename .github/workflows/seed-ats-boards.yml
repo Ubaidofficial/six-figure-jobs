@@ -1,0 +1,64 @@
+name: seed ats boards
+
+# Manual. Adds the company job boards in scripts/data/atsBoards.json to CompanyATS (see scripts/seedAtsBoards.ts), so the
+# direct-ATS scrape reads them. A dry run unless "apply" is ticked. "verify" asks each new board's public API whether it
+# lists postings first and drops the ones that do not. Same production-database guard as the other manual workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Write the changes (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+      verify:
+        description: "Check each new board lists postings before adding it"
+        type: boolean
+        required: false
+        default: true
+      limit:
+        description: "Add at most this many boards (0 = all)"
+        type: string
+        required: false
+        default: "0"
+
+concurrency:
+  group: seed-ats-boards
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Seed boards
+        env:
+          APPLY: ${{ inputs.apply }}
+          VERIFY: ${{ inputs.verify }}
+          LIMIT: ${{ inputs.limit }}
+        run: |
+          args="--limit=$LIMIT"
+          [ "$VERIFY" = "true" ] && args="$args --verify"
+          [ "$APPLY" = "true" ] && args="$args --apply"
+          npx tsx scripts/seedAtsBoards.ts $args
