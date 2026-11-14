@@ -46,6 +46,22 @@ export function normalizeTitle(title: string): string {
     .trim()
 }
 
+/**
+ * A German-style gender note after a title: "(m/f/d)", "(w/m/x)", "(all genders)", "[m/w/d]", or a bare "m/w/d". One
+ * source prints it and another drops it, so the same opening reads as two titles. The idea is FTJA's (MIT, see
+ * THIRD_PARTY_NOTICES.md).
+ */
+const GENDER_NOTE = /[(\[]\s*(?:all genders|gn|[mwfdxhi]\s*(?:[/|,*]\s*[mwfdxhi]\s*)+)[)\]]|\b[mwfdx]\/[mwfdx]\/[mwfdx]\b/gi
+
+/**
+ * normalizeTitle with the gender note removed first. Used to compare copies of one opening across sources
+ * (lib/jobs/crossSourceDuplicates.ts). It is deliberately NOT what makes the stored `dedupeKey`: changing that key would
+ * make every existing row whose title has a gender note miss its key on the next ingest.
+ */
+export function normalizeTitleForMatch(title: string): string {
+  return normalizeTitle((title || '').replace(GENDER_NOTE, ' '))
+}
+
 // =============================================================================
 // Location Normalization
 // =============================================================================

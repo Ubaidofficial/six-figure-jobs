@@ -10,7 +10,7 @@
 // GDIT's "Senior System Administrator - DISA E-ICAM Program" was live twice on 2026-11-09, once under "gdit" and once
 // under "General Dynamics Information Technology", from two career sites of the one Workday tenant
 // (gdit.wd5.myworkdayjobs.com/GDIT_Empl_Ref/... and .../External_Career_Site/...).
-import { normalizeTitle } from '../ingest/dedupeHelpers'
+import { normalizeTitleForMatch } from '../ingest/dedupeHelpers'
 import { boardNameFor } from '../scrapers/utils/boardHosts'
 
 export type DuplicateCandidate = {
@@ -83,7 +83,7 @@ export function duplicateJobIdsToExpire(jobs: DuplicateCandidate[]): string[] {
   const byId = new Map<string, DuplicateCandidate>()
   for (const job of jobs) {
     const place = placeKey(job)
-    const title = normalizeTitle(job.title)
+    const title = normalizeTitleForMatch(job.title)
     if (!place || !title) continue
     const tenant = atsTenantKey(job.applyUrl || job.url)
     const keys = [

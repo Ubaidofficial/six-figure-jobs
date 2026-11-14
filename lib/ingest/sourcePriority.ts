@@ -30,6 +30,9 @@ export const BOARD_SOURCES = {
   REMOTEAI: 'board:remoteai',
   WEWORKREMOTELY: 'board:weworkremotely',
   BUILTIN: 'board:builtin',
+  LINKEDIN: 'board:linkedin',
+  JOBICY: 'board:jobicy',
+  WORKINGNOMADS: 'board:workingnomads',
 } as const
 
 export const OTHER_SOURCES = {
@@ -64,6 +67,9 @@ export const SOURCE_PRIORITY: Record<string, number> = {
   // Lower-quality / less reliable boards
   [BOARD_SOURCES.WEWORKREMOTELY]: 30,
   [BOARD_SOURCES.BUILTIN]: 30,
+  [BOARD_SOURCES.LINKEDIN]: 30,
+  [BOARD_SOURCES.JOBICY]: 30,
+  [BOARD_SOURCES.WORKINGNOMADS]: 30,
 
   // Fallback for unknown sources
   [OTHER_SOURCES.OTHER]: 20,
