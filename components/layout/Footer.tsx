@@ -189,6 +189,20 @@ export function Footer() {
                 loading="lazy"
               />
             </a>
+            <a
+              className={styles.badge}
+              href="https://builtbyindies.com/products/6figjobs?utm_source=badge&utm_medium=embed&utm_campaign=live"
+              target="_blank"
+              rel="noopener"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://builtbyindies.com/badge/b5f1a0ef-cefe-4adb-9acd-fe3cd444dc39.svg?theme=dark"
+                alt="BuiltByIndies"
+                loading="lazy"
+              />
+            </a>
           </div>
           <div className={styles.made}>Made with 💚 for high earners</div>
         </div>

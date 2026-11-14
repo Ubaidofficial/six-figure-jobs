@@ -1,5 +1,7 @@
 # Unreleased
 
+- Footer: BuiltByIndies directory badge added after the other directory badges (`components/layout/Footer.tsx`), same markup and lazy loading as them; one more third-party image request per page view, no script. (**SEO: one more outbound followed link (`rel="noopener"`, like the other badges) in the site-wide footer; no canonical, hreflang, robots, sitemap or JSON-LD change**)
+
 - Company profile measurement also asks Wikidata (by official website, never by name) for founding year and headcount, to see whether it fills what homepages cannot (`lib/companies/wikidataProfile.ts`, `scripts/measureCompanyProfiles.ts`); measurement only, nothing is written. (**SEO: none**)
 
 - Tech-stack backfill fills each field only when it is empty: a job that already had a `techStack` but no `skillsJson` no longer has its `techStack` replaced (`scripts/backfill-tech-stack.ts`). The owner approved applying the backfill in small batches (2026-11-14). (**SEO: none; the skill chips and skill-hub links read these fields, and only empty ones are filled**)
