@@ -1,0 +1,75 @@
+name: evidence audits
+
+# Manual. Two reports on the live jobs, to judge the free text readers on real data before anything is switched on:
+#   1. which languages live jobs require (scripts/audit-language-requirements.ts): read-only;
+#   2. which live jobs with no remoteMode say, in a sentence, that the role is remote (scripts/backfillRemoteEvidence.ts):
+#      a DRY RUN unless "apply" is ticked. Applying writes remoteMode = 'remote' on jobs that had none, which changes their
+#      JSON-LD (jobLocationType TELECOMMUTE), so read the dry run's sample sentences first. updatedAt is not touched.
+# Same production-database fingerprint guard as the other manual workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Live jobs to look at (the audit reads descriptions; about 30,000 live jobs on 2026-11-14)"
+        type: string
+        required: false
+        default: "30000"
+      apply:
+        description: "Write remoteMode (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: evidence-audits
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Required languages (read-only)
+        env:
+          LIMIT: ${{ inputs.limit }}
+        run: npx tsx scripts/audit-language-requirements.ts --limit="$LIMIT" --examples=5
+
+      - name: Remote evidence
+        env:
+          LIMIT: ${{ inputs.limit }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          args="--limit=$LIMIT --report=remote-evidence.json"
+          [ "$APPLY" = "true" ] && args="$args --apply"
+          npx tsx scripts/backfillRemoteEvidence.ts $args
+
+      - name: Keep the sentences
+        uses: actions/upload-artifact@v4
+        with:
+          name: remote-evidence-report
+          path: remote-evidence.json
+          retention-days: 14

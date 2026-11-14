@@ -26,6 +26,7 @@ import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { cleanJobDescriptionHtml } from '../../../lib/jobs/descriptionCleaning'
 import { detectJobLanguage } from '../../../lib/jobs/language'
 import { findLanguageRequirements } from '../../../lib/jobs/languageRequirement'
+import { experienceLabel, findExperienceRequirement } from '../../../lib/jobs/experienceRequirement'
 import { countryCodeToSlug, countryCodeToName } from '../../../lib/seo/countrySlug'
 import { CITY_TARGETS, CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { countryName, normalizeCountryCode } from '../../../lib/location/country'
@@ -34,7 +35,7 @@ import { employmentTypeLabel } from '../../../lib/jobs/employmentTypeLabel'
 import { skillLabel } from '../../../lib/jobs/skillLabel'
 import { resolveJobRoleSlug, similarJobsKeyword } from '../../../lib/roles/indexableRole'
 import { JobCard } from '@/components/jobs/JobCard'
-import { Briefcase, Clock, Globe, Languages, Laptop, MapPin, TrendingUp } from 'lucide-react'
+import { Briefcase, Clock, Globe, Hourglass, Languages, Laptop, MapPin, TrendingUp } from 'lucide-react'
 
 import { SKILL_TARGETS } from '../../../lib/seo/pseoTargets'
 import { Badge, badgeVariants } from '@/components/ui/badge'
@@ -452,10 +453,17 @@ export default async function JobPage({
   const requiredLanguages = isOversizedDescription
     ? []
     : findLanguageRequirements({ title: typedJob.title, descriptionHtml: rawDescriptionString })
+  // Years of experience the posting asks for, with the sentence it was read from.
+  const experience = isOversizedDescription ? null : findExperienceRequirement(rawDescriptionString)
   const heroChips = ([
     ...metaItems,
     { Icon: Briefcase, label: employmentTypeLabel(employmentType) },
     { Icon: TrendingUp, label: seniority ? String(seniority) : null },
+    {
+      Icon: Hourglass,
+      label: experience ? experienceLabel(experience) : null,
+      content: experience ? <span title={`"${experience.sentence}"`}>{experienceLabel(experience)}</span> : undefined,
+    },
     {
       Icon: Languages,
       label: requiredLanguages.length ? `${requiredLanguages.map((l) => l.language).join(' / ')} required` : null,
