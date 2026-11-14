@@ -193,8 +193,13 @@
 
 .bottomLinks {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
+}
+
+.bottomLinks .link {
+  white-space: nowrap;
 }
 
 .dot {
