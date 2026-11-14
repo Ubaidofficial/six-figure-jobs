@@ -11,7 +11,7 @@ import { unstable_rethrow } from 'next/navigation'
 import { Faq, JobRows, LinkChips, ListingHeader, ListingPage, ListingSection, Prose } from '@/components/listing/ListingParts'
 import { HIGH_PAYING_MIN_ROLES_TO_INDEX, highPayingFaq, loadHighPayingJobs, MIN_LISTINGS } from '@/lib/jobs/highPayingJobs'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
-import { buildDescription, fitTitle } from '@/lib/seo/metaText'
+import { buildDescription, fitTitle, titleYearTag } from '@/lib/seo/metaText'
 import { SITE_NAME, defaultOgImages, getSiteUrl } from '@/lib/seo/site'
 
 export const revalidate = 1800
@@ -28,8 +28,8 @@ export async function generateMetadata(): Promise<Metadata> {
     const title =
       roles.length > 0
         ? fitTitle([
-            `High-Paying Jobs, Ranked by Real Pay – ${roles.length} Roles | ${SITE_NAME}`,
-            `High-Paying Jobs, Ranked by Real Pay – ${roles.length} Roles`,
+            `High-Paying Jobs, Ranked by Real Pay ${titleYearTag()} | ${SITE_NAME}`,
+            `High-Paying Jobs, Ranked by Real Pay ${titleYearTag()}`,
             'High-Paying Jobs, Ranked by Real Pay',
           ])
         : fitTitle([`High-Paying Jobs Ranked by Real Pay | ${SITE_NAME}`, 'High-Paying Jobs Ranked by Real Pay'])

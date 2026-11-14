@@ -102,7 +102,7 @@ function buildCompaniesCollectionPageJsonLd(totalCompanies: number, totalEligibl
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const { totalCompanies, totalEligibleJobs, totalCompaniesHiring } = await loadEligibleCompaniesDirectory()
-    const title = buildCompaniesIndexTitle(totalCompanies, MIN_COMPANY_INDEXABLE_JOBS)
+    const title = buildCompaniesIndexTitle()
     const description = buildCompaniesIndexDescription(
       totalCompanies,
       totalEligibleJobs,

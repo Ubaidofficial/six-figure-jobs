@@ -39,7 +39,6 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
   const title = buildListingTitle({
     topic: `Remote ${skillInfo.label} Jobs`,
-    count: total,
     qualifier: 'Paying $100k+',
   })
   const description = buildListingDescription(`Remote $100k+ ${skillInfo.label} jobs.`, [

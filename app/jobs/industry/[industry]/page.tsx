@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const allowIndex =
     total >= 1 && isPhaseIndexable({ pathname: `/jobs/industry/${resolved.slug}` })
   // Same shape as the category and skill titles ("5,197 Engineering Jobs Paying $100k+ | Six Figure Jobs").
-  const title = buildListingTitle({ topic: `${resolved.label} Jobs`, count: total, qualifier: 'Paying $100k+' })
+  const title = buildListingTitle({ topic: `${resolved.label} Jobs`, qualifier: 'Paying $100k+' })
   const description = buildListingDescription(`$100k+ ${resolved.label} jobs.`, [
     ['Six-figure roles at top companies, with remote, hybrid and on-site options.', 'Six-figure roles at top companies.'],
   ], total)

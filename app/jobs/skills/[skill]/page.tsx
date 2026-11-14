@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const allowIndex =
     total >= 5 &&
     (isPhaseIndexable({ pathname: `/jobs/skills/${resolved.slug}` }) || isPseoHubUnlocked(total, `/jobs/skills/${resolved.slug}`))
-  const title = buildSkillTitle(resolved.label, total)
+  const title = buildSkillTitle(resolved.label)
   const description = buildListingDescription(
     `${resolved.label} jobs paying $100k+.`,
     [['High-paying roles at top tech companies.']], total)

@@ -12,6 +12,9 @@
 //   devops jobs 3.6k · senior software engineer salary 3.6k · software engineer jobs new york 2.9k
 //   python developer jobs 2.4k · six figure jobs without a degree ~1.6k · senior software engineer jobs 1.3k
 //   kubernetes jobs 880
+// OpenSEO, 2026-11-14: jobs paying 100k 1.3k · 100k jobs 1.0k · 100k a year jobs 880 · high paying jobs 2026 590 ·
+//   remote jobs 100k 590 · software engineer salary 2026 ~20. "$100k jobs 8,100" in docs/SEO_SPEC.md (Dec 2025) did
+//   not reproduce: the tool returned no row for it, and "100k jobs" is 1.0k.
 //
 // `titleHas` is what the title must contain (hyphens read as spaces, case ignored); __tests__/seo/keywordMap.test.ts
 // checks it against the real title builders so a template change cannot quietly drop the primary keyword.
@@ -31,10 +34,11 @@ export const KEYWORD_MAP = {
     secondary: ['6 figure jobs', 'high paying jobs', '$100k jobs', 'high paying remote jobs'],
     titleHas: 'six figure jobs',
   },
+  // Not "six figure jobs": that is the home page's keyword, and two pages on one phrase compete with each other.
   jobsHub: {
-    primary: 'six figure jobs',
-    secondary: ['high paying jobs', '$100k jobs', '100k jobs'],
-    titleHas: 'six figure jobs',
+    primary: 'jobs paying $100k+',
+    secondary: ['100k jobs', '100k a year jobs', 'six figure jobs', 'high paying jobs'],
+    titleHas: 'jobs paying $100k+',
   },
   highPayingJobs: {
     primary: 'high paying jobs',

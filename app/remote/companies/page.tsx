@@ -34,7 +34,7 @@ function describe(companies: number, jobs: number): string {
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const { companies, totalRemoteJobs } = await loadRemoteCompaniesDirectory()
-    const title = buildListingTitle({ topic: 'Remote Companies', count: companies.length, qualifier: 'Hiring $100k+ Roles', countNoun: 'Companies' })
+    const title = buildListingTitle({ topic: 'Remote Companies', qualifier: 'Hiring $100k+ Roles' })
     const description = describe(companies.length, totalRemoteJobs)
     return {
       title,

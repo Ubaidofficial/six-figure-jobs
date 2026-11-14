@@ -98,7 +98,7 @@ export async function generateMetadata({
         publishingDecision.ready &&
         publishingDecision.unlocked
 
-      const baseTitle = buildCompanyPageTitle(company.name, jobCount)
+      const baseTitle = buildCompanyPageTitle(company.name)
       // Pages 2+ are noindex but still get a distinct title
       const title = pageNumber > 1 ? `${baseTitle} (page ${pageNumber})` : baseTitle
       const stats = buildCompanySeoStats(jobs)

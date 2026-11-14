@@ -137,8 +137,8 @@ export async function generateMetadata({
   const regionLabel = prettyRemoteRegion(activeRemoteRegion)
   // The count comes last; the brand, then the qualifier, drop out when the title would pass TITLE_MAX.
   const title = regionLabel
-    ? buildListingTitle({ topic: `${regionLabel} Remote $100k+ Jobs`, count: total, qualifier: pageSuffix.trim() || undefined })
-    : buildListingTitle({ topic: 'High-Paying Remote Jobs', count: total, qualifier: `($100k+)${pageSuffix}` })
+    ? buildListingTitle({ topic: `${regionLabel} Remote $100k+ Jobs`, qualifier: pageSuffix.trim() || undefined })
+    : buildListingTitle({ topic: 'High-Paying Remote Jobs', qualifier: `($100k+)${pageSuffix}` })
   const description = regionLabel
     ? buildDescription(
         `Six-figure remote jobs in ${regionLabel} in engineering, product, data and more, with published salaries.`,

@@ -46,7 +46,6 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
   const title = buildListingTitle({
     topic: `${roleName} Jobs in ${cityInfo.label}`,
-    count: total,
     qualifier: 'Paying $100k+',
     flag: countryFlag(cityInfo.countryCode),
   })

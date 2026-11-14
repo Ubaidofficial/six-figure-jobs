@@ -187,7 +187,6 @@ export async function generateMetadata({
   const totalJobs = result.total
   const title = buildListingTitle({
     topic: `Remote ${roleName} Jobs in ${countryCode}`,
-    count: totalJobs,
     qualifier: 'Paying $100k+',
     flag: countryFlag(countryCode),
   })

@@ -77,7 +77,7 @@ export async function generateMetadata({
 
   const title = loc.remoteOnly
     ? `Remote ${salaryLabel} jobs (${total.toLocaleString()}) | ${SITE_NAME}`
-    : buildCountryTitle(loc.label, salaryLabel, total, loc.countryCode)
+    : buildCountryTitle(loc.label, salaryLabel, loc.countryCode)
 
   const description = loc.remoteOnly
     ? `Browse ${total.toLocaleString()} remote ${salaryLabel} jobs with published salary ranges, and fresh listings across engineering, product, and data.`

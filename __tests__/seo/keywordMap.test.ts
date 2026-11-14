@@ -3,6 +3,7 @@ import {
   buildCategoryTitle,
   buildCityTitle,
   buildCompanyPageTitle,
+  buildCompaniesIndexTitle,
   buildCountryTitle,
   buildJobsHubTitle,
   buildListingTitle,
@@ -18,20 +19,21 @@ const norm = (s: string) => s.toLowerCase().replace(/-/g, ' ')
 
 // Real title builders (or the same buildListingTitle call the page makes), one per page type that has one.
 const TITLES: Partial<Record<KeywordPageType, string[]>> = {
-  jobsHub: [buildJobsHubTitle(28025), buildJobsHubTitle(null)],
-  remoteHub: [buildListingTitle({ topic: 'High-Paying Remote Jobs', count: 5670, qualifier: '($100k+)' })],
+  jobsHub: [buildJobsHubTitle(), buildJobsHubTitle(' (Page 2)')],
+  remoteHub: [buildListingTitle({ topic: 'High-Paying Remote Jobs', qualifier: '($100k+)' })],
   remoteRole: [
-    buildListingTitle({ topic: 'Remote Software Engineer Jobs', count: 602, qualifier: 'Paying $100k+' }),
-    buildListingTitle({ topic: 'Remote Machine Learning Engineer Jobs', count: 75, qualifier: 'Paying $100k+' }),
+    buildListingTitle({ topic: 'Remote Software Engineer Jobs', qualifier: 'Paying $100k+' }),
+    buildListingTitle({ topic: 'Remote Machine Learning Engineer Jobs', qualifier: 'Paying $100k+' }),
   ],
-  role: [buildListingTitle({ topic: 'Software Engineer Jobs', count: 3277, qualifier: 'Paying $100k+' })],
+  role: [buildListingTitle({ topic: 'Software Engineer Jobs', qualifier: 'Paying $100k+' })],
   salaryGuide: [buildSalaryGuideTitle('Software Engineer', '$100k+', 222000), buildSalaryGuideTitle('DevOps Engineer', '$100k+', null)],
-  salaryTier: [buildSalaryTierTitle('$100k–$199k', 8573), buildSalaryTierTitle('$400k+', 1129)],
-  country: [buildCountryTitle('United States', '$100k+', 22021), buildCountryTitle('Canada', 'C$120k+', 1865)],
-  city: [buildCityTitle('San Francisco', '$100k+', 2454), buildCityTitle('London', '£75k+', 255)],
-  skill: [buildSkillTitle('Python', 897), buildSkillTitle('Kubernetes', 349)],
-  category: [buildCategoryTitle('Engineering', 5197)],
-  company: [buildCompanyPageTitle('Adobe', 132), buildCompanyPageTitle('Capital One', 1402)],
+  salaryTier: [buildSalaryTierTitle('$100k–$199k'), buildSalaryTierTitle('$400k+')],
+  country: [buildCountryTitle('United States', '$100k+', 'US'), buildCountryTitle('Canada', 'C$120k+', 'CA')],
+  city: [buildCityTitle('San Francisco', '$100k+', 'US'), buildCityTitle('London', '£75k+', 'GB')],
+  skill: [buildSkillTitle('Python'), buildSkillTitle('Kubernetes')],
+  category: [buildCategoryTitle('Engineering')],
+  company: [buildCompanyPageTitle('Adobe'), buildCompanyPageTitle('Capital One')],
+  companies: [buildCompaniesIndexTitle()],
 }
 
 describe('keyword map', () => {
@@ -88,6 +90,6 @@ describe('inCountry', () => {
   })
 
   it('reads naturally in the country title', () => {
-    expect(buildCountryTitle('United Kingdom', '£75k+', 673)).toBe('High-Paying Jobs in the United Kingdom (£75k+) – 673 Roles')
+    expect(buildCountryTitle('United Kingdom', '£75k+')).toBe('High-Paying Jobs in the United Kingdom (£75k+) [2026]')
   })
 })

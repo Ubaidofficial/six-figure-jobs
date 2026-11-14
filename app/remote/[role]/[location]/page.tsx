@@ -253,7 +253,6 @@ export async function generateMetadata({
   const canonicalUrl = `${SITE_URL}${canonicalPath}`
   const title = buildListingTitle({
     topic: `Remote ${prettyRole(roleSlug)} Jobs in ${cityName}`,
-    count: totalJobs,
     qualifier: 'Paying $100k+',
   })
 

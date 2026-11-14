@@ -113,7 +113,7 @@ export async function generateMetadata({
     total >= 5 && isPhaseIndexable({ pathname: `/jobs/category/${category}` })
   const canonical = `${SITE_URL}/jobs/category/${category}`
   const shouldIndex = allowIndex && page === 1
-  const title = buildCategoryTitle(cfg.label, total)
+  const title = buildCategoryTitle(cfg.label)
   const description = buildListingDescription(`$100k+ ${cfg.label.toLowerCase()} jobs.`, [
     ['Remote, hybrid and on-site roles.'],
   ], total)

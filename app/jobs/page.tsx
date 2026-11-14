@@ -132,7 +132,7 @@ export async function generateMetadata({
       logRuntimeFallback('jobs.page.metadata', error)
     }
   }
-  const title = buildJobsHubTitle(total, pageSuffix)
+  const title = buildJobsHubTitle(pageSuffix)
   const description = buildJobsHubDescription(total)
 
   return {

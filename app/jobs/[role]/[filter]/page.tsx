@@ -162,7 +162,7 @@ export async function generateMetadata({
     isRoleFilterPageIndexable(total) &&
     isPhaseIndexable({ roleSlug: role, pathname: `/jobs/${role}/${filter}` })
   const payFloor = `$${parsed.label.toLowerCase()}`
-  const title = buildListingTitle({ topic: `${roleTitle} Jobs`, count: total, qualifier: `Paying ${payFloor}` })
+  const title = buildListingTitle({ topic: `${roleTitle} Jobs`, qualifier: `Paying ${payFloor}` })
   const description = buildListingDescription(`${roleTitle} jobs paying ${payFloor}.`, [
     [`Listed minimum pay ranges ${salaryRange}.`],
   ], total)

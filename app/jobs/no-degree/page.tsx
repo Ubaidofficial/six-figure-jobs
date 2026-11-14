@@ -98,7 +98,7 @@ export async function generateMetadata({
     void error
   }
 
-  const title = buildListingTitle({ topic: 'High-Paying Jobs Without a Degree', count: open, qualifier: '($100k+)' })
+  const title = buildListingTitle({ topic: 'High-Paying Jobs Without a Degree', qualifier: '($100k+)' })
   const description = buildDescription(
     "Six-figure jobs whose posting doesn't ask for a college degree or accepts equivalent experience.",
     [['Salary shown on every listing.']],

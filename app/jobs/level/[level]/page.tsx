@@ -93,7 +93,7 @@ export async function generateMetadata({
   const canonical = `${SITE_URL}/jobs/level/${level}`
 
   // Same shape as the role, skill and category titles ("8,148 Senior Jobs Paying $100k+ | Six Figure Jobs").
-  const title = buildListingTitle({ topic: `${info.label} Jobs`, count: total, qualifier: 'Paying $100k+' })
+  const title = buildListingTitle({ topic: `${info.label} Jobs`, qualifier: 'Paying $100k+' })
 
   const description = buildListingDescription(`${info.label} jobs paying $100k+.`, [
     [`${info.description} at top companies.`],

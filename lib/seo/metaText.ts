@@ -46,31 +46,28 @@ export function countryFlag(code: string | null | undefined): string {
   return String.fromCodePoint(...[...c].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65))
 }
 
-/** " – 3,277 Roles": the job count, last in a title; "" when there is none. */
-export function titleCountTail(count: number | null | undefined, noun = 'Roles'): string {
-  return count && count > 0 ? ` – ${count.toLocaleString()} ${noun}` : ''
+/**
+ * The bracketed year that closes a listing title ("[2026]"): a freshness cue for the reader. It is not a keyword
+ * (US searches for "software engineer salary 2026" are about 20 a month, OpenSEO 2026-11-14), so it is the first
+ * thing to change if Search Console shows it does not lift clicks. The one place to change it.
+ */
+export function titleYearTag(now: Date = new Date()): string {
+  return `[${now.getFullYear()}]`
 }
 
 /**
- * Topic-first title with the job count after it and the brand last ("Python Jobs Paying $100k+ – 897 Roles |
- * Six Figure Jobs"). A `flag` (countryFlag) goes first. When it is too long the brand drops first, then the
- * qualifier ("Paying $100k+"), then the count.
+ * Topic-first title that ends with the year tag and the brand ("Python Jobs Paying $100k+ [2026] | Six Figure
+ * Jobs"). A `flag` (countryFlag) goes first. A qualifier that starts with ":" attaches without a space. When it is
+ * too long the brand drops first, then the qualifier ("Paying $100k+"), then the year tag.
  */
-export function buildListingTitle(parts: {
-  topic: string
-  count?: number | null
-  qualifier?: string
-  brand?: string
-  flag?: string
-  /** What the count counts, when it is not open roles ("Companies"). */
-  countNoun?: string
-}): string {
+export function buildListingTitle(parts: { topic: string; qualifier?: string; brand?: string; flag?: string }): string {
   const brand = parts.brand ?? SITE_NAME
   const flag = parts.flag ? `${parts.flag} ` : ''
-  const tail = titleCountTail(parts.count, parts.countNoun)
-  const full = `${flag}${parts.topic}${parts.qualifier ? ` ${parts.qualifier}` : ''}`
+  const tag = ` ${titleYearTag()}`
+  const joiner = parts.qualifier?.startsWith(':') ? '' : ' '
+  const full = `${flag}${parts.topic}${parts.qualifier ? `${joiner}${parts.qualifier}` : ''}`
   const short = `${flag}${parts.topic}`
-  return fitTitle([`${full}${tail} | ${brand}`, `${full}${tail}`, `${short}${tail} | ${brand}`, `${short}${tail}`, `${short} | ${brand}`, short])
+  return fitTitle([`${full}${tag} | ${brand}`, `${full}${tag}`, `${short}${tag} | ${brand}`, `${short}${tag}`, `${short} | ${brand}`, short])
 }
 
 /**
@@ -156,13 +153,13 @@ export function buildRoleDescription(roleTitle: string, total: number, avgUsd: n
  * Company page title. Leads with "<Company> Jobs", the way people search for an employer's openings ("openai jobs");
  * long names fall back, never overflow.
  */
-export function buildCompanyPageTitle(name: string, jobCount: number): string {
-  const tail = titleCountTail(jobCount)
+export function buildCompanyPageTitle(name: string): string {
+  const tag = titleYearTag()
   return fitTitle([
-    `${name} Jobs Paying $100k+${tail} | ${SITE_NAME}`,
-    `${name} Jobs Paying $100k+${tail}`,
-    `${name} Jobs${tail} | ${SITE_NAME}`,
-    `${name} Jobs${tail}`,
+    `${name} Jobs Paying $100k+ ${tag} | ${SITE_NAME}`,
+    `${name} Jobs Paying $100k+ ${tag}`,
+    `${name} Jobs ${tag} | ${SITE_NAME}`,
+    `${name} Jobs ${tag}`,
     `${name} Jobs`,
   ])
 }
@@ -189,10 +186,8 @@ export function buildCompanyPageDescription(
  * /companies title. The directory lists only companies with `minJobs`+ open jobs, a subset of every company hiring
  * (the number the home page quotes), so the title says which companies it counts.
  */
-export function buildCompaniesIndexTitle(totalCompanies: number, minJobs: number): string {
-  if (totalCompanies <= 0) return fitTitle([`Companies Hiring $100k+ Roles | ${SITE_NAME}`, 'Companies Hiring $100k+ Roles'])
-  const lead = `Top Companies Hiring $100k+ Jobs – ${totalCompanies.toLocaleString()} With ${minJobs}+ Open Roles`
-  return fitTitle([`${lead} | ${SITE_NAME}`, lead, `Top Companies Hiring $100k+ Jobs | ${SITE_NAME}`, 'Top Companies Hiring $100k+ Jobs'])
+export function buildCompaniesIndexTitle(): string {
+  return buildListingTitle({ topic: 'Top Companies Hiring $100k+ Jobs' })
 }
 
 /**
@@ -231,11 +226,10 @@ export function buildCompaniesIndexDescription(
  * (keyword research, 2026-11-11). Not "tech": the hub also lists sales, finance, legal and operations roles.
  * `pageSuffix` is " (Page 2)" style text for deeper pages.
  */
-export function buildJobsHubTitle(total: number | null, pageSuffix = ''): string {
+export function buildJobsHubTitle(pageSuffix = ''): string {
   return buildListingTitle({
-    topic: 'Six-Figure Jobs',
-    count: total,
-    qualifier: `& High-Paying Jobs${pageSuffix}`,
+    topic: 'Jobs Paying $100k+',
+    qualifier: `: Browse by Role, Country & Remote${pageSuffix}`,
   })
 }
 
@@ -252,8 +246,8 @@ export function buildJobsHubDescription(total: number | null): string {
  * Salary-tier page title ("5,753 Jobs That Pay $100k–$199k a Year | Six Figure Jobs"), worded the way people search
  * for these jobs ("jobs that pay 100k a year", "jobs that pay 200k").
  */
-export function buildSalaryTierTitle(rangeLabel: string, total: number): string {
-  return buildListingTitle({ topic: `Jobs That Pay ${rangeLabel} a Year`, count: total })
+export function buildSalaryTierTitle(rangeLabel: string): string {
+  return buildListingTitle({ topic: `Jobs That Pay ${rangeLabel} a Year` })
 }
 
 /** Salary-tier page description with the live count. */
@@ -267,10 +261,9 @@ export function buildSalaryTierDescription(rangeLabel: string, total: number): s
 }
 
 /** City page title ("🇺🇸 High-Paying Jobs in Austin ($100k+) – 1,234 Roles"); fits TITLE_MAX for any city. */
-export function buildCityTitle(cityLabel: string, salaryLabel: string, total: number, countryCode?: string | null): string {
+export function buildCityTitle(cityLabel: string, salaryLabel: string, countryCode?: string | null): string {
   return buildListingTitle({
     topic: `High-Paying Jobs in ${cityLabel}`,
-    count: total,
     qualifier: `(${salaryLabel})`,
     flag: countryFlag(countryCode),
   })
@@ -285,23 +278,17 @@ export function inCountry(countryLabel: string): string {
 }
 
 /** Country page title ("🇨🇦 High-Paying Jobs in Canada (C$120k+) – 1,637 Roles"). */
-export function buildCountryTitle(
-  countryLabel: string,
-  salaryLabel: string,
-  total: number,
-  countryCode?: string | null,
-): string {
+export function buildCountryTitle(countryLabel: string, salaryLabel: string, countryCode?: string | null): string {
   return buildListingTitle({
     topic: `High-Paying Jobs in ${inCountry(countryLabel)}`,
-    count: total,
     qualifier: `(${salaryLabel})`,
     flag: countryFlag(countryCode),
   })
 }
 
 /** Skill page title ("674 Python Jobs Paying $100k+ | Six Figure Jobs"), the same shape as role pages. */
-export function buildSkillTitle(skillLabel: string, total: number): string {
-  return buildListingTitle({ topic: `${skillLabel} Jobs`, count: total, qualifier: 'Paying $100k+' })
+export function buildSkillTitle(skillLabel: string): string {
+  return buildListingTitle({ topic: `${skillLabel} Jobs`, qualifier: 'Paying $100k+' })
 }
 
 /**
@@ -310,15 +297,19 @@ export function buildSkillTitle(skillLabel: string, total: number): string {
  */
 export function buildSalaryGuideTitle(roleName: string, bandLabel: string, medianUsd: number | null): string {
   const median = medianUsd ? `$${Math.round(medianUsd / 1000)}k Median` : null
+  const tag = titleYearTag()
   return fitTitle([
-    ...(median ? [`${roleName} Salary: ${median} | ${SITE_NAME}`, `${roleName} Salary: ${median}`] : []),
-    `${roleName} Salary Guide (${bandLabel}) | ${SITE_NAME}`,
+    ...(median
+      ? [`${roleName} Salary: ${median} ${tag} | ${SITE_NAME}`, `${roleName} Salary: ${median} ${tag}`, `${roleName} Salary: ${median}`]
+      : []),
+    `${roleName} Salary Guide (${bandLabel}) ${tag} | ${SITE_NAME}`,
+    `${roleName} Salary Guide (${bandLabel}) ${tag}`,
     `${roleName} Salary Guide (${bandLabel})`,
     `${roleName} Salary`,
   ])
 }
 
 /** Category page title ("1,420 Engineering Jobs Paying $100k+ | Six Figure Jobs"), the same shape as role pages. */
-export function buildCategoryTitle(categoryLabel: string, total: number): string {
-  return buildListingTitle({ topic: `${categoryLabel} Jobs`, count: total, qualifier: 'Paying $100k+' })
+export function buildCategoryTitle(categoryLabel: string): string {
+  return buildListingTitle({ topic: `${categoryLabel} Jobs`, qualifier: 'Paying $100k+' })
 }

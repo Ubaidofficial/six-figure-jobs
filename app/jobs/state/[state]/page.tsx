@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const allowIndex =
     total >= 1 && isPhaseIndexable({ pathname: `/jobs/state/${resolved.slug}` })
   // Same shape as the city and country titles ("1,234 High-Paying Jobs in Texas ($100k+) | Six Figure Jobs").
-  const title = buildListingTitle({ topic: `High-Paying Jobs in ${resolved.name}`, count: total, qualifier: '($100k+)', flag: countryFlag('US') })
+  const title = buildListingTitle({ topic: `High-Paying Jobs in ${resolved.name}`, qualifier: '($100k+)', flag: countryFlag('US') })
   const description = buildListingDescription(`High-paying $100k+ jobs in ${resolved.name}.`, [
     ['Remote, hybrid and on-site roles.'],
   ], total)

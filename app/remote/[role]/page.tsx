@@ -278,7 +278,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         isPhaseIndexable({ roleSlug, pathname: `/remote/${roleSlug}` })
 
       // "Remote Role Jobs Paying $100k+ – N Open Roles", the same shape as /jobs/<role>; long role names drop the brand.
-      const title = buildListingTitle({ topic: `Remote ${roleName} Jobs`, count: jobCount, qualifier: 'Paying $100k+' })
+      const title = buildListingTitle({ topic: `Remote ${roleName} Jobs`, qualifier: 'Paying $100k+' })
       const description = buildListingDescription(`Remote ${roleName} jobs paying $100k+.`, [
         ['Verified six-figure salaries at top companies.'],
       ], jobCount)
