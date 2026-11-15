@@ -1,4 +1,4 @@
-import { employerHostFromApplyUrl, nameMatchesHost, pickCompanyWebsite } from '../../lib/companies/websiteFromApplyUrls'
+import { employerHostFromApplyUrl, nameMatchesHost, pickCompanyWebsite, registrableDomain } from '../../lib/companies/websiteFromApplyUrls'
 
 describe('employerHostFromApplyUrl', () => {
   it('returns the employer domain without www or a career-site label', () => {
@@ -46,5 +46,30 @@ describe('pickCompanyWebsite', () => {
     expect(pickCompanyWebsite('Acme', ['https://acme.com/1', 'https://acme-careers.net/2']).ok).toBe(false)
     expect(pickCompanyWebsite('Acme', ['https://boards.greenhouse.io/acme/1', null]).ok).toBe(false)
     expect(pickCompanyWebsite('Acme', [])).toEqual({ ok: false, reason: 'no-employer-link', hosts: [] })
+  })
+})
+
+describe('registrableDomain', () => {
+  it('keeps what a company registers', () => {
+    expect(registrableDomain('careersemea.smbcgroup.com')).toBe('smbcgroup.com')
+    expect(registrableDomain('x.y.acme.com')).toBe('acme.com')
+    expect(registrableDomain('careers.acme.co.uk')).toBe('acme.co.uk')
+    expect(registrableDomain('acme.io')).toBe('acme.io')
+  })
+})
+
+describe('pickCompanyWebsite with measured context', () => {
+  it('gives the registrable domain, not a career sub-domain', () => {
+    expect(pickCompanyWebsite('Sumitomo Mitsui Banking Corporation', ['https://careersemea.smbcgroup.com/1'] , {})).toMatchObject({ ok: false, reason: 'not-enough-evidence' })
+    expect(pickCompanyWebsite('SMBC Group', ['https://careersemea.smbcgroup.com/1', 'https://careersemea.smbcgroup.com/2'], {})).toMatchObject({ ok: true, website: 'https://smbcgroup.com', jobs: 2, nameMatch: true })
+  })
+  it('refuses a domain many companies apply on (a vendor tenant such as <company>.hcshiring.com)', () => {
+    const ctx = { sharedDomains: new Set(['hcshiring.com']) }
+    expect(pickCompanyWebsite('Sapphire Health Services', ['https://sapphirehealthservices.hcshiring.com/a', 'https://sapphirehealthservices.hcshiring.com/b'], ctx)).toEqual({ ok: false, reason: 'shared-domain', hosts: [] })
+  })
+  it('refuses a domain that is already another company\'s website (DeepMind -> google.com)', () => {
+    const urls = Array.from({ length: 10 }, (_, i) => `https://careers.google.com/jobs/${i}`)
+    expect(pickCompanyWebsite('DeepMind', urls, { takenDomains: new Set(['google.com']) })).toEqual({ ok: false, reason: 'domain-taken', hosts: ['google.com'] })
+    expect(pickCompanyWebsite('DeepMind', urls, {})).toMatchObject({ ok: true, website: 'https://google.com' })
   })
 })

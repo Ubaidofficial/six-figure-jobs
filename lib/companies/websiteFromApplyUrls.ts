@@ -35,6 +35,17 @@ export function employerHostFromApplyUrl(url: string | null | undefined): string
   return host
 }
 
+const SECOND_LEVEL = new Set(['co', 'com', 'org', 'net', 'gov', 'ac', 'edu', 'ne', 'or', 'go'])
+
+/** "careers.acme.co.uk" -> "acme.co.uk", "x.y.acme.com" -> "acme.com": the part a company registers. (A small rule, not the public-suffix list.) */
+export function registrableDomain(host: string): string {
+  const labels = host.toLowerCase().split('.').filter(Boolean)
+  if (labels.length <= 2) return labels.join('.')
+  const tld = labels[labels.length - 1]
+  const sld = labels[labels.length - 2]
+  return labels.slice(tld.length === 2 && SECOND_LEVEL.has(sld) ? -3 : -2).join('.')
+}
+
 const key = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(COMPANY_SUFFIX, ' ').replace(/[^a-z0-9]+/g, '')
 
 /** Does the domain's name look like the company's name ("Datadog" ~ datadoghq.com, "Scale AI" ~ scale.com)? Both at least four letters. */
@@ -47,21 +58,36 @@ export function nameMatchesHost(companyName: string, host: string): boolean {
 
 export type WebsitePick =
   | { ok: true; website: string; jobs: number; nameMatch: boolean }
-  | { ok: false; reason: 'no-employer-link' | 'several-domains' | 'not-enough-evidence'; hosts: string[] }
+  | { ok: false; reason: 'no-employer-link' | 'shared-domain' | 'several-domains' | 'domain-taken' | 'not-enough-evidence'; hosts: string[] }
+
+export type WebsiteContext = {
+  /** Registrable domains that the apply links of 3+ DIFFERENT companies use: vendors and boards (measured by the caller). */
+  sharedDomains?: ReadonlySet<string>
+  /** Registrable domains that already are some company's website. */
+  takenDomains?: ReadonlySet<string>
+}
 
 /** The website to fill for a company with no stored one, from its jobs' apply links; or why not. */
-export function pickCompanyWebsite(companyName: string, applyUrls: ReadonlyArray<string | null | undefined>): WebsitePick {
+export function pickCompanyWebsite(companyName: string, applyUrls: ReadonlyArray<string | null | undefined>, ctx: WebsiteContext = {}): WebsitePick {
   const counts = new Map<string, number>()
+  let shared = 0
   for (const url of applyUrls) {
     const host = employerHostFromApplyUrl(url)
-    if (host) counts.set(host, (counts.get(host) ?? 0) + 1)
+    if (!host) continue
+    const domain = registrableDomain(host)
+    if (ctx.sharedDomains?.has(domain)) {
+      shared++
+      continue
+    }
+    counts.set(domain, (counts.get(domain) ?? 0) + 1)
   }
-  const hosts = [...counts.keys()]
-  if (!hosts.length) return { ok: false, reason: 'no-employer-link', hosts }
-  if (hosts.length > 1) return { ok: false, reason: 'several-domains', hosts }
-  const host = hosts[0]
-  const jobs = counts.get(host)!
-  const nameMatch = nameMatchesHost(companyName, host)
-  if (!nameMatch && jobs < 3) return { ok: false, reason: 'not-enough-evidence', hosts }
-  return { ok: true, website: `https://${host}`, jobs, nameMatch }
+  const domains = [...counts.keys()]
+  if (!domains.length) return { ok: false, reason: shared ? 'shared-domain' : 'no-employer-link', hosts: [] }
+  if (domains.length > 1) return { ok: false, reason: 'several-domains', hosts: domains }
+  const domain = domains[0]
+  if (ctx.takenDomains?.has(domain)) return { ok: false, reason: 'domain-taken', hosts: domains }
+  const jobs = counts.get(domain)!
+  const nameMatch = nameMatchesHost(companyName, domain)
+  if (!nameMatch && jobs < 3) return { ok: false, reason: 'not-enough-evidence', hosts: domains }
+  return { ok: true, website: `https://${domain}`, jobs, nameMatch }
 }
