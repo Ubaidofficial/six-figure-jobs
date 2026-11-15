@@ -15,6 +15,7 @@ import {
   payReportDescription,
   payReportFaq,
   payReportFindings,
+  payReportQuotes,
   payReportTitle,
   payReportTrend,
   previousEdition,
@@ -26,6 +27,7 @@ import { EDITION_2026_11 } from '@/lib/research/editions/2026-11'
 import { PAY_REPORT_CHART_NAMES, chartEmbedHtml, chartPath, isChartName, payReportChart } from '@/lib/research/payReportCharts'
 import { payReportMetadata } from '@/lib/research/payReportMetadata'
 import { getSiteUrl } from '@/lib/seo/site'
+import { METHOD_CHANGELOG, METHOD_PATH, METHOD_VERSION, DATA_DICTIONARY, USD_CAP } from '@/lib/research/method'
 import { KEYWORD_MAP } from '@/lib/seo/keywordMap'
 import { ALWAYS_INDEXABLE_HUBS } from '@/lib/seo/indexingPhase'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, TITLE_MAX } from '@/lib/seo/metaText'
@@ -129,6 +131,27 @@ const FULL: PayReportData = {
     { label: 'Rust', listings: 120, employers: 40, median: 230000 },
     { label: 'Python', listings: 2000, employers: 500, median: 190000 },
   ],
+  collectedISO: '2026-12-01/2026-12-14',
+  funnel: [
+    { label: 'Jobs stored in the window', listings: 30000 },
+    { label: 'With a yearly pay figure', listings: 20000 },
+    { label: 'In US dollars', listings: 18000 },
+    { label: 'In the report', listings: 15456 },
+  ],
+  sensitivity: [
+    { key: 'all', label: 'All validated USD listings', listings: 15456, employers: 2700, median: 190000 },
+    { key: 'top5', label: 'Without the 5 largest employers', listings: 11500, employers: 2695, median: 187000 },
+    { key: 'bayarea', label: 'Without the Bay Area', listings: 12000, employers: 2500, median: 184000 },
+    { key: 'dedupe', label: 'One listing per employer and job title', listings: 9000, employers: 2700, median: 185000 },
+  ],
+  highestListings: [
+    { company: 'Acme', title: 'Principal engineer', advertised: '$459,000 - $536,000', midpoint: 497500, source: 'greenhouse', captured: '2026-12-14' },
+    { company: 'Beta', title: 'Head of data', advertised: '$401,000 - $510,000', midpoint: 455500, captured: '2026-12-14' },
+  ],
+  spotCheck: { sampled: 100, matched: 96, checkedOn: '2026-12-10', notes: 'The four that differed were hourly ranges.' },
+  external: [{ label: 'Software developers', ours: 210000, theirs: 130000, source: 'Official wage survey', sourceUrl: 'https://example.org/wages', note: 'Different year and definition' }],
+  reviewedBy: { name: 'A. Reviewer', role: 'Compensation analyst' },
+  doi: '10.5281/zenodo.0000000',
 }
 
 describe('editions', () => {
@@ -226,10 +249,10 @@ function parseCsv(text: string): string[][] {
 }
 
 describe('CSV', () => {
-  it('has one header, six columns on every row, and a row for every table entry', () => {
+  it('has one header, eight columns on every row, and a row for every table entry', () => {
     const rows = parseCsv(payReportCsv(R))
-    expect(rows[0]).toEqual(['table', 'label', 'listings', 'employers', 'value_usd', 'share_pct'])
-    for (const row of rows) expect(row).toHaveLength(6)
+    expect(rows[0]).toEqual(['table', 'label', 'listings', 'employers', 'value_usd', 'share_pct', 'p25_usd', 'p75_usd'])
+    for (const row of rows) expect(row).toHaveLength(8)
     const count = (t: string) => rows.filter((r) => r[0] === t).length
     expect(count('salary_band')).toBe(R.bands.length)
     expect(count('role')).toBe(R.roles.length)
@@ -252,13 +275,15 @@ describe('CSV', () => {
 
   it('adds the optional tables only when the edition has them', () => {
     const base = payReportCsv(R)
-    expect(base).not.toMatch(/same_role|range_width|\nskill,/)
+    expect(base).not.toMatch(/same_role|range_width|sensitivity|funnel|\nskill,/)
     const full = parseCsv(payReportCsv(FULL))
     expect(full.filter((r) => r[0] === 'same_role_remote')).toHaveLength(2)
     expect(full.filter((r) => r[0] === 'same_role_onsite')).toHaveLength(2)
     expect(full.filter((r) => r[0] === 'range_width')).toHaveLength(3)
     expect(full.filter((r) => r[0] === 'skill')).toHaveLength(2)
-    for (const row of full) expect(row).toHaveLength(6)
+    for (const row of full) expect(row).toHaveLength(8)
+    expect(full.filter((r) => r[0] === 'sensitivity')).toHaveLength(FULL.sensitivity!.length)
+    expect(full.filter((r) => r[0] === 'funnel')).toHaveLength(FULL.funnel!.length)
   })
 })
 
@@ -322,5 +347,101 @@ describe('metadata', () => {
     const meta = payReportMetadata(older)
     expect(meta.alternates?.canonical).toBe(`${getSiteUrl()}/high-paying-jobs-report/2025-10`)
     expect(String(meta.title)).toContain('Oct 2025')
+  })
+})
+
+describe('evidence blocks', () => {
+  it('has a funnel that only narrows, starting from every stored job', () => {
+    const steps = FULL.funnel!
+    expect(steps.length).toBeGreaterThan(2)
+    steps.forEach((step, i) => {
+      if (i > 0) expect({ step: step.label, ok: step.listings <= steps[i - 1].listings }).toEqual({ step: step.label, ok: true })
+    })
+    expect(steps[steps.length - 1].listings).toBe(FULL.headline.allListings)
+  })
+
+  it('starts the sensitivity check from the baseline, with one row per key', () => {
+    const keys = FULL.sensitivity!.map((x) => x.key)
+    expect(keys[0]).toBe('all')
+    expect(new Set(keys).size).toBe(keys.length)
+    for (const x of FULL.sensitivity!) {
+      expect(x.listings).toBeLessThanOrEqual(FULL.sensitivity![0].listings)
+      expect(x.median).toBeGreaterThan(100000)
+    }
+  })
+
+  it('writes the robustness sentence from the rows it has, signed against the baseline', () => {
+    const text = payReportFindings(FULL).join('\n')
+    expect(text).toContain('The headline is not set by a few employers or one region')
+    expect(text).toContain('leaving out the five largest employers gives $187,000 (-1.6%)')
+    expect(text).toContain('leaving out the Bay Area gives $184,000 (-3.2%)')
+    const onlyAll = payReportFindings({ ...FULL, sensitivity: [FULL.sensitivity![0]] }).join('\n')
+    expect(onlyAll).not.toContain('The headline is not set')
+  })
+
+  it('reports a spot-check only when one is recorded, and never more matches than listings', () => {
+    expect(payReportFindings(R).join('\n')).not.toContain('manual check')
+    const text = payReportFindings(FULL).join('\n')
+    expect(text).toContain('96 (96%)')
+    expect(FULL.spotCheck!.matched).toBeLessThanOrEqual(FULL.spotCheck!.sampled)
+  })
+
+  it('keeps the highest ranges real: quoted text, below the cap, highest first, with a read date', () => {
+    const rows = FULL.highestListings!
+    expect(descending(rows.map((x) => x.midpoint))).toBe(true)
+    for (const x of rows) {
+      expect(x.midpoint).toBeLessThan(USD_CAP)
+      expect(x.advertised).toMatch(/\d/)
+      expect(x.captured).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    }
+  })
+
+  it('keeps the middle half around the median when an edition gives it', () => {
+    const withSpread = { ...R, roles: R.roles.map((x) => ({ ...x, p25: x.median - 20000, p75: x.median + 25000 })) }
+    for (const x of withSpread.roles) expect(x.p25! <= x.median && x.median <= x.p75!).toBe(true)
+    const csv = parseCsv(payReportCsv(withSpread))
+    const role = csv.find((r) => r[0] === 'role')!
+    expect(role[6]).toBe(String(R.roles[0].median - 20000))
+    expect(role[7]).toBe(String(R.roles[0].median + 25000))
+  })
+
+  it('gives the collection window as an ISO interval for the dataset record', () => {
+    expect(R.collectedISO).toMatch(/^\d{4}-\d{2}-\d{2}\/\d{4}-\d{2}-\d{2}$/)
+    const [from, to] = R.collectedISO!.split('/')
+    expect(from <= to).toBe(true)
+  })
+})
+
+describe('quotable sentences and the DOI', () => {
+  it('writes sentences from the data, each with its attribution', () => {
+    const quotes = payReportQuotes(R)
+    expect(quotes.length).toBeGreaterThanOrEqual(3)
+    for (const q of quotes) expect(q).toContain('(Six Figure Jobs, Six-Figure Job Pay Report, November 2026)')
+    expect(quotes.join('\n')).toContain(usd(R.headline.medianMidpoint))
+    expect(quotes.join('\n')).toContain(usd(R.roles[0].median))
+  })
+
+  it('adds the DOI to the citation only when the edition has one', () => {
+    expect(payReportCitation(R)).not.toContain('doi.org')
+    expect(payReportCitation(FULL)).toContain('DOI: https://doi.org/10.5281/zenodo.0000000')
+  })
+})
+
+describe('method file', () => {
+  it('names the current version first in its history, and has a registered page', () => {
+    expect(METHOD_CHANGELOG[0].version).toBe(METHOD_VERSION)
+    const dates = METHOD_CHANGELOG.map((c) => c.date)
+    expect([...dates].sort().reverse()).toEqual(dates)
+    expect(METHOD_PATH).toBe('/high-paying-jobs-report/method')
+    expect(ALWAYS_INDEXABLE_HUBS.has(METHOD_PATH)).toBe(true)
+  })
+
+  it('explains every CSV column and every table name, once each', () => {
+    const terms = DATA_DICTIONARY.map((d) => d.term)
+    expect(new Set(terms).size).toBe(terms.length)
+    const text = DATA_DICTIONARY.map((d) => `${d.term} ${d.meaning}`).join('\n')
+    for (const column of ['listings', 'value_usd', 'share_pct']) expect(text).toContain(column)
+    for (const table of ['headline', 'salary_band', 'role', 'sensitivity', 'funnel']) expect(text).toContain(table)
+    for (const d of DATA_DICTIONARY) expect(d.meaning.length).toBeGreaterThan(20)
   })
 })

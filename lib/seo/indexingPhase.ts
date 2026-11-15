@@ -88,6 +88,8 @@ export const ALWAYS_INDEXABLE_HUBS = new Set<string>([
   '/high-paying-jobs',
   // The monthly Six-Figure Job Pay Report (2026-11-15): one permanent research URL, refreshed monthly, built to earn links.
   '/high-paying-jobs-report',
+  // Its versioned method and data dictionary (2026-11-15), the page that makes the report's numbers checkable.
+  '/high-paying-jobs-report/method',
   '/jobs/no-degree',
   // Four-day-week jobs paying $100k+ (2026-11-09), for "4 day work week jobs"; indexable only with enough jobs.
   '/jobs/4-day-week',

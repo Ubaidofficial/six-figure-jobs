@@ -1,4 +1,5 @@
 import { RESEARCH, buildResearch, windowFor, type Basis } from '@/scripts/research-30d-stats'
+import { AGGREGATOR_PATTERNS, BAY_AREA_CITIES, MIN_CONFIDENCE, MIN_SAME_ROLE_EMPLOYERS, MIN_SKILL_EMPLOYERS, USD_CAP } from '@/lib/research/method'
 
 const BASES: Basis[] = ['created', 'posted', 'posted_or_created']
 
@@ -72,5 +73,33 @@ describe('30-day research report', () => {
     // A skill is a quoted JSON token, so "Java" cannot match "JavaScript".
     expect(skills.sql).toContain(`ILIKE '%"' || s.skill || '"%'`)
     expect(skills.sql).toContain(`('Java')`)
+  })
+
+  it('builds its rules from the shared method file, so the methodology page and the query cannot disagree', () => {
+    const all = buildResearch('created').map((a) => a.sql).join('\n')
+    for (const pattern of AGGREGATOR_PATTERNS) expect(all).toContain(`'${pattern}'`)
+    expect(all).toContain(`"salaryConfidence" >= ${MIN_CONFIDENCE}`)
+    expect(all).toContain(`< ${USD_CAP}`)
+    for (const city of BAY_AREA_CITIES) expect(all).toContain(`'${city}'`)
+    const sameRole = RESEARCH.find((a) => a.title === 'Pay: the same role, remote against on-site')!
+    expect(sameRole.sql).toContain(`count(DISTINCT company) >= ${MIN_SAME_ROLE_EMPLOYERS}`)
+    const skills = RESEARCH.find((a) => a.title === 'Pay by skill named in the listing')!
+    expect(skills.sql).toContain(`count(DISTINCT j.company) >= ${MIN_SKILL_EMPLOYERS}`)
+  })
+
+  it('has the evidence queries: funnel, robustness check (five variants), hand-check sample, quoted highest ranges, middle half', () => {
+    const funnel = RESEARCH.find((a) => a.title === 'Evidence: what was counted and what was left out')!
+    expect(funnel.pay).toBeFalsy() // it counts jobs that fail the gate on purpose
+    expect(funnel.sql).toContain('in_the_report')
+    const robust = RESEARCH.find((a) => a.title.startsWith('Pay: do a few big employers'))!
+    expect(robust.pay).toBe(true)
+    expect(robust.sql.match(/UNION ALL/g)).toHaveLength(4)
+    expect(robust.sql).toContain('DISTINCT ON (company, title)')
+    const audit = RESEARCH.find((a) => a.title.startsWith('Audit sample'))!
+    expect(audit.sql).toContain('ORDER BY random() LIMIT 100')
+    const highest = RESEARCH.find((a) => a.title === 'Highest advertised salaries')!
+    expect(highest.sql).toContain('"salaryRaw"')
+    const byRole = RESEARCH.find((a) => a.title === 'Pay by role')!
+    expect(byRole.sql).toContain('p25_usd')
   })
 })
