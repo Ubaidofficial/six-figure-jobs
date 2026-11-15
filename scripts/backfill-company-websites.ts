@@ -4,7 +4,9 @@
 // lib/companies/websiteFromApplyUrls.ts). A DRY RUN unless --apply. Companies with the most live jobs first. A write only goes in
 // while the company still has no website (a value written meanwhile is never replaced).
 //
-//   npx tsx scripts/backfill-company-websites.ts [--limit=500] [--apply]
+//   npx tsx scripts/backfill-company-websites.ts [--limit=500] [--allow-jobs-evidence] [--apply]
+//
+// By default a domain must look like the company's name. --allow-jobs-evidence also accepts a domain named by 3+ of its jobs.
 //
 // SEO: a company's website feeds its job pages' hiringOrganization URL and logo (lib/seo/jobJsonLd.ts) and the company page's
 // Organization data, so a wrong one is worse than none: see the evidence rules in the library.
@@ -16,6 +18,7 @@ import { parseLimit } from '../lib/ai/freeEnrichWrite'
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3)
 const apply = process.argv.includes('--apply')
+const allowJobsEvidence = process.argv.includes('--allow-jobs-evidence')
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set')
@@ -52,7 +55,7 @@ async function main() {
     const claimed = new Set<string>() // a domain given to one company in this run is not given to a second
     const samples: string[] = []
     for (const c of companies) {
-      const pick = pickCompanyWebsite(c.name, c.jobs.flatMap((j) => [j.applyUrl, j.url]), { sharedDomains, takenDomains: new Set([...takenDomains, ...claimed]) })
+      const pick = pickCompanyWebsite(c.name, c.jobs.flatMap((j) => [j.applyUrl, j.url]), { sharedDomains, takenDomains: new Set([...takenDomains, ...claimed]), allowJobsEvidence })
       if (!pick.ok) {
         tally[pick.reason]++
         if ((pick.reason === 'several-domains' || pick.reason === 'domain-taken') && samples.length < 80) samples.push(`  (skipped, ${pick.reason}) ${c.name}: ${pick.hosts.slice(0, 4).join(', ')}`)

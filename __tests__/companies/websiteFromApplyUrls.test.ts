@@ -37,10 +37,11 @@ describe('pickCompanyWebsite', () => {
     expect(pickCompanyWebsite('ServiceNow', ['https://careers.servicenow.com/a', 'https://careers.servicenow.com/b'])).toEqual({ ok: true, website: 'https://servicenow.com', jobs: 2, nameMatch: true })
     expect(pickCompanyWebsite('ServiceNow', ['https://careers.servicenow.com/a'])).toMatchObject({ ok: true, jobs: 1 })
   })
-  it('accepts a domain that does not look like the name only with three or more jobs', () => {
-    const urls = ['https://hire.x1.com/1', 'https://hire.x1.com/2']
+  it('does not accept a domain that does not look like the name, however many jobs name it, unless asked', () => {
+    const urls = ['https://hire.x1.com/1', 'https://hire.x1.com/2', 'https://hire.x1.com/3']
     expect(pickCompanyWebsite('Globex', urls)).toEqual({ ok: false, reason: 'not-enough-evidence', hosts: ['x1.com'] })
-    expect(pickCompanyWebsite('Globex', [...urls, 'https://hire.x1.com/3'])).toMatchObject({ ok: true, website: 'https://x1.com', jobs: 3, nameMatch: false })
+    expect(pickCompanyWebsite('Globex', urls.slice(0, 2), { allowJobsEvidence: true })).toEqual({ ok: false, reason: 'not-enough-evidence', hosts: ['x1.com'] })
+    expect(pickCompanyWebsite('Globex', urls, { allowJobsEvidence: true })).toMatchObject({ ok: true, website: 'https://x1.com', jobs: 3, nameMatch: false })
   })
   it('refuses several domains and no employer link at all (portals only)', () => {
     expect(pickCompanyWebsite('Acme', ['https://acme.com/1', 'https://acme-careers.net/2']).ok).toBe(false)
@@ -70,6 +71,6 @@ describe('pickCompanyWebsite with measured context', () => {
   it('refuses a domain that is already another company\'s website (DeepMind -> google.com)', () => {
     const urls = Array.from({ length: 10 }, (_, i) => `https://careers.google.com/jobs/${i}`)
     expect(pickCompanyWebsite('DeepMind', urls, { takenDomains: new Set(['google.com']) })).toEqual({ ok: false, reason: 'domain-taken', hosts: ['google.com'] })
-    expect(pickCompanyWebsite('DeepMind', urls, {})).toMatchObject({ ok: true, website: 'https://google.com' })
+    expect(pickCompanyWebsite('DeepMind', urls, { allowJobsEvidence: true })).toMatchObject({ ok: true, website: 'https://google.com' })
   })
 })

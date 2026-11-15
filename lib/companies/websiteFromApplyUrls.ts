@@ -6,8 +6,13 @@
 // organisation URL into the job pages' structured data (lib/seo/jobJsonLd.ts), so this is strict:
 //  - job boards, hosted ATS / payroll portals, LinkedIn and other social hosts never count (isJobPortalHost, detectAtsFromUrl);
 //  - a leading career-site label ("careers.", "jobs.", "apply."...) is dropped: servicenow.com, not careers.servicenow.com;
-//  - the links must name exactly ONE host, and the host must look like the company (nameMatchesHost) or be named by at least
-//    three jobs. Anything else is left empty. Pure.
+//  - the website is the registrable domain ("careersemea.smbcgroup.com" -> smbcgroup.com), never a vendor's tenant address;
+//  - a domain that many different companies' jobs apply on is a vendor or a board, not an employer ("hcshiring.com",
+//    "naukri.com"): the caller measures that from our own data (sharedDomains), so no hand-kept vendor list has to be complete;
+//  - a domain that is already another company's website is not given to a second company (DeepMind's jobs apply on google.com);
+//  - the links must name exactly ONE domain, and it must look like the company's name (nameMatchesHost). Naming it in three or
+//    more jobs is accepted as evidence only when the caller asks (allowJobsEvidence): on the first production dry run that path
+//    was right 4 times in 6 and wrong twice (naukri.com, a job board), and a wrong website is worse than none. Pure.
 import { detectAtsFromUrl } from '../normalizers/ats'
 import { isJobPortalHost } from './website'
 
@@ -65,6 +70,8 @@ export type WebsiteContext = {
   sharedDomains?: ReadonlySet<string>
   /** Registrable domains that already are some company's website. */
   takenDomains?: ReadonlySet<string>
+  /** Also accept a domain that does not look like the name when 3+ of the company's jobs apply there. Off by default. */
+  allowJobsEvidence?: boolean
 }
 
 /** The website to fill for a company with no stored one, from its jobs' apply links; or why not. */
@@ -88,6 +95,6 @@ export function pickCompanyWebsite(companyName: string, applyUrls: ReadonlyArray
   if (ctx.takenDomains?.has(domain)) return { ok: false, reason: 'domain-taken', hosts: domains }
   const jobs = counts.get(domain)!
   const nameMatch = nameMatchesHost(companyName, domain)
-  if (!nameMatch && jobs < 3) return { ok: false, reason: 'not-enough-evidence', hosts: domains }
+  if (!nameMatch && !(ctx.allowJobsEvidence && jobs >= 3)) return { ok: false, reason: 'not-enough-evidence', hosts: domains }
   return { ok: true, website: `https://${domain}`, jobs, nameMatch }
 }
