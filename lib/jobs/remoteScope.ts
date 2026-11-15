@@ -37,11 +37,27 @@ const OPEN_TO_IN = /\b(?:open\s+to|hiring\s+(?:candidates\s+)?(?:in|from)|accept
 const REGION_IN = /\b(?:in|within|across|from)\s+(?:the\s+)?(Europe|European Union|EU|EMEA|APAC|Asia[- ]Pacific|LATAM|Latin America|North America)\b/i
 const TIMEZONE = /\b(?:EU|European|CET|EMEA|UK|GMT)\s+(?:time\s*)?zones?\b/i
 
-// "work from anywhere in the world", "hire worldwide", "open to candidates globally", "global remote", "anywhere in the world".
-const OPENS = /\b(?:anywhere\s+in\s+the\s+world|from\s+anywhere\s+in\s+the\s+world|work(?:ing)?\s+from\s+anywhere|worldwide|world-wide|globally\s+(?:distributed|remote)|global\s+remote|remote[- ]first[^.]{0,40}\banywhere\b|hir(?:e|ing)\s+(?:globally|worldwide|anywhere)|any\s+country|across\s+the\s+globe|around\s+the\s+(?:world|globe))\b/i
-// An opening phrase that is itself limited: "anywhere in the US", "worldwide customers" is not about the candidate.
-const OPENS_BUT_LIMITED = /\b(?:anywhere|worldwide|globally)\s+(?:in|within|across)\s+(?:the\s+)?(?:US|U\.S\.|USA|United States|UK|Europe|EU|Canada|Australia|[A-Z]{2}\b)/i
-const ABOUT_SOMETHING_ELSE = /\b(?:customers?|clients?|users?|offices?|teams?\s+(?:are|is)\s+located|employees\s+worldwide|(?:millions?|thousands?)\s+of|brands?|markets?|presence|leading|largest|operat(?:e|es|ing)\s+(?:in|across))\b[^.]{0,80}\b(?:worldwide|around the world|across the globe|globally)\b|\b(?:worldwide|around the world|globally)\b[^.]{0,40}\b(?:customers?|clients?|users?|brands?)\b/i
+// Only statements about WHERE THE CANDIDATE may work count: "open to candidates anywhere in the world", "we hire worldwide",
+// "work remotely from any country", "Location: Worldwide". The words "worldwide", "around the world", "across the globe",
+// "globally" and "from anywhere" alone are company marketing ("customers worldwide", "employees around the globe", "our
+// mission worldwide", "do your best work from anywhere"): in the first audit of 5,784 live remote jobs they gave about 650 wrong
+// readings in 800 conflicts, so they are not read.
+const OPENS = new RegExp(
+  [
+    '(?:candidates|applicants)\\s+(?:from\\s+|located\\s+|based\\s+)?(?:anywhere|worldwide|globally|around\\s+the\\s+(?:world|globe)|across\\s+the\\s+globe)',
+    'open\\s+to\\s+(?:candidates\\s+|applicants\\s+)?(?:anywhere|worldwide|globally)',
+    'anywhere\\s+in\\s+the\\s+world',
+    'hir(?:e|es|ing)\\s+(?:globally|worldwide|anywhere|(?:remotely\\s+)?(?:from|in)\\s+any\\s+country)',
+    'work(?:ing)?\\s+(?:remotely\\s+)?from\\s+any\\s+country',
+    'location\\s*[:\\-–]\\s*(?:worldwide|anywhere|global)',
+    'remote\\s*[-–:]\\s*(?:worldwide|anywhere\\s+in\\s+the\\s+world)',
+    'based\\s+anywhere',
+  ].join('|'),
+  'i',
+)
+// ...and the sentence must talk about the person or the role, not a perk or the company.
+const ABOUT_THE_CANDIDATE = /\b(?:candidates?|applicants?|you|your|role|position|job|hir\w+|work\w*|location|based|team members? can)\b/i
+const NOT_A_STATEMENT_ABOUT_WORK = /\b(?:perk|stipend|travel|bonus|trip|vacation|flights?|customers?|clients?|users?|offices?|brands?)\b/i
 
 const REGION_BY_WORD: Record<string, RemoteScope extends infer T ? (T extends { region: infer R } ? R : never) : never> = {
   europe: 'europe',
@@ -56,13 +72,33 @@ const REGION_BY_WORD: Record<string, RemoteScope extends infer T ? (T extends { 
   'north america': 'north-america',
 }
 
-// The clause ends where the sentence moves on ("... the United States to be considered", "... Canada and are ...").
-const limitingCountries = (clause: string): string[] =>
-  countriesFromText(clause.split(/\s+(?:to|for|in order|so that|as|and\s+(?:be|have|are|will|must|you))\b/i)[0].replace(/\b(?:residents?|citizens?|candidates|applicants)\b/gi, ' '))
+// The clause ends where the sentence moves on ("... the United States to be considered", "... Canada and are ..."); a
+// leading "residing in the" is dropped; and EVERY listed place must be a country we know. One we do not ("Latin America",
+// "other listed locations") means the sentence says more than we can list, so the answer is none, never a partial list
+// ("the US and Canada" read as Canada only, "the United States or Latin America" read as the US only: first audit).
+const limitingCountries = (clause: string): string[] => {
+  const cut = clause.split(/\s+(?:to|for|in order|so that|as|and\s+(?:be|have|are|will|must|you))\b/i)[0]
+  const stripped = cut
+    .replace(/\b(?:residents?|citizens?|candidates|applicants)\b/gi, ' ')
+    .replace(/^\s*(?:currently\s+)?(?:residing|living|located|based|working)?\s*(?:in|within|from)?\s*(?:the\s+)?/i, '')
+  const parts = stripped.split(/\s*(?:,|;|&|\/|\band\b|\bor\b|\beither\b|\bboth\b)\s*/i).map((p) => p.replace(/^the\s+/i, '').trim()).filter(Boolean)
+  const codes: string[] = []
+  for (const part of parts) {
+    const found = countriesFromText(part)
+    if (found.length === 0) return []
+    codes.push(...found)
+  }
+  return Array.from(new Set(codes))
+}
+
+const COUNTRY_TOKEN = /\b(?:US|USA|U\.S\.|United States|Canada|UK|U\.K\.|United Kingdom|Australia|Ireland|Germany|France|Spain|Netherlands|Poland)\b/
+const MONEY_IN_SENTENCE = /[$£€]\s?\d|\b(?:USD|CAD|AUD|GBP|EUR|CHF)\b/
 
 type Limit = { countries?: string[]; region?: string; sentence: string }
 
 function limitOf(sentence: string): Limit | null {
+  // A sentence about pay by location ("$148,000 for most US-based locations, $131,000 CAD in Canada...") limits nothing.
+  if (MONEY_IN_SENTENCE.test(sentence)) return null
   for (const re of [MUST_BE_IN, AUTHORIZED_IN, OPEN_TO_IN]) {
     const m = re.exec(sentence)
     if (m) {
@@ -83,7 +119,7 @@ function limitOf(sentence: string): Limit | null {
     if (countries.length) return { countries, sentence }
   }
   const region = REGION_IN.exec(sentence)
-  if (region && /\b(?:remote\w*|candidates|applicants|hiring|located|based|time zone)\b/i.test(sentence)) {
+  if (region && !COUNTRY_TOKEN.test(sentence) && /\b(?:remote\w*|candidates|applicants|hiring|located|based|time zone)\b/i.test(sentence)) {
     const r = REGION_BY_WORD[region[1].toLowerCase()]
     if (r) return { region: r, sentence }
   }
@@ -106,7 +142,7 @@ export function readRemoteScope(html: string | null | undefined): RemoteScope | 
   for (const sentence of sentences) {
     const limit = limitOf(sentence)
     if (limit) limits.push(limit)
-    if (OPENS.test(sentence) && !OPENS_BUT_LIMITED.test(sentence) && !ABOUT_SOMETHING_ELSE.test(sentence)) opens.push(sentence)
+    if (OPENS.test(sentence) && ABOUT_THE_CANDIDATE.test(sentence) && !NOT_A_STATEMENT_ABOUT_WORK.test(sentence)) opens.push(sentence)
   }
 
   if (limits.length > 0) {

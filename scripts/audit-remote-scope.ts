@@ -32,7 +32,8 @@ export function compareScope(stored: Stored, read: RemoteScope | null): string {
     return read.kind === 'worldwide' ? 'agree: worldwide' : `CONFLICT: location text worldwide, description ${label}`
   }
   if (read.kind === 'countries') return read.countries.includes(stored.code) ? 'agree: country' : `CONFLICT: stored ${stored.code}, description ${label}`
-  if (read.kind === 'worldwide') return `CONFLICT: stored ${stored.code}, description worldwide`
+  // The location field outranks one sentence about the world: it is not a conflict, and it is not used.
+  if (read.kind === 'worldwide') return `info: stored ${stored.code}, description worldwide (not used)`
   return `info: stored ${stored.code}, description ${label}`
 }
 

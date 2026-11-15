@@ -48,3 +48,38 @@ describe('readRemoteScope: stays quiet when unsure', () => {
     expect(read(null)).toBeNull()
   })
 })
+
+// Wrong readings found in the first audit of 5,784 live remote jobs (2026-11-15): "worldwide" in company marketing was read
+// as the job being open to the world in about 650 of 800 conflicts; and three limit readings were partial or about pay.
+describe('readRemoteScope: wrong readings from the first audit', () => {
+  it.each([
+    ['customers', 'More than 15,000 companies worldwide trust us to do exactly that.'],
+    ['mission', 'Inclusive collaboration is critical to our mission of changing the management of disease worldwide.'],
+    ['employees around the world', 'Our 30,000+ employees worldwide are creating the future.'],
+    ['culture', '100% Remote, Global Culture - As a remote-only company, we bring together talent from around the world.'],
+    ['a perk', '$1,000 travel perk on each Earnie-versary to anywhere in the world'],
+    ['marketing', 'We are built as a remote-first company that enables you to do your best work from anywhere.'],
+    ['an area', 'Work from anywhere in the NYC, LA or San Francisco area.'],
+    ['distributed company', 'ClickHouse is a globally distributed company and remote-friendly.'],
+    ['team across the globe', "We're 100% remote with team members across the globe."],
+    ['certified', 'Great Place to Work Certified across the globe'],
+  ])('does not read company boilerplate as "open to the world": %s', (_name, html) => {
+    expect(read(html)).toBeNull()
+  })
+  it('reads "residing in the US and Canada" as both countries, not just the last', () => {
+    expect(read('Open to candidates residing in the US and Canada.')).toMatchObject({ kind: 'countries', countries: expect.arrayContaining(['US', 'CA']) })
+  })
+  it('gives nothing when the sentence also names a place we cannot list', () => {
+    expect(read('Remote in the United States or Latin America.')).toBeNull()
+    expect(read('Candidates based in other listed US locations or remotely in Latin America may also be considered.')).toBeNull()
+  })
+  it('does not read a sentence about pay by location as a limit', () => {
+    expect(read('Our hiring range is $148,000 - $180,000 for most US-based locations, $131,000 - $192,000 CAD in most Canada-based locations, £84,000 – £114,000 GBP for most UK-based locations.')).toBeNull()
+  })
+  it('still reads an explicit statement about where the person can work', () => {
+    expect(read('This role is open to candidates anywhere in the world.')).toMatchObject({ kind: 'worldwide' })
+    expect(read('We hire worldwide and you can work remotely from any country.')).toMatchObject({ kind: 'worldwide' })
+    expect(read('Location: Worldwide')).toMatchObject({ kind: 'worldwide' })
+  })
+})
+
