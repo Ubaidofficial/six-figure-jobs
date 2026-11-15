@@ -32,6 +32,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       ['Canada', '/remote?remoteRegion=canada', 'CA'],
       ['Europe', '/remote?remoteRegion=europe', 'EU'],
       ['Australia', '/remote?remoteRegion=australia', 'AU'],
+      ['Remote Companies', '/remote/companies'],
     ],
   },
   {
@@ -78,6 +79,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     title: 'Resources',
     links: [
       ['Career Blog', '/blog'],
+      ['Pay Report Method', '/high-paying-jobs-report/method'],
       ['Visa Sponsorship Jobs', '/jobs/visa-sponsorship'],
       ['Jobs Without a Degree', '/jobs/no-degree'],
       ['4-Day Work Week Jobs', '/jobs/4-day-week'],

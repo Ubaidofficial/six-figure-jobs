@@ -296,11 +296,14 @@ export function buildResearch(basis: Basis = 'created'): Research[] {
     },
     {
       title: 'Employers with the most six-figure listings',
-      note: 'Validated USD jobs paying 100,000 or more. Job boards and aggregators are left out: they list other employers\' jobs.',
+      note: 'Validated USD jobs paying 100,000 or more. Job boards and aggregators are left out: they list other employers\' jobs. company_slug is the employer\'s own page on the site (/company/<slug>); the report links an employer only when it has one. Check a slug exists before pasting it.',
       pay: true,
-      sql: `SELECT company, count(*) AS six_figure_jobs, ${medianOf(ANNUAL, 'true')} AS median_usd
-    FROM "Job" WHERE ${W} AND ${PAY_OK} AND ${ANNUAL} >= 100000 AND ${NOT_AGGREGATOR}
-    GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 20`,
+      sql: `SELECT e.company, e.six_figure_jobs, e.median_usd, c.slug AS company_slug
+    FROM (SELECT company, max("companyId") AS company_id, count(*) AS six_figure_jobs, ${medianOf(ANNUAL, 'true')} AS median_usd
+      FROM "Job" WHERE ${W} AND ${PAY_OK} AND ${ANNUAL} >= 100000 AND ${NOT_AGGREGATOR}
+      GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 20) e
+    LEFT JOIN "Company" c ON c.id = e.company_id
+    ORDER BY e.six_figure_jobs DESC, e.company`,
     },
     {
       title: 'Highest advertised salaries',

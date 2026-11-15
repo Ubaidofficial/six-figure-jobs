@@ -11,6 +11,8 @@
 //      meet the sample floors) rangeWidth, sameRole and skills. Delete an optional block rather than keep last month's.
 //   3. Set slug, month, monthTag, publishedAt, updatedAt, collected, window. Write `sinceLastEdition`: one sentence saying
 //      whether the method or sources changed, so readers know if the trend table compares like with like.
+//      Employer rows: paste the query's `company_slug` as `slug` so the employer links to its page; leave `slug` out when the
+//      column is empty (the report links only pages that exist, see payReportLinks.ts).
 //   4. Add the new edition FIRST in PAY_REPORT_EDITIONS below. Leave the old file as it is.
 //   5. Re-read the "Method and limits" text on the page: if a source or rule changed, say so.
 //   6. Run __tests__/research/payReport.test.ts: it checks the bands add up, the tables are sorted, the sample floors hold,
@@ -35,6 +37,8 @@ export type PayRow = {
   /** 25th and 75th percentile of the advertised midpoints, when the run gave them: the middle half of the listings. */
   p25?: number
   p75?: number
+  /** An employer's own slug on the site (`/company/<slug>`), from the research query's company_slug column. No slug, no link. */
+  slug?: string
 }
 
 /** How wide the advertised ranges are: (maximum - minimum) against the minimum, among listings that state both ends. */
