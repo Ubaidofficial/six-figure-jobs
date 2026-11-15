@@ -19,8 +19,15 @@
 
 import { type IndexingRequestType } from '../lib/indexing/googleIndexingClient'
 import { prisma } from '../lib/prisma'
-import { parseJobSlugParam } from '../lib/jobs/jobSlug'
+import { buildJobSlug, hasCanonicalJobShortId, parseJobSlugParam } from '../lib/jobs/jobSlug'
 import { enqueueJobIndexingUpdate, enqueueJobIndexingDelete } from '../lib/jobs/indexingQueue'
+import { buildGlobalExclusionsWhere, buildHighSalaryEligibilityWhere } from '../lib/jobs/queryJobs'
+import {
+  buildIndexableJobStructureWhere,
+  dedupeIndexableJobs,
+  evaluateJobIndexability,
+} from '../lib/jobs/qualityGate'
+import { buildFreshJobWhere, MAX_INDEXABLE_JOB_AGE_DAYS } from '../lib/jobs/freshness'
 
 type SitemapEntry = {
   loc: string
@@ -132,12 +139,46 @@ async function collectJobUrls(): Promise<string[]> {
   return urls
 }
 
+/**
+ * In indexing phase 1 the job sitemap is an empty <urlset> (lib/seo/indexingPhase.ts), so the sitemap lists nothing to
+ * queue. Take the newest jobs the sitemap's shard query would list instead (same filters, same quality gate); the queue
+ * worker re-checks each one before it sends it to Google.
+ */
+async function collectJobUrlsFromDb(): Promise<string[]> {
+  const jobs = await prisma.job.findMany({
+    where: {
+      isExpired: false,
+      shortId: { not: null },
+      ...(SINCE && !Number.isNaN(SINCE.getTime()) ? { updatedAt: { gte: SINCE } } : {}),
+      AND: [
+        buildGlobalExclusionsWhere(),
+        buildHighSalaryEligibilityWhere(),
+        buildFreshJobWhere(MAX_INDEXABLE_JOB_AGE_DAYS - 2),
+        buildIndexableJobStructureWhere(),
+      ],
+    },
+    orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+    // Room for the rows the indexability checks drop.
+    take: Math.ceil(MAX_URLS * 1.5),
+  })
+
+  return dedupeIndexableJobs(
+    jobs.filter((job) => hasCanonicalJobShortId(job) && evaluateJobIndexability(job).indexable),
+  )
+    .slice(0, MAX_URLS)
+    .map((job) => `${BASE_URL}/job/${buildJobSlug({ id: job.id, title: job.title })}`)
+}
+
 async function main() {
   console.log(`[indexing] sitemap=${JOB_SITEMAP_INDEX_URL}`)
   console.log(`[indexing] type=${REQUEST_TYPE} dryRun=${DRY_RUN} maxUrls=${MAX_URLS}`)
   if (SINCE) console.log(`[indexing] since=${SINCE.toISOString()}`)
 
-  const urls = await collectJobUrls()
+  let urls = await collectJobUrls()
+  if (urls.length === 0) {
+    console.log('[indexing] The job sitemap lists no jobs (indexing phase 1); reading the newest indexable jobs from the database.')
+    urls = await collectJobUrlsFromDb()
+  }
   console.log(`[indexing] collected=${urls.length}`)
 
   if (urls.length === 0) return

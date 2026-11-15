@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 
 import {
   Faq,
@@ -212,13 +213,14 @@ export function buildRoleMetadata(
   const roleOpt = SEARCH_ROLE_OPTIONS.find((r) => r.slug === roleSlug)
   const roleTitle = roleOpt?.label ?? toTitleCase(roleSlug)
 
-  const title = buildListingTitle({ topic: `${roleTitle} Jobs`, count: total, qualifier: 'Paying $100k+' })
+  const title = buildListingTitle({ topic: `${roleTitle} Jobs`, qualifier: 'Paying $100k+' })
   const description = buildRoleDescription(roleTitle, total, avgUsd)
 
   const canonical = options?.canonicalPath ? `${SITE_URL}${options.canonicalPath}` : `${SITE_URL}/jobs/${roleSlug}`
   return {
     title,
     description,
+    keywords: keywordsFor('role', { role: roleTitle }),
     alternates: { canonical },
     openGraph: {
       title,

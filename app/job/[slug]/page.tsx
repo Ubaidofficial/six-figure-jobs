@@ -25,6 +25,8 @@ import { buildSalaryText } from '../../../lib/jobs/salary'
 import { SITE_NAME, getSiteUrl } from '../../../lib/seo/site'
 import { cleanJobDescriptionHtml } from '../../../lib/jobs/descriptionCleaning'
 import { detectJobLanguage } from '../../../lib/jobs/language'
+import { findLanguageRequirements } from '../../../lib/jobs/languageRequirement'
+import { experienceLabel, findExperienceRequirement } from '../../../lib/jobs/experienceRequirement'
 import { countryCodeToSlug, countryCodeToName } from '../../../lib/seo/countrySlug'
 import { CITY_TARGETS, CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { countryName, normalizeCountryCode } from '../../../lib/location/country'
@@ -33,7 +35,7 @@ import { employmentTypeLabel } from '../../../lib/jobs/employmentTypeLabel'
 import { skillLabel } from '../../../lib/jobs/skillLabel'
 import { resolveJobRoleSlug, similarJobsKeyword } from '../../../lib/roles/indexableRole'
 import { JobCard } from '@/components/jobs/JobCard'
-import { Briefcase, Clock, Globe, Laptop, MapPin, TrendingUp } from 'lucide-react'
+import { Briefcase, Clock, Globe, Hourglass, Languages, Laptop, MapPin, TrendingUp } from 'lucide-react'
 
 import { SKILL_TARGETS } from '../../../lib/seo/pseoTargets'
 import { Badge, badgeVariants } from '@/components/ui/badge'
@@ -53,8 +55,10 @@ import {
   JobSection,
   MobileApplyBar,
   RelatedSearchesCard,
+  SkillChip,
   TranslateNotice,
 } from './JobDetailParts'
+import { JobPageNav, type JobPageNavItem } from './JobPageNav'
 import styles from './JobDetail.module.css'
 import { loadPeerSalaries, rankSalary, type SalaryRank } from '@/lib/jobs/salaryRank'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
@@ -445,11 +449,52 @@ export default async function JobPage({
     { Icon: Clock, label: postedLabel ? `Posted ${postedLabel}` : null },
   ] as HeroChipDraft[]).filter((m): m is HeroChip => Boolean(m.label))
 
+  // Languages the posting requires of the applicant (not merely mentions), with the sentence it was read from.
+  const requiredLanguages = isOversizedDescription
+    ? []
+    : findLanguageRequirements({ title: typedJob.title, descriptionHtml: rawDescriptionString })
+  // Years of experience the posting asks for, with the sentence it was read from.
+  const experience = isOversizedDescription ? null : findExperienceRequirement(rawDescriptionString)
   const heroChips = ([
     ...metaItems,
     { Icon: Briefcase, label: employmentTypeLabel(employmentType) },
     { Icon: TrendingUp, label: seniority ? String(seniority) : null },
+    {
+      Icon: Hourglass,
+      label: experience ? experienceLabel(experience) : null,
+      content: experience ? <span title={`"${experience.sentence}"`}>{experienceLabel(experience)}</span> : undefined,
+    },
+    {
+      Icon: Languages,
+      label: requiredLanguages.length ? `${requiredLanguages.map((l) => l.language).join(' / ')} required` : null,
+      content: requiredLanguages.length ? (
+        <span title={requiredLanguages.map((l) => `"${l.sentence}"`).join(' ')}>
+          {requiredLanguages.map((l) => l.language).join(' / ')} required
+        </span>
+      ) : undefined,
+    },
   ] as HeroChipDraft[]).filter((m): m is HeroChip => Boolean(m.label))
+
+  // The sections below, in order, for the sticky "On this page" bar. Mirrors the conditions the sections render under.
+  const pageNavItems: JobPageNavItem[] = (
+    hasStructuredSections
+      ? [
+          aiStructured.description.length > 0 && { id: 'job-about', label: 'About the role' },
+          aiStructured.requirements.length > 0 && { id: 'job-requirements', label: 'Requirements' },
+          aiStructured.benefits.length > 0 && { id: 'job-benefits', label: 'Benefits' },
+        ]
+      : [
+          aiStructured.bullets.length > 0 && { id: 'job-highlights', label: 'Highlights' },
+          responsibilities.length > 0 && { id: 'job-responsibilities', label: 'Responsibilities' },
+          resolvedRequirements.length > 0 && { id: 'job-requirements', label: 'Requirements' },
+          benefitItems.length > 0 && { id: 'job-benefits', label: 'Benefits' },
+        ]
+  )
+    .concat([
+      requiredSkills.length > 0 && { id: 'job-skills', label: 'Skills' },
+      (hasDescription || isOversizedDescription) && { id: 'job-description', label: 'Full description' },
+    ])
+    .filter((item): item is JobPageNavItem => Boolean(item))
 
   const salaryRank = await withRuntimeFallback<(SalaryRank & { scope: 'role' | 'market' }) | null>(
     `job.${typedJob.id}.salary-rank`,
@@ -565,12 +610,16 @@ export default async function JobPage({
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
         <article className={`${styles.bodyCard} min-w-0 space-y-10`}>
+          {pageNavItems.length >= 3 ? <JobPageNav items={pageNavItems} /> : null}
           {foreignLanguage ? <TranslateNotice language={foreignLanguage} pageUrl={`${SITE_URL}/job/${canonicalSlug}`} /> : null}
 
           {hasStructuredSections ? (
             <>
+              <p className="text-xs text-muted-foreground">
+                Summary written by AI from the employer’s posting. The full original text is further down.
+              </p>
               {aiStructured.description.length > 0 ? (
-                <JobSection title="About the role">
+                <JobSection id="job-about" title="About the role">
                   <div className="max-w-[68ch] space-y-3 text-[15px] leading-relaxed text-foreground/90">
                     {aiSnippet ? <p>{aiSnippet}</p> : null}
                     {aiStructured.description.map((line, idx) => (
@@ -580,12 +629,12 @@ export default async function JobPage({
                 </JobSection>
               ) : null}
               {aiStructured.requirements.length > 0 ? (
-                <JobSection title="Requirements">
+                <JobSection id="job-requirements" title="Requirements">
                   <BulletList items={aiStructured.requirements} />
                 </JobSection>
               ) : null}
               {aiStructured.benefits.length > 0 ? (
-                <JobSection title="Benefits and perks">
+                <JobSection id="job-benefits" title="Benefits and perks">
                   <BulletList items={aiStructured.benefits} />
                 </JobSection>
               ) : null}
@@ -593,22 +642,22 @@ export default async function JobPage({
           ) : (
             <>
               {aiStructured.bullets.length > 0 ? (
-                <JobSection title="Role highlights">
+                <JobSection id="job-highlights" title="Role highlights">
                   <BulletList items={aiStructured.bullets} />
                 </JobSection>
               ) : null}
               {responsibilities.length > 0 ? (
-                <JobSection title="Responsibilities">
+                <JobSection id="job-responsibilities" title="Responsibilities">
                   <BulletList items={responsibilities.slice(0, 5)} />
                 </JobSection>
               ) : null}
               {resolvedRequirements.length > 0 ? (
-                <JobSection title="Requirements">
+                <JobSection id="job-requirements" title="Requirements">
                   <BulletList items={resolvedRequirements.slice(0, 6)} />
                 </JobSection>
               ) : null}
               {benefitItems.length > 0 ? (
-                <JobSection title="Benefits">
+                <JobSection id="job-benefits" title="Benefits">
                   <BulletList items={benefitItems.slice(0, 10).map(formatBenefitPill)} />
                 </JobSection>
               ) : null}
@@ -616,12 +665,10 @@ export default async function JobPage({
           )}
 
           {requiredSkills.length > 0 ? (
-            <JobSection title="Skills">
+            <JobSection id="job-skills" title="Skills">
               <div className="flex flex-wrap gap-2">
                 {requiredSkills.map((skill) => (
-                  <Badge key={skill} variant="secondary" className="rounded-md px-2.5 py-1 font-medium">
-                    {skillLabel(skill)}
-                  </Badge>
+                  <SkillChip key={skill} skill={skill} variant="required" />
                 ))}
               </div>
               {niceSkills.length > 0 ? (
@@ -629,9 +676,7 @@ export default async function JobPage({
                   <p className="pt-2 text-sm text-muted-foreground">Nice to have</p>
                   <div className="flex flex-wrap gap-2">
                     {niceSkills.map((skill) => (
-                      <Badge key={skill} variant="outline" className="rounded-md px-2.5 py-1 font-normal">
-                        {skillLabel(skill)}
-                      </Badge>
+                      <SkillChip key={skill} skill={skill} variant="nice" />
                     ))}
                   </div>
                 </>
@@ -640,7 +685,7 @@ export default async function JobPage({
           ) : null}
 
           {hasDescription || isOversizedDescription ? (
-            <JobSection title="Full job description">
+            <JobSection id="job-description" title="Full job description">
               {isOversizedDescription ? (
                 <p className="text-sm text-muted-foreground">
                   This description is too large to display safely. Use Apply to read the full posting on the company site.

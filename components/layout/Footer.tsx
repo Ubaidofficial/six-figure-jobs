@@ -9,7 +9,7 @@ import { alertsEnabled } from '@/lib/alerts/config'
 import { FooterNewsletter } from './FooterNewsletter'
 import { FOOTER_COLUMNS } from './footerLinks'
 import styles from './Footer.module.css'
-import { Wordmark } from './Wordmark'
+import { Logo } from '@/components/brand/Logo'
 
 export function Footer() {
   return (
@@ -34,7 +34,7 @@ export function Footer() {
         <div className={styles.columnsDesktop} aria-label="Footer links">
           <div className={styles.brand}>
             <Link href="/" className={styles.logo}>
-              <Wordmark />
+              <Logo variant="stacked-tag" className={styles.logoImg} />
             </Link>
             <div className={styles.tagline}>Premium jobs for high earners.</div>
             <div className={styles.socialRow} aria-label="Social links">
@@ -86,7 +86,7 @@ export function Footer() {
         <div className={styles.columnsMobile} aria-label="Footer links (mobile)">
           <div className={styles.brand}>
             <Link href="/" className={styles.logo}>
-              <Wordmark />
+              <Logo variant="stacked-tag" className={styles.logoImg} />
             </Link>
             <div className={styles.tagline}>Premium jobs for high earners.</div>
             <div className={styles.socialRow} aria-label="Social links">
@@ -186,6 +186,58 @@ export function Footer() {
                 width={240}
                 height={66}
                 alt="Featured on Submit Hunt"
+                loading="lazy"
+              />
+            </a>
+            <a
+              className={styles.badge}
+              href="https://builtbyindies.com/products/6figjobs?utm_source=badge&utm_medium=embed&utm_campaign=live"
+              target="_blank"
+              rel="noopener"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://builtbyindies.com/badge/b5f1a0ef-cefe-4adb-9acd-fe3cd444dc39.svg?theme=dark"
+                alt="BuiltByIndies"
+                loading="lazy"
+              />
+            </a>
+            <a className={styles.badge} href="https://www.aitoolsaver.com" target="_blank" rel="noopener">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://www.aitoolsaver.com/images/badges/featured-on-aitoolsaver-badge-brand-wide.svg"
+                width={320}
+                height={80}
+                alt="Featured on AiToolSaver"
+                loading="lazy"
+              />
+            </a>
+            <a className={styles.badge} href="https://marketingdb.live" target="_blank" rel="noopener noreferrer nofollow sponsored">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://marketingdb.live/badge.svg"
+                width={190}
+                height={44}
+                alt="Launched on MarketingDB"
+                loading="lazy"
+              />
+            </a>
+            <a
+              className={styles.badge}
+              href="https://www.pavelaunch.com/p/efd3cf08-9167-47a1-9c77-4519759a39fe"
+              target="_blank"
+              rel="noopener"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://www.pavelaunch.com/api/embed?type=launching-soon&theme=light"
+                width={250}
+                height={54}
+                alt="On PaveLaunch"
                 loading="lazy"
               />
             </a>

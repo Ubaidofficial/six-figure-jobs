@@ -17,13 +17,17 @@ export function buildCompanyJsonLd(
     ((company as any).description as string | null | undefined) ?? undefined
   const publicWebsite = normalizePublicCompanyWebsite(company.website)
 
+  // The company's own LinkedIn page (only a linkedin.com/company/ link is ever stored) next to its website.
+  const sameAs = [publicWebsite, company.linkedinUrl].filter((v): v is string => typeof v === 'string' && v.length > 0)
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: company.name,
     url: `${origin}/company/${company.slug}`,
     logo: company.logoUrl || undefined,
-    sameAs: publicWebsite || undefined,
+    sameAs: sameAs.length > 1 ? sameAs : sameAs[0],
+    ...(company.foundedYear ? { foundingDate: String(company.foundedYear) } : {}),
     description,
   }
 }

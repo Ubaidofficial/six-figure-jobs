@@ -2,7 +2,10 @@
 // Filter out jobs older than a threshold
 
 export const MAX_INGEST_AGE_DAYS = 30  // Don't ingest jobs older than 30 days
-export const MAX_DISPLAY_AGE_DAYS = 45 // Only show jobs up to 45 days old
+// A job is shown only while it was POSTED within this many days (postedAt, else the day we first stored it), however
+// recently we last saw it still open. JOB_MAX_AGE_DAYS (7-90) changes it without a code change; restart to apply.
+const configuredAge = Number(process.env.JOB_MAX_AGE_DAYS)
+export const MAX_DISPLAY_AGE_DAYS = Number.isInteger(configuredAge) && configuredAge >= 7 && configuredAge <= 90 ? configuredAge : 14
 
 export function isJobTooOld(postedAt: Date | string | null | undefined, maxDays: number = MAX_INGEST_AGE_DAYS): boolean {
   if (!postedAt) return false

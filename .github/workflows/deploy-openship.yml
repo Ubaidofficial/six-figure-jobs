@@ -1,0 +1,85 @@
+name: deploy (Openship)
+# A push to main calls the project's Openship incoming webhook (Source & Triggers > Webhooks), which deploys the
+# six-figure-jobs service only (never the whole project: a project-level deploy once started containers without the
+# saved database variables). It then watches /api/health while Openship builds and switches, and fails if the site
+# stops answering 200. Nothing here proves the NEW version is live: /api/health answers 200 on the old one too.
+#
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   OPENSHIP_DEPLOY_URL    the webhook address
+#   OPENSHIP_DEPLOY_TOKEN  its bearer token
+# Without them the workflow only prints a warning, so merging it changes nothing until the secrets exist.
+# Run it by hand from the Actions tab (workflow_dispatch) to test.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.6figjobs.com' }}
+
+jobs:
+  # Only the webhook call (a few seconds) is serialized: one request at a time, a newer merge replaces a waiting one,
+  # a running one is never cancelled. The 25-minute health watch is a separate job with no lock, so a merge no longer
+  # waits behind the previous merge's watch (2026-11-15: #149's deploy waited 20+ minutes behind #147's watch).
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: openship-deploy
+      cancel-in-progress: false
+    outputs:
+      triggered: ${{ steps.trigger.outputs.triggered }}
+    steps:
+      - name: Trigger the Openship deploy
+        id: trigger
+        env:
+          OPENSHIP_DEPLOY_URL: ${{ secrets.OPENSHIP_DEPLOY_URL }}
+          OPENSHIP_DEPLOY_TOKEN: ${{ secrets.OPENSHIP_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "$OPENSHIP_DEPLOY_URL" ] || [ -z "$OPENSHIP_DEPLOY_TOKEN" ]; then
+            echo "::warning::OPENSHIP_DEPLOY_URL or OPENSHIP_DEPLOY_TOKEN is not set; no deploy was requested."
+            echo "triggered=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          status=$(curl -sS -o /tmp/openship-response.txt -w '%{http_code}' -m 60 -X POST \
+            -H "Authorization: Bearer ${OPENSHIP_DEPLOY_TOKEN}" "${OPENSHIP_DEPLOY_URL}") || status=000
+          echo "Openship answered HTTP ${status}"
+          head -c 500 /tmp/openship-response.txt || true
+          echo
+          case "$status" in
+            2*) echo "triggered=true" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::Openship did not accept the deploy request (HTTP ${status}). Check the webhook, its token and the Openship server."
+              exit 1
+              ;;
+          esac
+
+  watch:
+    needs: deploy
+    if: needs.deploy.outputs.triggered == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Watch /api/health while Openship builds and switches
+        run: |
+          # A build took about 10 minutes on 2026-11-14; watch for 25. Three failures in a row fail the job.
+          deadline=$((SECONDS + 1500))
+          bad=0
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 60 "${SITE_URL}/api/health" || echo 000)
+            if [ "$code" = "200" ]; then
+              bad=0
+            else
+              bad=$((bad + 1))
+              echo "::warning::/api/health answered ${code} (${bad} in a row)"
+            fi
+            if [ "$bad" -ge 3 ]; then
+              echo "::error::/api/health failed 3 times in a row after the deploy was requested. Check Openship; if the app points at the wrong database, run Apply environment on the service."
+              exit 1
+            fi
+            sleep 60
+          done
+          echo "/api/health stayed healthy for 25 minutes after the deploy was requested."

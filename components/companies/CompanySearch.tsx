@@ -26,12 +26,12 @@ function highlight(text: string, query: string): React.ReactNode {
   )
 }
 
-/** "3 new this week · median $185k": the extra facts under a company's job count; empty when there are none to show. */
+/** "3 new this week · median pay $185k": the extra facts under a company's job count; empty when there are none to show. */
 export function hiringFacts(stats: CompanyHiringStats | undefined): string[] {
   if (!stats) return []
   const facts: string[] = []
   if (stats.newThisWeek > 0) facts.push(`${stats.newThisWeek.toLocaleString('en-US')} new this week`)
-  if (stats.medianPay) facts.push(`median ${formatCurrencyShort(stats.medianPay.amount, stats.medianPay.currency)}`)
+  if (stats.medianPay) facts.push(`median pay ${formatCurrencyShort(stats.medianPay.amount, stats.medianPay.currency)}`)
   return facts
 }
 
@@ -95,10 +95,10 @@ export function CompanySearch({
                 <CompanyLogo name={c.name ?? ''} src={buildLogoUrl(c.logoUrl, c.website, c.name)} size="lg" />
                 <span className={styles.text}>
                   <span className={styles.name}>{highlight(c.name ?? '', query)}</span>
-                  <span className={styles.meta}>
-                    {c._count.jobs.toLocaleString()} {c._count.jobs === 1 ? noun : `${noun}s`}
+                  <span className={styles.count}>
+                    {c._count.jobs.toLocaleString('en-US')} {c._count.jobs === 1 ? noun : `${noun}s`}
                   </span>
-                  {facts.length > 0 ? <span className={styles.meta}>{facts.join(' · ')}</span> : null}
+                  {facts.length > 0 ? <span className={styles.facts}>{facts.join(' · ')}</span> : null}
                 </span>
               </Link>
             </li>

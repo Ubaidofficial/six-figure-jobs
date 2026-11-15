@@ -81,6 +81,12 @@
   white-space: nowrap;
 }
 
+.logoImg {
+  display: block;
+  height: 30px;
+  width: auto;
+}
+
 .kicker {
   display: inline-flex;
   align-items: center;
@@ -548,7 +554,13 @@
 
 /* The kicker joins the logo once there is room for it next to the links and the search. */
 @media (min-width: 1024px) and (max-width: 1279px) {
-  .kicker {
+  .logoImg {
+  display: block;
+  height: 30px;
+  width: auto;
+}
+
+.kicker {
     display: none;
   }
 }
@@ -558,7 +570,13 @@
     padding: 0 var(--space-16);
   }
 
-  .kicker {
+  .logoImg {
+  display: block;
+  height: 30px;
+  width: auto;
+}
+
+.kicker {
     display: none;
   }
 }
@@ -566,6 +584,10 @@
 @media (max-width: 480px) {
   .logo {
     font-size: 23px;
+  }
+
+  .logoImg {
+    height: 26px;
   }
 
   .mobileSheet {

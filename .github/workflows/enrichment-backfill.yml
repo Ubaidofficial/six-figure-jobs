@@ -1,0 +1,108 @@
+name: enrichment backfill
+
+# Manual. Fills the tech stack of EXISTING live jobs from their descriptions with the free, deterministic extractor
+# (scripts/backfill-tech-stack.ts), so jobs scraped before enrichment-at-ingest also carry it. A dry run unless "apply" is
+# ticked. Only empty fields are written: a job's stored skills (from freehire, Ashby...) are never overwritten. Newest jobs
+# first, "limit" at a time. Same production-database fingerprint guard as the other manual workflows.
+
+# The "task" input picks what to fill (default: the tech stack above). Two more free, deterministic backfills, each a dry run unless
+# "apply" is ticked and each writing only empty fields, guarded by "still empty":
+#   websites        company websites from the live jobs' apply links (scripts/backfill-company-websites.ts; "limit" = companies)
+#   fix-company-names  company names that still carry an HTML entity (scripts/fix-entity-company-names.ts; only companies with live jobs)
+#   boards          fetch the pay-stating job boards the hourly sync does not cover (jobicy, workingnomads, spainjobs, uiuxjobsboard,
+#                   remoteok, remotive...) with scripts/dailyScrapeV2.ts --mode=boards; "sources" is a comma list of board keys
+#                   (lib/scrapers/boardRegistry.ts). A dry run fetches and maps and writes nothing; "limit" does not apply.
+#   freehire-gap    READ-ONLY report of what freehire carries that we do not publish, and why (scripts/freehire-gap-audit.ts;
+#                   "limit" / 100 = pages of freehire's newest jobs to read, default 20)
+#   remote-country  the country of remote jobs whose location text names exactly one (scripts/backfill-remote-country.ts; "limit" = jobs;
+#                   only jobs whose JobPosting JSON-LD stays identical are written)
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "tech-stack, websites, remote-country, fix-company-names, boards or freehire-gap"
+        type: choice
+        required: false
+        default: tech-stack
+        options:
+          - tech-stack
+          - websites
+          - remote-country
+          - fix-company-names
+          - boards
+          - freehire-gap
+      sources:
+        description: "For task boards: comma list of board keys"
+        type: string
+        required: false
+        default: "jobicy,workingnomads,spainjobs,uiuxjobsboard,remoteok,remotive"
+      limit:
+        description: "Jobs (tech-stack, remote-country) or companies (websites) to look at this run (newest / busiest first)"
+        type: string
+        required: false
+        default: "2000"
+      apply:
+        description: "Write the changes (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: enrichment-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Backfill
+        env:
+          TASK: ${{ inputs.task }}
+          BACKFILL_TECHSTACK_LIMIT: ${{ inputs.limit }}
+          LIMIT: ${{ inputs.limit }}
+          APPLY: ${{ inputs.apply }}
+          SOURCES: ${{ inputs.sources }}
+          BOARD_SCRAPE_TIMEOUT_MS: "300000"
+          FREEHIRE_API_KEY: ${{ secrets.FREEHIRE_API_KEY }}
+        run: |
+          args=(--limit="$LIMIT")
+          [ "$APPLY" = "true" ] && args+=(--apply)
+          case "$TASK" in
+            websites) npx tsx scripts/backfill-company-websites.ts "${args[@]}" ;;
+            remote-country) npx tsx scripts/backfill-remote-country.ts "${args[@]}" ;;
+            fix-company-names) npx tsx scripts/fix-entity-company-names.ts $([ "$APPLY" = "true" ] && echo --apply) ;;
+            freehire-gap) npx tsx scripts/freehire-gap-audit.ts --pages=$(( LIMIT / 100 > 0 ? LIMIT / 100 : 1 )) ;;
+            boards) npx tsx scripts/dailyScrapeV2.ts --mode=boards --source="$SOURCES" $([ "$APPLY" = "true" ] || echo --dry-run) ;;
+            *)
+              if [ "$APPLY" = "true" ]; then
+                npx tsx scripts/backfill-tech-stack.ts
+              else
+                npx tsx scripts/backfill-tech-stack.ts --dry-run
+              fi
+              ;;
+          esac

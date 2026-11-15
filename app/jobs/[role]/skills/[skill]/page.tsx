@@ -11,7 +11,7 @@ import { queryJobs, type JobWithCompany } from '../../../../../lib/jobs/queryJob
 import JobList from '../../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
-import { buildListingDescription, buildListingTitle, countPrefix } from '../../../../../lib/seo/metaText'
+import { buildListingDescription, buildListingTitle } from '../../../../../lib/seo/metaText'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -46,13 +46,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
   const title = buildListingTitle({
     topic: `${roleName} ${skillInfo.label} Jobs`,
-    count: total,
     qualifier: 'Paying $100k+',
   })
   const description = buildListingDescription(
-    `${countPrefix(total)}$100k+ ${roleName} jobs requiring ${skillInfo.label}.`,
-    [['Roles at top companies.']],
-  )
+    `$100k+ ${roleName} jobs requiring ${skillInfo.label}.`,
+    [['Roles at top companies.']], total)
   const canonical = `${SITE_URL}/jobs/${role}/skills/${skillInfo.slug}`
 
   return {

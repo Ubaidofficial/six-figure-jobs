@@ -10,6 +10,8 @@
 //
 //   npm run audit:db-coverage
 import { appendFileSync } from 'node:fs'
+import { countryFromText } from '../lib/location/jobLocation'
+import { normalizeCountryCode } from '../lib/location/country'
 
 export type Audit = { title: string; note?: string; sql: string }
 
@@ -17,6 +19,10 @@ export type Audit = { title: string; note?: string; sql: string }
 // these counts are an upper bound on what visitors see.
 const LIVE = `"isExpired" = false`
 const REMOTE = `(remote = true OR "remoteMode" = 'remote')`
+
+// An HTML entity ("&#038;", "&amp;"): the pattern is built with chr(59) so no query contains a ';' (the test that keeps this audit read-only
+// refuses one, since a second statement could write).
+const ENTITY = `('&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+)' || chr(59))`
 
 export const AUDITS: Audit[] = [
   {
@@ -28,6 +34,82 @@ export const AUDITS: Audit[] = [
       count(*) FILTER (WHERE "createdAt" BETWEEN now() - interval '14 days' AND now() - interval '7 days') AS created_prev_7d,
       max("lastSeenAt") AS newest_last_seen
     FROM "Job" WHERE ${LIVE}`,
+  },
+  {
+    title: 'Is "new this week" believable? Live jobs by source',
+    note: 'new_7d_as_shown is what the company cards count (postedAt, else createdAt, within 7 days). first_seen_7d is when WE first stored the job. posted_after_first_seen jobs have a posting date later than the day we first saw them: a re-posted or updated date, not a first posting.',
+    sql: `SELECT source, count(*) AS live,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") >= now() - interval '7 days') AS new_7d_as_shown,
+      count(*) FILTER (WHERE "createdAt" >= now() - interval '7 days') AS first_seen_7d,
+      count(*) FILTER (WHERE "postedAt" IS NOT NULL AND "postedAt" > "createdAt" + interval '1 day') AS posted_after_first_seen,
+      count(*) FILTER (WHERE "postedAt" IS NULL) AS no_posted_at
+    FROM "Job" WHERE ${LIVE} GROUP BY source ORDER BY live DESC LIMIT 15`,
+  },
+  {
+    title: 'The 20 biggest companies: jobs and "new this week"',
+    note: 'A company whose live jobs are nearly all "new" is usually one we only started scraping this week, not one that just posted everything.',
+    sql: `SELECT c.name, count(*) AS live,
+      count(*) FILTER (WHERE coalesce(j."postedAt", j."createdAt") >= now() - interval '7 days') AS new_7d_as_shown,
+      count(*) FILTER (WHERE j."createdAt" >= now() - interval '7 days') AS first_seen_7d,
+      min(j."createdAt")::date AS first_stored
+    FROM "Job" j JOIN "Company" c ON c.id = j."companyId" WHERE j."isExpired" = false
+    GROUP BY c.id, c.name ORDER BY live DESC LIMIT 20`,
+  },
+  {
+    title: 'How old are the live jobs? (posting date, else the day we first stored it)',
+    note: 'Age is measured from postedAt, and from createdAt when the employer gave no date. This is what a visitor would call "posted N days ago". The site itself keeps a job for 45 days from when WE last saw it (lastSeenAt), not from when it was posted.',
+    sql: `SELECT count(*) AS live,
+      count(*) FILTER (WHERE "postedAt" IS NULL) AS no_posting_date,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") >= now() - interval '3 days') AS d0_3,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '3 days' AND coalesce("postedAt", "createdAt") >= now() - interval '7 days') AS d3_7,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '7 days' AND coalesce("postedAt", "createdAt") >= now() - interval '14 days') AS d7_14,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '14 days' AND coalesce("postedAt", "createdAt") >= now() - interval '21 days') AS d14_21,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '21 days' AND coalesce("postedAt", "createdAt") >= now() - interval '30 days') AS d21_30,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '30 days' AND coalesce("postedAt", "createdAt") >= now() - interval '45 days') AS d30_45,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '45 days') AS older_than_45
+    FROM "Job" WHERE ${LIVE}`,
+  },
+  {
+    title: 'Freshness by source: how old are its live jobs, and when did we last fetch it?',
+    note: 'posted_14d / posted_21d: live jobs posted within that many days (postedAt, else createdAt). older_21d: the rest. newest_stored is the latest createdAt (a brand-new job), newest_seen the latest lastSeenAt (the scraper touched the source). stored_24h / stored_72h count jobs first stored in the last day / three days.',
+    sql: `SELECT source, count(*) AS live,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") >= now() - interval '14 days') AS posted_14d,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") >= now() - interval '21 days') AS posted_21d,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '21 days') AS older_21d,
+      count(*) FILTER (WHERE "postedAt" IS NULL) AS no_posting_date,
+      count(*) FILTER (WHERE "createdAt" >= now() - interval '24 hours') AS stored_24h,
+      count(*) FILTER (WHERE "createdAt" >= now() - interval '72 hours') AS stored_72h,
+      max("createdAt") AS newest_stored,
+      max("lastSeenAt") AS newest_seen
+    FROM "Job" WHERE ${LIVE} GROUP BY source ORDER BY live DESC LIMIT 30`,
+  },
+  {
+    title: 'Jobs kept alive by being seen again: live, seen this week, but posted long ago',
+    note: 'The site shows a job while lastSeenAt is under 45 days old, and every scrape that finds the job on the employer page refreshes lastSeenAt. These are the jobs a "posted within N days" rule would hide.',
+    sql: `SELECT count(*) FILTER (WHERE "lastSeenAt" >= now() - interval '7 days' AND "postedAt" < now() - interval '21 days') AS seen_7d_posted_over_21d,
+      count(*) FILTER (WHERE "lastSeenAt" >= now() - interval '7 days' AND "postedAt" < now() - interval '30 days') AS seen_7d_posted_over_30d,
+      count(*) FILTER (WHERE "lastSeenAt" >= now() - interval '7 days' AND "postedAt" < now() - interval '60 days') AS seen_7d_posted_over_60d,
+      count(*) FILTER (WHERE "lastSeenAt" < now() - interval '7 days') AS not_seen_for_7d,
+      count(*) FILTER (WHERE "lastSeenAt" < now() - interval '14 days') AS not_seen_for_14d,
+      count(*) FILTER (WHERE "lastSeenAt" IS NULL) AS never_seen
+    FROM "Job" WHERE ${LIVE}`,
+  },
+  {
+    title: 'Jobs first stored per day (the last 14 days)',
+    note: 'Shows how often new jobs actually arrive: a steady hourly feed, or spikes on the days the main scrape runs.',
+    sql: `SELECT ("createdAt" AT TIME ZONE 'UTC')::date AS day, count(*) AS stored, count(*) FILTER (WHERE ${LIVE}) AS still_live
+    FROM "Job" WHERE "createdAt" >= now() - interval '14 days' GROUP BY 1 ORDER BY 1 DESC`,
+  },
+  {
+    title: 'HTML entities left in names and titles ("&#038;", "&amp;")',
+    note: 'Rows whose stored text still contains an HTML entity, shown literally to visitors. Companies and live jobs.',
+    sql: `SELECT 'Company.name' AS field, count(*) AS rows_with_entity FROM "Company" WHERE name ~ ${ENTITY}
+      UNION ALL SELECT 'Job.company (live)', count(*) FROM "Job" WHERE ${LIVE} AND company ~ ${ENTITY}
+      UNION ALL SELECT 'Job.title (live)', count(*) FROM "Job" WHERE ${LIVE} AND title ~ ${ENTITY}`,
+  },
+  {
+    title: 'Companies whose name still has an HTML entity (sample)',
+    sql: `SELECT name, slug, "jobCount" FROM "Company" WHERE name ~ ${ENTITY} ORDER BY "jobCount" DESC NULLS LAST LIMIT 15`,
   },
   {
     title: 'Company profile completeness',
@@ -145,6 +227,44 @@ export const AUDITS: Audit[] = [
 
 type Row = Record<string, unknown>
 
+export type FlagRow = { primaryLocation: unknown; locationRaw: string | null; countryCode: string | null }
+
+/**
+ * Pure: how a job row's flag compares with its location text. The text is what visitors read (JobCard.buildLocationDisplay),
+ * so "text_disagrees" rows are flagged with another country than the stored code says. "none_findable" rows show no flag and
+ * no country can be read from the text either: a missing-data gap, not a display bug.
+ */
+export function summarizeFlags(rows: FlagRow[]): { counts: Row; examples: Row[] } {
+  const counts = { checked: 0, stored_ok: 0, text_disagrees: 0, stored_missing_text_has: 0, none_findable: 0 }
+  const examples: Row[] = []
+  const seen = new Set<string>()
+  for (const r of rows) {
+    const text = typeof r.primaryLocation === 'string' && r.primaryLocation.trim() ? r.primaryLocation.trim() : (r.locationRaw ?? '').trim()
+    if (!text) continue
+    counts.checked += 1
+    const stored = normalizeCountryCode(r.countryCode)
+    const fromText = countryFromText(text)
+    let kind: string
+    if (stored && fromText && stored !== fromText) kind = 'text_disagrees'
+    else if (stored) kind = 'stored_ok'
+    else if (fromText) kind = 'stored_missing_text_has'
+    else kind = 'none_findable'
+    counts[kind as keyof typeof counts] += 1
+    if (kind !== 'stored_ok') {
+      const key = `${kind}|${text}|${stored ?? ''}`
+      if (!seen.has(key) && examples.length < 400) {
+        seen.add(key)
+        examples.push({ kind, text: text.slice(0, 70), stored_code: stored ?? '', text_country: fromText ?? '' })
+      }
+    }
+  }
+  return { counts, examples }
+}
+
+const FLAG_SAMPLE_SQL = `SELECT "primaryLocation", "locationRaw", "countryCode" FROM "Job"
+  WHERE ${LIVE} AND NOT ${REMOTE} AND ("primaryLocation" IS NOT NULL OR "locationRaw" IS NOT NULL)
+  ORDER BY "createdAt" DESC LIMIT 30000`
+
 function cell(value: unknown): string {
   if (typeof value === 'bigint') return value.toString()
   if (value instanceof Date) return value.toISOString()
@@ -175,6 +295,21 @@ async function main() {
           const rows = (await tx.$queryRawUnsafe(audit.sql)) as Row[]
           parts.push(toMarkdown(audit, rows))
         }
+        const flagRows = (await tx.$queryRawUnsafe(FLAG_SAMPLE_SQL)) as FlagRow[]
+        const { counts, examples } = summarizeFlags(flagRows)
+        parts.push(
+          toMarkdown(
+            {
+              title: 'Country flags vs location text (newest 30,000 live on-site jobs)',
+              note: 'text_disagrees: the location text names another country than the stored code (the job page shows the text, and the flag now follows it). stored_missing_text_has: no stored country but the text names one (a backfill could fill it). none_findable: neither says. Examples are distinct location texts, mismatches first.',
+            },
+            [counts],
+          ),
+          toMarkdown(
+            { title: 'Flag examples (not stored_ok)' },
+            [...examples.filter((e) => e.kind === 'text_disagrees'), ...examples.filter((e) => e.kind !== 'text_disagrees')].slice(0, 60),
+          ),
+        )
       },
       { timeout: 120_000, maxWait: 30_000 },
     )

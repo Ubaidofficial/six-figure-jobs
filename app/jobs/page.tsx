@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { redirect, unstable_rethrow } from 'next/navigation'
 import { InfiniteJobsList } from './_components/InfiniteJobsList'
@@ -26,6 +27,8 @@ import { loadSponsorSlots } from '@/lib/sponsors/slots'
 import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { displayKeyword } from '@/lib/search/displayKeyword'
 import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
+import { isPseoBatchReleased } from '@/lib/seo/pseoBatches'
+import { CITY_TARGETS } from '@/lib/seo/pseoTargets'
 import { CategoryRow, type CategoryRowItem } from '@/components/listing/CategoryRow'
 import { loadListingSalaryStats } from '@/lib/jobs/listingSalaryStats'
 import { countryName } from '@/lib/location/country'
@@ -131,12 +134,13 @@ export async function generateMetadata({
       logRuntimeFallback('jobs.page.metadata', error)
     }
   }
-  const title = buildJobsHubTitle(total, pageSuffix)
+  const title = buildJobsHubTitle(pageSuffix)
   const description = buildJobsHubDescription(total)
 
   return {
     title,
     description,
+    keywords: keywordsFor('jobsHub'),
     alternates: {
       canonical,
     },
@@ -762,6 +766,15 @@ export default async function JobsIndexPage({
             </div>
           </ListingSection>
         ) : null}
+
+        <ListingSection title="Browse by city">
+          <LinkChips
+            label="Cities with six-figure jobs"
+            items={CITY_TARGETS.filter((city) => isPseoBatchReleased(`/jobs/city/${city.slug}`))
+              .slice(0, 12)
+              .map((city) => ({ label: `Jobs in ${city.label}`, href: `/jobs/city/${city.slug}` }))}
+          />
+        </ListingSection>
 
         <ListingSection title="Browse by salary band">
           <LinkChips

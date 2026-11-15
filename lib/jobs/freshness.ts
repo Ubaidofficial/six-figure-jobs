@@ -16,10 +16,11 @@ function toDate(value: Date | string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+// The date a visitor reads as "posted": the employer's posting date, else the day we first stored the job. NOT lastSeenAt:
+// every scrape that finds a job still listed refreshes that, so a job posted six months ago stayed "fresh" for ever
+// (2026-11-15 audit: 9,038 of 28,685 live jobs were posted over 45 days ago, 12,829 over 21 days ago, all kept by
+// being seen again). Whether the employer still lists it is handled separately (run-expiry sets isExpired).
 export function resolveJobFreshnessDate(job: JobFreshnessInput): Date | null {
-  const lastSeenAt = toDate(job.lastSeenAt)
-  if (lastSeenAt) return lastSeenAt
-
   const postedAt = toDate(job.postedAt)
   if (postedAt) return postedAt
 
@@ -48,17 +49,6 @@ export function buildFreshJobWhere(
   const cutoff = getDateThreshold(maxAgeDays, asOf)
 
   return {
-    OR: [
-      { lastSeenAt: { gte: cutoff } },
-      {
-        lastSeenAt: null,
-        postedAt: { gte: cutoff },
-      },
-      {
-        lastSeenAt: null,
-        postedAt: null,
-        createdAt: { gte: cutoff },
-      },
-    ],
+    OR: [{ postedAt: { gte: cutoff } }, { postedAt: null, createdAt: { gte: cutoff } }],
   }
 }

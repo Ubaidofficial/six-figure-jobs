@@ -6,10 +6,12 @@ import { useLinkStatus } from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Menu, Search, X } from 'lucide-react'
 
+import { RegionMark } from '@/components/ui/RegionMark'
+
 import { HeroSearchInput } from '@/components/home/HeroSearchInput'
 
 import { AuthNav } from './AuthNav'
-import { Wordmark } from './Wordmark'
+import { Logo } from '@/components/brand/Logo'
 
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 
@@ -65,7 +67,7 @@ export function SiteHeader() {
       <div className={styles.inner}>
         <div className={styles.brand}>
           <Link href="/" className={styles.logo} aria-label="six fig jobs home">
-            <Wordmark />
+            <Logo variant="wide" className={styles.logoImg} />
           </Link>
           <span className={styles.kicker} aria-hidden="true">
             <span className={styles.kickerStrong}>$100k+</span> salaries shown
@@ -126,7 +128,7 @@ export function SiteHeader() {
                 <SheetTitle className="sr-only">Menu</SheetTitle>
                 <div className={styles.mobileHeader}>
                   <Link href="/" className={styles.logo} onClick={() => setMobileOpen(false)}>
-                    <Wordmark />
+                    <Logo variant="wide" className={styles.logoImg} />
                   </Link>
                   <SheetClose asChild>
                     <button type="button" className={styles.mobileClose} aria-label="Close menu">
@@ -152,35 +154,35 @@ export function SiteHeader() {
                   <div className={styles.mobileSection}>
                     <div className={styles.mobileSectionTitle}>By Salary</div>
                     <Link className={styles.mobileItem} href="/jobs/100k-plus" onClick={() => setMobileOpen(false)}>
-                      💵 $100k+ jobs <span className={styles.mobileMeta}>Core six-figure</span>
+                      $100k+ jobs <span className={styles.mobileMeta}>Core six-figure</span>
                     </Link>
                     <Link className={styles.mobileItem} href="/jobs/200k-plus" onClick={() => setMobileOpen(false)}>
-                      💰 $200k+ jobs <span className={styles.mobileMeta}>Senior + staff</span>
+                      $200k+ jobs <span className={styles.mobileMeta}>Senior + staff</span>
                     </Link>
                     <Link className={styles.mobileItem} href="/jobs/300k-plus" onClick={() => setMobileOpen(false)}>
-                      💎 $300k+ jobs <span className={styles.mobileMeta}>Principal + lead</span>
+                      $300k+ jobs <span className={styles.mobileMeta}>Principal + lead</span>
                     </Link>
                     <Link className={styles.mobileItem} href="/jobs/400k-plus" onClick={() => setMobileOpen(false)}>
-                      🏆 $400k+ jobs <span className={styles.mobileMeta}>Executive band</span>
+                      $400k+ jobs <span className={styles.mobileMeta}>Executive band</span>
                     </Link>
                   </div>
 
                   <div className={styles.mobileSection}>
                     <div className={styles.mobileSectionTitle}>By Location</div>
                     <Link className={styles.mobileItem} href="/jobs/location/united-states" onClick={() => setMobileOpen(false)}>
-                      🇺🇸 United States <span className={styles.mobileMeta}>$100k+ USD</span>
+                      <span><RegionMark mark="US" className="mr-2" />United States</span> <span className={styles.mobileMeta}>$100k+ USD</span>
                     </Link>
                     <Link className={styles.mobileItem} href="/jobs/location/united-kingdom" onClick={() => setMobileOpen(false)}>
-                      🇬🇧 United Kingdom <span className={styles.mobileMeta}>£75k+ GBP</span>
+                      <span><RegionMark mark="GB" className="mr-2" />United Kingdom</span> <span className={styles.mobileMeta}>£75k+ GBP</span>
                     </Link>
                     <Link className={styles.mobileItem} href="/jobs/location/canada" onClick={() => setMobileOpen(false)}>
-                      🇨🇦 Canada <span className={styles.mobileMeta}>$120k+ CAD</span>
+                      <span><RegionMark mark="CA" className="mr-2" />Canada</span> <span className={styles.mobileMeta}>$120k+ CAD</span>
                     </Link>
                     <Link className={styles.mobileItem} href="/jobs/location/germany" onClick={() => setMobileOpen(false)}>
-                      🇩🇪 Germany <span className={styles.mobileMeta}>€80k+ EUR</span>
+                      <span><RegionMark mark="DE" className="mr-2" />Germany</span> <span className={styles.mobileMeta}>€80k+ EUR</span>
                     </Link>
                     <Link className={styles.mobileItem} href="/jobs/location/australia" onClick={() => setMobileOpen(false)}>
-                      🇦🇺 Australia <span className={styles.mobileMeta}>$140k+ AUD</span>
+                      <span><RegionMark mark="AU" className="mr-2" />Australia</span> <span className={styles.mobileMeta}>$140k+ AUD</span>
                     </Link>
                   </div>
 

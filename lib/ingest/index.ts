@@ -13,6 +13,8 @@
 //   const result = await ingestJob(scrapedJobInput)
 
 import { prisma } from '../prisma'
+import { enrichAtIngest } from './enrichAtIngest'
+import { fixMojibake } from '../jobs/mojibake'
 import { upsertCompanyFromBoard } from '../companies/upsertFromBoard'
 import { relinkToRepairedCompany } from '../companies/repairCompanyName'
 import { cleanApplyUrlForSource } from '../jobs/applyUrl'
@@ -197,8 +199,10 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
     input.descriptionHtml,
     input.descriptionText,
   )
-  input.descriptionHtml = sanitizedDescription.descriptionHtml
-  input.descriptionText = sanitizedDescription.descriptionText
+  // Text whose UTF-8 was read as Windows-1252 upstream ("â€”" for an em dash) is repaired before anything is stored or parsed.
+  input.title = fixMojibake(input.title)
+  input.descriptionHtml = sanitizedDescription.descriptionHtml ? fixMojibake(sanitizedDescription.descriptionHtml) : sanitizedDescription.descriptionHtml
+  input.descriptionText = sanitizedDescription.descriptionText ? fixMojibake(sanitizedDescription.descriptionText) : sanitizedDescription.descriptionText
 
   if (sanitizedDescription.polluted) {
     ingestLog(
@@ -358,6 +362,15 @@ async function createNewJob(
   const sourceExpiresAt = getSourceExpirationDate(input)
   const validThrough = sourceExpiresAt ?? buildEffectiveValidThroughDate(input)
 
+  // Free, deterministic enrichment: every scraped job is saved already enriched (see ./enrichAtIngest).
+  const enrichment = enrichAtIngest({
+    title: input.title,
+    descriptionHtml: input.descriptionHtml,
+    sourceHasSkills: Boolean(input.skills?.length),
+    remoteMode: locationData.remoteMode,
+    isRemote: locationData.isRemote ?? input.isRemote,
+  })
+
   const jobData = {
     id: jobId,
     shortId: getShortStableIdForJobId(jobId),
@@ -379,7 +392,7 @@ async function createNewJob(
     countryCode: locationData.countryCode ?? null,
     remote: locationData.isRemote ?? input.isRemote ?? false,
     remoteRegion: input.remoteRegion ?? null,
-    remoteMode: locationData.remoteMode ?? null,
+    remoteMode: locationData.remoteMode ?? enrichment.remoteMode ?? null,
 
     // Salary
     salaryRaw: input.salaryRaw ?? null,
@@ -411,7 +424,10 @@ async function createNewJob(
     applyUrl: cleanApplyUrlForSource(input.source, input.applyUrl, input.url),
     url: input.url ?? null,
     descriptionHtml: input.descriptionHtml ?? null,
-    skillsJson: input.skills?.length ? JSON.stringify(input.skills) : null,
+    skillsJson: input.skills?.length ? JSON.stringify(input.skills) : enrichment.skillsJson ?? null,
+    benefitsJson: input.benefits?.length ? JSON.stringify(input.benefits) : null,
+    requirementsJson: input.requirements?.length ? JSON.stringify(input.requirements) : null,
+    techStack: enrichment.techStack ?? null,
     sourceRef: input.sourceRef ?? null,
     visaSponsorship: input.visaSponsorship === true,
 
@@ -705,6 +721,23 @@ async function refreshJob(
   if (input.skills?.length) updateData.skillsJson = JSON.stringify(input.skills)
   if (input.sourceRef) updateData.sourceRef = input.sourceRef
   if (input.visaSponsorship === true) updateData.visaSponsorship = true
+  // Structured benefits and requirements fill only an empty field: a list a person, the AI writer or an earlier pass
+  // stored is never replaced.
+  if (!existing.benefitsJson && input.benefits?.length) updateData.benefitsJson = JSON.stringify(input.benefits)
+  if (!existing.requirementsJson && input.requirements?.length) updateData.requirementsJson = JSON.stringify(input.requirements)
+
+  // Free, deterministic enrichment for a job stored before it existed (or without a description at the time): fills
+  // only what is empty, never overrides a value a source or an earlier pass gave.
+  const enrichment = enrichAtIngest({
+    title: input.title,
+    descriptionHtml: updateData.descriptionHtml ?? existing.descriptionHtml,
+    sourceHasSkills: Boolean(input.skills?.length) || Boolean(existing.skillsJson),
+    remoteMode: updateData.remoteMode ?? existing.remoteMode,
+    isRemote: updateData.remote ?? existing.remote,
+  })
+  if (!existing.techStack && enrichment.techStack) updateData.techStack = enrichment.techStack
+  if (enrichment.skillsJson && !updateData.skillsJson) updateData.skillsJson = enrichment.skillsJson
+  if (enrichment.remoteMode) updateData.remoteMode = enrichment.remoteMode
 
   // Fill in a missing posting date (never move one already stored: datePosted is when the employer first posted it)
   if (!existing.postedAt && input.postedAt) {

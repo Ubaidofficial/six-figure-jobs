@@ -90,7 +90,9 @@ describe('evaluateJobIndexability', () => {
   it('rejects stale jobs even when the rest of the page is high quality', () => {
     const result = evaluateJobIndexability({
       ...baseJob,
-      lastSeenAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+      // Posted two months ago; we saw it again today, which does not make it fresh.
+      postedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+      lastSeenAt: new Date().toISOString(),
     })
 
     expect(result.indexable).toBe(false)

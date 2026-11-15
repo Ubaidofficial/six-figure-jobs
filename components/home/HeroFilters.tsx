@@ -103,7 +103,7 @@ function LocationField({
             {regions.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.value === 'global'
-                  ? withCount('🌍 Anywhere in the world (remote)', counts?.remoteWorldwide)
+                  ? withCount('Anywhere in the world (remote)', counts?.remoteWorldwide)
                   : `Remote · ${r.label}`}
               </option>
             ))}

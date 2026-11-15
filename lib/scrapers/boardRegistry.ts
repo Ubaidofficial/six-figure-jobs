@@ -18,6 +18,11 @@ import scrapeCursorDirectory from './cursordirectory'
 import scrapeRemotive from './remotive'
 import scrapeFreehire from './freehire'
 import scrapeGenericSources from './generic'
+import scrapeLinkedIn from './linkedin'
+import scrapeJobicy from './jobicy'
+import scrapeWorkingNomads from './workingnomads'
+import scrapeSpainJobs from './spainjobs'
+import scrapeUiuxJobsBoard from './uiuxjobsboard'
 
 export type BoardScraperTask = {
   key: string
@@ -45,6 +50,12 @@ export const BOARD_SCRAPERS: BoardScraperTask[] = [
   { key: 'cursordirectory', name: 'CursorDirectory', run: scrapeCursorDirectory, probeUrl: 'https://www.cursor.com/directory/jobs' },
   { key: 'remotive', name: 'Remotive', run: scrapeRemotive, probeUrl: 'https://remotive.com/remote-jobs' },
   { key: 'freehire', name: 'freehire', run: scrapeFreehire, probeUrl: 'https://freehire.me/api/v1/jobs/search?limit=1' },
+  { key: 'jobicy', name: 'Jobicy', run: scrapeJobicy, probeUrl: 'https://jobicy.com/api/jobs?count=1' },
+  { key: 'workingnomads', name: 'WorkingNomads', run: scrapeWorkingNomads, probeUrl: 'https://www.workingnomads.com/api/exposed_jobs/' },
+  { key: 'spainjobs', name: 'SpainJobs', run: scrapeSpainJobs, probeUrl: 'https://www.spainjobs.io/jobs/75k' },
+  { key: 'uiuxjobsboard', name: 'UIUXJobsBoard', run: scrapeUiuxJobsBoard, probeUrl: 'https://uiuxjobsboard.com/sitemaps/1.xml' },
+  // Off unless LINKEDIN_SCRAPER_ENABLED=1 (does nothing, and costs no request, otherwise). See lib/scrapers/linkedin.ts.
+  { key: 'linkedin', name: 'LinkedIn (guest pages)', run: scrapeLinkedIn, dryRunSafe: false },
   // Retired 2026-06-12: Dice/Wellfound/Otta return 404 (APIs changed / Otta shut
   // down) and YCombinator fetch fails — dead sources burning runtime + inflating
   // the failure count. Scraper files kept in case the sources return.

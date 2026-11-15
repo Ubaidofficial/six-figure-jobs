@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
 import { countryName, normalizeCountryCode } from '@/lib/location/country'
-import { describeJobLocation, isPlaceholderLocation } from '@/lib/location/jobLocation'
+import { countryFromText, describeJobLocation, isPlaceholderLocation } from '@/lib/location/jobLocation'
 import { skillLabel } from '@/lib/jobs/skillLabel'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
@@ -15,7 +15,7 @@ import { buildSalaryText } from '@/lib/jobs/salary'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { getJobCardSnippet } from '@/lib/jobs/snippet'
-import { SKILL_TARGETS } from '@/lib/seo/pseoTargets'
+import { resolveSkillSlug } from '@/lib/jobs/skillSlug'
 import {
   ArrowRight,
   BadgeCheck,
@@ -30,6 +30,9 @@ import {
 } from 'lucide-react'
 
 import styles from './JobCard.module.css'
+
+// Kept here so existing imports (JobRow) keep working; the resolver itself lives in lib/ so server components can call it.
+export { resolveSkillSlug }
 
 export type JobCardProps = {
   job: JobWithCompany & {
@@ -142,36 +145,6 @@ export function uniqStrings(values: string[]): string[] {
   return result
 }
 
-function normalizeSkillKey(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '')
-}
-
-const SKILL_KEY_TO_SLUG = new Map<string, string>()
-for (const target of SKILL_TARGETS) {
-  SKILL_KEY_TO_SLUG.set(normalizeSkillKey(target.slug), target.slug)
-  SKILL_KEY_TO_SLUG.set(normalizeSkillKey(target.label), target.slug)
-}
-
-const SKILL_ALIASES: Record<string, string> = {
-  c: 'c-plus-plus',
-  cpp: 'c-plus-plus',
-  node: 'node-js',
-  nodejs: 'node-js',
-  next: 'nextjs',
-  postgres: 'postgresql',
-  ml: 'machine-learning',
-  machinelearning: 'machine-learning',
-  go: 'golang',
-}
-
-export function resolveSkillSlug(value: string): string | null {
-  const key = normalizeSkillKey(value.trim())
-  if (!key) return null
-  const alias = SKILL_ALIASES[key]
-  if (alias) return alias
-  return SKILL_KEY_TO_SLUG.get(key) ?? null
-}
-
 export function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: any; locationsJson?: any }): {
   label: string
   /** For the flag; the name is always in `label`. */
@@ -198,7 +171,9 @@ export function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: a
       return { label: humanizeLocationText(value), countryCode: null, ...multi }
     }
 
-    return { label: humanizeLocationText(value), countryCode: stored, ...multi }
+    // The flag follows the words the reader sees: when the text names one country ("Dublin, Ireland") that is the flag,
+    // even if the stored code says another (a job re-tagged by a board's default); with no country in the text, the stored code.
+    return { label: humanizeLocationText(value), countryCode: countryFromText(value) ?? stored, ...multi }
   }
 
   // Fallback to old logic

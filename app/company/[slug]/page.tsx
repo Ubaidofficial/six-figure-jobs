@@ -10,7 +10,7 @@ import { prisma } from '../../../lib/prisma'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
-import { Briefcase, Globe } from 'lucide-react'
+import { Briefcase, Globe, Linkedin } from 'lucide-react'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
 import { Faq, JobRows, LinkChips, ListingPage, ListingSection } from '@/components/listing/ListingParts'
@@ -31,6 +31,7 @@ import {
 import { CompanyJobsMore } from '@/components/companies/CompanyJobsMore'
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
+import { roleLabelFor } from '../../../lib/roles/relatedRoles'
 
 export const revalidate = 3600
 
@@ -97,7 +98,7 @@ export async function generateMetadata({
         publishingDecision.ready &&
         publishingDecision.unlocked
 
-      const baseTitle = buildCompanyPageTitle(company.name, jobCount)
+      const baseTitle = buildCompanyPageTitle(company.name)
       // Pages 2+ are noindex but still get a distinct title
       const title = pageNumber > 1 ? `${baseTitle} (page ${pageNumber})` : baseTitle
       const stats = buildCompanySeoStats(jobs)
@@ -223,9 +224,9 @@ export default async function CompanyPage({
                 <span className="font-semibold">{company.name}</span> jobs
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                <strong className="font-semibold text-foreground">{jobs.length}</strong> open $100k+{' '}
+                <strong className="font-semibold text-foreground">{jobs.length.toLocaleString('en-US')}</strong> open $100k+{' '}
                 {jobs.length === 1 ? 'job' : 'jobs'}
-                {[company.industry, company.sizeBucket ? `${company.sizeBucket} employees` : null, company.headquarters ?? company.countryCode]
+                {[company.industry, company.sizeBucket ? `${company.sizeBucket} employees` : null, company.foundedYear ? `Founded ${company.foundedYear}` : null, company.headquarters ?? company.countryCode]
                   .filter(Boolean)
                   .map((v) => ` · ${v}`)
                   .join('')}
@@ -269,6 +270,16 @@ export default async function CompanyPage({
                     className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline"
                   >
                     <Briefcase className="size-4" aria-hidden="true" /> Careers page
+                  </a>
+                )}
+                {company.linkedinUrl && (
+                  <a
+                    href={cleanUrl(company.linkedinUrl)}
+                    target="_blank"
+                    rel="nofollow noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline"
+                  >
+                    <Linkedin className="size-4" aria-hidden="true" /> LinkedIn
                   </a>
                 )}
               </div>
@@ -514,14 +525,6 @@ function cleanUrl(url: string): string {
   return `https://${s}`
 }
 
-function toTitleCaseSlug(slug: string): string {
-  return slug
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
-}
-
 function asAnnualNumber(value: unknown): number | null {
   if (value == null) return null
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -672,7 +675,7 @@ function buildCompanySeoStats(jobs: JobWithFlags[]) {
     const maxMedian = sortedMax.length > 0 ? sortedMax[Math.floor(sortedMax.length / 2)] : null
     return {
       ...role,
-      label: toTitleCaseSlug(role.key),
+      label: roleLabelFor(role.key),
       salary:
         minMedian != null || maxMedian != null
           ? {

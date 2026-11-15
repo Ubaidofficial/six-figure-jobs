@@ -64,8 +64,11 @@
 
 .globe {
   display: block;
-  font-size: 34px;
-  line-height: 48px; /* the flags sit in a 48px line, so the names line up */
+  width: 34px;
+  height: 48px; /* the flags sit in a 48px line, so the names line up */
+  margin: 0 auto;
+  stroke-width: 1.5;
+  color: var(--color-text-1);
 }
 
 .name {

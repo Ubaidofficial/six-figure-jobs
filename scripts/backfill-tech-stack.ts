@@ -72,9 +72,10 @@ async function main() {
 
       await prisma.job.update({
         where: { id: job.id },
+        // Nothing a source gave (freehire, Ashby...) is overwritten: each field is filled only when it is empty.
         data: {
-          techStack: nextTechStack,
-          skillsJson: nextSkills,
+          ...(job.techStack ? {} : { techStack: nextTechStack }),
+          ...(job.skillsJson ? {} : { skillsJson: nextSkills }),
         },
       })
 

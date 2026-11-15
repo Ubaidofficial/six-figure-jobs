@@ -16,7 +16,7 @@ const job = (id: string, title: string, company: string, min: number, max: numbe
 })
 
 const call = async (query: string) => {
-  const res = await GET(new Request(`https://www.6figjobs.com/api/jobs/suggest?${query}`))
+  const res = await GET(new Request(`https://www.6figjobs.com/api/jobs/suggest?${query}`, { headers: { 'user-agent': 'Mozilla/5.0 (Macintosh) Chrome/130.0 Safari/537.36', 'sec-fetch-site': 'same-origin' } }))
   return { status: res.status, cache: res.headers.get('cache-control'), body: await res.json() }
 }
 

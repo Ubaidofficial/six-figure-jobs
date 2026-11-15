@@ -8,6 +8,9 @@ describe('boardNameFor', () => {
     expect(boardNameFor('https://en-ca.whatjobs.com/pub_api__cpl__159933264__7103')).toBe('WhatJobs')
     expect(boardNameFor('https://himalayas.app/companies/acme/jobs/engineer')).toBe('Himalayas')
     expect(boardNameFor('https://www.jobs.ch/en/vacancies/detail/123/')).toBe('jobs.ch')
+    // lib/scrapers/linkedin.ts: a LinkedIn apply link must not read "Apply on company site"
+    expect(boardNameFor('https://www.linkedin.com/jobs/view/4463498594')).toBe('LinkedIn')
+    expect(boardNameFor('https://uk.linkedin.com/jobs/view/1')).toBe('LinkedIn')
   })
 
   it('returns null for an employer site or its applicant tracking system', () => {
