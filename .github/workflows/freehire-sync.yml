@@ -149,9 +149,10 @@ jobs:
       # added 173 Jobicy, 37 SpainJobs and 16 UIUXJobsBoard jobs; Working Nomads and Remotive state pay on few jobs
       # and cost seconds. RemoteOK is left out: 81 of its 97 jobs showed no pay and none would have been added. The
       # scraper applies the same $100k salary gate as every source and takes no Google credentials here (the queue
-      # drain below is the only step that gets them). Independent of the steps above; a failure here stops nothing.
+      # drain below is the only step that gets them). Runs on every sync, light ones too, so these boards are read each time freehire
+      # is, about five minutes of the run. Independent of the steps above; a failure here stops nothing.
       - name: Sync pay-stating job boards
-        if: ${{ !cancelled() && env.LIGHT_RUN != 'true' }}
+        if: ${{ !cancelled() }}
         continue-on-error: true
         timeout-minutes: 20
         env:
