@@ -50,6 +50,15 @@ export const KEYWORD_MAP = {
     titleHas: 'high paying jobs',
     descHas: ['high paying jobs'],
   },
+  // The monthly research page. Not "high paying jobs" (/high-paying-jobs) and not "six figure jobs" (the home page): it is
+  // written around the report itself. OpenSEO 2026-11-15: "salary report" 210 a month (difficulty 4); "high paying jobs
+  // report" and "six figure jobs report" returned no volume, so this page earns its keep through links, not search volume.
+  payReport: {
+    primary: 'six figure job pay report',
+    secondary: ['high paying jobs report', 'salary report', 'six figure salary data'],
+    titleHas: 'pay report',
+    descHas: ['six-figure', 'median'],
+  },
   noDegree: {
     primary: 'high paying jobs without a degree',
     secondary: ['six figure jobs without a degree', 'no degree jobs $100k'],

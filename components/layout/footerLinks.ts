@@ -17,6 +17,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       ['Remote Jobs', '/remote'],
       ['Top Companies', '/companies'],
       ['Highest-Paying Jobs', '/high-paying-jobs'],
+      ['Pay Report', '/high-paying-jobs-report'],
       ['$100k+ Jobs', '/jobs/100k-plus'],
       ['$200k+ Jobs', '/jobs/200k-plus'],
       ['$300k+ Jobs', '/jobs/300k-plus'],
