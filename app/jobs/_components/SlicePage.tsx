@@ -1,6 +1,8 @@
 // app/jobs/_components/SlicePage.tsx
 
 import Link from '@/components/ui/Link'
+import { Banknote } from 'lucide-react'
+import { RegionMark } from '@/components/ui/RegionMark'
 import type { JobSlice } from '../../../lib/slices/types'
 import type { JobQueryResult } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
@@ -261,7 +263,7 @@ export function SlicePage({ slice, data }: Props) {
               href={`/remote/${roleSlug}`}
               className="rounded-full border border-border bg-card px-3 py-1 hover:border-foreground/40"
             >
-              🌎 Remote {roleLabel} roles
+              <RegionMark mark="globe" className="mr-1.5" />Remote {roleLabel} roles
             </Link>
           )}
           {roleSlug && (
@@ -362,7 +364,7 @@ export function SlicePage({ slice, data }: Props) {
                 href={basePath}
                 className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 hover:border-foreground/40"
               >
-                💵 {formatSalaryBandLabel(band, countryCode)}
+                <Banknote className="size-4" aria-hidden="true" /> {formatSalaryBandLabel(band, countryCode)}
               </Link>
             )
           })}

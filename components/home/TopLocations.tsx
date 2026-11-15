@@ -1,5 +1,5 @@
 import Link from '@/components/ui/Link'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, Globe } from 'lucide-react'
 
 import { CountryFlag } from '@/components/ui/CountryFlag'
 import { pluralize } from '@/lib/utils/number'
@@ -35,7 +35,7 @@ export function TopLocations({ locations }: { locations: TopLocationCard[] }) {
         {locations.map((loc) => (
           <Link key={loc.slug} href={loc.href ?? `/jobs/location/${loc.slug}`} className={styles.card}>
             <div className={styles.flag} aria-hidden="true">
-              {loc.countryCode ? <CountryFlag code={loc.countryCode} className="h-9" /> : <span className={styles.globe}>🌍</span>}
+              {loc.countryCode ? <CountryFlag code={loc.countryCode} className="h-9" /> : <Globe className={styles.globe} aria-hidden="true" />}
             </div>
 
             <div className={styles.name}>{loc.name}</div>
