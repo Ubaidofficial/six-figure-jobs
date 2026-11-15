@@ -37,6 +37,14 @@ const PAY_OK = `"salaryValidated" AND "salaryConfidence" >= ${MIN_CONFIDENCE} AN
 // Job boards and aggregators list other employers' jobs under their own name; they are not employers.
 const NOT_AGGREGATOR = `"company" NOT ILIKE ALL (ARRAY['jobgether%','jooble%','adzuna%','talent.com%','lensa%','jobrapido%','careerjet%','ziprecruiter%','simplyhired%','whatjobs%','neuvoo%','remote rocketship%','remoterocketship%'])`
 
+const ARRANGEMENT = `coalesce("remoteMode", CASE WHEN "remote" THEN 'remote' END, "workArrangement")`
+// Skills compared on the pay report. A listing's skills are a JSON array of strings, so each is matched as a quoted token (the
+// same way the job search does), never as a bare substring ("Java" must not match "JavaScript").
+const REPORT_SKILLS = [
+  'Python', 'Java', 'JavaScript', 'TypeScript', 'Go', 'Rust', 'C++', 'Kotlin', 'Swift', 'Scala', 'Ruby', 'React', 'Node.js',
+  'Kubernetes', 'Docker', 'AWS', 'GCP', 'Azure', 'Terraform', 'SQL', 'Spark', 'Kafka', 'PyTorch', 'TensorFlow', 'Snowflake', 'Salesforce',
+]
+
 /** The SQL condition for "in the last 30 days" under one definition (pure). */
 export function windowFor(basis: Basis): string {
   if (basis === 'posted') return `"postedAt" > now() - ${THIRTY}`
@@ -205,6 +213,43 @@ export function buildResearch(basis: Basis = 'created'): Research[] {
         WHEN ${ANNUAL} < 300000 THEN '4) 200k-299k' ELSE '5) 300k+' END AS band,
       count(*) AS jobs, round(100.0 * count(*) / sum(count(*)) OVER (), 1) AS pct
     FROM "Job" WHERE ${W} AND ${PAY_OK} GROUP BY 1 ORDER BY 1`,
+    },
+    {
+      title: 'Pay: how wide the advertised ranges are',
+      note: 'Among validated USD jobs that state both ends of the range: the median gap between maximum and minimum in dollars and as a percentage of the minimum, and the share whose maximum is at least 1.5 times the minimum. of_all is every validated USD job in the window.',
+      pay: true,
+      sql: `SELECT count(*) AS of_all,
+      count(*) FILTER (WHERE "minAnnual" > 0 AND "maxAnnual" > "minAnnual") AS ranged,
+      round(percentile_cont(0.5) WITHIN GROUP (ORDER BY (100.0 * ("maxAnnual" - "minAnnual") / "minAnnual")::float8) FILTER (WHERE "minAnnual" > 0 AND "maxAnnual" > "minAnnual")::numeric, 1) AS median_width_pct,
+      round(percentile_cont(0.5) WITHIN GROUP (ORDER BY ("maxAnnual" - "minAnnual")::float8) FILTER (WHERE "minAnnual" > 0 AND "maxAnnual" > "minAnnual"))::bigint AS median_width_usd,
+      round(100.0 * count(*) FILTER (WHERE "minAnnual" > 0 AND "maxAnnual" >= 1.5 * "minAnnual") / NULLIF(count(*) FILTER (WHERE "minAnnual" > 0 AND "maxAnnual" > "minAnnual"), 0), 1) AS pct_wider_than_50
+    FROM "Job" WHERE ${W} AND ${PAY_OK}`,
+    },
+    {
+      title: 'Pay: the same role, remote against on-site',
+      note: 'Roles with at least 20 remote AND 20 on-site validated USD jobs, each side from at least 5 employers. Compares like with like, which the all-jobs remote and on-site medians do not (they mix roles and cities). remote_vs_onsite_pct is negative when remote pays less.',
+      pay: true,
+      sql: `SELECT r."roleSlug" AS "group", r.jobs AS remote_jobs, r.companies AS remote_companies, round(r.median)::bigint AS remote_median_usd,
+      o.jobs AS onsite_jobs, o.companies AS onsite_companies, round(o.median)::bigint AS onsite_median_usd,
+      round((100.0 * (r.median - o.median) / o.median)::numeric, 1) AS remote_vs_onsite_pct
+    FROM (SELECT "roleSlug", count(*) AS jobs, count(DISTINCT company) AS companies, percentile_cont(0.5) WITHIN GROUP (ORDER BY ${ANNUAL}::float8) AS median
+        FROM "Job" WHERE ${W} AND ${PAY_OK} AND "roleSlug" IS NOT NULL AND ${ARRANGEMENT} = 'remote'
+        GROUP BY 1 HAVING count(*) >= 20 AND count(DISTINCT company) >= 5) r
+    JOIN (SELECT "roleSlug", count(*) AS jobs, count(DISTINCT company) AS companies, percentile_cont(0.5) WITHIN GROUP (ORDER BY ${ANNUAL}::float8) AS median
+        FROM "Job" WHERE ${W} AND ${PAY_OK} AND "roleSlug" IS NOT NULL AND ${ARRANGEMENT} = 'onsite'
+        GROUP BY 1 HAVING count(*) >= 20 AND count(DISTINCT company) >= 5) o ON o."roleSlug" = r."roleSlug"
+    ORDER BY (r.jobs + o.jobs) DESC LIMIT 20`,
+    },
+    {
+      title: 'Pay by skill named in the listing',
+      note: 'A listing counts once for each listed skill it names, so the rows overlap. At least 50 jobs from at least 10 employers. This is an association, not a cause: skills cluster in senior and specialist roles, so a high median mostly reflects which roles use the skill.',
+      pay: true,
+      sql: `SELECT s.skill AS "group", count(*) AS jobs, count(DISTINCT j.company) AS companies,
+      round(percentile_cont(0.5) WITHIN GROUP (ORDER BY j.annual::float8))::bigint AS median_usd
+    FROM (SELECT company, ${ANNUAL} AS annual, "skillsJson" FROM "Job" WHERE ${W} AND ${PAY_OK} AND "skillsJson" IS NOT NULL) j
+    JOIN (VALUES ${REPORT_SKILLS.map((k) => `('${k}')`).join(', ')}) AS s(skill) ON j."skillsJson" ILIKE '%"' || s.skill || '"%'
+    GROUP BY 1 HAVING count(*) >= 50 AND count(DISTINCT j.company) >= 10
+    ORDER BY median_usd DESC LIMIT 20`,
     },
     {
       title: 'Six-figure jobs: visa sponsorship and remote share',
