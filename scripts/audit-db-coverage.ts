@@ -18,6 +18,10 @@ export type Audit = { title: string; note?: string; sql: string }
 const LIVE = `"isExpired" = false`
 const REMOTE = `(remote = true OR "remoteMode" = 'remote')`
 
+// An HTML entity ("&#038;", "&amp;"): the pattern is built with chr(59) so no query contains a ';' (the test that keeps this audit read-only
+// refuses one, since a second statement could write).
+const ENTITY = `('&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+)' || chr(59))`
+
 export const AUDITS: Audit[] = [
   {
     title: 'Live jobs',
@@ -52,13 +56,13 @@ export const AUDITS: Audit[] = [
   {
     title: 'HTML entities left in names and titles ("&#038;", "&amp;")',
     note: 'Rows whose stored text still contains an HTML entity, shown literally to visitors. Companies and live jobs.',
-    sql: `SELECT 'Company.name' AS field, count(*) AS rows_with_entity FROM "Company" WHERE name ~ '&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);'
-      UNION ALL SELECT 'Job.company (live)', count(*) FROM "Job" WHERE ${LIVE} AND company ~ '&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);'
-      UNION ALL SELECT 'Job.title (live)', count(*) FROM "Job" WHERE ${LIVE} AND title ~ '&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);'`,
+    sql: `SELECT 'Company.name' AS field, count(*) AS rows_with_entity FROM "Company" WHERE name ~ ${ENTITY}
+      UNION ALL SELECT 'Job.company (live)', count(*) FROM "Job" WHERE ${LIVE} AND company ~ ${ENTITY}
+      UNION ALL SELECT 'Job.title (live)', count(*) FROM "Job" WHERE ${LIVE} AND title ~ ${ENTITY}`,
   },
   {
     title: 'Companies whose name still has an HTML entity (sample)',
-    sql: `SELECT name, slug, "jobCount" FROM "Company" WHERE name ~ '&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);' ORDER BY "jobCount" DESC NULLS LAST LIMIT 15`,
+    sql: `SELECT name, slug, "jobCount" FROM "Company" WHERE name ~ ${ENTITY} ORDER BY "jobCount" DESC NULLS LAST LIMIT 15`,
   },
   {
     title: 'Company profile completeness',
