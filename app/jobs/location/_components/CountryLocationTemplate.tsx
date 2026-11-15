@@ -18,7 +18,8 @@ import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '
 import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
-import { CITY_TARGET_SLUG_SET } from '@/lib/seo/pseoTargets'
+import { CITY_TARGETS, CITY_TARGET_SLUG_SET } from '@/lib/seo/pseoTargets'
+import { countryCodeToSlug } from '@/lib/seo/countrySlug'
 import { highSalaryThresholdForCountry, TARGET_COUNTRIES } from '@/lib/seo/regions'
 import { formatRelativeTime } from '@/lib/utils/time'
 
@@ -28,6 +29,8 @@ import { ActiveFilters } from '../../_components/ActiveFilters'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '@/lib/jobs/relatedSearches'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const PAGE_SIZE = 24
@@ -445,6 +448,24 @@ export async function CountryLocationTemplate({
   const faqJsonLd = buildCountryFaqJsonLd(countrySeoInput)
   const faqItems = buildCountryFaqItems(countrySeoInput)
 
+  // Sidebar "Related searches": the tracked cities of this country and a few other countries, each counted with the
+  // destination page's own query.
+  const relatedSearches = await loadRelatedSearches(
+    [
+      ...CITY_TARGETS.filter((c) => c.countryCode === countryCode)
+        .slice(0, 4)
+        .map((c) => ({ label: `Jobs in ${c.label}`, href: `/jobs/city/${c.slug}`, input: relatedInput.city(c.slug, countryCode) })),
+      ...TARGET_COUNTRIES.filter((c) => c.code !== countryCode && countryCodeToSlug(c.code))
+        .slice(0, 5)
+        .map((c) => ({
+          label: `Jobs in ${c.label}`,
+          href: `/jobs/location/${countryCodeToSlug(c.code)}`,
+          input: relatedInput.country(c.code),
+        })),
+    ],
+    { exclude: [basePath] },
+  )
+
   return (
     <ListingPage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
@@ -470,7 +491,12 @@ export async function CountryLocationTemplate({
       />
 
       <ListingLayout
-        sidebar={<JobsFiltersPanel facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />}
+        sidebar={
+          <>
+            <JobsFiltersPanel facets={facets} locationPreset={{ label: loc.label, countryCode }} hideSalaryFilter />
+            <RelatedSearches items={relatedSearches} />
+          </>
+        }
         bar={
           <ActiveFilters
             total={data.total}

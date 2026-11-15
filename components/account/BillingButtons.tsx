@@ -1,5 +1,6 @@
 'use client'
 
+import type { ProductKey } from '@/lib/billing/config'
 import * as React from 'react'
 
 import { Button, type ButtonVariant } from '@/components/ui/button'
@@ -61,7 +62,7 @@ export function CheckoutButton({
   children,
   variant = 'primary',
 }: {
-  product: 'subscription' | 'pack_small' | 'pack_large'
+  product: ProductKey
   children: React.ReactNode
   variant?: ButtonVariant
 }) {

@@ -15,6 +15,7 @@ This list is everything the owner has to do to turn it on. Do the steps in order
 1. Create or open the Stripe account and finish business verification, payout bank account and public business details (these show on Checkout and receipts).
 2. **Products and prices** (Product catalogue). Create three prices; the code reads only their ids:
    - a **recurring monthly** price for the subscription -> `STRIPE_PRICE_SUBSCRIPTION`
+   - a **recurring weekly** price for the weekly plan -> `STRIPE_PRICE_SUBSCRIPTION_WEEKLY` (decided 2026-11-15: **$4.99/week** list, **$9.99/month** list)
    - a **one-time** price for the small credit pack -> `STRIPE_PRICE_PACK_SMALL`
    - a **one-time** price for the large credit pack -> `STRIPE_PRICE_PACK_LARGE`
 
@@ -68,6 +69,10 @@ Set them on the `six-figure-jobs` service in Openship so they are present at **b
 | `STRIPE_WEBHOOK_SECRET` | for billing | Webhook signing secret. Without it the webhook route is 404 and no payment is ever credited. |
 | `STRIPE_PRICE_SUBSCRIPTION` | for the subscription | Recurring price id (`price_...`). |
 | `STRIPE_PRICE_PACK_SMALL`, `STRIPE_PRICE_PACK_LARGE` | for packs | One-time price ids. A product with no price id is not offered. |
+| `STRIPE_PRICE_SUBSCRIPTION_WEEKLY` | for the weekly plan | Recurring weekly price id. Without it the weekly plan is not offered. |
+| `BILLING_WEEKLY_CREDITS` | **set it** | Credits granted for each paid week of the weekly plan (placeholder 25). |
+| `BILLING_LAUNCH_COUPON_ID` | optional | Stripe coupon id for the launch discount. Create the coupon in Stripe (**50% off**, and choose its duration: once, a number of months, or forever); `/pricing` and Checkout then show and charge exactly what Stripe says. Applies to the two subscription plans only. Unset it to end the offer. |
+| `CRON_SECRET` | for instant alerts | Already used by the other `/api/cron` routes. |
 | `BILLING_MONTHLY_CREDITS` | **set it** | Credits granted when a subscription invoice is paid (first payment and each renewal). |
 | `BILLING_PACK_SMALL_CREDITS`, `BILLING_PACK_LARGE_CREDITS` | **set them** | Credits per pack purchase. |
 | `APPLICATION_KIT_CREDITS` | **set it** | Credits one application kit costs (placeholder 1). Also needs an AI key (`DEEPSEEK_API_KEY` or `OPENAI_API_KEY`) and the `20261106180000_add_application_kit` migration. |
@@ -107,3 +112,37 @@ The live **Terms**, **Privacy** and **Cookie** pages have not been touched and d
 - **Not built**: account deletion (ledger and subscription rows block deleting a user), admin screens for manual credit adjustments, emails about receipts or low balance (Stripe sends receipts if enabled in its settings), and a refund path for credits spent on a failed feature call. `spendCredits` is called by the application kit (`lib/applykit/generate.ts`) and auto-apply (`lib/autoapply/service.ts`), so with those flags on, credits are really spent: test those flows in test mode too (step 7).
 - The sign-in email rate limit (3 per address and 10 per IP per 15 minutes) is held in memory per server instance and resets on deploy. It is a brake on abuse, not an audit log.
 - Sessions are 14-day JWTs and cannot be revoked server-side; the account page and every billing action re-check that the user still exists, and entitlement is always read from the database, never from the cookie.
+
+## 10. Pro alerts (instant alerts and saved searches)
+
+Pro adds **instant** email alerts and up to 100 saved searches; free keeps daily/weekly alerts and 3 saved searches for **new** alerts (an address that already holds more keeps them). Needs `ALERTS_ENABLED` and its settings (`docs/job-alerts-launch-checklist.md`) as well as accounts.
+
+- Schedule `GET https://www.6figjobs.com/api/cron/alerts-instant` every 15 minutes with the header `Authorization: Bearer <CRON_SECRET>` (any scheduler: Openship cron, cron-job.org ...). It runs inside the app and sends nothing for an alert whose owner has no active subscription: that alert is switched to daily instead. "Instant" means within about 15 minutes of the next run, not seconds.
+- A signed-in subscriber gets instant alerts only for their **own** sign-in email. Anyone else choosing "Instant (Pro)" is told it is part of Pro.
+- Verify in test mode: subscribe, create an instant alert, run the endpoint, check the email; cancel the subscription, run it again, check the alert became daily.
+
+### Stripe sandbox set up 2026-11-15 (account "Six Figure Jobs sandbox", test mode; live is set up below)
+
+Created through the Stripe MCP, on the existing product `prod_VaHADi6DoqSYzl` ("Six Figure Jobs subscription"), tax behavior `exclusive` like the existing price:
+
+| Env var | Value |
+| --- | --- |
+| `STRIPE_PRICE_SUBSCRIPTION` | `price_1UcAvBLGk62v9av8jTK608Oz` ($9.99 / month) |
+| `STRIPE_PRICE_SUBSCRIPTION_WEEKLY` | `price_1UcAvFLGk62v9av8UmErFugJ` ($4.99 / week) |
+| `BILLING_LAUNCH_COUPON_ID` | `LAUNCH50` (50% off, **once**: first payment only; a coupon's duration cannot be edited, create another coupon for "first 3 months" or "forever") |
+| `STRIPE_WEBHOOK_SECRET` | reveal in Stripe, Developers, Webhooks, endpoint `we_1UcAvuLGk62v9av8eVrp8hL4` (URL `https://www.6figjobs.com/api/billing/webhook`, API version `2026-10-28.endive`, the 9 events above). It returns 404 until `ACCOUNTS_ENABLED=true`. |
+
+The older $9.00 monthly price (`price_1UZ6c1LGk62v9av8PVlTNSFb`) is still active in the sandbox; archive it once nothing points at it. The customer portal already existed (cancel at period end, invoices, payment method, Terms and Privacy links). Not done: the same set-up in **live mode**, Stripe Tax decisions, Smart Retries and failed-payment emails (account settings), and setting the variables in Openship.
+
+### Stripe live mode, set up 2026-11-15 (account "Six Figure Jobs")
+
+Created through the Stripe MCP on the existing product `prod_VaIJybSnp6NGCL` ("Six Figure Jobs subscription"), tax behavior `exclusive`, the same settings as the sandbox:
+
+| Env var | Live value |
+| --- | --- |
+| `STRIPE_PRICE_SUBSCRIPTION` | `price_1UcBHqQ8IFR77Lybe5gpHAaE` ($9.99 / month) |
+| `STRIPE_PRICE_SUBSCRIPTION_WEEKLY` | `price_1UcBHrQ8IFR77Lyb1C1so9YC` ($4.99 / week) |
+| `BILLING_LAUNCH_COUPON_ID` | `LAUNCH50` (50% off, once) |
+| `STRIPE_WEBHOOK_SECRET` | reveal in Stripe, Developers, Webhooks, endpoint `we_1UZ7lQQ8IFR77LybEQ4jJpTl` (same URL, API version and 9 events as the sandbox one) |
+
+The older $9.00 monthly price (`price_1UZ7isQ8IFR77LybktHzVC93`) is still active and is the product's default price; archive it once nothing points at it. The customer portal (`bpc_1UZ7j4Q8IFR77LybMmkxEJt8`) already existed. Nothing is purchasable until `ACCOUNTS_ENABLED=true`, and the checklist's test-mode run (section 7) comes first.

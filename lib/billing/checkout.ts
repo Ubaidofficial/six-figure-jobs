@@ -4,7 +4,7 @@
 import type { PrismaClient } from '@prisma/client'
 import type Stripe from 'stripe'
 
-import { getProduct, type ProductKey } from './config'
+import { getLaunchCouponId, getProduct, type ProductKey } from './config'
 import { hasActiveSubscription } from './entitlement'
 
 import { getSiteUrl } from '@/lib/seo/site'
@@ -69,7 +69,12 @@ export async function createCheckoutUrl(userId: string, productKey: ProductKey, 
       line_items: [{ price: product.priceId, quantity: 1 }],
       metadata,
       ...(product.mode === 'subscription'
-        ? { subscription_data: { metadata: { userId }, billing_mode: { type: 'flexible' as const } } }
+        ? {
+            // `product` is read back on each invoice, so a weekly period grants the weekly credits (webhook.ts).
+            subscription_data: { metadata: { userId, product: product.key }, billing_mode: { type: 'flexible' as const } },
+            // The launch discount, when a coupon is configured. Its size and duration are whatever Stripe says.
+            ...(getLaunchCouponId(env) ? { discounts: [{ coupon: getLaunchCouponId(env)! }] } : {}),
+          }
         : { payment_intent_data: { metadata } }),
       success_url: `${siteUrl}/account?checkout=success`,
       cancel_url: `${siteUrl}/account?checkout=cancelled`,

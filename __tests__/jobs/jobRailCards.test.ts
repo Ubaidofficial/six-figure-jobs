@@ -53,6 +53,19 @@ describe('RelatedSearchesCard', () => {
     expect(html.match(/<li/g)).toHaveLength(2)
   })
 
+  it('shows each page\'s job count when there is one', () => {
+    const html = renderToStaticMarkup(
+      createElement(RelatedSearchesCard, {
+        links: [
+          { href: '/jobs/account-executive', label: 'All Account Executive jobs', count: 1234 },
+          { href: '/salary/account-executive', label: 'Account Executive salary guide' },
+        ],
+      }),
+    )
+    expect(html).toContain('1,234')
+    expect(html.match(/tabular-nums/g)).toHaveLength(1)
+  })
+
   it('renders nothing without links', () => {
     expect(renderToStaticMarkup(createElement(RelatedSearchesCard, { links: [] }))).toBe('')
   })

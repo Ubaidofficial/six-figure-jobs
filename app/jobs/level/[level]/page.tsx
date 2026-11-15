@@ -13,6 +13,8 @@ import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
 import { LEVEL_TARGETS } from '../../../../lib/seo/pseoTargets'
 import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '../../../../lib/jobs/relatedSearches'
 
 export const revalidate = 3600
 
@@ -153,6 +155,14 @@ export default async function LevelPage({
   })
   const faqJsonLd = buildFaqJsonLd(info.label, info.description, total)
 
+  // "Related searches": the whole jobs hub and the other levels, each counted with the destination page's own query.
+  const relatedSearches = await loadRelatedSearches([
+    { label: 'All $100k+ jobs', href: '/jobs', input: relatedInput.jobsHub() },
+    ...Object.entries(LEVELS)
+      .filter(([l]) => l !== level)
+      .map(([l, lv]) => ({ label: `${lv.label} jobs`, href: `/jobs/level/${l}`, input: relatedInput.level(l) })),
+  ])
+
   return (
     <ListingPage>
       <ListingHeader
@@ -191,6 +201,8 @@ export default async function LevelPage({
           hrefLabel: 'Browse all $100k+ jobs',
         }}
       />
+
+      <RelatedSearches items={relatedSearches} />
 
       <ListingSection title="Frequently asked questions">
         <Faq items={faqJsonLd.mainEntity.map((q) => ({ question: q.name, answer: q.acceptedAnswer.text }))} />

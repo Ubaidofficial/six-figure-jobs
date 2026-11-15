@@ -14,6 +14,7 @@ import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
 import { buildJobBreadcrumbJsonLd } from '../../../lib/seo/jobBreadcrumbJsonLd'
 import { queryJobs, type JobQueryResult, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { filterSimilarJobs } from '../../../lib/jobs/similarJobs'
+import { loadRelatedSearches, relatedInput, type RelatedSearchInput } from '../../../lib/jobs/relatedSearches'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { isJobDetailAvailable } from '../../../lib/jobs/detailAvailability'
 import { evaluateJobIndexability } from '../../../lib/jobs/qualityGate'
@@ -291,8 +292,12 @@ export default async function JobPage({
   const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
   const internalLinks = buildInternalLinks(typedJob)
   // The sidebar shows the few links that are about this job; "Explore more" below keeps the rest, minus those.
-  const railLinks = internalLinks.filter((l) => l.contextual).slice(0, 5)
-  const railHrefs = new Set(railLinks.map((l) => l.href))
+  const railCandidates = internalLinks.filter((l) => l.contextual).slice(0, 5)
+  const railHrefs = new Set(railCandidates.map((l) => l.href))
+  // Each link that lists jobs carries that page's job count; links to thin pages drop out. If the counts cannot be read
+  // the links are shown without them rather than not at all (the page is cached for 10 minutes).
+  const railCounted = await loadRelatedSearches(railCandidates)
+  const railLinks = railCounted.length > 0 ? railCounted : railCandidates
   const moreLinks = internalLinks.filter((l) => !railHrefs.has(l.href))
 
   // AI snippet / score (feature flagged)
@@ -915,7 +920,7 @@ function extractBenefitsFromAi(raw: any): string[] {
 }
 
 /** `contextual` links are about this job (its role, country, skills); the rest are hubs every job page carries. */
-type InternalLink = { href: string; label: string; contextual?: boolean }
+type InternalLink = { href: string; label: string; contextual?: boolean; input?: RelatedSearchInput }
 
 function prettyRole(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -937,14 +942,15 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
   // /jobs/<role>/country/<country> only redirects to the country page, so there is no role-in-country page to link:
   // the role link says what it is (every country) and the country link is separate.
   if (roleSlug) {
-    links.push({ href: `/jobs/${roleSlug}`, label: `All ${roleLabel} jobs`, contextual: true })
+    links.push({ href: `/jobs/${roleSlug}`, label: `All ${roleLabel} jobs`, contextual: true, input: relatedInput.role(roleSlug) })
   }
 
-  if (isCountryRecognized && countrySlug) {
+  if (isCountryRecognized && countrySlug && countryCode) {
     links.push({
       href: `/jobs/location/${countrySlug}`,
       label: `$100k+ jobs in ${countryName}`,
       contextual: true,
+      input: relatedInput.country(countryCode),
     })
   }
 
@@ -953,6 +959,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
       href: `/remote/${roleSlug}`,
       label: `Remote $100k+ ${roleLabel} jobs`,
       contextual: true,
+      input: relatedInput.remoteRole(roleSlug),
     })
   }
 
@@ -982,7 +989,12 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
     .map((s): InternalLink | null => {
       const slug = s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
       if (SKILL_SLUG_SET.has(slug)) {
-        return { href: `/jobs/skills/${slug}`, label: `$100k+ ${SKILL_LABEL_MAP.get(slug) ?? s} jobs`, contextual: true }
+        return {
+          href: `/jobs/skills/${slug}`,
+          label: `$100k+ ${SKILL_LABEL_MAP.get(slug) ?? s} jobs`,
+          contextual: true,
+          input: relatedInput.skill(slug),
+        }
       }
       return null
     })
@@ -996,6 +1008,7 @@ function buildInternalLinks(job: JobWithCompany): InternalLink[] {
       href: `/jobs/city/${job.citySlug}`,
       label: `$100k+ jobs in ${job.city ?? job.citySlug}`,
       contextual: true,
+      input: relatedInput.city(job.citySlug, job.countryCode),
     })
   }
 

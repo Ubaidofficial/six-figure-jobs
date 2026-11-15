@@ -43,7 +43,10 @@ export function newJobsSince(
   return new Date(Math.max(floor, from ? from.getTime() : floor))
 }
 
-export const asFrequency = (v: string): AlertFrequency => (v === 'daily' ? 'daily' : 'weekly')
+export const asFrequency = (v: string): AlertFrequency => (v === 'daily' || v === 'instant' ? v : 'weekly')
+
+/** How a frequency reads in an email: "weekly", "daily", "instantly". */
+const FREQUENCY_WORD: Record<AlertFrequency, string> = { daily: 'daily', weekly: 'weekly', instant: 'instantly' }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 /* Picking jobs                                                                                                       */
@@ -114,7 +117,7 @@ ${escapeHtml(BRAND)} · ${escapeHtml(oneLine(postalAddress))}`
 /** The double opt-in email. Nothing is mailed to the address until its link is used. */
 export function buildConfirmationEmail(input: { label: string; frequency: string; links: AlertLinks; postalAddress: string }) {
   const label = oneLine(input.label)
-  const freq = asFrequency(input.frequency)
+  const freq = FREQUENCY_WORD[asFrequency(input.frequency)]
   const subject = `Confirm your job alert: ${label}`
   const text = [
     `Confirm your ${BRAND} alert`,
@@ -149,7 +152,7 @@ export function buildDigestEmail(input: {
   const n = input.jobs.length
   const subject = `${n} new ${n === 1 ? label.replace(/\bjobs\b/, 'job') : label}`
   const more = input.totalNew > n ? input.totalNew - n : 0
-  const why = `You get this ${asFrequency(input.frequency)} because you confirmed a ${BRAND} alert for: ${label}.`
+  const why = `You get this ${FREQUENCY_WORD[asFrequency(input.frequency)]} because you confirmed a ${BRAND} alert for: ${label}.`
 
   const text = [
     subject,

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { connection } from 'next/server'
 
 import { PlansView } from '@/components/account/PlansView'
+import { alertsEnabled } from '@/lib/alerts/config'
 import { accountsEnabled, billingEnabled } from '@/lib/accounts/enabled'
 
 // Accounts off (the default): /pricing is the same static redirect to /jobs it has always been. Accounts on: a
@@ -26,5 +27,19 @@ export default async function PricingPage() {
   const user = await getSessionUser()
   const plans = billingEnabled() ? await loadPlans(getStripe()) : []
   const subscribed = user ? await hasActiveSubscription(user.id) : false
-  return <PlansView plans={plans} signedIn={Boolean(user)} subscribed={subscribed} />
+
+  // Live numbers for the comparison; if the database cannot be read the section is left out rather than guessed.
+  const numbers = await Promise.all([import('@/lib/jobs/publicStats'), import('@/lib/jobs/siteCounts')])
+    .then(async ([{ loadPublicSiteStats }, { loadSiteCounts }]) => {
+      const [stats, counts] = await Promise.all([loadPublicSiteStats(), loadSiteCounts()])
+      return {
+        jobs: stats.totalJobs,
+        companies: stats.totalCompaniesHiring,
+        countries: counts.byCountry.length,
+        newThisWeek: stats.newThisWeek,
+      }
+    })
+    .catch(() => null)
+
+  return <PlansView plans={plans} signedIn={Boolean(user)} subscribed={subscribed} numbers={numbers} instantAlerts={alertsEnabled()} />
 }
