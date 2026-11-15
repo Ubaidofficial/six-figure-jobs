@@ -114,6 +114,27 @@ Moves worth testing (from the data, scaled to our phase-1 indexing policy):
 
 What will not copy: 4dayweek's niche press hook and years of editorial links, Remotive's brand traffic, meme traffic.
 
+### Who gets the most search traffic (US estimates, 2026-11-15)
+
+| # | Site | Est. visits / month | Ranking keywords | Note |
+| --- | --- | --- | --- | --- |
+| 1 | builtin.com | 778,353 | 400,555 | Mostly AI news articles, not job searches |
+| 2 | levels.fyi | 232,642 | 81,224 | Salary data, broader than jobs |
+| 3 | wellfound.com | 135,105 | 51,278 | Startups, broader than jobs |
+| 4 | remoterocketship.com | 123,790 | 46,732 | Job pages ranking for employer names, part-time and remote hubs |
+| 5 | weworkremotely.com | 118,290 | 19,399 | `/categories/remote-customer-support-jobs` is its top page |
+| 6 | himalayas.app | 65,618 | 88,279 | |
+| 7 | 4dayweek.io | ~34,300 | ~14,930 | Company pages |
+| 8 | remotive.com | ~23,600 | ~7,770 | Category pages |
+| 9 | 6figr.com | 14,898 | 32,285 | |
+| 10 | remoteok.com | 11,540 | 2,004 | |
+| 11 | remote100k.com | 8,081 | 963 | |
+| 12 | remoteyeah.com | 3 | 34 | Unverified: probably a data gap |
+
+Among pure job boards: Remote Rocketship, then We Work Remotely, Himalayas, 4dayweek, Remotive. These are third-party estimates of Google
+organic visits only. The full workbook (90 top pages, 110 keywords, 175 backlink targets) and the same summary are kept in the OpenSEO
+project's context (section "competitor-traffic"). Referring-domain totals and domain rank were not returned for most sites.
+
 Both competitors are now in the OpenSEO project's competitor list (`4dayweek.io`, `remotive.com`; the rest were already
 there: remoteok, weworkremotely, remoterocketship, remote100k, remoteyeah, himalayas, wellfound, built in, levels.fyi,
 6figr, spainjobs). The findings are in the project's research log.
