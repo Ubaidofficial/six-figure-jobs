@@ -1,5 +1,5 @@
 import Link from '@/components/ui/Link'
-import { Linkedin, MessageCircle, Twitter } from 'lucide-react'
+import { Linkedin, Twitter } from 'lucide-react'
 
 import { RegionMark } from '@/components/ui/RegionMark'
 
@@ -56,15 +56,6 @@ export function Footer() {
               >
                 <Twitter className={styles.socialIcon} aria-hidden="true" />
               </a>
-              <a
-                className={styles.social}
-                href="https://discord.gg/6figjobs"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Six Figure Jobs on Discord"
-              >
-                <MessageCircle className={styles.socialIcon} aria-hidden="true" />
-              </a>
             </div>
           </div>
 
@@ -107,15 +98,6 @@ export function Footer() {
                 aria-label="Six Figure Jobs on Twitter"
               >
                 <Twitter className={styles.socialIcon} aria-hidden="true" />
-              </a>
-              <a
-                className={styles.social}
-                href="https://discord.gg/6figjobs"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Six Figure Jobs on Discord"
-              >
-                <MessageCircle className={styles.socialIcon} aria-hidden="true" />
               </a>
             </div>
           </div>
