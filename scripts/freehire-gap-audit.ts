@@ -9,6 +9,7 @@
 import axios from 'axios'
 import { appendFileSync } from 'node:fs'
 
+import { readPayFromDescription } from '../lib/jobs/payEvidence'
 import { getMinimumSalaryRejection } from '../lib/jobs/salaryPublicationGate'
 import { FREEHIRE_MARKETS, freehireHeaders, isListableByReality, mapFreehireJob, type FreehireJob } from '../lib/scrapers/freehire'
 
@@ -103,14 +104,20 @@ async function main() {
   }
 
   const noSalary = classified.filter((c) => c.reason === 'no-salary')
-  const payInText = noSalary.filter((c) => /[$€£]\s?\d{2,3}[,.]?\d{3}\s*(?:-|–|—|to)\s*[$€£]?\s?\d{2,3}[,.]?\d{3}/i.test((c.j.description ?? '').slice(0, 6000)))
+  const read = noSalary
+    .map((c) => ({ c, pay: readPayFromDescription(c.j.description, { countries: c.j.countries, location: c.j.location }) }))
+    .filter((r) => r.pay)
+  const passing = read.filter((r) => !getMinimumSalaryRejection({ salaryMin: r.pay!.min, salaryMax: r.pay!.max, salaryCurrency: r.pay!.currency }))
   out.push(
-    '### No pay in freehire\'s fields',
+    "### No pay in freehire's fields: what reading the description gives (lib/jobs/payEvidence.ts)",
     '',
-    `${noSalary.length} jobs. ${payInText.length} of them show a pay range such as "$150,000 - $180,000" in the description (a rough text match, includes false positives): pay our own reader could take from the posting.`,
+    `${noSalary.length} jobs have no pay in freehire's fields. The description reader found a yearly range in ${read.length} of them, and ${passing.length} of those pass our salary gate. Each line: the range read, then the sentence it came from. Review for wrong readings before this is switched on.`,
     '',
-    ...payInText.slice(0, 6).map((r) => `- ${r.j.title.slice(0, 70)} — ${(r.j.company ?? '').slice(0, 30)}`),
+    ...passing.slice(0, 40).map((r) => `- ${r.pay!.currency} ${r.pay!.min}-${r.pay!.max} | ${r.c.j.title.slice(0, 50)} — ${(r.c.j.company ?? '').slice(0, 25)} | "${r.pay!.quote.replace(/\s+/g, ' ').slice(0, 220)}"`),
     '',
+    ...(read.length > passing.length
+      ? [`Read but below the gate (${read.length - passing.length}):`, ...read.filter((r) => !passing.includes(r)).slice(0, 8).map((r) => `- ${r.pay!.currency} ${r.pay!.min}-${r.pay!.max} | ${r.c.j.title.slice(0, 50)}`), '']
+      : []),
   )
 
   const ok = classified.filter((c) => c.reason === 'ok').map((c) => c.j)
