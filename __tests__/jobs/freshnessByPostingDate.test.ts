@@ -14,8 +14,10 @@ describe('job freshness is measured from the posting date', () => {
   })
 
   it('with no posting date, the day we first stored the job stands in', () => {
-    expect(resolveJobFreshnessDate({ postedAt: null, createdAt: daysAgo(5) })?.getTime()).toBe(daysAgo(5).getTime())
-    expect(isJobFresh({ postedAt: null, createdAt: daysAgo(5) })).toBe(true)
+    // One date, read once: two daysAgo(5) calls read the clock twice and can differ by a few milliseconds (it did, in CI).
+    const stored = daysAgo(5)
+    expect(resolveJobFreshnessDate({ postedAt: null, createdAt: stored })?.getTime()).toBe(stored.getTime())
+    expect(isJobFresh({ postedAt: null, createdAt: stored })).toBe(true)
     expect(isJobFresh({ postedAt: null, createdAt: daysAgo(40), lastSeenAt: new Date() })).toBe(false)
     expect(isJobFresh({})).toBe(false)
   })
