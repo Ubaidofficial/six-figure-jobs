@@ -25,6 +25,7 @@ import {
 import { EDITION_2026_11 } from '@/lib/research/editions/2026-11'
 import { PAY_REPORT_CHART_NAMES, chartEmbedHtml, chartPath, isChartName, payReportChart } from '@/lib/research/payReportCharts'
 import { payReportMetadata } from '@/lib/research/payReportMetadata'
+import { getSiteUrl } from '@/lib/seo/site'
 import { KEYWORD_MAP } from '@/lib/seo/keywordMap'
 import { ALWAYS_INDEXABLE_HUBS } from '@/lib/seo/indexingPhase'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, TITLE_MAX } from '@/lib/seo/metaText'
@@ -313,13 +314,13 @@ describe('citation and charts', () => {
 
 describe('metadata', () => {
   it('points the latest edition, at either address, to the one permanent page', () => {
-    expect(payReportMetadata(R).alternates?.canonical).toBe('https://www.6figjobs.com/high-paying-jobs-report')
+    expect(payReportMetadata(R).alternates?.canonical).toBe(`${getSiteUrl()}/high-paying-jobs-report`)
   })
 
   it('gives an older edition its own canonical and its own title', () => {
     const older = { ...EDITION_2026_11, slug: '2025-10', month: 'October 2025', monthTag: 'Oct 2025' }
     const meta = payReportMetadata(older)
-    expect(meta.alternates?.canonical).toBe('https://www.6figjobs.com/high-paying-jobs-report/2025-10')
+    expect(meta.alternates?.canonical).toBe(`${getSiteUrl()}/high-paying-jobs-report/2025-10`)
     expect(String(meta.title)).toContain('Oct 2025')
   })
 })
