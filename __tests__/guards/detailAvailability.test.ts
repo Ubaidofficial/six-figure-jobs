@@ -25,7 +25,9 @@ describe('job detail availability', () => {
   it('marks stale jobs as unavailable even when not expired', () => {
     const job = {
       ...baseJob,
-      lastSeenAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+      // Posted two months ago; we saw it again today, which does not make it fresh.
+      postedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+      lastSeenAt: new Date().toISOString(),
     }
 
     expect(getJobDetailAvailability(job)).toBe('stale')

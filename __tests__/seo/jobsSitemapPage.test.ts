@@ -158,7 +158,7 @@ describe('sitemap-jobs/[page] route', () => {
     
     // Search the AND array for the freshness query block
     const andClauses = callArgs?.where?.AND || []
-    const freshnessClause = andClauses.find((c: any) => c.OR && c.OR.some((orClause: any) => orClause.lastSeenAt?.gte))
+    const freshnessClause = andClauses.find((c: any) => c.OR && c.OR.some((orClause: any) => orClause.postedAt?.gte))
     
     expect(freshnessClause).toBeDefined()
     
@@ -169,7 +169,7 @@ describe('sitemap-jobs/[page] route', () => {
     const expectedDateMs = expectedDate.getTime()
     
     // Allow 1 minute of slack
-    const gteDate = freshnessClause.OR[0].lastSeenAt.gte
+    const gteDate = freshnessClause.OR[0].postedAt.gte
     const actualDateMs = gteDate.getTime()
     expect(Math.abs(actualDateMs - expectedDateMs)).toBeLessThan(60 * 1000)
   })

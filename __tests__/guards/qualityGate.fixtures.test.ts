@@ -79,7 +79,9 @@ const QUALITY_GATE_FIXTURES: Array<{
     name: 'stale job',
     job: {
       ...baseJob,
-      lastSeenAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+      // Posted two months ago; we saw it again today, which does not make it fresh.
+      postedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+      lastSeenAt: new Date().toISOString(),
     },
     expectIndexable: false,
     expectReason: 'stale_job',
@@ -117,13 +119,15 @@ describe('quality gate fixture suite', () => {
   })
 
   it('dedupes near-identical indexable jobs so they do not all remain indexable in sitemap scope', () => {
+    // Posted two days ago: a fixed date would age out of the freshness window.
+    const postedDay = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
     const fixtures = [
       {
         ...baseJob,
         id: 'dup-newest',
         externalId: 'job-1',
         lastSeenAt: new Date().toISOString(),
-        postedAt: '2026-02-01T09:00:00.000Z',
+        postedAt: `${postedDay}T09:00:00.000Z`,
         updatedAt: '2026-02-11T10:00:00.000Z',
       },
       {
@@ -131,7 +135,7 @@ describe('quality gate fixture suite', () => {
         id: 'dup-older',
         externalId: 'job-1b',
         lastSeenAt: new Date().toISOString(),
-        postedAt: '2026-02-01T08:00:00.000Z',
+        postedAt: `${postedDay}T08:00:00.000Z`,
         updatedAt: '2026-02-10T10:00:00.000Z',
       },
       {
@@ -139,7 +143,7 @@ describe('quality gate fixture suite', () => {
         id: 'dup-oldest',
         externalId: 'job-1c',
         lastSeenAt: new Date().toISOString(),
-        postedAt: '2026-02-01T08:00:00.000Z',
+        postedAt: `${postedDay}T08:00:00.000Z`,
         updatedAt: '2026-02-09T10:00:00.000Z',
       },
       {
@@ -149,7 +153,7 @@ describe('quality gate fixture suite', () => {
         countryCode: 'CA',
         locationRaw: 'Toronto, CA',
         lastSeenAt: new Date().toISOString(),
-        postedAt: '2026-02-01T08:00:00.000Z',
+        postedAt: `${postedDay}T08:00:00.000Z`,
         updatedAt: '2026-02-10T11:00:00.000Z',
       },
       {
@@ -158,7 +162,7 @@ describe('quality gate fixture suite', () => {
         company: 'Globex',
         companyId: 'company_2',
         lastSeenAt: new Date().toISOString(),
-        postedAt: '2026-02-01T08:00:00.000Z',
+        postedAt: `${postedDay}T08:00:00.000Z`,
         updatedAt: '2026-02-10T12:00:00.000Z',
       },
       {
@@ -168,7 +172,7 @@ describe('quality gate fixture suite', () => {
         aiSnippet: 'none',
         aiOneLiner: 'n/a',
         lastSeenAt: new Date().toISOString(),
-        postedAt: '2026-02-01T08:00:00.000Z',
+        postedAt: `${postedDay}T08:00:00.000Z`,
         updatedAt: '2026-02-12T10:00:00.000Z',
       },
     ]
