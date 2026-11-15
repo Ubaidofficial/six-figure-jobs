@@ -1,6 +1,12 @@
 # Unreleased
 
-- Docs only: `docs/billing-launch-checklist.md` now lists the live-mode Stripe price ids and coupon (read from the account, 2026-11-15) and notes that the alerts migration `20261110180000_add_job_alerts` was applied to production. Replaces the earlier note that the live prices were missing. No code change.
+<<<<<<< HEAD
+- Docs only: `docs/billing-launch-checklist.md` records that the alerts migration `20261110180000_add_job_alerts` was the only pending migration in production and was applied on 2026-11-15 (two new tables; schema up to date afterwards). No code change.
+=======
+- Billing checklist: the live Stripe section now records the live prices and coupon created on 2026-11-15 ($9.99/month `price_1UcBHqQ8IFR77Lybe5gpHAaE`, $4.99/week `price_1UcBHrQ8IFR77Lyb1C1so9YC`, coupon `LAUNCH50`), replacing "not yet set up". Docs only.
+
+- Billing launch checklist brought in line with the code (owner's request, 2026-11-15: "pick up from docs/billing-launch-checklist.md"). Docs only, no application, Prisma or SEO change. Fixes: the webhook step said "these seven" events but lists nine; section 9 said disputes are not handled although `charge.dispute.created` / `closed` are (`lib/billing/webhook.ts`) and the bullet above it says so; it also said nothing calls `spendCredits`, but the application kit and auto-apply do, so the step-7 test now covers them; section 6 said Railway, the service is on Openship (with a note to confirm Openship passes service variables to `next build`); the pending-migration list now names the four migrations after the accounts one (the dry run stays the source of truth); `AUTO_APPLY_ENABLED`, `AUTO_APPLY_LIVE` and `AUTO_APPLY_CREDITS` added to the variable table.
+>>>>>>> origin/main
 
 - Docs only: `docs/billing-launch-checklist.md` records the state of Stripe live mode (checked 2026-11-15: product, $9.00 price, portal and webhook exist; the $9.99 monthly price, $4.99 weekly price and `LAUNCH50` coupon are missing because the Stripe connector refused live-mode writes). No code change.
 

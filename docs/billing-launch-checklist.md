@@ -6,8 +6,10 @@ This list is everything the owner has to do to turn it on. Do the steps in order
 
 ## 1. Apply the database migration (first, before anything is enabled)
 
-1. GitHub, Actions, **database migrate**, Run workflow with **apply** unticked. It prints which migrations are pending; `20261106120000_add_accounts_billing` should be the only one.
-2. Run it again with **apply** ticked. The migration only creates new tables (`User`, `Account`, `VerificationToken`, `Subscription`, `CreditLedger`, `StripeEvent`) and their indexes and foreign keys. It changes no existing table.
+1. GitHub, Actions, **database migrate**, Run workflow with **apply** unticked. It prints which migrations are pending. `20261106120000_add_accounts_billing` must be among them. Later migrations in the repository that may also be pending: `20261106180000_add_application_kit`, `20261106210000_add_auto_apply`, `20261110140000_add_feedback_screenshot`, `20261110180000_add_job_alerts`. Apply them together; the dry run is the source of truth for what is really pending in production.
+2. Run it again with **apply** ticked. The accounts migration only creates new tables (`User`, `Account`, `VerificationToken`, `Subscription`, `CreditLedger`, `StripeEvent`) and their indexes and foreign keys. It changes no existing table. Read the SQL of each later pending migration before applying it.
+
+**Status, 2026-11-15:** the dry run showed only `20261110180000_add_job_alerts` pending in production (the accounts, billing, application-kit, auto-apply and feedback migrations were already applied). Its SQL only creates the `JobAlert` and `JobAlertSent` tables; it was applied through the workflow and `prisma migrate status` then reported the schema up to date.
 3. Do not set `ACCOUNTS_ENABLED=true` until this has run. With the flag on and no tables, sign-in fails with a server error.
 
 ## 2. Stripe
@@ -24,7 +26,7 @@ This list is everything the owner has to do to turn it on. Do the steps in order
 4. **Webhook endpoint** (Developers, Webhooks, Add endpoint):
    - URL: `https://www.6figjobs.com/api/billing/webhook`
    - API version: **2026-10-28.endive**, the version the installed `stripe` package (23.1.0) is written against. Pick it when creating the endpoint. If you leave the account default and it differs, event payloads can have a different shape from what the code reads.
-   - Events to send (these seven, no others needed):
+   - Events to send (these nine, no others needed):
      `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `invoice.paid`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`
    - Copy the endpoint's **signing secret** -> `STRIPE_WEBHOOK_SECRET`.
 5. Payment methods (Settings, Payment methods): cards and wallets confirm at once. Delayed methods (bank debits) are handled (credits arrive on `checkout.session.async_payment_succeeded`) but have not been tested.
@@ -53,9 +55,9 @@ This list is everything the owner has to do to turn it on. Do the steps in order
 - `AUTH_SECRET`: a long random string, for example `openssl rand -base64 33`. It signs and encrypts session cookies. Changing it signs everyone out.
 - `AUTH_URL`: `https://www.6figjobs.com`. Required in production (the flag stays off without it). It pins the address put in sign-in emails and redirects, so a forged `Host` header cannot make a link point somewhere else.
 
-## 6. Environment variables (Railway, service variables)
+## 6. Environment variables (Openship, `six-figure-jobs` service)
 
-Set them for the service so they are present at **build time and run time** (Railway does this for service variables). `ACCOUNTS_ENABLED` is read at build to decide whether the header shows a "Sign in" link, and again on every request as the real switch.
+Set them on the `six-figure-jobs` service in Openship so they are present at **build time and run time**, then run **Apply environment** and a service-scoped **Deploy** (see CLAUDE.md, Deploy). I have not confirmed that Openship passes every service variable to `next build`; check that after the first deploy (the header shows "Sign in" only if `ACCOUNTS_ENABLED` was visible to the build). `ACCOUNTS_ENABLED` is read at build to decide whether the header shows a "Sign in" link, and again on every request as the real switch.
 
 | Variable | Required | What it does |
 | --- | --- | --- |
@@ -64,7 +66,7 @@ Set them for the service so they are present at **build time and run time** (Rai
 | `AUTH_URL` | yes in production | `https://www.6figjobs.com` (section 5). |
 | `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | for Google | OAuth client (section 3). Without both, no Google button. |
 | `EMAIL_SERVER`, `EMAIL_FROM` | for magic link | SMTP URL and sender (section 4). Without both, no email form. |
-| `AUTH_CLIENT_IP_HOPS` | optional | How many proxies sit in front of the app, default `1`. The sign-in rate limit takes the client address that many entries from the right of `X-Forwarded-For`. Check on Railway that the address it sees is the visitor's, not an internal one. |
+| `AUTH_CLIENT_IP_HOPS` | optional | How many proxies sit in front of the app, default `1`. The sign-in rate limit takes the client address that many entries from the right of `X-Forwarded-For`. Check behind Openship's proxy that the address it sees is the visitor's, not an internal one. |
 | `STRIPE_SECRET_KEY` | for billing | Stripe API key (section 2). Without it billing routes are 404 and `/account` shows no purchase buttons. |
 | `STRIPE_WEBHOOK_SECRET` | for billing | Webhook signing secret. Without it the webhook route is 404 and no payment is ever credited. |
 | `STRIPE_PRICE_SUBSCRIPTION` | for the subscription | Recurring price id (`price_...`). |
@@ -76,6 +78,7 @@ Set them for the service so they are present at **build time and run time** (Rai
 | `BILLING_MONTHLY_CREDITS` | **set it** | Credits granted when a subscription invoice is paid (first payment and each renewal). |
 | `BILLING_PACK_SMALL_CREDITS`, `BILLING_PACK_LARGE_CREDITS` | **set them** | Credits per pack purchase. |
 | `APPLICATION_KIT_CREDITS` | **set it** | Credits one application kit costs (placeholder 1). Also needs an AI key (`DEEPSEEK_API_KEY` or `OPENAI_API_KEY`) and the `20261106180000_add_application_kit` migration. |
+| `AUTO_APPLY_ENABLED`, `AUTO_APPLY_LIVE`, `AUTO_APPLY_CREDITS` | only for auto-apply | `AUTO_APPLY_ENABLED=true` (with accounts on) shows the feature; `AUTO_APPLY_LIVE=true` lets the worker really submit (otherwise it fills the form and stops). `AUTO_APPLY_CREDITS` is the cost of one confirmed application (placeholder 5, **set it**). Needs the `20261106210000_add_auto_apply` migration and the worker (`scripts/autoapply-worker.ts`) running somewhere with a browser. Leave off unless you intend to launch it. |
 
 **The three credit amounts have placeholder defaults (100, 50, 250) so development runs. They are not product decisions. Set all three explicitly.** The number a customer is promised at checkout is written into the Checkout Session when it is created, so changing a variable later does not change purchases already in progress.
 
@@ -108,7 +111,7 @@ The live **Terms**, **Privacy** and **Cookie** pages have not been touched and d
 - Subscription access: `active` and `trialing`, plus `past_due` for 3 days after it went past due (Stripe is retrying the card; no credits are granted for an unpaid period). `unpaid`, `canceled`, `incomplete` and `paused` have no access. If a "subscription deleted" webhook is ever lost, access stops anyway once the stored period ended more than 3 days ago.
 - Monthly credits are granted on `invoice.paid` for the first invoice and each renewal, not for mid-period plan changes or manual invoices. No trial periods are configured. Subscriptions are created in Stripe's flexible billing mode. A dispute (chargeback) takes back the credits that payment granted, in full and capped at the balance; if the dispute is won they are given back.
 - One active subscription per user (a second checkout is refused); packs can always be bought.
-- **Not built**: disputes and chargebacks (`charge.dispute.*` are not handled, so credits from a disputed charge stay), account deletion (ledger and subscription rows block deleting a user), admin screens for manual credit adjustments, emails about receipts or low balance (Stripe sends receipts if enabled in its settings), and the features that spend credits (`spendCredits` exists and is tested but nothing calls it yet).
+- **Not built**: account deletion (ledger and subscription rows block deleting a user), admin screens for manual credit adjustments, emails about receipts or low balance (Stripe sends receipts if enabled in its settings), and a refund path for credits spent on a failed feature call. `spendCredits` is called by the application kit (`lib/applykit/generate.ts`) and auto-apply (`lib/autoapply/service.ts`), so with those flags on, credits are really spent: test those flows in test mode too (step 7).
 - The sign-in email rate limit (3 per address and 10 per IP per 15 minutes) is held in memory per server instance and resets on deploy. It is a brake on abuse, not an audit log.
 - Sessions are 14-day JWTs and cannot be revoked server-side; the account page and every billing action re-check that the user still exists, and entitlement is always read from the database, never from the cookie.
 
@@ -120,7 +123,7 @@ Pro adds **instant** email alerts and up to 100 saved searches; free keeps daily
 - A signed-in subscriber gets instant alerts only for their **own** sign-in email. Anyone else choosing "Instant (Pro)" is told it is part of Pro.
 - Verify in test mode: subscribe, create an instant alert, run the endpoint, check the email; cancel the subscription, run it again, check the alert became daily.
 
-### Stripe sandbox set up 2026-11-15 (account "Six Figure Jobs sandbox", test mode; live is NOT set up)
+### Stripe sandbox set up 2026-11-15 (account "Six Figure Jobs sandbox", test mode; live is set up below)
 
 Created through the Stripe MCP, on the existing product `prod_VaHADi6DoqSYzl` ("Six Figure Jobs subscription"), tax behavior `exclusive` like the existing price:
 
@@ -133,15 +136,15 @@ Created through the Stripe MCP, on the existing product `prod_VaHADi6DoqSYzl` ("
 
 The older $9.00 monthly price (`price_1UZ6c1LGk62v9av8PVlTNSFb`) is still active in the sandbox; archive it once nothing points at it. The customer portal already existed (cancel at period end, invoices, payment method, Terms and Privacy links). Not done: the same set-up in **live mode**, Stripe Tax decisions, Smart Retries and failed-payment emails (account settings), and setting the variables in Openship.
 
-### Stripe live mode, checked again 2026-11-15 (account "Six Figure Jobs")
+### Stripe live mode, set up 2026-11-15 (account "Six Figure Jobs")
 
-Set up (created outside this session's connector, which could not write in live mode; verified by reading the account): product `prod_VaIJybSnp6NGCL`, with these prices and coupon, all tax exclusive and matching the sandbox:
+Created through the Stripe MCP on the existing product `prod_VaIJybSnp6NGCL` ("Six Figure Jobs subscription"), tax behavior `exclusive`, the same settings as the sandbox:
 
 | Env var | Live value |
 | --- | --- |
 | `STRIPE_PRICE_SUBSCRIPTION` | `price_1UcBHqQ8IFR77Lybe5gpHAaE` ($9.99 / month) |
 | `STRIPE_PRICE_SUBSCRIPTION_WEEKLY` | `price_1UcBHrQ8IFR77Lyb1C1so9YC` ($4.99 / week) |
-| `BILLING_LAUNCH_COUPON_ID` | `LAUNCH50` (50% off, once, no redemption limit, valid) |
-| `STRIPE_WEBHOOK_SECRET` | reveal in Stripe (live), Developers, Webhooks, endpoint `we_1UZ7lQQ8IFR77LybEQ4jJpTl` (same URL, API version and 9 events as the sandbox one) |
+| `BILLING_LAUNCH_COUPON_ID` | `LAUNCH50` (50% off, once) |
+| `STRIPE_WEBHOOK_SECRET` | reveal in Stripe, Developers, Webhooks, endpoint `we_1UZ7lQQ8IFR77LybEQ4jJpTl` (same URL, API version and 9 events as the sandbox one) |
 
-Also already there: the older $9.00 monthly price (`price_1UZ7isQ8IFR77LybktHzVC93`, still active: archive it once nothing points at it) and the customer portal (`bpc_1UZ7j4Q8IFR77LybMmkxEJt8`). The set-up in Stripe is therefore complete in both modes; what is left is setting the variables in Openship (live values for production, the sandbox ones only with test keys), `ACCOUNTS_ENABLED` and the rest of this list. The database migration for alerts (`20261110180000_add_job_alerts`) was applied to production on 2026-11-15; the accounts, billing, application-kit and auto-apply migrations were already applied.
+The older $9.00 monthly price (`price_1UZ7isQ8IFR77LybktHzVC93`) is still active and is the product's default price; archive it once nothing points at it. The customer portal (`bpc_1UZ7j4Q8IFR77LybMmkxEJt8`) already existed. Nothing is purchasable until `ACCOUNTS_ENABLED=true`, and the checklist's test-mode run (section 7) comes first.
