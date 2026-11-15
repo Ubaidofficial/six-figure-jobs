@@ -19,6 +19,11 @@ on:
         type: boolean
         required: false
         default: false
+      only:
+        description: "Only these companies, comma-separated exact names (empty: all). For applying what a dry run was read and approved for"
+        type: string
+        required: false
+        default: ""
       provider:
         description: "Free model for descriptions: auto (Cloudflare first), cloudflare, openrouter or none"
         type: string
@@ -67,7 +72,9 @@ jobs:
           LIMIT: ${{ inputs.limit }}
           APPLY: ${{ inputs.apply }}
           PROVIDER: ${{ inputs.provider }}
+          ONLY: ${{ inputs.only }}
         run: |
-          args="--limit=$LIMIT --provider=$PROVIDER"
-          [ "$APPLY" = "true" ] && args="$args --apply"
-          npx tsx scripts/fill-company-profiles.ts $args
+          args=(--limit="$LIMIT" --provider="$PROVIDER")
+          [ -n "$ONLY" ] && args+=(--only="$ONLY")
+          [ "$APPLY" = "true" ] && args+=(--apply)
+          npx tsx scripts/fill-company-profiles.ts "${args[@]}"

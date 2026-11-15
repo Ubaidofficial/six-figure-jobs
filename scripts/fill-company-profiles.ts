@@ -6,7 +6,10 @@
 // without it nothing is written. Companies with the most live jobs first. Never overwrites a stored value (every write is
 // guarded by "that field is still empty").
 //
-//   npx tsx scripts/fill-company-profiles.ts [--limit=50] [--provider=auto|cloudflare|openrouter|none] [--ai-max=60] [--apply]
+//   npx tsx scripts/fill-company-profiles.ts [--limit=50] [--provider=auto|cloudflare|openrouter|none] [--ai-max=60] [--only="Stripe,Datadog"] [--apply]
+//
+// --only limits the run to companies with those exact names (case-insensitive), so a person who has read a dry run can apply
+// just the companies whose text was approved. The model's wording can differ between two runs: read the apply log too.
 //
 // Polite: one homepage request per company 1.5 s apart (honest User-Agent, a 401/403/429 skips that company), Wikidata 10
 // companies per query 2 s apart (an error ends the lookup, never retried). Free only: lib/ai/freeLlm.ts refuses anything that
@@ -44,9 +47,10 @@ async function main() {
       orderBy: { jobCount: 'desc' },
       take: limit * 3,
     })
+    const only = new Set((arg('only') ?? '').split(',').map((n) => n.trim().toLowerCase()).filter(Boolean))
     const candidates = rows.flatMap((r) => {
       const url = homepageOf(r.website)
-      return url ? [{ ...r, url }] : []
+      return url && (!only.size || only.has(r.name.trim().toLowerCase())) ? [{ ...r, url }] : []
     }).slice(0, limit)
     out(`Companies read: ${rows.length} | with their own website and something empty: ${candidates.length} (limit ${limit}) | free model: **${provider}**`)
     out()

@@ -1,5 +1,7 @@
 # Unreleased
 
+- Company profile writer: a restated description must be ONE sentence (the third dry run joined Databricks' tagline sentences, ad line included), and the workflow takes an optional `only` list of exact company names so a person who has read a dry run can apply just the approved companies (`--only` in `scripts/fill-company-profiles.ts`). (**SEO: none**)
+
 - Company profile writer: a tagline that is recruiting copy ("Join the team...", "careers", "we're hiring") is no longer restated into a description (the second dry run turned ServiceNow's careers-site line into a vague "ServiceNow is a company that puts AI to work for people"), and "reliable" joins the promotional words. (**SEO: none**)
 
 - Company profile writer: the description check is stricter after the first production dry run (40 companies) let through ad lines. A restated description is now rejected when it does not name the company ("Run payments and offer financial products in one platform."), repeats an offer ("no fees", "commission-free", "free", "$0"), uses promotional words ("proven", "faster", "smarter", "seamless", "trusted") or is a sentence copied word for word from the tagline. Founding years and LinkedIn links were applied on their own (`provider=none`) for 40 companies; descriptions wait for this check. (**SEO: none; fewer, more neutral company descriptions once the writer is run with "apply"**)
