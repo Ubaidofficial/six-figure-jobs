@@ -88,6 +88,9 @@ const COUNTRY_ALIASES: Record<string, string> = {
   wales: 'GB',
   'northern ireland': 'GB',
   deutschland: 'DE',
+  nederland: 'NL',
+  österreich: 'AT',
+  osterreich: 'AT',
   czechia: 'CZ',
   'royaume-uni': 'GB',
 }
@@ -129,8 +132,9 @@ export function countryFromText(text: unknown): string | null {
   let code: string | null = COUNTRY_ALIASES[last] ?? null
   if (!code) {
     // "ca united states": a state code run into the country name. Long names only, so "us" is never a suffix match.
+    // "new mexico" ends in " mexico" but is a US state, not the country.
     for (const [name, c] of Object.entries(COUNTRY_BY_NAME)) {
-      if (last.endsWith(` ${name}`)) code = c
+      if (last.endsWith(` ${name}`) && last !== 'new mexico') code = c
     }
   }
   if (!code && parts.length >= 2) code = REGION_IMPLIES_COUNTRY.get(last) ?? null
@@ -141,7 +145,7 @@ export function countryFromText(text: unknown): string | null {
   }
   if (!code) return null
 
-  const rest = lower.replace('northern ireland', '')
+  const rest = lower.replace('northern ireland', '').replace(/\bnew mexico\b/g, '')
   for (const [name, c] of Object.entries(COUNTRY_BY_NAME)) {
     if (c !== code && new RegExp(`\\b${name}\\b`).test(rest)) return null
   }

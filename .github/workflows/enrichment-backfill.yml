@@ -8,6 +8,7 @@ name: enrichment backfill
 # The "task" input picks what to fill (default: the tech stack above). Two more free, deterministic backfills, each a dry run unless
 # "apply" is ticked and each writing only empty fields, guarded by "still empty":
 #   websites        company websites from the live jobs' apply links (scripts/backfill-company-websites.ts; "limit" = companies)
+#   fix-company-names  company names that still carry an HTML entity (scripts/fix-entity-company-names.ts; only companies with live jobs)
 #   remote-country  the country of remote jobs whose location text names exactly one (scripts/backfill-remote-country.ts; "limit" = jobs;
 #                   only jobs whose JobPosting JSON-LD stays identical are written)
 
@@ -15,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "tech-stack, websites or remote-country"
+        description: "tech-stack, websites, remote-country or fix-company-names"
         type: choice
         required: false
         default: tech-stack
@@ -23,6 +24,7 @@ on:
           - tech-stack
           - websites
           - remote-country
+          - fix-company-names
       limit:
         description: "Jobs (tech-stack, remote-country) or companies (websites) to look at this run (newest / busiest first)"
         type: string
@@ -78,6 +80,7 @@ jobs:
           case "$TASK" in
             websites) npx tsx scripts/backfill-company-websites.ts "${args[@]}" ;;
             remote-country) npx tsx scripts/backfill-remote-country.ts "${args[@]}" ;;
+            fix-company-names) npx tsx scripts/fix-entity-company-names.ts $([ "$APPLY" = "true" ] && echo --apply) ;;
             *)
               if [ "$APPLY" = "true" ]; then
                 npx tsx scripts/backfill-tech-stack.ts

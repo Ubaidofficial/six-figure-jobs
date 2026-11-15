@@ -10,6 +10,8 @@
 //
 //   npm run audit:db-coverage
 import { appendFileSync } from 'node:fs'
+import { countryFromText } from '../lib/location/jobLocation'
+import { normalizeCountryCode } from '../lib/location/country'
 
 export type Audit = { title: string; note?: string; sql: string }
 
@@ -180,6 +182,44 @@ export const AUDITS: Audit[] = [
 
 type Row = Record<string, unknown>
 
+export type FlagRow = { primaryLocation: unknown; locationRaw: string | null; countryCode: string | null }
+
+/**
+ * Pure: how a job row's flag compares with its location text. The text is what visitors read (JobCard.buildLocationDisplay),
+ * so "text_disagrees" rows are flagged with another country than the stored code says. "none_findable" rows show no flag and
+ * no country can be read from the text either: a missing-data gap, not a display bug.
+ */
+export function summarizeFlags(rows: FlagRow[]): { counts: Row; examples: Row[] } {
+  const counts = { checked: 0, stored_ok: 0, text_disagrees: 0, stored_missing_text_has: 0, none_findable: 0 }
+  const examples: Row[] = []
+  const seen = new Set<string>()
+  for (const r of rows) {
+    const text = typeof r.primaryLocation === 'string' && r.primaryLocation.trim() ? r.primaryLocation.trim() : (r.locationRaw ?? '').trim()
+    if (!text) continue
+    counts.checked += 1
+    const stored = normalizeCountryCode(r.countryCode)
+    const fromText = countryFromText(text)
+    let kind: string
+    if (stored && fromText && stored !== fromText) kind = 'text_disagrees'
+    else if (stored) kind = 'stored_ok'
+    else if (fromText) kind = 'stored_missing_text_has'
+    else kind = 'none_findable'
+    counts[kind as keyof typeof counts] += 1
+    if (kind !== 'stored_ok') {
+      const key = `${kind}|${text}|${stored ?? ''}`
+      if (!seen.has(key) && examples.length < 400) {
+        seen.add(key)
+        examples.push({ kind, text: text.slice(0, 70), stored_code: stored ?? '', text_country: fromText ?? '' })
+      }
+    }
+  }
+  return { counts, examples }
+}
+
+const FLAG_SAMPLE_SQL = `SELECT "primaryLocation", "locationRaw", "countryCode" FROM "Job"
+  WHERE ${LIVE} AND NOT ${REMOTE} AND ("primaryLocation" IS NOT NULL OR "locationRaw" IS NOT NULL)
+  ORDER BY "createdAt" DESC LIMIT 30000`
+
 function cell(value: unknown): string {
   if (typeof value === 'bigint') return value.toString()
   if (value instanceof Date) return value.toISOString()
@@ -210,6 +250,21 @@ async function main() {
           const rows = (await tx.$queryRawUnsafe(audit.sql)) as Row[]
           parts.push(toMarkdown(audit, rows))
         }
+        const flagRows = (await tx.$queryRawUnsafe(FLAG_SAMPLE_SQL)) as FlagRow[]
+        const { counts, examples } = summarizeFlags(flagRows)
+        parts.push(
+          toMarkdown(
+            {
+              title: 'Country flags vs location text (newest 30,000 live on-site jobs)',
+              note: 'text_disagrees: the location text names another country than the stored code (the job page shows the text, and the flag now follows it). stored_missing_text_has: no stored country but the text names one (a backfill could fill it). none_findable: neither says. Examples are distinct location texts, mismatches first.',
+            },
+            [counts],
+          ),
+          toMarkdown(
+            { title: 'Flag examples (not stored_ok)' },
+            [...examples.filter((e) => e.kind === 'text_disagrees'), ...examples.filter((e) => e.kind !== 'text_disagrees')].slice(0, 60),
+          ),
+        )
       },
       { timeout: 120_000, maxWait: 30_000 },
     )

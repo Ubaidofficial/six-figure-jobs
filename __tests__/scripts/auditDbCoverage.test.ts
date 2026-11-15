@@ -1,4 +1,4 @@
-import { AUDITS, toMarkdown } from '@/scripts/audit-db-coverage'
+import { AUDITS, summarizeFlags, toMarkdown } from '@/scripts/audit-db-coverage'
 
 describe('database coverage audit', () => {
   it('is read-only: every query is one SELECT and none can write', () => {
@@ -28,5 +28,15 @@ describe('database coverage audit', () => {
     expect(md).toContain('| text | jobs | seen | empty |')
     expect(md).toContain('| Remote \\| EMEA | 12 | 2026-11-13T08:10:00.000Z |  |')
     expect(toMarkdown({ title: 'Empty' }, [])).toContain('(no rows)')
+  })
+
+  it('classifies flags against the location text', () => {
+    const { counts } = summarizeFlags([
+      { primaryLocation: 'Dublin, Ireland', locationRaw: null, countryCode: 'GB' },
+      { primaryLocation: 'Berlin, Germany', locationRaw: null, countryCode: null },
+      { primaryLocation: 'Berlin', locationRaw: null, countryCode: 'DE' },
+      { primaryLocation: 'Somewhere', locationRaw: null, countryCode: null },
+    ])
+    expect(counts).toEqual({ checked: 4, stored_ok: 1, text_disagrees: 1, stored_missing_text_has: 1, none_findable: 1 })
   })
 })

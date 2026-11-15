@@ -117,11 +117,21 @@
   align-items: center;
   gap: 6px;
   max-width: 220px;
-  overflow: hidden;
+  min-width: 0;
   font-size: 0.875rem;
   color: var(--color-text-1);
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The ellipsis lives on the text, not on the inline-flex row (it has no effect there), so a long place name is cut with "…" instead of mid-letter. */
+.locationText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.locationMore {
+  flex: none;
 }
 
 .toggle {

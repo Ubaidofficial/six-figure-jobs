@@ -315,7 +315,7 @@ export function JobsFiltersPanel({
                   count={worldwide.count}
                   onClick={() => setRegion(selectedRemoteRegion === 'global' ? null : 'global', true)}
                 >
-                  🌍 Anywhere in the world
+                  <RegionMark mark="globe" className="mr-1.5" />Anywhere in the world
                 </Option>
               ) : null}
               <ShortList
