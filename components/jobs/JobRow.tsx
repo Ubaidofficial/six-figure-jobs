@@ -154,10 +154,10 @@ export function JobRow({
         <div className={styles.right}>
           {salary ? <span className={styles.salary}>{salary}</span> : null}
           {location ? (
-            <span className={styles.location}>
+            <span className={styles.location} title={location.label}>
               <CountryFlag code={location.countryCode} />
-              {location.label}
-              {location.hasMultiple ? ` +${location.count - 1}` : ''}
+              <span className={styles.locationText}>{location.label}</span>
+              {location.hasMultiple ? <span className={styles.locationMore}>{` +${location.count - 1}`}</span> : null}
             </span>
           ) : null}
         </div>

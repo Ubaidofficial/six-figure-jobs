@@ -10,7 +10,7 @@ import { prisma } from '../../../lib/prisma'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../lib/jobs/salary'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
-import { Briefcase, Globe } from 'lucide-react'
+import { Briefcase, Globe, Linkedin } from 'lucide-react'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
 import { Faq, JobRows, LinkChips, ListingPage, ListingSection } from '@/components/listing/ListingParts'
@@ -226,7 +226,7 @@ export default async function CompanyPage({
               <p className="mt-2 text-sm text-muted-foreground">
                 <strong className="font-semibold text-foreground">{jobs.length.toLocaleString('en-US')}</strong> open $100k+{' '}
                 {jobs.length === 1 ? 'job' : 'jobs'}
-                {[company.industry, company.sizeBucket ? `${company.sizeBucket} employees` : null, company.headquarters ?? company.countryCode]
+                {[company.industry, company.sizeBucket ? `${company.sizeBucket} employees` : null, company.foundedYear ? `Founded ${company.foundedYear}` : null, company.headquarters ?? company.countryCode]
                   .filter(Boolean)
                   .map((v) => ` · ${v}`)
                   .join('')}
@@ -270,6 +270,16 @@ export default async function CompanyPage({
                     className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline"
                   >
                     <Briefcase className="size-4" aria-hidden="true" /> Careers page
+                  </a>
+                )}
+                {company.linkedinUrl && (
+                  <a
+                    href={cleanUrl(company.linkedinUrl)}
+                    target="_blank"
+                    rel="nofollow noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline"
+                  >
+                    <Linkedin className="size-4" aria-hidden="true" /> LinkedIn
                   </a>
                 )}
               </div>

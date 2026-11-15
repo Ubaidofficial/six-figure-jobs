@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
 import { countryName, normalizeCountryCode } from '@/lib/location/country'
-import { describeJobLocation, isPlaceholderLocation } from '@/lib/location/jobLocation'
+import { countryFromText, describeJobLocation, isPlaceholderLocation } from '@/lib/location/jobLocation'
 import { skillLabel } from '@/lib/jobs/skillLabel'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
@@ -171,7 +171,9 @@ export function buildLocationDisplay(job: JobWithCompany & { primaryLocation?: a
       return { label: humanizeLocationText(value), countryCode: null, ...multi }
     }
 
-    return { label: humanizeLocationText(value), countryCode: stored, ...multi }
+    // The flag follows the words the reader sees: when the text names one country ("Dublin, Ireland") that is the flag,
+    // even if the stored code says another (a job re-tagged by a board's default); with no country in the text, the stored code.
+    return { label: humanizeLocationText(value), countryCode: countryFromText(value) ?? stored, ...multi }
   }
 
   // Fallback to old logic
