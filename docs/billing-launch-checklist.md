@@ -133,6 +133,15 @@ Created through the Stripe MCP, on the existing product `prod_VaHADi6DoqSYzl` ("
 
 The older $9.00 monthly price (`price_1UZ6c1LGk62v9av8PVlTNSFb`) is still active in the sandbox; archive it once nothing points at it. The customer portal already existed (cancel at period end, invoices, payment method, Terms and Privacy links). Not done: the same set-up in **live mode**, Stripe Tax decisions, Smart Retries and failed-payment emails (account settings), and setting the variables in Openship.
 
-### Stripe live mode, checked 2026-11-15 (account "Six Figure Jobs", NOT yet set up for the new plans)
+### Stripe live mode, checked again 2026-11-15 (account "Six Figure Jobs")
 
-Already there: product `prod_VaIJybSnp6NGCL` ("Six Figure Jobs subscription"), a $9.00 monthly price (`price_1UZ7isQ8IFR77LybktHzVC93`, tax exclusive), the customer portal (`bpc_1UZ7j4Q8IFR77LybMmkxEJt8`) and a webhook endpoint (`we_1UZ7lQQ8IFR77LybEQ4jJpTl`, same URL, API version and 9 events as the sandbox one). **Missing:** the $9.99 monthly price, the $4.99 weekly price and the `LAUNCH50` coupon. The Stripe connector refused these writes ("requires additional permissions": it can write in the sandbox but not in live mode), so create them in the dashboard on that product with the same settings as the sandbox (nickname "Six Figure Jobs Pro monthly" / "Pro weekly", tax behavior exclusive; coupon id `LAUNCH50`, 50% off, duration once), or reconnect the connector with live write access. Then put the live price ids and the live webhook's signing secret in Openship.
+Set up (created outside this session's connector, which could not write in live mode; verified by reading the account): product `prod_VaIJybSnp6NGCL`, with these prices and coupon, all tax exclusive and matching the sandbox:
+
+| Env var | Live value |
+| --- | --- |
+| `STRIPE_PRICE_SUBSCRIPTION` | `price_1UcBHqQ8IFR77Lybe5gpHAaE` ($9.99 / month) |
+| `STRIPE_PRICE_SUBSCRIPTION_WEEKLY` | `price_1UcBHrQ8IFR77Lyb1C1so9YC` ($4.99 / week) |
+| `BILLING_LAUNCH_COUPON_ID` | `LAUNCH50` (50% off, once, no redemption limit, valid) |
+| `STRIPE_WEBHOOK_SECRET` | reveal in Stripe (live), Developers, Webhooks, endpoint `we_1UZ7lQQ8IFR77LybEQ4jJpTl` (same URL, API version and 9 events as the sandbox one) |
+
+Also already there: the older $9.00 monthly price (`price_1UZ7isQ8IFR77LybktHzVC93`, still active: archive it once nothing points at it) and the customer portal (`bpc_1UZ7j4Q8IFR77LybMmkxEJt8`). The set-up in Stripe is therefore complete in both modes; what is left is setting the variables in Openship (live values for production, the sandbox ones only with test keys), `ACCOUNTS_ENABLED` and the rest of this list. The database migration for alerts (`20261110180000_add_job_alerts`) was applied to production on 2026-11-15; the accounts, billing, application-kit and auto-apply migrations were already applied.
