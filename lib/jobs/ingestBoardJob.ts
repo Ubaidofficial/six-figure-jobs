@@ -58,6 +58,10 @@ export interface BoardJobInput {
   /** Visa sponsorship, when the board states it */
   visaSponsorship?: boolean | null
 
+  /** Benefits and requirements the board lists as structured data (readable labels / sentences) */
+  benefits?: string[] | null
+  requirements?: string[] | null
+
   /** Remote / type hints */
   isRemote?: boolean | null
   employmentType?: string | null
@@ -132,6 +136,8 @@ export async function ingestBoardJob(
     sourceRef: job.sourceRef ?? null,
     skills: job.skills ?? null,
     visaSponsorship: job.visaSponsorship ?? null,
+    benefits: job.benefits ?? null,
+    requirements: job.requirements ?? null,
 
     // Location
     locationText: job.locationText ?? null,

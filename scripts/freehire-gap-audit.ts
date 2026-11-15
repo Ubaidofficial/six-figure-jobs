@@ -9,6 +9,7 @@
 import axios from 'axios'
 import { appendFileSync } from 'node:fs'
 
+import { readPayFromDescription } from '../lib/jobs/payEvidence'
 import { getMinimumSalaryRejection } from '../lib/jobs/salaryPublicationGate'
 import { FREEHIRE_MARKETS, freehireHeaders, isListableByReality, mapFreehireJob, type FreehireJob } from '../lib/scrapers/freehire'
 
@@ -103,14 +104,20 @@ async function main() {
   }
 
   const noSalary = classified.filter((c) => c.reason === 'no-salary')
-  const payInText = noSalary.filter((c) => /[$€£]\s?\d{2,3}[,.]?\d{3}\s*(?:-|–|—|to)\s*[$€£]?\s?\d{2,3}[,.]?\d{3}/i.test((c.j.description ?? '').slice(0, 6000)))
+  const read = noSalary
+    .map((c) => ({ c, pay: readPayFromDescription(c.j.description, { countries: c.j.countries, location: c.j.location }) }))
+    .filter((r) => r.pay)
+  const passing = read.filter((r) => !getMinimumSalaryRejection({ salaryMin: r.pay!.min, salaryMax: r.pay!.max, salaryCurrency: r.pay!.currency }))
   out.push(
-    '### No pay in freehire\'s fields',
+    "### No pay in freehire's fields: what reading the description gives (lib/jobs/payEvidence.ts)",
     '',
-    `${noSalary.length} jobs. ${payInText.length} of them show a pay range such as "$150,000 - $180,000" in the description (a rough text match, includes false positives): pay our own reader could take from the posting.`,
+    `${noSalary.length} jobs have no pay in freehire's fields. The description reader found a yearly range in ${read.length} of them, and ${passing.length} of those pass our salary gate. Each line: the range read, then the sentence it came from. Review for wrong readings before this is switched on.`,
     '',
-    ...payInText.slice(0, 6).map((r) => `- ${r.j.title.slice(0, 70)} — ${(r.j.company ?? '').slice(0, 30)}`),
+    ...passing.slice(0, 40).map((r) => `- ${r.pay!.currency} ${r.pay!.min}-${r.pay!.max} | ${r.c.j.title.slice(0, 50)} — ${(r.c.j.company ?? '').slice(0, 25)} | "${r.pay!.quote.replace(/\s+/g, ' ').slice(0, 220)}"`),
     '',
+    ...(read.length > passing.length
+      ? [`Read but below the gate (${read.length - passing.length}):`, ...read.filter((r) => !passing.includes(r)).slice(0, 8).map((r) => `- ${r.pay!.currency} ${r.pay!.min}-${r.pay!.max} | ${r.c.j.title.slice(0, 50)}`), '']
+      : []),
   )
 
   const ok = classified.filter((c) => c.reason === 'ok').map((c) => c.j)
@@ -129,10 +136,24 @@ async function main() {
       const live = ok.filter((j) => have.get(j.external_id || j.public_slug) === false).length
       const expired = ok.filter((j) => have.get(j.external_id || j.public_slug) === true).length
       const absent = ok.filter((j) => !have.has(j.external_id || j.public_slug))
+      // A job posted in the last three hours has simply not been synced yet; one posted earlier may be held under another
+      // source's copy of the same posting (same title and company, live), which is not a gap either.
+      const THREE_HOURS = 3 * 60 * 60 * 1000
+      const tooNew = absent.filter((j) => j.posted_at && Date.now() - new Date(j.posted_at).getTime() < THREE_HOURS)
+      const older = absent.filter((j) => !tooNew.includes(j))
+      const missing: FreehireJob[] = []
+      let heldElsewhere = 0
+      for (const j of older) {
+        const held = await prisma.job.count({
+          where: { isExpired: false, title: j.title, company: { equals: j.company ?? '', mode: 'insensitive' } },
+        })
+        if (held > 0) heldElsewhere++
+        else missing.push(j)
+      }
       out.push(
-        `${ok.length} publishable: ${live} live in our database, ${expired} there but expired, ${absent.length} not stored under freehire's id (they may be held under another source's copy of the same job).`,
+        `${ok.length} publishable by our rules: ${live} live in our database under freehire's id, ${expired} there but expired, ${absent.length} not stored under freehire's id: ${tooNew.length} posted in the last three hours (not synced yet), ${heldElsewhere} held live under another source's copy of the same job, **${missing.length} not in our database at all**.`,
         '',
-        ...absent.slice(0, 15).map((j) => `- ${j.title.slice(0, 70)} — ${(j.company ?? '').slice(0, 30)} (posted ${j.posted_at?.slice(0, 10) ?? '?'})`),
+        ...missing.slice(0, 20).map((j) => `- ${j.title.slice(0, 70)} — ${(j.company ?? '').slice(0, 30)} (posted ${j.posted_at?.slice(0, 16) ?? '?'})`),
       )
     } finally {
       await prisma.$disconnect()
