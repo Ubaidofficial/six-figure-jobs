@@ -14,11 +14,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# One deploy request at a time; a newer merge replaces a waiting one, and a running one is never cancelled.
-concurrency:
-  group: openship-deploy
-  cancel-in-progress: false
-
 permissions:
   contents: read
 
@@ -26,9 +21,17 @@ env:
   SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.6figjobs.com' }}
 
 jobs:
+  # Only the webhook call (a few seconds) is serialized: one request at a time, a newer merge replaces a waiting one,
+  # a running one is never cancelled. The 25-minute health watch is a separate job with no lock, so a merge no longer
+  # waits behind the previous merge's watch (2026-11-15: #149's deploy waited 20+ minutes behind #147's watch).
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 5
+    concurrency:
+      group: openship-deploy
+      cancel-in-progress: false
+    outputs:
+      triggered: ${{ steps.trigger.outputs.triggered }}
     steps:
       - name: Trigger the Openship deploy
         id: trigger
@@ -54,8 +57,13 @@ jobs:
               ;;
           esac
 
+  watch:
+    needs: deploy
+    if: needs.deploy.outputs.triggered == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
       - name: Watch /api/health while Openship builds and switches
-        if: steps.trigger.outputs.triggered == 'true'
         run: |
           # A build took about 10 minutes on 2026-11-14; watch for 25. Three failures in a row fail the job.
           deadline=$((SECONDS + 1500))
