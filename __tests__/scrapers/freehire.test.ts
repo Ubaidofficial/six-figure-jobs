@@ -282,3 +282,45 @@ describe('freehire structured benefits and requirements', () => {
     expect(mapped.requirements).toEqual(['Eight or more years building distributed systems.'])
   })
 })
+
+describe('freehire jobs whose pay is only in the posting text', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { mapFreehireJob, DESCRIPTION_PAY_MARKET } = require('@/lib/scrapers/freehire')
+  const base = (description: string, enrichment: Record<string, unknown> = {}) => ({
+    public_slug: 'a',
+    url: 'https://jobs.example.com/a',
+    title: 'Senior Engineer',
+    company: 'Acme',
+    countries: ['us'],
+    location: 'Remote, US',
+    reality: { class: 'fresh' },
+    description,
+    enrichment,
+  })
+
+  it('takes the range the posting states, with its sentence as the raw salary text', () => {
+    const mapped = mapFreehireJob(base('<p>The base salary range for this role is $150,000 - $180,000 per year.</p>'))
+    expect(mapped).toMatchObject({ salaryMin: 150000, salaryMax: 180000, salaryCurrency: 'USD', salaryInterval: 'year' })
+    expect(mapped.raw.salaryText).toContain('$150,000 - $180,000')
+  })
+  it('still applies the salary gate to a range read from text', () => {
+    expect(mapFreehireJob(base('Salary range: $70,000 - $90,000 per year.'))).toBeNull()
+  })
+  it('never reads on-target earnings or hourly pay as a salary', () => {
+    expect(mapFreehireJob(base('Compensation: $200k-$300k OTE.'))).toBeNull()
+    expect(mapFreehireJob(base('The pay range is $90 - $120 per hour.'))).toBeNull()
+  })
+  it('does not replace pay freehire has but we cannot use with a reading of the text', () => {
+    const monthly = base('Salary range: $150,000 - $180,000 per year.', { salary_min: 12000, salary_max: 15000, salary_currency: 'USD', salary_period: 'month' })
+    expect(mapFreehireJob(monthly)).toBeNull()
+  })
+  it("leaves freehire's own pay alone when it has some", () => {
+    const own = base('Salary range: $300,000 - $400,000 per year.', { salary_min: 150000, salary_max: 180000, salary_currency: 'USD', salary_period: 'year' })
+    const mapped = mapFreehireJob(own)
+    expect(mapped).toMatchObject({ salaryMin: 150000, salaryMax: 180000 })
+    expect(mapped.raw).toBeUndefined()
+  })
+  it('has a no-filter market that is separate from the currency markets', () => {
+    expect(DESCRIPTION_PAY_MARKET.anyPay).toBe(true)
+  })
+})

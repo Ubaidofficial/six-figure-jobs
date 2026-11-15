@@ -8,6 +8,7 @@ import { getSalaryFloorAnnual } from '../currency/thresholds'
 import { ingestBoardJob, type BoardJobInput } from '../jobs/ingestBoardJob'
 import { normalizePublicCompanyWebsite } from '../companies/website'
 import { repairCompanyName } from '../companies/repairCompanyName'
+import { readPayFromDescription } from '../jobs/payEvidence'
 import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 import { freehireStructuredLocationText } from './freehireStructured'
@@ -29,7 +30,14 @@ const PAGE_DELAY_MS = 700
  * One query per currency. `geo` narrows by freehire's region/country facets (unset = anywhere). `lookbackDays` gives a
  * query its own, longer window than FREEHIRE_LOOKBACK_DAYS (the daily run reads 1.5 days).
  */
-export type FreehireMarket = { currency: string; geo: Record<string, string>; label?: string; lookbackDays?: number }
+export type FreehireMarket = {
+  currency: string
+  geo: Record<string, string>
+  label?: string
+  lookbackDays?: number
+  /** Ask without any salary filter, to find jobs whose posting states the pay but freehire's fields do not. */
+  anyPay?: boolean
+}
 
 // Worldwide-remote jobs (freehire's `regions=global`), read over 30 days. The daily 1.5-day window missed most of them
 // for good (a missed run, or a job freehire found days after its posting date): on 2026-11-09 freehire had 57 jobs at
@@ -53,6 +61,14 @@ export const FREEHIRE_MARKETS: ReadonlyArray<FreehireMarket> = [
   { currency: 'CHF', geo: {} },
   ...WORLDWIDE_MARKETS,
 ]
+
+/**
+ * freehire's newest jobs with NO salary filter, so jobs whose pay is only in the posting text are seen too (2026-11-15
+ * audit: 82% of freehire's jobs carry no pay in its fields, and the description states a yearly range for about 1.8% of
+ * them). Only jobs without freehire pay fields are taken from this pass; mapFreehireJob reads the range with
+ * lib/jobs/payEvidence.ts and keeps the sentence. About 5,000 jobs a day, 50 pages.
+ */
+export const DESCRIPTION_PAY_MARKET: FreehireMarket = { currency: 'ANY', geo: {}, label: 'pay in description', anyPay: true }
 
 export type FreehireJob = {
   public_slug: string
@@ -171,11 +187,29 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
   const e = job.enrichment ?? {}
   if (job.closed_at) return null
   if (!isListableByReality(job.reality)) return null
-  if (e.salary_period !== 'year') return null
-  const currency = e.salary_currency?.toUpperCase()
-  if (!currency || !FREEHIRE_MARKETS.some((m) => m.currency === currency)) return null
-  if (typeof e.salary_min !== 'number') return null
-  if (getMinimumSalaryRejection({ salaryMin: e.salary_min, salaryMax: e.salary_max, salaryCurrency: currency })) return null
+  // Pay: freehire's own fields when it has any; only when it has NONE does the posting's own sentence stand in (a range
+  // read by payEvidence, quoted and verified). Pay freehire has but we cannot use (monthly, an unqueried currency) is
+  // never replaced by a reading of the text.
+  let salaryMin: number
+  let salaryMax: number | null
+  let currency: string
+  let payQuote: string | null = null
+  if (typeof e.salary_min === 'number') {
+    if (e.salary_period !== 'year') return null
+    const c = e.salary_currency?.toUpperCase()
+    if (!c || !FREEHIRE_MARKETS.some((m) => m.currency === c)) return null
+    currency = c
+    salaryMin = e.salary_min
+    salaryMax = e.salary_max ?? null
+  } else {
+    const pay = readPayFromDescription(job.description, { countries: job.countries, location: job.location })
+    if (!pay || !FREEHIRE_MARKETS.some((m) => m.currency === pay.currency)) return null
+    currency = pay.currency
+    salaryMin = pay.min
+    salaryMax = pay.max
+    payQuote = pay.quote
+  }
+  if (getMinimumSalaryRejection({ salaryMin, salaryMax, salaryCurrency: currency })) return null
   if (!job.title || !job.url) return null
 
   const url = stripFreehireUtm(job.url)
@@ -199,10 +233,12 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     locationText: freehireStructuredLocationText(job) ?? job.location ?? null,
     isRemote: job.work_mode === 'remote',
     employmentType: e.employment_type ?? null,
-    salaryMin: e.salary_min,
-    salaryMax: e.salary_max ?? null,
+    salaryMin,
+    salaryMax,
     salaryCurrency: currency,
     salaryInterval: 'year',
+    // The sentence the pay was read from, kept as the job's raw salary text.
+    ...(payQuote ? { raw: { salaryText: payQuote, salarySource: 'description' } } : {}),
     postedAt: job.posted_at ? new Date(job.posted_at) : null,
     updatedAt: job.updated_at ? new Date(job.updated_at) : null,
     descriptionHtml: job.description ?? null,
@@ -256,11 +292,15 @@ async function fetchPage(market: FreehireMarket, offset: number): Promise<Freehi
     headers: freehireHeaders(),
     timeout: 30_000,
     params: {
-      salary_currency: market.currency,
-      salary_period: 'year',
-      // The lowest bottom-of-range that can qualify (below the threshold for euro jobs, see TOP_OF_RANGE_CURRENCIES);
-      // mapFreehireJob then applies the full rule, since freehire can only filter on the bottom.
-      salary_min: getSalaryFloorAnnual(market.currency),
+      ...(market.anyPay
+        ? {}
+        : {
+            salary_currency: market.currency,
+            salary_period: 'year',
+            // The lowest bottom-of-range that can qualify (below the threshold for euro jobs, see TOP_OF_RANGE_CURRENCIES);
+            // mapFreehireJob then applies the full rule, since freehire can only filter on the bottom.
+            salary_min: getSalaryFloorAnnual(market.currency),
+          }),
       sort: 'posted_at',
       order: 'desc',
       limit: PAGE_SIZE,
@@ -335,7 +375,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
   let unmappable = 0
   const cutoff = options.since?.getTime() ?? Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
-  for (const market of FREEHIRE_MARKETS) {
+  for (const market of [...FREEHIRE_MARKETS, DESCRIPTION_PAY_MARKET]) {
     // A market with its own window reads at least that far back.
     const marketCutoff = market.lookbackDays
       ? Math.min(cutoff, Date.now() - market.lookbackDays * 24 * 60 * 60 * 1000)
@@ -376,6 +416,8 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
             continue
           }
           report.fetched++
+          // The no-filter pass takes only jobs freehire has no pay for; the currency passes above already carry the rest.
+          if (market.anyPay && typeof job.enrichment?.salary_min === 'number') continue
           if (job.posted_at) {
             report.newest = report.newest && report.newest > job.posted_at ? report.newest : job.posted_at
             report.oldest = report.oldest && report.oldest < job.posted_at ? report.oldest : job.posted_at

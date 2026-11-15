@@ -34,7 +34,14 @@ export type PayContext = {
 }
 
 const PAY_WORDS =
-  /\b(?:salary|salaries|base pay|base salary|base compensation|compensation|pay range|pay scale|pay band|salary range|annual (?:base|salary|pay|compensation)|annualized|target base|starting (?:base|salary|pay)|expected (?:base|salary|pay)|total cash|wage range|pay transparency|ote)\b/i
+  /\b(?:salary|salaries|base pay|base salary|base compensation|compensation|pay range|pay scale|pay band|salary range|annual (?:base|salary|pay|compensation)|annualized|target base|starting (?:base|salary|pay)|expected (?:base|salary|pay)|wage range|pay transparency)\b/i
+
+// A sentence that says the figure is not a base salary: on-target earnings, total pay with commission, "earning
+// potential", "top performers", or pay per visit/shift/project. Found on 34 real readings (2026-11-15): "estimated annual total
+// compensation: $200,000 - $350,000+ (Including Base Salary, Commissions...)", "$200k-$300k OTE", "($100k-$150k+ Yearly
+// Potential for Top Performers)", "$80 per routine visit, or an annual salary option of $100,000-$120,000".
+const NOT_BASE_SALARY =
+  /\b(?:on[- ]target|OTE|total (?:cash|compensation|earnings|comp)|earnings? potential|top performers?|uncapped|commissions? (?:are |is )?included|including[^.]{0,60}commission|per (?:routine |home |patient )?(?:visit|patient|case|shift|project|piece|mile|delivery|call))\b/i
 
 // Money that is not the salary, when it sits just before the amount ("bonus of $10,000", "equity valued at $2M").
 const NOT_SALARY_BEFORE =
@@ -85,7 +92,7 @@ export function readPayFromDescription(html: string | null | undefined, ctx: Pay
 
   const found: Array<{ min: number; max: number; currency: Currency; sentence: string }> = []
   for (const sentence of splitSentences(text)) {
-    if (!PAY_WORDS.test(sentence)) continue
+    if (!PAY_WORDS.test(sentence) || NOT_BASE_SALARY.test(sentence)) continue
     RANGE.lastIndex = 0
     let m: RegExpExecArray | null
     while ((m = RANGE.exec(sentence))) {
