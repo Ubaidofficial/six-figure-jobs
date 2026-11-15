@@ -84,4 +84,12 @@ describe('robots route sitemap declarations', () => {
     expect(response.status).toBe(200)
     expect(body).toBe('User-agent: *\nDisallow: /')
   })
+
+  it('shuts out dataset and resale scrapers entirely, and never Google or Bing', async () => {
+    const body = await (await GET()).text()
+    expect(body).toMatch(/User-agent: CCBot\n(?:User-agent: .*\n)*Disallow: \/\n/)
+    expect(body).toContain('User-agent: Bytespider')
+    expect(body).not.toMatch(/User-agent: Googlebot/i)
+    expect(body).not.toMatch(/User-agent: bingbot/i)
+  })
 })

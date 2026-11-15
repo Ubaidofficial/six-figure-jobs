@@ -15,6 +15,7 @@ import { buildWhere, queryJobs } from '@/lib/jobs/queryJobs'
 import { buildSalaryText } from '@/lib/jobs/salary'
 import { matchRolePages } from '@/lib/roles/relatedRoles'
 import { loadRoleSlugCounts } from '@/lib/roles/roleSlugCounts'
+import { guardUiApi } from '@/lib/security/scrapeGuard'
 
 const MAX_QUERY_LENGTH = 60
 const MIN_QUERY_LENGTH = 2
@@ -33,6 +34,8 @@ export type SuggestResult = {
 }
 
 export async function GET(request: Request) {
+  const blocked = guardUiApi(request)
+  if (blocked) return blocked
   const params = new URL(request.url).searchParams
   const q = (params.get('q') ?? '').trim().slice(0, MAX_QUERY_LENGTH)
   const salary = Number(params.get('minSalary'))

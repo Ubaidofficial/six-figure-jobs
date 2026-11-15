@@ -9,6 +9,7 @@ import { memoAsync, stableKey } from '@/lib/cache/memo'
 import { getCompanyJobsChunk } from '@/lib/companies/companyJobs'
 import { COMPANY_JOBS_PAGE_SIZE, companyJobsTotalPages, parseCompanyJobsPage } from '@/lib/companies/jobsPaging'
 import { toPublicJob } from '@/lib/jobs/publicJob'
+import { guardUiApi } from '@/lib/security/scrapeGuard'
 
 const TTL_MS = 5 * 60 * 1000
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,149}$/
@@ -16,6 +17,8 @@ const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,149}$/
 const toNumber = (value: bigint | number | null | undefined) => (value == null ? null : Number(value))
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const blocked = guardUiApi(request)
+  if (blocked) return blocked
   const { slug } = await params
   const pageParam = new URL(request.url).searchParams.get('page')
   const page = parseCompanyJobsPage(pageParam ?? '1')

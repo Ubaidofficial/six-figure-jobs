@@ -3,7 +3,7 @@ jest.mock('../../lib/jobs/jobAvailabilityCheck', () => ({ checkJobAvailability: 
 import { NextRequest } from 'next/server'
 import { proxy } from '../../proxy'
 
-const run = (path: string) => proxy(new NextRequest(`https://www.6figjobs.com${path}`, { headers: { host: 'www.6figjobs.com' } }))
+const run = (path: string) => proxy(new NextRequest(`https://www.6figjobs.com${path}`, { headers: { host: 'www.6figjobs.com', 'user-agent': 'Mozilla/5.0 (Macintosh) Chrome/130.0 Safari/537.36' } }))
 const redirected = (res: Response) => (res.status >= 300 && res.status < 400 ? res.headers.get('location') : null)
 
 describe('proxy: listing filter parameters reach the page', () => {

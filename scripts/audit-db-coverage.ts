@@ -56,6 +56,51 @@ export const AUDITS: Audit[] = [
     GROUP BY c.id, c.name ORDER BY live DESC LIMIT 20`,
   },
   {
+    title: 'How old are the live jobs? (posting date, else the day we first stored it)',
+    note: 'Age is measured from postedAt, and from createdAt when the employer gave no date. This is what a visitor would call "posted N days ago". The site itself keeps a job for 45 days from when WE last saw it (lastSeenAt), not from when it was posted.',
+    sql: `SELECT count(*) AS live,
+      count(*) FILTER (WHERE "postedAt" IS NULL) AS no_posting_date,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") >= now() - interval '3 days') AS d0_3,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '3 days' AND coalesce("postedAt", "createdAt") >= now() - interval '7 days') AS d3_7,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '7 days' AND coalesce("postedAt", "createdAt") >= now() - interval '14 days') AS d7_14,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '14 days' AND coalesce("postedAt", "createdAt") >= now() - interval '21 days') AS d14_21,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '21 days' AND coalesce("postedAt", "createdAt") >= now() - interval '30 days') AS d21_30,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '30 days' AND coalesce("postedAt", "createdAt") >= now() - interval '45 days') AS d30_45,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '45 days') AS older_than_45
+    FROM "Job" WHERE ${LIVE}`,
+  },
+  {
+    title: 'Freshness by source: how old are its live jobs, and when did we last fetch it?',
+    note: 'posted_14d / posted_21d: live jobs posted within that many days (postedAt, else createdAt). older_21d: the rest. newest_stored is the latest createdAt (a brand-new job), newest_seen the latest lastSeenAt (the scraper touched the source). stored_24h / stored_72h count jobs first stored in the last day / three days.',
+    sql: `SELECT source, count(*) AS live,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") >= now() - interval '14 days') AS posted_14d,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") >= now() - interval '21 days') AS posted_21d,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") < now() - interval '21 days') AS older_21d,
+      count(*) FILTER (WHERE "postedAt" IS NULL) AS no_posting_date,
+      count(*) FILTER (WHERE "createdAt" >= now() - interval '24 hours') AS stored_24h,
+      count(*) FILTER (WHERE "createdAt" >= now() - interval '72 hours') AS stored_72h,
+      max("createdAt") AS newest_stored,
+      max("lastSeenAt") AS newest_seen
+    FROM "Job" WHERE ${LIVE} GROUP BY source ORDER BY live DESC LIMIT 30`,
+  },
+  {
+    title: 'Jobs kept alive by being seen again: live, seen this week, but posted long ago',
+    note: 'The site shows a job while lastSeenAt is under 45 days old, and every scrape that finds the job on the employer page refreshes lastSeenAt. These are the jobs a "posted within N days" rule would hide.',
+    sql: `SELECT count(*) FILTER (WHERE "lastSeenAt" >= now() - interval '7 days' AND "postedAt" < now() - interval '21 days') AS seen_7d_posted_over_21d,
+      count(*) FILTER (WHERE "lastSeenAt" >= now() - interval '7 days' AND "postedAt" < now() - interval '30 days') AS seen_7d_posted_over_30d,
+      count(*) FILTER (WHERE "lastSeenAt" >= now() - interval '7 days' AND "postedAt" < now() - interval '60 days') AS seen_7d_posted_over_60d,
+      count(*) FILTER (WHERE "lastSeenAt" < now() - interval '7 days') AS not_seen_for_7d,
+      count(*) FILTER (WHERE "lastSeenAt" < now() - interval '14 days') AS not_seen_for_14d,
+      count(*) FILTER (WHERE "lastSeenAt" IS NULL) AS never_seen
+    FROM "Job" WHERE ${LIVE}`,
+  },
+  {
+    title: 'Jobs first stored per day (the last 14 days)',
+    note: 'Shows how often new jobs actually arrive: a steady hourly feed, or spikes on the days the main scrape runs.',
+    sql: `SELECT ("createdAt" AT TIME ZONE 'UTC')::date AS day, count(*) AS stored, count(*) FILTER (WHERE ${LIVE}) AS still_live
+    FROM "Job" WHERE "createdAt" >= now() - interval '14 days' GROUP BY 1 ORDER BY 1 DESC`,
+  },
+  {
     title: 'HTML entities left in names and titles ("&#038;", "&amp;")',
     note: 'Rows whose stored text still contains an HTML entity, shown literally to visitors. Companies and live jobs.',
     sql: `SELECT 'Company.name' AS field, count(*) AS rows_with_entity FROM "Company" WHERE name ~ ${ENTITY}

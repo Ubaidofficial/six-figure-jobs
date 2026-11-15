@@ -9,6 +9,11 @@ name: enrichment backfill
 # "apply" is ticked and each writing only empty fields, guarded by "still empty":
 #   websites        company websites from the live jobs' apply links (scripts/backfill-company-websites.ts; "limit" = companies)
 #   fix-company-names  company names that still carry an HTML entity (scripts/fix-entity-company-names.ts; only companies with live jobs)
+#   boards          fetch the pay-stating job boards the hourly sync does not cover (jobicy, workingnomads, spainjobs, uiuxjobsboard,
+#                   remoteok, remotive...) with scripts/dailyScrapeV2.ts --mode=boards; "sources" is a comma list of board keys
+#                   (lib/scrapers/boardRegistry.ts). A dry run fetches and maps and writes nothing; "limit" does not apply.
+#   freehire-gap    READ-ONLY report of what freehire carries that we do not publish, and why (scripts/freehire-gap-audit.ts;
+#                   "limit" / 100 = pages of freehire's newest jobs to read, default 20)
 #   remote-country  the country of remote jobs whose location text names exactly one (scripts/backfill-remote-country.ts; "limit" = jobs;
 #                   only jobs whose JobPosting JSON-LD stays identical are written)
 
@@ -16,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "tech-stack, websites, remote-country or fix-company-names"
+        description: "tech-stack, websites, remote-country, fix-company-names, boards or freehire-gap"
         type: choice
         required: false
         default: tech-stack
@@ -25,6 +30,13 @@ on:
           - websites
           - remote-country
           - fix-company-names
+          - boards
+          - freehire-gap
+      sources:
+        description: "For task boards: comma list of board keys"
+        type: string
+        required: false
+        default: "jobicy,workingnomads,spainjobs,uiuxjobsboard,remoteok,remotive"
       limit:
         description: "Jobs (tech-stack, remote-country) or companies (websites) to look at this run (newest / busiest first)"
         type: string
@@ -74,6 +86,9 @@ jobs:
           BACKFILL_TECHSTACK_LIMIT: ${{ inputs.limit }}
           LIMIT: ${{ inputs.limit }}
           APPLY: ${{ inputs.apply }}
+          SOURCES: ${{ inputs.sources }}
+          BOARD_SCRAPE_TIMEOUT_MS: "300000"
+          FREEHIRE_API_KEY: ${{ secrets.FREEHIRE_API_KEY }}
         run: |
           args=(--limit="$LIMIT")
           [ "$APPLY" = "true" ] && args+=(--apply)
@@ -81,6 +96,8 @@ jobs:
             websites) npx tsx scripts/backfill-company-websites.ts "${args[@]}" ;;
             remote-country) npx tsx scripts/backfill-remote-country.ts "${args[@]}" ;;
             fix-company-names) npx tsx scripts/fix-entity-company-names.ts $([ "$APPLY" = "true" ] && echo --apply) ;;
+            freehire-gap) npx tsx scripts/freehire-gap-audit.ts --pages=$(( LIMIT / 100 > 0 ? LIMIT / 100 : 1 )) ;;
+            boards) npx tsx scripts/dailyScrapeV2.ts --mode=boards --source="$SOURCES" $([ "$APPLY" = "true" ] || echo --dry-run) ;;
             *)
               if [ "$APPLY" = "true" ]; then
                 npx tsx scripts/backfill-tech-stack.ts

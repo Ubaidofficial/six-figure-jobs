@@ -144,6 +144,20 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         run: npm run sync:worldwide-boards
+      # Job boards that state pay and that freehire does not carry (owner's request 2026-11-15; before this nothing ran them:
+      # their old runner, daily-scrape.yml, was disabled by GitHub on 2026-10-08). The dry run of 2026-11-15 would have
+      # added 173 Jobicy, 37 SpainJobs and 16 UIUXJobsBoard jobs; Working Nomads and Remotive state pay on few jobs
+      # and cost seconds. RemoteOK is left out: 81 of its 97 jobs showed no pay and none would have been added. The
+      # scraper applies the same $100k salary gate as every source and takes no Google credentials here (the queue
+      # drain below is the only step that gets them). Runs on every sync, light ones too, so these boards are read each time freehire
+      # is, about five minutes of the run. Independent of the steps above; a failure here stops nothing.
+      - name: Sync pay-stating job boards
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          BOARD_SCRAPE_TIMEOUT_MS: "300000"
+        run: npx tsx scripts/dailyScrapeV2.ts --mode=boards --source=jobicy,spainjobs,uiuxjobsboard,workingnomads,remotive
       # Runs whenever a sync succeeded, even if the closed-job check above failed or timed out.
       - name: Expire jobs not refreshed in 7 days
         if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
