@@ -203,6 +203,44 @@ export function Footer() {
                 loading="lazy"
               />
             </a>
+            <a className={styles.badge} href="https://www.aitoolsaver.com" target="_blank" rel="noopener">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://www.aitoolsaver.com/images/badges/featured-on-aitoolsaver-badge-brand-wide.svg"
+                width={320}
+                height={80}
+                alt="Featured on AiToolSaver"
+                loading="lazy"
+              />
+            </a>
+            <a className={styles.badge} href="https://marketingdb.live" target="_blank" rel="noopener noreferrer nofollow sponsored">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://marketingdb.live/badge.svg"
+                width={190}
+                height={44}
+                alt="Launched on MarketingDB"
+                loading="lazy"
+              />
+            </a>
+            <a
+              className={styles.badge}
+              href="https://www.pavelaunch.com/p/efd3cf08-9167-47a1-9c77-4519759a39fe"
+              target="_blank"
+              rel="noopener"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served from its host */}
+              <img
+                className={styles.badgeImg}
+                src="https://www.pavelaunch.com/api/embed?type=launching-soon&theme=light"
+                width={250}
+                height={54}
+                alt="On PaveLaunch"
+                loading="lazy"
+              />
+            </a>
           </div>
           <div className={styles.made}>Made with 💚 for high earners</div>
         </div>
