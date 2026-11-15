@@ -18,6 +18,7 @@ import {
   PAY_REPORT_PATH,
   REPORT_AUTHOR,
   REPORT_CONTACT,
+  REPORT_LICENSE,
   csvPath,
   diffPct,
   editionPath,
@@ -26,27 +27,31 @@ import {
   payReportDescription,
   payReportFaq,
   payReportFindings,
+  payReportQuotes,
   payReportTrend,
   previousEdition,
   seniorityListings,
+  signedPct,
   usd,
   type PayReportData,
   type PayRow,
 } from '@/lib/research/payReport'
 import { PAY_REPORT_CHART_NAMES, chartEmbedHtml, chartPath, payReportChart } from '@/lib/research/payReportCharts'
+import { BAY_AREA_CITIES, METHOD_PATH, METHOD_VERSION } from '@/lib/research/method'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
 
 import styles from './PayReport.module.css'
 
 const n = (v: number) => v.toLocaleString('en-US')
 const longDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-const signed = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`
+const signed = signedPct
 
-type Column = { head: string; hideSm?: boolean }
+/** `text`: a column of sentences (left-aligned, wrapping) instead of figures. */
+type Column = { head: string; hideSm?: boolean; text?: boolean }
 type TableRow = { key: string; label: ReactNode; cells: ReactNode[]; barPct?: number }
 
 /** A table whose last column carries a bar (zero-based, relative to the largest figure), so a table is also a chart. */
-function DataTable({ caption, first, columns, rows }: { caption: string; first: string; columns: Column[]; rows: TableRow[] }) {
+export function DataTable({ caption, first, columns, rows }: { caption: string; first: string; columns: Column[]; rows: TableRow[] }) {
   const last = columns.length - 1
   return (
     <div className={styles.tableWrap}>
@@ -56,7 +61,7 @@ function DataTable({ caption, first, columns, rows }: { caption: string; first: 
           <tr>
             <th scope="col">{first}</th>
             {columns.map((c, i) => (
-              <th key={c.head} scope="col" className={`${styles.num} ${c.hideSm ? styles.hideSm : ''} ${i === last ? styles.valueCol : ''}`}>
+              <th key={c.head} scope="col" className={`${c.text ? styles.textCol : styles.num} ${c.hideSm ? styles.hideSm : ''} ${i === last && !c.text ? styles.valueCol : ''}`}>
                 {c.head}
               </th>
             ))}
@@ -67,7 +72,7 @@ function DataTable({ caption, first, columns, rows }: { caption: string; first: 
             <tr key={row.key}>
               <th scope="row">{row.label}</th>
               {row.cells.map((cell, i) => (
-                <td key={columns[i].head} className={`${styles.num} ${columns[i].hideSm ? styles.hideSm : ''}`}>
+                <td key={columns[i].head} className={`${columns[i].text ? styles.textCol : styles.num} ${columns[i].hideSm ? styles.hideSm : ''}`}>
                   {i === last && row.barPct !== undefined ? (
                     <span className={styles.valueCell}>
                       <span className={styles.bar} style={{ ['--r' as string]: row.barPct / 100 }} aria-hidden="true" />
@@ -86,25 +91,32 @@ function DataTable({ caption, first, columns, rows }: { caption: string; first: 
   )
 }
 
-/** Rows for a list of PayRow: listings, (employers,) median with a bar. */
+/** Rows for a list of PayRow: listings, (employers,) (middle half,) median with a bar. */
 function payRows(list: PayRow[], withEmployers: boolean): { columns: Column[]; rows: TableRow[] } {
   const max = Math.max(...list.map((x) => x.median), 1)
+  const spread = list.every((x) => x.p25 !== undefined && x.p75 !== undefined)
   return {
     columns: [
       { head: 'Listings' },
       ...(withEmployers ? [{ head: 'Employers', hideSm: true }] : []),
+      ...(spread ? [{ head: 'Middle half of listings', hideSm: true }] : []),
       { head: 'Median advertised midpoint' },
     ],
     rows: list.map((x) => ({
       key: x.label,
       label: x.label,
-      cells: [n(x.listings), ...(withEmployers ? [n(x.employers ?? 0)] : []), usd(x.median)],
+      cells: [
+        n(x.listings),
+        ...(withEmployers ? [n(x.employers ?? 0)] : []),
+        ...(spread ? [`${usd(x.p25!)} to ${usd(x.p75!)}`] : []),
+        usd(x.median),
+      ],
       barPct: Math.round((100 * x.median) / max),
     })),
   }
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+export function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section id={id} className={styles.section} aria-labelledby={`${id}-h`}>
       <h2 id={`${id}-h`} className={styles.h2}>
@@ -135,8 +147,14 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
   const seniorityTotal = seniorityListings(r)
   const above200 = Math.round((r.bands[2].pct + r.bands[3].pct) * 10) / 10
 
+  const funnel = r.funnel
+  const sens = r.sensitivity
+  const sensAll = sens?.find((x) => x.key === 'all')
+  const spot = r.spotCheck
+  const quotes = payReportQuotes(r)
   const sections = [
     { id: 'findings', title: 'Key findings' },
+    ...(funnel && funnel.length > 1 ? [{ id: 'funnel', title: 'What we counted' }] : []),
     ...(trend.length > 0 ? [{ id: 'trend', title: 'Since the last edition' }] : []),
     { id: 'bands', title: 'Salary bands' },
     { id: 'seniority', title: 'Seniority' },
@@ -146,7 +164,10 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
     { id: 'cities', title: 'Cities' },
     ...(r.skills && r.skills.length > 0 ? [{ id: 'skills', title: 'Skills' }] : []),
     { id: 'employers', title: 'Who is hiring' },
+    ...(sens && sensAll && sens.length > 1 ? [{ id: 'sensitivity', title: 'Is the number robust?' }] : []),
     { id: 'highest', title: 'Highest ranges' },
+    ...(spot ? [{ id: 'audit', title: 'Spot-check' }] : []),
+    ...(r.external && r.external.length > 0 ? [{ id: 'context', title: 'Official wage data' }] : []),
     { id: 'method', title: 'Method and limits' },
     { id: 'cite', title: 'Cite, download, embed' },
     { id: 'about', title: 'About and corrections' },
@@ -166,7 +187,13 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
       inLanguage: 'en',
       image: `${SITE_URL}/og-image.png`,
       author: author
-        ? { '@type': 'Person', name: author.name, ...(author.url ? { url: author.url } : {}) }
+        ? {
+            '@type': 'Person',
+            name: author.name,
+            ...(author.role ? { jobTitle: author.role } : {}),
+            ...(author.url ? { url: author.url } : {}),
+            ...(author.sameAs?.length ? { sameAs: author.sameAs } : {}),
+          }
         : { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
       publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL, logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo.png` } },
     },
@@ -182,8 +209,17 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
       isAccessibleForFree: true,
       creator: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
       publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
-      measurementTechnique: 'Median of the midpoint of the advertised minimum and maximum salary in each job listing',
+      measurementTechnique: `Median of the midpoint of the advertised minimum and maximum salary in each job listing (method version ${METHOD_VERSION}: ${SITE_URL}${METHOD_PATH})`,
+      spatialCoverage: `Mostly the United States (${r.countries.usSharePct}% of the USD-priced listings), plus Canada and other countries with USD-priced listings`,
+      variableMeasured: [
+        { '@type': 'PropertyValue', name: 'Median advertised midpoint salary', unitText: 'USD per year' },
+        { '@type': 'PropertyValue', name: 'Number of listings' },
+        { '@type': 'PropertyValue', name: 'Number of employers' },
+      ],
       distribution: [{ '@type': 'DataDownload', encodingFormat: 'text/csv', contentUrl: `${SITE_URL}${csv}` }],
+      ...(r.collectedISO ? { temporalCoverage: r.collectedISO } : {}),
+      ...(REPORT_LICENSE ? { license: REPORT_LICENSE.url } : {}),
+      ...(r.doi ? { identifier: `https://doi.org/${r.doi}`, sameAs: `https://doi.org/${r.doi}` } : {}),
     },
     {
       '@context': 'https://schema.org',
@@ -237,8 +273,8 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
         <a className={`${styles.btn} ${styles.btnQuiet}`} href="#cite">
           Cite or embed
         </a>
-        <Link className={`${styles.btn} ${styles.btnQuiet}`} href="/method">
-          How our data works
+        <Link className={`${styles.btn} ${styles.btnQuiet}`} href={METHOD_PATH}>
+          Method and data dictionary
         </Link>
       </div>
 
@@ -292,6 +328,26 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
               ))}
             </ul>
           </Section>
+
+          {funnel && funnel.length > 1 ? (
+            <Section id="funnel" title="What we counted, and what we left out">
+              <p className={styles.lead}>
+                Every job we stored in the window, and how many are left after each rule. A reader can see what was dropped and why; the rules are on the{' '}
+                <Link href={METHOD_PATH}>method page</Link>.
+              </p>
+              <DataTable
+                caption="Listings left after each rule"
+                first="Step"
+                columns={[{ head: 'Listings' }, { head: 'Share of all stored' }]}
+                rows={funnel.map((step) => ({
+                  key: step.label,
+                  label: step.label,
+                  cells: [n(step.listings), `${((100 * step.listings) / funnel[0].listings).toFixed(1)}%`],
+                  barPct: Math.round((100 * step.listings) / funnel[0].listings),
+                }))}
+              />
+            </Section>
+          ) : null}
 
           {trend.length > 0 ? (
             <Section id="trend" title="Since the last edition">
@@ -465,9 +521,126 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
             </p>
           </Section>
 
+          {sens && sensAll && sens.length > 1 ? (
+            <Section id="sensitivity" title="Is the number robust?">
+              <p className={styles.lead}>
+                The headline median, recomputed with one group taken out. If it barely moves, no single employer or region is driving it.
+              </p>
+              <DataTable
+                caption="The headline median with one group left out"
+                first="Version"
+                columns={[
+                  { head: 'Listings' },
+                  { head: 'Employers', hideSm: true },
+                  { head: 'Against the headline', hideSm: true },
+                  { head: 'Median advertised midpoint' },
+                ]}
+                rows={sens.map((x) => ({
+                  key: x.key,
+                  label: x.label,
+                  cells: [
+                    n(x.listings),
+                    n(x.employers),
+                    x.key === 'all' ? 'baseline' : signed(diffPct(x.median, sensAll.median)),
+                    usd(x.median),
+                  ],
+                  barPct: Math.round((100 * x.median) / Math.max(...sens.map((y) => y.median))),
+                }))}
+              />
+              <p className={styles.after}>
+                The Bay Area is the {n(BAY_AREA_CITIES.length)} cities named on the <Link href={METHOD_PATH}>method page</Link>; a listing with no city is kept.
+                &ldquo;One listing per employer and job title&rdquo; counts the same role posted for several places once, so it is a floor for duplicates.
+              </p>
+            </Section>
+          ) : null}
+
           <Section id="highest" title="The highest advertised ranges">
-            <p className={styles.lead}>{r.highestRanges}</p>
+            {r.highestListings && r.highestListings.length > 0 ? (
+              <>
+                <p className={styles.lead}>
+                  The ranges as the postings showed them when we read them. Postings close, so a link would soon lead nowhere: the pay text is quoted exactly, with
+                  its source and the day it was read.
+                </p>
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <caption className="sr-only">The highest advertised ranges, quoted from the postings</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Employer and role</th>
+                        <th scope="col" className={styles.hideSm}>Pay text in the posting</th>
+                        <th scope="col" className={styles.num}>Midpoint</th>
+                        <th scope="col" className={`${styles.num} ${styles.hideSm}`}>Read on</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {r.highestListings.map((x) => (
+                        <tr key={`${x.company}|${x.title}|${x.advertised}`}>
+                          <th scope="row">
+                            {x.company}
+                            <br />
+                            <small>{x.title}{x.source ? ` · ${x.source}` : ''}</small>
+                          </th>
+                          <td className={styles.hideSm}>&ldquo;{x.advertised}&rdquo;</td>
+                          <td className={styles.num}>{usd(x.midpoint)}</td>
+                          <td className={`${styles.num} ${styles.hideSm}`}>{longDate(x.captured)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <p className={styles.lead}>{r.highestRanges}</p>
+            )}
           </Section>
+
+          {spot ? (
+            <Section id="audit" title="Spot-check against the postings">
+              <p className={styles.lead}>
+                On {longDate(spot.checkedOn)} we opened {n(spot.sampled)} randomly chosen listings from the data and compared each posting&rsquo;s pay with what the
+                report stores. <strong>{n(spot.matched)} of {n(spot.sampled)} ({Math.round((100 * spot.matched) / spot.sampled)}%)</strong> stated the same range.
+                {spot.notes ? ` ${spot.notes}` : ''}
+              </p>
+            </Section>
+          ) : null}
+
+          {r.external && r.external.length > 0 ? (
+            <Section id="context" title="Compared with official wage data">
+              <p className={styles.lead}>
+                For context only. Official figures describe what people were paid, in a different year and with different job definitions; ours describe
+                advertised ranges for six-figure listings. The two should not be expected to match.
+              </p>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <caption className="sr-only">Our medians next to an official source</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Role</th>
+                      <th scope="col" className={styles.num}>Ours (advertised)</th>
+                      <th scope="col" className={styles.num}>Official</th>
+                      <th scope="col" className={`${styles.num} ${styles.hideSm}`}>Source</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {r.external.map((x) => (
+                      <tr key={x.label}>
+                        <th scope="row">
+                          {x.label}
+                          <br />
+                          <small>{x.note}</small>
+                        </th>
+                        <td className={styles.num}>{usd(x.ours)}</td>
+                        <td className={styles.num}>{usd(x.theirs)}</td>
+                        <td className={`${styles.num} ${styles.hideSm}`}>
+                          <a href={x.sourceUrl} rel="noopener">{x.source}</a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+          ) : null}
 
           <Section id="method" title="Method and limits">
             <ul className={styles.limits}>
@@ -503,12 +676,23 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
               <li>
                 <strong>Sample sizes:</strong> we show a role or city only when it has enough listings from enough employers, and we say how many.
               </li>
+              <li>
+                <strong>Method version {METHOD_VERSION}:</strong> the exact rules, the list of job boards left out of employer tables, a data dictionary for every
+                column of the CSV, and the history of method changes are on the <Link href={METHOD_PATH}>method page</Link>.
+              </li>
             </ul>
           </Section>
 
           <Section id="cite" title="Cite, download and embed">
             <p className={styles.lead}>
-              Free to quote with a link back. Each edition keeps its own address, so a citation of the {r.month} edition always shows the figures it quoted.
+              {REPORT_LICENSE ? (
+                <>
+                  Licensed under <a href={REPORT_LICENSE.url} rel="noopener">{REPORT_LICENSE.name}</a>.{' '}
+                </>
+              ) : (
+                'Free to quote with a link back. '
+              )}
+              Each edition keeps its own address, so a citation of the {r.month} edition always shows the figures it quoted.
             </p>
             <div className={styles.actions} style={{ marginTop: 0 }}>
               <a className={styles.btn} href={csv} download>
@@ -517,6 +701,13 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
             </div>
             <CopyField label="Citation" value={payReportCitation(r)} rows={5} />
             <CopyField label="Link (HTML)" value={`<a href="${SITE_URL}${PAY_REPORT_PATH}">${PAY_REPORT_HEADING}, ${r.month}, ${SITE_NAME}</a>`} rows={3} />
+            <h3 className={styles.h3}>For journalists</h3>
+            <p className={styles.lead}>
+              Sentences you can quote as they are, each with its attribution, written from this edition&rsquo;s tables. The three charts below can be used with the
+              link back they carry. Questions or an interview:{' '}
+              <a href={`mailto:${REPORT_CONTACT}?subject=${encodeURIComponent(`Press: ${PAY_REPORT_HEADING}, ${r.month}`)}`}>{REPORT_CONTACT}</a>.
+            </p>
+            <CopyField label="Quotable sentences" value={quotes.join('\n')} rows={9} />
             <div className={styles.embedGrid}>
               {PAY_REPORT_CHART_NAMES.map((name) => {
                 const chart = payReportChart(r, name)
@@ -537,6 +728,26 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
               <li>
                 <strong>Published by:</strong> {author ? `${author.name}${author.role ? `, ${author.role}` : ''}, ` : ''}
                 {SITE_NAME}. First published {longDate(PAY_REPORT_EDITIONS[PAY_REPORT_EDITIONS.length - 1].publishedAt)}; this edition {longDate(r.publishedAt)}.
+              </li>
+              {author?.bio ? (
+                <li>
+                  <strong>About the author:</strong> {author.bio}
+                </li>
+              ) : null}
+              {r.reviewedBy ? (
+                <li>
+                  <strong>Method reviewed by:</strong>{' '}
+                  {r.reviewedBy.url ? <a href={r.reviewedBy.url} rel="noopener">{r.reviewedBy.name}</a> : r.reviewedBy.name}
+                  {r.reviewedBy.role ? `, ${r.reviewedBy.role}` : ''}.
+                </li>
+              ) : null}
+              <li>
+                <strong>Method version:</strong> {METHOD_VERSION}. <Link href={METHOD_PATH}>Method and data dictionary</Link>.
+                {r.doi ? (
+                  <>
+                    {' '}Dataset DOI: <a href={`https://doi.org/${r.doi}`} rel="noopener">{r.doi}</a>.
+                  </>
+                ) : null}
               </li>
               <li>
                 <strong>Corrections and questions:</strong> <a href={`mailto:${REPORT_CONTACT}?subject=${encodeURIComponent(`${PAY_REPORT_HEADING}, ${r.month}`)}`}>{REPORT_CONTACT}</a>.

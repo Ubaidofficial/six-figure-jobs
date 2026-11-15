@@ -15,6 +15,7 @@ import { loadDegreeRequiredJobIds } from '../jobs/degreeRequirement'
 import { FOUR_DAY_WEEK_MIN_JOBS_TO_INDEX, FOUR_DAY_WEEK_PATH, loadFourDayWeekListings } from '../jobs/fourDayWeek'
 import { HIGH_PAYING_MIN_ROLES_TO_INDEX, loadHighPayingJobs } from '../jobs/highPayingJobs'
 import { buildGlobalExclusionsWhere, buildHighSalaryEligibilityWhere, buildWhere } from '../jobs/queryJobs'
+import { METHOD_CHANGELOG, METHOD_PATH } from '../research/method'
 import { PAY_REPORT, PAY_REPORT_EDITIONS, editionPath } from '../research/payReport'
 import { getTier1Slugs, isTier1Role } from '../roles/canonicalSlugs'
 import { isCityPageIndexable, isRemoteRolePageIndexable } from './indexabilityGates'
@@ -247,6 +248,8 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
   const entries: SitemapEntry[] = PILLAR_PATHS.map((path) => ({ path, lastmod: latestJob }))
   // Static research page: its lastmod is the report's own update date, so it moves only when a new edition is published.
   entries.push({ path: PAY_REPORT.path, lastmod: new Date(PAY_REPORT.updatedAt) })
+  // The report's versioned method page: moves only when a method change is added to METHOD_CHANGELOG.
+  entries.push({ path: METHOD_PATH, lastmod: new Date(METHOD_CHANGELOG[0].date) })
   // Older editions each have their own address and canonicalise to it. The latest edition's dated address does not belong here: it
   // canonicalises to the permanent page above, so listing it would submit one set of figures under two URLs.
   for (const e of PAY_REPORT_EDITIONS.slice(1)) entries.push({ path: editionPath(e), lastmod: new Date(e.updatedAt) })

@@ -21,13 +21,12 @@
 //   RESEARCH_BASIS=posted_or_created npm run research:30d
 import { appendFileSync } from 'node:fs'
 
+import { AGGREGATOR_PATTERNS, BAY_AREA_CITIES, MIN_CONFIDENCE, MIN_SAME_ROLE_EMPLOYERS, MIN_SKILL_EMPLOYERS, USD_CAP } from '../lib/research/method'
 import { toMarkdown, type Audit } from './audit-db-coverage'
 
 export type Basis = 'created' | 'posted' | 'posted_or_created'
 export type Research = Audit & { /** true when the query reports pay and so must carry the pay gate */ pay?: boolean }
 
-const MIN_CONFIDENCE = 80
-const USD_CAP = 600_000
 
 const THIRTY = `interval '30 days'`
 const REMOTE = `("remote" = true OR "remoteMode" = 'remote')`
@@ -35,7 +34,7 @@ const ANNUAL = `(CASE WHEN "minAnnual" IS NOT NULL AND "maxAnnual" IS NOT NULL T
 const MIN_PAY = `COALESCE("minAnnual", "maxAnnual")`
 const PAY_OK = `"salaryValidated" AND "salaryConfidence" >= ${MIN_CONFIDENCE} AND "currency" = 'USD' AND COALESCE("maxAnnual", "minAnnual") IS NOT NULL AND COALESCE("maxAnnual", "minAnnual") < ${USD_CAP}`
 // Job boards and aggregators list other employers' jobs under their own name; they are not employers.
-const NOT_AGGREGATOR = `"company" NOT ILIKE ALL (ARRAY['jobgether%','jooble%','adzuna%','talent.com%','lensa%','jobrapido%','careerjet%','ziprecruiter%','simplyhired%','whatjobs%','neuvoo%','remote rocketship%','remoterocketship%'])`
+const NOT_AGGREGATOR = `"company" NOT ILIKE ALL (ARRAY[${AGGREGATOR_PATTERNS.map((x) => `'${x}'`).join(',')}])`
 
 const ARRANGEMENT = `coalesce("remoteMode", CASE WHEN "remote" THEN 'remote' END, "workArrangement")`
 // Skills compared on the pay report. A listing's skills are a JSON array of strings, so each is matched as a quoted token (the
@@ -75,6 +74,7 @@ function payBy(o: PayBy): Research {
     note: o.note,
     pay: true,
     sql: `SELECT ${o.column} AS "group", count(*) AS jobs, count(DISTINCT company) AS companies,
+      round(percentile_cont(0.25) WITHIN GROUP (ORDER BY ${ANNUAL}::float8))::bigint AS p25_usd,
       round(percentile_cont(0.5) WITHIN GROUP (ORDER BY ${ANNUAL}::float8))::bigint AS median_usd,
       round(percentile_cont(0.75) WITHIN GROUP (ORDER BY ${ANNUAL}::float8))::bigint AS p75_usd,
       max(${ANNUAL})::bigint AS top_usd
@@ -137,6 +137,18 @@ export function buildResearch(basis: Basis = 'created'): Research[] {
       count(*) FILTER (WHERE COALESCE("maxAnnual", "minAnnual") >= 100000) AS at_or_over_100k,
       count(*) FILTER (WHERE COALESCE("maxAnnual", "minAnnual") = ${USD_CAP}) AS exactly_at_cap
     FROM "Job" WHERE ${W} AND "currency" = 'USD' AND COALESCE("maxAnnual", "minAnnual") IS NOT NULL`,
+    },
+    {
+      title: 'Evidence: what was counted and what was left out',
+      note: 'The funnel behind the report: every job stored in the window, then those with any annual pay figure, in US dollars, validated with confidence of at least the gate, and below the cap (= the base of the tables). The report shows these steps so a reader can see what was dropped and why. It counts jobs, not pay figures, so it carries no pay gate.',
+      sql: `SELECT count(*) AS in_window,
+      count(*) FILTER (WHERE COALESCE("maxAnnual", "minAnnual") IS NOT NULL) AS with_annual_pay,
+      count(*) FILTER (WHERE COALESCE("maxAnnual", "minAnnual") IS NOT NULL AND "currency" = 'USD') AS usd,
+      count(*) FILTER (WHERE COALESCE("maxAnnual", "minAnnual") IS NOT NULL AND "currency" = 'USD' AND "salaryValidated" AND "salaryConfidence" >= ${MIN_CONFIDENCE}) AS usd_validated,
+      count(*) FILTER (WHERE ${PAY_OK}) AS in_the_report,
+      count(*) FILTER (WHERE COALESCE("maxAnnual", "minAnnual") IS NOT NULL AND "currency" = 'USD' AND COALESCE("maxAnnual", "minAnnual") >= ${USD_CAP}) AS at_or_over_cap,
+      count(*) FILTER (WHERE COALESCE("maxAnnual", "minAnnual") IS NOT NULL AND "currency" <> 'USD') AS other_currency
+    FROM "Job" WHERE ${W}`,
     },
     // ---- Pay statistics (window = chosen basis) ----
     {
@@ -234,10 +246,10 @@ export function buildResearch(basis: Basis = 'created'): Research[] {
       round((100.0 * (r.median - o.median) / o.median)::numeric, 1) AS remote_vs_onsite_pct
     FROM (SELECT "roleSlug", count(*) AS jobs, count(DISTINCT company) AS companies, percentile_cont(0.5) WITHIN GROUP (ORDER BY ${ANNUAL}::float8) AS median
         FROM "Job" WHERE ${W} AND ${PAY_OK} AND "roleSlug" IS NOT NULL AND ${ARRANGEMENT} = 'remote'
-        GROUP BY 1 HAVING count(*) >= 20 AND count(DISTINCT company) >= 5) r
+        GROUP BY 1 HAVING count(*) >= 20 AND count(DISTINCT company) >= ${MIN_SAME_ROLE_EMPLOYERS}) r
     JOIN (SELECT "roleSlug", count(*) AS jobs, count(DISTINCT company) AS companies, percentile_cont(0.5) WITHIN GROUP (ORDER BY ${ANNUAL}::float8) AS median
         FROM "Job" WHERE ${W} AND ${PAY_OK} AND "roleSlug" IS NOT NULL AND ${ARRANGEMENT} = 'onsite'
-        GROUP BY 1 HAVING count(*) >= 20 AND count(DISTINCT company) >= 5) o ON o."roleSlug" = r."roleSlug"
+        GROUP BY 1 HAVING count(*) >= 20 AND count(DISTINCT company) >= ${MIN_SAME_ROLE_EMPLOYERS}) o ON o."roleSlug" = r."roleSlug"
     ORDER BY (r.jobs + o.jobs) DESC LIMIT 20`,
     },
     {
@@ -248,8 +260,30 @@ export function buildResearch(basis: Basis = 'created'): Research[] {
       round(percentile_cont(0.5) WITHIN GROUP (ORDER BY j.annual::float8))::bigint AS median_usd
     FROM (SELECT company, ${ANNUAL} AS annual, "skillsJson" FROM "Job" WHERE ${W} AND ${PAY_OK} AND "skillsJson" IS NOT NULL) j
     JOIN (VALUES ${REPORT_SKILLS.map((k) => `('${k}')`).join(', ')}) AS s(skill) ON j."skillsJson" ILIKE '%"' || s.skill || '"%'
-    GROUP BY 1 HAVING count(*) >= 50 AND count(DISTINCT j.company) >= 10
+    GROUP BY 1 HAVING count(*) >= 50 AND count(DISTINCT j.company) >= ${MIN_SKILL_EMPLOYERS}
     ORDER BY median_usd DESC LIMIT 20`,
+    },
+    {
+      title: 'Pay: do a few big employers or one region set the headline?',
+      note: 'The headline median (validated USD jobs) five ways: everything; named employers only (aggregators out); without the five largest employers; without the Bay Area cities named in lib/research/method.ts (jobs with no city are kept); one job per employer and title (the same role posted for several places counts once, a floor for duplicates). If the medians barely move, no one group is driving the number.',
+      pay: true,
+      sql: [
+        `SELECT '1) all validated USD jobs' AS variant, count(*) AS jobs, count(DISTINCT company) AS companies, ${medianOf(ANNUAL, 'true')} AS median_usd FROM "Job" WHERE ${W} AND ${PAY_OK}`,
+        `SELECT '2) named employers only (aggregators out)', count(*), count(DISTINCT company), ${medianOf(ANNUAL, 'true')} FROM "Job" WHERE ${W} AND ${PAY_OK} AND ${NOT_AGGREGATOR}`,
+        `SELECT '3) without the 5 largest employers', count(*), count(DISTINCT company), ${medianOf(ANNUAL, 'true')} FROM "Job" WHERE ${W} AND ${PAY_OK} AND ${NOT_AGGREGATOR}
+          AND company NOT IN (SELECT company FROM "Job" WHERE ${W} AND ${PAY_OK} AND ${NOT_AGGREGATOR} GROUP BY company ORDER BY count(*) DESC, company LIMIT 5)`,
+        `SELECT '4) without the Bay Area cities', count(*), count(DISTINCT company), ${medianOf(ANNUAL, 'true')} FROM "Job" WHERE ${W} AND ${PAY_OK}
+          AND ("city" IS NULL OR "city" NOT IN (${BAY_AREA_CITIES.map((c) => `'${c}'`).join(', ')}))`,
+        `SELECT '5) one job per employer and title', count(*), count(DISTINCT company), round(percentile_cont(0.5) WITHIN GROUP (ORDER BY annual::float8))::bigint
+          FROM (SELECT DISTINCT ON (company, title) company, ${ANNUAL} AS annual FROM "Job" WHERE ${W} AND ${PAY_OK} ORDER BY company, title, "postedAt" DESC NULLS LAST) t`,
+      ].join('\n    UNION ALL\n    '),
+    },
+    {
+      title: 'Audit sample: 100 random validated jobs to check by hand',
+      note: 'Open each posting, compare its pay with advertised_text and the stored range, and count the matches. The report states the result only when this check was really done (spotCheck in the edition file). random() makes each run a new sample; save the one you check.',
+      pay: true,
+      sql: `SELECT title, company, source, left("salaryRaw", 120) AS advertised_text, "minAnnual"::bigint AS min_usd, "maxAnnual"::bigint AS max_usd, "salaryConfidence" AS confidence, COALESCE("applyUrl", "url") AS posting
+    FROM "Job" WHERE ${W} AND ${PAY_OK} ORDER BY random() LIMIT 100`,
     },
     {
       title: 'Six-figure jobs: visa sponsorship and remote share',
@@ -272,8 +306,8 @@ export function buildResearch(basis: Basis = 'created'): Research[] {
       title: 'Highest advertised salaries',
       note: 'Top validated USD figures below the cap (midpoint), with the advertised text so each can be checked against the posting before it is quoted.',
       pay: true,
-      sql: `SELECT title, company, "countryCode" AS country, left("salaryRaw", 70) AS advertised_text, ${ANNUAL}::bigint AS midpoint_usd
-    FROM "Job" WHERE ${W} AND ${PAY_OK} AND ${NOT_AGGREGATOR} ORDER BY 5 DESC LIMIT 12`,
+      sql: `SELECT title, company, source, "countryCode" AS country, left("salaryRaw", 120) AS advertised_text, ${ANNUAL}::bigint AS midpoint_usd, "postedAt"::date AS posted, now()::date AS captured
+    FROM "Job" WHERE ${W} AND ${PAY_OK} AND ${NOT_AGGREGATOR} ORDER BY 6 DESC LIMIT 12`,
     },
   ]
 }

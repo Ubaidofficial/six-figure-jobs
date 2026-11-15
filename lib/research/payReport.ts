@@ -32,6 +32,9 @@ export type PayRow = {
   employers?: number
   /** Median advertised midpoint in US dollars. */
   median: number
+  /** 25th and 75th percentile of the advertised midpoints, when the run gave them: the middle half of the listings. */
+  p25?: number
+  p75?: number
 }
 
 /** How wide the advertised ranges are: (maximum - minimum) against the minimum, among listings that state both ends. */
@@ -54,6 +57,37 @@ export type SameRoleRow = {
 }
 
 export type Correction = { date: string; text: string }
+
+/** The headline median, recomputed with one group removed. `key` says which, so the page can write the sentence. */
+export type SensitivityRow = {
+  key: 'all' | 'named' | 'top5' | 'bayarea' | 'dedupe'
+  label: string
+  listings: number
+  employers: number
+  median: number
+}
+
+export type HighestListing = {
+  company: string
+  title: string
+  /** The pay text exactly as the posting shows it. */
+  advertised: string
+  midpoint: number
+  /** Job board or ATS the posting came from. */
+  source?: string
+  /** `YYYY-MM-DD`: the day the range was read. Postings close, so the page says so. */
+  captured: string
+}
+
+/** A figure of ours next to an official one, for context only: advertised pay is not reported pay. */
+export type ExternalContext = {
+  label: string
+  ours: number
+  theirs: number
+  source: string
+  sourceUrl: string
+  note: string
+}
 
 export type PayReportData = {
   /** `YYYY-MM`: the edition's dated address and file name. */
@@ -101,6 +135,22 @@ export type PayReportData = {
   sameRole?: SameRoleRow[]
   /** Skills named in the listings with at least MIN_SKILL_LISTINGS listings, descending by median. */
   skills?: PayRow[]
+  /** `YYYY-MM-DD/YYYY-MM-DD`: the collection window, for the Dataset's temporalCoverage. */
+  collectedISO?: string
+  /** What was counted and what was left out: steps of a funnel, largest first, each at most the one before. */
+  funnel?: Array<{ label: string; listings: number }>
+  /** The headline median with a group removed, `all` first. */
+  sensitivity?: SensitivityRow[]
+  /** The highest advertised ranges, each with its verbatim pay text. Replaces the sentence in `highestRanges` when present. */
+  highestListings?: HighestListing[]
+  /** Result of a manual check of random listings against their postings. Only fill it after really doing the check. */
+  spotCheck?: { sampled: number; matched: number; checkedOn: string; notes?: string }
+  /** Official figures beside ours, only where the definitions are close enough to compare. */
+  external?: ExternalContext[]
+  /** A named person who read the method and agreed to be named. Never fill it without their agreement. */
+  reviewedBy?: { name: string; role?: string; url?: string }
+  /** DOI of the deposited dataset (for example from Zenodo), without the `https://doi.org/` part. */
+  doi?: string
   /** One sentence: did the method or the sources change since the previous edition? Needed from the second edition on. */
   sinceLastEdition?: string
   /** Corrections made after publication, newest first. Empty = none so far. */
@@ -123,7 +173,10 @@ export const PAY_REPORT = { ...PAY_REPORT_EDITIONS[0], path: PAY_REPORT_PATH }
 export type PayReport = PayReportData
 
 /** Who is named as the author. Leave null until the owner names a person: the page then credits the site, which is true. */
-export const REPORT_AUTHOR: { name: string; role?: string; url?: string } | null = null
+export const REPORT_AUTHOR: { name: string; role?: string; url?: string; bio?: string; sameAs?: string[] } | null = null
+
+/** The licence for the CSV and charts. Null until the owner chooses one: the page then says only "free to quote with a link". */
+export const REPORT_LICENSE: { name: string; url: string } | null = null
 
 /** Where corrections and press questions go: an address the site already publishes (see /about). */
 export const REPORT_CONTACT = 'support@6figjobs.com'
@@ -199,8 +252,35 @@ function optionalFindings(r: PayReportData): string[] {
       `Comparing like with like, in ${lower} of the ${pairs.length} roles with at least ${MIN_SAME_ROLE_LISTINGS} remote and ${MIN_SAME_ROLE_LISTINGS} on-site listings, the remote median is below the on-site median. The gap between all remote and all on-site listings mixes roles and cities; this comparison does not.`,
     )
   }
+  const sens = r.sensitivity
+  const all = sens?.find((x) => x.key === 'all')
+  if (sens && all) {
+    const part = (key: SensitivityRow['key'], what: string): string | null => {
+      const row = sens.find((x) => x.key === key)
+      return row ? `${what} gives ${usd(row.median)} (${signedPct(diffPct(row.median, all.median))})` : null
+    }
+    const parts = [
+      part('top5', 'leaving out the five largest employers'),
+      part('bayarea', 'leaving out the Bay Area'),
+      part('dedupe', 'counting one listing per employer and job title'),
+    ].filter((x): x is string => x !== null)
+    if (parts.length > 0) {
+      out.push(
+        `The headline is not set by a few employers or one region: against ${usd(all.median)}, ${parts.join(', ')}.`,
+      )
+    }
+  }
+  const check = r.spotCheck
+  if (check && check.sampled > 0) {
+    out.push(
+      `In a manual check on ${check.checkedOn} of ${n0(check.sampled)} randomly chosen listings against their postings, ${n0(check.matched)} (${Math.round((100 * check.matched) / check.sampled)}%) stated the same pay range.`,
+    )
+  }
   return out
 }
+
+/** "+2.4%" or "-6.1%". */
+export const signedPct = (v: number): string => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`
 
 /** Percentage difference of `a` against `b`, one decimal, signed ("-6.1"). */
 export const diffPct = (a: number, b: number): number => Math.round(((a - b) / b) * 1000) / 10
@@ -237,7 +317,26 @@ export function payReportFaq(r: PayReport = PAY_REPORT): Array<{ question: strin
 
 /** One citation line for the edition. */
 export function payReportCitation(r: PayReportData = PAY_REPORT): string {
-  return `${SITE_NAME}, "${PAY_REPORT_HEADING}, ${r.month}", ${getSiteUrl()}${PAY_REPORT_PATH}. Data collected ${r.collected}; edition address ${getSiteUrl()}${editionPath(r)}.`
+  const doi = r.doi ? ` DOI: https://doi.org/${r.doi}.` : ''
+  return `${SITE_NAME}, "${PAY_REPORT_HEADING}, ${r.month}", ${getSiteUrl()}${PAY_REPORT_PATH}. Data collected ${r.collected}; edition address ${getSiteUrl()}${editionPath(r)}.${doi}`
+}
+
+/** Sentences a journalist can lift as they are, each with its attribution, written from the data so they match the tables. */
+export function payReportQuotes(r: PayReportData = PAY_REPORT): string[] {
+  const h = r.headline
+  const attribution = `(${SITE_NAME}, ${PAY_REPORT_HEADING}, ${r.month})`
+  const remote = r.arrangement.find((a) => a.label === 'Remote')
+  const onsite = r.arrangement.find((a) => a.label === 'On-site')
+  const top = r.roles[0]
+  const out = [
+    `Across ${n0(h.listings)} six-figure job listings from ${n0(h.employers)} employers, the median advertised pay is ${usd(h.medianMidpoint)} ${attribution}.`,
+    `${r.bands[3].pct}% of six-figure listings advertise $300,000 or more, and ${Math.round((r.bands[0].pct + r.bands[1].pct) * 10) / 10}% advertise under $200,000 ${attribution}.`,
+    `${top.label} is the best-paid role with a large sample, at a median advertised ${usd(top.median)} across ${top.listings} listings ${attribution}.`,
+  ]
+  if (remote && onsite) {
+    out.push(`Remote six-figure listings advertise a median of ${usd(remote.median)}, against ${usd(onsite.median)} for on-site listings ${attribution}.`)
+  }
+  return out
 }
 
 const csvCell = (v: string | number | undefined): string => {
@@ -246,18 +345,20 @@ const csvCell = (v: string | number | undefined): string => {
 }
 
 /**
- * Every table of the edition as one long CSV: table, label, listings, employers, value_usd, share_pct. `value_usd` is the
- * median advertised midpoint unless the row says otherwise in `label` (the headline rows name what they are).
+ * Every table of the edition as one long CSV: table, label, listings, employers, value_usd, share_pct, p25_usd, p75_usd.
+ * `value_usd` is the median advertised midpoint unless the row says otherwise in `label` (the headline rows name what they
+ * are). `p25_usd` and `p75_usd` are the middle half of the listings, empty where the edition has none.
  */
 export function payReportCsv(r: PayReportData = PAY_REPORT): string {
-  const rows: Array<[string, string, number | undefined, number | undefined, number | undefined, number | undefined]> = []
+  type Cell = number | undefined
+  const rows: Array<[string, string, Cell, Cell, Cell, Cell, Cell, Cell]> = []
   const h = r.headline
-  rows.push(['headline', 'Median advertised midpoint', h.listings, h.employers, h.medianMidpoint, undefined])
-  rows.push(['headline', 'Median advertised minimum', h.listings, h.employers, h.medianMinimum, undefined])
-  rows.push(['headline', 'Median of employer medians (employers with 3+ listings)', undefined, undefined, h.medianOfEmployerMedians, undefined])
-  for (const b of r.bands) rows.push(['salary_band', b.label, b.listings, undefined, undefined, b.pct])
+  rows.push(['headline', 'Median advertised midpoint', h.listings, h.employers, h.medianMidpoint, undefined, undefined, undefined])
+  rows.push(['headline', 'Median advertised minimum', h.listings, h.employers, h.medianMinimum, undefined, undefined, undefined])
+  rows.push(['headline', 'Median of employer medians (employers with 3+ listings)', undefined, undefined, h.medianOfEmployerMedians, undefined, undefined, undefined])
+  for (const b of r.bands) rows.push(['salary_band', b.label, b.listings, undefined, undefined, b.pct, undefined, undefined])
   const pay = (table: string, list: PayRow[]) => {
-    for (const x of list) rows.push([table, x.label, x.listings, x.employers, x.median, undefined])
+    for (const x of list) rows.push([table, x.label, x.listings, x.employers, x.median, undefined, x.p25, x.p75])
   }
   pay('seniority', r.seniority)
   pay('role', r.roles)
@@ -267,17 +368,23 @@ export function payReportCsv(r: PayReportData = PAY_REPORT): string {
   if (r.skills) pay('skill', r.skills)
   if (r.sameRole) {
     for (const p of r.sameRole) {
-      rows.push(['same_role_remote', p.label, p.remote.listings, p.remote.employers, p.remote.median, undefined])
-      rows.push(['same_role_onsite', p.label, p.onsite.listings, p.onsite.employers, p.onsite.median, undefined])
+      rows.push(['same_role_remote', p.label, p.remote.listings, p.remote.employers, p.remote.median, undefined, undefined, undefined])
+      rows.push(['same_role_onsite', p.label, p.onsite.listings, p.onsite.employers, p.onsite.median, undefined, undefined, undefined])
     }
   }
   if (r.rangeWidth) {
     const w = r.rangeWidth
-    rows.push(['range_width', 'Median gap, maximum minus minimum (USD)', w.ranged, undefined, w.medianWidthUsd, undefined])
-    rows.push(['range_width', 'Median gap as % of the minimum', w.ranged, undefined, undefined, w.medianWidthPct])
-    rows.push(['range_width', 'Ranges with maximum at least 1.5x the minimum', w.ranged, undefined, undefined, w.pctWiderThan50])
+    rows.push(['range_width', 'Median gap, maximum minus minimum (USD)', w.ranged, undefined, w.medianWidthUsd, undefined, undefined, undefined])
+    rows.push(['range_width', 'Median gap as % of the minimum', w.ranged, undefined, undefined, w.medianWidthPct, undefined, undefined])
+    rows.push(['range_width', 'Ranges with maximum at least 1.5x the minimum', w.ranged, undefined, undefined, w.pctWiderThan50, undefined, undefined])
   }
-  const head = ['table', 'label', 'listings', 'employers', 'value_usd', 'share_pct']
+  if (r.sensitivity) {
+    for (const x of r.sensitivity) rows.push(['sensitivity', x.label, x.listings, x.employers, x.median, undefined, undefined, undefined])
+  }
+  if (r.funnel) {
+    for (const step of r.funnel) rows.push(['funnel', step.label, step.listings, undefined, undefined, undefined, undefined, undefined])
+  }
+  const head = ['table', 'label', 'listings', 'employers', 'value_usd', 'share_pct', 'p25_usd', 'p75_usd']
   return [head, ...rows].map((row) => row.map(csvCell).join(',')).join('\n') + '\n'
 }
 

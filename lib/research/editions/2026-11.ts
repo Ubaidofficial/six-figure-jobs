@@ -16,6 +16,7 @@ export const EDITION_2026_11: PayReportData = {
   updatedAt: '2026-11-15',
   /** What the data covers, in words, for the method section. */
   collected: '5 to 15 November 2026',
+  collectedISO: '2026-11-05/2026-11-15',
   window: 'posted in the 30 days before 15 November 2026 (or, when a posting has no date, collected in that period)',
 
   headline: {
