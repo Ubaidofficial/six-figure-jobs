@@ -15,6 +15,7 @@ import { loadDegreeRequiredJobIds } from '../jobs/degreeRequirement'
 import { FOUR_DAY_WEEK_MIN_JOBS_TO_INDEX, FOUR_DAY_WEEK_PATH, loadFourDayWeekListings } from '../jobs/fourDayWeek'
 import { HIGH_PAYING_MIN_ROLES_TO_INDEX, loadHighPayingJobs } from '../jobs/highPayingJobs'
 import { buildGlobalExclusionsWhere, buildHighSalaryEligibilityWhere, buildWhere } from '../jobs/queryJobs'
+import { PAY_REPORT } from '../research/payReport'
 import { getTier1Slugs, isTier1Role } from '../roles/canonicalSlugs'
 import { isCityPageIndexable, isRemoteRolePageIndexable } from './indexabilityGates'
 import { PHASE_1_ROLE_SLUGS, isPhaseIndexable, isPhase2OrLater } from './indexingPhase'
@@ -244,6 +245,8 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
 
   const latestJob = await getLatestJobUpdate()
   const entries: SitemapEntry[] = PILLAR_PATHS.map((path) => ({ path, lastmod: latestJob }))
+  // Static research page: its lastmod is the report's own update date, so it moves only when a new edition is published.
+  entries.push({ path: PAY_REPORT.path, lastmod: new Date(PAY_REPORT.updatedAt) })
 
   if (BLOG_POSTS.length > 0 && !shouldAdvertiseSitemapFamily('blog')) {
     entries.push({ path: '/blog', lastmod: getLatestBlogUpdate() })
