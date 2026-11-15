@@ -5,11 +5,26 @@ name: enrichment backfill
 # ticked. Only empty fields are written: a job's stored skills (from freehire, Ashby...) are never overwritten. Newest jobs
 # first, "limit" at a time. Same production-database fingerprint guard as the other manual workflows.
 
+# The "task" input picks what to fill (default: the tech stack above). Two more free, deterministic backfills, each a dry run unless
+# "apply" is ticked and each writing only empty fields, guarded by "still empty":
+#   websites        company websites from the live jobs' apply links (scripts/backfill-company-websites.ts; "limit" = companies)
+#   remote-country  the country of remote jobs whose location text names exactly one (scripts/backfill-remote-country.ts; "limit" = jobs;
+#                   only jobs whose JobPosting JSON-LD stays identical are written)
+
 on:
   workflow_dispatch:
     inputs:
+      task:
+        description: "tech-stack, websites or remote-country"
+        type: choice
+        required: false
+        default: tech-stack
+        options:
+          - tech-stack
+          - websites
+          - remote-country
       limit:
-        description: "Jobs to look at this run (newest first)"
+        description: "Jobs (tech-stack, remote-country) or companies (websites) to look at this run (newest / busiest first)"
         type: string
         required: false
         default: "2000"
@@ -51,13 +66,23 @@ jobs:
           EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
         run: npm run scrape:db-target
 
-      - name: Tech stack backfill
+      - name: Backfill
         env:
+          TASK: ${{ inputs.task }}
           BACKFILL_TECHSTACK_LIMIT: ${{ inputs.limit }}
+          LIMIT: ${{ inputs.limit }}
           APPLY: ${{ inputs.apply }}
         run: |
-          if [ "$APPLY" = "true" ]; then
-            npx tsx scripts/backfill-tech-stack.ts
-          else
-            npx tsx scripts/backfill-tech-stack.ts --dry-run
-          fi
+          args=(--limit="$LIMIT")
+          [ "$APPLY" = "true" ] && args+=(--apply)
+          case "$TASK" in
+            websites) npx tsx scripts/backfill-company-websites.ts "${args[@]}" ;;
+            remote-country) npx tsx scripts/backfill-remote-country.ts "${args[@]}" ;;
+            *)
+              if [ "$APPLY" = "true" ]; then
+                npx tsx scripts/backfill-tech-stack.ts
+              else
+                npx tsx scripts/backfill-tech-stack.ts --dry-run
+              fi
+              ;;
+          esac
