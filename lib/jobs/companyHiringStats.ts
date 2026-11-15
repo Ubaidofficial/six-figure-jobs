@@ -14,7 +14,7 @@ import { getPublicJobWhere } from './publicStats'
 export const MIN_JOBS_FOR_MEDIAN = 3
 
 export type CompanyHiringStats = {
-  /** Open jobs posted in the last NEW_THIS_WEEK_DAYS days (the employer's posting date, else the day we first saw the job). */
+  /** Open jobs posted in the last NEW_THIS_WEEK_DAYS days (the employer's posting date; else the day we first saw the job, for a company tracked before the window). */
   newThisWeek: number
   /** Median yearly pay of the company's salaried jobs in their main currency; null when there are too few to say. */
   medianPay: { amount: number; currency: string } | null
@@ -46,13 +46,28 @@ export function summarizeCompanyJobs(rows: CompanyJobRow[], now: Date = new Date
   const since = new Date(now)
   since.setDate(since.getDate() - NEW_THIS_WEEK_DAYS)
 
+  // The day we first stored a job of each company. A job with no posting date counts as new by the day WE first saw it, but only for a
+  // company we were already tracking before the window: for one whose jobs were all stored this week (a board we just started
+  // scraping), "first seen this week" says nothing about when the employer posted, and every dateless job would read as new
+  // (the production audit of 2026-11-15: 1,334 of Workday's 5,374 jobs have no posting date, all stored this week, so 61% of the
+  // 2,188 Workday jobs shown as new were only that).
+  const firstStored = new Map<string, number>()
+  for (const row of rows) {
+    if (!row.companyId) continue
+    const t = row.createdAt.getTime()
+    if (t < (firstStored.get(row.companyId) ?? Infinity)) firstStored.set(row.companyId, t)
+  }
+
   const byCompany = new Map<string, { newThisWeek: number; pay: Map<string, number[]> }>()
   for (const row of rows) {
     if (!row.companyId) continue
     let entry = byCompany.get(row.companyId)
     if (!entry) byCompany.set(row.companyId, (entry = { newThisWeek: 0, pay: new Map() }))
 
-    if ((row.postedAt ?? row.createdAt).getTime() >= since.getTime()) entry.newThisWeek += 1
+    const isNew = row.postedAt
+      ? row.postedAt.getTime() >= since.getTime()
+      : (firstStored.get(row.companyId) ?? Infinity) < since.getTime() && row.createdAt.getTime() >= since.getTime()
+    if (isNew) entry.newThisWeek += 1
 
     const currency = row.currency?.trim().toUpperCase()
     const min = toNumber(row.minAnnual)

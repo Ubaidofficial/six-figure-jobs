@@ -105,15 +105,25 @@
   color: var(--color-text-0);
 }
 
-.meta {
-  margin-top: 2px;
+/* The name, the job count and the facts each sit on their own line: as inline spans they ran together ("1,245 jobs89 new this week"). */
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-0);
+}
+
+.facts {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--color-text-1);
-}
-
-.text {
-  min-width: 0;
 }
 
 .empty {

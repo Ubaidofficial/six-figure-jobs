@@ -15,8 +15,8 @@ const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '
 
 describe('hiringFacts', () => {
   it('lists new jobs and median pay, and nothing when there is nothing to say', () => {
-    expect(hiringFacts({ newThisWeek: 3, medianPay: { amount: 185_000, currency: 'USD' } })).toEqual(['3 new this week', 'median $185k'])
-    expect(hiringFacts({ newThisWeek: 0, medianPay: { amount: 90_000, currency: 'EUR' } })).toEqual(['median €90k'])
+    expect(hiringFacts({ newThisWeek: 3, medianPay: { amount: 185_000, currency: 'USD' } })).toEqual(['3 new this week', 'median pay $185k'])
+    expect(hiringFacts({ newThisWeek: 0, medianPay: { amount: 90_000, currency: 'EUR' } })).toEqual(['median pay €90k'])
     expect(hiringFacts({ newThisWeek: 0, medianPay: null })).toEqual([])
     expect(hiringFacts(undefined)).toEqual([])
   })
@@ -33,9 +33,21 @@ describe('CompanySearch with stats', () => {
       ),
     )
     expect(t).toContain('12 jobs')
-    expect(t).toContain('4 new this week · median $210k')
+    expect(t).toContain('4 new this week · median pay $210k')
     expect(t).toContain('1 job')
     expect(t.match(/new this week/g)).toHaveLength(1)
+  })
+
+  it('puts the job count and the facts in separate elements, with thousands separators', () => {
+    const html = renderToStaticMarkup(
+      createElement(CompanySearch, {
+        companies: [{ id: 'c3', name: 'Big Co', slug: 'big-co', logoUrl: null, website: null, _count: { jobs: 1245 } }],
+        stats: { c3: { newThisWeek: 89, medianPay: { amount: 204_000, currency: 'USD' } } },
+      }),
+    )
+    // Adjacent inline spans read as "1,245 jobs89 new this week" once rendered: each must be its own styled element.
+    expect(html).toContain('<span class="count">1,245 jobs</span>')
+    expect(html).toContain('<span class="facts">89 new this week · median pay $204k</span>')
   })
 
   it('renders as before without stats', () => {

@@ -11,11 +11,22 @@
  * - "Acme Inc - Remote"          → "Acme Inc"
  * - "Figma (Remote, US)"         → "Figma"
  */
+const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }
+
+/** "Quest Defense Systems &#038; Solutions" -> "... & Solutions": WordPress-style feeds (Jobicy, Working Nomads) send names HTML-escaped. */
+export function decodeNameEntities(text: string): string {
+  return text.replace(/&(?:#(\d{1,6})|#x([0-9a-f]{1,5})|([a-z]{2,6}));/gi, (whole, dec, hex, named) => {
+    if (named) return NAMED_ENTITIES[String(named).toLowerCase()] ?? whole
+    const code = dec ? Number(dec) : parseInt(hex, 16)
+    return code > 0 && code < 0x110000 ? String.fromCodePoint(code) : whole
+  })
+}
+
 export function cleanCompanyName(raw: string | null | undefined): string | null {
   if (!raw) return null
 
-  // Normalize whitespace
-  let name = raw.replace(/\s+/g, ' ').trim()
+  // Normalize whitespace (after decoding entities: "&nbsp;" is whitespace too)
+  let name = decodeNameEntities(raw).replace(/\s+/g, ' ').trim()
   if (!name) return null
 
   const lower = name.toLowerCase()

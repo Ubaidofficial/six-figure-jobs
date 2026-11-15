@@ -224,7 +224,7 @@ export default async function CompanyPage({
                 <span className="font-semibold">{company.name}</span> jobs
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                <strong className="font-semibold text-foreground">{jobs.length}</strong> open $100k+{' '}
+                <strong className="font-semibold text-foreground">{jobs.length.toLocaleString('en-US')}</strong> open $100k+{' '}
                 {jobs.length === 1 ? 'job' : 'jobs'}
                 {[company.industry, company.sizeBucket ? `${company.sizeBucket} employees` : null, company.headquarters ?? company.countryCode]
                   .filter(Boolean)

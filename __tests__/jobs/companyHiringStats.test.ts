@@ -27,6 +27,17 @@ describe('summarizeCompanyJobs', () => {
     expect(stats.get('c1')?.newThisWeek).toBe(3)
   })
 
+  it('does not call dateless jobs new for a company we only started tracking this week', () => {
+    // Every job of c2 was first stored 2-3 days ago and none has a posting date: that tells us nothing about when they were posted.
+    const fresh = [job({ companyId: 'c2', postedAt: null, createdAt: daysAgo(2) }), job({ companyId: 'c2', postedAt: null, createdAt: daysAgo(3) })]
+    expect(summarizeCompanyJobs(fresh, now).get('c2')?.newThisWeek).toBe(0)
+    // Dated jobs still count: the employer's own date is real evidence.
+    expect(summarizeCompanyJobs([...fresh, job({ companyId: 'c2', postedAt: daysAgo(1), createdAt: daysAgo(1) })], now).get('c2')?.newThisWeek).toBe(1)
+    // A company tracked for weeks keeps the first-seen fallback.
+    const known = [job({ companyId: 'c3', postedAt: null, createdAt: daysAgo(30) }), job({ companyId: 'c3', postedAt: null, createdAt: daysAgo(2) })]
+    expect(summarizeCompanyJobs(known, now).get('c3')?.newThisWeek).toBe(1)
+  })
+
   it('gives the median of job midpoints in the main currency, rounded', () => {
     const rows = [
       job({ minAnnual: 100_000, maxAnnual: 120_000 }), // 110k
