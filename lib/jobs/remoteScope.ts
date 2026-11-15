@@ -44,19 +44,18 @@ const TIMEZONE = /\b(?:EU|European|CET|EMEA|UK|GMT)\s+(?:time\s*)?zones?\b/i
 // readings in 800 conflicts, so they are not read.
 const OPENS = new RegExp(
   [
-    '(?:candidates|applicants)\\s+(?:from\\s+|located\\s+|based\\s+)?(?:anywhere|worldwide|globally|around\\s+the\\s+(?:world|globe)|across\\s+the\\s+globe)',
-    'open\\s+to\\s+(?:candidates\\s+|applicants\\s+)?(?:anywhere|worldwide|globally)',
+    '(?:candidates|applicants)\\s+(?:from\\s+|located\\s+|based\\s+)?(?:anywhere(?!\\s+(?:in|within|across)\\s+(?:the\\s+)?(?!world\\b|globe\\b))|worldwide|globally|around\\s+the\\s+(?:world|globe)|across\\s+the\\s+globe)',
+    'open\\s+to\\s+(?:candidates\\s+|applicants\\s+)?(?:anywhere(?!\\s+(?:in|within|across)\\s+(?:the\\s+)?(?!world\\b|globe\\b))|worldwide|globally)',
     'anywhere\\s+in\\s+the\\s+world',
     'hir(?:e|es|ing)\\s+(?:globally|worldwide|anywhere|(?:remotely\\s+)?(?:from|in)\\s+any\\s+country)',
     'work(?:ing)?\\s+(?:remotely\\s+)?from\\s+any\\s+country',
     'location\\s*[:\\-–]\\s*(?:worldwide|anywhere|global)',
     'remote\\s*[-–:]\\s*(?:worldwide|anywhere\\s+in\\s+the\\s+world)',
-    'based\\s+anywhere',
   ].join('|'),
   'i',
 )
 // ...and the sentence must talk about the person or the role, not a perk or the company.
-const ABOUT_THE_CANDIDATE = /\b(?:candidates?|applicants?|you|your|role|position|job|hir\w+|work\w*|location|based|team members? can)\b/i
+const ABOUT_THE_CANDIDATE = /\b(?:candidates?|applicants?|you|your|role|position|job|hir(?:e|es|ing)|work(?:ing)?|location)\b/i
 const NOT_A_STATEMENT_ABOUT_WORK = /\b(?:perk|stipend|travel|bonus|trip|vacation|flights?|customers?|clients?|users?|offices?|brands?)\b/i
 
 const REGION_BY_WORD: Record<string, RemoteScope extends infer T ? (T extends { region: infer R } ? R : never) : never> = {
@@ -80,16 +79,27 @@ const limitingCountries = (clause: string): string[] => {
   const cut = clause.split(/\s+(?:to|for|in order|so that|as|and\s+(?:be|have|are|will|must|you))\b/i)[0]
   const stripped = cut
     .replace(/\b(?:residents?|citizens?|candidates|applicants)\b/gi, ' ')
-    .replace(/^\s*(?:currently\s+)?(?:residing|living|located|based|working)?\s*(?:in|within|from)?\s*(?:the\s+)?/i, '')
+    .replace(/\bonly\b/gi, ' ')
+    .replace(/^\s*(?:currently\s+)?(?:residing|living|located|based|working)?\s*(?:anywhere\s+)?(?:in|within|from|across)?\s*(?:the\s+)?/i, '')
   const parts = stripped.split(/\s*(?:,|;|&|\/|\band\b|\bor\b|\beither\b|\bboth\b)\s*/i).map((p) => p.replace(/^the\s+/i, '').trim()).filter(Boolean)
   const codes: string[] = []
   for (const part of parts) {
+    // "CA", "DE", "IE" alone could be California, a word or a country: only "US" and "UK" are read as codes.
+    if (/^[A-Za-z]{2}$/.test(part) && !/^(?:US|UK)$/i.test(part)) return []
     const found = countriesFromText(part)
     if (found.length === 0) return []
     codes.push(...found)
   }
   return Array.from(new Set(codes))
 }
+
+// A sentence that names a place but is about something else: benefits and pay ("benefits for US-based employees", "the salary
+// range is for residents of the US only"), colleagues and teams ("our Australia-based team", "a US-based CRO"), a legal
+// notice ("San Francisco Fair Chance Ordinance"), or a list that is only preferred ("United States preferred; open to ...").
+const NOT_ABOUT_WHO_MAY_APPLY =
+  /\b(?:benefits?|compensation|salary|salaries|pay|paid|bonus|perks?|401\(?k\)?|insurance|medical|dental|vision|ordinance|equal opportunity|EEO|fair chance|privacy|customers?|clients?|preferred)\b/i
+// An implicit statement ("US-based", "open to candidates in", "remote in") must also talk about the role or the person.
+const ABOUT_THE_ROLE = /\b(?:position|role|job|opening|candidates?|applicants?|employment|remote\w*|hir(?:e|es|ing)|apply|located|reside\w*|work(?:ing)?)\b/i
 
 const COUNTRY_TOKEN = /\b(?:US|USA|U\.S\.|United States|Canada|UK|U\.K\.|United Kingdom|Australia|Ireland|Germany|France|Spain|Netherlands|Poland)\b/
 const MONEY_IN_SENTENCE = /[$£€]\s?\d|\b(?:USD|CAD|AUD|GBP|EUR|CHF)\b/
@@ -98,18 +108,26 @@ type Limit = { countries?: string[]; region?: string; sentence: string }
 
 function limitOf(sentence: string): Limit | null {
   // A sentence about pay by location ("$148,000 for most US-based locations, $131,000 CAD in Canada...") limits nothing.
-  if (MONEY_IN_SENTENCE.test(sentence)) return null
+  if (MONEY_IN_SENTENCE.test(sentence) || NOT_ABOUT_WHO_MAY_APPLY.test(sentence)) return null
   for (const re of [MUST_BE_IN, AUTHORIZED_IN, OPEN_TO_IN]) {
     const m = re.exec(sentence)
     if (m) {
+      if (re === OPEN_TO_IN && !ABOUT_THE_ROLE.test(sentence)) continue
       const countries = limitingCountries(m[1])
       if (countries.length) return { countries, sentence }
       const region = REGION_BY_WORD[m[1].trim().toLowerCase().replace(/^the\s+/, '')]
       if (region) return { region, sentence }
     }
   }
+  if (!ABOUT_THE_ROLE.test(sentence)) return null
   const adj = BASED_ADJ.exec(sentence)
-  if (adj) {
+  // "US-based" about a colleague, a team or the staff ("working with a US-based CRO", "our Australia-based team", "benefits for
+  // Canada-based employees") says nothing about where THIS person must be.
+  const aboutOthers =
+    adj &&
+    (/\b(?:with|alongside)\s+(?:our\s+|the\s+|a\s+|an\s+)?$/i.test(sentence.slice(Math.max(0, adj.index - 24), adj.index)) ||
+      /^\s*(?:teams?|employees?|colleagues?|counterparts?|orgs?|organi[sz]ations?|offices?|staff|customers?|clients?|CRO|team members?)\b/i.test(sentence.slice(adj.index + adj[0].length)))
+  if (adj && !aboutOthers) {
     const countries = limitingCountries(adj[1].replace(/^Canadian$/i, 'Canada').replace(/^Australian$/i, 'Australia'))
     if (countries.length) return { countries, sentence }
   }

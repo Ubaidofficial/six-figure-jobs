@@ -83,3 +83,42 @@ describe('readRemoteScope: wrong readings from the first audit', () => {
   })
 })
 
+// Second audit (2026-11-15): after the boilerplate fix, the wrong readings left were all sentences that mention a place but
+// are not about who may apply: benefits, pay notes, colleagues, a legal notice, a state abbreviation.
+describe('readRemoteScope: sentences that mention a place but are not about who may apply', () => {
+  it.each([
+    ['benefits', 'Full medical, dental, and vision benefits for US, UK, and Canada-based employees'],
+    ['benefits note', 'Note: Benefits and compensation reflect offerings for U.S.-based employees.'],
+    ['benefits for employees', '100% paid medical, mental, dental, and vision premium option plus One Medical membership (for US-based employees).'],
+    ['employees enjoy', 'Our US based employees enjoy:'],
+    ['pay note', "The base salary range for this role's listed level is currently for residents of the United States only."],
+    ['pay tiers', 'For US-based position the salary range is as follows:'],
+    ['compensation for others', 'Compensation for Canadian-based candidates is not specified and can be discussed with the recruiter.'],
+    ['team', 'Ability to work effectively across large timezone gaps, with regular overlap with our Australia-based team'],
+    ['colleagues', 'Even though this position is based in Portugal, you will be working closely with US based employees.'],
+    ['a colleague', 'Native or near-native Japanese and business-level English; able to work directly with a US-based CRO and cross-functional counterparts.'],
+    ['an org', 'Lead as One Distributed Team: Operate the UK team as a single function with the US-based data science org.'],
+    ['legal notice', 'For US based roles only: Pursuant to the San Francisco Fair Chance Ordinance, all qualified applicants with arrest and conviction records will be considered.'],
+    ['a state', 'Will also consider Remote in CA only.'],
+    ['preferred, a partial list', 'United States preferred; Open to Canada, the United Kingdom, and Germany.'],
+    ['a company description', 'Lifted is the first talent, country, and contract-agnostic contingent workforce management solution, giving enterprises a way to source any type of talent.'],
+    ['the team can work from anywhere', 'Because this role is open across the United States and can be based anywhere our team members work from, the salary range reflects that.'],
+  ])('%s', (_name, html) => {
+    expect(read(html)).toBeNull()
+  })
+  it('reads "anywhere in the United States" as a limit, not as the world', () => {
+    expect(read('This is a remote position open to candidates based anywhere in the United States.')).toMatchObject({ kind: 'countries', countries: ['US'] })
+  })
+  it('still reads the explicit statements it read right', () => {
+    expect(read('Must be authorized to work in the United States')).toMatchObject({ countries: ['US'] })
+    expect(read('Remote within the United States.')).toMatchObject({ countries: ['US'] })
+    expect(read('This is a U.S. based position.')).toMatchObject({ countries: ['US'] })
+    expect(read('A growing company is hiring its first US-based Senior Account Executive.')).toMatchObject({ countries: ['US'] })
+    expect(read('This role is only open to candidates based in the United Kingdom or Ireland.')).toMatchObject({ countries: expect.arrayContaining(['GB', 'IE']) })
+    expect(read('This is a remote role open to candidates based in Canada, Germany, the UK, or the US.')).toMatchObject({ countries: expect.arrayContaining(['CA', 'DE', 'GB', 'US']) })
+    expect(read('Work from anywhere in the world')).toMatchObject({ kind: 'worldwide' })
+    expect(read('Note: This role is open to US-based applicants only.')).toMatchObject({ countries: ['US'] })
+    expect(read('Location & Time Zone: This is a remote, U.S.-based role.')).toMatchObject({ countries: ['US'] })
+    expect(read('Fully remote within the United States.')).toMatchObject({ countries: ['US'] })
+  })
+})
