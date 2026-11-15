@@ -16,6 +16,10 @@ import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
 import { buildCityTitle, buildListingDescription } from '../../../../lib/seo/metaText'
 import { Faq, JobRows, ListingHeader, ListingLayout, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '../../../../lib/jobs/relatedSearches'
+import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
+import { countryCodeToSlug } from '../../../../lib/seo/countrySlug'
 
 export const revalidate = 600
 
@@ -162,6 +166,20 @@ export default async function CityPage({ params }: { params: Params }) {
 
   const relatedCities = CITY_TARGETS.filter((c) => c.slug !== resolved.slug && c.countryCode === resolved.countryCode).slice(0, 10)
 
+  // "Related searches": the country page, the whole jobs hub and other tracked cities (this country's first), each
+  // counted with the destination page's own query.
+  const otherCities = CITY_TARGETS.filter((c) => c.slug !== resolved.slug && c.countryCode)
+  const country = TARGET_COUNTRIES.find((c) => c.code === resolved.countryCode && countryCodeToSlug(c.code))
+  const relatedSearches = await loadRelatedSearches([
+    { label: 'All $100k+ jobs', href: '/jobs', input: relatedInput.jobsHub() },
+    ...(country
+      ? [{ label: `Jobs in ${country.label}`, href: `/jobs/location/${countryCodeToSlug(country.code)}`, input: relatedInput.country(country.code) }]
+      : []),
+    ...[...otherCities.filter((c) => c.countryCode === resolved.countryCode), ...otherCities.filter((c) => c.countryCode !== resolved.countryCode)]
+      .slice(0, 8)
+      .map((c) => ({ label: `Jobs in ${c.label}`, href: `/jobs/city/${c.slug}`, input: relatedInput.city(c.slug, c.countryCode!) })),
+  ])
+
   return (
     <ListingPage>
       <ListingHeader
@@ -204,6 +222,8 @@ export default async function CityPage({ params }: { params: Params }) {
           }}
         />
       </ListingLayout>
+
+      <RelatedSearches items={relatedSearches} />
 
       <ListingSection title="Frequently asked questions">
         <Faq items={faqJsonLd.mainEntity.map((q) => ({ question: q.name, answer: q.acceptedAnswer.text }))} />

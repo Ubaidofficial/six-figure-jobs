@@ -5,15 +5,27 @@
 import { createHash } from 'node:crypto'
 
 import { alertsEnabled, MAX_SIGNUPS_PER_IP_PER_10_MIN } from '@/lib/alerts/config'
-import { subscribe } from '@/lib/alerts/service'
+import { normalizeEmail, subscribe } from '@/lib/alerts/service'
 import { createRateLimiter } from '@/lib/jobs/jobReport'
-import { notFoundResponse } from '@/lib/accounts/enabled'
+import { accountsEnabled, notFoundResponse } from '@/lib/accounts/enabled'
 
 export const dynamic = 'force-dynamic'
 
 const limiter = createRateLimiter()
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
+
+/** The signed-in visitor's address when they hold an active subscription, else null. Only this unlocks Pro alert features. */
+async function signedInProEmail(): Promise<string | null> {
+  if (!accountsEnabled()) return null
+  const [{ getSessionUser }, { hasActiveSubscription }] = await Promise.all([
+    import('@/lib/auth/session'),
+    import('@/lib/billing/entitlement'),
+  ])
+  const user = await getSessionUser()
+  if (!user?.email || !(await hasActiveSubscription(user.id))) return null
+  return normalizeEmail(user.email)
+}
 
 const CHECK_INBOX = 'Check your inbox and click the link to confirm. If you already get this alert, nothing changes.'
 
@@ -40,8 +52,20 @@ export async function POST(req: Request) {
   if (typeof body.website === 'string' && body.website.trim() !== '') return json({ ok: true, message: CHECK_INBOX })
 
   try {
-    const result = await subscribe({ email: body.email, filters: body.filters, frequency: body.frequency, source: body.source })
+    // Pro only when the signed-in subscriber is signing up their own address; someone else's address stays free-tier.
+    const proEmail = await signedInProEmail()
+    const email = normalizeEmail(body.email)
+    const result = await subscribe({
+      email: body.email,
+      filters: body.filters,
+      frequency: body.frequency,
+      source: body.source,
+      pro: proEmail !== null && proEmail === email,
+    })
     if (result === 'invalid') return json({ ok: false, message: 'Enter a valid email address.' }, 400)
+    if (result === 'pro_required') {
+      return json({ ok: false, message: 'Instant alerts are part of Pro. Sign in with the same email and subscribe at /pricing, or choose daily or weekly.' }, 402)
+    }
     return json({ ok: true, message: CHECK_INBOX })
   } catch (err) {
     console.error('[alerts] signup failed', err instanceof Error ? err.message.split('\n').pop() : err)

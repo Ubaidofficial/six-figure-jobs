@@ -12,7 +12,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 import type Stripe from 'stripe'
 
-import { MAX_CREDITS_PER_GRANT, getMonthlyCredits, isProductKey } from './config'
+import { MAX_CREDITS_PER_GRANT, getMonthlyCredits, getWeeklyCredits, isProductKey, isSubscriptionKey } from './config'
 import { clawbackCredits, grantCredits } from './credits'
 
 type Env = Record<string, string | undefined>
@@ -130,7 +130,7 @@ async function onCheckoutPaid(tx: Tx, session: Stripe.Checkout.Session, log: Non
 
   const meta = session.metadata ?? {}
   const credits = Number(meta.credits)
-  if (!isProductKey(meta.product) || meta.product === 'subscription') return
+  if (!isProductKey(meta.product) || isSubscriptionKey(meta.product)) return
   if (!Number.isSafeInteger(credits) || credits <= 0 || credits > MAX_CREDITS_PER_GRANT) {
     log('pack session with unusable credits', { session: session.id })
     return
@@ -157,13 +157,16 @@ async function onCheckoutPaid(tx: Tx, session: Stripe.Checkout.Session, log: Non
   })
 }
 
-/** A subscription invoice was paid: grant the monthly credits for that period. */
+/** A subscription invoice was paid: grant the credits for that period (a week of the weekly plan, a month of the monthly one). */
 async function onInvoicePaid(tx: Tx, invoice: Stripe.Invoice, env: Env, log: NonNullable<WebhookDeps['log']>) {
   // Renewals and the first invoice only. Mid-period upgrades and manual invoices do not grant again.
   if (invoice.billing_reason !== 'subscription_create' && invoice.billing_reason !== 'subscription_cycle') return
   if (!idOf(invoice.parent?.subscription_details?.subscription)) return
 
-  const credits = getMonthlyCredits(env)
+  // The plan was written onto the subscription at checkout. A subscription without it (bought before the weekly plan
+  // existed) is the monthly one.
+  const weekly = invoice.parent?.subscription_details?.metadata?.product === 'subscription_weekly'
+  const credits = weekly ? getWeeklyCredits(env) : getMonthlyCredits(env)
   if (credits <= 0) return
 
   const user = await userForCustomer(tx, invoice.customer)
@@ -177,7 +180,7 @@ async function onInvoicePaid(tx: Tx, invoice: Stripe.Invoice, env: Env, log: Non
     userId: user.id,
     credits,
     kind: 'subscription_grant',
-    reason: 'monthly_credits',
+    reason: weekly ? 'weekly_credits' : 'monthly_credits',
     refId: invoice.id,
     idempotencyKey: `invoice:${invoice.id}`,
   })

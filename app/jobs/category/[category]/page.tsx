@@ -19,8 +19,10 @@ import { isPhaseIndexable } from '../../../../lib/seo/indexingPhase'
 import { buildJobsPath } from '../../../../lib/jobs/searchSlug'
 import { newThisWeekClause } from '../../../../lib/jobs/postedRecently'
 import { countrySlugToCode } from '../../../../lib/seo/countrySlug'
-import { resolveJobCategory } from '../../../../lib/seo/jobCategories'
+import { JOB_CATEGORY_MAP, resolveJobCategory } from '../../../../lib/seo/jobCategories'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '../../../../lib/jobs/relatedSearches'
 import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
@@ -177,6 +179,14 @@ export default async function CategoryPage({
   const primaryRoleSlug = cfg.roleSlugs[0]
   const avgSalaryLabel = formatSalary(insights.avgAnnual)
 
+  // "Related searches": the other categories and the whole jobs hub, each counted with the destination page's own query.
+  const relatedSearches = await loadRelatedSearches([
+    { label: 'All $100k+ jobs', href: '/jobs', input: relatedInput.jobsHub() },
+    ...Object.entries(JOB_CATEGORY_MAP)
+      .filter(([, c]) => c !== cfg)
+      .map(([slug, c]) => ({ label: `${c.label} jobs`, href: `/jobs/category/${slug}`, input: relatedInput.category(c.roleSlugs) })),
+  ])
+
   return (
     <ListingPage>
       <ListingHeader
@@ -222,6 +232,8 @@ export default async function CategoryPage({
           hrefFor={(n) => (n <= 1 ? `/jobs/category/${category}` : `/jobs/category/${category}?page=${n}`)}
         />
       </ListingLayout>
+
+      <RelatedSearches items={relatedSearches} />
 
       <SalaryByLevel input={{ roleSlugs: cfg.roleSlugs, isHundredKLocal: true }} label={cfg.label} />
 

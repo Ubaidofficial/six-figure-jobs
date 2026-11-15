@@ -1,4 +1,5 @@
 import Link from '@/components/ui/Link'
+import type { ProductKey } from '@/lib/billing/config'
 
 import { CheckoutButton, PortalButton } from './BillingButtons'
 import { SignOutButton } from './SignInForm'
@@ -10,7 +11,7 @@ export interface AccountViewProps {
   balance: number
   subscription: { active: boolean; currentPeriodEnd: Date | null; cancelAtPeriodEnd: boolean }
   /** Products with a Stripe price configured; empty when billing is not set up. */
-  products: { key: 'subscription' | 'pack_small' | 'pack_large'; credits: number }[]
+  products: { key: ProductKey; credits: number }[]
   hasBillingAccount: boolean
   checkout?: 'success' | 'cancelled'
 }
@@ -18,8 +19,9 @@ export interface AccountViewProps {
 const formatDate = (d: Date) => d.toLocaleDateString('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
 
 export function AccountView({ email, balance, subscription, products, hasBillingAccount, checkout }: AccountViewProps) {
-  const sub = products.find((p) => p.key === 'subscription')
-  const packs = products.filter((p) => p.key !== 'subscription')
+  const isPlan = (key: ProductKey) => key === 'subscription' || key === 'subscription_weekly'
+  const plans = products.filter((p) => isPlan(p.key))
+  const packs = products.filter((p) => !isPlan(p.key))
 
   return (
     <main className={styles.page}>
@@ -79,9 +81,14 @@ export function AccountView({ email, balance, subscription, products, hasBilling
           <p className={styles.muted}>Billing is not available yet.</p>
         ) : (
           <div className={styles.actions}>
-            {sub && !subscription.active ? (
-              <CheckoutButton product="subscription">Subscribe: {sub.credits.toLocaleString('en-US')} credits a month</CheckoutButton>
-            ) : null}
+            {!subscription.active
+              ? plans.map((p) => (
+                  <CheckoutButton key={p.key} product={p.key}>
+                    {p.key === 'subscription_weekly' ? 'Subscribe weekly' : 'Subscribe monthly'}: {p.credits.toLocaleString('en-US')} credits a{' '}
+                    {p.key === 'subscription_weekly' ? 'week' : 'month'}
+                  </CheckoutButton>
+                ))
+              : null}
             {packs.map((p) => (
               <CheckoutButton key={p.key} product={p.key} variant="tertiary">
                 Buy {p.credits.toLocaleString('en-US')} credits

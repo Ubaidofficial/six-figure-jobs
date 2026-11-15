@@ -264,6 +264,24 @@ describe('invoice.paid (monthly credits)', () => {
   })
 })
 
+describe('invoice.paid (weekly plan)', () => {
+  const weeklyInvoice = (over: Record<string, any> = {}) =>
+    invoice({
+      parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_1', metadata: { product: 'subscription_weekly' } } },
+      ...over,
+    })
+
+  it('grants the weekly credits for a weekly subscription and the monthly credits otherwise', async () => {
+    const { fake, deps } = setup({ BILLING_MONTHLY_CREDITS: '120', BILLING_WEEKLY_CREDITS: '30' })
+    await post(deps, event('invoice.paid', weeklyInvoice({ id: 'in_w1', billing_reason: 'subscription_create' })))
+    await post(deps, event('invoice.paid', weeklyInvoice({ id: 'in_w2' })))
+    expect(fake.balance('u1')).toBe(60)
+    await post(deps, event('invoice.paid', invoice({ id: 'in_m1' })))
+    expect(fake.balance('u1')).toBe(180)
+    expect(fake.tables.creditLedger.map((r) => r.reason)).toEqual(['weekly_credits', 'weekly_credits', 'monthly_credits'])
+  })
+})
+
 describe('subscription mirror', () => {
   it('creates, updates and cancels the mirror row', async () => {
     const { fake, deps } = setup()

@@ -532,18 +532,21 @@ export function CompanyRolesCard({
   )
 }
 
-/** A short list of pages about this job's role, country and skills (never more than a handful). */
-export function RelatedSearchesCard({ links }: { links: { href: string; label: string }[] }) {
+/** A short list of pages about this job's role, country and skills (never more than a handful), with each page's job count. */
+export function RelatedSearchesCard({ links }: { links: { href: string; label: string; count?: number }[] }) {
   if (links.length === 0) return null
   return (
     <Card className="rounded-3xl p-6">
       <h2 className={styles.sideTitle}>Related searches</h2>
       <ul className="mt-3 space-y-2 text-sm">
         {links.map((l) => (
-          <li key={l.href}>
+          <li key={l.href} className="flex items-baseline justify-between gap-3">
             <NextLink href={l.href} className="text-primary underline-offset-4 hover:underline">
               {l.label}
             </NextLink>
+            {l.count !== undefined ? (
+              <span className="shrink-0 tabular-nums text-muted-foreground">{l.count.toLocaleString('en-US')}</span>
+            ) : null}
           </li>
         ))}
       </ul>

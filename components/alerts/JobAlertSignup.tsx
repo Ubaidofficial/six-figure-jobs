@@ -23,7 +23,7 @@ type State = { kind: 'idle' | 'sending' | 'done' | 'error'; message?: string }
 
 export function JobAlertSignup({ filters, label, variant = 'inline', className }: Props) {
   const [email, setEmail] = React.useState('')
-  const [frequency, setFrequency] = React.useState<'weekly' | 'daily'>('weekly')
+  const [frequency, setFrequency] = React.useState<'weekly' | 'daily' | 'instant'>('weekly')
   const [state, setState] = React.useState<State>({ kind: 'idle' })
   // "name@gmial.com" -> offer "name@gmail.com". Checked when the field is left and on submit; never changed silently.
   const [suggestion, setSuggestion] = React.useState<string | null>(null)
@@ -102,11 +102,13 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className }
           <select
             id={`${id}-frequency`}
             value={frequency}
-            onChange={(e) => setFrequency(e.target.value === 'daily' ? 'daily' : 'weekly')}
+            onChange={(e) => setFrequency(e.target.value === 'daily' ? 'daily' : e.target.value === 'instant' ? 'instant' : 'weekly')}
             className={styles.select}
           >
             <option value="weekly">Weekly</option>
             <option value="daily">Daily</option>
+            {/* Shown only when subscriptions are on; the server refuses it unless the visitor is a signed-in subscriber. */}
+            {process.env.NEXT_PUBLIC_ACCOUNTS_ENABLED === 'true' ? <option value="instant">Instant (Pro)</option> : null}
           </select>
           {/* Hidden from people; bots that fill every field reveal themselves. */}
           <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className={styles.trap} />

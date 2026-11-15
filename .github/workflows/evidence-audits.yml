@@ -5,6 +5,8 @@ name: evidence audits
 #   2. which live jobs with no remoteMode say, in a sentence, that the role is remote (scripts/backfillRemoteEvidence.ts):
 #      a DRY RUN unless "apply" is ticked. Applying writes remoteMode = 'remote' on jobs that had none, which changes their
 #      JSON-LD (jobLocationType TELECOMMUTE), so read the dry run's sample sentences first. updatedAt is not touched.
+#   3. which live jobs with an empty benefitsJson state time off / benefits in a sentence (scripts/backfillBenefitsEvidence.ts):
+#      a DRY RUN unless "apply_benefits" is ticked. Applying writes benefitsJson (label strings) on jobs that had none.
 # Same production-database fingerprint guard as the other manual workflows.
 
 on:
@@ -17,6 +19,11 @@ on:
         default: "30000"
       apply:
         description: "Write remoteMode (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+      apply_benefits:
+        description: "Write benefitsJson on jobs with none (leave unticked for a dry run)"
         type: boolean
         required: false
         default: false
@@ -67,9 +74,20 @@ jobs:
           [ "$APPLY" = "true" ] && args="$args --apply"
           npx tsx scripts/backfillRemoteEvidence.ts $args
 
+      - name: Benefits evidence
+        env:
+          LIMIT: ${{ inputs.limit }}
+          APPLY: ${{ inputs.apply_benefits }}
+        run: |
+          args="--limit=$LIMIT --report=benefits-evidence.json"
+          [ "$APPLY" = "true" ] && args="$args --apply"
+          npx tsx scripts/backfillBenefitsEvidence.ts $args
+
       - name: Keep the sentences
         uses: actions/upload-artifact@v4
         with:
           name: remote-evidence-report
-          path: remote-evidence.json
+          path: |
+            remote-evidence.json
+            benefits-evidence.json
           retention-days: 14

@@ -15,6 +15,8 @@ import { prisma } from '@/lib/prisma'
 import { rankRelatedRoles } from '@/lib/roles/relatedRoles'
 import { loadRoleSlugCounts } from '@/lib/roles/roleSlugCounts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '@/lib/jobs/relatedSearches'
 import { buildJobSlugHref } from '../../../lib/jobs/jobSlug'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import JobList from '../../components/JobList'
@@ -372,6 +374,18 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
       notFoundPastLastPage(page, totalPages)
       const glance = await loadRemoteRoleGlance(roleSlug)
 
+      // "Related searches": the remote pages of the other roles in this field, the remote hub and this role's page
+      // for every work type, each counted with the destination page's own query.
+      const relatedSearches = await loadRelatedSearches([
+        ...(glance?.related ?? []).slice(0, 5).map((r) => ({
+          label: `Remote ${r.label} jobs`,
+          href: `/remote/${r.slug}`,
+          input: relatedInput.remoteRole(r.slug),
+        })),
+        { label: 'All remote jobs', href: '/remote', input: relatedInput.remoteHub() },
+        { label: `All ${roleName} jobs`, href: `/jobs/${roleSlug}`, input: relatedInput.role(roleSlug) },
+      ])
+
       const jsonLd = buildJobListJsonLd(roleSlug, jobs, page)
       const faqJsonLd = {
         '@context': 'https://schema.org',
@@ -609,6 +623,8 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
           )}
         </>
       )}
+
+      <RelatedSearches items={relatedSearches} />
 
       {glance && glance.remote > 0 ? (
         <section className="mt-8 rounded-2xl border border-border bg-card p-4">

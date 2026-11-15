@@ -30,6 +30,8 @@ import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
 import { ActiveFilters } from './ActiveFilters'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '@/lib/jobs/relatedSearches'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
 const SITE_URL = getSiteUrl()
@@ -365,6 +367,21 @@ export async function SalaryTierTemplate({
 
   const basePath = `/jobs/${tierId}`
 
+  // Sidebar "Related searches": the other salary tiers, the whole jobs hub and this tier's biggest role pages, each
+  // counted with the destination page's own query.
+  const relatedSearches = await loadRelatedSearches(
+    [
+      ...Object.values(SALARY_TIERS).map((t) => ({
+        label: `${t.rangeLabel} jobs`,
+        href: `/jobs/${t.id}`,
+        input: relatedInput.tier(t.id),
+      })),
+      { label: 'All $100k+ jobs', href: '/jobs', input: relatedInput.jobsHub() },
+      ...topRoles.slice(0, 3).map((r) => ({ label: `${r.label} jobs`, href: `/jobs/${r.slug}`, input: relatedInput.role(r.slug) })),
+    ],
+    { exclude: [basePath] },
+  )
+
   return (
     <ListingPage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
@@ -391,7 +408,12 @@ export async function SalaryTierTemplate({
       />
 
       <ListingLayout
-        sidebar={<JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />}
+        sidebar={
+          <>
+            <JobsFiltersPanel facets={facets} salaryPresetLabel={tier.rangeLabel} />
+            <RelatedSearches items={relatedSearches} />
+          </>
+        }
         bar={
           <ActiveFilters
             total={data.total}

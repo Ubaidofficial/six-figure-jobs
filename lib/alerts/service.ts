@@ -19,7 +19,15 @@ import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { getSearchVocabulary } from '@/lib/search/vocabulary'
 
 import { normalizeEmail } from './email'
-import { MAX_ALERTS_PER_EMAIL, MAX_CONFIRMATIONS_PER_EMAIL_PER_DAY, SEND_GAP_MS, type AlertFrequency } from './config'
+import { hasActiveSubscription } from '@/lib/billing/entitlement'
+
+import {
+  FREE_MAX_ALERTS_PER_EMAIL,
+  MAX_CONFIRMATIONS_PER_EMAIL_PER_DAY,
+  PRO_MAX_ALERTS_PER_EMAIL,
+  SEND_GAP_MS,
+  type AlertFrequency,
+} from './config'
 import { alertFiltersKey, alertQueryInput, buildAlertLabel, sanitizeAlertFilters, type AlertFilters } from './filters'
 import {
   asFrequency,
@@ -138,7 +146,7 @@ export function readSource(raw: unknown): string | null {
 const confirmationsPerEmail = createRateLimiter()
 const DAY_MS = 24 * 60 * 60 * 1000
 
-export type SubscribeResult = 'confirmation_sent' | 'nothing_to_do' | 'limited' | 'invalid'
+export type SubscribeResult = 'confirmation_sent' | 'nothing_to_do' | 'limited' | 'invalid' | 'pro_required'
 
 /**
  * Creates (or revives) an alert and mails the confirmation link. The visitor always sees the same message whatever
@@ -150,12 +158,19 @@ export async function subscribe(input: {
   frequency: unknown
   /** The page the form was on. */
   source?: unknown
+  /**
+   * True only when the caller has verified that the visitor is signed in, holds an active subscription and that this
+   * address is their own (app/api/alerts/route.ts). It unlocks instant alerts and the higher cap.
+   */
+  pro?: boolean
   send?: SendMail
 }): Promise<SubscribeResult> {
   const email = normalizeEmail(input.email)
   const filters = sanitizeAlertFilters(input.filters)
   if (!email || !filters) return 'invalid'
-  const frequency: AlertFrequency = input.frequency === 'daily' ? 'daily' : 'weekly'
+  if (input.frequency === 'instant' && !input.pro) return 'pro_required'
+  const frequency: AlertFrequency =
+    input.frequency === 'instant' ? 'instant' : input.frequency === 'daily' ? 'daily' : 'weekly'
   const filtersKey = alertFiltersKey(filters)
 
   const existing = await prisma.jobAlert.findUnique({ where: { email_filtersKey: { email, filtersKey } } })
@@ -163,7 +178,7 @@ export async function subscribe(input: {
 
   if (!existing) {
     const held = await prisma.jobAlert.count({ where: { email, status: { not: 'unsubscribed' } } })
-    if (held >= MAX_ALERTS_PER_EMAIL) return 'limited'
+    if (held >= (input.pro ? PRO_MAX_ALERTS_PER_EMAIL : FREE_MAX_ALERTS_PER_EMAIL)) return 'limited'
   }
   if (!confirmationsPerEmail.allow(email, MAX_CONFIRMATIONS_PER_EMAIL_PER_DAY, DAY_MS)) return 'limited'
 
@@ -247,6 +262,18 @@ export type DigestRunStats = {
   failed: number
   /** Due alerts not tried because the email provider's limit was reached; they go out on the next run, first. */
   leftForNextRun: number
+  /** Instant alerts whose owner no longer has an active subscription: switched to daily instead of sent now. */
+  demoted: number
+}
+
+/** Which of these addresses belong to a user with an active subscription (matched by sign-in email, any case). */
+async function proEmailsAmong(emails: string[]): Promise<Set<string>> {
+  const pro = new Set<string>()
+  for (const email of new Set(emails)) {
+    const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, select: { id: true } })
+    if (user && (await hasActiveSubscription(user.id))) pro.add(email)
+  }
+  return pro
 }
 
 /**
@@ -260,6 +287,8 @@ export async function runDigests(
     log?: (line: string) => void
     /** Build and "send" (to `send`) but record nothing: the same alerts stay due and no job is marked as sent. */
     dryRun?: boolean
+    /** Which alerts this run handles. The daily run does daily and weekly; the 15-minute run does only 'instant'. */
+    frequencies?: AlertFrequency[]
   } = {},
 ): Promise<DigestRunStats> {
   const now = opts.now ?? new Date()
@@ -267,13 +296,27 @@ export async function runDigests(
   const log = opts.log ?? (() => {})
   const base = getSiteUrl()
   const postalAddress = String(process.env.ALERTS_POSTAL_ADDRESS)
-  const stats: DigestRunStats = { active: 0, due: 0, sent: 0, nothingNew: 0, failed: 0, leftForNextRun: 0 }
+  const stats: DigestRunStats = { active: 0, due: 0, sent: 0, nothingNew: 0, failed: 0, leftForNextRun: 0, demoted: 0 }
+  const wanted = opts.frequencies ?? ['daily', 'weekly']
 
   // Longest-waiting first (never sent, then oldest last email), so when a daily sending limit cuts a run short, the
   // alerts it skipped are the first to go out the next day instead of the same ones missing out every day.
-  const active = await prisma.jobAlert.findMany({ where: { status: 'active' } })
+  const active = await prisma.jobAlert.findMany({ where: { status: 'active', frequency: { in: wanted } } })
   stats.active = active.length
+  // Instant is a Pro feature: an instant alert whose owner has stopped paying goes back to daily (it then goes out with
+  // the daily run) instead of being mailed every 15 minutes for free.
+  const instant = active.filter((a) => a.frequency === 'instant')
+  const lapsed = new Set<string>()
+  if (instant.length > 0) {
+    const pro = await proEmailsAmong(instant.map((a) => a.email))
+    for (const a of instant) if (!pro.has(a.email)) lapsed.add(a.id)
+    stats.demoted = lapsed.size
+    if (lapsed.size > 0 && !opts.dryRun) {
+      await prisma.jobAlert.updateMany({ where: { id: { in: [...lapsed] } }, data: { frequency: 'daily' } })
+    }
+  }
   const due = active
+    .filter((a) => !lapsed.has(a.id))
     .filter((a) => isDue(a, now))
     .sort((a, b) => (a.lastSentAt?.getTime() ?? 0) - (b.lastSentAt?.getTime() ?? 0) || a.id.localeCompare(b.id))
   stats.due = due.length
