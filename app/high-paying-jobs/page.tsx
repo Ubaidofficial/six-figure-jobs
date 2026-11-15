@@ -167,6 +167,7 @@ export default async function HighPayingJobsPage() {
           <LinkChips
             label="Related"
             items={[
+              { label: 'Six-figure job pay report', href: '/high-paying-jobs-report' },
               { label: 'Salary guides by role', href: '/salary' },
               { label: '$200k+ jobs', href: '/jobs/200k-plus' },
               { label: 'Remote $100k+ jobs', href: '/remote' },
