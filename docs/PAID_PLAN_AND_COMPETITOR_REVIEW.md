@@ -57,6 +57,12 @@ Open decisions (cannot be made from the code or from the sites):
 - Trial or money-back period, refund treatment of used credits, credit expiry (all in the checklist section 8).
 - Tax: whether to charge VAT/sales tax and turn on Stripe Tax.
 
+### Decisions made 2026-11-15 (owner)
+
+- **Prices:** $4.99/week and $9.99/month list, **50% launch discount on both** (built as a Stripe coupon, so the size and duration are whatever the coupon says; the page reads it from Stripe). Verified competitor prices for comparison: 4dayweek $9/week and $25/month, Remote Rocketship $29/month ($59/quarter, $99/year), Remote OK $14.95/month on a 12-month commitment. FlexJobs and Remotive could not be read from their own pages and are not in the table.
+- **Pro features:** build instant alerts and saved searches first (built, behind `ALERTS_ENABLED` + accounts); the comparison table lists only features that exist.
+- Stripe margin to keep in mind: standard card fees (about 2.9% + 30 cents, verify your rate) are about 44 cents on $4.99 and 59 cents on $9.99, before the discount; at 50% off the fixed part is a larger share.
+
 ## 5. Filters and page blocks: us vs competitors
 
 Our sidebar filters now: Salary, Work type, Location, Role, Seniority, Remote region, Company size, Technology, Visa.

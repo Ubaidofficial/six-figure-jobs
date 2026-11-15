@@ -20,11 +20,12 @@ export function alertsEnabled(env: Env = process.env): boolean {
 /** Pause between two emails in a digest run, under the email API's per-second limit. */
 export const SEND_GAP_MS = 600
 
-export type AlertFrequency = 'daily' | 'weekly'
-export const ALERT_FREQUENCIES: readonly AlertFrequency[] = ['daily', 'weekly']
+/** 'instant' is a Pro feature: mailed within about 15 minutes of a matching job arriving (the run is scheduled that often). */
+export type AlertFrequency = 'daily' | 'weekly' | 'instant'
+export const ALERT_FREQUENCIES: readonly AlertFrequency[] = ['daily', 'weekly', 'instant']
 
 /** Jobs in one email; the email links to the rest on the site. */
-export const DIGEST_SIZE: Record<AlertFrequency, number> = { daily: 10, weekly: 20 }
+export const DIGEST_SIZE: Record<AlertFrequency, number> = { daily: 10, weekly: 20, instant: 10 }
 /** At most this many jobs from one company per email, so one big hirer cannot fill it. */
 export const MAX_JOBS_PER_COMPANY = 2
 /**
@@ -34,15 +35,22 @@ export const MAX_JOBS_PER_COMPANY = 2
 export const DUE_AFTER_MS: Record<AlertFrequency, number> = {
   daily: 20 * 60 * 60 * 1000,
   weekly: (7 * 24 - 4) * 60 * 60 * 1000,
+  // Slightly under the 15-minute schedule, so a run that starts a little early still sends.
+  instant: 10 * 60 * 1000,
 }
 /** Never look further back than this for "new" jobs (a first digest, or one after a long gap). */
 export const LOOKBACK_MS: Record<AlertFrequency, number> = {
   daily: 2 * 24 * 60 * 60 * 1000,
   weekly: 8 * 24 * 60 * 60 * 1000,
+  instant: 24 * 60 * 60 * 1000,
 }
 
-/** Searches one address may hold. */
-export const MAX_ALERTS_PER_EMAIL = 10
+/**
+ * Searches one address may hold. Free: 3 (owner's decision 2026-11-15; it applies to NEW alerts only, an address that
+ * already holds more keeps them). Pro: 100, a ceiling against abuse rather than a promise of "unlimited" to count on.
+ */
+export const FREE_MAX_ALERTS_PER_EMAIL = 3
+export const PRO_MAX_ALERTS_PER_EMAIL = 100
 /** Confirmation emails one address may be sent in a day, so the form cannot be used to flood someone's inbox. */
 export const MAX_CONFIRMATIONS_PER_EMAIL_PER_DAY = 3
 /** Signups from one visitor in 10 minutes. */

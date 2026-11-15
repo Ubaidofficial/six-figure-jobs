@@ -3,7 +3,8 @@
 
 type Env = Record<string, string | undefined>
 
-export type ProductKey = 'subscription' | 'pack_small' | 'pack_large'
+/** 'subscription' is the monthly plan (kept under its first name so existing subscriptions and links keep working). */
+export type ProductKey = 'subscription' | 'subscription_weekly' | 'pack_small' | 'pack_large'
 
 export interface Product {
   key: ProductKey
@@ -19,7 +20,7 @@ export interface Product {
  * BILLING_MONTHLY_CREDITS, BILLING_PACK_SMALL_CREDITS and BILLING_PACK_LARGE_CREDITS before launch
  * (docs/billing-launch-checklist.md); these numbers are not a product decision.
  */
-export const PLACEHOLDER_CREDITS = { monthly: 100, packSmall: 50, packLarge: 250 } as const
+export const PLACEHOLDER_CREDITS = { monthly: 100, weekly: 25, packSmall: 50, packLarge: 250 } as const
 
 /** Sanity ceiling for one grant; anything above is treated as a misconfiguration, not honoured. */
 export const MAX_CREDITS_PER_GRANT = 1_000_000
@@ -29,6 +30,12 @@ const PRODUCT_ENV: Record<ProductKey, { price: string; credits: string; fallback
     price: 'STRIPE_PRICE_SUBSCRIPTION',
     credits: 'BILLING_MONTHLY_CREDITS',
     fallback: PLACEHOLDER_CREDITS.monthly,
+    mode: 'subscription',
+  },
+  subscription_weekly: {
+    price: 'STRIPE_PRICE_SUBSCRIPTION_WEEKLY',
+    credits: 'BILLING_WEEKLY_CREDITS',
+    fallback: PLACEHOLDER_CREDITS.weekly,
     mode: 'subscription',
   },
   pack_small: {
@@ -62,6 +69,21 @@ export function parseCredits(raw: string | undefined, fallback: number): number 
 /** Credits per paid subscription period (BILLING_MONTHLY_CREDITS). */
 export function getMonthlyCredits(env: Env = process.env): number {
   return parseCredits(env[PRODUCT_ENV.subscription.credits], PRODUCT_ENV.subscription.fallback)
+}
+
+/** Credits per paid week of the weekly plan (BILLING_WEEKLY_CREDITS). */
+export function getWeeklyCredits(env: Env = process.env): number {
+  return parseCredits(env[PRODUCT_ENV.subscription_weekly.credits], PRODUCT_ENV.subscription_weekly.fallback)
+}
+
+/** True for the monthly and weekly plans (Checkout mode "subscription"), false for one-off packs. */
+export function isSubscriptionKey(key: ProductKey): boolean {
+  return PRODUCT_ENV[key].mode === 'subscription'
+}
+
+/** The launch discount's Stripe coupon id (BILLING_LAUNCH_COUPON_ID), or null. Its size and duration live in Stripe. */
+export function getLaunchCouponId(env: Env = process.env): string | null {
+  return env.BILLING_LAUNCH_COUPON_ID?.trim() || null
 }
 
 /** One product, or null when its Stripe price id is not configured. */

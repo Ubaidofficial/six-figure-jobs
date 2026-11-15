@@ -241,3 +241,70 @@
     flex: 1 1 100%;
   }
 }
+
+.struck {
+  color: var(--color-text-2);
+  font-weight: var(--font-weight-regular);
+}
+
+.cellNote {
+  display: block;
+  margin-top: var(--space-4);
+  color: var(--color-text-1);
+  font-size: var(--text-xs);
+}
+
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-12);
+  margin-top: var(--space-12);
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-1);
+  font-size: var(--text-sm);
+}
+
+.statNumber {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-0);
+}
+
+.tableWrap {
+  margin-top: var(--space-12);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  color: var(--color-text-1);
+}
+
+.table th,
+.table td {
+  padding: var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  color: var(--color-text-0);
+  font-weight: var(--font-weight-semibold);
+}
+
+.table tbody th {
+  color: var(--color-text-0);
+  font-weight: var(--font-weight-regular);
+}
+
+.ourRow th,
+.ourRow td {
+  background: var(--color-bg-2);
+  color: var(--color-text-0);
+}
