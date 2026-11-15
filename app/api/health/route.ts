@@ -8,11 +8,11 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request?: Request) {
+export async function GET(request: Request) {
   const started = Date.now()
   // How many addresses the proxies in front append to X-Forwarded-For (no address is shown): send one fake entry and
   // read the count back. Needed to set SCRAPE_GUARD_IP_HOPS; remove once it is known.
-  const forwarded = (request?.headers.get('x-forwarded-for') ?? '').split(',').filter((p) => p.trim()).length
+  const forwarded = (request.headers.get('x-forwarded-for') ?? '').split(',').filter((p) => p.trim()).length
   const NO_STORE = { 'Cache-Control': 'no-store', 'X-Forwarded-For-Entries': String(forwarded) }
   try {
     const rows = await prisma.$queryRaw<unknown[]>`SELECT 1 FROM "Job" WHERE "isExpired" = false LIMIT 1`
