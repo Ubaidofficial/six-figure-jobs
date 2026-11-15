@@ -11,7 +11,7 @@ import { RegionMark } from '@/components/ui/RegionMark'
 import { HeroSearchInput } from '@/components/home/HeroSearchInput'
 
 import { AuthNav } from './AuthNav'
-import { Wordmark } from './Wordmark'
+import { Logo } from '@/components/brand/Logo'
 
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 
@@ -67,7 +67,7 @@ export function SiteHeader() {
       <div className={styles.inner}>
         <div className={styles.brand}>
           <Link href="/" className={styles.logo} aria-label="six fig jobs home">
-            <Wordmark />
+            <Logo variant="wide" className={styles.logoImg} />
           </Link>
           <span className={styles.kicker} aria-hidden="true">
             <span className={styles.kickerStrong}>$100k+</span> salaries shown
@@ -128,7 +128,7 @@ export function SiteHeader() {
                 <SheetTitle className="sr-only">Menu</SheetTitle>
                 <div className={styles.mobileHeader}>
                   <Link href="/" className={styles.logo} onClick={() => setMobileOpen(false)}>
-                    <Wordmark />
+                    <Logo variant="wide" className={styles.logoImg} />
                   </Link>
                   <SheetClose asChild>
                     <button type="button" className={styles.mobileClose} aria-label="Close menu">

@@ -9,7 +9,7 @@ import { alertsEnabled } from '@/lib/alerts/config'
 import { FooterNewsletter } from './FooterNewsletter'
 import { FOOTER_COLUMNS } from './footerLinks'
 import styles from './Footer.module.css'
-import { Wordmark } from './Wordmark'
+import { Logo } from '@/components/brand/Logo'
 
 export function Footer() {
   return (
@@ -34,7 +34,7 @@ export function Footer() {
         <div className={styles.columnsDesktop} aria-label="Footer links">
           <div className={styles.brand}>
             <Link href="/" className={styles.logo}>
-              <Wordmark />
+              <Logo variant="stacked-tag" className={styles.logoImg} />
             </Link>
             <div className={styles.tagline}>Premium jobs for high earners.</div>
             <div className={styles.socialRow} aria-label="Social links">
@@ -86,7 +86,7 @@ export function Footer() {
         <div className={styles.columnsMobile} aria-label="Footer links (mobile)">
           <div className={styles.brand}>
             <Link href="/" className={styles.logo}>
-              <Wordmark />
+              <Logo variant="stacked-tag" className={styles.logoImg} />
             </Link>
             <div className={styles.tagline}>Premium jobs for high earners.</div>
             <div className={styles.socialRow} aria-label="Social links">
