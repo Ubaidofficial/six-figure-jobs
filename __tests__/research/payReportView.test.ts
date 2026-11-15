@@ -127,3 +127,39 @@ describe('the report page, once an edition carries the evidence', () => {
     expect(markup).toContain('href="https://example.org/wages"')
   })
 })
+
+describe('row links in the report tables', () => {
+  const rowLinks = (markup: string) => [...markup.matchAll(/<a class="rowLink" href="([^"]*)"/g)].map((m) => m[1])
+
+  it('links roles, the two cities and the levels that have pages, and no others', () => {
+    const links = rowLinks(html(EDITION_2026_11))
+    expect(links).toContain('/jobs/principal-software-engineer')
+    expect(links).toContain('/jobs/city/san-francisco')
+    expect(links).toContain('/jobs/city/san-jose')
+    expect(links).toContain('/jobs/level/senior')
+    expect(links).toContain('/jobs/level/lead')
+    expect(links).not.toContain('/jobs/city/san-mateo')
+    expect(links.some((l) => l.startsWith('/company/'))).toBe(false) // no employer slugs in the November data, so no guessed links
+  })
+
+  it('stays bounded and clean: one link per destination, no query strings, a handful per table', () => {
+    const links = rowLinks(html(EDITION_2026_11))
+    expect(new Set(links).size).toBe(links.length)
+    for (const href of links) expect(href).not.toMatch(/[?#]/)
+    expect(links).toHaveLength(16) // 12 roles + 2 cities + 2 levels
+  })
+
+  it('links an employer only when its slug is in the data', () => {
+    const withSlug = {
+      ...EDITION_2026_11,
+      employers: EDITION_2026_11.employers.map((e) => (e.label === 'NVIDIA' ? { ...e, slug: 'nvidia' } : e)),
+    }
+    const links = rowLinks(html(withSlug))
+    expect(links).toContain('/company/nvidia')
+    expect(links.filter((l) => l.startsWith('/company/'))).toHaveLength(1)
+  })
+
+  it('leaves the work-arrangement rows unlinked, since the sentence under that table already links the remote page', () => {
+    expect(rowLinks(html(EDITION_2026_11))).not.toContain('/remote')
+  })
+})

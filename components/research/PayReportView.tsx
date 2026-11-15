@@ -36,6 +36,7 @@ import {
   type PayReportData,
   type PayRow,
 } from '@/lib/research/payReport'
+import { cityHref, employerHref, levelHref, roleHref, skillHref, uniqueHrefs } from '@/lib/research/payReportLinks'
 import { PAY_REPORT_CHART_NAMES, chartEmbedHtml, chartPath, payReportChart } from '@/lib/research/payReportCharts'
 import { BAY_AREA_CITIES, METHOD_PATH, METHOD_VERSION } from '@/lib/research/method'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
@@ -92,9 +93,11 @@ export function DataTable({ caption, first, columns, rows }: { caption: string; 
 }
 
 /** Rows for a list of PayRow: listings, (employers,) (middle half,) median with a bar. */
-function payRows(list: PayRow[], withEmployers: boolean): { columns: Column[]; rows: TableRow[] } {
+function payRows(list: PayRow[], withEmployers: boolean, hrefFor?: (row: PayRow) => string | undefined): { columns: Column[]; rows: TableRow[] } {
   const max = Math.max(...list.map((x) => x.median), 1)
   const spread = list.every((x) => x.p25 !== undefined && x.p75 !== undefined)
+  // One link per destination in a table, and only where the destination exists (lib/research/payReportLinks.ts).
+  const hrefs = uniqueHrefs(list.map((x) => hrefFor?.(x)))
   return {
     columns: [
       { head: 'Listings' },
@@ -102,9 +105,15 @@ function payRows(list: PayRow[], withEmployers: boolean): { columns: Column[]; r
       ...(spread ? [{ head: 'Middle half of listings', hideSm: true }] : []),
       { head: 'Median advertised midpoint' },
     ],
-    rows: list.map((x) => ({
+    rows: list.map((x, i) => ({
       key: x.label,
-      label: x.label,
+      label: hrefs[i] ? (
+        <Link className={styles.rowLink} href={hrefs[i]!}>
+          {x.label}
+        </Link>
+      ) : (
+        x.label
+      ),
       cells: [
         n(x.listings),
         ...(withEmployers ? [n(x.employers ?? 0)] : []),
@@ -401,13 +410,13 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
             <DataTable
               caption="Median advertised midpoint by seniority"
               first="Level"
-              {...payRows(r.seniority, false)}
+              {...payRows(r.seniority, false, (x) => levelHref(x.label))}
             />
           </Section>
 
           <Section id="roles" title="The best-paid roles">
             <p className={styles.lead}>Roles with at least {MIN_ROLE_LISTINGS} listings, ranked by median advertised midpoint.</p>
-            <DataTable caption="Roles ranked by median advertised midpoint" first="Role" {...payRows(r.roles, true)} />
+            <DataTable caption="Roles ranked by median advertised midpoint" first="Role" {...payRows(r.roles, true, (x) => roleHref(x.label))} />
             <p className={styles.after}>
               Roles with fewer listings can pay more, but a handful of postings cannot support a median, so we leave them out. For the live
               ranking of roles by pay, see <Link href="/high-paying-jobs">high-paying jobs ranked by real pay</Link>, or browse the{' '}
@@ -490,7 +499,7 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
             <p className={styles.lead}>
               The {r.cities.length} cities with the highest medians among those with at least 8 listings from at least {MIN_CITY_EMPLOYERS} employers.
             </p>
-            <DataTable caption="Cities ranked by median advertised midpoint" first="City" {...payRows(r.cities, true)} />
+            <DataTable caption="Cities ranked by median advertised midpoint" first="City" {...payRows(r.cities, true, (x) => cityHref(x.label))} />
             <p className={styles.after}>
               All {r.cities.length} are in the {r.citiesRegion}. By country, {r.countries.usSharePct}% of the USD-priced listings are in the United States,
               with a median of {usd(r.countries.usMedian)}; Canada has a median of {usd(r.countries.canadaMedian)} across {n(r.countries.canadaListings)} listings.
@@ -505,7 +514,7 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
                 skill it names. This is an association, not a cause: skills cluster in senior and specialist roles, so a high median mostly reflects which
                 roles use the skill.
               </p>
-              <DataTable caption="Skills ranked by median advertised midpoint" first="Skill" {...payRows(r.skills, true)} />
+              <DataTable caption="Skills ranked by median advertised midpoint" first="Skill" {...payRows(r.skills, true, (x) => skillHref(x.label))} />
             </Section>
           ) : null}
 
@@ -513,7 +522,7 @@ export function PayReportView({ report: r }: { report: PayReportData }) {
             <p className={styles.lead}>
               The employers with the most six-figure listings, leaving out recruiting and staffing firms, with their median advertised midpoint.
             </p>
-            <DataTable caption="Employers with the most six-figure listings" first="Employer" {...payRows(r.employers, false)} />
+            <DataTable caption="Employers with the most six-figure listings" first="Employer" {...payRows(r.employers, false, employerHref)} />
             <p className={styles.after}>
               The single largest employer accounts for {r.concentration.top1Pct}% of the listings, the top five for {r.concentration.top5Pct}% and the top
               twenty for {r.concentration.top20Pct}%. That concentration is why we also report the median with each employer (of those with three or more
