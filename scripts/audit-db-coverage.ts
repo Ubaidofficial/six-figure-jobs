@@ -30,6 +30,37 @@ export const AUDITS: Audit[] = [
     FROM "Job" WHERE ${LIVE}`,
   },
   {
+    title: 'Is "new this week" believable? Live jobs by source',
+    note: 'new_7d_as_shown is what the company cards count (postedAt, else createdAt, within 7 days). first_seen_7d is when WE first stored the job. posted_after_first_seen jobs have a posting date later than the day we first saw them: a re-posted or updated date, not a first posting.',
+    sql: `SELECT source, count(*) AS live,
+      count(*) FILTER (WHERE coalesce("postedAt", "createdAt") >= now() - interval '7 days') AS new_7d_as_shown,
+      count(*) FILTER (WHERE "createdAt" >= now() - interval '7 days') AS first_seen_7d,
+      count(*) FILTER (WHERE "postedAt" IS NOT NULL AND "postedAt" > "createdAt" + interval '1 day') AS posted_after_first_seen,
+      count(*) FILTER (WHERE "postedAt" IS NULL) AS no_posted_at
+    FROM "Job" WHERE ${LIVE} GROUP BY source ORDER BY live DESC LIMIT 15`,
+  },
+  {
+    title: 'The 20 biggest companies: jobs and "new this week"',
+    note: 'A company whose live jobs are nearly all "new" is usually one we only started scraping this week, not one that just posted everything.',
+    sql: `SELECT c.name, count(*) AS live,
+      count(*) FILTER (WHERE coalesce(j."postedAt", j."createdAt") >= now() - interval '7 days') AS new_7d_as_shown,
+      count(*) FILTER (WHERE j."createdAt" >= now() - interval '7 days') AS first_seen_7d,
+      min(j."createdAt")::date AS first_stored
+    FROM "Job" j JOIN "Company" c ON c.id = j."companyId" WHERE j."isExpired" = false
+    GROUP BY c.id, c.name ORDER BY live DESC LIMIT 20`,
+  },
+  {
+    title: 'HTML entities left in names and titles ("&#038;", "&amp;")',
+    note: 'Rows whose stored text still contains an HTML entity, shown literally to visitors. Companies and live jobs.',
+    sql: `SELECT 'Company.name' AS field, count(*) AS rows_with_entity FROM "Company" WHERE name ~ '&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);'
+      UNION ALL SELECT 'Job.company (live)', count(*) FROM "Job" WHERE ${LIVE} AND company ~ '&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);'
+      UNION ALL SELECT 'Job.title (live)', count(*) FROM "Job" WHERE ${LIVE} AND title ~ '&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);'`,
+  },
+  {
+    title: 'Companies whose name still has an HTML entity (sample)',
+    sql: `SELECT name, slug, "jobCount" FROM "Company" WHERE name ~ '&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);' ORDER BY "jobCount" DESC NULLS LAST LIMIT 15`,
+  },
+  {
     title: 'Company profile completeness',
     sql: `SELECT count(*) AS companies,
       count("employeeCount") AS has_employee_count, count("fundingStage") AS has_funding_stage,
