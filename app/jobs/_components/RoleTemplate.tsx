@@ -35,6 +35,8 @@ import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
 import { ActiveFilters } from './ActiveFilters'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '@/lib/jobs/relatedSearches'
 import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
@@ -506,6 +508,25 @@ export async function RoleTemplate({
       }
     : undefined
 
+  // Sidebar "Related searches": the remote page for this role, its top-paying cities and the other roles in its field,
+  // each counted with the destination page's own query (a role-city page lists only that city, not the whole role).
+  const relatedSearches = await loadRelatedSearches(
+    [
+      { label: `Remote ${roleTitle} jobs`, href: `/remote/${roleSlug}`, input: relatedInput.remoteRole(roleSlug) },
+      ...cities.slice(0, 3).map((c) => ({
+        label: `${roleTitle} jobs in ${c.city}`,
+        href: `${basePath}/city/${c.slug}`,
+        input: relatedInput.roleCity(roleSlug, c.slug),
+      })),
+      ...(related?.roles ?? []).slice(0, 4).map((r) => ({
+        label: `${r.label} jobs`,
+        href: `/jobs/${r.slug}`,
+        input: relatedInput.role(r.slug),
+      })),
+    ],
+    { exclude: [basePath] },
+  )
+
   // Skill chips link to the indexable /jobs/<role>/skills/<skill> landing pages. Only skills with a landing page
   // (SKILL_TARGETS, incl. stored spellings such as `nodejs`) get a chip; `?skill=` is stripped by proxy.ts.
   const skillChips = skills.flatMap((sk) => {
@@ -589,7 +610,12 @@ export async function RoleTemplate({
       />
 
       <ListingLayout
-        sidebar={<JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />}
+        sidebar={
+          <>
+            <JobsFiltersPanel facets={facets} rolePreset={{ label: roleTitle, emoji }} />
+            <RelatedSearches items={relatedSearches} />
+          </>
+        }
         bar={
           <ActiveFilters
             total={data.total}
