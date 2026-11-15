@@ -50,7 +50,8 @@ import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fa
 import { loadLastRefreshedAt, loadPublicSiteStats } from '@/lib/jobs/publicStats'
 import { SponsorStrip } from '@/components/sponsors/SponsorStrip'
 import { loadSponsorSlots } from '@/lib/sponsors/slots'
-import { getPriorityPublishedCompanyCandidates } from '@/lib/seo/companyPublishing'
+import { getPriorityPublishedCompanyCandidates, getPublishedCompanyCandidatesPage } from '@/lib/seo/companyPublishing'
+import { BrowseDirectory } from '@/components/home/BrowseDirectory'
 import { TOP_COMPANY_SLUGS } from '@/lib/constants/topCompanies'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { SectionIndicator } from '@/components/home/SectionIndicator'
@@ -591,8 +592,24 @@ async function loadHomePageData() {
   return { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, feedItemIds, newRolesCompanies, sponsors, jobs, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles }
 }
 
+/**
+ * The published (indexable) companies for the link directory at the bottom of the page: the same list, in the same
+ * order, as /sitemap-company. Cached with the rest of the page data; if it cannot be read the group is left out.
+ */
+async function loadDirectoryCompanies(): Promise<Array<{ slug: string; name: string }>> {
+  try {
+    return await memoAsync('home.directory.companies', DEFAULT_TTL_MS, async () => {
+      const page = await getPublishedCompanyCandidatesPage(1, 30)
+      return page.map((c) => ({ slug: c.slug, name: c.name }))
+    })
+  } catch {
+    return []
+  }
+}
+
 export default async function HomePage() {
   try {
+    const directoryCompanies = await loadDirectoryCompanies()
     const { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, feedItemIds, newRolesCompanies, sponsors, jobs, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles } = await memoAsync('home.page.data', DEFAULT_TTL_MS, loadHomePageData)
 
     return (
@@ -818,6 +835,7 @@ export default async function HomePage() {
             </Link>
           </div>
         </div>
+        <BrowseDirectory companies={directoryCompanies} />
       </section>
     </main>
     </>
