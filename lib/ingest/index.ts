@@ -425,6 +425,8 @@ async function createNewJob(
     url: input.url ?? null,
     descriptionHtml: input.descriptionHtml ?? null,
     skillsJson: input.skills?.length ? JSON.stringify(input.skills) : enrichment.skillsJson ?? null,
+    benefitsJson: input.benefits?.length ? JSON.stringify(input.benefits) : null,
+    requirementsJson: input.requirements?.length ? JSON.stringify(input.requirements) : null,
     techStack: enrichment.techStack ?? null,
     sourceRef: input.sourceRef ?? null,
     visaSponsorship: input.visaSponsorship === true,
@@ -719,6 +721,10 @@ async function refreshJob(
   if (input.skills?.length) updateData.skillsJson = JSON.stringify(input.skills)
   if (input.sourceRef) updateData.sourceRef = input.sourceRef
   if (input.visaSponsorship === true) updateData.visaSponsorship = true
+  // Structured benefits and requirements fill only an empty field: a list a person, the AI writer or an earlier pass
+  // stored is never replaced.
+  if (!existing.benefitsJson && input.benefits?.length) updateData.benefitsJson = JSON.stringify(input.benefits)
+  if (!existing.requirementsJson && input.requirements?.length) updateData.requirementsJson = JSON.stringify(input.requirements)
 
   // Free, deterministic enrichment for a job stored before it existed (or without a description at the time): fills
   // only what is empty, never overrides a value a source or an earlier pass gave.

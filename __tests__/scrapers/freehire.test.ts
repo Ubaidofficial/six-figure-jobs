@@ -237,3 +237,48 @@ describe('sourceRef', () => {
     expect(mapFreehireJob(job)?.sourceRef).toBe('financial-analyst-marketing-and-commercial-zoox-n43jspaa')
   })
 })
+
+describe('freehire structured benefits and requirements', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { freehireBenefitLabels, freehireRequirementTexts, mapFreehireJob } = require('@/lib/scrapers/freehire')
+
+  it('turns benefit slugs into readable labels, keeping acronyms, without repeats', () => {
+    expect(freehireBenefitLabels(['unlimited_pto', 'health_insurance', 'retirement_plan', 'hsa', 'unlimited_pto', '401k_match'])).toEqual([
+      'Unlimited PTO',
+      'Health insurance',
+      'Retirement plan',
+      'HSA',
+      '401(k) match',
+    ])
+    expect(freehireBenefitLabels(null)).toEqual([])
+    expect(freehireBenefitLabels(['', 7, 'a_b_c_d_e_f_g'])).toEqual([])
+  })
+
+  it('keeps requirement sentences of a sensible length, at most eight', () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ text: `Five years of experience with system number ${i}.` }))
+    expect(freehireRequirementTexts(many)).toHaveLength(8)
+    expect(freehireRequirementTexts([{ text: 'Too short' }, { text: 'x'.repeat(300) }, { text: '  Real   requirement   with   spacing.  ' }])).toEqual([
+      'Real requirement with spacing.',
+    ])
+  })
+
+  it('carries them into the mapped job', () => {
+    const mapped = mapFreehireJob({
+      public_slug: 'a',
+      url: 'https://jobs.example.com/a',
+      title: 'Staff Engineer',
+      company: 'Acme',
+      reality: { class: 'fresh' },
+      perks: ['generous_pto', 'health_insurance'],
+      enrichment: {
+        salary_min: 200000,
+        salary_max: 240000,
+        salary_currency: 'USD',
+        salary_period: 'year',
+        requirements: [{ text: 'Eight or more years building distributed systems.', priority: 'required' }],
+      },
+    })
+    expect(mapped.benefits).toEqual(['Generous PTO', 'Health insurance'])
+    expect(mapped.requirements).toEqual(['Eight or more years building distributed systems.'])
+  })
+})

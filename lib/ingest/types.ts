@@ -96,6 +96,12 @@ export interface ScrapedJobInput {
   /** Whether the posting says visa sponsorship is available, when the source states it. */
   visaSponsorship?: boolean | null
 
+  /** Benefits the source lists as structured data (readable labels), shown in the job page's Benefits section. */
+  benefits?: string[] | null
+
+  /** Requirements the source lists as structured data (one sentence each), shown in the job page's Requirements section. */
+  requirements?: string[] | null
+
   /** Application URL (may be same as url) */
   applyUrl?: string | null
 

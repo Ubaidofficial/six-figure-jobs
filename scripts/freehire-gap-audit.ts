@@ -129,10 +129,24 @@ async function main() {
       const live = ok.filter((j) => have.get(j.external_id || j.public_slug) === false).length
       const expired = ok.filter((j) => have.get(j.external_id || j.public_slug) === true).length
       const absent = ok.filter((j) => !have.has(j.external_id || j.public_slug))
+      // A job posted in the last three hours has simply not been synced yet; one posted earlier may be held under another
+      // source's copy of the same posting (same title and company, live), which is not a gap either.
+      const THREE_HOURS = 3 * 60 * 60 * 1000
+      const tooNew = absent.filter((j) => j.posted_at && Date.now() - new Date(j.posted_at).getTime() < THREE_HOURS)
+      const older = absent.filter((j) => !tooNew.includes(j))
+      const missing: FreehireJob[] = []
+      let heldElsewhere = 0
+      for (const j of older) {
+        const held = await prisma.job.count({
+          where: { isExpired: false, title: j.title, company: { equals: j.company ?? '', mode: 'insensitive' } },
+        })
+        if (held > 0) heldElsewhere++
+        else missing.push(j)
+      }
       out.push(
-        `${ok.length} publishable: ${live} live in our database, ${expired} there but expired, ${absent.length} not stored under freehire's id (they may be held under another source's copy of the same job).`,
+        `${ok.length} publishable by our rules: ${live} live in our database under freehire's id, ${expired} there but expired, ${absent.length} not stored under freehire's id: ${tooNew.length} posted in the last three hours (not synced yet), ${heldElsewhere} held live under another source's copy of the same job, **${missing.length} not in our database at all**.`,
         '',
-        ...absent.slice(0, 15).map((j) => `- ${j.title.slice(0, 70)} — ${(j.company ?? '').slice(0, 30)} (posted ${j.posted_at?.slice(0, 10) ?? '?'})`),
+        ...missing.slice(0, 20).map((j) => `- ${j.title.slice(0, 70)} — ${(j.company ?? '').slice(0, 30)} (posted ${j.posted_at?.slice(0, 16) ?? '?'})`),
       )
     } finally {
       await prisma.$disconnect()

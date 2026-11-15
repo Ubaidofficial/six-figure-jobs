@@ -72,6 +72,8 @@ export type FreehireJob = {
   closed_at?: string | null
   /** Skill / technology slugs, e.g. ['python', 'react', 'terraform']. */
   skills?: string[] | null
+  /** Benefit slugs, e.g. ['health_insurance', 'unlimited_pto', 'retirement_plan']. */
+  perks?: string[] | null
   /** freehire's own freshness verdict; `stale`/`fake_freshness` are old postings with a bumped date. */
   reality?: { class?: string | null; age_days?: number | null; fake_freshness?: boolean | null } | null
   enrichment?: {
@@ -81,6 +83,8 @@ export type FreehireJob = {
     salary_currency?: string | null
     salary_period?: string | null
     visa_sponsorship?: boolean | null
+    /** The posting's requirements, one sentence each. (`priority` says "required" even for "preferred" lines, so it is not used.) */
+    requirements?: Array<{ text?: string | null; priority?: string | null }> | null
   } | null
 }
 
@@ -204,8 +208,40 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     descriptionHtml: job.description ?? null,
     sourceRef: job.public_slug || null,
     skills: normalizeFreehireSkills(job.skills),
+    benefits: freehireBenefitLabels(job.perks),
+    requirements: freehireRequirementTexts(e.requirements),
     visaSponsorship: e.visa_sponsorship === true,
   }
+}
+
+const PERK_ACRONYMS: Record<string, string> = { pto: 'PTO', hsa: 'HSA', fsa: 'FSA', espp: 'ESPP', rsu: 'RSU', '401k': '401(k)', ira: 'IRA', eap: 'EAP', ppo: 'PPO', hmo: 'HMO' }
+
+/** freehire's benefit slugs as readable labels ("unlimited_pto" -> "Unlimited PTO"); at most 12, no repeats. */
+export function freehireBenefitLabels(perks: unknown): string[] {
+  if (!Array.isArray(perks)) return []
+  const out: string[] = []
+  for (const raw of perks) {
+    if (typeof raw !== 'string') continue
+    const words = raw.trim().toLowerCase().replace(/[^a-z0-9_ -]/g, '').split(/[_\s-]+/).filter(Boolean)
+    if (words.length === 0 || words.length > 6) continue
+    const label = words.map((w, i) => PERK_ACRONYMS[w] ?? (i === 0 ? w[0].toUpperCase() + w.slice(1) : w)).join(' ')
+    if (!out.includes(label)) out.push(label)
+    if (out.length === 12) break
+  }
+  return out
+}
+
+/** The posting's requirement sentences from freehire: trimmed, 20 to 240 characters, no repeats, at most 8. */
+export function freehireRequirementTexts(requirements: unknown): string[] {
+  if (!Array.isArray(requirements)) return []
+  const out: string[] = []
+  for (const item of requirements) {
+    const text = typeof (item as { text?: unknown })?.text === 'string' ? (item as { text: string }).text.replace(/\s+/g, ' ').trim() : ''
+    if (text.length < 20 || text.length > 240 || out.includes(text)) continue
+    out.push(text)
+    if (out.length === 8) break
+  }
+  return out
 }
 
 /** Request headers for the freehire API (the key is optional; it only raises the rate limit). */
