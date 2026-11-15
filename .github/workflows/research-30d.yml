@@ -7,6 +7,15 @@ name: 30-day research report
 
 on:
   workflow_dispatch:
+    inputs:
+      basis:
+        description: "Which 30 days the pay tables use: created (when we stored the job), posted (the employer's date) or posted_or_created"
+        type: choice
+        default: created
+        options:
+          - created
+          - posted
+          - posted_or_created
 
 jobs:
   research:
@@ -37,4 +46,6 @@ jobs:
         run: npm run scrape:db-target
 
       - name: 30-day research report (read-only)
+        env:
+          RESEARCH_BASIS: ${{ inputs.basis }}
         run: npm run research:30d
