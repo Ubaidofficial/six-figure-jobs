@@ -14,6 +14,10 @@ name: enrichment backfill
 #                   (lib/scrapers/boardRegistry.ts). A dry run fetches and maps and writes nothing; "limit" does not apply.
 #   freehire-gap    READ-ONLY report of what freehire carries that we do not publish, and why (scripts/freehire-gap-audit.ts;
 #                   "limit" / 100 = pages of freehire's newest jobs to read, default 20)
+#   quality-report  READ-ONLY report of what the description readers did on jobs stored in the last 8 hours, with each sentence
+#                   (scripts/quality-report.ts); the same report ends every freehire sync
+#   remote-scope    READ-ONLY report of who live remote jobs are open to according to their description (anywhere in the world, which
+#                   countries or region) against what we store (scripts/audit-remote-scope.ts; "limit" = jobs, default 6000)
 #   remote-country  the country of remote jobs whose location text names exactly one (scripts/backfill-remote-country.ts; "limit" = jobs;
 #                   only jobs whose JobPosting JSON-LD stays identical are written)
 
@@ -21,7 +25,7 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "tech-stack, websites, remote-country, fix-company-names, boards or freehire-gap"
+        description: "tech-stack, websites, remote-country, fix-company-names, boards, freehire-gap, remote-scope or quality-report"
         type: choice
         required: false
         default: tech-stack
@@ -32,6 +36,8 @@ on:
           - fix-company-names
           - boards
           - freehire-gap
+          - remote-scope
+          - quality-report
       sources:
         description: "For task boards: comma list of board keys"
         type: string
@@ -96,6 +102,8 @@ jobs:
             websites) npx tsx scripts/backfill-company-websites.ts "${args[@]}" ;;
             remote-country) npx tsx scripts/backfill-remote-country.ts "${args[@]}" ;;
             fix-company-names) npx tsx scripts/fix-entity-company-names.ts $([ "$APPLY" = "true" ] && echo --apply) ;;
+            quality-report) npx tsx scripts/quality-report.ts --hours=8 ;;
+            remote-scope) npx tsx scripts/audit-remote-scope.ts --limit="$LIMIT" ;;
             freehire-gap) npx tsx scripts/freehire-gap-audit.ts --pages=$(( LIMIT / 100 > 0 ? LIMIT / 100 : 1 )) ;;
             boards) npx tsx scripts/dailyScrapeV2.ts --mode=boards --source="$SOURCES" $([ "$APPLY" = "true" ] || echo --dry-run) ;;
             *)

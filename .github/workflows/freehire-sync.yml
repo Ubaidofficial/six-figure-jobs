@@ -158,6 +158,13 @@ jobs:
         env:
           BOARD_SCRAPE_TIMEOUT_MS: "300000"
         run: npx tsx scripts/dailyScrapeV2.ts --mode=boards --source=jobicy,spainjobs,uiuxjobsboard,workingnomads,remotive
+      # What the description readers (pay, who a remote job is open to) just did, with each sentence, in the run summary:
+      # read-only, the material the daily review uses to catch wrong readings the day they appear.
+      - name: Quality report (read-only)
+        if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
+        continue-on-error: true
+        timeout-minutes: 5
+        run: npx tsx scripts/quality-report.ts --hours=8
       # Runs whenever a sync succeeded, even if the closed-job check above failed or timed out.
       - name: Expire jobs not refreshed in 7 days
         if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
