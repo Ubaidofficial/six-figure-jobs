@@ -17,6 +17,14 @@ export type BlogPost = {
   content: string // HTML
 }
 
+// Small inline-styled table for data posts: the blog's styledContent() restyles headings, lists and links but not tables.
+function dataTable(head: string[], rows: string[][]): string {
+  const cell = 'padding:10px 12px;border-bottom:1px solid var(--color-border);text-align:left;color:var(--color-text-0)'
+  const th = head.map((h) => `<th style="${cell};font-weight:700">${h}</th>`).join('')
+  const body = rows.map((r) => `<tr>${r.map((c) => `<td style="${cell}">${c}</td>`).join('')}</tr>`).join('')
+  return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;margin:0 0 1.5em;font-size:15px"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div>`
+}
+
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'software-engineer-salary-2026',
@@ -532,6 +540,156 @@ export const BLOG_POSTS: BlogPost[] = [
   <li><strong>Product Manager:</strong> Senior PMs at remote-first companies earn $130k–$200k. See <a href="/remote/product-manager">remote PM jobs</a>.</li>
 </ul>
 <p>Browse all <a href="/remote">remote $100k+ jobs</a> on Six Figure Jobs — filtered and verified.</p>
+`,
+  },
+  {
+    slug: 'six-figure-job-pay-report-november-2026',
+    metaTitle: 'Six-Figure Job Pay Report: Nov 2026 Data',
+    title: 'Six-Figure Job Pay Report: What 15,212 Listings Advertise (November 2026)',
+    excerpt:
+      '15,212 six-figure listings, median pay $185,500. See the best-paid roles, remote vs on-site pay and top cities in our November 2026 data.',
+    publishedAt: '2026-11-15',
+    updatedAt: '2026-11-15',
+    category: 'Salary Research',
+    tags: ['salary-data', 'research', '2026'],
+    readingMinutes: 7,
+    faq: [
+      {
+        q: 'What is the median advertised salary for six-figure jobs?',
+        a: 'Across 15,212 listings from named employers with a validated USD salary, the median advertised midpoint is $185,500 and the median advertised minimum is $155,520. Counting each employer with three or more listings once, the median is $180,000. These are advertised ranges, not what people are paid.',
+      },
+      {
+        q: 'Which six-figure roles pay the most?',
+        a: 'Among roles with at least 50 listings, principal software engineers lead with a median advertised midpoint of $278,500, followed by senior engineering managers ($256,000), engineering directors ($254,935) and staff software engineers ($250,000).',
+      },
+      {
+        q: 'Do remote six-figure jobs pay less than on-site jobs?',
+        a: 'In this data, remote listings advertise a lower median ($176,000) than on-site listings ($185,000). Hybrid listings are highest ($230,000) but come from only 70 employers, so read that figure with caution.',
+      },
+      {
+        q: 'Where does this data come from?',
+        a: 'It comes from listings we collected between 5 and 15 November 2026 from company career pages and job boards. Only USD-priced listings with a validated salary of $100,000 or more are included, so it describes six-figure listings, not the whole job market.',
+      },
+    ],
+    content: `
+<p>Our database holds six-figure job listings with the pay shown upfront. This report summarises what those listings advertised in the 30 days up to 15 November 2026: how much they pay, which roles and cities pay most, and what remote and on-site listings offer. Every figure below comes from our own data and the limits are listed at the end, so you can judge how far to trust it.</p>
+<p><strong>Read this first:</strong> the data covers listings that advertise a salary of $100,000 or more, in US dollars. It describes six-figure listings, not the whole job market, and it shows advertised ranges, not what people are paid.</p>
+
+<h2>Key findings</h2>
+<ul>
+<li>The median advertised midpoint is <strong>$185,500</strong> across 15,212 listings from 2,639 named employers. The median advertised minimum is $155,520, and counting each employer with three or more listings once, the median is $180,000.</li>
+<li>About 60% of listings advertise a midpoint below $200,000, and 6.8% advertise $300,000 or more.</li>
+<li>Principal software engineer is the best-paid role with a large sample: a median of <strong>$278,500</strong> across 116 listings from 55 employers.</li>
+<li>Remote listings advertise a median of $176,000, against $185,000 for on-site listings.</li>
+<li>The cities with the highest medians are all in the San Francisco Bay Area, led by San Francisco at $225,000.</li>
+<li>The 20 largest employers account for 40.6% of the listings, so large technology employers shape these figures.</li>
+</ul>
+
+<h2>Where six-figure listings sit by salary</h2>
+<p>Share of the 15,456 validated USD listings whose advertised midpoint falls in each band.</p>
+${dataTable(
+  ['Advertised midpoint', 'Listings', 'Share'],
+  [
+    ['$100,000 to $149,999', '3,473', '22.5%'],
+    ['$150,000 to $199,999', '5,722', '37.0%'],
+    ['$200,000 to $299,999', '5,216', '33.7%'],
+    ['$300,000 and above', '1,045', '6.8%'],
+  ],
+)}
+
+<h2>Pay by seniority</h2>
+<p>Median advertised midpoint by the experience level stored for each listing (stored for about 8,300 of the listings).</p>
+${dataTable(
+  ['Level', 'Listings', 'Median advertised midpoint'],
+  [
+    ['Senior', '4,634', '$185,000'],
+    ['Lead', '603', '$194,500'],
+    ['Director', '1,066', '$219,950'],
+    ['Principal', '733', '$220,000'],
+    ['Staff', '1,029', '$227,300'],
+    ['VP', '150', '$253,274'],
+  ],
+)}
+
+<h2>The best-paid roles</h2>
+<p>Roles with at least 50 listings, ranked by median advertised midpoint.</p>
+${dataTable(
+  ['Role', 'Listings', 'Employers', 'Median advertised midpoint'],
+  [
+    ['Principal software engineer', '116', '55', '$278,500'],
+    ['Senior engineering manager', '65', '52', '$256,000'],
+    ['Engineering director', '118', '78', '$254,935'],
+    ['Staff software engineer', '237', '119', '$250,000'],
+    ['Sales director', '97', '65', '$240,000'],
+    ['Senior legal counsel', '55', '28', '$238,500'],
+    ['Principal product manager', '83', '46', '$230,600'],
+    ['Engineering manager', '226', '123', '$220,000'],
+    ['Senior machine learning engineer', '56', '33', '$219,698'],
+    ['Staff product manager', '74', '52', '$219,525'],
+    ['Marketing director', '62', '48', '$213,750'],
+    ['Solutions engineer', '83', '38', '$212,000'],
+  ],
+)}
+<p>Roles with fewer listings can pay more, but a handful of postings cannot support a median, so we leave them out. Browse the current pay for a role on our <a href="/salary">salary pages</a>.</p>
+
+<h2>Remote, hybrid and on-site</h2>
+${dataTable(
+  ['Arrangement', 'Listings', 'Employers', 'Median advertised midpoint'],
+  [
+    ['Remote', '3,131', '908', '$176,000'],
+    ['On-site', '11,055', '1,882', '$185,000'],
+    ['Hybrid', '640', '70', '$230,000'],
+  ],
+)}
+<p>About one in five six-figure listings (20.3%) is remote. The hybrid figure is the highest but rests on only 70 employers, so it says little about hybrid work in general. See current <a href="/remote">remote six-figure jobs</a>.</p>
+
+<h2>Which cities pay the most</h2>
+<p>The five cities with the highest medians among those with at least 8 listings from at least 10 employers.</p>
+${dataTable(
+  ['City', 'Listings', 'Employers', 'Median advertised midpoint'],
+  [
+    ['San Francisco', '1,063', '236', '$225,000'],
+    ['San Mateo', '172', '12', '$220,020'],
+    ['Mountain View', '109', '29', '$219,000'],
+    ['Sunnyvale', '59', '14', '$214,700'],
+    ['San Jose', '483', '40', '$211,425'],
+  ],
+)}
+<p>All five are in the San Francisco Bay Area. By country, 93% of the USD-priced listings are in the United States, with a median of $185,900; Canada has a median of $189,050 across 278 listings. Other countries have too few USD-priced listings to compare reliably.</p>
+
+<h2>Who is hiring</h2>
+<p>The employers with the most six-figure listings, leaving out recruiting and staffing firms, with their median advertised midpoint.</p>
+${dataTable(
+  ['Employer', 'Listings', 'Median advertised midpoint'],
+  [
+    ['Capital One', '1,255', '$188,350'],
+    ['NVIDIA', '1,231', '$204,000'],
+    ['Anduril Industries', '607', '$171,500'],
+    ['Cisco', '478', '$207,175'],
+    ['Intel', '250', '$194,500'],
+    ['Visa', '234', '$203,950'],
+    ['OpenAI', '216', '$278,500'],
+    ['Micron', '182', '$212,750'],
+    ['Workday', '171', '$196,300'],
+    ['Mastercard', '159', '$200,500'],
+  ],
+)}
+<p>The single largest employer accounts for 8.3% of the listings, the top five for 25.1% and the top twenty for 40.6%. That concentration is why we also report the median with each employer (of those with three or more listings) counted once: $180,000.</p>
+
+<h2>The highest advertised ranges</h2>
+<p>OpenAI advertised ranges of $459K to $536K for a principal software engineer and a head of data science role, and $401K to $510K for several security and data science roles. These are the ranges shown in the postings on 15 November 2026 and may have changed since.</p>
+
+<h2>Method and limits</h2>
+<ul>
+<li><strong>What is counted:</strong> listings with a validated salary in US dollars and an annual figure below $600,000. Our database keeps only listings at or above $100,000. Figures at exactly $600,000 are treated as caps, not real values, and left out.</li>
+<li><strong>The number:</strong> each listing's figure is the midpoint of its advertised minimum and maximum (or the single figure when only one is given). This describes advertised ranges, not salaries paid. The median of the advertised minimums ($155,520) is the more conservative reading.</li>
+<li><strong>Six-figure only:</strong> we store only listings at or above $100,000, so nothing here describes lower-paid jobs, and the medians are not market-wide averages.</li>
+<li><strong>Window:</strong> listings we collected between 5 and 15 November 2026 that were posted in the 30 days before 15 November (or, when a posting has no date, collected in that period). Several of our sources were added or expanded in this period, so the data cannot show trends over time.</li>
+<li><strong>Sources:</strong> company career pages and job boards, which lean towards technology employers. The figures reflect that mix, not every industry.</li>
+<li><strong>Counts:</strong> the headline figures use 15,212 listings from named employers. The band, seniority, role, work-arrangement and location tables use all 15,456 validated listings, including 244 that arrive through job-board aggregators.</li>
+<li><strong>Sample sizes:</strong> we show a role or city only when it has enough listings from enough employers, and we say how many.</li>
+</ul>
+<p>Want to see the listings behind these figures? <a href="/jobs">Browse six-figure jobs</a> with the salary shown upfront.</p>
 `,
   },
 ]
