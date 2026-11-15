@@ -24,6 +24,16 @@ on:
         type: string
         required: false
         default: ""
+      clear:
+        description: "UNDO one description: exact company name (then also fill 'expect'). Ignores everything else"
+        type: string
+        required: false
+        default: ""
+      expect:
+        description: "With 'clear': the exact description text that must still be there for it to be cleared"
+        type: string
+        required: false
+        default: ""
       provider:
         description: "Free model for descriptions: auto (Cloudflare first), cloudflare, openrouter or none"
         type: string
@@ -73,8 +83,11 @@ jobs:
           APPLY: ${{ inputs.apply }}
           PROVIDER: ${{ inputs.provider }}
           ONLY: ${{ inputs.only }}
+          CLEAR: ${{ inputs.clear }}
+          EXPECT: ${{ inputs.expect }}
         run: |
           args=(--limit="$LIMIT" --provider="$PROVIDER")
+          [ -n "$CLEAR" ] && args+=(--clear="$CLEAR" --expect="$EXPECT")
           [ -n "$ONLY" ] && args+=(--only="$ONLY")
           [ "$APPLY" = "true" ] && args+=(--apply)
           npx tsx scripts/fill-company-profiles.ts "${args[@]}"

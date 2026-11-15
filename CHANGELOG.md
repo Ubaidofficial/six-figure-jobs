@@ -1,5 +1,7 @@
 # Unreleased
 
+- Company profile writer: `--clear` / `--expect` (workflow inputs `clear`, `expect`) undo one written description, guarded so it is cleared only while it still equals the expected text; used to clear Palantir's, which kept the tagline's "empowers organizations to effectively" wording. (**SEO: none; one company page loses a description until the writer refills it**)
+
 - Company profile writer: a restated description must be ONE sentence (the third dry run joined Databricks' tagline sentences, ad line included), and the workflow takes an optional `only` list of exact company names so a person who has read a dry run can apply just the approved companies (`--only` in `scripts/fill-company-profiles.ts`). (**SEO: none**)
 
 - Company profile writer: a tagline that is recruiting copy ("Join the team...", "careers", "we're hiring") is no longer restated into a description (the second dry run turned ServiceNow's careers-site line into a vague "ServiceNow is a company that puts AI to work for people"), and "reliable" joins the promotional words. (**SEO: none**)
