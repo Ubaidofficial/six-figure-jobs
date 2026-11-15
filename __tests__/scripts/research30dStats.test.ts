@@ -58,4 +58,19 @@ describe('30-day research report', () => {
     const all = RESEARCH.map((a) => `${a.title} ${a.sql}`).join('\n')
     for (const gone of ['stateCode', 'industry', 'noDegreeMention', 'change_pct']) expect(all).not.toContain(gone)
   })
+
+  it('has the three queries behind the report\'s extra findings, with the same sample floors the page states', () => {
+    const wide = RESEARCH.find((a) => a.title === 'Pay: how wide the advertised ranges are')!
+    expect(wide.pay).toBe(true)
+    expect(wide.sql).toContain('"maxAnnual" > "minAnnual"')
+    const sameRole = RESEARCH.find((a) => a.title === 'Pay: the same role, remote against on-site')!
+    expect(sameRole.sql).toContain('count(*) >= 20 AND count(DISTINCT company) >= 5')
+    expect(sameRole.sql).toContain(`= 'remote'`)
+    expect(sameRole.sql).toContain(`= 'onsite'`)
+    const skills = RESEARCH.find((a) => a.title === 'Pay by skill named in the listing')!
+    expect(skills.sql).toContain('count(*) >= 50 AND count(DISTINCT j.company) >= 10')
+    // A skill is a quoted JSON token, so "Java" cannot match "JavaScript".
+    expect(skills.sql).toContain(`ILIKE '%"' || s.skill || '"%'`)
+    expect(skills.sql).toContain(`('Java')`)
+  })
 })
