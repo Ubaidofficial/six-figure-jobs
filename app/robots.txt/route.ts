@@ -11,6 +11,9 @@ export const revalidate = 86400
 const SLOW_CRAWLERS = ['AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'PetalBot'] as const
 // AI answer engines (they send visitors): slowed, not blocked.
 const AI_ANSWER_CRAWLERS = ['PerplexityBot', 'OAI-SearchBot'] as const
+// Crawlers that copy sites for datasets and resale and send no visitors. Honest ones obey this; the rest are met by
+// lib/security/scrapeGuard.ts (and, if it comes to it, a bot filter in front of the site).
+const SCRAPER_CRAWLERS = ['CCBot', 'Bytespider', 'Diffbot', 'ImagesiftBot', 'Omgilibot', 'Timpibot', 'DataForSeoBot', 'BLEXBot'] as const
 // Social preview images (/job/<slug>/opengraph-image, /company/..., /jobs/<role>/...) are drawn on the server and each
 // one blocks it for seconds: PerplexityBot fetched 160 in 5 minutes after the 2026-11-12 deploy and visitors' pages took
 // 26 s. Only link previews (Facebook, X, LinkedIn, Slack: the default group) and Google need them, so the crawlers
@@ -61,6 +64,9 @@ export async function GET() {
     'Disallow: /api/',
     'Disallow: /ubaid93/',
     NO_PREVIEW_IMAGES,
+    '',
+    ...SCRAPER_CRAWLERS.map((bot) => `User-agent: ${bot}`),
+    'Disallow: /',
     '',
     ...AI_ANSWER_CRAWLERS.map((bot) => `User-agent: ${bot}`),
     'Crawl-delay: 2',

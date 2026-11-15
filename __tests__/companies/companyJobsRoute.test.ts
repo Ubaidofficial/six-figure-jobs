@@ -11,7 +11,7 @@ import { buildCompanyJobsWhere, COMPANY_JOBS_ORDER_BY } from '../../lib/companie
 const job = (id: string) => ({ id, title: `Job ${id}`, minAnnual: BigInt(150_000), maxAnnual: BigInt(190_000), createdAt: new Date('2026-11-01T00:00:00Z') })
 
 const call = async (slug: string, query = '') => {
-  const res = await GET(new Request(`https://www.6figjobs.com/api/company/${encodeURIComponent(slug)}/jobs${query}`), { params: Promise.resolve({ slug }) })
+  const res = await GET(new Request(`https://www.6figjobs.com/api/company/${encodeURIComponent(slug)}/jobs${query}`, { headers: { 'user-agent': 'Mozilla/5.0 (Macintosh) Chrome/130.0 Safari/537.36', 'sec-fetch-site': 'same-origin' } }), { params: Promise.resolve({ slug }) })
   return { status: res.status, cache: res.headers.get('cache-control'), body: await res.json() }
 }
 

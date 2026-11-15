@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { checkJobAvailability } from './lib/jobs/jobAvailabilityCheck'
+import { guardJobPage } from './lib/security/scrapeGuard'
 
 // Next.js 16 `proxy.ts` always runs in the Node.js runtime (no `runtime`
 // override allowed — that errors at build time). Node access is what lets us
@@ -144,6 +145,10 @@ export async function proxy(request: NextRequest) {
     url.host = WWW_HOST
     return NextResponse.redirect(url, { status: 301 })
   }
+
+  // Command-line tools and scraping libraries get a 403 on the job pages; search engines and link previews never do.
+  const scrapeBlock = guardJobPage(request, request.nextUrl.pathname)
+  if (scrapeBlock) return new NextResponse(scrapeBlock.body, { status: scrapeBlock.status, headers: scrapeBlock.headers })
 
   const goneResponse = await handleJobDetailStatus(request)
   if (goneResponse) return goneResponse
