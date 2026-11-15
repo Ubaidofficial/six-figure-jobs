@@ -8,6 +8,10 @@
 //
 //   npx tsx scripts/fill-company-profiles.ts [--limit=50] [--provider=auto|cloudflare|openrouter|none] [--ai-max=60] [--only="Stripe,Datadog"] [--apply]
 //
+// --clear="Name" --expect="exact description text" [--apply] undoes one written description: it clears the description of the company
+// with that exact name (case-insensitive) ONLY while it still equals the expected text, so a description a person or a scrape wrote
+// since is never touched. A dry run unless --apply.
+//
 // --only limits the run to companies with those exact names (case-insensitive), so a person who has read a dry run can apply
 // just the companies whose text was approved. The model's wording can differ between two runs: read the apply log too.
 //
@@ -32,6 +36,21 @@ async function main() {
   const { prisma } = await import('../lib/prisma')
   const limit = parseLimit(arg('limit'), 50, 200)
   const aiMax = parseLimit(arg('ai-max'), 60, 150)
+  const clearName = arg('clear')
+  if (clearName) {
+    const expect = arg('expect') ?? ''
+    if (!expect) throw new Error('--clear needs --expect="the exact description to clear"')
+    try {
+      const matches = await prisma.company.findMany({ where: { name: { equals: clearName, mode: 'insensitive' } }, select: { id: true, name: true, description: true } })
+      const hit = matches.filter((c) => c.description === expect)
+      console.log(`Clear description of "${clearName}": ${matches.length} company with that name, ${hit.length} whose description equals the expected text (${apply ? 'APPLY' : 'dry run, nothing written'})`)
+      for (const c of matches) console.log(`- ${c.name}: ${c.description === expect ? 'MATCHES, would clear' : `does NOT match, left alone: ${String(c.description).slice(0, 120)}`}`)
+      if (apply) for (const c of hit) console.log(`cleared ${(await prisma.company.updateMany({ where: { id: c.id, description: expect }, data: { description: null } })).count}`)
+    } finally {
+      await prisma.$disconnect()
+    }
+    return
+  }
   const provider = pickFreeProvider(process.env, arg('provider'))
   const lines: string[] = [`## Company profile fill (${apply ? 'APPLY' : 'dry run, nothing written'})`, '']
   const out = (s = '') => lines.push(s)
