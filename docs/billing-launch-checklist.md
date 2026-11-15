@@ -8,6 +8,8 @@ This list is everything the owner has to do to turn it on. Do the steps in order
 
 1. GitHub, Actions, **database migrate**, Run workflow with **apply** unticked. It prints which migrations are pending. `20261106120000_add_accounts_billing` must be among them. Later migrations in the repository that may also be pending: `20261106180000_add_application_kit`, `20261106210000_add_auto_apply`, `20261110140000_add_feedback_screenshot`, `20261110180000_add_job_alerts`. Apply them together; the dry run is the source of truth for what is really pending in production.
 2. Run it again with **apply** ticked. The accounts migration only creates new tables (`User`, `Account`, `VerificationToken`, `Subscription`, `CreditLedger`, `StripeEvent`) and their indexes and foreign keys. It changes no existing table. Read the SQL of each later pending migration before applying it.
+
+**Status, 2026-11-15:** the dry run showed only `20261110180000_add_job_alerts` pending in production (the accounts, billing, application-kit, auto-apply and feedback migrations were already applied). Its SQL only creates the `JobAlert` and `JobAlertSent` tables; it was applied through the workflow and `prisma migrate status` then reported the schema up to date.
 3. Do not set `ACCOUNTS_ENABLED=true` until this has run. With the flag on and no tables, sign-in fails with a server error.
 
 ## 2. Stripe
