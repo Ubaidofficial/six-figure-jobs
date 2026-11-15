@@ -18,13 +18,22 @@ const n = (value: number) => value.toLocaleString('en-US')
 /** "$4.99" for a plan, with the discounted price first when a launch discount applies. */
 function OurPrice({ plan }: { plan: PlanData | undefined }) {
   if (!plan?.priceText) return <>Not available</>
-  if (!plan.discount?.discountedText) return <strong>{plan.priceText}</strong>
+  const saving = plan.savingsPercent ? <span className={styles.cellNote}>Save {plan.savingsPercent}% compared with paying weekly</span> : null
+  if (!plan.discount?.discountedText) {
+    return (
+      <>
+        <strong>{plan.priceText}</strong>
+        {saving}
+      </>
+    )
+  }
   return (
     <>
       <s className={styles.struck}>{plan.priceText}</s> <strong>{plan.discount.discountedText}</strong>
       <span className={styles.cellNote}>
         {plan.discount.percentOff}% off {plan.discount.duration}
       </span>
+      {saving}
     </>
   )
 }

@@ -1,6 +1,6 @@
 import { BillingError, createCheckoutUrl, createPortalUrl, ensureStripeCustomer } from '@/lib/billing/checkout'
 import { PLACEHOLDER_CREDITS, getMonthlyCredits, getProduct, getProducts, parseCredits } from '@/lib/billing/config'
-import { formatStripeAmount, loadPlans } from '@/lib/billing/plans'
+import { formatStripeAmount, loadPlans, savingsVersusWeekly } from '@/lib/billing/plans'
 
 import { createFakePrisma } from './fakePrisma'
 
@@ -173,9 +173,9 @@ describe('plans (pricing page data)', () => {
     }
     const plans = await loadPlans({ prices } as any, ENV)
     expect(plans).toEqual([
-      { key: 'subscription', priceText: '$19.00', interval: 'month', credits: 120, discount: null },
-      { key: 'pack_small', priceText: '$7.00', interval: null, credits: 60, discount: null },
-      { key: 'pack_large', priceText: null, interval: null, credits: 300, discount: null },
+      { key: 'subscription', priceText: '$19.00', interval: 'month', credits: 120, discount: null, savingsPercent: null },
+      { key: 'pack_small', priceText: '$7.00', interval: null, credits: 60, discount: null, savingsPercent: null },
+      { key: 'pack_large', priceText: null, interval: null, credits: 300, discount: null, savingsPercent: null },
     ])
     expect(prices.retrieve).toHaveBeenCalledTimes(3)
   })
@@ -249,5 +249,35 @@ describe('loadPlans with a launch discount', () => {
     }
     const broken = { ...stripeWith(null), coupons: { retrieve: jest.fn().mockRejectedValue(new Error('no such coupon')) } }
     expect((await loadPlans(broken as any, env)).every((p) => p.discount === null)).toBe(true)
+  })
+})
+
+describe('monthly saving against paying weekly', () => {
+  it('compares the monthly price with 52/12 weekly payments, in whole percent', () => {
+    // $9.99 a month against $4.99 a week (21.62 a month): 54% cheaper.
+    expect(savingsVersusWeekly(499, 999)).toBe(54)
+    expect(savingsVersusWeekly(200, 1000)).toBeNull() // dearer than 52/12 weekly payments (866.67): no saving to claim
+    expect(savingsVersusWeekly(200, 800)).toBe(8)
+    expect(savingsVersusWeekly(0, 999)).toBeNull()
+  })
+
+  it('is set on the monthly plan only, from the two Stripe prices, and only in one currency', async () => {
+    const env = { ...ENV, STRIPE_PRICE_SUBSCRIPTION_WEEKLY: 'price_week' }
+    const prices: Record<string, any> = {
+      price_week: { active: true, unit_amount: 499, currency: 'usd', recurring: { interval: 'week' } },
+      price_sub: { active: true, unit_amount: 999, currency: 'usd', recurring: { interval: 'month' } },
+      price_small: { active: true, unit_amount: 500, currency: 'usd', recurring: null },
+      price_large: { active: true, unit_amount: 1500, currency: 'usd', recurring: null },
+    }
+    const stripe = { prices: { retrieve: jest.fn(async (id: string) => prices[id]) }, coupons: { retrieve: jest.fn() } }
+    const plans = await loadPlans(stripe as any, env)
+    expect(Object.fromEntries(plans.map((p) => [p.key, p.savingsPercent]))).toEqual({
+      subscription: 54,
+      subscription_weekly: null,
+      pack_small: null,
+      pack_large: null,
+    })
+    prices.price_week = { ...prices.price_week, currency: 'eur' }
+    expect((await loadPlans(stripe as any, env)).find((p) => p.key === 'subscription')?.savingsPercent).toBeNull()
   })
 })

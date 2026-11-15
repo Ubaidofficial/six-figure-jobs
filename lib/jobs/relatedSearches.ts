@@ -10,6 +10,7 @@
 
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { buildWhere, type JobQueryInput } from '@/lib/jobs/queryJobs'
+import { tierQueryInput, type SalaryTierId } from '@/lib/jobs/salaryTiers'
 import { prisma } from '@/lib/prisma'
 
 export type RelatedSearchInput = Omit<JobQueryInput, 'page' | 'pageSize'>
@@ -22,6 +23,16 @@ export const RELATED_SEARCH_MAX = 7
 
 /** The query each destination page runs for the total it shows when no filter is applied. */
 export const relatedInput = {
+  /** /jobs (hub, no filter) */
+  jobsHub: (): RelatedSearchInput => ({}),
+  /** /remote (hub, no region) */
+  remoteHub: (): RelatedSearchInput => ({ remoteOnly: true, excludeInternships: true }),
+  /** /jobs/<tier> (SalaryTierTemplate) */
+  tier: (tierId: SalaryTierId): RelatedSearchInput => tierQueryInput(tierId),
+  /** /jobs/category/<category>; `roleSlugs` is resolveJobCategory(category).roleSlugs */
+  category: (roleSlugs: string[]): RelatedSearchInput => ({ roleSlugs, isHundredKLocal: true }),
+  /** /jobs/level/<level> */
+  level: (level: string): RelatedSearchInput => ({ experienceLevel: level, isHundredKLocal: true }),
   /** /jobs/<role> (RoleTemplate) */
   role: (role: string): RelatedSearchInput => ({ roleSlugs: [role] }),
   /** /remote/<role> */

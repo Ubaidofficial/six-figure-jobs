@@ -308,3 +308,10 @@
   background: var(--color-bg-2);
   color: var(--color-text-0);
 }
+
+.saving {
+  margin-top: var(--space-8);
+  color: var(--color-text-0);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}

@@ -34,6 +34,9 @@ import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fa
 import { formatRelativeTime } from '@/lib/utils/time'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '@/lib/jobs/relatedSearches'
+import { TARGET_COUNTRIES } from '../../lib/seo/regions'
 import {
   countRemoteByRegion,
   normalizeRemoteRegionSlug,
@@ -488,6 +491,23 @@ export default async function RemoteJobsPage({
         return null
       })
 
+    // "Related searches": the remote pages of the biggest remote roles, the whole jobs hub and the target countries
+    // with the most remote jobs (their pages list every job in the country), each counted with the destination
+    // page's own query. A region is a `?remoteRegion=` state of this page, so it is not offered.
+    const targetCountryCodes = new Set(TARGET_COUNTRIES.map((c) => c.code))
+    const relatedSearches = await loadRelatedSearches([
+      ...topRemoteRoles.slice(0, 5).map((r) => ({
+        label: `Remote ${r.label} jobs`,
+        href: `/remote/${r.slug}`,
+        input: relatedInput.remoteRole(r.slug),
+      })),
+      { label: 'All $100k+ jobs', href: '/jobs', input: relatedInput.jobsHub() },
+      ...topCountries
+        .filter((c) => targetCountryCodes.has(c.code))
+        .slice(0, 3)
+        .map((c) => ({ label: `Jobs in ${c.name}`, href: `/jobs/location/${c.slug}`, input: relatedInput.country(c.code) })),
+    ])
+
     return (
       <ListingPage>
         <script
@@ -555,6 +575,8 @@ export default async function RemoteJobsPage({
             </p>
           ) : null}
         </ListingLayout>
+
+        <RelatedSearches items={relatedSearches} />
 
         {roleList.length > 0 ? (
           <ListingSection title="Remote jobs by role">

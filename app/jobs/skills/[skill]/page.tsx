@@ -16,6 +16,8 @@ import { isPseoHubUnlocked } from '../../../../lib/seo/pseoUnlock'
 import { buildListingDescription, buildSkillTitle } from '../../../../lib/seo/metaText'
 import { Faq, JobRows, ListingHeader, ListingPage, ListingSection } from '@/components/listing/ListingParts'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '../../../../lib/jobs/relatedSearches'
 
 const SITE_URL = getSiteUrl()
 const PAGE_SIZE = 40
@@ -148,6 +150,12 @@ export default async function SkillPage({ params }: { params: Params }) {
 
   const relatedSkills = SKILL_TARGETS.filter((s) => s.slug !== resolved.slug).slice(0, 10)
 
+  // "Related searches": the whole jobs hub and the other skills, each counted with the destination page's own query.
+  const relatedSearches = await loadRelatedSearches([
+    { label: 'All $100k+ jobs', href: '/jobs', input: relatedInput.jobsHub() },
+    ...relatedSkills.map((s) => ({ label: `${s.label} jobs`, href: `/jobs/skills/${s.slug}`, input: relatedInput.skill(s.slug) })),
+  ])
+
   return (
     <ListingPage>
       <ListingHeader
@@ -183,6 +191,8 @@ export default async function SkillPage({ params }: { params: Params }) {
           hrefLabel: 'Browse all $100k+ jobs',
         }}
       />
+
+      <RelatedSearches items={relatedSearches} />
 
       <ListingSection title="Frequently asked questions">
         <Faq items={faqJsonLd.mainEntity.map((q) => ({ question: q.name, answer: q.acceptedAnswer.text }))} />

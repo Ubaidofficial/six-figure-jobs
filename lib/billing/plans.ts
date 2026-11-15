@@ -19,6 +19,18 @@ export interface PlanData {
   interval: string | null
   credits: number
   discount: PlanDiscount | null
+  /** On the monthly plan: how much cheaper a month is than paying the weekly price for it (list prices), whole percent; else null. */
+  savingsPercent: number | null
+}
+
+/** Weeks in an average month, so "weekly for a month" is 52/12 weekly payments. */
+const WEEKS_PER_MONTH = 52 / 12
+
+/** Whole percent a monthly price saves against paying weekly for the same time, or null when it saves under 1%. */
+export function savingsVersusWeekly(weeklyAmount: number, monthlyAmount: number): number | null {
+  if (!(weeklyAmount > 0) || !(monthlyAmount > 0)) return null
+  const pct = Math.round((1 - monthlyAmount / (weeklyAmount * WEEKS_PER_MONTH)) * 100)
+  return pct >= 1 ? pct : null
 }
 
 /** Words for how long a coupon lasts, from Stripe's own `duration` fields. */
@@ -60,11 +72,13 @@ export async function loadPlans(
   env: Record<string, string | undefined> = process.env,
 ): Promise<PlanData[]> {
   const coupon = await loadLaunchCoupon(stripe, env)
-  return Promise.all(
+  const amounts: Partial<Record<ProductKey, { amount: number; currency: string }>> = {}
+  const plans = await Promise.all(
     getProducts(env).map(async (product): Promise<PlanData> => {
       try {
         const price = await stripe.prices.retrieve(product.priceId)
         const usable = price.active
+        if (usable && price.unit_amount != null) amounts[product.key] = { amount: price.unit_amount, currency: price.currency }
         const discounted =
           coupon && usable && isSubscriptionKey(product.key) && price.unit_amount != null
             ? Math.round((price.unit_amount * (100 - (coupon.percent_off ?? 0))) / 100)
@@ -82,10 +96,16 @@ export async function loadPlans(
                   duration: describeCouponDuration(coupon),
                 }
               : null,
+          savingsPercent: null,
         }
       } catch {
-        return { key: product.key, priceText: null, interval: null, credits: product.credits, discount: null }
+        return { key: product.key, priceText: null, interval: null, credits: product.credits, discount: null, savingsPercent: null }
       }
     }),
   )
+  // The monthly plan's saving against paying weekly, only when both prices are readable and in the same currency.
+  const weekly = amounts.subscription_weekly
+  const monthly = amounts.subscription
+  const savings = weekly && monthly && weekly.currency === monthly.currency ? savingsVersusWeekly(weekly.amount, monthly.amount) : null
+  return plans.map((p) => (p.key === 'subscription' ? { ...p, savingsPercent: savings } : p))
 }

@@ -13,8 +13,9 @@ const plans = [
     interval: 'week',
     credits: 25,
     discount: { percentOff: 50, discountedText: '$2.50', duration: 'on your first payment' },
+    savingsPercent: null,
   },
-  { key: 'subscription' as const, priceText: '$9.99', interval: 'month', credits: 100, discount: null },
+  { key: 'subscription' as const, priceText: '$9.99', interval: 'month', credits: 100, discount: null, savingsPercent: 54 },
 ]
 const numbers = { jobs: 28559, companies: 7937, countries: 20, newThisWeek: 21160 }
 
@@ -30,6 +31,10 @@ describe('PlanComparison', () => {
     for (const c of COMPETITOR_PRICES) expect(html).toContain(c.name)
     expect(html).toContain(COMPETITOR_PRICES_CHECKED_ON)
     expect(html).toContain('4dayweek.io Pro')
+  })
+
+  it('shows how much the monthly plan saves against paying weekly', () => {
+    expect(render()).toContain('Save 54% compared with paying weekly')
   })
 
   it('shows the live numbers it is given, formatted', () => {

@@ -60,6 +60,7 @@ export function PlansView({
                   {plan.discount.percentOff}% off {plan.discount.duration}
                 </p>
               ) : null}
+              {plan.savingsPercent ? <p className={styles.saving}>Save {plan.savingsPercent}% compared with paying weekly</p> : null}
               <p className={styles.muted}>
                 {plan.credits.toLocaleString('en-US')} credits{plan.interval ? ` each ${plan.interval}` : ''}
               </p>

@@ -7,6 +7,9 @@ import JobList from '../../../../components/JobList'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../../lib/seo/site'
 import { buildItemListJsonLd } from '../../../../../lib/seo/itemListJsonLd'
 import { isPhaseIndexable } from '../../../../../lib/seo/indexingPhase'
+import { isCanonicalSlug } from '../../../../../lib/roles/canonicalSlugs'
+import { loadRelatedSearches, relatedInput } from '../../../../../lib/jobs/relatedSearches'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
 import { isPseoComboIndexable } from '../../../../../lib/seo/pseoUnlock'
 import { buildListingDescription, buildListingTitle, flagged } from '../../../../../lib/seo/metaText'
 
@@ -133,6 +136,18 @@ export default async function RoleCityPage({ params }: { params: Params }) {
     ],
   }
 
+  // "Related searches": this role's page, this city's page and this role in other tracked cities, each counted with
+  // the destination page's own query.
+  const relatedSearches = await loadRelatedSearches([
+    ...(isCanonicalSlug(role) ? [{ label: `All ${roleName} jobs`, href: `/jobs/${role}`, input: relatedInput.role(role) }] : []),
+    ...(cityInfo.countryCode
+      ? [{ label: `All jobs in ${cityInfo.label}`, href: `/jobs/city/${cityInfo.slug}`, input: relatedInput.city(cityInfo.slug, cityInfo.countryCode) }]
+      : []),
+    ...CITY_TARGETS.filter((c) => c.slug !== cityInfo.slug)
+      .slice(0, 8)
+      .map((c) => ({ label: `${roleName} jobs in ${c.label}`, href: `/jobs/${role}/city/${c.slug}`, input: relatedInput.roleCity(role, c.slug) })),
+  ])
+
   return (
     <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pb-12 pt-10">
       <script
@@ -174,6 +189,8 @@ export default async function RoleCityPage({ params }: { params: Params }) {
           </span>
         </nav>
       )}
+
+      <RelatedSearches items={relatedSearches} />
     </main>
   )
 }

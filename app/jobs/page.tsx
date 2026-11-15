@@ -56,6 +56,10 @@ import {
 import { ListingSearch } from '@/components/listing/ListingSearch'
 import { SavedSearchChip } from '@/components/listing/SavedSearchChip'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
+import { RelatedSearches } from '@/components/listing/RelatedSearches'
+import { loadRelatedSearches, relatedInput } from '@/lib/jobs/relatedSearches'
+import { SALARY_TIERS } from '@/lib/jobs/salaryTiers'
+import { TARGET_COUNTRIES } from '@/lib/seo/regions'
 import { toPublicJob } from '@/lib/jobs/publicJob'
 
 export const revalidate = 600
@@ -607,6 +611,21 @@ export default async function JobsIndexPage({
     // Placed by hand in the admin Site Config; none when unset, expired or unreadable. First page only.
     const sponsors = page === 1 ? await loadSponsorSlots() : []
 
+    // Sidebar "Related searches": the biggest role pages, the remote hub, the next salary tier and the biggest
+    // countries, each counted with the destination page's own query.
+    const relatedSearches = await loadRelatedSearches([
+      ...topRoles.slice(0, 3).map((r) => ({ label: `${r.label} jobs`, href: `/jobs/${r.slug}`, input: relatedInput.role(r.slug) })),
+      { label: 'Remote jobs', href: '/remote', input: relatedInput.remoteHub() },
+      { label: `${SALARY_TIERS['200k-plus'].rangeLabel} jobs`, href: '/jobs/200k-plus', input: relatedInput.tier('200k-plus') },
+      ...TARGET_COUNTRIES.filter((c) => countryCodeToSlug(c.code))
+        .slice(0, 3)
+        .map((c) => ({
+          label: `Jobs in ${c.label}`,
+          href: `/jobs/location/${countryCodeToSlug(c.code)}`,
+          input: relatedInput.country(c.code),
+        })),
+    ])
+
     return (
       <ListingPage>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
@@ -682,7 +701,12 @@ export default async function JobsIndexPage({
         />
 
         <ListingLayout
-          sidebar={<JobsFiltersPanel facets={facets} />}
+          sidebar={
+            <>
+              <JobsFiltersPanel facets={facets} />
+              <RelatedSearches items={relatedSearches} />
+            </>
+          }
           bar={<ActiveFilters total={data.total} actions={<JobsToolbar facets={facets} total={data.total} />} />}
           alert={queryInput}
         >

@@ -119,3 +119,16 @@ Pro adds **instant** email alerts and up to 100 saved searches; free keeps daily
 - Schedule `GET https://www.6figjobs.com/api/cron/alerts-instant` every 15 minutes with the header `Authorization: Bearer <CRON_SECRET>` (any scheduler: Openship cron, cron-job.org ...). It runs inside the app and sends nothing for an alert whose owner has no active subscription: that alert is switched to daily instead. "Instant" means within about 15 minutes of the next run, not seconds.
 - A signed-in subscriber gets instant alerts only for their **own** sign-in email. Anyone else choosing "Instant (Pro)" is told it is part of Pro.
 - Verify in test mode: subscribe, create an instant alert, run the endpoint, check the email; cancel the subscription, run it again, check the alert became daily.
+
+### Stripe sandbox set up 2026-11-15 (account "Six Figure Jobs sandbox", test mode; live is NOT set up)
+
+Created through the Stripe MCP, on the existing product `prod_VaHADi6DoqSYzl` ("Six Figure Jobs subscription"), tax behavior `exclusive` like the existing price:
+
+| Env var | Value |
+| --- | --- |
+| `STRIPE_PRICE_SUBSCRIPTION` | `price_1UcAvBLGk62v9av8jTK608Oz` ($9.99 / month) |
+| `STRIPE_PRICE_SUBSCRIPTION_WEEKLY` | `price_1UcAvFLGk62v9av8UmErFugJ` ($4.99 / week) |
+| `BILLING_LAUNCH_COUPON_ID` | `LAUNCH50` (50% off, **once**: first payment only; a coupon's duration cannot be edited, create another coupon for "first 3 months" or "forever") |
+| `STRIPE_WEBHOOK_SECRET` | reveal in Stripe, Developers, Webhooks, endpoint `we_1UcAvuLGk62v9av8eVrp8hL4` (URL `https://www.6figjobs.com/api/billing/webhook`, API version `2026-10-28.endive`, the 9 events above). It returns 404 until `ACCOUNTS_ENABLED=true`. |
+
+The older $9.00 monthly price (`price_1UZ6c1LGk62v9av8PVlTNSFb`) is still active in the sandbox; archive it once nothing points at it. The customer portal already existed (cancel at period end, invoices, payment method, Terms and Privacy links). Not done: the same set-up in **live mode**, Stripe Tax decisions, Smart Retries and failed-payment emails (account settings), and setting the variables in Openship.

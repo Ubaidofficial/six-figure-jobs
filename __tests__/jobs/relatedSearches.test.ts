@@ -27,6 +27,45 @@ describe('rankRelatedSearches', () => {
   })
 })
 
+// Each entry is the query its destination page runs for the unfiltered total it shows; a change to a page's query must
+// change the entry (and this test) with it, or the card shows a number the page does not.
+describe('relatedInput mirrors the destination pages', () => {
+  it('/jobs and /remote hubs', () => {
+    expect(relatedInput.jobsHub()).toEqual({})
+    expect(relatedInput.remoteHub()).toEqual({ remoteOnly: true, excludeInternships: true })
+  })
+
+  it('/jobs/<tier>: tierQueryInput (USD, top of the range inside the tier)', () => {
+    expect(relatedInput.tier('100k-plus')).toEqual({ currency: 'USD', minAnnual: 100_000, maxAnnual: 199_999 })
+    expect(relatedInput.tier('200k-plus')).toEqual({ currency: 'USD', minAnnual: 200_000, maxAnnual: 299_999 })
+    expect(relatedInput.tier('300k-plus')).toEqual({ currency: 'USD', minAnnual: 300_000, maxAnnual: 399_999 })
+    expect(relatedInput.tier('400k-plus')).toEqual({ currency: 'USD', minAnnual: 400_000 })
+  })
+
+  it('/jobs/category/<category>: the category roles, $100k+ local', () => {
+    expect(relatedInput.category(['data-scientist', 'data-engineer'])).toEqual({
+      roleSlugs: ['data-scientist', 'data-engineer'],
+      isHundredKLocal: true,
+    })
+  })
+
+  it('/jobs/level/<level>: the experience level, $100k+ local', () => {
+    expect(relatedInput.level('senior')).toEqual({ experienceLevel: 'senior', isHundredKLocal: true })
+  })
+
+  it('city, role x city, skill, role and remote role pages', () => {
+    expect(relatedInput.city('london', 'GB')).toEqual({ citySlug: 'london', countryCode: 'GB', isHundredKLocal: true })
+    expect(relatedInput.roleCity('data-engineer', 'london')).toEqual({
+      roleSlugs: ['data-engineer'],
+      citySlug: 'london',
+      isHundredKLocal: true,
+    })
+    expect(relatedInput.skill('python')).toEqual({ skillSlugs: ['python'], isHundredKLocal: true })
+    expect(relatedInput.role('data-engineer')).toEqual({ roleSlugs: ['data-engineer'] })
+    expect(relatedInput.remoteRole('data-engineer')).toEqual({ roleSlugs: ['data-engineer'], remoteOnly: true })
+  })
+})
+
 describe('loadRelatedSearches', () => {
   beforeEach(() => count.mockReset())
 
