@@ -66,6 +66,11 @@ describe('readRemoteScope: wrong readings from the first audit', () => {
   ])('does not read company boilerplate as "open to the world": %s', (_name, html) => {
     expect(read(html)).toBeNull()
   })
+  it('reads a list in front of "only" as the whole list ("US & Canada only" is not Canada only: third audit)', () => {
+    expect(read('This role is 100% remote (US & Canada only) and will regularly meet with teams in the EU and the US.')).toMatchObject({ kind: 'countries', countries: expect.arrayContaining(['US', 'CA']) })
+    expect(read('Remote (US, Canada and UK only).')).toMatchObject({ kind: 'countries', countries: expect.arrayContaining(['US', 'CA', 'GB']) })
+    expect(read('Remote (US/Canada only).')).toMatchObject({ kind: 'countries', countries: expect.arrayContaining(['US', 'CA']) })
+  })
   it('reads "residing in the US and Canada" as both countries, not just the last', () => {
     expect(read('Open to candidates residing in the US and Canada.')).toMatchObject({ kind: 'countries', countries: expect.arrayContaining(['US', 'CA']) })
   })
