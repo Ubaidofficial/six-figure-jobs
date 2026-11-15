@@ -30,8 +30,13 @@ const MUST_BE_IN = /\b(?:must|need(?:s)? to|have to|has to|required to|should)\s
 const AUTHORIZED_IN = /\b(?:authori[sz]ed|eligible|legally entitled|permitted|right)\s+to\s+work\s+(?:legally\s+)?in\s+(?:the\s+)?([^.;:()]{2,60})/i
 // "US-based", "UK based remote", "Canada-based".
 const BASED_ADJ = /\b(US|U\.S\.|USA|UK|U\.K\.|Canada|Canadian|Australia|Australian|Ireland|Germany|France|Netherlands|Spain|Poland)[-\s]based\b/i
-// "US only", "Canada only", "(US residents only)".
-const ONLY = /\b(US|U\.S\.|USA|United States|UK|United Kingdom|Canada|Australia|Ireland|Germany)\s+(?:residents?\s+|citizens?\s+|candidates\s+|applicants\s+)?only\b/i
+// "US only", "Canada only", "(US residents only)", and a list in front of "only": "(US & Canada only)", "US, Canada and UK only".
+// The WHOLE list is captured: reading only the last name made "US & Canada only" Canada only (third audit).
+const ONLY_COUNTRY = '(?:US|U\\.S\\.|USA|United States|UK|United Kingdom|Canada|Australia|Ireland|Germany)'
+const ONLY = new RegExp(
+  `\\b(${ONLY_COUNTRY}(?:\\s*(?:,\\s*(?:(?:and|or)\\s+)?|&|/|(?:and|or)\\s+)\\s*(?:the\\s+)?${ONLY_COUNTRY})*)\\s+(?:residents?\\s+|citizens?\\s+|candidates\\s+|applicants\\s+)?only\\b`,
+  'i',
+)
 // "open to candidates in the US and Canada", "hiring in the UK", "remote within the United States", "remote (US)".
 const OPEN_TO_IN = /\b(?:open\s+to|hiring\s+(?:candidates\s+)?(?:in|from)|accepting\s+applications\s+from|remote\s+(?:position\s+)?(?:in|within|across|from)|anywhere\s+(?:in|within|across)|work\s+remotely\s+(?:from|within|in))\s+(?:candidates\s+|applicants\s+)?(?:located\s+)?(?:in\s+|within\s+)?(?:the\s+)?([^.;:()]{2,60})/i
 const REGION_IN = /\b(?:in|within|across|from)\s+(?:the\s+)?(Europe|European Union|EU|EMEA|APAC|Asia[- ]Pacific|LATAM|Latin America|North America)\b/i
