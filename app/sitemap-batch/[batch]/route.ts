@@ -3,6 +3,7 @@
 // reports indexing coverage per batch. An unreleased (or unknown) batch returns an empty <urlset> with 200 so it is
 // never advertised and never errors. See lib/seo/pseoBatches.ts for the release controls.
 
+import { sitemapDate } from '../../../lib/seo/lastmod'
 import { getSiteUrl } from '../../../lib/seo/site'
 import { collectPseoBatchEntries } from '../../../lib/seo/evergreenSitemap'
 import { PSEO_BATCH_COUNT, getReleasedPseoBatch } from '../../../lib/seo/pseoBatches'
@@ -34,7 +35,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ batch: 
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries
   .map((e) => {
-    const lastmod = e.lastmod ? `\n    <lastmod>${e.lastmod.toISOString()}</lastmod>` : ''
+    const day = sitemapDate(e.lastmod)
+    const lastmod = day ? `\n    <lastmod>${day}</lastmod>` : ''
     return `  <url>\n    <loc>${escapeXml(`${SITE_URL}${e.path}`)}</loc>${lastmod}\n  </url>`
   })
   .join('\n')}

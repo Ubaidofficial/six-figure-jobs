@@ -38,6 +38,22 @@ describe('country sitemap route filters', () => {
   })
 })
 
+describe('country sitemap lastmod', () => {
+  beforeEach(() => aggregateMock.mockReset())
+
+  it('is the day of the newest job, and is left out (not set to now) when the page has none', async () => {
+    aggregateMock.mockImplementation(async ({ where }: any) =>
+      where?.countryCode === 'GB'
+        ? { _count: { _all: 9 }, _max: { createdAt: new Date('2026-02-14T01:00:00.000Z') } }
+        : { _count: { _all: 9 }, _max: { createdAt: null } },
+    )
+    const xml = await (await GET()).text()
+    expect(xml).toContain('/jobs/location/united-kingdom</loc>\n    <lastmod>2026-02-14</lastmod>')
+    expect((xml.match(/<lastmod>/g) ?? []).length).toBe(1) // only the page that has a job date
+    expect(xml).toMatch(/\/jobs\/location\/united-states<\/loc>\s*<\/url>/)
+  })
+})
+
 describe('country sitemap in phase 1', () => {
   const original = process.env.INDEXING_PHASE
   afterEach(() => {

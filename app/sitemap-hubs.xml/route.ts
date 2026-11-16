@@ -9,6 +9,7 @@
 import { memoAsync } from '../../lib/cache/memo'
 import { getSiteUrl } from '../../lib/seo/site'
 import { collectEvergreenEntries } from '../../lib/seo/evergreenSitemap'
+import { sitemapDate } from '../../lib/seo/lastmod'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
@@ -36,7 +37,8 @@ export async function GET() {
 ${entries
   .map((e) => {
     const loc = escapeXml(`${SITE_URL}${e.path === '/' ? '' : e.path}`)
-    const lastmod = e.lastmod ? `\n    <lastmod>${e.lastmod.toISOString()}</lastmod>` : ''
+    const day = sitemapDate(e.lastmod)
+    const lastmod = day ? `\n    <lastmod>${day}</lastmod>` : ''
     return `  <url>\n    <loc>${loc}</loc>${lastmod}\n  </url>`
   })
   .join('\n')}

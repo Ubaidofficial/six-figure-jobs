@@ -1,6 +1,7 @@
 // app/sitemap-company/[page]/route.ts
 // Sharded company sitemap pages
 
+import { sitemapDate } from '../../../lib/seo/lastmod'
 import { getSiteUrl } from '../../../lib/seo/site'
 import { getPublishedCompanyCandidatesPage } from '../../../lib/seo/companyPublishing'
 import {
@@ -82,11 +83,10 @@ export async function GET(
 
   const urls = rows.map((row) => {
     const loc = escapeXml(`${SITE_URL}/company/${row.slug}`)
-    const lastmod = new Date(toMs(row.latestUpdatedAt)).toISOString()
+    const day = sitemapDate(new Date(toMs(row.latestUpdatedAt)))
 
     return `  <url>
-    <loc>${loc}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${loc}</loc>${day ? `\n    <lastmod>${day}</lastmod>` : ''}
   </url>`
   })
 

@@ -31,18 +31,22 @@ describe('sitemap routes', () => {
     process.env.INDEXING_PHASE = '1'
   })
 
-  it('index: lastmod is the newest job update, never the request time', async () => {
+  it('index: a child is dated by its own newest entry, as a day, never a clock time or the request time', async () => {
     aggregate.mockResolvedValue({ _max: { createdAt: new Date('2026-01-02T03:04:05.000Z') } })
-    const xml = await (await getIndex()).text()
-    expect(xml).toContain('<lastmod>2026-01-02T03:04:05.000Z</lastmod>')
-    expect(xml).not.toContain(String(new Date().getUTCFullYear() + 1))
+    const index = await (await getIndex()).text()
+    const hubs = await (await getHubs()).text()
+    const { newestLastmod } = await import('../../lib/seo/lastmod')
+    expect(index).toContain(`<loc>https://www.6figjobs.com/sitemap-hubs.xml</loc>\n    <lastmod>${newestLastmod(hubs)}</lastmod>`)
+    expect(index).not.toMatch(/<lastmod>[^<]*T[^<]*<\/lastmod>/) // days only
+    expect(index).not.toContain(String(new Date().getUTCFullYear() + 1))
   })
 
-  it('index: omits lastmod instead of inventing one when the database is down', async () => {
+  it('index: leaves the date out of a child it cannot read, instead of lending it another page\'s', async () => {
     aggregate.mockRejectedValue(new Error('db down'))
     const xml = await (await getIndex()).text()
     expect(xml).toContain('<loc>https://www.6figjobs.com/sitemap-hubs.xml</loc>')
-    expect(xml).not.toContain('<lastmod>')
+    // The salary file needs the database: with it down there is nothing to date it by.
+    expect(xml).toMatch(/<loc>https:\/\/www\.6figjobs\.com\/sitemap-salary\.xml<\/loc>\s*<\/sitemap>/)
   })
 
   it('hubs: well-formed urlset with absolute URLs, the homepage without a trailing slash, and no duplicates', async () => {

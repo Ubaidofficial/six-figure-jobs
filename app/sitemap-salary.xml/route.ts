@@ -4,6 +4,7 @@ import { buildSliceCanonicalPath } from '../../lib/seo/canonical'
 import { SALARY_TIERS, type SalaryTierId } from '../../lib/jobs/salaryTiers'
 import { isSalaryTierPageIndexable } from '../../lib/seo/indexabilityGates'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
+import { sitemapDate } from '../../lib/seo/lastmod'
 import { getSiteUrl } from '../../lib/seo/site'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic' // built per request: the deploy-time bui
 
 type SalarySitemapUrl = {
   url: string
-  lastModified: string
+  lastModified: string | null
 }
 
 export async function GET() {
@@ -46,7 +47,7 @@ export async function GET() {
 
           return {
             url: `${SITE_URL}${path}`,
-            lastModified: (agg._max.createdAt ?? new Date()).toISOString(),
+            lastModified: sitemapDate(agg._max.createdAt),
           } satisfies SalarySitemapUrl
         }),
       )
@@ -55,8 +56,7 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(u => `  <url>
-    <loc>${u.url}</loc>
-    <lastmod>${u.lastModified}</lastmod>
+    <loc>${u.url}</loc>${u.lastModified ? `\n    <lastmod>${u.lastModified}</lastmod>` : ''}
   </url>`).join('\n')}
   ${buildSitemapMetaComment('sitemap-salary')}
 </urlset>`
