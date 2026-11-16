@@ -1,17 +1,10 @@
-// The comparison on /pricing: what rivals charge (read from their pages, dated), what Pro includes (only features that
-// exist), and what we collect (live numbers from the database). Server component.
+// The comparison on /pricing: what Pro includes (only features that exist) and what rivals charge (read from their pages,
+// dated). The live numbers moved to the hero (SiteStatsStrip, the same as the homepage). Server component.
 import { COMPETITOR_PRICES, COMPETITOR_PRICES_CHECKED_ON } from '@/lib/billing/competitorPrices'
 import type { PlanData } from '@/lib/billing/plans'
 import { FREE_MAX_ALERTS_PER_EMAIL, PRO_MAX_ALERTS_PER_EMAIL } from '@/lib/alerts/config'
 
 import styles from './account.module.css'
-
-export interface SiteNumbers {
-  jobs: number
-  companies: number
-  countries: number
-  newThisWeek: number
-}
 
 const n = (value: number) => value.toLocaleString('en-US')
 
@@ -40,11 +33,9 @@ function OurPrice({ plan }: { plan: PlanData | undefined }) {
 
 export function PlanComparison({
   plans,
-  numbers,
   instantAlerts,
 }: {
   plans: PlanData[]
-  numbers: SiteNumbers | null
   /** Whether instant alerts are switched on (ALERTS_ENABLED); the row is left out otherwise. */
   instantAlerts: boolean
 }) {
@@ -53,32 +44,6 @@ export function PlanComparison({
 
   return (
     <>
-      {numbers ? (
-        <section className={styles.card} aria-labelledby="scan-heading">
-          <h2 id="scan-heading" className={styles.cardTitle}>
-            What we collect for you
-          </h2>
-          <ul className={styles.statRow}>
-            <li>
-              <span className={styles.statNumber}>{n(numbers.jobs)}</span> live jobs, every one with a published six-figure salary
-            </li>
-            <li>
-              <span className={styles.statNumber}>{n(numbers.companies)}</span> companies hiring now
-            </li>
-            <li>
-              <span className={styles.statNumber}>{n(numbers.countries)}</span> countries
-            </li>
-            <li>
-              <span className={styles.statNumber}>{n(numbers.newThisWeek)}</span> new this week
-            </li>
-          </ul>
-          <p className={styles.muted}>
-            Jobs are read from employers&apos; own careers systems and linked to the employer&apos;s own application page. Browsing
-            every job, its salary and the apply link is free.
-          </p>
-        </section>
-      ) : null}
-
       <section className={styles.card} aria-labelledby="included-heading">
         <h2 id="included-heading" className={styles.cardTitle}>
           Free and Pro

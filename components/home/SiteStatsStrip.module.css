@@ -186,6 +186,26 @@
   }
 }
 
+/* compact: the band sits in a column narrower than the homepage's (the pricing page), so the three facts go on their own row at
+   any desktop width instead of being squeezed beside the funnel, where their numbers overlap. It copies the 1100px rules
+   above, and only above 640px so phones keep their stacked layout. Without the class nothing changes. */
+@media (min-width: 641px) {
+  .compact .row,
+  .compact .noScreen {
+    grid-template-columns: minmax(0, 1fr) minmax(80px, 0.4fr) minmax(0, 1fr);
+  }
+
+  .compact .facts {
+    grid-column: 1 / -1;
+    padding-top: 14px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text-0) 12%, transparent);
+  }
+
+  .compact .noScreen .facts {
+    grid-column: auto;
+  }
+}
+
 @media (max-width: 640px) {
   .band {
     padding: 20px 18px 16px;
