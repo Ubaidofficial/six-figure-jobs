@@ -3,7 +3,8 @@ import Link from '@/components/ui/Link'
 import type { PlanData } from '@/lib/billing/plans'
 
 import { CheckoutButton } from './BillingButtons'
-import { PlanComparison, type SiteNumbers } from './PlanComparison'
+import { PlanComparison } from './PlanComparison'
+import { PricingClosing, PricingFeatures, PricingHero, PricingShowcase, type PricingStats } from './PricingShowcase'
 
 import styles from './account.module.css'
 
@@ -23,19 +24,20 @@ export function PlansView({
   plans,
   signedIn,
   subscribed,
-  numbers = null,
+  stats = null,
   instantAlerts = false,
 }: {
   plans: Plan[]
   signedIn: boolean
   subscribed: boolean
-  numbers?: SiteNumbers | null
+  /** The numbers the homepage shows (SiteStatsStrip); the strip is left out when they could not be read. */
+  stats?: PricingStats | null
   instantAlerts?: boolean
 }) {
   const ordered = [...plans].sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key))
   return (
-    <main className={styles.page}>
-      <h1 className={styles.title}>Plans</h1>
+    <main className={`${styles.page} ${styles.pageWide}`}>
+      <PricingHero stats={stats} instantAlerts={instantAlerts} />
       <p className={styles.lede}>Prices are read from our payment provider when this page loads.</p>
 
       {ordered.length === 0 ? (
@@ -86,7 +88,10 @@ export function PlansView({
         </div>
       )}
 
-      {ordered.length > 0 ? <PlanComparison plans={ordered} numbers={numbers} instantAlerts={instantAlerts} /> : null}
+      <PricingShowcase />
+      <PricingFeatures stats={stats} instantAlerts={instantAlerts} />
+      {ordered.length > 0 ? <PlanComparison plans={ordered} instantAlerts={instantAlerts} /> : null}
+      <PricingClosing />
     </main>
   )
 }

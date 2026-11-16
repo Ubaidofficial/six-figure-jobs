@@ -11,6 +11,11 @@
   max-width: 440px;
 }
 
+/* The pricing page: wide enough for the product screenshots. The account and sign-in pages keep .page's width. */
+.pageWide {
+  max-width: 1080px;
+}
+
 .title {
   font-family: var(--font-display);
   font-size: var(--text-3xl);

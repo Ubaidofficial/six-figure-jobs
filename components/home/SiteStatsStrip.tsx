@@ -46,6 +46,7 @@ export function SiteStatsStrip({
   countries,
   catalog,
   refreshedAt,
+  compact = false,
 }: {
   jobs: number
   companies: number
@@ -55,6 +56,8 @@ export function SiteStatsStrip({
   catalog: FreehireCatalog | null
   /** When the daily sync last refreshed the listings; the "Updated" line is left out when it could not be read. */
   refreshedAt?: Date | null
+  /** For a column narrower than the homepage's (the pricing page): the two-row layout at any desktop width. Off by default. */
+  compact?: boolean
 }) {
   if (jobs <= 0) return null
   const refreshed = formatRefreshedAt(refreshedAt)
@@ -66,7 +69,7 @@ export function SiteStatsStrip({
   ]
 
   return (
-    <section className={styles.band} aria-labelledby="site-stats-title">
+    <section className={`${styles.band} ${compact ? styles.compact : ''}`} aria-labelledby="site-stats-title">
       <h2 id="site-stats-title" className={`eyebrow-pill ${styles.eyebrow}`}>
         6figjobs today
       </h2>

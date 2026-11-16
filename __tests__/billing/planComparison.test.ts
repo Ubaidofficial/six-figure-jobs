@@ -17,10 +17,8 @@ const plans = [
   },
   { key: 'subscription' as const, priceText: '$9.99', interval: 'month', credits: 100, discount: null, savingsPercent: 54 },
 ]
-const numbers = { jobs: 28559, companies: 7937, countries: 20, newThisWeek: 21160 }
-
 const render = (over: Record<string, unknown> = {}) =>
-  renderToStaticMarkup(createElement(PlanComparison, { plans, numbers, instantAlerts: true, ...over }))
+  renderToStaticMarkup(createElement(PlanComparison, { plans, instantAlerts: true, ...over }))
 
 describe('PlanComparison', () => {
   it('shows our price with the discount and every rival price with its date', () => {
@@ -37,17 +35,13 @@ describe('PlanComparison', () => {
     expect(render()).toContain('Save 54% compared with paying weekly')
   })
 
-  it('shows the live numbers it is given, formatted', () => {
-    const html = render()
-    expect(html).toContain('28,559')
-    expect(html).toContain('7,937')
+  it('leaves out the instant row when alerts are off', () => {
+    expect(render({ instantAlerts: false })).not.toContain('Instant alerts')
+    expect(render()).toContain('Instant alerts')
   })
 
-  it('leaves out the numbers section when there are none, and the instant row when alerts are off', () => {
-    const html = render({ numbers: null, instantAlerts: false })
-    expect(html).not.toContain('What we collect for you')
-    expect(html).not.toContain('Instant alerts')
-    expect(render()).toContain('Instant alerts')
+  it('no longer carries the live numbers: they are the hero strip now, the same as the homepage', () => {
+    expect(render()).not.toContain('What we collect for you')
   })
 
   it('does not invent a price for a plan Stripe could not return', () => {

@@ -83,3 +83,12 @@ describe('formatRefreshedAt', () => {
     expect(formatRefreshedAt(new Date('nope'))).toBeNull()
   })
 })
+
+describe('SiteStatsStrip compact variant', () => {
+  const render = (extra: Record<string, unknown> = {}) => renderToStaticMarkup(createElement(SiteStatsStrip, { ...base, catalog, ...extra }))
+
+  it('is off by default, so the homepage strip is unchanged, and adds one class when asked (the pricing page)', () => {
+    expect(render()).not.toContain('compact')
+    expect(render({ compact: true })).toContain('band compact')
+  })
+})
