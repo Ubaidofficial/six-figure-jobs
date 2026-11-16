@@ -1,5 +1,7 @@
 import {
   DEFAULT_DAILY_ENRICH_LIMIT,
+  HIGH_DEMAND_CLICKS,
+  MAX_CLICKED_JOB_AGE_DAYS,
   MAX_JOB_AGE_DAYS,
   MIN_DESCRIPTION_CHARS,
   enrichmentScore,
@@ -76,5 +78,32 @@ describe('selectJobsToEnrich', () => {
     const many = Array.from({ length: DEFAULT_DAILY_ENRICH_LIMIT + 25 }, () => job())
     expect(selectJobsToEnrich(many, { now })).toHaveLength(DEFAULT_DAILY_ENRICH_LIMIT)
     expect(selectJobsToEnrich(many, { now, limit: 0 })).toEqual([])
+  })
+})
+
+describe('click demand', () => {
+  const daysAgo = (d: number) => hoursAgo(d * 24)
+
+  it('keeps a clicked job eligible past the usual age, up to the age the site still shows, and no longer', () => {
+    const older = { postedAt: daysAgo(MAX_JOB_AGE_DAYS + 2), createdAt: daysAgo(MAX_JOB_AGE_DAYS + 2) }
+    expect(isEnrichable(job(older), now)).toBe(false) // nobody clicked: too old
+    expect(isEnrichable(job({ ...older, clicks30d: 0 }), now)).toBe(false)
+    expect(isEnrichable(job({ ...older, clicks30d: 1 }), now)).toBe(true)
+    const tooOld = { postedAt: daysAgo(MAX_CLICKED_JOB_AGE_DAYS + 1), createdAt: daysAgo(MAX_CLICKED_JOB_AGE_DAYS + 1) }
+    expect(isEnrichable(job({ ...tooOld, clicks30d: 50 }), now)).toBe(false) // the site no longer shows it
+  })
+
+  it('scores one click as a signal and many as a lot', () => {
+    const base = enrichmentScore(job(), now)
+    expect(enrichmentScore(job({ clicks30d: 0 }), now)).toBe(base)
+    expect(enrichmentScore(job({ clicks30d: null }), now)).toBe(base)
+    expect(enrichmentScore(job({ clicks30d: 1 }), now)).toBe(base + 2)
+    expect(enrichmentScore(job({ clicks30d: HIGH_DEMAND_CLICKS }), now)).toBe(base + 3)
+  })
+
+  it('picks the clicked job ahead of an otherwise identical one when the budget is one', () => {
+    const quiet = job({ id: 'quiet' })
+    const wanted = job({ id: 'wanted', clicks30d: 3 })
+    expect(selectJobsToEnrich([quiet, wanted], { limit: 1, now }).map((j) => j.id)).toEqual(['wanted'])
   })
 })

@@ -59,23 +59,31 @@ async function main() {
     }
 
     const since = new Date(now.getTime() - (MAX_JOB_AGE_DAYS + 1) * 86_400_000)
-    const rows = await prisma.job.findMany({
-      where: {
-        isExpired: false,
-        aiEnrichedAt: null,
-        aiOneLiner: null,
-        salaryValidated: true,
-        descriptionHtml: { not: null },
-        OR: [{ postedAt: { gte: since } }, { postedAt: null, createdAt: { gte: since } }],
-      },
-      select: {
-        id: true, title: true, source: true, locationRaw: true, descriptionHtml: true, createdAt: true, postedAt: true,
-        aiEnrichedAt: true, isExpired: true, maxAnnual: true, currency: true, techStack: true, companyRef: { select: { slug: true } },
-      },
+    const select = {
+      id: true, title: true, source: true, locationRaw: true, descriptionHtml: true, createdAt: true, postedAt: true,
+      aiEnrichedAt: true, isExpired: true, maxAnnual: true, currency: true, techStack: true, companyRef: { select: { slug: true } },
+    } as const
+    const eligible = { isExpired: false, aiEnrichedAt: null, aiOneLiner: null, salaryValidated: true, descriptionHtml: { not: null } } as const
+    const recent = await prisma.job.findMany({
+      where: { ...eligible, OR: [{ postedAt: { gte: since } }, { postedAt: null, createdAt: { gte: since } }] },
+      select,
       orderBy: { createdAt: 'desc' },
       take: 3000,
     })
-    const candidates: Array<EnrichCandidate & (typeof rows)[number]> = rows.map((r) => ({ ...r, companySlug: r.companyRef?.slug ?? null }))
+    // Enrich what people see first: jobs visitors clicked Apply on in the last 30 days stay eligible past the usual age (the
+    // selector enforces how long), so they are loaded even when they are older than `since`.
+    const clickRows = await prisma.applyClick.groupBy({
+      by: ['jobId'],
+      where: { createdAt: { gte: new Date(now.getTime() - 30 * 86_400_000) } },
+      _count: { _all: true },
+    })
+    const clicks = new Map(clickRows.map((c) => [c.jobId, c._count._all]))
+    const recentIds = new Set(recent.map((r) => r.id))
+    const clickedOlder = clicks.size
+      ? await prisma.job.findMany({ where: { ...eligible, id: { in: [...clicks.keys()].filter((id) => !recentIds.has(id)) } }, select, take: 500 })
+      : []
+    const rows = [...recent, ...clickedOlder]
+    const candidates: Array<EnrichCandidate & (typeof rows)[number]> = rows.map((r) => ({ ...r, companySlug: r.companyRef?.slug ?? null, clicks30d: clicks.get(r.id) ?? 0 }))
 
     // One model call per distinct description: a repost for another city shares it.
     const groups = groupByDescription(candidates, (j) => stripHtml(j.descriptionHtml).slice(0, SOURCE_CHARS))
@@ -83,7 +91,7 @@ async function main() {
     const representatives = [...membersOf.values()].map((members) => members[0])
     const priority = new Set(candidates.map((c) => c.companySlug).filter((s): s is string => isPriorityCompanySlug(s)))
     const chosen = selectJobsToEnrich(representatives, { limit: budget, now, priorityCompanySlugs: priority }) as typeof representatives
-    out(`Recent jobs read: ${candidates.length} | distinct descriptions: ${groups.size} | chosen for this run: ${chosen.length}`)
+    out(`Recent jobs read: ${candidates.length} (${clickedOlder.length} older ones kept for their clicks) | distinct descriptions: ${groups.size} | chosen for this run: ${chosen.length} (${chosen.filter((c) => (c.clicks30d ?? 0) > 0).length} with clicks)`)
     out()
 
     const ask = await createFreeAsker({ provider, env: process.env, log: (line) => out(line) })
