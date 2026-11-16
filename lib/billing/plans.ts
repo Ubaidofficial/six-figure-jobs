@@ -19,7 +19,7 @@ export interface PlanData {
   interval: string | null
   credits: number
   discount: PlanDiscount | null
-  /** On the monthly plan: how much cheaper a month is than paying the weekly price for it (list prices), whole percent; else null. */
+  /** On the monthly plan: how much cheaper a month is than paying the weekly price for it (what each plan actually charges, after any launch discount), whole percent; else null. */
   savingsPercent: number | null
 }
 
@@ -35,16 +35,16 @@ export function savingsVersusWeekly(weeklyAmount: number, monthlyAmount: number)
 
 /** Words for how long a coupon lasts, from Stripe's own `duration` fields. */
 export function describeCouponDuration(coupon: Pick<Stripe.Coupon, 'duration' | 'duration_in_months'>): string {
-  if (coupon.duration === 'forever') return 'on every payment'
+  if (coupon.duration === 'forever') return 'while you stay subscribed (launch price)'
   if (coupon.duration === 'repeating' && coupon.duration_in_months) {
     return `for the first ${coupon.duration_in_months === 1 ? 'month' : `${coupon.duration_in_months} months`}`
   }
   return 'on your first payment'
 }
 
-/** The launch coupon if one is configured and Stripe says it is usable and a percentage; else null. */
-async function loadLaunchCoupon(stripe: Pick<Stripe, 'coupons'>, env: Record<string, string | undefined>) {
-  const id = getLaunchCouponId(env)
+/** The plan's launch coupon if one is configured and Stripe says it is usable and a percentage; else null. */
+async function loadLaunchCoupon(stripe: Pick<Stripe, 'coupons'>, key: ProductKey, env: Record<string, string | undefined>) {
+  const id = getLaunchCouponId(key, env)
   if (!id) return null
   try {
     const coupon = await stripe.coupons.retrieve(id)
@@ -71,18 +71,21 @@ export async function loadPlans(
   stripe: Pick<Stripe, 'prices' | 'coupons'>,
   env: Record<string, string | undefined> = process.env,
 ): Promise<PlanData[]> {
-  const coupon = await loadLaunchCoupon(stripe, env)
   const amounts: Partial<Record<ProductKey, { amount: number; currency: string }>> = {}
   const plans = await Promise.all(
     getProducts(env).map(async (product): Promise<PlanData> => {
       try {
-        const price = await stripe.prices.retrieve(product.priceId)
+        const [price, coupon] = await Promise.all([
+          stripe.prices.retrieve(product.priceId),
+          isSubscriptionKey(product.key) ? loadLaunchCoupon(stripe, product.key, env) : null,
+        ])
         const usable = price.active
-        if (usable && price.unit_amount != null) amounts[product.key] = { amount: price.unit_amount, currency: price.currency }
         const discounted =
-          coupon && usable && isSubscriptionKey(product.key) && price.unit_amount != null
+          coupon && usable && price.unit_amount != null
             ? Math.round((price.unit_amount * (100 - (coupon.percent_off ?? 0))) / 100)
             : null
+        // The saving on the monthly plan is judged on what people actually pay, so on the discounted prices when there are any.
+        if (usable && price.unit_amount != null) amounts[product.key] = { amount: discounted ?? price.unit_amount, currency: price.currency }
         return {
           key: product.key,
           priceText: usable ? formatStripeAmount(price.unit_amount, price.currency) : null,
@@ -91,7 +94,7 @@ export async function loadPlans(
           discount:
             coupon && discounted != null
               ? {
-                  percentOff: coupon.percent_off ?? 0,
+                  percentOff: Math.round(coupon.percent_off ?? 0),
                   discountedText: formatStripeAmount(discounted, price.currency),
                   duration: describeCouponDuration(coupon),
                 }
