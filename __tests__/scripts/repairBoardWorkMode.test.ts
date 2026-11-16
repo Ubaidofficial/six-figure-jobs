@@ -30,4 +30,24 @@ describe('planRepair', () => {
   it('does not read a negated remote claim as remote', () => {
     expect(planRepair({ ...base, descriptionHtml: '<p>This position is not remote.</p>' })).toBeNull()
   })
+
+  it('does not call a job remote when the sentence offers remote beside another way of working', () => {
+    for (const quote of [
+      'Hybrid in London (UK) or Remote within the UK',
+      'This role is based in Chicago or remote within the US.',
+      'LOCATION: PASADENA, CA OR REMOTE WITHIN THE US',
+      'Location: Remote/Cobec Site - DC',
+      'This role is remote-friendly.',
+      'Location: fully remote is fine; onsite is preferred, at our Mission Bay waterfront office.',
+      'Location: Remote, but if local to San Mateo, CA - Hybrid',
+    ]) {
+      expect(planRepair({ ...base, descriptionHtml: `<p>${quote}</p>` })?.mode).not.toBe('remote')
+    }
+  })
+
+  it('still reads plain remote sentences as remote', () => {
+    for (const quote of ['Location: Remote within the United States', 'This is a remote role.', 'Remote within the United States, with Boston as the primary location.', 'Location: Remote, preferred Boston, MA or Dayton, OH', 'The starting pay range for this remote role is $105,840-$196,000.']) {
+      expect(planRepair({ ...base, descriptionHtml: `<p>${quote}</p>` })?.mode).toBe('remote')
+    }
+  })
 })

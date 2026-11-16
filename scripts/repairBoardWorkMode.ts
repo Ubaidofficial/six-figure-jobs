@@ -25,12 +25,19 @@ const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`
 
 export type Candidate = { source: string; remote: boolean | null; remoteMode: string | null; descriptionHtml: string | null }
 
+// A sentence that offers remote NEXT TO another way of working ("Hybrid in London or Remote within the UK", "Chicago or remote",
+// "remote-friendly", "onsite is preferred") says remote is possible, not that the role is remote. Written as remote it would tell
+// Google the job is telecommute (JobPosting jobLocationType). Review of the first 64 readings (2026-11-17) found 8 like that; they
+// stay as they are.
+const OFFERS_ANOTHER_MODE = /\b(?:hybrid|on-?site|in[- ]office|in[- ]person)\b|\bor remote\b|\bremote\s*\/|\bremote[- ]friendly\b|\bis preferred\b|\bbut if\b/i
+
 /** The mode to write and the sentence it was read from, or null when the job is not one this script may change (pure). */
 export function planRepair(job: Candidate): { mode: 'remote' | 'hybrid'; quote: string } | null {
   if (!job.source.startsWith('board:')) return null
   if (job.remoteMode !== 'onsite' || job.remote === true) return null
   const found = findRemoteEvidence(job.descriptionHtml)
   if (!found || (found.mode !== 'remote' && found.mode !== 'hybrid')) return null
+  if (found.mode === 'remote' && OFFERS_ANOTHER_MODE.test(found.quote)) return null
   return { mode: found.mode, quote: found.quote }
 }
 
