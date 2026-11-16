@@ -38,3 +38,6 @@ jobs:
 
       - name: Coverage audit (read-only)
         run: npm run audit:db-coverage
+
+      - name: Remote and place data of jobs posted in the last 3 days (read-only)
+        run: npx tsx scripts/auditRecentRemote.ts
