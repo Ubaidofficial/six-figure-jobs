@@ -2,8 +2,9 @@
 //
 // Company discovery from RemoteYeah (remoteyeah.com). RemoteYeah is an aggregator, so its listings are not republished:
 // each company it lists is looked up on its own website for a supported ATS board (Greenhouse, Lever, Ashby, ...) and
-// the board is saved as a CompanyATS row. The ATS scraper then ingests that employer's postings from the employer's own
-// board, with the real apply link, through the usual quality and salary gates.
+// the board is saved as a CompanyATS row. That table is an inventory: no scheduled job reads it, only the manual
+// scripts/scrapeDirectATS.ts does (checked 2026-11-16). To have an employer's own board read every day, with the usual
+// quality and salary gates, add it to DIRECT_EMPLOYERS (lib/constants/directEmployers.ts).
 //
 // Politeness: honest bot User-Agent, a gap between RemoteYeah requests, a hard stop on 401/403/429 (politeFetch), a cap
 // of companies per run, and a time budget. The slice of the sitemap read rotates daily so every company gets a turn.

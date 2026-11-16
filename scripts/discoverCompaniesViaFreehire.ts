@@ -4,15 +4,18 @@
 // scrape in the database? Optionally queue the boards we are missing for the ATS scraper.
 //
 // Per company, status in our database:
-//   scraped       an active CompanyATS row, a company ATS url, or an active CompanySource (a careers page)
-//   jobs-only     live jobs from other sources (e.g. the freehire import) but no board or careers page of our own
-//   no-jobs       the company is known but has no live jobs and no source
-//   not-in-db     no company, no ATS row
+//   scraped         a company ATS url (what the daily scrapes read) or an active CompanySource (a careers page)
+//   inventory-only  a CompanyATS row exists, but nothing scheduled reads that table (only scripts/scrapeDirectATS.ts, by hand)
+//   jobs-only       live jobs from other sources (e.g. the freehire import) but no board or careers page of our own
+//   no-jobs         the company is known but has no live jobs and no source
+//   not-in-db       no company, no ATS row
 //
-// Safe by default: a dry run unless --apply is passed. With --apply, a company that is not `scraped` and has a board gets a
-// CompanyATS row (discoveredBy: freehire-discovery), and each careers-page lead below gets a Company + CompanySource
-// (generic_careers_page). Nothing is ever deleted or overwritten. Every board's jobs still pass the usual quality and
-// salary gates when the ATS scraper ingests them.
+// A board found for a company that is not `scraped` is only REPORTED: to have it read every day, add it to DIRECT_EMPLOYERS
+// (lib/constants/directEmployers.ts), which scripts/sync-direct-employers.ts reads daily with the usual salary gate. (Saving
+// it to CompanyATS would read nothing: only the manual scripts/scrapeDirectATS.ts reads that table.)
+//
+// Safe by default: a dry run unless --apply is passed. --apply only adds the careers-page leads below, each as a Company plus
+// a CompanySource (generic_careers_page), which the daily company-careers scraper reads. Nothing is deleted or overwritten.
 //
 // Usage:
 //   npx tsx scripts/discoverCompaniesViaFreehire.ts                          # dry run, the built-in list
@@ -25,7 +28,6 @@ import slugify from 'slugify'
 import { prisma } from '../lib/prisma'
 import { lookupFreehireCompany, type FreehireCompany } from '../lib/scrapers/freehireCompanyBoard'
 import { classifyGenericCareerSource } from '../lib/scrapers/utils/companyCareersDiscovery'
-import { saveCompanyATS } from '../lib/scrapers/utils/saveCompanyATS'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + '\n')
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3)
@@ -42,7 +44,7 @@ const DEFAULT_NAMES = [
 // Companies whose jobs are on their own website, not on an ATS board: read by the generic careers-page scraper.
 const CAREERS_LEADS = [{ name: 'SerpApi', website: 'https://serpapi.com', careersUrl: 'https://serpapi.com/careers' }]
 
-type Status = 'scraped' | 'jobs-only' | 'no-jobs' | 'not-in-db'
+type Status = 'scraped' | 'inventory-only' | 'jobs-only' | 'no-jobs' | 'not-in-db'
 type Row = {
   name: string
   status: Status
@@ -73,11 +75,11 @@ async function dbStatus(name: string, website: string | null, boardUrl: string |
     }),
   ])
   const own = [
-    ...(ats?.isActive ? [`ATS ${ats.atsUrl}`] : []),
     ...(company?.atsUrl ? [`company ATS ${company.atsUrl}`] : []),
     ...(company?.sources.length ? [`${company.sources.length} source(s): ${[...new Set(company.sources.map((s) => s.sourceType))].join(',')}`] : []),
   ]
   if (own.length) return { status: 'scraped', detail: own.join('; ') }
+  if (ats?.isActive) return { status: 'inventory-only', detail: `CompanyATS ${ats.atsUrl}` }
   if (!company) return { status: 'not-in-db', detail: '' }
   const bySource = await prisma.job.groupBy({ by: ['source'], where: { companyId: company.id, isExpired: false }, _count: { _all: true } })
   if (!bySource.length) return { status: 'no-jobs', detail: 'company exists' }
@@ -105,8 +107,7 @@ async function main() {
     let action = '-'
     if (db.status !== 'scraped') {
       if (fh?.board) {
-        action = apply ? `saved ${fh.board.url}` : `would save ${fh.board.url}`
-        if (apply) await saveCompanyATS(name, fh.board.url, 'freehire-discovery')
+        action = `board ${fh.board.url}: add to DIRECT_EMPLOYERS`
       } else {
         action = fh ? 'no supported board in freehire jobs: needs a manual look' : 'not in freehire: needs a manual look'
       }
@@ -135,7 +136,7 @@ async function main() {
   }
 
   const count = (s: Status) => rows.filter((r) => r.status === s).length
-  __slog(`\nscraped ${count('scraped')} · jobs-only ${count('jobs-only')} · no-jobs ${count('no-jobs')} · not-in-db ${count('not-in-db')} · with a board to add ${rows.filter((r) => r.status !== 'scraped' && r.board).length}`)
+  __slog(`\nscraped ${count('scraped')} · inventory-only ${count('inventory-only')} · jobs-only ${count('jobs-only')} · no-jobs ${count('no-jobs')} · not-in-db ${count('not-in-db')} · boards to add to DIRECT_EMPLOYERS ${rows.filter((r) => r.status !== 'scraped' && r.board).length}`)
   if (arg('report')) writeFileSync(arg('report')!, JSON.stringify(rows, null, 2))
   if (!apply) __slog('Dry run: nothing was written. Pass --apply to save.')
 }
