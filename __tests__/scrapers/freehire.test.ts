@@ -43,6 +43,22 @@ describe('stripFreehireUtm', () => {
   })
 })
 
+describe('mapFreehireJob work mode', () => {
+  // freehire says remote, hybrid or onsite in work_mode. The mapper used to pass only "remote", so a hybrid job was stored as on-site
+  // (3 days to 2026-11-17: 0 hybrid among 1,065 freehire jobs, 142 whose own text says hybrid stored as on-site).
+  it('passes freehire\'s hybrid and on-site to the ingest as the structured workplace type', () => {
+    expect(mapFreehireJob(job)?.workplaceType).toBe('hybrid')
+    expect(mapFreehireJob({ ...job, work_mode: 'onsite' })?.workplaceType).toBe('onsite')
+    expect(mapFreehireJob({ ...job, work_mode: 'remote' })?.workplaceType).toBe('remote')
+  })
+
+  it('passes nothing for a missing or unknown work mode, so the location text decides as before', () => {
+    expect(mapFreehireJob({ ...job, work_mode: null })?.workplaceType).toBeNull()
+    expect(mapFreehireJob({ ...job, work_mode: 'flexible' })?.workplaceType).toBeNull()
+    expect(mapFreehireJob({ ...job, work_mode: undefined })?.workplaceType).toBeNull()
+  })
+})
+
 describe('mapFreehireJob', () => {
   it('maps a $100k+ USD yearly job to the employer apply URL', () => {
     const mapped = mapFreehireJob(job)

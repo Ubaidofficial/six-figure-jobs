@@ -232,6 +232,8 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     // without them a remote job's country was guessed from the company or the pay currency.
     locationText: freehireStructuredLocationText(job) ?? job.location ?? null,
     isRemote: job.work_mode === 'remote',
+    // The structured work mode decides remote, hybrid or on-site in the ingest (processLocation). Without it a hybrid job read as on-site.
+    workplaceType: job.work_mode === 'remote' || job.work_mode === 'hybrid' || job.work_mode === 'onsite' ? job.work_mode : null,
     employmentType: e.employment_type ?? null,
     salaryMin,
     salaryMax,
