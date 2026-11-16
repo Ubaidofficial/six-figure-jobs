@@ -64,6 +64,8 @@ export interface BoardJobInput {
 
   /** Remote / type hints */
   isRemote?: boolean | null
+  /** The board's own structured work mode (freehire `work_mode`), when it states one: decides remote, hybrid or on-site. */
+  workplaceType?: 'remote' | 'hybrid' | 'onsite' | null
   employmentType?: string | null
 
   /** Optional LinkedIn URL */
@@ -142,6 +144,7 @@ export async function ingestBoardJob(
     // Location
     locationText: job.locationText ?? null,
     isRemote: job.isRemote ?? null,
+    workplaceType: job.workplaceType ?? null,
 
     // Salary
     salaryMin: job.salaryMin ?? null,

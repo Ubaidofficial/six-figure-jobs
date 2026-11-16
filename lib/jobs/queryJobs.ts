@@ -20,6 +20,7 @@ import { salaryMidpoint } from './salarySnapshot'
 import { resolveJobRoleSlug } from '../roles/indexableRole'
 import { roleLabelFor } from '../roles/relatedRoles'
 import { NEW_TAG_WINDOW_MS } from './postedRecently'
+import { FLEX_WHERE, OTHER_WHERE, blendMerge, blendOffsets, blendPicks } from './workModeBlend'
 
 export type JobWithCompany = Job & {
   companyRef: Company | null
@@ -397,6 +398,53 @@ async function queryByPostingDate(args: {
   }
 }
 
+/**
+ * Whether a pay-ranked list mixes remote and hybrid jobs in ahead of their pay rank (lib/jobs/workModeBlend.ts). Not for a list
+ * the visitor or the page already narrowed by work mode or by company, not for the one-row calls that only count, and off
+ * with WORK_MODE_BLEND=off (set the variable and restart).
+ */
+export function shouldBlendWorkModes(input: JobQueryInput, pageSize: number): boolean {
+  if (process.env.WORK_MODE_BLEND === 'off') return false
+  if (pageSize <= 1) return false
+  return !input.remoteOnly && !input.remoteMode && !input.workArrangement && !input.companySlug
+}
+
+/** The pay-ranked list as two pay-ranked streams (remote or hybrid, and the rest) merged by a fixed pattern. */
+async function queryBlendedByPay(args: {
+  where: Prisma.JobWhereInput
+  select: typeof jobListingSelect | typeof jobFullSelect
+  orderBy: Prisma.JobOrderByWithRelationInput[]
+  page: number
+  pageSize: number
+}): Promise<JobQueryResult> {
+  const { where, select, orderBy, page, pageSize } = args
+  const skip = (page - 1) * pageSize
+  const [total, flexTotal] = await Promise.all([
+    prisma.job.count({ where }),
+    prisma.job.count({ where: { AND: [where, FLEX_WHERE] } }),
+  ])
+  const otherTotal = Math.max(total - flexTotal, 0)
+
+  const picks = blendPicks(skip, pageSize, flexTotal, otherTotal)
+  const flexNeeded = picks.filter((p) => p === 'flex').length
+  const offsets = blendOffsets(skip, flexTotal, otherTotal)
+  const read = (extra: Prisma.JobWhereInput, from: number, take: number) =>
+    take > 0 ? prisma.job.findMany({ where: { AND: [where, extra] }, select, orderBy, skip: from, take }) : Promise.resolve([])
+  const [flexRows, otherRows] = await Promise.all([
+    read(FLEX_WHERE, offsets.flex, flexNeeded),
+    read(OTHER_WHERE, offsets.other, picks.length - flexNeeded),
+  ])
+  const jobs = blendMerge(picks, flexRows, otherRows)
+
+  return {
+    jobs: (await withCardSummaries(jobs as any[])) as unknown as JobWithCompany[],
+    total,
+    page,
+    pageSize,
+    totalPages: total === 0 ? 1 : Math.ceil(total / pageSize),
+  }
+}
+
 export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
   const debugTiming =
     process.env.DEBUG_DB_TIMING === '1' ||
@@ -444,6 +492,10 @@ export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {
     { postedAt: 'desc' },
     { createdAt: 'desc' },
   ]
+
+  if (shouldBlendWorkModes(input, pageSize)) {
+    return queryBlendedByPay({ where, select, orderBy, page, pageSize })
+  }
 
   const t0 = debugTiming ? Date.now() : 0
   let countMs = 0

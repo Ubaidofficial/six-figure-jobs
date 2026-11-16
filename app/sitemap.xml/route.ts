@@ -10,6 +10,11 @@ import { isPseoUnlockEnabled } from '../../lib/seo/pseoUnlock'
 import { GET as getJobsIndex } from '../sitemap-jobs.xml/route'
 import { GET as getCompanyIndex } from '../sitemap-company.xml/route'
 import { GET as getSlicesIndex } from '../sitemap-slices.xml/route'
+import { GET as getHubsSitemap } from '../sitemap-hubs.xml/route'
+import { GET as getSalarySitemap } from '../sitemap-salary.xml/route'
+import { GET as getCountrySitemap } from '../sitemap-country.xml/route'
+import { GET as getBatchSitemap } from '../sitemap-batch/[batch]/route'
+import { newestLastmod, sitemapDate } from '../../lib/seo/lastmod'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
@@ -64,20 +69,44 @@ function buildAdvertisedSitemaps(): string[] {
   ]
 }
 
+/**
+ * The day a child sitemap last changed: the newest date among its own entries, read from the file itself so the index can
+ * never claim more than the file does (it used to give every child the site's newest job, so all of them carried one
+ * stamp). Null when the file cannot be read, and the index then leaves the date out.
+ */
+async function ownLastmod(path: string): Promise<string | null> {
+  try {
+    let res: Response | null = null
+    if (path === 'sitemap-hubs.xml') res = await getHubsSitemap()
+    else if (path === 'sitemap-salary.xml') res = await getSalarySitemap()
+    else if (path === 'sitemap-country.xml') res = await getCountrySitemap()
+    else if (path.startsWith('sitemap-batch/')) {
+      const batch = path.slice('sitemap-batch/'.length)
+      res = await getBatchSitemap(new Request(`${SITE_URL}/${path}`), { params: Promise.resolve({ batch }) })
+    }
+    if (!res || res.status !== 200) return null
+    return newestLastmod(await res.text())
+  } catch {
+    return null
+  }
+}
+
+const OWN_DATE_PATHS = /^(sitemap-(hubs|salary|country)\.xml|sitemap-batch\/)/
+
 export async function GET() {
-  // `lastmod` must be the time the child's content last changed, not the time of this request: Google stops
-  // trusting lastmod on sites where every entry always says "now". When the date is unknown it is omitted.
+  // `lastmod` must be the day the child's content last changed, not the time of this request: Google stops trusting
+  // lastmod on sites where every entry always says "now". When the date is unknown it is omitted. The files this site
+  // submits today (hubs, released batches, salary bands, countries) are dated by their own entries; the families that
+  // are advertised only from phase 2 keep the newest job's day until they are.
   const latestJob = await getLatestJobUpdate()
   const latestBlog = getLatestBlogUpdate()
-  const lastmodFor = (path: string): string | null => {
-    const d = path === 'sitemap-blog.xml' ? latestBlog : latestJob
-    return d ? d.toISOString() : null
-  }
+  const fallbackFor = (path: string): string | null => sitemapDate(path === 'sitemap-blog.xml' ? latestBlog : latestJob)
   // The country sitemap is advertised only when it has URLs (an empty or missing child is worse than none).
   const hasCountries = shouldAdvertiseSitemapFamily('country') ? await hasCountrySitemapEntries().catch(() => false) : false
-  const direct: Entry[] = buildAdvertisedSitemaps()
-    .filter((path) => path !== 'sitemap-country.xml' || hasCountries)
-    .map((path) => ({ path, lastmod: lastmodFor(path) }))
+  const directPaths = buildAdvertisedSitemaps().filter((path) => path !== 'sitemap-country.xml' || hasCountries)
+  const direct: Entry[] = await Promise.all(
+    directPaths.map(async (path) => ({ path, lastmod: OWN_DATE_PATHS.test(path) ? await ownLastmod(path) : fallbackFor(path) })),
+  )
   const [jobs, company, slices] = await Promise.all([
     shouldAdvertiseSitemapFamily('jobs') ? expandChildIndex(getJobsIndex) : [],
     shouldAdvertiseSitemapFamily('company') ? expandChildIndex(getCompanyIndex) : [],

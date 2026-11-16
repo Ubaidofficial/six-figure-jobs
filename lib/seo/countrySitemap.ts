@@ -2,6 +2,7 @@ import { buildWhere } from '../jobs/queryJobs'
 import { prisma } from '../prisma'
 import { countryCodeToSlug } from './countrySlug'
 import { isCountryPageIndexable } from './indexabilityGates'
+import { sitemapDate } from './lastmod'
 import { getSiteUrl } from './site'
 
 const SITE_URL = getSiteUrl()
@@ -16,7 +17,8 @@ function countryCodes(): string[] {
 
 export type CountrySitemapUrl = {
   url: string
-  lastModified: string
+  /** The day the newest job on the page was added; null when unknown (the sitemap then omits it). */
+  lastModified: string | null
 }
 
 export async function getCountrySitemapUrls(): Promise<CountrySitemapUrl[]> {
@@ -40,7 +42,7 @@ export async function getCountrySitemapUrls(): Promise<CountrySitemapUrl[]> {
         if (!isCountryPageIndexable(total)) return null
 
         const slug = countryCodeToSlug(countryCode)
-        const lastmod = (agg._max.createdAt ?? new Date()).toISOString()
+        const lastmod = sitemapDate(agg._max.createdAt)
         return {
           url: `${SITE_URL}/jobs/location/${slug}`,
           lastModified: lastmod,

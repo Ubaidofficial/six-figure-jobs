@@ -219,6 +219,12 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
  */
 async function collectDataPageEntries(lastmod: Date | null): Promise<SitemapEntry[]> {
   const out: SitemapEntry[] = []
+  // A hub that lists only some jobs changes when one of THEM is added, not when any job on the site is: its own newest job
+  // dates it (the site-wide newest is the fallback when that cannot be read).
+  const own = async (where: object): Promise<{ count: number; latest: Date | null }> => {
+    const r = await countAndLatest(where)
+    return { count: r.count, latest: r.latest ?? lastmod }
+  }
   try {
     const { roles } = await loadHighPayingJobs()
     if (roles.length >= HIGH_PAYING_MIN_ROLES_TO_INDEX) out.push({ path: '/high-paying-jobs', lastmod })
@@ -227,14 +233,15 @@ async function collectDataPageEntries(lastmod: Date | null): Promise<SitemapEntr
   }
   try {
     const pass = await loadDegreeRequiredJobIds()
-    if ((await prisma.job.count({ where: buildWhere({ noDegreeRequired: pass }) })) > 0) out.push({ path: '/jobs/no-degree', lastmod })
+    const noDegree = await own(buildWhere({ noDegreeRequired: pass }))
+    if (noDegree.count > 0) out.push({ path: '/jobs/no-degree', lastmod: noDegree.latest })
   } catch {
     // left out
   }
   try {
     const listings = await loadFourDayWeekListings()
-    const open = await prisma.job.count({ where: buildWhere({ fourDayWeek: listings }) })
-    if (open >= FOUR_DAY_WEEK_MIN_JOBS_TO_INDEX) out.push({ path: FOUR_DAY_WEEK_PATH, lastmod })
+    const fourDay = await own(buildWhere({ fourDayWeek: listings }))
+    if (fourDay.count >= FOUR_DAY_WEEK_MIN_JOBS_TO_INDEX) out.push({ path: FOUR_DAY_WEEK_PATH, lastmod: fourDay.latest })
   } catch {
     // left out
   }
