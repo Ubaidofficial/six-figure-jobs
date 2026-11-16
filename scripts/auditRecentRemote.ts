@@ -69,7 +69,7 @@ export function compareWithDescription(r: Row): { head: 'agree' | 'NEW' | 'CONFL
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set')
   const { prisma } = await import('../lib/prisma')
-  const days = Math.min(Math.max(Number(arg('days')) || 3, 1), 14)
+  const days = Math.min(Math.max(Number(arg('days')) || 3, 1), 30)
   const out: string[] = [`## Remote and place data of jobs posted in the last ${days} days (read-only)`, '']
   try {
     await prisma.$transaction(

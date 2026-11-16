@@ -7,6 +7,12 @@ name: database audit
 
 on:
   workflow_dispatch:
+    inputs:
+      days:
+        description: "Days of postings the work-mode audit reads (default 3; up to 30)"
+        type: string
+        required: false
+        default: "3"
 
 jobs:
   audit:
@@ -40,4 +46,10 @@ jobs:
         run: npm run audit:db-coverage
 
       - name: Remote and place data of jobs posted in the last 3 days (read-only)
-        run: npx tsx scripts/auditRecentRemote.ts
+        run: npx tsx scripts/auditRecentRemote.ts --days=${{ inputs.days || '3' }}
+
+      - name: Board jobs stored on-site whose own text says remote or hybrid (dry run, read-only)
+        run: npx tsx scripts/repairBoardWorkMode.ts --days=${{ inputs.days || '30' }}
+
+      - name: Skills on live jobs against the skill pages (read-only)
+        run: npx tsx scripts/auditSkillCoverage.ts
