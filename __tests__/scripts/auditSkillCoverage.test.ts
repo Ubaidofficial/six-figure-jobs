@@ -23,7 +23,8 @@ describe('coveredBy', () => {
   })
 
   it('says none for a skill with no page', () => {
-    expect(coveredBy('salesforce')).toEqual([])
     expect(coveredBy('shopify')).toEqual([])
+    expect(coveredBy('wordpress')).toEqual([])
+    expect(coveredBy('salesforce')).toEqual(['salesforce']) // added 2026-11-17
   })
 })

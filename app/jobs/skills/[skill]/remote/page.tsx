@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     qualifier: 'Paying $100k+',
   })
   const description = buildListingDescription(`Remote $100k+ ${skillInfo.label} jobs.`, [
-    ['Work-from-anywhere roles at top tech companies.'],
+    [skillInfo.business ? 'Work-from-anywhere roles at leading companies.' : 'Work-from-anywhere roles at top tech companies.'],
   ], total)
   const canonical = `${SITE_URL}/jobs/skills/${skillInfo.slug}/remote`
 
