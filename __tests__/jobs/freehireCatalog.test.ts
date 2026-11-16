@@ -51,7 +51,7 @@ describe('loadFreehireCatalog', () => {
     await loadFreehireCatalog()
     const init = fetchMock.mock.calls[0][1] as RequestInit & { next?: { revalidate?: number } }
     expect(init.cache).not.toBe('no-store')
-    expect(init.next?.revalidate).toBe(3600)
+    expect(init.next?.revalidate).toBe(600) // ten minutes: the live band follows this figure
   })
 
   it('gives null, not an error, when freehire is down or unreachable', async () => {
