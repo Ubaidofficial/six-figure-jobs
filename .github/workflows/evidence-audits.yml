@@ -27,6 +27,11 @@ on:
         type: boolean
         required: false
         default: false
+      apply_workmode:
+        description: "Write remoteMode on board jobs stored on-site whose own text says remote or hybrid (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: evidence-audits
@@ -83,6 +88,14 @@ jobs:
           [ "$APPLY" = "true" ] && args="$args --apply"
           npx tsx scripts/backfillBenefitsEvidence.ts $args
 
+      - name: Board jobs stored on-site whose own text says remote or hybrid
+        env:
+          APPLY: ${{ inputs.apply_workmode }}
+        run: |
+          args="--days=30 --limit=20000 --report=board-work-mode.json"
+          [ "$APPLY" = "true" ] && args="$args --apply"
+          npx tsx scripts/repairBoardWorkMode.ts $args
+
       - name: Keep the sentences
         uses: actions/upload-artifact@v4
         with:
@@ -90,4 +103,5 @@ jobs:
           path: |
             remote-evidence.json
             benefits-evidence.json
+            board-work-mode.json
           retention-days: 14

@@ -134,7 +134,7 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
     )
     SKILL_TARGETS.forEach((skill, i) => {
       if (counts[i].count >= 5 && meetsPseoHubFloor(counts[i].count)) {
-        unlockedSkills.push(skill.slug)
+        if (!skill.hubOnly) unlockedSkills.push(skill.slug) // role-by-skill pages only for the original skills
         if (listSkills) entries.push({ path: `/jobs/skills/${skill.slug}`, lastmod: counts[i].latest })
       }
     })

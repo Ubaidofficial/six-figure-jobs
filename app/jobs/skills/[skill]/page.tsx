@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const title = buildSkillTitle(resolved.label)
   const description = buildListingDescription(
     `${resolved.label} jobs paying $100k+.`,
-    [['High-paying roles at top tech companies.']], total)
+    [[resolved.business ? 'High-paying roles at leading companies.' : 'High-paying roles at top tech companies.']], total)
   const canonical = `${SITE_URL}/jobs/skills/${resolved.slug}`
 
   return {
@@ -142,7 +142,9 @@ export default async function SkillPage({ params }: { params: Params }) {
         name: `What other skills pair well with ${resolved.label}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `High-paying ${resolved.label} roles frequently appear alongside complementary technologies in cloud infrastructure, distributed systems, and data pipelines. Browse the full $100k+ ${resolved.label} job feed to see which skills co-occur most in current postings.`,
+          text: resolved.business
+            ? `Each ${resolved.label} role on Six Figure Jobs shows its pay range, employer and apply link. Browse the full $100k+ ${resolved.label} job feed to see which other skills the current postings name.`
+            : `High-paying ${resolved.label} roles frequently appear alongside complementary technologies in cloud infrastructure, distributed systems, and data pipelines. Browse the full $100k+ ${resolved.label} job feed to see which skills co-occur most in current postings.`,
         },
       },
     ],

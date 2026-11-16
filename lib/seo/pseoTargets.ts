@@ -1,7 +1,14 @@
 // Shared pSEO target lists for states, skills, industries, and cities.
 
 export type StateTarget = { slug: string; code: string; name: string }
-export type SkillTarget = { slug: string; label: string }
+export type SkillTarget = {
+  slug: string
+  label: string
+  /** Only the skill's own hub page: no role-by-skill pages and no entries for them in the sitemap (keeps the sitemap build small). */
+  hubOnly?: boolean
+  /** A business skill rather than a technology: the page copy does not call its employers tech companies. */
+  business?: boolean
+}
 export type IndustryTarget = { slug: string; label: string }
 export type CityTarget = { slug: string; label: string; countryCode?: string }
 
@@ -91,6 +98,40 @@ export const SKILL_TARGETS: SkillTarget[] = [
   { slug: 'machine-learning', label: 'Machine Learning' },
   { slug: 'csharp', label: 'C#' },
   { slug: 'gcp', label: 'Google Cloud' },
+
+  // Added 2026-11-17 (owner's request: "add skill pages for the top uncovered skills"). Chosen from the live jobs: every skill named by
+  // at least 300 of them that had no page (scripts/auditSkillCoverage.ts), plus Salesforce, which a competitor links and 282 jobs name;
+  // too generic to be a page of their own (api, automation, agile, github, saas, analytics, fintech) were left out. Each slug is the
+  // spelling the jobs store in skillsJson. They are batch 2 (lib/seo/pseoBatches.ts): live pages, noindex until that batch is released.
+  { slug: 'ai', label: 'AI', hubOnly: true },
+  { slug: 'azure', label: 'Azure', hubOnly: true },
+  { slug: 'cloud', label: 'Cloud Computing', hubOnly: true },
+  { slug: 'agentic-ai', label: 'Agentic AI', hubOnly: true },
+  { slug: 'ci-cd', label: 'CI/CD', hubOnly: true },
+  { slug: 'pytorch', label: 'PyTorch', hubOnly: true },
+  { slug: 'kafka', label: 'Kafka', hubOnly: true },
+  { slug: 'llm', label: 'LLM', hubOnly: true },
+  { slug: 'cybersecurity', label: 'Cybersecurity', hubOnly: true },
+  { slug: 'networking', label: 'Networking', hubOnly: true },
+  { slug: 'devops', label: 'DevOps', hubOnly: true },
+  { slug: 'distributed-systems', label: 'Distributed Systems', hubOnly: true },
+  { slug: 'dbt', label: 'dbt', hubOnly: true },
+  { slug: 'airflow', label: 'Airflow', hubOnly: true },
+  { slug: 'data-pipelines', label: 'Data Pipelines', hubOnly: true },
+  { slug: 'data-engineering', label: 'Data Engineering', hubOnly: true },
+  { slug: 'data-science', label: 'Data Science', hubOnly: true },
+  { slug: 'observability', label: 'Observability', hubOnly: true },
+  { slug: 'tensorflow', label: 'TensorFlow', hubOnly: true },
+  { slug: 'elasticsearch', label: 'Elasticsearch', hubOnly: true },
+  { slug: 'cad', label: 'CAD', hubOnly: true },
+  { slug: 'accessibility', label: 'Accessibility', hubOnly: true },
+  { slug: 'salesforce', label: 'Salesforce', hubOnly: true, business: true },
+  { slug: 'crm', label: 'CRM', hubOnly: true, business: true },
+  { slug: 'erp', label: 'ERP', hubOnly: true, business: true },
+  { slug: 'go-to-market', label: 'Go-to-Market', hubOnly: true, business: true },
+  { slug: 'business-development', label: 'Business Development', hubOnly: true, business: true },
+  { slug: 'program-management', label: 'Program Management', hubOnly: true, business: true },
+  { slug: 'gdpr', label: 'GDPR', hubOnly: true, business: true },
 ]
 
 // Spellings freehire (and the enrichment step) actually store in Job.skillsJson when they differ from the page slug:
