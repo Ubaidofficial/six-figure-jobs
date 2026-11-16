@@ -24,7 +24,7 @@ import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
 import { buildListingTitle, buildRoleDescription } from '@/lib/seo/metaText'
-import { CITY_TARGET_SLUG_SET, SKILL_TARGETS, skillStoredTokens } from '@/lib/seo/pseoTargets'
+import { SKILL_TARGETS, skillStoredTokens } from '@/lib/seo/pseoTargets'
 import { SEARCH_ROLE_OPTIONS } from '@/lib/roles/searchRoles'
 import { CANONICAL_ROLE_SET } from '@/lib/roles/canonicalSlugs'
 import { rankRelatedRoles } from '@/lib/roles/relatedRoles'
@@ -37,6 +37,7 @@ import { ActiveFilters } from './ActiveFilters'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { RelatedSearches } from '@/components/listing/RelatedSearches'
 import { loadRelatedSearches, relatedInput } from '@/lib/jobs/relatedSearches'
+import { normalizeTopCities } from '@/lib/roles/topCities'
 import { SalaryByLevel } from '@/components/listing/SalaryByLevel'
 import { notFoundPastLastPage } from '@/lib/seo/listingSearchParams'
 
@@ -391,8 +392,8 @@ export async function RoleTemplate({
   const avgMinUsd = asNumber((avgAggUsd as any)?._avg?.minAnnual)
   const avgUsd = avgMaxUsd != null && avgMinUsd != null ? (avgMaxUsd + avgMinUsd) / 2 : (avgMaxUsd ?? avgMinUsd)
 
-  const cities = (topCityRows as any[])
-    .map((r) => {
+  const cities = normalizeTopCities(
+    (topCityRows as any[]).map((r) => {
       const slug = String(r.citySlug || '')
       const city = String(r.city || r.citySlug || '').trim()
       const cc = String(r.countryCode || '').toUpperCase()
@@ -401,9 +402,8 @@ export async function RoleTemplate({
       const min = asNumber(r?._avg?.minAnnual)
       const avg = max != null && min != null ? (max + min) / 2 : (max ?? min)
       return { slug, city, cc, count, avg }
-    })
-    .filter((c) => c.slug && CITY_TARGET_SLUG_SET.has(c.slug))
-    .filter((c) => c.slug && c.city)
+    }),
+  ).filter((c) => c.slug && c.city)
 
   // Skills and top employers for the role overall, like the insights above: cached per role, the two queries in
   // parallel. Uncached, they ran one after another on every request (up to 2,000 rows for the skills alone).

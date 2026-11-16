@@ -7,11 +7,14 @@ import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import { alertsEnabled } from '@/lib/alerts/config'
 
 import { FooterNewsletter } from './FooterNewsletter'
-import { FOOTER_COLUMNS } from './footerLinks'
+import { accountsEnabled } from '@/lib/accounts/enabled'
+
+import { footerColumns } from './footerLinks'
 import styles from './Footer.module.css'
 import { Logo } from '@/components/brand/Logo'
 
 export function Footer() {
+  const columns = footerColumns(accountsEnabled())
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>
@@ -59,7 +62,7 @@ export function Footer() {
             </div>
           </div>
 
-          {FOOTER_COLUMNS.map((col) => (
+          {columns.map((col) => (
             <div key={col.title}>
               <div className={styles.colTitle}>{col.title}</div>
               <div className={styles.list}>
@@ -102,7 +105,7 @@ export function Footer() {
             </div>
           </div>
 
-          {FOOTER_COLUMNS.map((col) => (
+          {columns.map((col) => (
             <details key={col.title} className={styles.accordion}>
               <summary className={styles.summary}>
                 {col.title} <span className={styles.chev}>⌄</span>

@@ -97,6 +97,9 @@ export function AccountView({ email, balance, subscription, products, hasBilling
             {hasBillingAccount ? <PortalButton>Manage billing</PortalButton> : null}
           </div>
         )}
+        <Link href="/pricing" className={styles.link}>
+          See plans and compare prices
+        </Link>
       </section>
 
       <div className={styles.actions}>

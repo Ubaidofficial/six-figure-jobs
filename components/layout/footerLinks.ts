@@ -100,3 +100,15 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     ],
   },
 ]
+
+/** The footer columns; with accounts on, "Pricing" is added to the Company column (/pricing redirects while they are off). */
+export function footerColumns(accountsOn: boolean): readonly FooterColumn[] {
+  if (!accountsOn) return FOOTER_COLUMNS
+  return FOOTER_COLUMNS.map((col) => {
+    if (col.title !== 'Company') return col
+    const at = col.links.findIndex(([, href]) => href === '/post-a-job')
+    const links = [...col.links]
+    links.splice(at < 0 ? links.length : at, 0, ['Pricing', '/pricing'])
+    return { ...col, links }
+  })
+}

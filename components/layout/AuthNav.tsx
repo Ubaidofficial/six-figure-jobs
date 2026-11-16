@@ -18,7 +18,21 @@ function fetchSignedIn(): Promise<boolean> {
   return pending
 }
 
-export function AuthNav({ className }: { className?: string }) {
+/** "Pricing" in the header; renders nothing unless accounts are on (/pricing redirects to /jobs while they are off). */
+export function PricingNavLink({ className }: { className?: string }) {
+  if (!ENABLED) return null
+  return (
+    <Link href="/pricing" className={className}>
+      Pricing
+    </Link>
+  )
+}
+
+/**
+ * "Sign in" (or "Account" once signed in) and, when `signUpClassName` is given and nobody is signed in, a "Sign up"
+ * button next to it. Sign-in has no password and creates the account the first time, so both go to the same page.
+ */
+export function AuthNav({ className, signUpClassName }: { className?: string; signUpClassName?: string }) {
   const [signedIn, setSignedIn] = React.useState(false)
 
   React.useEffect(() => {
@@ -33,8 +47,15 @@ export function AuthNav({ className }: { className?: string }) {
   if (!ENABLED) return null
   // The server-rendered HTML is always the static "Sign in" link; it becomes "Account" after the session check.
   return (
-    <Link href={signedIn ? '/account' : '/sign-in'} className={className} prefetch={false} rel="nofollow">
-      {signedIn ? 'Account' : 'Sign in'}
-    </Link>
+    <>
+      <Link href={signedIn ? '/account' : '/sign-in'} className={className} prefetch={false} rel="nofollow">
+        {signedIn ? 'Account' : 'Sign in'}
+      </Link>
+      {!signedIn && signUpClassName ? (
+        <Link href="/sign-in" className={signUpClassName} prefetch={false} rel="nofollow">
+          Sign up
+        </Link>
+      ) : null}
+    </>
   )
 }
