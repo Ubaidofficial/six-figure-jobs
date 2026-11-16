@@ -46,6 +46,7 @@ async function main() {
   const counts = { looked: 0, remote: 0, hybrid: 0, written: 0, evidenceSaved: 0 }
   const bySource = new Map<string, number>()
   const samples: string[] = []
+  const remoteSamples: string[] = []
   const report: Array<{ id: string; title: string; source: string; to: RemoteMode; quote: string; written: boolean }> = []
   try {
     const jobs = await prisma.job.findMany({
@@ -68,14 +69,17 @@ async function main() {
         if (written) counts.evidenceSaved += await saveEvidence(prisma, [remoteEvidenceRecord(job.id, { mode: plan.mode, quote: plan.quote })])
       }
       report.push({ id: job.id, title: job.title, source: job.source, to: plan.mode, quote: plan.quote, written })
-      if (samples.length < 40) samples.push(`- on-site -> ${plan.mode} | ${job.source} | "${(job.locationRaw ?? '').slice(0, 40)}" | ${job.title.slice(0, 45)} | "${plan.quote.replace(/\s+/g, ' ').slice(0, 220)}"`)
+      // Every remote reading is listed (a wrong "remote" is the costly mistake); hybrid readings are sampled.
+      if (plan.mode === 'remote') remoteSamples.push(`- on-site -> remote | ${job.source} | "${(job.locationRaw ?? '').slice(0, 40)}" | ${job.title.slice(0, 45)} | "${plan.quote.replace(/\s+/g, ' ').slice(0, 260)}"`)
+      else if (samples.length < 25) samples.push(`- on-site -> ${plan.mode} | ${job.source} | "${(job.locationRaw ?? '').slice(0, 40)}" | ${job.title.slice(0, 45)} | "${plan.quote.replace(/\s+/g, ' ').slice(0, 220)}"`)
     }
   } finally {
     await prisma.$disconnect()
   }
   out.push(`${counts.looked} live board jobs stored on-site were read. To remote: ${counts.remote}. To hybrid: ${counts.hybrid}.${apply ? ` Written: ${counts.written}. Evidence saved: ${counts.evidenceSaved}.` : ' Nothing was written.'}`, '', '| source | jobs to change |', '| --- | --- |')
   for (const [s, n] of [...bySource].sort((a, b) => b[1] - a[1])) out.push(`| ${s} | ${n} |`)
-  out.push('', '### Examples (review for wrong readings)', '', ...(samples.length ? samples : ['(none)']))
+  out.push('', '### Every reading to REMOTE (review each)', '', ...(remoteSamples.length ? remoteSamples.slice(0, 120) : ['(none)']))
+  out.push('', '### Examples of readings to hybrid (review for wrong readings)', '', ...(samples.length ? samples : ['(none)']))
   const text = out.join('\n')
   console.log(text)
   if (arg('report')) writeFileSync(arg('report') as string, JSON.stringify({ apply, days, counts, report }, null, 1))
