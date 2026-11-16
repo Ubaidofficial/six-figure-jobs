@@ -128,6 +128,8 @@ export function detectAtsFromUrl(rawUrl: string | null | undefined): DetectedAts
     const parts = path.split('/').filter(Boolean)
     const accountSlug = parts[0]
     if (!accountSlug) return null
+    // The short link apply.workable.com/j/<id> names no account; "j" is the job path, not a board.
+    if (accountSlug === 'j') return null
 
     const atsUrl = `https://apply.workable.com/${accountSlug}`
     return { provider: 'workable', atsUrl }

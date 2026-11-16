@@ -484,8 +484,11 @@ function extractJobLinksFromAnchors(html: string, pageUrl: string): string[] {
     const href = $(element).attr('href')
     const text = normalizeText($(element).text())
     if (!href || !text) return
-    if (GENERIC_LINK_TEXT_RE.test(text)) return
-    if (text.length < 6 || text.length > 180) return
+    // A card-style link wraps a title, tags, pay and a blurb (serpapi.com's role cards run 320-420 characters), so when
+    // the link has a heading, the length and generic-label rules read the heading. Without one, the whole text, as before.
+    const label = normalizeText($(element).find('h1, h2, h3, h4').first().text()) || text
+    if (GENERIC_LINK_TEXT_RE.test(label)) return
+    if (label.length < 6 || label.length > 180) return
     if (BLOCKED_LINK_RE.test(href)) return
 
     const normalized = normalizeUrlOrNull(href, pageUrl)

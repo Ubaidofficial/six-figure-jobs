@@ -8,6 +8,14 @@ describe('detectAtsFromUrl', () => {
     })
   })
 
+  it('takes the Workable account from a full job URL, and none from the short /j/<id> link (seen live on freehire: apply.workable.com/j/AA79C0ABA6)', () => {
+    expect(detectAtsFromUrl('https://apply.workable.com/huggingface/j/0CE9E806CC')).toEqual({
+      provider: 'workable',
+      atsUrl: 'https://apply.workable.com/huggingface',
+    })
+    expect(detectAtsFromUrl('https://apply.workable.com/j/AA79C0ABA6?utm_source=freehire.me')).toBeNull()
+  })
+
   it('normalizes workday job and login URLs to board roots', () => {
     expect(
       detectAtsFromUrl(

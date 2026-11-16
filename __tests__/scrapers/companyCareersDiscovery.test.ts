@@ -142,4 +142,35 @@ describe('company careers discovery utilities', () => {
       reason: 'ok',
     })
   })
+
+  it('finds role links on card-style listings whose whole card is the link (seen live: serpapi.com/careers, cards of 320-420 characters)', () => {
+    const blurb =
+      'We are looking for a Senior Fullstack Engineer. You will design, maintain, fix, deploy, and monitor our APIs, features, and documentation. Our current stack is Ruby, Rails, MongoDB, and JavaScript. We deploy on Linux servers on AWS.'
+    const card = (slug: string, title: string) => `
+      <a href="/careers/${slug}" class="p-4 d-block">
+        <div class="title"><h3>${title}</h3><span>Remote-first | Full-time | 150K - 180K a year + profit share</span></div>
+        <p>${blurb}</p><span>Learn more</span>
+      </a>`
+    const html = `<html><body>
+      <a href="/careers">Careers</a>
+      ${card('senior-fullstack-engineer', 'Senior Fullstack Engineer')}
+      ${card('chief-of-staff', 'Chief of Staff')}
+      <a href="/pricing">${'Pricing '.repeat(30)}</a>
+    </body></html>`
+
+    const signals = extractCareerPageSignals(html, 'https://serpapi.com/careers')
+    expect(signals.jobLinks).toEqual(
+      expect.arrayContaining([
+        'https://serpapi.com/careers/senior-fullstack-engineer',
+        'https://serpapi.com/careers/chief-of-staff',
+      ]),
+    )
+    expect(signals.jobLinks).toHaveLength(2)
+  })
+
+  it('still ignores a long link with no heading, as before', () => {
+    const longText = 'Open position details and many other words about the team and the work. '.repeat(5)
+    const html = `<a href="/careers/some-role">${longText}</a>`
+    expect(extractCareerPageSignals(html, 'https://acme.com/careers').jobLinks).toEqual([])
+  })
 })
