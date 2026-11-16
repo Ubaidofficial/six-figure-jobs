@@ -5,10 +5,21 @@
 // now one band (~150 px) right after "Top Companies Hiring Now". The typical salary is left out: the hero shows it.
 // A number that is missing (its query failed) is left out rather than shown as 0; without the catalogue only the listed
 // side shows.
+//
+// Live (owner's request, 2026-11-16): the page renders these numbers on the server, and after load the band asks
+// /api/stats/live once a minute while the tab is visible and counts to whatever the database and the live catalogue now say
+// (AnimatedNumber counts a changed number). Nothing is made up between answers: a number moves only when the answer moved,
+// and an answer that fails or does not parse leaves the band as it was. Polling stops after 30 minutes of one visit and
+// resumes when the tab is shown again. Without JavaScript, or under reduced motion, the numbers are simply the server's.
+'use client'
+
+import * as React from 'react'
+
 import Link from '@/components/ui/Link'
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { DIRECT_EMPLOYERS } from '@/lib/constants/directEmployers'
 import type { FreehireCatalog } from '@/lib/jobs/freehireCatalog'
+import { parseLiveSiteStats, type LiveSiteStats } from '@/lib/jobs/siteStatsShape'
 
 import styles from './SiteStatsStrip.module.css'
 
@@ -39,13 +50,61 @@ export function formatRefreshedAt(date: Date | null | undefined): string | null 
   return `${text} UTC`
 }
 
+const POLL_MS = 60_000
+const MAX_POLLS_PER_VISIT = 30
+
+/** The newest answer from /api/stats/live, or null until one arrives (the server's numbers show until then). */
+function useLiveSiteStats(): LiveSiteStats | null {
+  const [live, setLive] = React.useState<LiveSiteStats | null>(null)
+  const lastPoll = React.useRef(0)
+  const polls = React.useRef(0)
+
+  const poll = React.useCallback(async () => {
+    if (document.visibilityState !== 'visible' || polls.current >= MAX_POLLS_PER_VISIT) return
+    polls.current += 1
+    lastPoll.current = Date.now()
+    try {
+      const res = await fetch('/api/stats/live', { headers: { accept: 'application/json' } })
+      if (!res.ok) return
+      const next = parseLiveSiteStats(await res.json())
+      // A part this answer could not read (the screened-jobs figure, the refresh time) keeps its last good value, so the band
+      // never steps back to the older numbers the page was rendered with.
+      if (next)
+        setLive((prev) => ({
+          ...next,
+          countries: next.countries ?? prev?.countries ?? null,
+          catalog: next.catalog ?? prev?.catalog ?? null,
+          refreshedAt: next.refreshedAt ?? prev?.refreshedAt ?? null,
+        }))
+    } catch {
+      // Offline or a hiccup: the band keeps what it shows and tries again at the next tick.
+    }
+  }, [])
+
+  React.useEffect(() => {
+    const timer = setInterval(() => void poll(), POLL_MS)
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      polls.current = 0
+      if (Date.now() - lastPoll.current >= POLL_MS) void poll()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [poll])
+
+  return live
+}
+
 export function SiteStatsStrip({
-  jobs,
-  companies,
-  newThisWeek,
-  countries,
-  catalog,
-  refreshedAt,
+  jobs: serverJobs,
+  companies: serverCompanies,
+  newThisWeek: serverNewThisWeek,
+  countries: serverCountries,
+  catalog: serverCatalog,
+  refreshedAt: serverRefreshedAt,
   compact = false,
 }: {
   jobs: number
@@ -59,6 +118,14 @@ export function SiteStatsStrip({
   /** For a column narrower than the homepage's (the pricing page): the two-row layout at any desktop width. Off by default. */
   compact?: boolean
 }) {
+  const live = useLiveSiteStats()
+  const jobs = live?.jobs ?? serverJobs
+  const companies = live?.companies ?? serverCompanies
+  const newThisWeek = live?.newThisWeek ?? serverNewThisWeek
+  const countries = live?.countries ?? serverCountries
+  const catalog = live?.catalog ?? serverCatalog
+  const refreshedAt = live?.refreshedAt ? new Date(live.refreshedAt) : serverRefreshedAt
+
   if (jobs <= 0) return null
   const refreshed = formatRefreshedAt(refreshedAt)
   const ratio = catalog ? screenRatio(catalog.jobs, jobs) : null

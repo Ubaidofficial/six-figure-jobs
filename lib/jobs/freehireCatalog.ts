@@ -8,8 +8,8 @@ import { memoAsync } from '@/lib/cache/memo'
 export type FreehireCatalog = { jobs: number; companies: number; sources: number; atsPlatforms: number }
 
 export const FREEHIRE_CATALOG_URL = 'https://freehire.me/api/v1/stats/catalog'
-/** Their figures move slowly; a failed read is kept for the same hour, so a freehire outage cannot slow every visit. */
-export const FREEHIRE_CATALOG_TTL_MS = 60 * 60 * 1000
+/** Ten minutes (it was an hour) so the live band can follow their figure; a failed read is kept for the same time, so an outage there cannot slow every visit. */
+export const FREEHIRE_CATALOG_TTL_MS = 10 * 60 * 1000
 
 const count = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v > 0 ? v : null)
 

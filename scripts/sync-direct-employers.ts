@@ -58,7 +58,7 @@ async function syncOne(e: DirectEmployer) {
   const r = await upsertJobsForCompanyFromAts(company, jobs)
   // When this employer was last read from its own system: the next run reads the least recently synced first.
   await prisma.company.update({ where: { id: company.id }, data: { lastScrapedAt: new Date() } })
-  return { slug: e.slug, scraped: jobs.length, created: r.created, updated: r.updated, skipped: r.skipped }
+  return { slug: e.slug, scraped: jobs.length, created: r.created, updated: r.updated, skipped: r.skipped, errors: r.errors ?? 0 }
 }
 
 async function main() {
@@ -93,7 +93,9 @@ async function main() {
   ])
   const sum = (k: 'scraped' | 'created' | 'updated' | 'skipped') => results.reduce((n, r) => n + r[k], 0)
   const failed = results.filter((r) => 'error' in r && r.error).map((r) => r.slug)
-  console.log(`[direct-employers] scraped ${sum('scraped')}, created ${sum('created')}, updated ${sum('updated')}, skipped ${sum('skipped')} (no qualifying salary or excluded); failed: ${failed.length ? failed.join(', ') : 'none'}`)
+  // Jobs that failed to save are inside `skipped`; counted on their own, so a bug shows as a number in the log, not as a quiet skip.
+  const saveErrors = results.reduce((n, r) => n + ('errors' in r && typeof r.errors === 'number' ? r.errors : 0), 0)
+  console.log(`[direct-employers] scraped ${sum('scraped')}, created ${sum('created')}, updated ${sum('updated')}, skipped ${sum('skipped')} (no qualifying salary or excluded; ${saveErrors} of them failed to save); failed: ${failed.length ? failed.join(', ') : 'none'}`)
   if (notReached.length) console.log(`[direct-employers] time budget reached; ${notReached.length} not reached today (first next run): ${notReached.join(', ')}`)
   await prisma.$disconnect()
   // A few boards failing (renamed, briefly down) must not fail the run; every one failing means something is wrong.

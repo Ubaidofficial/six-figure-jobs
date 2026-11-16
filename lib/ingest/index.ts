@@ -814,6 +814,7 @@ async function refreshJob(
 function existingJobSelect() {
   return {
     id: true,
+    externalId: true,
     title: true,
     company: true,
     companyId: true,
@@ -855,7 +856,35 @@ function existingJobSelect() {
   } as const
 }
 
+/**
+ * The posting's stored row: the one matching by dedupe key, URL or id (findExistingJobByKeys), unless the database holds
+ * another row for the same (source, externalId). That pair is unique, and the stored id is not always built from it (a
+ * job first stored by one source and later upgraded keeps its old id), so a posting whose title or place changed would
+ * match nothing here, be created again, and fail with "Unique constraint failed on the fields: (`externalId`,`source`)":
+ * 805 postings on 2026-11-16. When the match is a copy with another identity, the posting's own row wins: upgrading the
+ * copy would give it an identity that row already holds.
+ */
 async function findExistingJob(
+  input: ScrapedJobInput,
+  company: ResolvedCompany,
+  dedupeKey: string,
+  stableJobId: string,
+): Promise<IngestExistingJob | null> {
+  const found = await findExistingJobByKeys(input, company, dedupeKey, stableJobId)
+  const sameIdentity =
+    found !== null &&
+    found.source === input.source &&
+    (found.externalId !== undefined ? found.externalId === input.externalId : found.id === stableJobId)
+  if (sameIdentity) return found
+
+  const own = await prisma.job.findUnique({
+    where: { externalId_source: { externalId: input.externalId, source: input.source } },
+    select: existingJobSelect(),
+  })
+  return own ?? found
+}
+
+async function findExistingJobByKeys(
   input: ScrapedJobInput,
   company: ResolvedCompany,
   dedupeKey: string,
