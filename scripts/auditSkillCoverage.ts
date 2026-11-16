@@ -39,6 +39,8 @@ async function main() {
         await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY')
         const jobs = await tx.job.findMany({ where: { isExpired: false }, select: { skillsJson: true, techStack: true }, take: 60000 })
         const counts = new Map<string, number>()
+        // What a skill page counts: its filter reads skillsJson only (queryJobs: skillsJson contains "token"), not techStack.
+        const onPage = new Map<string, number>()
         let withSkills = 0
         let withTech = 0
         let withEither = 0
@@ -49,13 +51,14 @@ async function main() {
           if (t.length) withTech++
           if (s.length || t.length) withEither++
           for (const tok of new Set([...s, ...t])) counts.set(tok, (counts.get(tok) ?? 0) + 1)
+          for (const tok of new Set(s)) onPage.set(tok, (onPage.get(tok) ?? 0) + 1)
         }
         const pct = (n: number) => `${((n / Math.max(jobs.length, 1)) * 100).toFixed(1)}%`
         out.push(`${jobs.length} live jobs. With skillsJson: ${withSkills} (${pct(withSkills)}). With techStack: ${withTech} (${pct(withTech)}). With either: ${withEither} (${pct(withEither)}). Distinct skill names: ${counts.size}.`, '')
         out.push(`Skill pages today: ${SKILL_TARGETS.length} (${SKILL_TARGETS.map((s) => s.slug).join(', ')}).`, '')
         const ranked = [...counts].sort((a, b) => b[1] - a[1])
-        out.push('### Most common skills, and whether a skill page covers them', '', '| skill | live jobs | share | skill page |', '| --- | --- | --- | --- |')
-        for (const [tok, n] of ranked.slice(0, 70)) out.push(`| ${tok} | ${n} | ${pct(n)} | ${coveredBy(tok).join(', ') || '**none**'} |`)
+        out.push('### Most common skills, and whether a skill page covers them', '', '| skill | live jobs (skills or tech stack) | live jobs a skill page would list (skills only) | skill page |', '| --- | --- | --- | --- |')
+        for (const [tok, n] of ranked.slice(0, 70)) out.push(`| ${tok} | ${n} | ${onPage.get(tok) ?? 0} | ${coveredBy(tok).join(', ') || '**none**'} |`)
         out.push('', '### Skills a competitor links (himalayas.app), here', '', '| skill | live jobs here | skill page |', '| --- | --- | --- |')
         for (const tok of COMPETITOR_SKILLS) out.push(`| ${tok} | ${counts.get(tok) ?? 0} | ${coveredBy(tok).join(', ') || '**none**'} |`)
         const gaps = ranked.filter(([tok]) => coveredBy(tok).length === 0).slice(0, 40)
