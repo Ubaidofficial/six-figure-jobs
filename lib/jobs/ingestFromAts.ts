@@ -22,6 +22,8 @@ export type UpsertAtsResult = {
   created: number
   updated: number
   skipped: number
+  /** Jobs that failed to save (also counted in `skipped`). A skip is a decision; an error is a bug or an outage. */
+  errors?: number
   companyId?: string | null
   companySlug?: string | null
   totalJobs?: number
@@ -543,6 +545,7 @@ function inferRoleSlugFromTitle(title: string | null | undefined): string | null
 function existingJobSelect() {
   return {
     id: true,
+    externalId: true,
     title: true,
     company: true,
     companyId: true,
@@ -680,6 +683,7 @@ export async function upsertJobsForCompanyFromAts(
   let created = 0
   let updated = 0
   let skipped = 0
+  let errors = 0
 
   for (const raw of rawJobs) {
     try {
@@ -781,24 +785,30 @@ export async function upsertJobsForCompanyFromAts(
         case 'upgraded':
           updated++
           break
+        case 'error':
+          errors++
+          skipped++
+          break
         default:
           skipped++
           break
       }
     } catch (err) {
       console.error('[ATS ingest] Failed to upsert job:', err)
+      errors++
       skipped++
     }
   }
 
   console.log(
-    `[ATS ingest] ${companySlug ?? companyId} → created=${created}, updated=${updated}, skipped=${skipped}`,
+    `[ATS ingest] ${companySlug ?? companyId} → created=${created}, updated=${updated}, skipped=${skipped}${errors ? `, errors=${errors}` : ''}`,
   )
 
   return {
     created,
     updated,
     skipped,
+    errors,
     companyId,
     companySlug,
     totalJobs: rawJobs.length,
