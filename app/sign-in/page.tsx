@@ -31,8 +31,11 @@ export default async function SignInPage({
   const error = typeof params.error === 'string' ? params.error : undefined
   return (
     <main className={`${styles.page} ${styles.narrow}`}>
-      <h1 className={styles.title}>Sign in</h1>
-      <p className={styles.lede}>No password. Use Google, or get a one-time sign-in link by email.</p>
+      <h1 className={styles.title}>Sign in or sign up</h1>
+      <p className={styles.lede}>
+        No password. Use Google, or get a one-time sign-in link by email. New here? Your account is created the first time you
+        sign in.
+      </p>
       <SignInForm
         google={googleConfigured()}
         email={emailConfigured()}

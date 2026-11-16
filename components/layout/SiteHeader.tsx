@@ -10,7 +10,7 @@ import { RegionMark } from '@/components/ui/RegionMark'
 
 import { HeroSearchInput } from '@/components/home/HeroSearchInput'
 
-import { AuthNav } from './AuthNav'
+import { AuthNav, PricingNavLink } from './AuthNav'
 import { Logo } from '@/components/brand/Logo'
 
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
@@ -80,7 +80,8 @@ export function SiteHeader() {
           <Link href="/companies" className={`${styles.navLink} ${isActive("/companies") ? styles.navLinkActive : ''}`} aria-current={isActive("/companies") ? 'page' : undefined}>Companies<NavPending /></Link>
           <Link href="/salary" className={`${styles.navLink} ${isActive("/salary") ? styles.navLinkActive : ''}`} aria-current={isActive("/salary") ? 'page' : undefined}>Salaries<NavPending /></Link>
           <Link href="/blog" className={`${styles.navLink} ${isActive("/blog") ? styles.navLinkActive : ''}`} aria-current={isActive("/blog") ? 'page' : undefined}>Blog<NavPending /></Link>
-          <AuthNav className={styles.navLink} />
+          <PricingNavLink className={styles.navLink} />
+          <AuthNav className={styles.navLink} signUpClassName={styles.signUp} />
         </nav>
 
         {/* Search on every page except the two that open with their own. Same destination as the old dialog: /search?q=... */}
@@ -193,6 +194,10 @@ export function SiteHeader() {
                     </Link>
                     <Link className={styles.mobileItem} href="/blog" onClick={() => setMobileOpen(false)}>
                       Career Blog <span className={styles.mobileMeta}>Tips + insights</span>
+                    </Link>
+                    <PricingNavLink className={styles.mobileItem} />
+                    <Link className={styles.mobileItem} href="/post-a-job" onClick={() => setMobileOpen(false)}>
+                      Advertise <span className={styles.mobileMeta}>Reach $100k+ job seekers</span>
                     </Link>
                   </div>
                 </div>

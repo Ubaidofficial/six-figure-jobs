@@ -654,3 +654,27 @@
   }
 }
 
+
+/* "Sign up" next to "Sign in" in the desktop nav: the site's green pill, sized to sit in the nav row. */
+.signUp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  margin-left: 6px;
+  padding: 0 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: var(--font-weight-semibold);
+  color: #0a0a0a;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border: 1px solid rgba(132, 204, 22, 0.25);
+  white-space: nowrap;
+  transition: transform 200ms ease, filter 200ms ease;
+}
+
+.signUp:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
