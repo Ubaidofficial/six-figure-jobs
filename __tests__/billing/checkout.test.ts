@@ -212,6 +212,19 @@ describe('weekly plan and launch discount', () => {
     await createCheckoutUrl('u1', 'subscription', plain.deps)
     expect((plain.stripe.checkout.sessions.create as jest.Mock).mock.calls.at(-1)![0]).not.toHaveProperty('discounts')
   })
+
+  it('uses a plan\'s own launch coupon over the shared one', async () => {
+    const { stripe, deps } = setup({
+      ...WEEKLY_ENV,
+      BILLING_LAUNCH_COUPON_ID: 'LAUNCH50',
+      BILLING_LAUNCH_COUPON_ID_WEEKLY: 'LAUNCH_WEEKLY',
+      BILLING_LAUNCH_COUPON_ID_MONTHLY: 'LAUNCH_MONTHLY',
+    })
+    await createCheckoutUrl('u1', 'subscription_weekly', deps)
+    expect(stripe.checkout.sessions.create).toHaveBeenLastCalledWith(expect.objectContaining({ discounts: [{ coupon: 'LAUNCH_WEEKLY' }] }))
+    await createCheckoutUrl('u1', 'subscription', deps)
+    expect(stripe.checkout.sessions.create).toHaveBeenLastCalledWith(expect.objectContaining({ discounts: [{ coupon: 'LAUNCH_MONTHLY' }] }))
+  })
 })
 
 describe('loadPlans with a launch discount', () => {
@@ -240,7 +253,7 @@ describe('loadPlans with a launch discount', () => {
     const repeating = await loadPlans(stripeWith({ valid: true, percent_off: 50, duration: 'repeating', duration_in_months: 3 }) as any, env)
     expect(repeating[0].discount?.duration).toBe('for the first 3 months')
     const forever = await loadPlans(stripeWith({ valid: true, percent_off: 50, duration: 'forever', duration_in_months: null }) as any, env)
-    expect(forever[0].discount?.duration).toBe('on every payment')
+    expect(forever[0].discount?.duration).toBe('while you stay subscribed (launch price)')
   })
 
   it('shows no discount when the coupon is expired, missing, a fixed amount, or unreadable', async () => {
@@ -249,6 +262,42 @@ describe('loadPlans with a launch discount', () => {
     }
     const broken = { ...stripeWith(null), coupons: { retrieve: jest.fn().mockRejectedValue(new Error('no such coupon')) } }
     expect((await loadPlans(broken as any, env)).every((p) => p.discount === null)).toBe(true)
+  })
+})
+
+describe('loadPlans with a different launch coupon per plan', () => {
+  // $10.00 a week and $50.00 a month, charged $4.99 and $9.99 while subscribed (percentages with decimals land on those cents).
+  const env = {
+    ...ENV,
+    STRIPE_PRICE_SUBSCRIPTION_WEEKLY: 'price_week',
+    BILLING_LAUNCH_COUPON_ID_WEEKLY: 'LAUNCH_WEEKLY',
+    BILLING_LAUNCH_COUPON_ID_MONTHLY: 'LAUNCH_MONTHLY',
+  }
+  const prices: Record<string, any> = {
+    price_week: { active: true, unit_amount: 1000, currency: 'usd', recurring: { interval: 'week' } },
+    price_sub: { active: true, unit_amount: 5000, currency: 'usd', recurring: { interval: 'month' } },
+    price_small: { active: true, unit_amount: 500, currency: 'usd', recurring: null },
+    price_large: { active: true, unit_amount: 1500, currency: 'usd', recurring: null },
+  }
+  const coupons: Record<string, any> = {
+    LAUNCH_WEEKLY: { valid: true, percent_off: 50.1, duration: 'forever', duration_in_months: null },
+    LAUNCH_MONTHLY: { valid: true, percent_off: 80.02, duration: 'forever', duration_in_months: null },
+  }
+  const stripe = {
+    prices: { retrieve: jest.fn(async (id: string) => prices[id]) },
+    coupons: { retrieve: jest.fn(async (id: string) => coupons[id]) },
+  }
+
+  it('shows $10.00 to $4.99 a week and $50.00 to $9.99 a month, with whole-number percentages', async () => {
+    const byKey = Object.fromEntries((await loadPlans(stripe as any, env)).map((p) => [p.key, p]))
+    expect(byKey.subscription_weekly).toMatchObject({ priceText: '$10.00', discount: { percentOff: 50, discountedText: '$4.99' } })
+    expect(byKey.subscription).toMatchObject({ priceText: '$50.00', discount: { percentOff: 80, discountedText: '$9.99' } })
+    expect(byKey.pack_small.discount).toBeNull()
+  })
+
+  it('judges the monthly saving on what is actually charged ($9.99 against 4.33 weeks at $4.99), not on list prices', async () => {
+    const byKey = Object.fromEntries((await loadPlans(stripe as any, env)).map((p) => [p.key, p]))
+    expect(byKey.subscription.savingsPercent).toBe(54)
   })
 })
 

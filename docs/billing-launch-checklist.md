@@ -73,7 +73,8 @@ Set them on the `six-figure-jobs` service in Openship so they are present at **b
 | `STRIPE_PRICE_PACK_SMALL`, `STRIPE_PRICE_PACK_LARGE` | for packs | One-time price ids. A product with no price id is not offered. |
 | `STRIPE_PRICE_SUBSCRIPTION_WEEKLY` | for the weekly plan | Recurring weekly price id. Without it the weekly plan is not offered. |
 | `BILLING_WEEKLY_CREDITS` | **set it** | Credits granted for each paid week of the weekly plan (placeholder 25). |
-| `BILLING_LAUNCH_COUPON_ID` | optional | Stripe coupon id for the launch discount. Create the coupon in Stripe (**50% off**, and choose its duration: once, a number of months, or forever); `/pricing` and Checkout then show and charge exactly what Stripe says. Applies to the two subscription plans only. Unset it to end the offer. |
+| `BILLING_LAUNCH_COUPON_ID_WEEKLY`, `BILLING_LAUNCH_COUPON_ID_MONTHLY` | optional | A launch coupon per plan; each wins over the shared one below (a single percentage cannot turn two list prices into two chosen prices). Same rules as below. |
+| `BILLING_LAUNCH_COUPON_ID` | optional | Stripe coupon id for the launch discount, used for a plan that has no coupon of its own. Create the coupon in Stripe (**50% off**, and choose its duration: once, a number of months, or forever); `/pricing` and Checkout then show and charge exactly what Stripe says. Applies to the two subscription plans only. Unset it to end the offer. |
 | `CRON_SECRET` | for instant alerts | Already used by the other `/api/cron` routes. |
 | `BILLING_MONTHLY_CREDITS` | **set it** | Credits granted when a subscription invoice is paid (first payment and each renewal). |
 | `BILLING_PACK_SMALL_CREDITS`, `BILLING_PACK_LARGE_CREDITS` | **set them** | Credits per pack purchase. |
@@ -148,3 +149,16 @@ Created through the Stripe MCP on the existing product `prod_VaIJybSnp6NGCL` ("S
 | `STRIPE_WEBHOOK_SECRET` | reveal in Stripe, Developers, Webhooks, endpoint `we_1UZ7lQQ8IFR77LybEQ4jJpTl` (same URL, API version and 9 events as the sandbox one) |
 
 The older $9.00 monthly price (`price_1UZ7isQ8IFR77LybktHzVC93`) is still active and is the product's default price; archive it once nothing points at it. The customer portal (`bpc_1UZ7j4Q8IFR77LybMmkxEJt8`) already existed. Nothing is purchasable until `ACCOUNTS_ENABLED=true`, and the checklist's test-mode run (section 7) comes first.
+
+### Launch prices $4.99/week and $9.99/month against $10.00 and $50.00 (2026-11-16)
+
+Created through the Stripe MCP on the same products, tax behavior `exclusive`. A sandbox invoice preview confirmed the charge: $10.00 less 501 cents is $4.99, $50.00 less 4001 cents is $9.99. The discount is **forever** (the customer keeps the launch price while subscribed); the percentages carry decimals so the result lands on those cents.
+
+| Env var | Live | Sandbox |
+| --- | --- | --- |
+| `STRIPE_PRICE_SUBSCRIPTION_WEEKLY` | `price_1UcEIXQ8IFR77LybElgPQm8O` ($10.00 / week) | `price_1UcEIILGk62v9av8A5glagD4` |
+| `STRIPE_PRICE_SUBSCRIPTION` | `price_1UcEIYQ8IFR77Lyb1CFLnX5l` ($50.00 / month) | `price_1UcEIJLGk62v9av8GN3Gfpjt` |
+| `BILLING_LAUNCH_COUPON_ID_WEEKLY` | `LAUNCH_WEEKLY` (50.1% off, forever) | `LAUNCH_WEEKLY` |
+| `BILLING_LAUNCH_COUPON_ID_MONTHLY` | `LAUNCH_MONTHLY` (80.02% off, forever) | `LAUNCH_MONTHLY` |
+
+Set these in Openship **after** the code that reads the per-plan coupons is deployed, then Apply. The earlier $4.99 and $9.99 prices and `LAUNCH50` stay in Stripe; archive them once nothing points at them. When the launch ends: stop offering the coupons (unset the two variables) so new customers pay list; existing subscribers keep their discount because it is attached to their subscription. The crossed-out list price should be a price new customers really pay.

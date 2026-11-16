@@ -73,7 +73,7 @@ export async function createCheckoutUrl(userId: string, productKey: ProductKey, 
             // `product` is read back on each invoice, so a weekly period grants the weekly credits (webhook.ts).
             subscription_data: { metadata: { userId, product: product.key }, billing_mode: { type: 'flexible' as const } },
             // The launch discount, when a coupon is configured. Its size and duration are whatever Stripe says.
-            ...(getLaunchCouponId(env) ? { discounts: [{ coupon: getLaunchCouponId(env)! }] } : {}),
+            ...(getLaunchCouponId(product.key, env) ? { discounts: [{ coupon: getLaunchCouponId(product.key, env)! }] } : {}),
           }
         : { payment_intent_data: { metadata } }),
       success_url: `${siteUrl}/account?checkout=success`,

@@ -81,9 +81,14 @@ export function isSubscriptionKey(key: ProductKey): boolean {
   return PRODUCT_ENV[key].mode === 'subscription'
 }
 
-/** The launch discount's Stripe coupon id (BILLING_LAUNCH_COUPON_ID), or null. Its size and duration live in Stripe. */
-export function getLaunchCouponId(env: Env = process.env): string | null {
-  return env.BILLING_LAUNCH_COUPON_ID?.trim() || null
+/**
+ * The launch discount's Stripe coupon id for a plan, or null. A plan's own coupon (BILLING_LAUNCH_COUPON_ID_WEEKLY /
+ * BILLING_LAUNCH_COUPON_ID_MONTHLY) wins over the shared BILLING_LAUNCH_COUPON_ID, because one percentage cannot land two
+ * different list prices on two chosen prices. Size and duration live in Stripe.
+ */
+export function getLaunchCouponId(key: ProductKey, env: Env = process.env): string | null {
+  const own = key === 'subscription_weekly' ? 'WEEKLY' : key === 'subscription' ? 'MONTHLY' : null
+  return (own && env[`BILLING_LAUNCH_COUPON_ID_${own}`]?.trim()) || env.BILLING_LAUNCH_COUPON_ID?.trim() || null
 }
 
 /** One product, or null when its Stripe price id is not configured. */
