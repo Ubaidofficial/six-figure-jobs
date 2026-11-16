@@ -19,6 +19,7 @@ import { writeFileSync } from 'node:fs'
 import { format as __format } from 'node:util'
 
 import { findRemoteEvidence, type RemoteMode } from '../lib/jobs/remoteEvidence'
+import { remoteEvidenceRecord, saveEvidence } from '../lib/history/evidence'
 import { prisma } from '../lib/prisma'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + '\n')
@@ -31,7 +32,7 @@ const reportPath = arg('report')
 const BATCH = 500
 
 async function main() {
-  const counts = { looked: 0, remote: 0, hybrid: 0, onsite: 0, applied: 0 }
+  const counts = { looked: 0, remote: 0, hybrid: 0, onsite: 0, applied: 0, evidenceSaved: 0 }
   const report: Array<{ id: string; title: string; source: string; mode: RemoteMode; quote: string; written: boolean }> = []
   let cursor: string | undefined
 
@@ -65,6 +66,8 @@ async function main() {
         })
         written = count === 1
         counts.applied += count
+        // Keep the sentence the mode was read from, only when the mode was written.
+        if (written) counts.evidenceSaved += await saveEvidence(prisma, [remoteEvidenceRecord(job.id, found)])
       }
       report.push({ id: job.id, title: job.title, source: job.source, mode: found.mode, quote: found.quote, written })
     }

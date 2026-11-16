@@ -16,6 +16,9 @@
 // Pure: no database, no network.
 import { plainPostingText, splitSentences, verifyQuote } from './verifiedQuote'
 
+/** Stored with each quote-backed value (lib/history/evidence.ts). Raise it whenever a rule below changes what the reader finds. */
+export const REMOTE_EVIDENCE_VERSION = 1
+
 export type RemoteMode = 'remote' | 'hybrid' | 'onsite'
 
 export type RemoteEvidence = {

@@ -1,0 +1,107 @@
+name: data history
+
+# Records history the database does not otherwise keep, so reports can compare today with earlier weeks (docs/DATA_ROADMAP_2027.md):
+#   every day   job lifecycle (first seen, last seen live, expiry seen, reopens, pay changes)   scripts/observeJobLifecycle.ts
+#               apply clicks rolled up by week                                                  scripts/rollupApplyClicks.ts
+#   Mondays     pay by cell (MarketSnapshot) and the data-quality scorecard, compared with last week
+#               scripts/marketSnapshot.ts, scripts/dataScorecard.ts
+# Writes only to the five append-only history tables; never to Job, Company or anything a page reads.
+#
+# A manual run is a dry run (counts only) unless "apply" is ticked. A scheduled run applies. The tables come from the migration
+# 20261116040000_add_data_history: until the "database migrate" workflow has applied it, a run only warns and records nothing
+# (so a missing migration is not a red run every day). Same production-database fingerprint guard as the other workflows.
+
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Write the records (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+      weekly:
+        description: "Also run the weekly steps now (market snapshot, scorecard)"
+        type: boolean
+        required: false
+        default: false
+      weeks:
+        description: "Completed weeks of apply clicks to roll up (default 4; raise it once to fill in older weeks)"
+        type: string
+        required: false
+        default: "4"
+
+concurrency:
+  group: data-history
+  cancel-in-progress: false
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Decide what to run
+        id: plan
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          IN_APPLY: ${{ inputs.apply }}
+          IN_WEEKLY: ${{ inputs.weekly }}
+          IN_WEEKS: ${{ inputs.weeks }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            APPLY="${IN_APPLY:-false}"; WEEKLY="${IN_WEEKLY:-false}"; WEEKS="${IN_WEEKS:-4}"
+          else
+            APPLY="true"; WEEKS="4"
+            if [ "$(date -u +%u)" = "1" ]; then WEEKLY="true"; else WEEKLY="false"; fi
+          fi
+          WEEKS="$(echo "$WEEKS" | tr -cd '0-9')"; WEEKS="${WEEKS:-4}"
+          if npx prisma db execute --stdin --schema prisma/schema.prisma <<< 'SELECT 1 FROM "JobLifecycle" LIMIT 1' >/dev/null 2>&1; then
+            READY=true
+          else
+            READY=false
+            echo "::warning::The data-history tables do not exist yet. Run the 'database migrate' workflow first. Nothing was recorded."
+          fi
+          { echo "apply=$APPLY"; echo "weekly=$WEEKLY"; echo "weeks=$WEEKS"; echo "ready=$READY"; } >> "$GITHUB_OUTPUT"
+          echo "apply=$APPLY weekly=$WEEKLY weeks=$WEEKS ready=$READY"
+
+      - name: Job lifecycle
+        if: steps.plan.outputs.ready == 'true'
+        run: npx tsx scripts/observeJobLifecycle.ts ${{ steps.plan.outputs.apply == 'true' && '--apply' || '' }}
+
+      - name: Apply clicks by week
+        if: steps.plan.outputs.ready == 'true'
+        run: npx tsx scripts/rollupApplyClicks.ts --weeks=${{ steps.plan.outputs.weeks }} ${{ steps.plan.outputs.apply == 'true' && '--apply' || '' }}
+
+      - name: Market snapshot (weekly)
+        if: steps.plan.outputs.ready == 'true' && steps.plan.outputs.weekly == 'true'
+        run: npx tsx scripts/marketSnapshot.ts ${{ steps.plan.outputs.apply == 'true' && '--apply' || '' }}
+
+      - name: Data scorecard (weekly)
+        if: steps.plan.outputs.ready == 'true' && steps.plan.outputs.weekly == 'true'
+        run: npx tsx scripts/dataScorecard.ts ${{ steps.plan.outputs.apply == 'true' && '--apply' || '' }}

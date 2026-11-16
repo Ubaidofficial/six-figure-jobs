@@ -607,3 +607,99 @@ model JobAlertSent {
   @@id([alertId, jobId])
   @@index([sentAt])
 }
+
+// ---- Data history (added 2026-11-16) ----------------------------------------------------------------------------------
+// Append-only records that outlive the rows they describe, so reports can compare today with earlier weeks. Before these,
+// SalaryAggregate (one overwritten row per slice) and Job.lastSeenAt (overwritten by every scrape) kept no history, and a
+// year-on-year figure would have had nothing to compare with. None of these tables is read by a page.
+
+// One row per job: when it was first stored, last seen live, seen expired, reopened, and each change of its pay. jobId has no
+// foreign key on purpose (as JobAlertSent): the row must outlive an expired or deleted job. Written by
+// scripts/observeJobLifecycle.ts; history starts at its first run, and "days listed" is first seen to expiry OBSERVED, not
+// time to fill (a listing coming down does not say whether anyone was hired).
+model JobLifecycle {
+  jobId              String    @id
+  source             String
+  company            String
+  companyId          String?
+  roleSlug           String?
+  countryCode        String?
+  currency           String?
+  firstSeenAt        DateTime  @db.Timestamptz(6)
+  postedAt           DateTime? @db.Timestamptz(6)
+  lastObservedLiveAt DateTime  @db.Timestamptz(6)
+  expiredObservedAt  DateTime? @db.Timestamptz(6)
+  reopenCount        Int       @default(0)
+  lastMinAnnual      BigInt?
+  lastMaxAnnual      BigInt?
+  payChangeCount     Int       @default(0)
+  /// Up to the last 20 changes: [{ at, min, max, currency }].
+  payHistory         Json?
+  updatedAt          DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@index([source])
+  @@index([expiredObservedAt])
+  @@index([roleSlug, countryCode])
+}
+
+// The sentence a field was read from, and which reader and version read it, so a stored value can be audited and a reader's
+// precision measured. field is "benefits" or "remoteMode"; value is the label or mode. No foreign key (see JobLifecycle).
+model JobEvidence {
+  id               String   @id @default(cuid())
+  jobId            String
+  field            String
+  value            String
+  quote            String
+  extractor        String
+  extractorVersion Int
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([jobId, field, value])
+  @@index([field, value])
+}
+
+// Weekly pay by cell, one row per (date, dimension, key, currency), under lib/research/method.ts's rules (methodVersion). Pay
+// is never converted between currencies. dimension: all | role | country | role_country | level | arrangement.
+model MarketSnapshot {
+  id            String   @id @default(cuid())
+  snapshotDate  DateTime @db.Date
+  dimension     String
+  key           String
+  currency      String
+  jobs          Int
+  companies     Int
+  p25           Int
+  median        Int
+  p75           Int
+  newJobs7d     Int
+  methodVersion String
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([snapshotDate, dimension, key, currency])
+  @@index([dimension, key, currency, snapshotDate])
+}
+
+// A weekly data-quality scorecard: fill rates and counts, as JSON, so the trend can be read (scripts/dataScorecard.ts).
+model DataScorecard {
+  id         String   @id @default(cuid())
+  capturedAt DateTime @default(now()) @db.Timestamptz(6)
+  metrics    Json
+
+  @@index([capturedAt])
+}
+
+// Apply clicks per week, rolled up by dimension (all | company | role | country | source), so demand survives and reports do not
+// scan the raw ApplyClick table. Holds counts only: ApplyClick itself stores no IP, user agent or visitor id.
+model ApplyClickWeekly {
+  id        String   @id @default(cuid())
+  weekStart DateTime @db.Date
+  dimension String
+  key       String
+  clicks    Int
+  jobs      Int
+  mobile    Int
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([weekStart, dimension, key])
+  @@index([dimension, key, weekStart])
+}

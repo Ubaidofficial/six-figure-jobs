@@ -26,6 +26,9 @@ export type BenefitEvidence = {
   quote: string
 }
 
+/** Stored with each quote-backed value (lib/history/evidence.ts). Raise it whenever a rule below changes what the reader finds. */
+export const BENEFITS_EVIDENCE_VERSION = 1
+
 export type BenefitCategory = 'pto' | 'parental' | 'health' | 'k401' | 'pension' | 'equity' | 'learning' | 'fourDay'
 
 const MAX_ITEMS = 12

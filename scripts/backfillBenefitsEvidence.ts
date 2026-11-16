@@ -8,7 +8,7 @@
 //  - only jobs whose benefitsJson is empty (null, '' or '[]') are looked at, and jobs with an AI benefits list
 //    (aiBenefits) are skipped; the write is conditional on the field still being empty, so freehire / ATS perks and an AI
 //    list are never overridden;
-//  - writes `benefitsJson` as a JSON array of label strings and nothing else (the quotes are only printed / reported);
+//  - writes `benefitsJson` as a JSON array of label strings, and keeps each benefit's sentence in JobEvidence (lib/history/evidence.ts);
 //  - `updatedAt` is kept as it was, so sitemap lastmod does not move for a data repair.
 //
 // It prints: jobs scanned, jobs with at least one benefit found, a count per category, and 25 random examples with the
@@ -22,6 +22,7 @@ import { writeFileSync } from 'node:fs'
 import { format as __format } from 'node:util'
 
 import { readBenefitsEvidence, type BenefitCategory, type BenefitEvidence } from '../lib/jobs/benefitsEvidence'
+import { benefitEvidenceRecords, saveEvidence } from '../lib/history/evidence'
 import { prisma } from '../lib/prisma'
 
 const __slog = (...args: any[]) => process.stdout.write(__format(...args) + '\n')
@@ -57,7 +58,7 @@ function hasAiBenefits(raw: unknown): boolean {
 }
 
 async function main() {
-  const counts = { scanned: 0, skippedAiList: 0, withBenefit: 0, applied: 0 }
+  const counts = { scanned: 0, skippedAiList: 0, withBenefit: 0, applied: 0, evidenceSaved: 0 }
   const byCategory: Record<BenefitCategory, number> = { pto: 0, parental: 0, health: 0, k401: 0, pension: 0, equity: 0, learning: 0, fourDay: 0 }
   const sample: Row[] = [] // reservoir of EXAMPLES random hits
   const report: Row[] = []
@@ -94,6 +95,8 @@ async function main() {
         })
         written = count === 1
         counts.applied += count
+        // Keep the sentences the labels were read from, only when the labels were written.
+        if (written) counts.evidenceSaved += await saveEvidence(prisma, benefitEvidenceRecords(job.id, benefits))
       }
       const row: Row = { id: job.id, title: job.title, source: job.source, benefits, written }
       if (reportPath) report.push(row)
