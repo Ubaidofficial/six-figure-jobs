@@ -17,13 +17,15 @@ beforeEach(() => {
   __clearMemoForTests()
   count.mockReset()
   groupBy.mockReset()
-  // total, remote, hybrid, onsite, remote worldwide (in call order)
+  // total, remote, hybrid, onsite, remote worldwide, remote with North America / Americas text, remote with Europe text (in call order)
   count
     .mockResolvedValueOnce(3000)
     .mockResolvedValueOnce(973)
     .mockResolvedValueOnce(400)
     .mockResolvedValueOnce(1500)
     .mockResolvedValueOnce(41)
+    .mockResolvedValueOnce(63)
+    .mockResolvedValueOnce(9)
   groupBy
     .mockResolvedValueOnce(rows([['us', 1800], ['CA', 300], [null, 500], ['GB', 120]]))
     .mockResolvedValueOnce(rows([['US', 274], [null, 196], ['CA', 70]]))
@@ -49,10 +51,11 @@ describe('siteCounts', () => {
     expect(first.byCountry[0]).toEqual({ code: 'US', count: 1800 })
     expect(first.remoteByCountry).toEqual([{ code: 'US', count: 274 }, { code: 'CA', count: 70 }])
     expect(first.remoteWorldwide).toBe(41) // its own count, not the 196 remote jobs with no country
+    expect(first.remoteByRegionText).toEqual({ 'us-only': 63, canada: 63, europe: 9, emea: 9 })
     expect(Number.isNaN(new Date(first.computedAt).getTime())).toBe(false)
 
     const queriesAfterFirst = count.mock.calls.length + groupBy.mock.calls.length
-    expect(queriesAfterFirst).toBe(7)
+    expect(queriesAfterFirst).toBe(9)
     const second = await loadSiteCounts()
     expect(second).toBe(first)
     expect(count.mock.calls.length + groupBy.mock.calls.length).toBe(queriesAfterFirst) // no new queries

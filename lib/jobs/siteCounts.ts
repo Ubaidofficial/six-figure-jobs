@@ -8,7 +8,7 @@
 import { memoAsync } from '../cache/memo'
 import { prisma } from '../prisma'
 import { buildWhere } from './queryJobs'
-import { REMOTE_JOB_CLAUSE, remoteRegionWhere } from './remoteRegions'
+import { REMOTE_JOB_CLAUSE, regionTextWhere, remoteRegionWhere } from './remoteRegions'
 
 export const SITE_COUNTS_TTL_MS = 60 * 60 * 1000
 
@@ -24,6 +24,8 @@ export type SiteCounts = {
   /** Remote jobs per country, and remote jobs that can be done from anywhere (the "global" region). */
   remoteByCountry: CountryCount[]
   remoteWorldwide: number
+  /** Remote jobs with no country that name a region in their location text ("North America", "Europe"), per region slug: added to the per-country counts. */
+  remoteByRegionText: Record<string, number>
   /** ISO time the counts were taken. */
   computedAt: string
 }
@@ -54,7 +56,7 @@ export function loadSiteCounts(): Promise<SiteCounts> {
     const base = buildWhere({ excludeInternships: true, page: 1, pageSize: 1 })
     const remoteWhere = { AND: [base, REMOTE_JOB_CLAUSE] }
 
-    const [total, countryRows, remote, hybrid, onsite, remoteCountryRows, remoteWorldwide] = await Promise.all([
+    const [total, countryRows, remote, hybrid, onsite, remoteCountryRows, remoteWorldwide, remoteNorthAmerica, remoteEurope] = await Promise.all([
       prisma.job.count({ where: base }),
       prisma.job.groupBy({ by: ['countryCode'], where: base, _count: { _all: true } }),
       prisma.job.count({ where: remoteWhere }),
@@ -62,6 +64,9 @@ export function loadSiteCounts(): Promise<SiteCounts> {
       prisma.job.count({ where: { AND: [base, { remoteMode: { in: ['onsite', 'on-site'] } }, { NOT: REMOTE_JOB_CLAUSE }] } }),
       prisma.job.groupBy({ by: ['countryCode'], where: remoteWhere, _count: { _all: true } }),
       prisma.job.count({ where: { AND: [base, remoteRegionWhere('global')] } }),
+      // Two word sets cover all four regions that read text: North America / Americas (US, Canada) and Europe (Europe, EMEA).
+      prisma.job.count({ where: { AND: [base, REMOTE_JOB_CLAUSE, regionTextWhere('us-only')!] } }),
+      prisma.job.count({ where: { AND: [base, REMOTE_JOB_CLAUSE, regionTextWhere('europe')!] } }),
     ])
 
     const all = summarizeCountryGroups(countryRows)
@@ -72,6 +77,7 @@ export function loadSiteCounts(): Promise<SiteCounts> {
       byWorkType: { remote, hybrid, onsite },
       remoteByCountry: rem.countries,
       remoteWorldwide,
+      remoteByRegionText: { 'us-only': remoteNorthAmerica, canada: remoteNorthAmerica, europe: remoteEurope, emea: remoteEurope },
       computedAt: new Date().toISOString(),
     }
   })

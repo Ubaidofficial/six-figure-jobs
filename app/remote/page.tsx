@@ -485,7 +485,7 @@ export default async function RemoteJobsPage({
     const regionPill = prettyRemoteRegion(activeRemoteRegion)
     // Remote jobs per region, counted from the database at most every hour; the chips still work without them.
     const regionCounts = await loadSiteCounts()
-      .then((c) => countRemoteByRegion(c.remoteByCountry, c.remoteWorldwide))
+      .then((c) => countRemoteByRegion(c.remoteByCountry, c.remoteWorldwide, c.remoteByRegionText))
       .catch((error) => {
         logRuntimeFallback('remote.regionCounts', error)
         return null

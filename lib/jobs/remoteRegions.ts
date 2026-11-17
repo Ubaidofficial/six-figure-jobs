@@ -80,6 +80,44 @@ export function normalizeRemoteRegionSlug(raw: string | string[] | undefined | n
 /** Same predicate as the `remoteOnly` filter in queryJobs. */
 export const REMOTE_JOB_CLAUSE: Prisma.JobWhereInput = { OR: [{ remote: true }, { remoteMode: 'remote' }] }
 
+// A remote job with no country can still name a region in its location text: "North America", "Americas", "Europe". Region
+// filters match on country, so these jobs were in no US, Canada or Europe list and in none of the chip counts (2026-11-17 audit
+// of 1,332 live remote jobs with no country: "north america" 29, "americas" 34, "europe" 9). A job open to "North America" can be
+// done from the US and from Canada, so it counts for both; "Americas" the same (Latin America has no chip of its own); "Europe"
+// counts for Europe and the old EMEA slug. Only jobs with NO country are read this way (a stored country decides), and a text that
+// names the place only to leave it out ("Americas excluding the US", "Worldwide except Europe") does not count.
+const NORTH_AMERICA_WORDS = ['north america', 'americas'] as const
+const EUROPE_WORDS = ['europe'] as const
+export const REGION_TEXT_WORDS: Readonly<Record<string, readonly string[]>> = {
+  'us-only': NORTH_AMERICA_WORDS,
+  canada: NORTH_AMERICA_WORDS,
+  europe: EUROPE_WORDS,
+  emea: EUROPE_WORDS,
+}
+const LEAVING_OUT_WORDS = ['exclud', 'except', 'outside', ' not ', 'non-'] as const
+
+/** Regions a remote job with no country belongs to, from its location text alone (pure; the database form is regionTextWhere). */
+export function regionsForLocationText(text: string | null | undefined): string[] {
+  const t = String(text ?? '').toLowerCase()
+  if (!t || LEAVING_OUT_WORDS.some((w) => t.includes(w))) return []
+  return Object.entries(REGION_TEXT_WORDS)
+    .filter(([, words]) => words.some((w) => t.includes(w)))
+    .map(([slug]) => slug)
+}
+
+/** The database form of regionsForLocationText for one region: no country, a region word, nothing left out. Null if the region has no words. */
+export function regionTextWhere(slug: string): Prisma.JobWhereInput | null {
+  const words = REGION_TEXT_WORDS[slug]
+  if (!words) return null
+  return {
+    AND: [
+      { countryCode: null },
+      { OR: words.map((w) => ({ locationRaw: { contains: w, mode: 'insensitive' as const } })) },
+      { NOT: { OR: LEAVING_OUT_WORDS.map((w) => ({ locationRaw: { contains: w, mode: 'insensitive' as const } })) } },
+    ],
+  }
+}
+
 // "Anywhere in the world" needs the posting to say so. A remote job with no country is not enough: on the live site
 // (2026-11-09) most of the 1,021 such jobs read "Remote (US)", "San Francisco Bay Area or Remote (U.S.)" or a US city.
 const WORLDWIDE_WORDS = ['worldwide', 'anywhere', 'global'] as const
@@ -128,13 +166,16 @@ export function remoteRegionWhere(slug: string): Prisma.JobWhereInput {
   if (!def) return { remoteRegion: slug }
   const stored: Prisma.JobWhereInput = { remoteRegion: { equals: def.slug, mode: 'insensitive' } }
   if (def.countries === null) return WORLDWIDE_CLAUSE
-  return { AND: [REMOTE_JOB_CLAUSE, { OR: [{ countryCode: { in: [...def.countries] } }, stored] }] }
+  const byText = regionTextWhere(def.slug)
+  return { AND: [REMOTE_JOB_CLAUSE, { OR: [{ countryCode: { in: [...def.countries] } }, stored, ...(byText ? [byText] : [])] }] }
 }
 
 /** Remote jobs per region from per-country counts and the worldwide count (pure; the database part is in siteCounts). */
 export function countRemoteByRegion(
   remoteByCountry: ReadonlyArray<{ code: string; count: number }>,
   remoteWorldwide: number,
+  /** Remote jobs with no country that name the region in their location text (see REGION_TEXT_WORDS), per region slug. */
+  remoteByText: Readonly<Record<string, number>> = {},
 ): Record<string, number> {
   const out: Record<string, number> = {}
   for (const def of REMOTE_REGIONS) {
@@ -143,7 +184,7 @@ export function countRemoteByRegion(
       continue
     }
     const set = new Set(def.countries)
-    out[def.slug] = remoteByCountry.reduce((sum, c) => (set.has(c.code.toUpperCase()) ? sum + c.count : sum), 0)
+    out[def.slug] = remoteByCountry.reduce((sum, c) => (set.has(c.code.toUpperCase()) ? sum + c.count : sum), 0) + (remoteByText[def.slug] ?? 0)
   }
   return out
 }
