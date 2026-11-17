@@ -125,6 +125,8 @@ export default function RootLayout({
         <ErrorTracker />
         <ScrollReveal />
         <RouteTransition />
+        {/* SourceTrack attribution tag (loads before the other analytics scripts below) */}
+        <Script src="https://api.srctk.com/tracker.min.js" strategy="afterInteractive" data-site-key="929382d1-ca2b-4559-9896-580f499039f6" />
         {/* Google Analytics 4: loads only when NEXT_PUBLIC_GA_MEASUREMENT_ID is set to a G- id (inlined at build time) */}
         {GA_MEASUREMENT_ID ? (
           <>
