@@ -8,6 +8,7 @@ import Script from 'next/script'
 import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
+import { JobAlertPopup } from '@/components/alerts/JobAlertPopup'
 import ErrorTracker from '@/components/ErrorTracker'
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
 import { RouteTransition } from '@/components/ui/RouteTransition'
@@ -120,6 +121,7 @@ export default function RootLayout({
           <Footer />
         </div>
         <FeedbackWidget />
+        <JobAlertPopup />
         <ErrorTracker />
         <ScrollReveal />
         <RouteTransition />

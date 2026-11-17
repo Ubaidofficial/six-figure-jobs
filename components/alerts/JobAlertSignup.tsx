@@ -15,13 +15,15 @@ type Props = {
   filters: AlertFilters
   /** What the alert is for, e.g. "Senior Software Engineer jobs · Remote". */
   label: string
-  variant?: 'inline' | 'footer'
+  variant?: 'inline' | 'footer' | 'popup'
   className?: string
+  /** Called once, when the signup was accepted (the popup remembers it and stops showing). */
+  onSuccess?: () => void
 }
 
 type State = { kind: 'idle' | 'sending' | 'done' | 'error'; message?: string }
 
-export function JobAlertSignup({ filters, label, variant = 'inline', className }: Props) {
+export function JobAlertSignup({ filters, label, variant = 'inline', className, onSuccess }: Props) {
   const [email, setEmail] = React.useState('')
   const [frequency, setFrequency] = React.useState<'weekly' | 'daily' | 'instant'>('weekly')
   const [state, setState] = React.useState<State>({ kind: 'idle' })
@@ -50,18 +52,19 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className }
         body: JSON.stringify({ email, frequency, filters, website, source: window.location.pathname }),
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string }
-      setState(
-        res.ok && body.ok
-          ? { kind: 'done', message: body.message }
-          : { kind: 'error', message: body.message || 'Something went wrong. Please try again.' },
-      )
+      if (res.ok && body.ok) {
+        setState({ kind: 'done', message: body.message })
+        onSuccess?.()
+      } else {
+        setState({ kind: 'error', message: body.message || 'Something went wrong. Please try again.' })
+      }
     } catch {
       setState({ kind: 'error', message: 'Could not reach the server. Please try again.' })
     }
   }
 
   return (
-    <section className={cn(styles.box, variant === 'footer' && styles.footer, className)} aria-labelledby={`${id}-title`}>
+    <section className={cn(styles.box, variant === 'footer' && styles.footer, variant === 'popup' && styles.popup, className)} aria-labelledby={`${id}-title`}>
       <div className={styles.text}>
         <p id={`${id}-title`} className={styles.title}>
           <BellRing aria-hidden className={styles.icon} />
