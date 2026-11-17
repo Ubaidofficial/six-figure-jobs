@@ -1,4 +1,4 @@
-import { planRepair } from '../../scripts/repairBoardWorkMode'
+import { planRemoteToHybrid, planRepair } from '../../scripts/repairBoardWorkMode'
 
 const base = { source: 'board:freehire', remote: false, remoteMode: 'onsite', descriptionHtml: '<p>This is a hybrid role, based in Amsterdam, with two office days a week.</p>' }
 
@@ -49,5 +49,32 @@ describe('planRepair', () => {
     for (const quote of ['Location: Remote within the United States', 'This is a remote role.', 'Remote within the United States, with Boston as the primary location.', 'Location: Remote, preferred Boston, MA or Dayton, OH', 'The starting pay range for this remote role is $105,840-$196,000.']) {
       expect(planRepair({ ...base, descriptionHtml: `<p>${quote}</p>` })?.mode).toBe('remote')
     }
+  })
+})
+
+describe('planRemoteToHybrid', () => {
+  const remoteJob = { source: 'board:freehire', remote: true, remoteMode: 'remote', locationRaw: 'Netherlands', descriptionHtml: '<p>This is a Hybrid role, based in the Netherlands, reporting to the Sales Engineering Manager.</p>' }
+
+  it('moves a board job stored remote to hybrid when its own sentence says this role is hybrid', () => {
+    expect(planRemoteToHybrid(remoteJob)).toEqual({ mode: 'hybrid', quote: expect.stringContaining('Hybrid role') })
+    expect(planRemoteToHybrid({ ...remoteJob, remoteMode: null })?.mode).toBe('hybrid')
+    expect(planRemoteToHybrid({ ...remoteJob, descriptionHtml: '<p>Location: Hybrid, 3 days a week in the office.</p>' })?.mode).toBe('hybrid')
+  })
+
+  it('leaves a job remote when the sentence or the place also offers remote, or only describes company policy', () => {
+    for (const quote of [
+      'Flexible working arrangements, with fully remote, hybrid and on-site options in Munich.',
+      'Hybrid office options in Draper, Utah, as well as remote work opportunities within the United States.',
+      'Maven embraces a flexible hybrid work model.',
+      "Learn more about Zscaler's hybrid working model and benefits here.",
+    ]) expect(planRemoteToHybrid({ ...remoteJob, descriptionHtml: `<p>${quote}</p>` })).toBeNull()
+    expect(planRemoteToHybrid({ ...remoteJob, locationRaw: 'New York, NY; Remote, US' })).toBeNull()
+  })
+
+  it('never touches an ATS value, an on-site or hybrid job, or a job whose text says nothing clear', () => {
+    expect(planRemoteToHybrid({ ...remoteJob, source: 'ats:greenhouse' })).toBeNull()
+    expect(planRemoteToHybrid({ ...remoteJob, remoteMode: 'onsite', remote: false })).toBeNull()
+    expect(planRemoteToHybrid({ ...remoteJob, remoteMode: 'hybrid' })).toBeNull()
+    expect(planRemoteToHybrid({ ...remoteJob, descriptionHtml: '<p>We are a growing team.</p>' })).toBeNull()
   })
 })

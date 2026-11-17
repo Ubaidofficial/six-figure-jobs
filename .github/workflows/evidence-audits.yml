@@ -32,6 +32,11 @@ on:
         type: boolean
         required: false
         default: false
+      apply_workmode_remote:
+        description: "Write hybrid on board jobs stored remote whose own text says the role is hybrid (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: evidence-audits
@@ -96,6 +101,14 @@ jobs:
           [ "$APPLY" = "true" ] && args="$args --apply"
           npx tsx scripts/repairBoardWorkMode.ts $args
 
+      - name: Board jobs stored remote whose own text says the role is hybrid
+        env:
+          APPLY: ${{ inputs.apply_workmode_remote }}
+        run: |
+          args="--from=remote --days=30 --limit=20000 --report=board-remote-to-hybrid.json"
+          [ "$APPLY" = "true" ] && args="$args --apply"
+          npx tsx scripts/repairBoardWorkMode.ts $args
+
       - name: Keep the sentences
         uses: actions/upload-artifact@v4
         with:
@@ -104,4 +117,5 @@ jobs:
             remote-evidence.json
             benefits-evidence.json
             board-work-mode.json
+            board-remote-to-hybrid.json
           retention-days: 14
