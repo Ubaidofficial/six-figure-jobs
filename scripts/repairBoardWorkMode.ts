@@ -49,13 +49,14 @@ export function planRepair(job: Candidate): { mode: 'remote' | 'hybrid'; quote: 
 
 // Remote -> hybrid: only a sentence that is about THIS role and offers no remote. "Fully remote, hybrid and on-site options in
 // Munich", "remote work opportunities within the US", "Maven embraces a flexible hybrid work model" (company policy, and the
-// location says Remote) all stay as stored. A location text that itself says remote also keeps the job remote.
+// location says Remote) all stay as stored. So does a days-in-the-office sentence: the first dry run (2026-11-17) found two
+// wrong readings among 10, "For roles that are listed as hybrid, our approach is 3 days a week in the office" (a policy, not
+// this role) and "Home-based with travel to London client sites 3 to 4 days per week" (home-based). A location text that itself says remote also keeps the job remote.
 const ROLE_IS_HYBRID = new RegExp(
   [
     '\\b(?:this|the) (?:\\w+ ){0,3}?(?:role|position|job|opportunity) is (?:a )?hybrid\\b',
     '\\bthis is (?:a )?hybrid (?:role|position|job|opportunity)\\b',
     '\\b(?:location|work ?(?:place|location|model|arrangement|type))\\s*[:–-]\\s*hybrid\\b',
-    '\\b\\d(?:\\s*[-–]\\s*\\d)?\\s*days?\\s*(?:a|per|each|/)\\s*week\\b[^.;]{0,40}\\b(?:office|on-?site|in[- ]person)\\b',
   ].join('|'),
   'i',
 )
@@ -123,7 +124,7 @@ async function main() {
   } finally {
     await prisma.$disconnect()
   }
-  out.push(`${counts.looked} live board jobs stored on-site were read. To remote: ${counts.remote}. To hybrid: ${counts.hybrid}.${apply ? ` Written: ${counts.written}. Evidence saved: ${counts.evidenceSaved}.` : ' Nothing was written.'}`, '', '| source | jobs to change |', '| --- | --- |')
+  out.push(`${counts.looked} live board jobs stored ${fromRemote ? 'remote' : 'on-site'} were read. To remote: ${counts.remote}. To hybrid: ${counts.hybrid}.${apply ? ` Written: ${counts.written}. Evidence saved: ${counts.evidenceSaved}.` : ' Nothing was written.'}`, '', '| source | jobs to change |', '| --- | --- |')
   for (const [s, n] of [...bySource].sort((a, b) => b[1] - a[1])) out.push(`| ${s} | ${n} |`)
   out.push('', fromRemote ? '### Every reading to HYBRID (review each)' : '### Every reading to REMOTE (review each)', '', ...(remoteSamples.length ? remoteSamples.slice(0, 250) : ['(none)']))
   out.push('', '### Examples of readings to hybrid (review for wrong readings)', '', ...(samples.length ? samples : ['(none)']))

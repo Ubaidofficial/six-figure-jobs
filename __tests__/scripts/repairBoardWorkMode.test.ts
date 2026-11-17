@@ -58,7 +58,9 @@ describe('planRemoteToHybrid', () => {
   it('moves a board job stored remote to hybrid when its own sentence says this role is hybrid', () => {
     expect(planRemoteToHybrid(remoteJob)).toEqual({ mode: 'hybrid', quote: expect.stringContaining('Hybrid role') })
     expect(planRemoteToHybrid({ ...remoteJob, remoteMode: null })?.mode).toBe('hybrid')
-    expect(planRemoteToHybrid({ ...remoteJob, descriptionHtml: '<p>Location: Hybrid, 3 days a week in the office.</p>' })?.mode).toBe('hybrid')
+    for (const quote of ['This is a hybrid position based in Adelphi, Maryland.', 'This position is hybrid, based in our Vancouver, BC office, with two days a week required in the office.', 'This is a hybrid role with in-office expectations determined by location and subject to change.', 'Work model: hybrid, with two days in the office each week.']) {
+      expect(planRemoteToHybrid({ ...remoteJob, descriptionHtml: `<p>${quote}</p>` })?.mode).toBe('hybrid')
+    }
   })
 
   it('leaves a job remote when the sentence or the place also offers remote, or only describes company policy', () => {
@@ -67,6 +69,8 @@ describe('planRemoteToHybrid', () => {
       'Hybrid office options in Draper, Utah, as well as remote work opportunities within the United States.',
       'Maven embraces a flexible hybrid work model.',
       "Learn more about Zscaler's hybrid working model and benefits here.",
+      'For roles that are listed as hybrid, our approach is 3 days a week in the office giving us the chance to connect.',
+      'Location: Home-based with travel to London client sites approximately 3 to 4 days per week and attendance at the Cambridge office at least once per month.',
     ]) expect(planRemoteToHybrid({ ...remoteJob, descriptionHtml: `<p>${quote}</p>` })).toBeNull()
     expect(planRemoteToHybrid({ ...remoteJob, locationRaw: 'New York, NY; Remote, US' })).toBeNull()
   })
