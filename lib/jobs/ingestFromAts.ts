@@ -601,11 +601,14 @@ function titleCompanySourceKey(
 
 function rememberExistingJob(cache: IngestExistingJobCache, job: IngestExistingJob) {
   cache.byId.set(job.id, job)
-  if (job.isExpired) return
 
+  // An expired row still holds its (companyId, dedupeKey) in the database, so it must be found by key: left out, a live posting
+  // with the same title and place tries to create a second row and fails (777 such errors in the 2026-11-17 full sync).
+  // Finding it reactivates it, like the non-cache lookup in lib/ingest/index.ts, which includes expired rows on purpose.
   if (job.dedupeKey) {
     cache.byDedupeKey.set(job.dedupeKey, job)
   }
+  if (job.isExpired) return
 
   if (job.source && job.title) {
     const key = titleCompanySourceKey(job.company, job.source, job.title)

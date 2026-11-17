@@ -53,3 +53,6 @@ jobs:
 
       - name: Skills on live jobs against the skill pages (read-only)
         run: npx tsx scripts/auditSkillCoverage.ts
+
+      - name: Anywhere-in-the-world remote jobs and what the rule leaves out (read-only)
+        run: npx tsx scripts/auditWorldwideRemote.ts
