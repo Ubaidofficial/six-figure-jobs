@@ -2,7 +2,7 @@
 // per-company cache the ATS sync builds (lib/jobs/ingestFromAts.ts) left expired rows out of its dedupe-key index, so when an
 // employer listed the same title and place again (a new requisition, or a role reopened) the ingest found no match, tried to
 // create a second row and failed with "Unique constraint failed on the fields: (`companyId`,`dedupeKey`)". After PR #171
-// removed the (externalId, source) failures, the 2026-11-17 full sync still logged 675 of these (rocket-lab 83, brex 42, ...).
+// removed the (externalId, source) failures, the 2026-11-17 full sync still logged 777 of these (rocket-lab, brex, toast, ...).
 const findFirst = jest.fn()
 const findMany = jest.fn()
 const findUnique = jest.fn()

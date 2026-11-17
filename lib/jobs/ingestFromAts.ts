@@ -603,7 +603,7 @@ function rememberExistingJob(cache: IngestExistingJobCache, job: IngestExistingJ
   cache.byId.set(job.id, job)
 
   // An expired row still holds its (companyId, dedupeKey) in the database, so it must be found by key: left out, a live posting
-  // with the same title and place tries to create a second row and fails (675 such errors in the 2026-11-17 full sync).
+  // with the same title and place tries to create a second row and fails (777 such errors in the 2026-11-17 full sync).
   // Finding it reactivates it, like the non-cache lookup in lib/ingest/index.ts, which includes expired rows on purpose.
   if (job.dedupeKey) {
     cache.byDedupeKey.set(job.dedupeKey, job)
