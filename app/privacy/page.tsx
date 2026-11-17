@@ -50,6 +50,25 @@ export default function PrivacyPage() {
       </ul>
 
       <h2 className="mt-10 text-xl font-semibold text-foreground">
+        Email job alerts
+      </h2>
+      <p className="mt-4 text-muted-foreground">
+        If you sign up for a free job alert, we store your email address, the search you chose (for example a role,
+        country or pay level), how often you want to hear from us (daily or weekly), the page you signed up on, when
+        you confirmed, and which jobs we have already emailed you. We use this only to send you that alert. We first
+        send one email asking you to confirm, and we send nothing more until you do. Every alert email has an
+        unsubscribe link, and your email provider’s own unsubscribe button works too. The emails are sent through an
+        email delivery provider that processes your address for us. We keep an alert until you unsubscribe; after you
+        unsubscribe we keep the address and the alert record so that signing up again works, and you can ask us to
+        delete them by emailing{' '}
+        <a className="text-primary underline" href="mailto:privacy@6figjobs.com">
+          privacy@6figjobs.com
+        </a>
+        . The signup pop-up remembers on your device (in your browser’s local storage, not a cookie) that you closed it
+        or signed up, so it does not keep appearing.
+      </p>
+
+      <h2 className="mt-10 text-xl font-semibold text-foreground">
         How we use information
       </h2>
       <ul className="mt-4 list-disc space-y-3 pl-6 text-muted-foreground">
