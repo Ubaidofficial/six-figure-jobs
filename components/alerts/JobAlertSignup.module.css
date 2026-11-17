@@ -20,6 +20,28 @@
   width: 100%;
 }
 
+/* Inside the corner popup: no frame of its own (the card has one), one column, the form wraps. */
+.popup {
+  grid-template-columns: 1fr;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.popup .form {
+  flex-wrap: wrap;
+}
+
+.popup .input {
+  flex: 1 1 12rem;
+  width: auto;
+}
+
+.popup .done {
+  grid-column: 1 / -1;
+}
+
 .text {
   min-width: 0;
 }

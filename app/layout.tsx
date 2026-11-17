@@ -8,6 +8,7 @@ import Script from 'next/script'
 import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
+import { JobAlertPopup } from '@/components/alerts/JobAlertPopup'
 import ErrorTracker from '@/components/ErrorTracker'
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
 import { RouteTransition } from '@/components/ui/RouteTransition'
@@ -120,9 +121,12 @@ export default function RootLayout({
           <Footer />
         </div>
         <FeedbackWidget />
+        <JobAlertPopup />
         <ErrorTracker />
         <ScrollReveal />
         <RouteTransition />
+        {/* SourceTrack attribution tag (loads before the other analytics scripts below) */}
+        <Script src="https://api.srctk.com/tracker.min.js" strategy="afterInteractive" data-site-key="929382d1-ca2b-4559-9896-580f499039f6" />
         {/* Google Analytics 4: loads only when NEXT_PUBLIC_GA_MEASUREMENT_ID is set to a G- id (inlined at build time) */}
         {GA_MEASUREMENT_ID ? (
           <>
