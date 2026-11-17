@@ -6,6 +6,8 @@ import {
   countRemoteByRegion,
   isWorldwideLocationText,
   normalizeRemoteRegionSlug,
+  regionTextWhere,
+  regionsForLocationText,
   remoteRegionDef,
   remoteRegionWhere,
   visibleHubRegionSlugs,
@@ -149,5 +151,50 @@ describe('hub chips', () => {
 
   it('treats a missing count as none', () => {
     expect(visibleHubRegionSlugs({ 'us-only': 3 }, null)).toEqual(['us-only'])
+  })
+})
+
+describe('regions named in the location text of a remote job with no country', () => {
+  it('reads North America and Americas as US and Canada, Europe as Europe and EMEA', () => {
+    expect(regionsForLocationText('North America')).toEqual(['us-only', 'canada'])
+    expect(regionsForLocationText('Americas Remote')).toEqual(['us-only', 'canada'])
+    expect(regionsForLocationText('Remote - Europe')).toEqual(['europe', 'emea'])
+    expect(regionsForLocationText('EUROPE')).toEqual(['europe', 'emea'])
+  })
+
+  it('reads nothing from other text, from an empty text, or from a text that names the place only to leave it out', () => {
+    for (const t of ['Remote', 'Worldwide', 'Latin America', 'Asia Pacific', '', null, undefined]) expect(regionsForLocationText(t)).toEqual([])
+    for (const t of ['Americas excluding the US', 'Worldwide except Europe', 'Remote, outside North America', 'Europe - not UK', 'non-Europe']) {
+      expect(regionsForLocationText(t)).toEqual([])
+    }
+  })
+
+  it('is part of the US, Canada, Europe and EMEA filters, only for jobs with no country, and of no other region', () => {
+    for (const slug of ['us-only', 'canada', 'europe', 'emea']) {
+      const either = (remoteRegionWhere(slug) as any).AND[1].OR
+      const text = json(either)
+      expect(text).toContain('"countryCode":null')
+      expect(text).toContain('"locationRaw":{"contains"')
+      expect(text).toContain('"NOT"')
+      expect(either).toContainEqual(regionTextWhere(slug))
+    }
+    for (const slug of ['australia', 'apac', 'middle-east', 'uk-ireland', 'global']) expect(regionTextWhere(slug)).toBeNull()
+    expect(json(remoteRegionWhere('australia'))).not.toContain('north america')
+  })
+
+  it('adds the text matches to the per-country counts, and to no other region', () => {
+    const out = countRemoteByRegion([{ code: 'US', count: 274 }, { code: 'CA', count: 70 }, { code: 'DE', count: 3 }], 41, {
+      'us-only': 63,
+      canada: 63,
+      europe: 9,
+      emea: 9,
+    })
+    expect(out['us-only']).toBe(337)
+    expect(out.canada).toBe(133)
+    expect(out.europe).toBe(12)
+    expect(out.emea).toBe(12)
+    expect(out.australia).toBe(0)
+    expect(out.global).toBe(41)
+    expect(countRemoteByRegion([{ code: 'US', count: 5 }], 1)['us-only']).toBe(5) // no text counts given: as before
   })
 })
