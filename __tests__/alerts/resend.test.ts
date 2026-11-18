@@ -49,10 +49,23 @@ describe('sending through Resend', () => {
     await expect(done).resolves.toBeUndefined()
   })
 
-  it('reports other refusals without the response body (it can echo the address)', async () => {
+  it('reports other refusals without any address from the response body', async () => {
     const fetchImpl = jest.fn().mockResolvedValue(reply(422, '{"message":"jane@example.com is invalid"}'))
-    await expect(sendViaResend(mail, 'k', 'f', fetchImpl as never)).rejects.toThrow('email provider refused the email (HTTP 422)')
+    await expect(sendViaResend(mail, 'k', 'f', fetchImpl as never)).rejects.toThrow('email provider refused the email (HTTP 422 [address] is invalid)')
     await expect(sendViaResend(mail, 'k', 'f', fetchImpl as never)).rejects.not.toThrow(/jane/)
+  })
+
+  it("names Resend's reason so a refusal can be fixed, with addresses removed", async () => {
+    const body = JSON.stringify({ statusCode: 400, name: 'validation_error', message: 'Invalid `from` field. "Jane <jane@example.com>"\nis not valid.' })
+    const fetchImpl = jest.fn().mockImplementation(async () => reply(400, body))
+    const err: Error = await sendViaResend(mail, 'k', 'f', fetchImpl as never).catch((e) => e)
+    expect(err.message).toBe('email provider refused the email (HTTP 400 validation_error: Invalid `from` field. "Jane <[address]>" is not valid.)')
+    expect(err.message).not.toMatch(/jane@/)
+  })
+
+  it('still reports the status when the refusal has no readable body', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(reply(400, 'not json'))
+    await expect(sendViaResend(mail, 'k', 'f', fetchImpl as never)).rejects.toThrow(/^email provider refused the email \(HTTP 400\)$/)
   })
 })
 
