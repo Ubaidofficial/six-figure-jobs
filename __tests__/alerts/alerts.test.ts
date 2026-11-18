@@ -81,7 +81,7 @@ describe('alert filters', () => {
       'Senior Software Engineer jobs · Remote (Europe)',
     )
     expect(buildAlertLabel({ keyword: 'rust', countryCode: 'US', minAnnual: 150000, currency: 'USD' })).toBe(
-      '“rust” jobs · USA · $150k+',
+      'Rust jobs · USA · $150k+',
     )
     expect(buildAlertLabel({ remoteOnly: true, visaSponsorship: true })).toBe('Six-figure jobs · Remote · Visa sponsorship')
   })
@@ -156,6 +156,19 @@ describe('emails', () => {
     expect(mail.subject).toBe('Confirm your job alert: Six-figure jobs')
     expect(mail.html).toContain(links.manage)
     expect(mail.html.match(/href=/g)).toHaveLength(1)
+  })
+
+  it('confirmation email says what the alert sends and that the page has one more button', () => {
+    const mail = buildConfirmationEmail({ label: 'Six-figure jobs', frequency: 'daily', links, postalAddress: '1 Main St' })
+    for (const body of [mail.html, mail.text]) {
+      expect(body).toContain('Up to 10 new jobs that match this search, daily.')
+      expect(body).toContain('one last Confirm button')
+      expect(body).toContain(links.manage)
+    }
+    // Inbox preview text, hidden in the body.
+    expect(mail.html).toContain('One more click and new matching jobs arrive daily.')
+    const weekly = buildConfirmationEmail({ label: 'Six-figure jobs', frequency: 'weekly', links, postalAddress: '1 Main St' })
+    expect(weekly.text).toContain('Up to 20 new jobs that match this search, weekly.')
   })
 })
 

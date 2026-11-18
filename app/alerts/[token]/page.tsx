@@ -6,9 +6,12 @@ import type { Metadata } from 'next'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 
-import { alertsEnabled } from '@/lib/alerts/config'
-import { buildAlertLabel, sanitizeAlertFilters } from '@/lib/alerts/filters'
+import { alertsEnabled, DIGEST_SIZE, type AlertFrequency } from '@/lib/alerts/config'
+import { alertQueryInput, buildAlertLabel, sanitizeAlertFilters } from '@/lib/alerts/filters'
 import { findAlertByToken, searchUrlFor } from '@/lib/alerts/service'
+import { queryJobs } from '@/lib/jobs/queryJobs'
+import JobList from '@/app/components/JobList'
+import { AlertConfirmedEvent } from '@/components/alerts/AlertConfirmedEvent'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +22,7 @@ export const metadata: Metadata = {
 }
 
 const DONE: Record<string, string> = {
-  confirm: 'Your alert is on.',
+  confirm: 'You are subscribed. Your alert is on.',
   daily: 'You will now get this alert daily.',
   weekly: 'You will now get this alert weekly.',
   unsubscribe: 'You are unsubscribed. No more emails will be sent for this alert.',
@@ -55,25 +58,62 @@ export default async function AlertPage({
     </form>
   )
 
+  // The newest jobs this alert matches, so the page shows what the emails will hold. Never blocks the page.
+  const matches =
+    alert.status === 'unsubscribed'
+      ? null
+      : await queryJobs({
+          ...alertQueryInput(filters),
+          sortBy: 'date',
+          pageSize: 5,
+        }).catch(() => null)
+  const matchesBlock =
+    matches && matches.jobs.length > 0 ? (
+      <section className="mt-12" aria-labelledby="alert-matches">
+        <h2 id="alert-matches" className="text-lg font-semibold text-foreground">
+          Newest matching jobs
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {matches.total.toLocaleString('en-US')} open {matches.total === 1 ? 'job matches' : 'jobs match'} this alert
+          today. Emails hold only the new ones.
+        </p>
+        <div className="mt-4">
+          <JobList jobs={matches.jobs} />
+        </div>
+      </section>
+    ) : null
+  const frequency = (alert.frequency in DIGEST_SIZE ? alert.frequency : 'weekly') as AlertFrequency
+  const when = frequency === 'instant' ? 'as soon as they are posted' : frequency
+
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-12">
+    <main className="mx-auto w-full max-w-3xl px-4 py-12">
       <p className="text-sm text-muted-foreground">Job alert</p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{label}</h1>
 
+      {done === DONE.confirm ? <AlertConfirmedEvent frequency={alert.frequency} /> : null}
       {done ? (
-        <p role="status" className="mt-6 rounded-lg border border-border bg-muted px-4 py-3 text-foreground">
+        <p
+          role="status"
+          className="mt-6 rounded-lg border border-lime-600/40 bg-lime-500/10 px-4 py-3 font-medium text-foreground"
+        >
           {done}
         </p>
       ) : null}
 
       {alert.status === 'pending' ? (
-        <section className="mt-8">
-          <p className="text-muted-foreground">Confirm to start getting new matching jobs by email, {alert.frequency}.</p>
+        <section className="mt-8 rounded-2xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">One last step</h2>
+          <p className="mt-1 text-muted-foreground">Click below to start getting new matching jobs by email, {when}.</p>
           <div className="mt-4">
             <Action value="confirm" kind={primary}>
               Confirm alert
             </Action>
           </div>
+          <ul className="mt-6 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>Up to {DIGEST_SIZE[frequency]} new matching jobs per email.</li>
+            <li>No email when nothing new has come in.</li>
+            <li>Unsubscribe from any email in one click.</li>
+          </ul>
         </section>
       ) : alert.status === 'unsubscribed' ? (
         <section className="mt-8">
@@ -83,30 +123,43 @@ export default async function AlertPage({
           </div>
         </section>
       ) : (
-        <section className="mt-8 space-y-6">
-          <div>
-            <h2 className="font-semibold text-foreground">How often</h2>
-            <p className="mt-1 text-muted-foreground">
-              Now: <strong>{alert.frequency}</strong>. Emails only go out when there are new matching jobs.
+        <>
+          {done === DONE.confirm ? (
+            <p className="mt-6 text-muted-foreground">
+              Your first email comes with the next new jobs that match, {when}. To keep it out of spam, add the sender
+              to your contacts.
             </p>
-            <div className="mt-3 flex gap-3">
-              <Action value={alert.frequency === 'daily' ? 'weekly' : 'daily'}>
-                {alert.frequency === 'daily' ? 'Switch to weekly' : 'Switch to daily'}
-              </Action>
+          ) : null}
+          {matchesBlock}
+          <section className="mt-12 space-y-6" aria-label="Manage this alert">
+            <div>
+              <h2 className="font-semibold text-foreground">How often</h2>
+              <p className="mt-1 text-muted-foreground">
+                Now: <strong>{alert.frequency}</strong>. Emails only go out when there are new matching jobs.
+              </p>
+              <div className="mt-3 flex gap-3">
+                <Action value={alert.frequency === 'daily' ? 'weekly' : 'daily'}>
+                  {alert.frequency === 'daily' ? 'Switch to weekly' : 'Switch to daily'}
+                </Action>
+              </div>
             </div>
-          </div>
-          <div>
-            <h2 className="font-semibold text-foreground">Stop this alert</h2>
-            <div className="mt-3">
-              <Action value="unsubscribe">Unsubscribe</Action>
+            <div>
+              <h2 className="font-semibold text-foreground">Stop this alert</h2>
+              <div className="mt-3">
+                <Action value="unsubscribe">Unsubscribe</Action>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </>
       )}
 
-      <p className="mt-10 text-sm text-muted-foreground">
+      {alert.status === 'pending' ? matchesBlock : null}
+
+      <p className="mt-8 text-sm text-muted-foreground">
         <Link className="underline" href={searchUrlFor(filters)}>
-          See matching jobs now
+          {matches && matches.total > 5
+            ? `See all ${matches.total.toLocaleString('en-US')} matching jobs`
+            : 'See matching jobs now'}
         </Link>
       </p>
     </main>

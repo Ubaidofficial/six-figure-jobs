@@ -26,6 +26,11 @@
   flex-wrap: wrap;
 }
 
+/* The signup hides itself on an alert's own page (JobAlertSignup); take its frame away with it. */
+.newsletter:empty {
+  display: none;
+}
+
 .newsletterTitle {
   font-family: var(--font-display);
   font-weight: 500;
