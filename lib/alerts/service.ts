@@ -95,6 +95,12 @@ async function resendReason(res: Response): Promise<string> {
   }
 }
 
+/** EMAIL_FROM with the site's name in front when it is a bare address, so inboxes show "Six Figure Jobs", not the address. */
+export function senderWithName(from: string | undefined): string {
+  const f = String(from ?? '').trim()
+  return f && !f.includes('<') ? `Six Figure Jobs <${f}>` : f
+}
+
 /**
  * Sends from EMAIL_FROM through Resend's API when RESEND_API_KEY is set, else through the SMTP server in EMAIL_SERVER.
  * With ALERTS_DRY_RUN_DIR set, writes each email there as HTML and text instead (to preview them); nothing is sent.
@@ -108,10 +114,11 @@ export const sendMail: SendMail = async (mail) => {
     await writeFile(`${base}.txt`, [`To: ${mail.to}`, `Subject: ${mail.subject}`, ...Object.entries(mail.headers ?? {}).map(([k, v]) => `${k}: ${v}`), '', mail.text].join('\n'))
     return
   }
+  const from = senderWithName(process.env.EMAIL_FROM)
   const apiKey = process.env.RESEND_API_KEY?.trim()
-  if (apiKey) return sendViaResend(mail, apiKey, String(process.env.EMAIL_FROM))
+  if (apiKey) return sendViaResend(mail, apiKey, from)
   transport ??= createTransport(String(process.env.EMAIL_SERVER))
-  const result = await transport.sendMail({ from: process.env.EMAIL_FROM, ...mail })
+  const result = await transport.sendMail({ from, ...mail })
   // Deliberately generic: the transport's message can contain the recipient address.
   if ((result.rejected ?? []).length > 0) throw new Error('alert email was not accepted')
 }

@@ -133,9 +133,26 @@
 }
 
 .done {
-  grid-column: auto;
+  font-size: 0.875rem;
+  color: var(--color-text-1, var(--color-text-0));
+}
+
+.done p {
+  margin: 0;
+}
+
+.done strong {
+  color: var(--color-text-0);
+  overflow-wrap: anywhere;
+}
+
+.done .doneTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-0);
 }
 

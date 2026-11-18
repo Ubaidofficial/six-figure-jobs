@@ -1,7 +1,7 @@
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
 
 import { alertsEnabled } from '@/lib/alerts/config'
-import { SendLimitError, sendViaResend } from '@/lib/alerts/service'
+import { SendLimitError, senderWithName, sendViaResend } from '@/lib/alerts/service'
 
 const mail = {
   to: 'jane@example.com',
@@ -75,5 +75,14 @@ describe('alerts switch with Resend', () => {
     expect(alertsEnabled({ ...base, RESEND_API_KEY: 're_x' })).toBe(true)
     expect(alertsEnabled({ ...base, EMAIL_SERVER: 'smtp://x' })).toBe(true)
     expect(alertsEnabled(base)).toBe(false)
+  })
+})
+
+describe('sender name', () => {
+  it('puts the site name in front of a bare address and leaves a named sender alone', () => {
+    expect(senderWithName('alerts@6figjobs.com')).toBe('Six Figure Jobs <alerts@6figjobs.com>')
+    expect(senderWithName(' alerts@6figjobs.com\n')).toBe('Six Figure Jobs <alerts@6figjobs.com>')
+    expect(senderWithName('6figjobs <alerts@6figjobs.com>')).toBe('6figjobs <alerts@6figjobs.com>')
+    expect(senderWithName(undefined)).toBe('')
   })
 })

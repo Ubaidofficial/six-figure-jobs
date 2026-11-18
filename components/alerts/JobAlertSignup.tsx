@@ -3,7 +3,8 @@
 // "Get these jobs by email": signs the visitor up for an alert on the search they are looking at. The filters are the
 // listing page's own job query (checked again on the server); the label is built on the server from them.
 import * as React from 'react'
-import { BellRing } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { BellRing, MailCheck } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import type { AlertFilters } from '@/lib/alerts/filters'
@@ -33,6 +34,7 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className, 
   // shows the suggestion a moment before the click, and that must not count as the visitor having seen it.
   const warnedFor = React.useRef<string | null>(null)
   const id = React.useId()
+  const pathname = usePathname()
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -63,6 +65,9 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className, 
     }
   }
 
+  // The footer's box would sit under an alert's own page, offering the same signup the visitor just made.
+  if (variant === 'footer' && pathname?.startsWith('/alerts/')) return null
+
   return (
     <section className={cn(styles.box, variant === 'footer' && styles.footer, variant === 'popup' && styles.popup, className)} aria-labelledby={`${id}-title`}>
       <div className={styles.text}>
@@ -74,9 +79,16 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className, 
       </div>
 
       {state.kind === 'done' ? (
-        <p role="status" className={styles.done}>
-          {state.message}
-        </p>
+        <div role="status" className={styles.done}>
+          <p className={styles.doneTitle}>
+            <MailCheck aria-hidden className={styles.icon} />
+            Almost done: confirm in your inbox
+          </p>
+          <p>
+            We sent a link to <strong>{email.trim()}</strong>. Open it to switch your alert on. Not there in a minute? Check spam
+            or promotions. If you already get this alert, nothing changes.
+          </p>
+        </div>
       ) : (
         <form className={styles.form} onSubmit={onSubmit} noValidate>
           <label htmlFor={`${id}-email`} className={styles.srOnly}>

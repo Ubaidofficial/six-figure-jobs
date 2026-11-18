@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 
-import { alertsEnabled } from '@/lib/alerts/config'
+import { alertsEnabled, DIGEST_SIZE, type AlertFrequency } from '@/lib/alerts/config'
 import { buildAlertLabel, sanitizeAlertFilters } from '@/lib/alerts/filters'
 import { findAlertByToken, searchUrlFor } from '@/lib/alerts/service'
 
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 }
 
 const DONE: Record<string, string> = {
-  confirm: 'Your alert is on.',
+  confirm: 'You are subscribed. Your alert is on.',
   daily: 'You will now get this alert daily.',
   weekly: 'You will now get this alert weekly.',
   unsubscribe: 'You are unsubscribed. No more emails will be sent for this alert.',
@@ -55,25 +55,34 @@ export default async function AlertPage({
     </form>
   )
 
+  const frequency = (alert.frequency in DIGEST_SIZE ? alert.frequency : 'weekly') as AlertFrequency
+  const when = frequency === 'instant' ? 'as soon as they are posted' : frequency
+
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-12">
       <p className="text-sm text-muted-foreground">Job alert</p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{label}</h1>
 
       {done ? (
-        <p role="status" className="mt-6 rounded-lg border border-border bg-muted px-4 py-3 text-foreground">
+        <p role="status" className="mt-6 rounded-lg border border-lime-600/40 bg-lime-500/10 px-4 py-3 font-medium text-foreground">
           {done}
         </p>
       ) : null}
 
       {alert.status === 'pending' ? (
-        <section className="mt-8">
-          <p className="text-muted-foreground">Confirm to start getting new matching jobs by email, {alert.frequency}.</p>
+        <section className="mt-8 rounded-2xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">One last step</h2>
+          <p className="mt-1 text-muted-foreground">Click below to start getting new matching jobs by email, {when}.</p>
           <div className="mt-4">
             <Action value="confirm" kind={primary}>
               Confirm alert
             </Action>
           </div>
+          <ul className="mt-6 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>Up to {DIGEST_SIZE[frequency]} new matching jobs per email.</li>
+            <li>No email when nothing new has come in.</li>
+            <li>Unsubscribe from any email in one click.</li>
+          </ul>
         </section>
       ) : alert.status === 'unsubscribed' ? (
         <section className="mt-8">
@@ -84,6 +93,12 @@ export default async function AlertPage({
         </section>
       ) : (
         <section className="mt-8 space-y-6">
+          {done === DONE.confirm ? (
+            <p className="text-muted-foreground">
+              Your first email comes with the next new jobs that match, {when}. To keep it out of spam, add the sender to your
+              contacts.
+            </p>
+          ) : null}
           <div>
             <h2 className="font-semibold text-foreground">How often</h2>
             <p className="mt-1 text-muted-foreground">

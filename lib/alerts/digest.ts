@@ -114,26 +114,47 @@ function footerHtml(links: AlertLinks, postalAddress: string, why: string): stri
 ${escapeHtml(BRAND)} · ${escapeHtml(oneLine(postalAddress))}`
 }
 
-/** The double opt-in email. Nothing is mailed to the address until its link is used. */
+/**
+ * The double opt-in email. Nothing is mailed to the address until its link is used. The link opens the alert's page,
+ * where one more click confirms (a button, because mail scanners open every link), so the email says so up front.
+ */
 export function buildConfirmationEmail(input: { label: string; frequency: string; links: AlertLinks; postalAddress: string }) {
   const label = oneLine(input.label)
-  const freq = FREQUENCY_WORD[asFrequency(input.frequency)]
+  const frequency = asFrequency(input.frequency)
+  const freq = FREQUENCY_WORD[frequency]
+  const size = DIGEST_SIZE[frequency]
   const subject = `Confirm your job alert: ${label}`
+  const preview = `One more click and new matching jobs arrive ${freq}.`
+  const promises = [
+    `Up to ${size} new jobs that match this search, ${freq}.`,
+    'No email when nothing new has come in.',
+    'Unsubscribe from any email in one click.',
+  ]
   const text = [
     `Confirm your ${BRAND} alert`,
     '',
-    `${label}, ${freq}.`,
+    `You asked for: ${label}, ${freq}.`,
     '',
     `Confirm: ${input.links.manage}`,
+    '(The link opens a page on our site with one last Confirm button.)',
+    '',
+    ...promises.map((p) => `- ${p}`),
     '',
     'If you did not sign up, ignore this email: nothing more will be sent.',
     '',
     `${BRAND} · ${oneLine(input.postalAddress)}`,
   ].join('\n')
-  const inner = `<p style="font-size:18px;font-weight:600;margin:0 0 8px">Confirm your job alert</p>
-<p style="margin:0 0 20px;color:${MUTED}">${escapeHtml(label)}, ${freq}.</p>
-<p style="margin:0 0 24px"><a href="${escapeHtml(input.links.manage)}" style="display:inline-block;background:${ACCENT};color:#0a0a0a;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">Confirm alert</a></p>
-<p style="font-size:14px;color:${MUTED};margin:0">If you did not sign up, ignore this email: nothing more will be sent.</p>`
+  const manage = escapeHtml(input.links.manage)
+  const inner = `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(preview)}</div>
+<p style="font-size:15px;font-weight:800;letter-spacing:-0.02em;margin:0 0 20px">six figure jobs</p>
+<p style="font-size:20px;font-weight:700;margin:0 0 8px">Confirm your job alert</p>
+<p style="margin:0 0 20px;color:${MUTED}">You asked for <strong style="color:${INK}">${escapeHtml(label)}</strong>, ${freq}.</p>
+<p style="margin:0 0 8px"><a href="${manage}" style="display:inline-block;background:${ACCENT};color:#0a0a0a;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">Confirm alert</a></p>
+<p style="font-size:13px;color:${MUTED};margin:0 0 24px">Opens a page on our site with one last Confirm button.</p>
+<p style="font-weight:600;margin:0 0 8px">What you will get</p>
+<ul style="margin:0 0 24px;padding-left:20px;color:${MUTED};line-height:22px">${promises.map((p) => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
+<p style="font-size:13px;color:${MUTED};margin:0 0 8px">Button not working? Paste this into your browser:<br><span style="word-break:break-all;color:${INK}">${manage}</span></p>
+<p style="font-size:13px;color:${MUTED};margin:0">If you did not sign up, ignore this email: nothing more will be sent.</p>`
   const footer = `${escapeHtml(BRAND)} · ${escapeHtml(oneLine(input.postalAddress))}`
   return { subject, text, html: shell(inner, footer) }
 }
