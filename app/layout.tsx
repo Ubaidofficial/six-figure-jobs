@@ -12,6 +12,7 @@ import { JobAlertPopup } from '@/components/alerts/JobAlertPopup'
 import ErrorTracker from '@/components/ErrorTracker'
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
 import { RouteTransition } from '@/components/ui/RouteTransition'
+import { GtmStartIfMissing } from '@/components/analytics/GtmStartIfMissing'
 import { getSiteUrl } from '../lib/seo/site'
 import { PreloadResources } from './preload-resources'
 
@@ -130,6 +131,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           />
         </noscript>
         <PreloadResources />
+        <GtmStartIfMissing id="GTM-PV6WJZ8J" />
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
 
