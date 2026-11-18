@@ -9,6 +9,8 @@ import { BellRing, MailCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AlertFilters } from '@/lib/alerts/filters'
 import { suggestEmailFix } from '@/lib/alerts/email'
+import { cleanAlertKeyword } from '@/lib/alerts/keyword'
+import { pushAlertEvent } from '@/lib/alerts/track'
 
 import styles from './JobAlertSignup.module.css'
 
@@ -24,10 +26,33 @@ type Props = {
 
 type State = { kind: 'idle' | 'sending' | 'done' | 'error'; message?: string }
 
+// Offered while typing in the role field; any other role or skill works too.
+const ROLE_IDEAS = [
+  'Software Engineer',
+  'Senior Software Engineer',
+  'Engineering Manager',
+  'Product Manager',
+  'Data Scientist',
+  'Machine Learning Engineer',
+  'Data Engineer',
+  'DevOps Engineer',
+  'Product Designer',
+  'Account Executive',
+  'Solutions Engineer',
+  'Marketing Manager',
+]
+
+const titleCase = (s: string) => s.replace(/(^|[\s-])\p{L}/gu, (m) => m.toUpperCase())
+
 export function JobAlertSignup({ filters, label, variant = 'inline', className, onSuccess }: Props) {
   const [email, setEmail] = React.useState('')
   const [frequency, setFrequency] = React.useState<'weekly' | 'daily' | 'instant'>('weekly')
   const [state, setState] = React.useState<State>({ kind: 'idle' })
+  // The footer and the popup sign up for "all jobs"; there the visitor can narrow it to a role and to remote work.
+  // A listing page's box already carries that page's search, so it does not ask.
+  const canNarrow = variant !== 'inline' && Object.keys(filters).length === 0
+  const [role, setRole] = React.useState('')
+  const [remote, setRemote] = React.useState(false)
   // "name@gmial.com" -> offer "name@gmail.com". Checked when the field is left and on submit; never changed silently.
   const [suggestion, setSuggestion] = React.useState<string | null>(null)
   // The fix a submit has already stopped for. Only a submit counts: clicking the button blurs the field first, which
@@ -46,16 +71,30 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className, 
       setSuggestion(fix)
       return
     }
+    const keyword = role.trim() ? cleanAlertKeyword(role) : null
+    if (role.trim() && !keyword) {
+      setState({ kind: 'error', message: 'Use only letters and numbers for the role, for example "Product manager".' })
+      return
+    }
+    const chosen: AlertFilters = canNarrow
+      ? { ...filters, ...(keyword ? { keyword } : {}), ...(remote ? { remoteMode: 'remote' as const } : {}) }
+      : filters
     setState({ kind: 'sending' })
     try {
       const res = await fetch('/api/alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, frequency, filters, website, source: window.location.pathname }),
+        body: JSON.stringify({ email, frequency, filters: chosen, website, source: window.location.pathname }),
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string }
       if (res.ok && body.ok) {
         setState({ kind: 'done', message: body.message })
+        pushAlertEvent('job_alert_signup', {
+          alert_form: variant,
+          alert_frequency: frequency,
+          alert_has_role: Boolean(keyword) || Boolean(filters.roleSlugs?.length),
+          alert_remote: remote || Boolean(filters.remoteMode || filters.remoteOnly),
+        })
         onSuccess?.()
       } else {
         setState({ kind: 'error', message: body.message || 'Something went wrong. Please try again.' })
@@ -75,7 +114,13 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className, 
           <BellRing aria-hidden className={styles.icon} />
           Get new jobs like these by email
         </p>
-        <p className={styles.label}>{label}</p>
+        <p className={styles.label}>
+          {canNarrow && (role.trim() || remote)
+            ? [`${role.trim() ? titleCase(role.trim().replace(/\s+/g, ' ')) : 'Six-figure'} jobs`, remote ? 'Remote' : null]
+                .filter(Boolean)
+                .join(' · ')
+            : label}
+        </p>
       </div>
 
       {state.kind === 'done' ? (
@@ -111,6 +156,34 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className, 
             aria-describedby={suggestion ? `${id}-suggestion` : undefined}
             className={styles.input}
           />
+          {canNarrow ? (
+            <>
+              <label htmlFor={`${id}-role`} className={styles.srOnly}>
+                Role or skill (optional)
+              </label>
+              <input
+                id={`${id}-role`}
+                type="text"
+                name="role"
+                list={`${id}-roles`}
+                maxLength={60}
+                autoComplete="off"
+                placeholder="Any role, or e.g. Product manager"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className={cn(styles.input, styles.role)}
+              />
+              <datalist id={`${id}-roles`}>
+                {ROLE_IDEAS.map((r) => (
+                  <option key={r} value={r} />
+                ))}
+              </datalist>
+              <label className={styles.toggle}>
+                <input type="checkbox" checked={remote} onChange={(e) => setRemote(e.target.checked)} />
+                Remote only
+              </label>
+            </>
+          ) : null}
           <label htmlFor={`${id}-frequency`} className={styles.srOnly}>
             How often
           </label>

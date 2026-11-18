@@ -81,7 +81,7 @@ describe('alert filters', () => {
       'Senior Software Engineer jobs · Remote (Europe)',
     )
     expect(buildAlertLabel({ keyword: 'rust', countryCode: 'US', minAnnual: 150000, currency: 'USD' })).toBe(
-      '“rust” jobs · USA · $150k+',
+      'Rust jobs · USA · $150k+',
     )
     expect(buildAlertLabel({ remoteOnly: true, visaSponsorship: true })).toBe('Six-figure jobs · Remote · Visa sponsorship')
   })

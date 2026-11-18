@@ -38,6 +38,20 @@
   width: auto;
 }
 
+/* Footer: the panel has room for the two-line text above a full-width form. */
+.footer:has(.role) {
+  grid-template-columns: 1fr;
+}
+
+.footer .form {
+  flex-wrap: wrap;
+}
+
+.footer .input {
+  flex: 1 1 13rem;
+  width: auto;
+}
+
 .popup .done {
   grid-column: 1 / -1;
 }
@@ -93,6 +107,27 @@
 
 .select {
   padding: 0 8px;
+}
+
+.role {
+  width: 15rem;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  font-size: 0.875rem;
+  color: var(--color-text-0);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
 }
 
 .input:focus-visible,

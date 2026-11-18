@@ -13,6 +13,8 @@ import { countryName } from '@/lib/location/country'
 import { roleLabelFor } from '@/lib/roles/relatedRoles'
 import { formatCurrencyShort } from '@/lib/seo/salaryLabels'
 
+import { cleanAlertKeyword, looksLikeLink } from './keyword'
+
 export type AlertFilters = Pick<
   JobQueryInput,
   | 'roleSlugs'
@@ -35,7 +37,6 @@ const SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/
 const SHORT = /^[a-z0-9+][a-z0-9+-]{0,19}$/
 const TECH = /^[a-z0-9+#.][a-z0-9+#. -]{0,39}$/i
 // Letters (any language), digits, spaces and the few symbols job searches use (c++, c#, node.js, r&d, ui/ux).
-const KEYWORD = /^[\p{L}\p{N}][\p{L}\p{N} +#.&/-]{0,59}$/u
 const REGIONS = new Set(REMOTE_REGIONS.map((r) => r.slug))
 
 const slugList = (v: unknown, re: RegExp, max: number): string[] | undefined => {
@@ -47,8 +48,6 @@ const slugList = (v: unknown, re: RegExp, max: number): string[] | undefined => 
 const money = (v: unknown): number | undefined =>
   typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= 10_000_000 ? v : undefined
 
-/** A link or an address has no place in a job search, and would turn the confirmation email into a carrier for one. */
-const looksLikeLink = (s: string) => /(https?|www\.|\.(com|net|org|io|ru|xyz|info|top|co)\b|@)/i.test(s)
 
 /** The browser's filters (any JSON) to the alert's filters, or null when nothing valid is left to search for. */
 export function sanitizeAlertFilters(raw: unknown): AlertFilters | null {
@@ -65,10 +64,7 @@ export function sanitizeAlertFilters(raw: unknown): AlertFilters | null {
   if (r.remoteOnly === true) f.remoteOnly = true
   if (typeof r.remoteRegion === 'string' && REGIONS.has(r.remoteRegion)) f.remoteRegion = r.remoteRegion
   if (typeof r.tech === 'string' && TECH.test(r.tech.trim()) && !looksLikeLink(r.tech)) f.tech = r.tech.trim().toLowerCase()
-  if (typeof r.keyword === 'string') {
-    const k = r.keyword.trim().replace(/\s+/g, ' ')
-    if (KEYWORD.test(k) && !looksLikeLink(k)) f.keyword = k.toLowerCase()
-  }
+  if (typeof r.keyword === 'string') f.keyword = cleanAlertKeyword(r.keyword) ?? undefined
   if (r.visaSponsorship === true) f.visaSponsorship = true
   if (typeof r.currency === 'string' && /^[A-Z]{3}$/.test(r.currency)) f.currency = r.currency
   f.minAnnual = money(r.minAnnual)
@@ -107,7 +103,7 @@ export function buildAlertLabel(f: AlertFilters): string {
   if (f.roleSlugs?.length) {
     what = roleLabelFor(f.roleSlugs[0]) + (f.roleSlugs.length > 1 ? ` +${f.roleSlugs.length - 1}` : '')
   } else if (f.keyword) {
-    what = `“${f.keyword}”`
+    what = titleCase(f.keyword)
   } else if (f.tech) {
     what = titleCase(f.tech)
   } else if (f.skillSlugs?.length) {

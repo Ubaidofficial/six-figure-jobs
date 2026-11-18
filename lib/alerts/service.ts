@@ -11,6 +11,7 @@ import { createTransport, type Transporter } from 'nodemailer'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, jobListingSelect } from '@/lib/jobs/queryJobs'
 import { buildSalaryText } from '@/lib/jobs/salary'
+import { buildLogoUrl } from '@/lib/companies/logo'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import { describeJobLocation } from '@/lib/location/jobLocation'
 import { createRateLimiter } from '@/lib/jobs/jobReport'
@@ -266,6 +267,8 @@ const CANDIDATES = 80
 type ListingRow = Prisma.JobGetPayload<{ select: typeof jobListingSelect }>
 
 function toDigestJob(job: ListingRow, base: string): DigestJob {
+  const company = job.companyRef?.name || job.company
+  const logo = buildLogoUrl(job.companyRef?.logoUrl ?? job.companyLogo ?? null, job.companyRef?.website ?? null, company)
   return {
     id: job.id,
     title: job.title,
@@ -273,6 +276,8 @@ function toDigestJob(job: ListingRow, base: string): DigestJob {
     salary: buildSalaryText(job as never),
     location: describeJobLocation(job as never).text || null,
     url: `${base}${buildJobSlugHref(job as never)}?${UTM}&utm_campaign=digest`,
+    // Email clients need absolute URLs; the site's own /logo/ route is made absolute.
+    logo: logo ? (logo.startsWith('/') ? `${base}${logo}` : logo) : null,
   }
 }
 

@@ -4,6 +4,8 @@
 //
 // Job titles and company names are written by employers: every value put into HTML is escaped.
 
+import { fallbackHue, getInitials } from '@/lib/companies/logoFallback'
+
 import { DIGEST_SIZE, DUE_AFTER_MS, LOOKBACK_MS, MAX_JOBS_PER_COMPANY, type AlertFrequency } from './config'
 
 export type DigestJob = {
@@ -13,6 +15,8 @@ export type DigestJob = {
   salary: string | null
   location: string | null
   url: string
+  /** Absolute logo URL, or null for a letter tile. */
+  logo?: string | null
 }
 
 export type AlertLinks = {
@@ -159,6 +163,40 @@ export function buildConfirmationEmail(input: { label: string; frequency: string
   return { subject, text, html: shell(inner, footer) }
 }
 
+/** Inbox preview line: the best-paid job, so the reason to open is visible before opening. */
+function previewOf(jobs: DigestJob[]): string {
+  const top = jobs[0]
+  if (!top) return ''
+  return oneLine(`${top.title} at ${top.company}${top.salary ? `, ${top.salary}` : ''}`)
+}
+
+/** Company logo on a white tile (a dark logo on a dark tile disappears), or the company's initials. */
+function logoCell(j: DigestJob): string {
+  const box = 'width:40px;height:40px;border-radius:8px;border:1px solid #ececE6;background:#ffffff'
+  if (j.logo && /^https:\/\//.test(j.logo)) {
+    return `<img src="${escapeHtml(j.logo)}" width="40" height="40" alt="" style="${box};display:block;object-fit:contain">`
+  }
+  const hue = fallbackHue(j.company)
+  return `<div style="${box};background:hsl(${hue},45%,92%);color:hsl(${hue},45%,28%);font-size:14px;font-weight:700;line-height:40px;text-align:center">${escapeHtml(getInitials(j.company))}</div>`
+}
+
+function digestJobRow(j: DigestJob): string {
+  const url = escapeHtml(j.url)
+  const where = [oneLine(j.company), j.location ? oneLine(j.location) : ''].filter(Boolean).map(escapeHtml).join(' · ')
+  const pay = j.salary
+    ? `<span style="display:inline-block;margin:8px 8px 0 0;padding:3px 10px;border-radius:999px;background:#ecfccb;color:#365314;font-size:13px;font-weight:700">${escapeHtml(oneLine(j.salary))}</span>`
+    : ''
+  return `<tr><td style="padding:16px 0;border-top:1px solid #ececE6">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td width="40" valign="top" style="width:40px">${logoCell(j)}</td>
+<td valign="top" style="padding-left:14px">
+<a href="${url}" style="font-size:16px;font-weight:700;line-height:22px;color:${INK};text-decoration:none">${escapeHtml(oneLine(j.title))}</a>
+<div style="font-size:14px;line-height:20px;color:${MUTED};margin-top:2px">${where}</div>
+${pay}<a href="${url}" style="display:inline-block;margin-top:8px;font-size:13px;font-weight:600;color:#3f6212">View job &rarr;</a>
+</td></tr></table>
+</td></tr>`
+}
+
 /** One digest: subject, plain text, HTML and the List-Unsubscribe headers Gmail and Yahoo require of bulk mail. */
 export function buildDigestEmail(input: {
   label: string
@@ -192,23 +230,16 @@ export function buildDigestEmail(input: {
     `${BRAND} · ${oneLine(input.postalAddress)}`,
   ].join('\n')
 
-  const rows = input.jobs
-    .map((j) => {
-      const meta = [j.salary ? `<strong style="color:${INK}">${escapeHtml(j.salary)}</strong>` : '', j.location ? escapeHtml(j.location) : '']
-        .filter(Boolean)
-        .join(' · ')
-      return `<tr><td style="padding:14px 0;border-bottom:1px solid #ececE6">
-<a href="${escapeHtml(j.url)}" style="font-size:16px;font-weight:600;color:${INK};text-decoration:none">${escapeHtml(oneLine(j.title))}</a>
-<div style="font-size:14px;color:${MUTED};margin-top:2px">${escapeHtml(oneLine(j.company))}</div>
-${meta ? `<div style="font-size:14px;color:${MUTED};margin-top:2px">${meta}</div>` : ''}
-</td></tr>`
-    })
-    .join('\n')
+  const rows = input.jobs.map((j) => digestJobRow(j)).join('\n')
+  const lead = more > 0 ? `Best paid first. ${more} more on the site.` : 'Best paid first.'
 
-  const inner = `<p style="font-size:13px;color:${MUTED};margin:0 0 4px">${escapeHtml(BRAND)} alert</p>
-<p style="font-size:20px;font-weight:600;margin:0 0 12px">${escapeHtml(subject)}</p>
+  const inner = `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(previewOf(input.jobs))}</div>
+<p style="font-size:15px;font-weight:800;letter-spacing:-0.02em;margin:0 0 20px">six figure jobs</p>
+<p style="font-size:13px;color:${MUTED};margin:0 0 4px">Your alert: ${escapeHtml(label)}</p>
+<p style="font-size:22px;font-weight:700;margin:0 0 4px">${n} new ${n === 1 ? 'job' : 'jobs'}</p>
+<p style="font-size:14px;color:${MUTED};margin:0 0 8px">${escapeHtml(lead)}</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
-<p style="margin:20px 0 0"><a href="${escapeHtml(input.links.search)}" style="display:inline-block;background:${ACCENT};color:#0a0a0a;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px">${more > 0 ? `See ${more} more` : 'See all matching jobs'}</a></p>`
+<p style="margin:24px 0 0"><a href="${escapeHtml(input.links.search)}" style="display:inline-block;background:${ACCENT};color:#0a0a0a;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">${more > 0 ? `See ${more} more` : 'See all matching jobs'}</a></p>`
 
   return {
     subject,
