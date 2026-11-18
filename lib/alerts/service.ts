@@ -76,7 +76,22 @@ export async function sendViaResend(mail: OutgoingMail, apiKey: string, from: st
       await sleep(1500)
       continue
     }
-    throw new Error(`email provider refused the email (HTTP ${res.status})`)
+    throw new Error(`email provider refused the email (HTTP ${res.status}${await resendReason(res)})`)
+  }
+}
+
+/**
+ * Resend's error name and message (https://resend.com/docs/api-reference/errors), on one line, with every email address
+ * replaced, so the log says which field or key was refused without recording anyone's address.
+ */
+async function resendReason(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { name?: unknown; message?: unknown }
+    const reason = [body.name, body.message].filter((v) => typeof v === 'string' && v).join(': ')
+    const safe = reason.replace(/[^\s<>"'`@]+@[^\s<>"'`]+/g, '[address]').replace(/\s+/g, ' ').trim().slice(0, 300)
+    return safe ? ` ${safe}` : ''
+  } catch {
+    return ''
   }
 }
 
