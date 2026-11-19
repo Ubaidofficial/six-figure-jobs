@@ -14,7 +14,7 @@ import { isHomepageFeatured } from '@/lib/jobs/latestSelection'
 import { publicJobId } from './publicJob'
 
 export const LATEST_FEED_TTL_MS = 15 * 1000
-export const FEED_SIZE = 12
+export const FEED_SIZE = 20
 const MAX_PER_COMPANY = 2
 
 export type FeedItem = {
