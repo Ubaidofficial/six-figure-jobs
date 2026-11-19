@@ -25,6 +25,9 @@ const MAX_OFFSET = 10_000
 const LOOKBACK_DAYS = Number(process.env.FREEHIRE_LOOKBACK_DAYS) || 30
 // Public limit is 120 requests/minute without a key; stay well under it.
 const PAGE_DELAY_MS = 700
+// Companies written to the database at once by ingestFreehireJobs. Below the 5-connection Prisma pool the sync scripts
+// get outside production (lib/prisma.ts), so no write waits for a free connection.
+const INGEST_CONCURRENCY = 4
 
 /**
  * One query per currency. `geo` narrows by freehire's region/country facets (unset = anywhere). `lookbackDays` gives a
@@ -540,7 +543,22 @@ export async function ingestFreehireJobs(inputs: BoardJobInput[]): Promise<Scrap
   } catch (error) {
     console.warn('[freehire] company website lookup skipped:', error instanceof Error ? error.message : error)
   }
-  for (const input of inputs) addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
+  // Each ingest waits on many sequential database round trips (about 1-1.6 s a job from GitHub's runners to the database
+  // in Europe), so one at a time the full sync ran past its 150-minute job limit on 2026-11-18. Jobs are written a few
+  // companies at a time; one company's jobs stay in order, so two of them never race to create the same company.
+  const groups = new Map<string, BoardJobInput[]>()
+  for (const input of inputs) {
+    const key = (input.rawCompanyName ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '') || `#${input.externalId}`
+    groups.set(key, [...(groups.get(key) ?? []), input])
+  }
+  const queue = [...groups.values()]
+  await Promise.all(
+    Array.from({ length: Math.min(INGEST_CONCURRENCY, queue.length) }, async () => {
+      for (let group = queue.shift(); group; group = queue.shift()) {
+        for (const input of group) addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
+      }
+    }),
+  )
   return stats
 }
 
