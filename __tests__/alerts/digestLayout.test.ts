@@ -29,7 +29,7 @@ describe('digest layout', () => {
 
   it('omits the pill when a job has no pay', () => {
     const mail = buildDigestEmail({ label: 'L', frequency: 'daily', jobs: [job({ salary: null })], totalNew: 1, links, postalAddress: 'A' })
-    expect(mail.html).not.toContain('#ecfccb')
+    expect(mail.html).not.toContain('class="x-pill"')
   })
 })
 
@@ -46,5 +46,29 @@ describe('role typed in the signup form', () => {
     const f = sanitizeAlertFilters({ keyword: 'Product manager', remoteMode: 'remote' })
     expect(f).toEqual({ keyword: 'product manager', remoteMode: 'remote' })
     expect(buildAlertLabel(f!)).toBe('Product Manager jobs · Remote')
+  })
+})
+
+describe('digest in light and dark mode', () => {
+  const now = Date.parse('2026-11-19T12:00:00Z')
+  const mail = buildDigestEmail({
+    label: 'Data Engineer jobs', frequency: 'daily', totalNew: 1, links, postalAddress: 'A', now,
+    jobs: [job({ remote: true, listedAt: '2026-11-17T09:00:00Z', logo: 'https://x.test/l.png' })],
+  })
+
+  it('declares both colour schemes and carries dark styles for clients that honour them', () => {
+    expect(mail.html).toContain('<meta name="color-scheme" content="light dark">')
+    expect(mail.html).toContain('@media (prefers-color-scheme:dark)')
+    expect(mail.html).toContain('[data-ogsc] .x-ink') // Outlook.com
+    // The brand is text, not an image that a dark inbox could hide.
+    expect(mail.html).toMatch(/class="x-ink"[^>]*>six figure jobs</)
+    // Logos keep a white tile Gmail does not invert.
+    expect(mail.html).toContain('background-image:linear-gradient(#ffffff,#ffffff)')
+  })
+
+  it('shows Remote and how long ago we listed the job, in HTML and text', () => {
+    expect(mail.html).toContain('>Remote</span>')
+    expect(mail.html).toContain('>2d ago</span>')
+    expect(mail.text).toContain('Remote · 2d ago')
   })
 })
