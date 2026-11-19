@@ -9,6 +9,7 @@ const links = [
   { href: '/ubaid93/jobs', label: 'Jobs', icon: '💼' },
   { href: '/ubaid93/clicks', label: 'Apply clicks', icon: '👆' },
   { href: '/ubaid93/alerts', label: 'Job alerts', icon: '🔔' },
+  { href: '/ubaid93/autoapply', label: 'Auto-apply runs', icon: '🤖' },
   { href: '/ubaid93/config', label: 'Site Config', icon: '⚙️' },
 ]
 

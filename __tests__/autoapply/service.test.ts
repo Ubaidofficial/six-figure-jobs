@@ -246,6 +246,30 @@ describe('runApplication: what is charged and when', () => {
     expect(balance(s)).toBe(20)
   })
 
+  it('keeps a run record for the owner report: board, outcome, empty questions with their labels, never answers', async () => {
+    const { s, id } = await approved()
+    s.db.autoApplyRun = table([], 'id')
+    const driver = jest.fn(async () => ({ kind: 'dry_run' as const, filled: ['first_name'], unfilled: ['question_9', 'phone'], labels: { question_9: 'Do you need sponsorship?' } }))
+    await runApplication(id, driver, { live: false })
+    const [run] = s.db.autoApplyRun.rows
+    expect(run).toMatchObject({ applicationId: id, mode: 'dry_run', outcome: 'dry_run', reason: null, filledCount: 1 })
+    expect(run.board).toBeTruthy()
+    // The employer's label from the page, or else the plan's label for that question.
+    expect(run.unfilled).toEqual([{ key: 'question_9', label: 'Do you need sponsorship?' }, { key: 'phone', label: expect.any(String) }])
+    expect(JSON.stringify(run)).not.toMatch(/ada@example|My résumé|Dear team/)
+
+    const live = await approved()
+    live.s.db.autoApplyRun = table([], 'id')
+    await runApplication(live.id, async () => ({ kind: 'needs_user', reason: 'captcha' }), { live: true })
+    expect(live.s.db.autoApplyRun.rows[0]).toMatchObject({ mode: 'live', outcome: 'needs_user', reason: 'captcha' })
+  })
+
+  it('an application is unaffected when the run table is missing (migration not applied yet)', async () => {
+    const { id, row } = await approved()
+    await runApplication(id, async () => ({ kind: 'needs_user', reason: 'captcha' }), { live: true })
+    expect(row()).toMatchObject({ status: 'needs_user', reason: 'captcha' })
+  })
+
   it('refuses to send anything that is not what was approved: a changed plan, or a changed résumé', async () => {
     const t = await approved()
     const driver = jest.fn(submitted)

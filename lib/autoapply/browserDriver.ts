@@ -144,6 +144,22 @@ function unfilledRequired(page: Page): Promise<string[]> {
   })
 }
 
+/** The employer's label text for each control id (label[for], aria-label or aria-labelledby), cut to 120 characters. */
+function labelsFor(page: Page, ids: string[]): Promise<Record<string, string>> {
+  return page.evaluate((list: string[]) => {
+    const out: Record<string, string> = {}
+    for (const id of list) {
+      const el = document.getElementById(id) ?? document.querySelector(`[id^="${CSS.escape(id)}"]`)
+      const byFor = document.querySelector(`label[for="${CSS.escape(id)}"]`) as HTMLElement | null
+      const by = el?.getAttribute('aria-labelledby')
+      const text = byFor?.innerText || el?.getAttribute('aria-label') || (by ? document.getElementById(by)?.innerText : '') || ''
+      const clean = text.replace(/\s+/g, ' ').replace(/\*$/, '').trim().slice(0, 120)
+      if (clean) out[id] = clean
+    }
+    return out
+  }, ids)
+}
+
 export function createBrowserDriver(opts: BrowserDriverOptions): ApplyDriver {
   const formTimeout = opts.formTimeoutMs ?? 20_000
   const confirmTimeout = opts.confirmTimeoutMs ?? 30_000
@@ -175,8 +191,9 @@ export function createBrowserDriver(opts: BrowserDriverOptions): ApplyDriver {
       }
       const unfilled = [...new Set([...(await unfilledRequired(page)), ...missed])]
 
-      if (!req.live) return { kind: 'dry_run', filled, unfilled }
-      if (unfilled.length > 0) return { kind: 'needs_user', reason: 'unexpected_field' }
+      const labels = unfilled.length > 0 ? await labelsFor(page, unfilled).catch(() => ({})) : {}
+      if (!req.live) return { kind: 'dry_run', filled, unfilled, labels }
+      if (unfilled.length > 0) return { kind: 'needs_user', reason: 'unexpected_field', unfilled, labels }
 
       const before = await bodyText(page)
       const baseline = { captcha: CAPTCHA.test(before), security: SECURITY.test(before) }

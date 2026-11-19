@@ -14,7 +14,7 @@ import {
   type Plan,
   type PlanInputs,
 } from './plan'
-import { ACTIVE_STATUSES, planHash, type Outcome } from './state'
+import { ACTIVE_STATUSES, planHash, type FieldLabels, type Outcome } from './state'
 
 import { findKitJob, type KitJob } from '@/lib/applykit/job'
 import { getBalance, spendCredits } from '@/lib/billing/credits'
@@ -220,8 +220,34 @@ export async function runApplication(id: string, driver: ApplyDriver, opts: { li
   if (opts.live && busy >= MAX_PER_BOARD_PER_HOUR) return { done: 'skipped', why: 'board_busy' }
 
   const plan = app.plan as unknown as Plan
-  const stop = async (reason: string, status: 'failed' | 'needs_user' = 'failed'): Promise<RunResult> => {
+  const started = Date.now()
+  // Every attempt is kept for the owner's report (AutoApplyRun), dry runs too. It must never change the outcome.
+  const record = async (outcome: string, reason: string | null, extra: { filled?: number; unfilled?: string[]; labels?: FieldLabels } = {}) => {
+    try {
+      const labelOf = (key: string) => extra.labels?.[key] ?? plan.fields?.find((f) => f.key === key)?.label ?? ''
+      await prisma.autoApplyRun.create({
+        data: {
+          applicationId: id,
+          board: app.board,
+          mode: opts.live ? 'live' : 'dry_run',
+          outcome,
+          reason,
+          filledCount: extra.filled ?? 0,
+          unfilled: extra.unfilled?.length ? extra.unfilled.slice(0, 50).map((key) => ({ key, label: labelOf(key) })) : undefined,
+          durationMs: Date.now() - started,
+        },
+      })
+    } catch {
+      // The table may not exist yet (migration not applied); the application itself is unaffected.
+    }
+  }
+  const stop = async (
+    reason: string,
+    status: 'failed' | 'needs_user' = 'failed',
+    extra: { unfilled?: string[]; labels?: FieldLabels } = {},
+  ): Promise<RunResult> => {
     if (opts.live) await finish(id, { status, reason })
+    await record(status, reason, extra)
     return { done: 'finished', status, reason }
   }
 
@@ -245,14 +271,19 @@ export async function runApplication(id: string, driver: ApplyDriver, opts: { li
     return stop('driver_error')
   }
 
-  if (!opts.live) return { done: 'dry_run', outcome }
-  if (outcome.kind === 'needs_user') return stop(outcome.reason, 'needs_user')
+  if (!opts.live) {
+    if (outcome.kind === 'dry_run') await record('dry_run', null, { filled: outcome.filled.length, unfilled: outcome.unfilled, labels: outcome.labels })
+    else await record(outcome.kind, outcome.kind === 'submitted' ? null : outcome.reason, outcome.kind === 'needs_user' ? outcome : {})
+    return { done: 'dry_run', outcome }
+  }
+  if (outcome.kind === 'needs_user') return stop(outcome.reason, 'needs_user', outcome)
   if (outcome.kind === 'failed') return stop(outcome.reason)
   if (outcome.kind === 'dry_run') return stop('driver_did_not_submit')
 
   // Confirmed by the employer: now, and only now, take the credits.
   const spent = await spendCredits(app.userId, 'auto-apply', cost, `autoapply:${id}`)
   await finish(id, { status: 'submitted', evidence: outcome.evidence.slice(0, 2000), charge: spent.ok ? 'charged' : 'unpaid' })
+  await record('submitted', null)
   return { done: 'finished', status: 'submitted' }
 }
 

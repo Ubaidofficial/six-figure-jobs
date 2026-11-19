@@ -567,6 +567,30 @@ model AutoApplication {
   @@index([status])
 }
 
+// One attempt by the auto-apply worker (dry run or live), kept so the owner can see where real employer forms stop before
+// selling auto-apply. Append-only. Holds no answers, names or résumé text: only the board, the outcome, why it stopped and
+// which form questions were left empty (their key and the employer's own label). applicationId has no foreign key on
+// purpose: the statistics must outlive an application deleted with its user.
+model AutoApplyRun {
+  id            String   @id @default(cuid())
+  applicationId String
+  board         String
+  // 'dry_run' | 'live'
+  mode          String
+  // 'dry_run' | 'submitted' | 'needs_user' | 'failed'
+  outcome       String
+  // Why it stopped (the same codes as AutoApplication.reason); null for a submission or a dry run.
+  reason        String?
+  filledCount   Int      @default(0)
+  // [{ key, label }] of required questions still empty when the worker stopped.
+  unfilled      Json?
+  durationMs    Int?
+  createdAt     DateTime @default(now())
+
+  @@index([board, createdAt])
+  @@index([createdAt])
+}
+
 // An email job alert: a saved search (the listing page's own job query) mailed daily or weekly. No account needed:
 // double opt-in, and every link carries the alert's random token (confirm, change frequency, unsubscribe).
 model JobAlert {

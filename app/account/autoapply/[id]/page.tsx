@@ -7,7 +7,8 @@ import { AutoApplyCancel } from '@/components/autoapply/AutoApplyCancel'
 import { AutoApplyReview } from '@/components/autoapply/AutoApplyReview'
 import { accountsEnabled } from '@/lib/accounts/enabled'
 import { autoApplyEnabled, getAutoApplyCredits } from '@/lib/autoapply/config'
-import type { Plan } from '@/lib/autoapply/plan'
+import { approvedAnswers, type Plan } from '@/lib/autoapply/plan'
+import { reasonText } from '@/lib/autoapply/reasons'
 import { planHash } from '@/lib/autoapply/state'
 import { getSessionUser } from '@/lib/auth/session'
 import { getBalance } from '@/lib/billing/credits'
@@ -20,19 +21,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-const REASONS: Record<string, string> = {
-  captcha: 'The employer\'s site asked for a captcha, which we do not solve.',
-  security_code: 'The employer\'s site asked for a security code sent to your email.',
-  login: 'The employer\'s site asked you to sign in.',
-  unexpected_field: 'The form has a required question we do not recognise.',
-  validation: 'The employer\'s site rejected something in the form.',
-  unconfirmed: 'We sent the form but did not see a confirmation. It may have gone through: check your email before applying again.',
-  resume_changed: 'Your résumé changed after you approved this, so we did not send it.',
-  plan_changed: 'The application changed after you approved it, so we did not send it.',
-  insufficient_credits: 'You did not have enough credits when it was time to send.',
-  form_not_found: 'We could not open the employer\'s form.',
-  driver_error: 'Something went wrong while filling the form.',
-}
 
 export default async function AutoApplyPage({ params }: { params: Promise<{ id: string }> }) {
   await connection()
@@ -73,8 +61,10 @@ export default async function AutoApplyPage({ params }: { params: Promise<{ id: 
       />
     )
   } else {
-    const reason = app.reason ? (REASONS[app.reason] ?? 'It stopped.') : null
     const handBack = app.status === 'needs_user' || app.status === 'failed'
+    const reason = handBack ? reasonText(app.reason) : null
+    // Not after an unconfirmed send: it may have gone through, and the user should check before applying again.
+    const answers = handBack && app.reason !== 'unconfirmed' ? approvedAnswers(plan) : []
     body = (
       <div className={styles.card}>
         <p className={styles.big}>
@@ -89,14 +79,36 @@ export default async function AutoApplyPage({ params }: { params: Promise<{ id: 
             {app.evidence ? ` Their page said: “${app.evidence.slice(0, 200)}”` : null}
           </p>
         ) : null}
-        {reason ? <p className={styles.muted}>{reason}</p> : null}
-        {handBack ? <p className={styles.muted}>You were not charged. You can finish this one yourself on the employer&apos;s site.</p> : null}
+        {reason ? (
+          <>
+            <p className={styles.muted}>
+              <strong>What happened:</strong> {reason.what} You were not charged.
+            </p>
+            <p className={styles.muted}>
+              <strong>What to do:</strong> {reason.next}
+            </p>
+          </>
+        ) : null}
         {safeApply && (handBack || app.status === 'approved') ? (
           <p className={styles.muted}>
             <a href={safeApply} target="_blank" rel="noopener noreferrer nofollow" className={styles.link}>
-              Apply on the employer site
+              {handBack ? 'Open the employer’s form' : 'Apply on the employer site'}
             </a>
           </p>
+        ) : null}
+        {answers.length > 0 ? (
+          <details className={styles.muted}>
+            <summary>Your approved answers ({answers.length}), to copy</summary>
+            <dl>
+              {answers.map((a) => (
+                <div key={a.key} style={{ marginTop: 10 }}>
+                  <dt style={{ fontWeight: 600 }}>{a.label}</dt>
+                  <dd style={{ margin: 0, whiteSpace: 'pre-wrap', userSelect: 'all' }}>{a.text}</dd>
+                </div>
+              ))}
+            </dl>
+            <p style={{ marginTop: 12 }}>Attach your résumé file yourself on their form.</p>
+          </details>
         ) : null}
       </div>
     )
