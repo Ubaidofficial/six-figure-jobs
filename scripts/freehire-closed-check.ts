@@ -7,8 +7,10 @@ import { prisma } from '../lib/prisma'
 import { checkClosedFreehireJobs } from '../lib/scrapers/freehireClosedCheck'
 
 const dryRun = process.argv.includes('--dry-run')
+// FREEHIRE_CLOSED_MAX_LOOKUPS: most jobs looked up this run (default MAX_LOOKUPS_PER_RUN, 2,000); light runs use fewer.
+const maxLookups = Number(process.env.FREEHIRE_CLOSED_MAX_LOOKUPS) || undefined
 
-checkClosedFreehireJobs({ dryRun, deadlineMs: 15 * 60 * 1000, onProgress: (m) => console.log(m) })
+checkClosedFreehireJobs({ dryRun, maxLookups, deadlineMs: 15 * 60 * 1000, onProgress: (m) => console.log(m) })
   .then((r) => {
     console.log(`freehire closed-job check ${dryRun ? '(DRY RUN — no job is expired)' : ''}`)
     console.log(`active: ${r.active}  slugs found for older jobs: ${r.resolved}  without a slug: ${r.unresolved}`)

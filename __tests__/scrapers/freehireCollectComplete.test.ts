@@ -107,3 +107,55 @@ describe('worldwide-remote markets', () => {
     expect(params).toContainEqual(expect.objectContaining({ regions: 'global', salary_currency: 'USD' }))
   })
 })
+
+describe('collectFreehireJobs: description-pay slices and dropped connections', () => {
+  beforeEach(() => get.mockReset())
+  const since = new Date(Date.now() - 48 * 3_600_000)
+  const full = Array.from({ length: 100 }, (_, i) => rec(i, hoursAgo(1)))
+
+  it('reads each description-pay slice up to its own page cap (US 100, CA/AU/UK 50, rest 50)', async () => {
+    const pagesBySlice: Record<string, number> = {}
+    get.mockImplementation(async (_url: string, config: { params: Record<string, unknown> }) => {
+      const p = config.params
+      if (!('salary_currency' in p)) {
+        const key = JSON.stringify({ c: p.countries, r: p.regions, ce: p.countries_exclude, re: p.regions_exclude })
+        pagesBySlice[key] = (pagesBySlice[key] ?? 0) + 1
+        return page(full, 1_000_000)
+      }
+      return page([], 0)
+    })
+    const r = await withImmediateTimers(() => collectFreehireJobs({ since }))
+    expect(Object.values(pagesBySlice)).toEqual([100, 50, 50])
+    expect(r.markets.filter((m) => m.currency.startsWith('pay in description')).map((m) => m.complete)).toEqual([false, false, false])
+  })
+
+  it('reads no description-pay slice when withDescriptionPay is false (the 15-minute pull)', async () => {
+    get.mockResolvedValue(page([], 0))
+    const r = await collectFreehireJobs({ since, withDescriptionPay: false })
+    expect(r.markets.some((m) => m.currency.startsWith('pay in description'))).toBe(false)
+  })
+
+  it('retries a dropped connection instead of failing the market (one ECONNRESET failed the 2026-11-19 sync)', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    let calls = 0
+    get.mockImplementation(async () => {
+      calls++
+      if (calls === 1) throw Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' })
+      return page([rec(1, hoursAgo(1))], 1)
+    })
+    const r = await withImmediateTimers(() => collectFreehireJobs({ since, withDescriptionPay: false }))
+    expect(r.errors).toEqual([])
+    expect(r.markets[0]).toMatchObject({ fetched: 1, complete: true })
+    warn.mockRestore()
+  })
+
+  it('still gives up after a few dropped connections in a row, and reports the market', async () => {
+    get.mockRejectedValue(Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }))
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    const err = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const r = await withImmediateTimers(() => collectFreehireJobs({ since, withDescriptionPay: false }))
+    expect(r.errors[0]).toMatch(/ECONNRESET/)
+    warn.mockRestore()
+    err.mockRestore()
+  })
+})
