@@ -172,3 +172,21 @@ export function refreshProfileFields(plan: Plan, inputs: PlanInputs): Plan {
   })
   return { ...plan, fields }
 }
+
+/**
+ * The answers the user approved, as text to copy into the employer's form when an application is handed back to them.
+ * Choices show the option's wording (not Greenhouse's value id); files and empty answers are left out.
+ */
+export function approvedAnswers(plan: Plan): Array<{ key: string; label: string; text: string }> {
+  const out: Array<{ key: string; label: string; text: string }> = []
+  for (const f of plan.fields ?? []) {
+    if (f.type === 'file' || f.value == null) continue
+    const values = Array.isArray(f.value) ? f.value : [f.value]
+    const text = values
+      .map((v) => (f.type === 'single' || f.type === 'multi' ? (f.options?.find((o) => o.value === v)?.label ?? v) : v))
+      .filter((v) => typeof v === 'string' && v.trim() !== '')
+      .join(', ')
+    if (text) out.push({ key: f.key, label: f.label, text })
+  }
+  return out
+}

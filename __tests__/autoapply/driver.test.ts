@@ -76,14 +76,19 @@ run('browser driver against the employer form replica', () => {
     const dry = await go(planWith({ question_3: null }), false)
     expect(dry).toMatchObject({ kind: 'dry_run' })
     expect((dry as { unfilled: string[] }).unfilled).toContain('question_3')
-    expect(await go(planWith({ question_3: null }), true)).toEqual({ kind: 'needs_user', reason: 'unexpected_field' })
+    expect((dry as { labels?: Record<string, string> }).labels?.question_3).toBeTruthy()
+    const live = await go(planWith({ question_3: null }), true)
+    expect(live).toMatchObject({ kind: 'needs_user', reason: 'unexpected_field' })
+    expect((live as { unfilled?: string[] }).unfilled).toContain('question_3')
     expect(server.received).toHaveLength(0)
   }, 60_000)
 
   it('does not guess when the approved option is not one the form offers', async () => {
     const plan = planWith()
     plan.fields = plan.fields.map((f) => (f.key === 'question_1' ? { ...f, value: '9', options: [{ label: 'Perhaps', value: '9' }] } : f))
-    expect(await go(plan, true)).toEqual({ kind: 'needs_user', reason: 'unexpected_field' })
+    const out = await go(plan, true)
+    expect(out).toMatchObject({ kind: 'needs_user', reason: 'unexpected_field' })
+    expect((out as { unfilled?: string[] }).unfilled).toContain('question_1')
     expect(server.received).toHaveLength(0)
   }, 60_000)
 
