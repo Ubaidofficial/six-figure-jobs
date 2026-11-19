@@ -29,6 +29,10 @@ export const REASONS: Record<string, ReasonText> = {
     what: 'The employer’s form has a required question we do not have an answer for, so we stopped rather than guess.',
     next: FINISH,
   },
+  control_not_set: {
+    what: 'The employer’s form did not keep one of your approved answers (for example a dropdown that would not take the option), so we stopped rather than send it wrong.',
+    next: FINISH,
+  },
   validation: {
     what: 'The employer’s site rejected part of the form (for example a phone number or a date format).',
     next: `${FINISH} Their form will show which answer it wants changed.`,

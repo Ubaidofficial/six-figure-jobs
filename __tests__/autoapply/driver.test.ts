@@ -47,8 +47,35 @@ run('browser driver against the employer form replica', () => {
   afterAll(() => server.close())
   beforeEach(() => { server.received.length = 0 })
 
-  const go = (plan: Plan, live: boolean, mode = 'confirm') =>
-    driver({ applyUrl: `${server.url}/?mode=${mode}`, plan, resumeText: 'Ada Lovelace\nEngineer\n<script>alert(1)</script>', live })
+  const go = (plan: Plan, live: boolean, mode = 'confirm', quirk = '') =>
+    driver({ applyUrl: `${server.url}/?mode=${mode}&quirk=${quirk}`, plan, resumeText: 'Ada Lovelace\nEngineer\n<script>alert(1)</script>', live })
+
+  it('stops (never sends) when a dropdown does not keep the approved option, and names it', async () => {
+    const live = await go(planWith(), true, 'confirm', 'stubborn')
+    expect(live).toMatchObject({ kind: 'needs_user', reason: 'control_not_set' })
+    expect((live as { unfilled?: string[] }).unfilled).toEqual(['question_1'])
+    expect(server.received).toHaveLength(0)
+    const dry = await go(planWith(), false, 'confirm', 'stubborn')
+    expect(dry).toMatchObject({ kind: 'dry_run', notSet: ['question_1'] })
+    expect((dry as { unfilled: string[] }).unfilled).toContain('question_1')
+  }, 60_000)
+
+  it('puts back a field the form overwrote after reading the resume, then sends the approved value', async () => {
+    const out = await go(planWith(), true, 'confirm', 'autofill')
+    expect(out).toMatchObject({ kind: 'submitted' })
+    expect(server.received[0].fields.first_name).toBe('Ada')
+  }, 60_000)
+
+  it('checks the phone country picker matches the number, and stops when it stays on another country', async () => {
+    const uk = planWith({ phone: '+44 20 7946 0958' })
+    expect(await go(uk, true, 'confirm', 'iti')).toMatchObject({ kind: 'submitted' })
+    expect(server.received[0].fields.phone).toBe('+44 20 7946 0958')
+    server.received.length = 0
+    const stuck = await go(uk, true, 'confirm', 'iti-stuck')
+    expect(stuck).toMatchObject({ kind: 'needs_user', reason: 'control_not_set' })
+    expect((stuck as { unfilled?: string[] }).unfilled).toEqual(['phone'])
+    expect(server.received).toHaveLength(0)
+  }, 60_000)
 
   it('live: fills every approved answer, attaches the résumé as a PDF, submits, and reports the employer\'s confirmation', async () => {
     const out = await go(planWith(), true)
