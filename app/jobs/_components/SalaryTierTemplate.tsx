@@ -1,3 +1,4 @@
+import { roleFacetsFromRows } from '@/lib/jobs/roleFacets'
 import type { Metadata } from 'next'
 import { keywordsFor } from '@/lib/seo/keywordMap'
 import {
@@ -236,7 +237,6 @@ export async function SalaryTierTemplate({
       },
       _count: { _all: true },
       orderBy: { _count: { roleSlug: 'desc' } } as any,
-      take: 20,
     }),
     (prisma.job.groupBy as any)({
       by: ['countryCode'],
@@ -267,12 +267,7 @@ export async function SalaryTierTemplate({
   )
 
   const facets: JobsFacets = {
-    roles: roleRows
-      .map((r: any) => ({
-        value: (r as any).roleSlug as string,
-        count: Number((r as any)._count?._all ?? 0),
-      }))
-      .filter((r: any) => Boolean(r.value)),
+    roles: roleFacetsFromRows(roleRows),
     countries: countryRows
       .map((r: any) => ({
         value: String((r as any).countryCode || '').toUpperCase(),

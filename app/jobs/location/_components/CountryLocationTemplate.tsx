@@ -1,3 +1,4 @@
+import { roleFacetsFromRows } from '@/lib/jobs/roleFacets'
 import Link from '@/components/ui/Link'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'
@@ -395,7 +396,6 @@ export async function CountryLocationTemplate({
       },
       _count: { _all: true },
       orderBy: { _count: { roleSlug: 'desc' } } as any,
-      take: 20,
     }),
     prisma.job.count({
       where: buildWhere({ ...baseFacetInput, remoteMode: 'remote' }),
@@ -413,12 +413,7 @@ export async function CountryLocationTemplate({
   )
 
   const facets: JobsFacets = {
-    roles: roleRows
-      .map((r: any) => ({
-        value: (r as any).roleSlug as string,
-        count: Number((r as any)._count?._all ?? 0),
-      }))
-      .filter((r: any) => Boolean(r.value)),
+    roles: roleFacetsFromRows(roleRows),
     countries: [],
     workTypes: {
       remote: remoteCount,

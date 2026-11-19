@@ -1,3 +1,4 @@
+import { roleFacetsFromRows } from '@/lib/jobs/roleFacets'
 import type { Metadata } from 'next'
 import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
@@ -20,11 +21,10 @@ import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../lib/seo/site'
 import { parseSliceFilters } from '../../lib/slices/types'
 import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { salaryFilterCurrency } from '@/lib/jobs/salaryFilter'
+import { parseJobsListing } from '@/lib/jobs/jobsListQuery'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
 import { SponsorStrip } from '@/components/sponsors/SponsorStrip'
 import { loadSponsorSlots } from '@/lib/sponsors/slots'
-import { buildKeywordPlan } from '@/lib/search/keywordPlan'
 import { displayKeyword } from '@/lib/search/displayKeyword'
 import { JOB_CATEGORY_MAP } from '@/lib/seo/jobCategories'
 import { isPseoBatchReleased } from '@/lib/seo/pseoBatches'
@@ -321,14 +321,23 @@ export default async function JobsIndexPage({
 }) {
   const sp = (await searchParams) || {}
   const page = parsePage(sp)
-  const techFilter = (firstParam(sp, 'tech') || '').trim() || undefined
-  const keyword = (firstParam(sp, 'q') || '').trim() || undefined
-  const visa = firstParam(sp, 'visa') === '1'
-  // exact=1: the visitor chose to search for the words as typed, without typo correction.
-  const exact = firstParam(sp, 'exact') === '1'
+  const {
+    queryInput,
+    keyword,
+    tech: techFilter,
+    visa,
+    rawCountry,
+    country,
+    remoteMode: parsedRemoteMode,
+    remoteRegion,
+    sort,
+    roles,
+    seniority,
+    companySizes,
+    minSalary,
+  } = parseJobsListing({ get: (k) => firstParam(sp, k), getAll: (k) => allParams(sp, k) }, page, PAGE_SIZE)
+  const remoteMode = parsedRemoteMode ?? ''
 
-  const rawCountry = (firstParam(sp, 'country') || '').trim().toUpperCase()
-  const country = rawCountry.length === 2 ? rawCountry : undefined
   // The homepage Location list also offers remote regions ("global" = anywhere in the world); they arrive as `country`
   // and are moved to `remoteRegion`, the one parameter the filters read.
   const regionFromLocation = country ? null : normalizeRemoteRegionSlug(rawCountry.toLowerCase())
@@ -342,31 +351,6 @@ export default async function JobsIndexPage({
     redirect(`/jobs?${next.toString()}`)
   }
 
-  const rawRemoteMode = (firstParam(sp, 'remoteMode') || '').trim()
-  const remoteMode: '' | 'remote' | 'hybrid' | 'onsite' =
-    rawRemoteMode === 'remote' || rawRemoteMode === 'hybrid' || rawRemoteMode === 'onsite'
-      ? rawRemoteMode
-      : ''
-
-  // Remote jobs in a region (a set of countries), or "global" for jobs that can be done from anywhere.
-  const remoteRegion = normalizeRemoteRegionSlug(firstParam(sp, 'remoteRegion')) ?? undefined
-
-  const rawSort = (firstParam(sp, 'sort') || '').trim()
-  // A keyword search is ranked by relevance unless the visitor picked another order.
-  const sort =
-    rawSort === 'recent' || rawSort === 'salary' || rawSort === 'relevant' ? rawSort : keyword ? 'relevant' : 'recent'
-
-
-  const roles = allParams(sp, 'role')
-  const seniority = allParams(sp, 'seniority')
-  const companySizes = allParams(sp, 'companySize')
-
-  const minSalaryRaw = Number(firstParam(sp, 'minSalary') || '') || null
-  const minSalary =
-    minSalaryRaw && Number.isFinite(minSalaryRaw)
-      ? Math.min(450_000, Math.max(100_000, minSalaryRaw))
-      : null
-  const salaryCurrency = minSalary ? salaryFilterCurrency(country) : null
   const activeFilterCount =
     roles.length +
     seniority.length +
@@ -378,23 +362,6 @@ export default async function JobsIndexPage({
     (visa ? 1 : 0) +
     (keyword ? 1 : 0) +
     (minSalary ? 1 : 0)
-
-  const queryInput: JobQueryInput = {
-    page,
-    pageSize: PAGE_SIZE,
-    sortBy: sort === 'recent' ? 'date' : sort === 'relevant' && keyword ? 'relevant' : 'salary',
-    roleSlugs: roles.length ? roles : undefined,
-    countryCode: country || undefined,
-    remoteMode: remoteMode || undefined,
-    remoteRegion,
-    seniorityLevels: seniority.length ? seniority : undefined,
-    companySizeBuckets: companySizes.length ? companySizes : undefined,
-    tech: techFilter,
-    keyword,
-    ...(visa ? { visaSponsorship: true } : {}),
-    ...(keyword && exact ? { keywordPlan: buildKeywordPlan(keyword, null) } : {}),
-    ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
-  }
 
   try {
     const data = await memoAsync(stableKey('jobs-list', queryInput), DEFAULT_TTL_MS, () => queryJobs(queryInput))
@@ -417,7 +384,6 @@ export default async function JobsIndexPage({
           },
           _count: { _all: true },
           orderBy: { _count: { roleSlug: 'desc' } },
-          take: 20,
         }),
         prisma.job.groupBy({
           by: ['countryCode'],
@@ -451,12 +417,7 @@ export default async function JobsIndexPage({
   )
 
   const facets: JobsFacets = {
-    roles: roleRows
-      .map((r) => ({
-        value: (r as any).roleSlug as string,
-        count: Number((r as any)._count?._all ?? 0),
-      }))
-      .filter((r) => Boolean(r.value)),
+    roles: roleFacetsFromRows(roleRows),
     countries: countryRows
       .map((r) => ({
         value: String((r as any).countryCode || '').toUpperCase(),

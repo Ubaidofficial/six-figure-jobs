@@ -8,6 +8,7 @@
 import Link from '@/components/ui/Link'
 
 import { FilterPills } from '@/components/filters/FilterPills'
+import { salaryFilterCurrency, salaryFilterLabel } from '@/lib/jobs/salaryFilter'
 
 import styles from './SearchForm.module.css'
 
@@ -34,12 +35,13 @@ const WORK: Option[] = [
   { value: 'onsite', label: 'On-site' },
 ]
 
-const SALARY: Option[] = [
-  { value: '100000', label: '$100k+' },
-  { value: '200000', label: '$200k+' },
-  { value: '300000', label: '$300k+' },
-  { value: '400000', label: '$400k+' },
-]
+// The first choice is the site's $100k+ floor, which is not a filter; the others compare in the selected location's
+// currency, labelled the way the listing sidebar labels them (lib/jobs/salaryFilter.ts).
+const SALARY_STEPS = [200_000, 300_000, 400_000]
+function salaryOptions(location: string): Option[] {
+  const currency = salaryFilterCurrency(location)
+  return [{ value: '100000', label: 'Any ($100k+)' }, ...SALARY_STEPS.map((step) => ({ value: String(step), label: salaryFilterLabel(step, currency) }))]
+}
 
 const REGIONS: Option[] = [
   { value: '', label: 'Any' },
@@ -53,9 +55,11 @@ const REGIONS: Option[] = [
 
 const SENIORITY: Option[] = [
   { value: '', label: 'Any' },
-  { value: 'entry', label: 'Entry' },
-  { value: 'mid', label: 'Mid' },
+  // The levels jobs carry (Job.experienceLevel, read from the title); "entry" and "mid" are never stored, so they
+  // matched nothing.
   { value: 'senior', label: 'Senior' },
+  { value: 'staff', label: 'Staff' },
+  { value: 'principal', label: 'Principal' },
   { value: 'lead', label: 'Lead' },
   { value: 'director', label: 'Director' },
   { value: 'vp', label: 'VP' },
@@ -146,7 +150,7 @@ export function SearchForm({
           </div>
           <div className={styles.pillGroups}>
             <FilterPills legend="Work arrangement" name="remoteMode" options={WORK} defaultValue={remoteMode} />
-            <FilterPills legend="Minimum salary" name="minSalary" options={SALARY} defaultValue={String(minSalary)} />
+            <FilterPills legend="Minimum salary" name="minSalary" options={salaryOptions(location)} defaultValue={String(minSalary)} />
             <FilterPills legend="Seniority" name="seniority" options={SENIORITY} defaultValue={seniority} />
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { activeFilterChips, multiParam } from '../../lib/jobs/activeFilters'
-import { salaryFilterCurrency, salaryFilterLabel } from '../../lib/jobs/salaryFilter'
+import { salaryFilterAmount, salaryFilterCurrency, salaryFilterLabel } from '../../lib/jobs/salaryFilter'
 
 const params = (qs: string) => new URLSearchParams(qs)
 const labels = (qs: string, pinned?: string[]) => activeFilterChips(params(qs), pinned).map((c) => c.label)
@@ -9,7 +9,21 @@ describe('salary filter currency', () => {
     expect(salaryFilterCurrency('GB')).toBe('GBP')
     expect(salaryFilterCurrency('de')).toBe('EUR')
     expect(salaryFilterCurrency('')).toBe('USD')
-    expect(salaryFilterCurrency('CH')).toBe('USD') // no mapping: the page also compares in USD
+    // Every country with a known currency, not only US/GB/CA/DE/NL/AU: Switzerland and France used to compare in USD and
+    // drop almost every local job (/jobs?country=CH&minSalary=150000 showed 2 of 385, FR showed 0; 2026-11-19 audit).
+    expect(salaryFilterCurrency('CH')).toBe('CHF')
+    expect(salaryFilterCurrency('FR')).toBe('EUR')
+    expect(salaryFilterCurrency('SE')).toBe('SEK')
+    expect(salaryFilterCurrency('BR')).toBe('USD') // no mapping
+  })
+
+  it('filters krona and krone at a scaled amount, others at the step itself', () => {
+    expect(salaryFilterAmount(150_000, 'SEK')).toBe(1_500_000)
+    expect(salaryFilterAmount(150_000, 'DKK')).toBe(1_050_000)
+    expect(salaryFilterAmount(150_000, 'CHF')).toBe(150_000)
+    expect(salaryFilterAmount(150_000, 'EUR')).toBe(150_000)
+    expect(salaryFilterLabel(150_000, 'SEK')).toBe('SEK 1.5M+')
+    expect(salaryFilterLabel(200_000, 'CHF')).toBe('CHF 200k+')
   })
 
   it('labels amounts with the currency symbol', () => {

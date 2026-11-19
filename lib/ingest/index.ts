@@ -1191,22 +1191,35 @@ export function processLocation(input: ScrapedJobInput) {
   const location = normalizeLocationData(locationText)
   // A location without a country name ("Nürnberg, Bayern", "Kanton Zürich") falls back to its state/canton, or to
   // Switzerland for a Swiss-franc salary. processSalary keeps its own country lookup unchanged.
+  const currency = String(input.salaryCurrency ?? '').toUpperCase()
+  const normalizedCountry = countryToCode(location.country)
+  // A bare trailing "CA" is read as Canada, but with US-dollar pay it is California ("Remote, CA": DeepSeas, hiring
+  // "across the U.S.", showed "Remote · Canada"; 2026-11-19 audit).
+  const californiaNotCanada = normalizedCountry === 'CA' && currency === 'USD' && /(^|[\s,(/])CA\)?\s*$/.test(locationText.trim())
   const statedCountry =
-    countryToCode(location.country) ??
+    (californiaNotCanada ? 'US' : normalizedCountry) ??
     countryCodeFromContext(locationText, input.salaryCurrency) ??
     stateOrCountryCodeByCurrency(location, input.salaryCurrency)
+  // A country named anywhere in the text: "Remote from Spain", "Remote (USA), strong preference…", "Allentown,
+  // Pennsylvania", and dash-separated "United States-Pennsylvania-Philadelphia".
+  const textCountry =
+    countryFromText(locationText) ?? (locationText.includes('-') ? countryFromText(locationText.replace(/\s*-\s*/g, ', ')) : null)
+  // "Remote from Spain" and "Remote (USA)" are not cities.
+  const city = location.city && !/\bremote\b/i.test(location.city) ? location.city : null
   // normalizeLocation takes the last segment as the country, so on-site jobs at "Irvine, California", "Hamburg, Hamburg"
   // or "Redwood City" got none. For on-site and hybrid jobs only (remote jobs keep the rule above): the location text read
   // the way job pages read it ("..., NV, United States", US states), else a city we have a page for, else a national pay
   // currency. City and currency must agree when both are known ("Birmingham, Jefferson County" paid in USD is Alabama, not
   // England), and the euro never names a country ("Kerestinec, HR" is in Croatia).
   const byCity = countryFromCity(location.city) ?? countryFromCity(location.country) // "Mitte, Berlin": the last segment is a city
-  const byCurrency = CURRENCY_COUNTRY[String(input.salaryCurrency ?? '').toUpperCase()] ?? null
+  const byCurrency = CURRENCY_COUNTRY[currency] ?? null
+  // Remote jobs take a country only from the location text (stated or named in it), never from the city or the pay
+  // currency: a remote job paid in dollars is not necessarily open only to the US. They used to take only the stated
+  // one, so the examples above had no country and were missing from the country and region filters.
   const countryCode = (onsite: boolean): string | null =>
     statedCountry ??
-    (onsite
-      ? countryFromText(locationText) ?? (byCity && byCurrency && byCity !== byCurrency ? null : byCity ?? byCurrency)
-      : null)
+    textCountry ??
+    (onsite ? (byCity && byCurrency && byCity !== byCurrency ? null : byCity ?? byCurrency) : null)
 
   // A structured workplace type from the source decides; otherwise the location text does. Ashby marks hybrid jobs
   // `isRemote: true` (OpenAI on 2026-11-09: 533 of 814), so that flag alone stored hybrid jobs as remote.
@@ -1215,8 +1228,8 @@ export function processLocation(input: ScrapedJobInput) {
   // ✅ Hybrid / Onsite must win over any “isRemote” heuristic
   if (kind === 'hybrid') {
     return {
-      city: location.city ?? null,
-      citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
+      city,
+      citySlug: city ? slugify(city, { lower: true, strict: true }) : null,
       countryCode: countryCode(true),
       isRemote: false,
       remoteMode: 'hybrid',
@@ -1225,8 +1238,8 @@ export function processLocation(input: ScrapedJobInput) {
 
   if (kind === 'onsite') {
     return {
-      city: location.city ?? null,
-      citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
+      city,
+      citySlug: city ? slugify(city, { lower: true, strict: true }) : null,
       countryCode: countryCode(true),
       isRemote: false,
       remoteMode: 'onsite',
@@ -1237,11 +1250,15 @@ export function processLocation(input: ScrapedJobInput) {
   const effectiveRemote = kind === 'remote' || input.isRemote === true || location.isRemote === true
 
   return {
-    city: location.city ?? null,
-    citySlug: location.city ? slugify(location.city, { lower: true, strict: true }) : null,
+    city,
+    citySlug: city ? slugify(city, { lower: true, strict: true }) : null,
     countryCode: countryCode(!effectiveRemote),
     isRemote: effectiveRemote,
-    remoteMode: effectiveRemote ? 'remote' : location.city || location.country ? 'onsite' : null,
+    // No source field and no location wording says how the job is worked: leave it unknown. A city or country alone was
+    // stored as on-site, which kept the description reader (enrichAtIngest / remoteEvidence) from ever marking it
+    // remote: "Software Architect ... AI-Enabled", location "Germany", showed "Onsite" though its posting is remote
+    // (2026-11-19 audit). An unknown job's JobPosting still gets its jobLocation (lib/seo/jobJsonLd.ts).
+    remoteMode: effectiveRemote ? 'remote' : null,
   }
 }
 

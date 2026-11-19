@@ -721,11 +721,10 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
     })
   }
 
-  // Seniority via RoleInference relation
+  // Seniority: the level ingest reads from the title (Job.experienceLevel: senior, staff, principal, lead, director, vp,
+  // c-level). It used to read RoleInference, which nothing writes, so every level showed 0 jobs (2026-11-19 audit).
   if (filters.seniorityLevels?.length) {
-    where.roleInference = {
-      seniority: { in: filters.seniorityLevels },
-    }
+    addAnd({ experienceLevel: { in: filters.seniorityLevels } })
   }
 
   // Employment type + optional internship exclusion (kept for legacy call sites)
