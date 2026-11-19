@@ -110,7 +110,7 @@ export default async function AlertsAdminPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ textAlign: 'left', color: '#888' }}>
-                    {['Email', 'Alert', 'How often', 'Status', 'From page', 'Signed up', 'Confirmed', 'Last email'].map((h) => (
+                    {['Email', 'First name', 'Alert', 'How often', 'Status', 'From page', 'Signed up', 'Confirmed', 'Last email'].map((h) => (
                       <th key={h} style={cell}>
                         {h}
                       </th>
@@ -121,6 +121,7 @@ export default async function AlertsAdminPage() {
                   {recent.map((r) => (
                     <tr key={r.id} style={{ borderTop: '1px solid #1f1f1f' }}>
                       <td style={cell}>{r.email}</td>
+                      <td style={cell}>{r.firstName ?? '–'}</td>
                       <td style={cell}>{buildAlertLabel(sanitizeAlertFilters(r.filters) ?? {})}</td>
                       <td style={cell}>{r.frequency}</td>
                       <td style={{ ...cell, color: r.status === 'active' ? '#84cc16' : r.status === 'pending' ? '#facc15' : '#888' }}>{r.status}</td>
@@ -147,6 +148,7 @@ function loadRecent() {
     select: {
       id: true,
       email: true,
+      firstName: true,
       filters: true,
       frequency: true,
       status: true,

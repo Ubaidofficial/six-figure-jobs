@@ -46,6 +46,7 @@ const titleCase = (s: string) => s.replace(/(^|[\s-])\p{L}/gu, (m) => m.toUpperC
 
 export function JobAlertSignup({ filters, label, variant = 'inline', className, onSuccess }: Props) {
   const [email, setEmail] = React.useState('')
+  const [firstName, setFirstName] = React.useState('')
   const [frequency, setFrequency] = React.useState<'weekly' | 'daily' | 'instant'>('weekly')
   const [state, setState] = React.useState<State>({ kind: 'idle' })
   // The footer and the popup sign up for "all jobs"; there the visitor can narrow it to a role and to remote work.
@@ -84,7 +85,7 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className, 
       const res = await fetch('/api/alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, frequency, filters: chosen, website, source: window.location.pathname }),
+        body: JSON.stringify({ email, firstName: firstName.trim() || undefined, frequency, filters: chosen, website, source: window.location.pathname }),
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string }
       if (res.ok && body.ok) {
@@ -136,6 +137,20 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className, 
         </div>
       ) : (
         <form className={styles.form} onSubmit={onSubmit} noValidate>
+          <label htmlFor={`${id}-name`} className={styles.srOnly}>
+            First name (optional)
+          </label>
+          <input
+            id={`${id}-name`}
+            type="text"
+            name="firstName"
+            autoComplete="given-name"
+            maxLength={40}
+            placeholder="First name (optional)"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className={cn(styles.input, styles.name)}
+          />
           <label htmlFor={`${id}-email`} className={styles.srOnly}>
             Email address
           </label>

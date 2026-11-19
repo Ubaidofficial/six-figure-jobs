@@ -166,6 +166,16 @@ export function readSource(raw: unknown): string | null {
   return /^\/[a-z0-9\-/._~%]{0,199}$/i.test(path) ? path : null
 }
 
+/**
+ * The optional first name from the signup form, or null. Letters (any script), spaces, apostrophes, dots and hyphens,
+ * at most 40 characters; anything else (digits, links, markup) is dropped rather than refusing the signup.
+ */
+export function readFirstName(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const name = raw.normalize('NFC').replace(/\s+/g, ' ').trim()
+  return /^\p{L}[\p{L}\p{M}' .\u2019-]{0,39}$/u.test(name) ? name : null
+}
+
 const confirmationsPerEmail = createRateLimiter()
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -181,6 +191,8 @@ export async function subscribe(input: {
   frequency: unknown
   /** The page the form was on. */
   source?: unknown
+  /** Optional first name typed on the form. */
+  firstName?: unknown
   /**
    * True only when the caller has verified that the visitor is signed in, holds an active subscription and that this
    * address is their own (app/api/alerts/route.ts). It unlocks instant alerts and the higher cap.
@@ -195,6 +207,7 @@ export async function subscribe(input: {
   const frequency: AlertFrequency =
     input.frequency === 'instant' ? 'instant' : input.frequency === 'daily' ? 'daily' : 'weekly'
   const filtersKey = alertFiltersKey(filters)
+  const firstName = readFirstName(input.firstName)
 
   const existing = await prisma.jobAlert.findUnique({ where: { email_filtersKey: { email, filtersKey } } })
   if (existing?.status === 'active') return 'nothing_to_do'
@@ -206,7 +219,7 @@ export async function subscribe(input: {
   if (!confirmationsPerEmail.allow(email, MAX_CONFIRMATIONS_PER_EMAIL_PER_DAY, DAY_MS)) return 'limited'
 
   const alert = existing
-    ? await prisma.jobAlert.update({ where: { id: existing.id }, data: { status: 'pending', frequency } })
+    ? await prisma.jobAlert.update({ where: { id: existing.id }, data: { status: 'pending', frequency, ...(firstName ? { firstName } : {}) } })
     : await prisma.jobAlert.create({
         data: {
           email,
@@ -214,6 +227,7 @@ export async function subscribe(input: {
           filtersKey,
           frequency,
           source: readSource(input.source),
+          firstName,
           token: randomBytes(32).toString('hex'),
         },
       })
@@ -256,7 +270,7 @@ export function maskEmail(email: string): string {
  * confirmation.
  */
 export async function notifyOwnerOfConfirmation(
-  alert: { email: string; filters: unknown; frequency: string; source: string | null },
+  alert: { email: string; firstName?: string | null; filters: unknown; frequency: string; source: string | null },
   send: SendMail = sendMail,
 ): Promise<void> {
   const to = process.env.ALERTS_OWNER_EMAIL?.trim()
@@ -266,7 +280,7 @@ export async function notifyOwnerOfConfirmation(
     const label = filters ? buildAlertLabel(filters) : 'All six-figure jobs'
     const active = await prisma.jobAlert.count({ where: { status: 'active' } })
     const lines = [
-      `${maskEmail(alert.email)} confirmed a job alert.`,
+      `${alert.firstName ? `${alert.firstName} (${maskEmail(alert.email)})` : maskEmail(alert.email)} confirmed a job alert.`,
       `Alert: ${label}`,
       `Frequency: ${alert.frequency}`,
       `Signed up from: ${alert.source ?? 'unknown'}`,

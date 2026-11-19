@@ -12,16 +12,17 @@ export async function GET() {
     .findMany({
       where: { status: 'active' },
       orderBy: { confirmedAt: 'asc' },
-      select: { email: true, filters: true, frequency: true, source: true, confirmedAt: true },
+      select: { email: true, firstName: true, filters: true, frequency: true, source: true, confirmedAt: true },
     })
     .catch(() => null)
   if (!rows) return new Response('Alert tables not available yet', { status: 503 })
 
   const lines = [
-    ['email', 'alert', 'frequency', 'signed_up_on_page', 'confirmed_at'].join(','),
+    ['email', 'first_name', 'alert', 'frequency', 'signed_up_on_page', 'confirmed_at'].join(','),
     ...rows.map((r) =>
       [
         r.email,
+        r.firstName ?? '',
         buildAlertLabel(sanitizeAlertFilters(r.filters) ?? {}),
         r.frequency,
         r.source ?? '',

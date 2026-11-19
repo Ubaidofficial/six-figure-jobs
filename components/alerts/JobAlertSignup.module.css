@@ -113,6 +113,10 @@
   width: 15rem;
 }
 
+.name {
+  width: 11rem;
+}
+
 .toggle {
   display: inline-flex;
   align-items: center;
@@ -227,6 +231,13 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* With the first-name field the form needs about 40rem: below this width the text goes above it instead of beside it. */
+@media (max-width: 1439px) {
+  .box {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 767px) {
