@@ -151,13 +151,15 @@ jobs:
       # scraper applies the same $100k salary gate as every source and takes no Google credentials here (the queue
       # drain below is the only step that gets them). Runs on every sync, light ones too, so these boards are read each time freehire
       # is, about five minutes of the run. Independent of the steps above; a failure here stops nothing.
+      # Y Combinator's board (owner's request 2026-11-19) reads its public jobs sitemap, at most 160 pages a run at one a
+      # second, only companies with a job changed in the last 30 days (lib/scrapers/ycombinator.ts).
       - name: Sync pay-stating job boards
         if: ${{ !cancelled() }}
         continue-on-error: true
         timeout-minutes: 20
         env:
           BOARD_SCRAPE_TIMEOUT_MS: "300000"
-        run: npx tsx scripts/dailyScrapeV2.ts --mode=boards --source=jobicy,spainjobs,uiuxjobsboard,workingnomads,remotive
+        run: npx tsx scripts/dailyScrapeV2.ts --mode=boards --source=jobicy,spainjobs,uiuxjobsboard,workingnomads,remotive,ycombinator
       # What the description readers (pay, who a remote job is open to) just did, with each sentence, in the run summary:
       # read-only, the material the daily review uses to catch wrong readings the day they appear.
       - name: Quality report (read-only)
