@@ -67,6 +67,23 @@
   cursor: pointer;
 }
 
+.pause {
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-1);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.pause[aria-pressed='true'] {
+  color: var(--color-text-0);
+  border-color: var(--color-text-2);
+}
+
 .list {
   margin: var(--space-8) 0 0;
   padding: 0;

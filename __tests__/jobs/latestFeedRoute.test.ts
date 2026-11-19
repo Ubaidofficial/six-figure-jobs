@@ -16,13 +16,13 @@ const call = (q = '') => GET(new Request(`https://www.6figjobs.com/api/jobs/late
 beforeEach(() => mockLoad.mockReset().mockResolvedValue(feed))
 
 describe('GET /api/jobs/latest', () => {
-  it('returns the whole feed without `since`, cacheable for a minute', async () => {
+  it('returns the whole feed without `since`, cacheable for 15 seconds (the feed asks every 20)', async () => {
     const res = await call()
     const body = await res.json()
     expect(body.items.map((i: any) => i.id)).toEqual(['new', 'mid', 'old'])
     expect(body.newestAt).toBe(feed.newestAt)
     expect(Number.isNaN(Date.parse(body.checkedAt))).toBe(false)
-    expect(res.headers.get('cache-control')).toMatch(/s-maxage=60/)
+    expect(res.headers.get('cache-control')).toMatch(/s-maxage=15/)
   })
 
   it('returns only jobs added after `since`', async () => {

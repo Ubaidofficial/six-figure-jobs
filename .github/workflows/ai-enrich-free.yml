@@ -6,12 +6,14 @@ name: ai enrich free
 # model and checks the answer but writes nothing. Free only: lib/ai/freeLlm.ts refuses anything that could cost money, and the day's
 # total is capped (AI_FREE_DAILY_MAX, default 80 jobs per UTC day, counted from the database, so repeated runs cannot exceed it).
 #
-# It has no schedule on purpose. To run it daily once its output has been reviewed, add under `on:`
-#   schedule:
-#     - cron: "17 6 * * *"
-# and set the "apply" default to true, in a reviewed change. Same production-database fingerprint guard as the other manual workflows.
+# Scheduled since 2026-11-19 (owner's go-ahead after the dry run of that day, run 44490592550: 18 of 20 would be saved, the
+# check stopped 2: benefits the posting does not mention, and a technology it does not name). Scheduled runs SAVE, twice a day,
+# 40 jobs each (the 80-a-day maximum); a manual run is still a dry run unless "apply" is ticked. Same production-database
+# fingerprint guard as the other manual workflows.
 
 on:
+  schedule:
+    - cron: "23 4,16 * * *"
   workflow_dispatch:
     inputs:
       limit:
@@ -71,7 +73,8 @@ jobs:
       - name: Summarise
         env:
           LIMIT: ${{ inputs.limit }}
-          APPLY: ${{ inputs.apply }}
+          # A scheduled run has no inputs: it saves, with the script's defaults (40 jobs, Cloudflare first).
+          APPLY: ${{ github.event_name == 'schedule' || inputs.apply }}
           PROVIDER: ${{ inputs.provider }}
         run: |
           args="--limit=$LIMIT --provider=$PROVIDER"

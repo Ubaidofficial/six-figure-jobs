@@ -96,7 +96,9 @@ describe('newestAddedAt', () => {
 describe('formatAgo', () => {
   const now = Date.parse('2026-11-06T12:00:00Z')
   it.each([
-    ['2026-11-06T11:59:30Z', 'just now'],
+    ['2026-11-06T11:59:55Z', 'just now'],
+    ['2026-11-06T11:59:30Z', '30 sec ago'],
+    ['2026-11-06T11:59:01Z', '50 sec ago'],
     ['2026-11-06T12:30:00Z', 'just now'], // a clock a little ahead of ours is never "in the future"
     ['2026-11-06T11:55:00Z', '5 min ago'],
     ['2026-11-06T09:00:00Z', '3 hr ago'],
@@ -109,7 +111,7 @@ describe('formatAgo', () => {
 })
 
 describe('loadLatestFeed', () => {
-  it('uses the homepage population, newest first, and queries the database once a minute at most', async () => {
+  it('uses the homepage population, newest first, and queries the database every 15 seconds at most', async () => {
     mockQuery.mockResolvedValue({ jobs: [job({ id: 'n', createdAt: new Date('2026-11-06T12:00:00Z') }), job({ id: 'o', title: 'Older' })] })
     const first = await loadLatestFeed()
     expect(first.newestAt).toBe('2026-11-06T12:00:00.000Z')
@@ -117,7 +119,7 @@ describe('loadLatestFeed', () => {
     expect(mockQuery).toHaveBeenCalledWith(expect.objectContaining({ isHundredKLocal: true, sortBy: 'date', excludeInternships: true }))
     expect(await loadLatestFeed()).toBe(first)
     expect(mockQuery).toHaveBeenCalledTimes(1)
-    expect(LATEST_FEED_TTL_MS).toBe(60_000)
+    expect(LATEST_FEED_TTL_MS).toBe(15_000)
   })
 })
 
