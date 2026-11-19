@@ -2,7 +2,8 @@ name: Scheduled Job Scraper (GitHub Runner)
 
 # The scheduled ATS scrape: every Company row with a supported atsProvider and atsUrl, plus all board scrapers.
 # GitHub disabled this workflow for inactivity on 2026-10-08; brought back on 2026-11-19 (owner's request), with the
-# topstartups.io company boards step added. Google Indexing is drained only by freehire-sync.yml (its full run holds the
+# topstartups.io step tried and then taken out again the same day: 175 of its 183 employer boards are already on
+# freehire, so scripts/addTopStartupsCompanies.ts stays for a manual run only. Google Indexing is drained only by freehire-sync.yml (its full run holds the
 # credentials and the 180-a-day cap), so this workflow no longer drains the queue or receives those credentials.
 
 on:
@@ -144,22 +145,6 @@ jobs:
 
       - name: Generate Prisma client
         run: npx prisma generate
-
-      # Employer boards linked from topstartups.io become Company rows (scripts/addTopStartupsCompanies.ts), so the
-      # scrape below reads them the same run. About 230 listing pages at one request every 2 seconds; a dry run only
-      # prints the plan. A failure here stops nothing.
-      - name: Add topstartups.io company boards
-        if: steps.prep.outputs.mode == 'all' || steps.prep.outputs.mode == 'ats'
-        continue-on-error: true
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ "${{ steps.prep.outputs.dry_run }}" = "true" ]; then
-            npx tsx scripts/addTopStartupsCompanies.ts | tee /tmp/daily-scrape-topstartups.log
-          else
-            npx tsx scripts/addTopStartupsCompanies.ts --apply | tee /tmp/daily-scrape-topstartups.log
-          fi
 
       - name: Run scrape (boards/ats)
         shell: bash
