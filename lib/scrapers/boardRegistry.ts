@@ -23,6 +23,7 @@ import scrapeJobicy from './jobicy'
 import scrapeWorkingNomads from './workingnomads'
 import scrapeSpainJobs from './spainjobs'
 import scrapeUiuxJobsBoard from './uiuxjobsboard'
+import scrapeYCombinator from './ycombinator'
 
 export type BoardScraperTask = {
   key: string
@@ -54,11 +55,13 @@ export const BOARD_SCRAPERS: BoardScraperTask[] = [
   { key: 'workingnomads', name: 'WorkingNomads', run: scrapeWorkingNomads, probeUrl: 'https://www.workingnomads.com/api/exposed_jobs/' },
   { key: 'spainjobs', name: 'SpainJobs', run: scrapeSpainJobs, probeUrl: 'https://www.spainjobs.io/jobs/75k' },
   { key: 'uiuxjobsboard', name: 'UIUXJobsBoard', run: scrapeUiuxJobsBoard, probeUrl: 'https://uiuxjobsboard.com/sitemaps/1.xml' },
+  { key: 'ycombinator', name: 'YCombinator', run: scrapeYCombinator, probeUrl: 'https://www.ycombinator.com/jobs/sitemap' },
   // Off unless LINKEDIN_SCRAPER_ENABLED=1 (does nothing, and costs no request, otherwise). See lib/scrapers/linkedin.ts.
   { key: 'linkedin', name: 'LinkedIn (guest pages)', run: scrapeLinkedIn, dryRunSafe: false },
   // Retired 2026-06-12: Dice/Wellfound/Otta return 404 (APIs changed / Otta shut
-  // down) and YCombinator fetch fails — dead sources burning runtime + inflating
-  // the failure count. Scraper files kept in case the sources return.
+  // down) — dead sources burning runtime + inflating the failure count. Scraper
+  // files kept in case the sources return. YCombinator, retired the same day,
+  // was rewritten on 2026-11-19 to read the public jobs sitemap (above).
   { key: 'company-careers', name: 'CompanyCareers', run: scrapeGenericSources, probeMode: 'dynamic' },
   { key: 'remoteyeah', name: 'RemoteYeah', run: scrapeRemoteYeah, dryRunSafe: false, probeUrl: 'https://remoteyeah.com' },
   { key: 'remoteai', name: 'RemoteAI (companies only)', run: scrapeRemoteAI, dryRunSafe: false, probeUrl: 'https://remoteai.io' },
