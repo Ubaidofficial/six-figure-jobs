@@ -40,6 +40,8 @@ export type FreehireMarket = {
   lookbackDays?: number
   /** Ask without any salary filter, to find jobs whose posting states the pay but freehire's fields do not. */
   anyPay?: boolean
+  /** Most pages this market reads in one run (default: until the window ends or freehire's 10,000-row limit). */
+  maxPages?: number
 }
 
 // Worldwide-remote jobs (freehire's `regions=global`), read over 30 days. The daily 1.5-day window missed most of them
@@ -69,9 +71,20 @@ export const FREEHIRE_MARKETS: ReadonlyArray<FreehireMarket> = [
  * freehire's newest jobs with NO salary filter, so jobs whose pay is only in the posting text are seen too (2026-11-15
  * audit: 82% of freehire's jobs carry no pay in its fields, and the description states a yearly range for about 1.8% of
  * them). Only jobs without freehire pay fields are taken from this pass; mapFreehireJob reads the range with
- * lib/jobs/payEvidence.ts and keeps the sentence. About 5,000 jobs a day, 50 pages.
+ * lib/jobs/payEvidence.ts and keeps the sentence.
+ *
+ * Read in three slices (owner's request, 2026-11-19: use more of the daily request budget for this). freehire adds about
+ * 117,000 jobs a day and one query stops at 10,000 rows, so a single worldwide pass saw only the newest 3-5 hours of each
+ * window. 78% of the readings are in US dollars (359 of 458 logged, 2026-11-19; then CAD 34, EUR 27, GBP 23, AUD 15), so
+ * the US (about 32,000 jobs a day) gets its own 100 pages, about 7 hours; Canada, Australia and the UK (about 13,600 a
+ * day) 50 pages, about 9 hours; the rest of the world (about 72,000 a day, mostly the euro readings) 50 pages. The three
+ * slices cover every job exactly once (their totals add up to freehire's, measured 2026-11-19).
  */
-export const DESCRIPTION_PAY_MARKET: FreehireMarket = { currency: 'ANY', geo: {}, label: 'pay in description', anyPay: true }
+export const DESCRIPTION_PAY_MARKETS: ReadonlyArray<FreehireMarket> = [
+  { currency: 'ANY', geo: { countries: 'us' }, label: 'pay in description (US)', anyPay: true, maxPages: 100 },
+  { currency: 'ANY', geo: { countries: 'ca,au', regions: 'uk' }, label: 'pay in description (CA, AU, UK)', anyPay: true, maxPages: 50 },
+  { currency: 'ANY', geo: { countries_exclude: 'us,ca,au', regions_exclude: 'uk' }, label: 'pay in description (rest)', anyPay: true, maxPages: 50 },
+]
 
 export type FreehireJob = {
   public_slug: string
@@ -132,7 +145,7 @@ export type FreehireSyncOptions = {
   maxPagesPerMarket?: number
   /** Only jobs posted at or after this moment (default: now minus FREEHIRE_LOOKBACK_DAYS). */
   since?: Date
-  /** Also read DESCRIPTION_PAY_MARKET (default true): about 50 pages a day, too many for the 15-minute recent pull. */
+  /** Also read DESCRIPTION_PAY_MARKETS (default true): 200 pages a run, too many for the 15-minute recent pull. */
   withDescriptionPay?: boolean
 }
 
@@ -294,6 +307,9 @@ export function freehireHeaders(): Record<string, string> {
   return headers
 }
 
+/** freehire's rate-limit headers on the last search page read (logged after a sync, to see how much budget is left). */
+export let lastRateLimit: { limit?: string; remaining?: string; reset?: string } | null = null
+
 async function fetchPage(market: FreehireMarket, offset: number): Promise<FreehireResponse> {
   const res = await axios.get<FreehireResponse>(API_URL, {
     headers: freehireHeaders(),
@@ -315,6 +331,8 @@ async function fetchPage(market: FreehireMarket, offset: number): Promise<Freehi
       ...market.geo,
     },
   })
+  const h = (res.headers ?? {}) as Record<string, string | undefined>
+  lastRateLimit = { limit: h['x-ratelimit-limit'], remaining: h['x-ratelimit-remaining'], reset: h['x-ratelimit-reset'] }
   return res.data
 }
 
@@ -337,7 +355,12 @@ export function decideRateLimitWait(
   return { action: seconds > capSeconds ? 'give-up' : 'wait', seconds }
 }
 
-/** fetchPage that waits out short 429 rate limits (Retry-After) and fails fast, with a clear message, on a long one. */
+const NETWORK_RETRY_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ECONNABORTED', 'EAI_AGAIN', 'ECONNREFUSED', 'EPIPE', 'ERR_SOCKET_CONNECTION_TIMEOUT'])
+
+/**
+ * fetchPage that waits out short 429 rate limits (Retry-After) and fails fast, with a clear message, on a long one, and
+ * retries a dropped connection or a timeout up to 3 times.
+ */
 async function fetchPageWithRetry(market: FreehireMarket, offset: number): Promise<FreehireResponse> {
   for (let attempt = 0; ; attempt++) {
     try {
@@ -359,6 +382,14 @@ async function fetchPageWithRetry(market: FreehireMarket, offset: number): Promi
           await sleep(decision.seconds * 1000)
           continue
         }
+      }
+      // A dropped connection or a timeout, not an answer from freehire: try again a few times. One "read ECONNRESET" at
+      // USD offset 3400 failed the whole sync on 2026-11-19 14:24, so that day's closed-job check never ran.
+      const code = (error as { code?: string }).code
+      if (!response && code && NETWORK_RETRY_CODES.has(code) && attempt < 3) {
+        console.warn(`[freehire] ${code} on ${market.label ?? market.currency} offset=${offset}, retrying (attempt ${attempt + 1})`)
+        await sleep(5_000 * (attempt + 1))
+        continue
       }
       throw error
     }
@@ -382,7 +413,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
   let unmappable = 0
   const cutoff = options.since?.getTime() ?? Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
-  for (const market of [...FREEHIRE_MARKETS, ...(options.withDescriptionPay === false ? [] : [DESCRIPTION_PAY_MARKET])]) {
+  for (const market of [...FREEHIRE_MARKETS, ...(options.withDescriptionPay === false ? [] : DESCRIPTION_PAY_MARKETS)]) {
     // A market with its own window reads at least that far back.
     const marketCutoff = market.lookbackDays
       ? Math.min(cutoff, Date.now() - market.lookbackDays * 24 * 60 * 60 * 1000)
@@ -407,6 +438,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
       let oldPages = 0
       for (let offset = 0; offset < MAX_OFFSET; offset += PAGE_SIZE) {
         if (options.maxPagesPerMarket && pages >= options.maxPagesPerMarket) break
+        if (market.maxPages && pages >= market.maxPages) break
         const page = await fetchPageWithRetry(market, offset)
         assertFiltersApplied(page.meta)
         report.available = page.meta.total
