@@ -39,6 +39,19 @@ function failure(err: unknown): Response {
 
 const idOf = (b: Record<string, unknown> | null) => (typeof b?.id === 'string' && b.id.length <= 60 ? b.id : null)
 
+/** POST {keyword?, remote?, skip?: string[]}: the next swipe cards. Read-only; POST so the same-origin check applies. */
+export async function postDeck(req: Request): Promise<Response> {
+  const auth = await authorize(req, 'ap-deck', 120)
+  if (auth instanceof Response) return auth
+  const { readDeckRequest, swipeDeck } = await import('./deck')
+  const { filters, skip } = readDeckRequest(await body(req))
+  try {
+    return json({ cards: await swipeDeck(auth.userId, filters, skip) })
+  } catch (err) {
+    return failure(err)
+  }
+}
+
 export async function postPrepare(req: Request): Promise<Response> {
   const auth = await authorize(req, 'ap-prepare', 10)
   if (auth instanceof Response) return auth
