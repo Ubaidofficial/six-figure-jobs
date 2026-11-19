@@ -52,6 +52,23 @@ export async function postDeck(req: Request): Promise<Response> {
   }
 }
 
+/** POST {id} deletes one saved answer of the signed-in user; POST {all: true} deletes all of them. */
+export async function postDeleteAnswers(req: Request): Promise<Response> {
+  const auth = await authorize(req, 'ap-answers', 60)
+  if (auth instanceof Response) return auth
+  const b = await body(req)
+  const { prisma } = await import('@/lib/prisma')
+  if (b?.all === true) {
+    const r = await prisma.savedAnswer.deleteMany({ where: { userId: auth.userId } })
+    return json({ deleted: r.count })
+  }
+  const id = idOf(b)
+  if (!id) return json({ error: 'bad_request' }, 400)
+  // Scoped to the user: another user's id deletes nothing.
+  const r = await prisma.savedAnswer.deleteMany({ where: { id, userId: auth.userId } })
+  return r.count ? json({ deleted: r.count }) : json({ error: 'not_found' }, 404)
+}
+
 export async function postPrepare(req: Request): Promise<Response> {
   const auth = await authorize(req, 'ap-prepare', 10)
   if (auth instanceof Response) return auth
@@ -75,7 +92,7 @@ export async function patchDraft(req: Request): Promise<Response> {
   const answers = b.answers && typeof b.answers === 'object' && !Array.isArray(b.answers) ? (b.answers as Record<string, unknown>) : undefined
   const profile = b.profile && typeof b.profile === 'object' && !Array.isArray(b.profile) ? (b.profile as Record<string, unknown>) : undefined
   try {
-    const r = await saveDraft(auth.userId, id, { answers, profile, consent: b.consent })
+    const r = await saveDraft(auth.userId, id, { answers, profile, consent: b.consent, confirm: b.confirm, remember: b.remember })
     return json({ plan: r.plan, errors: r.errors, missing: r.missing, hash: r.hash })
   } catch (err) {
     return failure(err)

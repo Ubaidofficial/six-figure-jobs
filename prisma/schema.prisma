@@ -406,6 +406,7 @@ model User {
   applicationKits  ApplicationKit[]
   applyProfile     ApplyProfile?
   autoApplications AutoApplication[]
+  savedAnswers     SavedAnswer[]
 }
 
 // OAuth link (Google). Provider tokens are not stored: lib/auth/config.ts drops them before the adapter writes.
@@ -530,8 +531,37 @@ model ApplyProfile {
   linkedin  String?
   website   String?
   github    String?
+  // Answers to common application questions, typed by the user, matched to questions by their label (plan.ts).
+  currentCompany    String?
+  currentTitle      String?
+  state             String?
+  postalCode        String?
+  noticePeriod      String?
+  salaryExpectation String?
+  languages         String?
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// An answer the user gave to an employer's question, kept (unless they opt out) so the same question on a later
+// application can start from it. Never used without the user ticking it on that application; questions about
+// demographics (EEO) are never kept. Choices are stored as the option wording, not one employer's option ids.
+model SavedAnswer {
+  id          String   @id @default(cuid())
+  userId      String
+  // The question as the employer worded it last time, and its normalised form used for exact matching.
+  question    String
+  questionKey String
+  // 'text' | 'textarea' | 'single' | 'multi'
+  type        String
+  // A string for text, an array of option labels for choices.
+  answer      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionKey, type])
+  @@index([userId])
 }
 
 // One hosted application the user reviewed and approved. `plan` is the exact set of answers that gets submitted;

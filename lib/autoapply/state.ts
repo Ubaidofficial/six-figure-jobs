@@ -41,10 +41,17 @@ export type Outcome =
   | { kind: 'submitted'; evidence: string }
   | {
       kind: 'needs_user'
-      reason: 'captcha' | 'security_code' | 'login' | 'unexpected_field' | 'validation' | 'unconfirmed'
-      /** For 'unexpected_field': the required questions still empty. */
+      reason: 'captcha' | 'security_code' | 'login' | 'unexpected_field' | 'control_not_set' | 'validation' | 'unconfirmed'
+      /** For 'unexpected_field' / 'control_not_set': the questions still empty, or not holding the approved answer. */
       unfilled?: string[]
       labels?: FieldLabels
     }
   | { kind: 'failed'; reason: string }
-  | { kind: 'dry_run'; filled: string[]; unfilled: string[]; labels?: FieldLabels }
+  | {
+      kind: 'dry_run'
+      filled: string[]
+      unfilled: string[]
+      labels?: FieldLabels
+      /** Fields the form did not take even after a second try (also listed in `unfilled`). */
+      notSet?: string[]
+    }
