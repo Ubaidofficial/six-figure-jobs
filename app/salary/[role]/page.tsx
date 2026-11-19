@@ -1,5 +1,6 @@
 // app/salary/[role]/page.tsx
 
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import type { Metadata } from 'next'
 import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
@@ -511,6 +512,11 @@ export default async function SalaryRolePage(props: PageProps) {
           </>
         )}
       </section>
+
+      {/* New jobs for this role by email, under the role's live jobs. */}
+      <div className="mt-8">
+        <JobAlertBox query={{ roleSlugs: [role] }} title="Get new jobs for this role by email" />
+      </div>
 
       <PageSection
         title={`How is this ${roleName} salary data calculated?`}

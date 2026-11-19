@@ -211,7 +211,8 @@ export default async function CityPage({ params }: { params: Params }) {
         ]}
       />
 
-      <ListingLayout>
+      {/* Alerts filter by country, not city: this one is the city's country, and its label names the country. */}
+      <ListingLayout alert={{ countryCode: resolved.countryCode ?? undefined }}>
         <JobRows
           jobs={jobs as JobWithCompany[]}
           empty={{

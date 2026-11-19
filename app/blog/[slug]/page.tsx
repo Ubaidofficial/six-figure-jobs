@@ -1,6 +1,7 @@
 // app/blog/[slug]/page.tsx
 // Individual blog post — Article + FAQPage + BreadcrumbList JSON-LD
 
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import type { Metadata } from 'next'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
@@ -193,6 +194,10 @@ export default async function BlogPostPage({ params }: Props) {
           </Link>
         </div>
       </section>
+
+      <div style={{ marginTop: 40 }}>
+        <JobAlertBox query={{}} title="Get new six-figure jobs by email" />
+      </div>
 
       {/* Related articles */}
       {relatedPosts.length > 0 && (

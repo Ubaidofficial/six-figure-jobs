@@ -683,6 +683,10 @@
   scroll-margin-top: 96px;
 }
 
+.alertAfter {
+  margin-top: var(--space-24, 24px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .savedSearchChip {
     transition: none;

@@ -216,7 +216,9 @@ export default async function CategoryPage({
         ]}
       />
 
-      <ListingLayout>
+      {/* An alert holds at most 5 roles (lib/alerts/filters.ts): a bigger category (Engineering, 14) gets the all-jobs alert,
+          labelled as such, rather than one that silently leaves roles out. */}
+      <ListingLayout alert={cfg.roleSlugs.length <= 5 ? { roleSlugs: cfg.roleSlugs } : {}}>
         <JobRows
           jobs={jobs as JobWithCompany[]}
           empty={{

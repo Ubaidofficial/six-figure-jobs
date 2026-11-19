@@ -28,6 +28,7 @@ import { loadNewRolesByCompany } from '@/lib/jobs/newRolesByCompany'
 import { loadFreehireCatalog } from '@/lib/jobs/freehireCatalog'
 import { REMOTE_REGIONS } from '@/lib/jobs/remoteRegions'
 import { LiveJobFeed } from '@/components/home/LiveJobFeed'
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import { NewRolesStrip } from '@/components/home/NewRolesStrip'
 import { SiteStatsStrip } from '@/components/home/SiteStatsStrip'
 import { buildFeedItems } from '@/lib/jobs/latestFeed'
@@ -667,6 +668,9 @@ export default async function HomePage() {
 
       {/* The newest jobs, live (one list since 2026-11-19; it replaced a static "Latest" list and a separate live block). */}
       <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} totalJobs={stats.totalJobs} />
+
+      {/* The alert signup right under the newest jobs, as well as in the footer and the corner popup. */}
+      <JobAlertBox query={{}} title="Get new six-figure jobs by email" />
 
       {priorityFeaturedCompanies.length > 0 && (
         <section className="panel-hairline mb-8 p-5">

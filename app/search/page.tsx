@@ -1,5 +1,6 @@
 // app/search/page.tsx
 
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import type { Metadata } from 'next'
 import Link from '@/components/ui/Link'
 import { redirect } from 'next/navigation'
@@ -434,6 +435,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </div>
         </>
       )}
+          <div className="mt-10">
+            <JobAlertBox query={{}} title="Get new six-figure jobs by email" />
+          </div>
         </main>
       )
     },
