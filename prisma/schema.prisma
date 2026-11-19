@@ -626,6 +626,8 @@ model AutoApplyRun {
 model JobAlert {
   id             String         @id @default(cuid())
   email          String
+  // Optional, typed by the subscriber on the signup form (letters, spaces, ' . - only; at most 40 characters).
+  firstName      String?
   // 32 random bytes, hex. The only secret in the alert's links; never derived from the email.
   token          String         @unique
   // The saved search: a whitelisted subset of JobQueryInput (lib/alerts/filters.ts), run through buildWhere.

@@ -53,7 +53,7 @@ export default function PrivacyPage() {
         Email job alerts
       </h2>
       <p className="mt-4 text-muted-foreground">
-        If you sign up for a free job alert, we store your email address, the search you chose (for example a role,
+        If you sign up for a free job alert, we store your email address, your first name if you give it, the search you chose (for example a role,
         country or pay level), how often you want to hear from us (daily or weekly), the page you signed up on, when
         you confirmed, and which jobs we have already emailed you. We use this only to send you that alert. We first
         send one email asking you to confirm, and we send nothing more until you do. Every alert email has an
