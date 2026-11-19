@@ -65,7 +65,7 @@ jobs:
 
       - name: Start app
         run: |
-          # FREEHIRE_RECENT_EVERY_MIN=0: the app's 15-minute freehire pull (instrumentation.ts) must not call freehire from CI.
+          # FREEHIRE_RECENT_EVERY_MIN=0: the app's 5-minute freehire pull (instrumentation.ts) must not call freehire from CI.
           SITE_URL=http://localhost:3000 FREEHIRE_RECENT_EVERY_MIN=0 npm run start >/tmp/seo-next-start.log 2>&1 &
           echo $! >/tmp/seo-next-start.pid
 

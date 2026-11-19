@@ -1,5 +1,5 @@
 // GET /api/cron/freehire-recent: runs the frequent freehire pull (lib/scrapers/freehireRecent.ts) on demand. The app
-// already runs it every 15 minutes by itself (instrumentation.ts); this route is for a manual run or an outside
+// already runs it every 5 minutes by itself (instrumentation.ts); this route is for a manual run or an outside
 // scheduler. Needs `Authorization: Bearer <CRON_SECRET>`, like the other /api/cron routes; 401 without it.
 import { NextResponse } from 'next/server'
 

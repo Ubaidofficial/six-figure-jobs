@@ -145,7 +145,7 @@ export type FreehireSyncOptions = {
   maxPagesPerMarket?: number
   /** Only jobs posted at or after this moment (default: now minus FREEHIRE_LOOKBACK_DAYS). */
   since?: Date
-  /** Also read DESCRIPTION_PAY_MARKETS (default true): 200 pages a run, too many for the 15-minute recent pull. */
+  /** Also read DESCRIPTION_PAY_MARKETS (default true): 200 pages a run, too many for the 5-minute recent pull. */
   withDescriptionPay?: boolean
 }
 
@@ -568,7 +568,7 @@ export async function ingestFreehireJobs(
 ): Promise<ScraperStats> {
   const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
   // Give each job its employer's website (when freehire has one) so its logo comes from a real domain, not a name guess.
-  // The 15-minute recent pull skips this (one request per company, against freehire's daily quota); the regular syncs
+  // The 5-minute recent pull skips this (one request per company, against freehire's daily quota); the regular syncs
   // read the same jobs again and fill the websites then.
   if (opts.lookUpWebsites !== false) {
     try {

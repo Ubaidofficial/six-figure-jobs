@@ -2,7 +2,7 @@
 // Runs once when the server starts. In production:
 //  - warms the busiest pages a few seconds after start, then keeps every hub page in the sitemaps warm with a slow pass
 //    every 45 minutes (lib/runtime/warmPages.ts); WARM_ON_START=0 turns both off;
-//  - saves freehire's newest jobs every 15 minutes (lib/scrapers/freehireRecent.ts), first 2 minutes after start;
+//  - saves freehire's newest jobs every 5 minutes (lib/scrapers/freehireRecent.ts), first 2 minutes after start;
 //    FREEHIRE_RECENT_EVERY_MIN sets the minutes, 0 turns it off.
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return

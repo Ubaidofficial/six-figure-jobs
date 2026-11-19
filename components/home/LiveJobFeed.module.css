@@ -1,29 +1,30 @@
-/* Homepage live feed. Compact rows, thumb-sized tap targets, no layout shift when new jobs arrive. */
+/* Homepage "Latest Six Figure Opportunities", live: one card of full-width rows (title and employer on the left, pay and
+   place on the right), thumb-sized tap targets, no layout shift when new jobs arrive. */
 
 .section {
-  margin: var(--space-24) 0;
-  padding: 20px 22px;
-  background: var(--color-bg-1);
-  border-radius: 20px;
-  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(12, 13, 14, 0.04);
+  margin: var(--space-24) auto;
 }
 
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: var(--space-12);
+  gap: var(--space-16);
+  margin-bottom: var(--space-20, 20px);
 }
 
-.title {
+.live {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
+  gap: 8px;
+  margin-top: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-1);
+}
+
+.live strong {
   color: var(--color-text-0);
+  font-weight: var(--font-weight-semibold);
 }
 
 .dot {
@@ -35,23 +36,17 @@
   animation: pulse 1.8s ease-out infinite;
 }
 
-.sub {
-  margin-top: var(--space-4, 4px);
-  font-size: var(--text-sm);
-  color: var(--color-text-1);
-}
-
-.all {
-  padding: var(--space-8) 0;
-  white-space: nowrap;
-}
-
 .actions {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   gap: var(--space-12);
   min-height: 44px;
+}
+
+.all {
+  padding: var(--space-8) 0;
+  white-space: nowrap;
 }
 
 .pending {
@@ -85,35 +80,41 @@
 }
 
 .list {
-  margin: var(--space-8) 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
+  overflow: hidden;
+  background: var(--color-bg-1);
+  border-radius: 20px;
+  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(12, 13, 14, 0.04);
 }
 
 .list > li + li {
   border-top: 1px solid var(--color-border);
 }
 
-/* Wide screens: two columns, so twelve short rows do not leave most of the card empty. */
-@media (min-width: 1024px) {
-  .list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--space-32, 32px);
-  }
-  .list > li:nth-child(2) {
-    border-top: 0;
-  }
+.empty {
+  padding: var(--space-24);
+  text-align: center;
+  color: var(--color-text-1);
+  background: var(--color-bg-1);
+  border-radius: 20px;
+  box-shadow: 0 0 0 1px var(--color-border);
 }
 
 .row {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-12);
-  min-height: 64px;
-  padding: var(--space-12) var(--space-4, 4px);
+  align-items: center;
+  gap: var(--space-16);
+  min-height: 72px;
+  padding: var(--space-16) var(--space-24);
   color: inherit;
   text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+.row:hover {
+  background: color-mix(in srgb, var(--color-fg, #0c0d0e) 3%, transparent);
 }
 
 .row:hover .jobTitle {
@@ -122,8 +123,8 @@
 
 .logo {
   display: block;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   overflow: hidden;
   background: #fff;
@@ -136,43 +137,84 @@
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .jobTitle {
-  font-size: var(--text-base);
+  font-size: 1.0625rem;
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   color: var(--color-text-0);
   overflow-wrap: anywhere;
 }
 
-.company {
-  font-size: var(--text-sm);
-  color: var(--color-text-1);
-}
-
-.meta {
+.byline {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px var(--space-12);
-  margin-top: 2px;
+  align-items: center;
+  gap: 2px 6px;
   font-size: var(--text-sm);
-  color: var(--color-text-2);
+  color: var(--color-text-1);
 }
 
 .ago {
   color: var(--color-primary-text);
   font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.side {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 40%;
+  text-align: right;
 }
 
 .salary {
-  color: var(--color-text-0);
+  font-family: var(--font-mono);
   font-weight: var(--font-weight-semibold);
+  color: var(--color-text-0);
+  white-space: nowrap;
 }
 
+.place {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--color-text-1);
+  overflow-wrap: anywhere;
+}
+
+/* A job that just arrived slides in at the top and glows green for a moment. */
 .fresh {
-  animation: arrive 1.6s ease-out;
+  animation: arrive 1.8s ease-out;
+}
+
+.cta {
+  margin-top: var(--space-24);
+  display: flex;
+  justify-content: center;
+}
+
+.ctaButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  color: #0a0a0a;
+  background: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.ctaButton:hover {
+  background: var(--color-primary-light);
 }
 
 @keyframes pulse {
@@ -182,17 +224,23 @@
 }
 
 @keyframes arrive {
-  from { background: rgba(132, 204, 22, 0.18); }
-  to { background: transparent; }
+  0% { opacity: 0; transform: translateY(-8px); background: rgba(132, 204, 22, 0.22); }
+  20% { opacity: 1; transform: none; }
+  100% { background: transparent; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dot, .fresh { animation: none; }
 }
 
-@media (max-width: 480px) {
-  .header { flex-direction: column; gap: var(--space-4, 4px); }
-  /* Phones: the 5 newest; "All new jobs" links the rest (the homepage was ~13,000px tall on an iPhone, 2026-11-08). */
-  .list > li:nth-child(n + 6) { display: none; }
-  .section { padding: var(--space-12); }
+@media (max-width: 767px) {
+  .header { flex-direction: column; align-items: flex-start; gap: var(--space-8); }
+  .actions { flex-wrap: wrap; }
+  .row { align-items: flex-start; flex-wrap: wrap; padding: var(--space-12) var(--space-16); }
+  .logo { width: 40px; height: 40px; }
+  /* Pay and place drop under the title, aligned with it. */
+  .side { flex-basis: 100%; max-width: none; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 2px var(--space-12); padding-left: 56px; text-align: left; }
+  /* Phones: the 8 newest; the buttons link the rest (the homepage was ~13,000px tall on an iPhone, 2026-11-08). */
+  .list > li:nth-child(n + 9) { display: none; }
+  .ctaButton { width: 100%; }
 }
