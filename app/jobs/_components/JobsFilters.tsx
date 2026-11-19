@@ -43,12 +43,14 @@ export type RolePreset = {
 /** Long lists show this many options until "Show all" is pressed. */
 const SHORT_LIST = 6
 
+// The levels jobs carry (Job.experienceLevel, read from the title). "Mid-level" was offered, but no job is stored as mid.
 const SENIORITY = [
-  { value: 'mid', label: 'Mid-level' },
   { value: 'senior', label: 'Senior' },
   { value: 'staff', label: 'Staff' },
   { value: 'principal', label: 'Principal' },
   { value: 'lead', label: 'Lead' },
+  { value: 'director', label: 'Director' },
+  { value: 'vp', label: 'VP' },
 ] as const
 
 const COMPANY_SIZES = [
@@ -402,24 +404,28 @@ export function JobsFiltersPanel({
           </Section>
         ) : null}
 
-        <Section title="Company size" open={selectedCompanySizes.length > 0}>
-          <div className={styles.pills} role="group" aria-label="Company size (employees)">
-            {COMPANY_SIZES.map((opt) => {
-              const on = selectedCompanySizes.includes(opt.value)
-              return (
-                <Pill
-                  key={opt.value}
-                  on={on}
-                  count={facets.companySizes ? (facets.companySizes[opt.value] ?? 0) : undefined}
-                  onClick={() => toggleMulti('companySize', opt.value, on)}
-                >
-                  {opt.label}
-                </Pill>
-              )
-            })}
-          </div>
-          <p className={styles.help}>Employees.</p>
-        </Section>
+        {/* Company sizes come from Company.sizeBucket, which only a backfill script fills; while every count is 0 the
+            pills could only disable themselves, so the section is left out until the data exists (2026-11-19 audit). */}
+        {selectedCompanySizes.length > 0 || !facets.companySizes || Object.values(facets.companySizes).some((n) => n > 0) ? (
+          <Section title="Company size" open={selectedCompanySizes.length > 0}>
+            <div className={styles.pills} role="group" aria-label="Company size (employees)">
+              {COMPANY_SIZES.map((opt) => {
+                const on = selectedCompanySizes.includes(opt.value)
+                return (
+                  <Pill
+                    key={opt.value}
+                    on={on}
+                    count={facets.companySizes ? (facets.companySizes[opt.value] ?? 0) : undefined}
+                    onClick={() => toggleMulti('companySize', opt.value, on)}
+                  >
+                    {opt.label}
+                  </Pill>
+                )
+              })}
+            </div>
+            <p className={styles.help}>Employees.</p>
+          </Section>
+        ) : null}
 
         {facets.techs && facets.techs.length > 0 ? (
           <Section title="Technology" open={Boolean(selectedTech)}>

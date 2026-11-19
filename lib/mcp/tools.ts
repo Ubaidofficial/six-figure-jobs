@@ -104,10 +104,15 @@ export function readJobRef(value: string): string {
   return ref
 }
 
-/** Seniority words in a query ("senior", "staff", "director") to the levels the listing filter stores. */
+/**
+ * Seniority words in a query ("senior", "staff", "director") to the levels jobs store (Job.experienceLevel). nlToFilters'
+ * "lead" group also covers the words staff and principal; "entry" and "mid" are never stored, so they do not filter.
+ */
 function seniorityLevelsFor(level: string | undefined): string[] | undefined {
-  if (!level) return undefined
-  return level === 'executive' ? ['director', 'vp'] : [level]
+  if (level === 'senior') return ['senior']
+  if (level === 'lead') return ['lead', 'staff', 'principal']
+  if (level === 'executive') return ['director', 'vp', 'c-level']
+  return undefined
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */

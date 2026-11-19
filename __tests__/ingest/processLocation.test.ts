@@ -41,10 +41,27 @@ describe('processLocation country code', () => {
     expect(processLocation(job({ locationText: 'Any Location / Remote', salaryCurrency: 'USD', isRemote: true })).countryCode).toBeNull()
   })
 
-  it('keeps the on-site mode and city for a job whose country was found from its state', () => {
+  it('keeps the city and the country found from its state, and leaves an unstated work type unknown', () => {
     const r = processLocation(job({ locationText: 'Nürnberg, Bayern', salaryCurrency: 'EUR' }))
     expect(r.countryCode).toBe('DE')
-    expect(r.remoteMode).toBe('onsite')
+    expect(r.city).toBe('Nürnberg')
+    expect(r.remoteMode).toBeNull()
+  })
+})
+
+describe('processLocation work type', () => {
+  // A place name alone was stored as on-site, so the description reader never marked such a job remote: a remote
+  // "Software Architect" posting located "Germany" showed "Onsite" and had no TELECOMMUTE (2026-11-19 audit).
+  it('does not turn a bare place name into on-site', () => {
+    expect(processLocation(job({ locationText: 'Germany', salaryCurrency: 'EUR' })).remoteMode).toBeNull()
+    expect(processLocation(job({ locationText: 'Austin, TX', salaryCurrency: 'USD' })).remoteMode).toBeNull()
+  })
+
+  it('still takes on-site, hybrid and remote from the source or the location wording', () => {
+    expect(processLocation(job({ locationText: 'Austin, TX', workplaceType: 'onsite' })).remoteMode).toBe('onsite')
+    expect(processLocation(job({ locationText: 'Austin, TX', workplaceType: 'hybrid' })).remoteMode).toBe('hybrid')
+    expect(processLocation(job({ locationText: 'Austin, TX', isRemote: true })).remoteMode).toBe('remote')
+    expect(processLocation(job({ locationText: 'Remote - US' })).remoteMode).toBe('remote')
   })
 })
 
@@ -71,5 +88,31 @@ describe('processLocation: CA, DE and IN after a city are US states unless the c
     const r = processLocation(job({ locationText: 'Berlin', isRemote: true }))
     expect(r.countryCode).toBe('DE')
     expect(r.city).toBe('Berlin')
+  })
+})
+
+describe('processLocation remote job country', () => {
+  const remote = (locationText: string, salaryCurrency: string) => processLocation(job({ locationText, salaryCurrency, isRemote: true }))
+
+  // 2026-11-19 audit: these remote jobs had a wrong or no country, so they were missing from the country and region
+  // filters and their JobPosting applicantLocationRequirements were wrong.
+  it('reads a country named anywhere in the text', () => {
+    expect(remote('Remote from Spain', 'EUR').countryCode).toBe('ES')
+    expect(remote('Remote (USA), strong preference for East Coast', 'USD').countryCode).toBe('US')
+    expect(remote('Allentown, Pennsylvania', 'USD').countryCode).toBe('US')
+    expect(remote('United States-Pennsylvania-Philadelphia', 'USD').countryCode).toBe('US')
+  })
+
+  it('reads a bare trailing CA as California with dollar pay, Canada otherwise', () => {
+    expect(remote('Remote, CA', 'USD').countryCode).toBe('US')
+    expect(remote('Remote, CA', 'CAD').countryCode).toBe('CA')
+    expect(remote('Remote - Canada', 'CAD').countryCode).toBe('CA')
+  })
+
+  it('never takes a remote country from the pay currency alone, and keeps "Remote ..." out of the city', () => {
+    expect(remote('Remote', 'USD').countryCode).toBeNull()
+    expect(remote('Remote - EMEA', 'EUR').countryCode).toBeNull()
+    expect(remote('Remote from Spain', 'EUR').city).toBeNull()
+    expect(remote('Remote (USA), strong preference for East Coast', 'USD').city).toBeNull()
   })
 })

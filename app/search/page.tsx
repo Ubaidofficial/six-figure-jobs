@@ -14,6 +14,7 @@ import { SearchForm } from './SearchForm'
 import { parseSearchQuery } from '../../lib/jobs/nlToFilters'
 import { leftoverTokens } from '../../lib/search/leftover'
 import { SITE_NAME, getSiteUrl } from '../../lib/seo/site'
+import { salaryFilterAmount, salaryFilterCurrency } from '../../lib/jobs/salaryFilter'
 
 // CDN-cacheable per-query. /search is noindex by design (X-Robots-Tag header in
 // next.config), so caching has no SEO impact — but every search hit was
@@ -79,25 +80,21 @@ function resolveCountryCode(value: string | undefined): string | undefined {
   return normalized.length === 2 ? normalized : undefined
 }
 
-function resolveSeniorityLevels(
-  explicit: string | undefined,
-  inferred: string | undefined,
-): string[] | undefined {
-  const value = (explicit || inferred || '').trim().toLowerCase()
-  if (!value) return undefined
-
-  switch (value) {
-    case 'entry':
-    case 'mid':
+// Levels as jobs store them (Job.experienceLevel, read from the title by lib/ingest): senior, staff, principal, lead,
+// director, vp, c-level. A level from the form filters on itself. A level read from the query text is one of
+// nlToFilters' groups, whose "lead" also covers the words staff and principal, and "executive" director/vp/chief.
+// "entry" and "mid" are never stored, so they do not filter (they used to return no jobs at all).
+function resolveSeniorityLevels(explicit: string | undefined, inferred: string | undefined): string[] | undefined {
+  const STORED = ['senior', 'staff', 'principal', 'lead', 'director', 'vp', 'c-level']
+  const form = (explicit || '').trim().toLowerCase()
+  if (form) return form === 'executive' ? ['director', 'vp', 'c-level'] : STORED.includes(form) ? [form] : undefined
+  switch ((inferred || '').trim().toLowerCase()) {
     case 'senior':
-    case 'staff':
-    case 'principal':
+      return ['senior']
     case 'lead':
-    case 'director':
-    case 'vp':
-      return [value]
+      return ['lead', 'staff', 'principal']
     case 'executive':
-      return ['director', 'vp']
+      return ['director', 'vp', 'c-level']
     default:
       return undefined
   }
@@ -275,8 +272,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const remoteMode = normalizeRemoteMode(getParam(sp, 'remoteMode')?.trim())
   const remoteRegion = getParam(sp, 'remoteRegion')?.trim() || ''
   const seniority = getParam(sp, 'seniority')?.trim() || ''
-  const minSalaryParam = getParam(sp, 'minSalary')
-  const minSalaryRaw = Number(minSalaryParam || '100000')
+  const minSalaryRaw = Number(getParam(sp, 'minSalary') || '100000')
   const page = Math.max(1, Number(getParam(sp, 'page') || '1') || 1)
 
   const aiFilters = parseSearchQuery(q)
@@ -299,7 +295,12 @@ export default async function SearchPage({ searchParams }: PageProps) {
     resolvedLocation === 'remote' ? undefined : resolveCountryCode(resolvedLocation)
   const remoteOnly = resolvedLocation === 'remote' || (Boolean(aiFilters.remoteOnly) && !remoteMode)
   const seniorityLevels = resolveSeniorityLevels(seniority, aiFilters.experienceLevel)
-  const hasUserMinSalary = Boolean(minSalaryParam) || aiFilters.minAnnual != null
+  // Only a step above the site's $100k floor filters (the form always sends minSalary, at 100000 for "Any"). Filtering at
+  // the floor forced US dollars without a location and dropped every £ and € job (2026-11-19 audit). A step compares
+  // in the location's currency, as on /jobs (lib/jobs/salaryFilter.ts).
+  const salaryCurrency = salaryFilterCurrency(resolvedCountryCode)
+  const salaryFilter =
+    minAnnual > 100_000 ? { currency: salaryCurrency, minAnnual: salaryFilterAmount(minAnnual, salaryCurrency) } : {}
 
   return withRuntimeFallback(
     'search.page',
@@ -322,7 +323,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
         // raw phrase is not ANDed (it would require the literal text in the title and wipe out valid matches); only
         // the leftover words above are. With no structured match the whole query is the keyword.
         keyword,
-        ...(hasUserMinSalary ? { minAnnual } : {}),
+        ...salaryFilter,
       })
 
       const jobs = data.jobs as JobWithCompany[]
