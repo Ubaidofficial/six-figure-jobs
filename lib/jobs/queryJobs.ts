@@ -249,7 +249,7 @@ export async function withCardSummaries<
 }
 
 /** Most matches ranked per search; beyond this, results are ordered by recency instead of score. */
-const RELEVANCE_CANDIDATE_CAP = 1500
+export const RELEVANCE_CANDIDATE_CAP = 1500
 
 /**
  * Pure: "Most relevant" order. Jobs that carry the "New" tag (posted within NEW_TAG_WINDOW_MS) come first, so a fresh

@@ -132,6 +132,8 @@ export type FreehireSyncOptions = {
   maxPagesPerMarket?: number
   /** Only jobs posted at or after this moment (default: now minus FREEHIRE_LOOKBACK_DAYS). */
   since?: Date
+  /** Also read DESCRIPTION_PAY_MARKET (default true): about 50 pages a day, too many for the 15-minute recent pull. */
+  withDescriptionPay?: boolean
 }
 
 /** freehire tags outbound links with utm_source=freehire.me; drop only that tag. */
@@ -380,7 +382,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
   let unmappable = 0
   const cutoff = options.since?.getTime() ?? Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
-  for (const market of [...FREEHIRE_MARKETS, DESCRIPTION_PAY_MARKET]) {
+  for (const market of [...FREEHIRE_MARKETS, ...(options.withDescriptionPay === false ? [] : [DESCRIPTION_PAY_MARKET])]) {
     // A market with its own window reads at least that far back.
     const marketCutoff = market.lookbackDays
       ? Math.min(cutoff, Date.now() - market.lookbackDays * 24 * 60 * 60 * 1000)
@@ -528,20 +530,27 @@ export async function loadFreehireCompanyWebsites(
 }
 
 /** Write already-collected jobs through the normal board ingest (dedupe, priority, salary gate). */
-export async function ingestFreehireJobs(inputs: BoardJobInput[]): Promise<ScraperStats> {
+export async function ingestFreehireJobs(
+  inputs: BoardJobInput[],
+  opts: { lookUpWebsites?: boolean } = {},
+): Promise<ScraperStats> {
   const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
   // Give each job its employer's website (when freehire has one) so its logo comes from a real domain, not a name guess.
-  try {
-    const wanted = [...new Set(inputs.filter((i) => !i.companyWebsiteUrl).map((i) => i.companyRef ?? '').filter(Boolean))]
-    const t0 = Date.now()
-    const sites = await loadFreehireCompanyWebsites(wanted)
-    console.log(`[freehire] company websites: ${sites.size} found for ${wanted.length} companies in ${Math.round((Date.now() - t0) / 1000)}s`)
-    for (const input of inputs) {
-      const site = input.companyRef ? sites.get(input.companyRef) : undefined
-      if (site && !input.companyWebsiteUrl) input.companyWebsiteUrl = site
+  // The 15-minute recent pull skips this (one request per company, against freehire's daily quota); the regular syncs
+  // read the same jobs again and fill the websites then.
+  if (opts.lookUpWebsites !== false) {
+    try {
+      const wanted = [...new Set(inputs.filter((i) => !i.companyWebsiteUrl).map((i) => i.companyRef ?? '').filter(Boolean))]
+      const t0 = Date.now()
+      const sites = await loadFreehireCompanyWebsites(wanted)
+      console.log(`[freehire] company websites: ${sites.size} found for ${wanted.length} companies in ${Math.round((Date.now() - t0) / 1000)}s`)
+      for (const input of inputs) {
+        const site = input.companyRef ? sites.get(input.companyRef) : undefined
+        if (site && !input.companyWebsiteUrl) input.companyWebsiteUrl = site
+      }
+    } catch (error) {
+      console.warn('[freehire] company website lookup skipped:', error instanceof Error ? error.message : error)
     }
-  } catch (error) {
-    console.warn('[freehire] company website lookup skipped:', error instanceof Error ? error.message : error)
   }
   // Each ingest waits on many sequential database round trips (about 1-1.6 s a job from GitHub's runners to the database
   // in Europe), so one at a time the full sync ran past its 150-minute job limit on 2026-11-18. Jobs are written a few

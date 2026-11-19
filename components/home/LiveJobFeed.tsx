@@ -1,9 +1,11 @@
 'use client'
 
 // The homepage live feed: the newest jobs we added, with how long ago. The server renders the first list (so it is in
-// the HTML and the page stays static); after load this asks /api/jobs/latest once a minute while the tab is visible.
-// New jobs wait behind a "Show N new jobs" button instead of being pushed into the list, so nothing moves under a
-// reader's thumb. Polling stops after 30 minutes of one visit and resumes when the tab is shown again.
+// the HTML and the page stays static); after load this asks /api/jobs/latest every 20 seconds while the tab is visible.
+// New jobs slide in at the top as they arrive (owner's request, 2026-11-19: "updates in live real time" like freehire's
+// "Just added"). So nothing moves under a reader's thumb, arrivals wait while the pointer or keyboard focus is in the
+// list, and Pause holds them behind a "Show N new jobs" button. Polling stops after 30 minutes of one visit and resumes
+// when the tab is shown again.
 
 import * as React from 'react'
 import Link from '@/components/ui/Link'
@@ -14,9 +16,9 @@ import { FEED_SIZE, formatAgo, newestAddedAt, type FeedItem } from '@/lib/jobs/l
 
 import styles from './LiveJobFeed.module.css'
 
-const POLL_MS = 60_000
-const TICK_MS = 30_000
-const MAX_POLLS_PER_VISIT = 30
+const POLL_MS = 20_000
+const TICK_MS = 5_000
+const MAX_POLLS_PER_VISIT = 90
 
 export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedItem[]; serverNow: string }) {
   const [items, setItems] = React.useState(initialItems)
@@ -27,6 +29,9 @@ export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedIte
   const known = React.useRef(initialItems)
   const lastPoll = React.useRef(0)
   const polls = React.useRef(0)
+  const [paused, setPaused] = React.useState(false)
+  // The pointer or keyboard focus is in the list: arrivals wait so a row does not move under a tap.
+  const [holding, setHolding] = React.useState(false)
 
   const newest = newestAddedAt([...items, ...pending])
   known.current = [...items, ...pending]
@@ -71,11 +76,20 @@ export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedIte
     }
   }, [poll])
 
-  const showPending = () => {
-    setFresh(new Set(pending.map((i) => i.id)))
-    setItems((cur) => [...pending, ...cur].slice(0, FEED_SIZE))
-    setPending([])
-  }
+  const showPending = React.useCallback(() => {
+    setPending((queued) => {
+      if (queued.length) {
+        setFresh(new Set(queued.map((i) => i.id)))
+        setItems((cur) => [...queued, ...cur].slice(0, FEED_SIZE))
+      }
+      return []
+    })
+  }, [])
+
+  // Live unless paused or held: new jobs go straight into the list.
+  React.useEffect(() => {
+    if (!paused && !holding && pending.length) showPending()
+  }, [paused, holding, pending.length, showPending])
 
   if (items.length === 0 && pending.length === 0) return null
 
@@ -90,14 +104,17 @@ export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedIte
             </span>
           </h2>
           <p className={styles.sub}>
-            {newest ? `Latest job added ${formatAgo(newest, now)}.` : 'Updated continuously.'} This list refreshes while you
-            are here.
+            {newest ? `Latest job added ${formatAgo(newest, now)}.` : 'Updated continuously.'}{' '}
+            {paused ? 'Paused: new jobs wait until you resume.' : 'New jobs appear here as we add them.'}
           </p>
         </div>
-        {/* The "Show N new jobs" button sits beside the link, in a row that is always there, so it never moves the list. */}
+        {/* The buttons sit beside the link, in a row that is always there, so they never move the list. */}
         <div className={styles.actions}>
+          <button type="button" className={styles.pause} aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
+            {paused ? 'Resume' : 'Pause'}
+          </button>
           <span aria-live="polite">
-            {pending.length > 0 ? (
+            {paused && pending.length > 0 ? (
               <button type="button" className={styles.pending} onClick={showPending}>
                 Show {pending.length} new {pending.length === 1 ? 'job' : 'jobs'}
               </button>
@@ -110,7 +127,15 @@ export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedIte
         </div>
       </header>
 
-      <ul className={styles.list}>
+      <ul
+        className={styles.list}
+        onPointerEnter={() => setHolding(true)}
+        onPointerLeave={() => setHolding(false)}
+        onFocus={() => setHolding(true)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHolding(false)
+        }}
+      >
         {items.map((job) => (
           <li key={job.id} className={fresh.has(job.id) ? styles.fresh : undefined}>
             <Link href={job.href} prefetch={false} className={styles.row}>
