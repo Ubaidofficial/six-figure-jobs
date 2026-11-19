@@ -6,12 +6,15 @@ import { useRouter } from 'next/navigation'
 import { Check, CheckCircle2, Circle, FileText, Mail, ShieldCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import type { Plan, PlanField } from '@/lib/autoapply/plan'
+import { isIntlPhone, missingFields, type Plan, type PlanField } from '@/lib/autoapply/plan'
 import { cn } from '@/lib/utils'
 
 import styles from './autoapply.module.css'
 
-type Profile = { firstName: string; lastName: string; phone: string; country: string; city: string; linkedin: string; website: string; github: string }
+type Profile = {
+  firstName: string; lastName: string; phone: string; country: string; city: string; linkedin: string; website: string; github: string
+  currentCompany: string; currentTitle: string; state: string; postalCode: string; noticePeriod: string; salaryExpectation: string; languages: string
+}
 
 export type ReviewProps = {
   id: string
@@ -33,6 +36,7 @@ const MESSAGES: Record<string, string> = {
   daily_limit: 'You have reached the daily limit of applications.',
   not_editable: 'This application can no longer be edited.',
   invalid: 'Some details are not valid. Links must start with https://.',
+  invalid_phone: 'Enter your phone with + and your country code, for example +44 20 7946 0958 or +1 415 555 0100.',
   rate_limited: 'Too many attempts. Wait a few minutes and try again.',
 }
 
@@ -48,15 +52,23 @@ export function AutoApplyReview(props: ReviewProps) {
     Object.fromEntries(props.plan.fields.filter(isAnswer).map((f) => [f.key, f.value ?? (f.type === 'multi' ? [] : '')])),
   )
   const [consent, setConsent] = React.useState(props.plan.consentGiven)
+  // Pre-filled saved answers the user ticked on this application, and whether to keep their answers for next time.
+  const [confirmed, setConfirmed] = React.useState<Set<string>>(
+    () => new Set(props.plan.fields.filter((f) => f.saved === 'exact' && f.confirmed).map((f) => f.key)),
+  )
+  const [remember, setRemember] = React.useState(true)
   const [dirty, setDirty] = React.useState(false)
   const [busy, setBusy] = React.useState<'save' | 'approve' | 'cancel' | null>(null)
   const [errors, setErrors] = React.useState<Record<string, string>>({})
   const [message, setMessage] = React.useState<string | null>(null)
 
-  const missing = plan.fields.filter((f) => f.required && blank(f.value))
+  // The same rule the server applies on approval (missing answers, a phone without a country code, unticked saved answers).
+  const blocking = missingFields(plan)
+  const unticked = blocking.filter((f) => f.saved === 'exact' && !f.confirmed)
+  const missing = blocking.filter((f) => !unticked.includes(f))
   const consentOk = !plan.needsConsent || plan.consentGiven
   const enough = props.balance >= props.cost
-  const canApprove = !dirty && missing.length === 0 && consentOk && enough && busy === null
+  const canApprove = !dirty && blocking.length === 0 && consentOk && enough && busy === null
 
   async function call(path: string, method: string, body: unknown) {
     const res = await fetch(path, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
@@ -69,14 +81,18 @@ export function AutoApplyReview(props: ReviewProps) {
     setBusy('save')
     setMessage(null)
     try {
-      const { ok, data } = await call('/api/autoapply/draft', 'PATCH', { id: props.id, profile, answers, consent })
+      const { ok, data } = await call('/api/autoapply/draft', 'PATCH', { id: props.id, profile, answers, consent, confirm: [...confirmed], remember })
       if (ok) {
         setPlan(data.plan)
         setHash(data.hash)
         setErrors(data.errors ?? {})
         setDirty(false)
         setMessage(Object.keys(data.errors ?? {}).length ? 'Saved, but some answers were not accepted.' : 'Saved.')
-      } else setMessage(MESSAGES[data.error] ?? 'Could not save. Please try again.')
+      } else
+        setMessage(
+          (data.error === 'invalid' && data.details?.fields?.includes('phone') ? MESSAGES.invalid_phone : MESSAGES[data.error]) ??
+            'Could not save. Please try again.',
+        )
     } catch {
       setMessage('Could not reach the server. Check your connection and try again.')
     }
@@ -131,9 +147,13 @@ export function AutoApplyReview(props: ReviewProps) {
 
   // Live progress for the checklist; approval itself still goes by the saved plan (`canApprove`).
   const questions = plan.fields.filter(isAnswer)
+  // Employer questions answered from the profile (links, current company, notice period…): shown so nothing goes unseen.
+  const STD = new Set(['first_name', 'last_name', 'email', 'phone', 'country', 'candidate-location', 'resume', 'cover_letter_text'])
+  const fromDetails = plan.fields.filter((f) => f.source === 'profile' && !STD.has(f.key) && !blank(f.value))
   const requiredQs = questions.filter((f) => f.required)
   const answeredQs = requiredQs.filter((f) => !blank(answers[f.key] ?? null)).length
-  const detailsOk = [profile.firstName, profile.lastName, profile.phone].every((v) => v.trim() !== '')
+  const phoneOk = isIntlPhone(profile.phone)
+  const detailsOk = [profile.firstName, profile.lastName].every((v) => v.trim() !== '') && phoneOk
   const Tick = ({ ok }: { ok: boolean }) => (ok ? <CheckCircle2 aria-hidden className={styles.ok} /> : <Circle aria-hidden className={styles.todo} />)
 
   return (
@@ -152,13 +172,36 @@ export function AutoApplyReview(props: ReviewProps) {
           <div className={styles.grid2}>
             {profileInput('firstName', 'First name', true, 'text', 'given-name')}
             {profileInput('lastName', 'Last name', true, 'text', 'family-name')}
-            {profileInput('phone', 'Phone', true, 'tel', 'tel')}
+            <div>
+              {profileInput('phone', 'Phone, with country code', true, 'tel', 'tel')}
+              <p className={phoneOk || !profile.phone.trim() ? styles.cardHint : styles.err}>
+                {phoneOk || !profile.phone.trim()
+                  ? 'Start with + and your country code, e.g. +1 415 555 0100. Forms pick the country from it.'
+                  : 'Add + and your country code, e.g. +44 20 7946 0958.'}
+              </p>
+            </div>
             {profileInput('country', 'Country', false, 'text', 'country-name')}
             {profileInput('city', 'City', false, 'text', 'address-level2')}
             {profileInput('linkedin', 'LinkedIn URL', false, 'url')}
             {profileInput('website', 'Website URL', false, 'url')}
             {profileInput('github', 'GitHub URL', false, 'url')}
           </div>
+          <details className={styles.more} open={Boolean(profile.currentCompany || profile.currentTitle || profile.noticePeriod)}>
+            <summary>More details, for common questions</summary>
+            <p className={styles.cardHint}>
+              Used only when an employer asks exactly this (for example &ldquo;Current company&rdquo; or &ldquo;Notice period&rdquo;), and
+              shown to you below before you approve.
+            </p>
+            <div className={styles.grid2}>
+              {profileInput('currentCompany', 'Current company', false, 'text', 'organization')}
+              {profileInput('currentTitle', 'Current title', false, 'text', 'organization-title')}
+              {profileInput('state', 'State or province', false, 'text', 'address-level1')}
+              {profileInput('postalCode', 'Postal code', false, 'text', 'postal-code')}
+              {profileInput('noticePeriod', 'Notice period or start date', false)}
+              {profileInput('salaryExpectation', 'Salary expectation', false)}
+              {profileInput('languages', 'Languages you speak', false)}
+            </div>
+          </details>
         </section>
 
         <section className={styles.card} aria-labelledby="q-h">
@@ -185,6 +228,19 @@ export function AutoApplyReview(props: ReviewProps) {
               similar questions for you.
             </span>
           </p>
+          {fromDetails.length > 0 ? (
+            <div className={styles.fromDetails}>
+              <p className={styles.fromDetailsTitle}>Filled from your details</p>
+              <dl>
+                {fromDetails.map((f) => (
+                  <div key={f.key}>
+                    <dt>{f.label}</dt>
+                    <dd>{String(f.value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : null}
           {questions.length === 0 ? <p className={styles.cardHint}>This employer asks nothing beyond your details.</p> : null}
           {questions.map((f) => {
             const v = answers[f.key]
@@ -227,10 +283,53 @@ export function AutoApplyReview(props: ReviewProps) {
                 ) : (
                   <input id={`a-${f.key}`} className={styles.input} aria-invalid={bad} maxLength={500} value={(v as string) ?? ''} onChange={(e) => setAnswer(f.key, e.target.value)} />
                 )}
+                {f.saved === 'exact' && JSON.stringify(v ?? null) === JSON.stringify(f.value) ? (
+                  <label className={cn(styles.savedTick, confirmed.has(f.key) && styles.savedTickOn)}>
+                    <input
+                      type="checkbox"
+                      checked={confirmed.has(f.key)}
+                      onChange={(e) => {
+                        setConfirmed((c) => {
+                          const n = new Set(c)
+                          if (e.target.checked) n.add(f.key)
+                          else n.delete(f.key)
+                          return n
+                        })
+                        setDirty(true)
+                      }}
+                    />
+                    <span>
+                      <b>From your earlier answer.</b> Tick to use it on this application, or change it above.
+                    </span>
+                  </label>
+                ) : null}
+                {f.suggestion && blank(v ?? null) ? (
+                  <div className={styles.suggest}>
+                    <span>
+                      You answered a similar question, &ldquo;{f.suggestion.question}&rdquo;: <b>{f.suggestion.text}</b>
+                    </span>
+                    <button type="button" className={styles.copy} onClick={() => setAnswer(f.key, f.suggestion!.value)}>
+                      Use this answer
+                    </button>
+                  </div>
+                ) : null}
                 {errors[f.key] ? <p className={styles.err}>That answer was not accepted.</p> : null}
               </div>
             )
           })}
+          {questions.length > 0 ? (
+            <div className={styles.choices} style={{ marginTop: 'var(--space-20)' }}>
+              <label className={styles.check}>
+                <input type="checkbox" checked={remember} onChange={(e) => { setRemember(e.target.checked); setDirty(true) }} />
+                <span>
+                  Save my answers to fill in next time (you still check each one).{' '}
+                  <a href="/account/answers" className={styles.inlineLink}>
+                    Manage saved answers
+                  </a>
+                </span>
+              </label>
+            </div>
+          ) : null}
           {plan.needsConsent ? (
             <div className={styles.choices} style={{ marginTop: 'var(--space-20)' }}>
               <label className={styles.check}>
@@ -276,11 +375,16 @@ export function AutoApplyReview(props: ReviewProps) {
         <div className={styles.card}>
           <h2 className={styles.sumTitle}>Ready to approve?</h2>
           <ul className={styles.checklist}>
-            <li><Tick ok={detailsOk} /> Your name and phone</li>
+            <li><Tick ok={detailsOk} /> Your name, and phone with country code</li>
             <li>
               <Tick ok={answeredQs === requiredQs.length} />
               {requiredQs.length === 0 ? 'No required questions' : `Required questions: ${answeredQs} of ${requiredQs.length}`}
             </li>
+            {plan.fields.some((f) => f.saved === 'exact') ? (
+              <li>
+                <Tick ok={plan.fields.every((f) => f.saved !== 'exact' || confirmed.has(f.key) || JSON.stringify(answers[f.key] ?? null) !== JSON.stringify(f.value))} /> Earlier answers checked
+              </li>
+            ) : null}
             {plan.needsConsent ? <li><Tick ok={consent} /> The employer&apos;s consent</li> : null}
             <li><Tick ok={!dirty} /> {dirty ? 'Changes not saved yet' : 'Everything saved'}</li>
             <li><Tick ok={enough} /> {enough ? `Credits: you have ${props.balance}` : `Credits: you have ${props.balance}, need ${props.cost}`}</li>
@@ -312,7 +416,9 @@ export function AutoApplyReview(props: ReviewProps) {
           ) : null}
           {!canApprove && !dirty ? (
             <p className={styles.blocker}>
-              {missing.length > 0
+              {unticked.length > 0
+                ? `Tick ${unticked.length === 1 ? 'the answer' : `the ${unticked.length} answers`} filled from your earlier applications, or change ${unticked.length === 1 ? 'it' : 'them'}.`
+                : missing.length > 0
                 ? `${missing.length} required ${missing.length === 1 ? 'answer is' : 'answers are'} still missing.`
                 : !consentOk
                   ? 'Tick the employer\'s consent to continue.'

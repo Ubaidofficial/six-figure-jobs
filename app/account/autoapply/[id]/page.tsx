@@ -70,6 +70,9 @@ export default async function AutoApplyPage({ params }: { params: Promise<{ id: 
           firstName: profile?.firstName ?? '', lastName: profile?.lastName ?? '', phone: profile?.phone ?? '',
           country: profile?.country ?? '', city: profile?.city ?? '', linkedin: profile?.linkedin ?? '',
           website: profile?.website ?? '', github: profile?.github ?? '',
+          currentCompany: profile?.currentCompany ?? '', currentTitle: profile?.currentTitle ?? '', state: profile?.state ?? '',
+          postalCode: profile?.postalCode ?? '', noticePeriod: profile?.noticePeriod ?? '',
+          salaryExpectation: profile?.salaryExpectation ?? '', languages: profile?.languages ?? '',
         }}
         email={user.email ?? ''}
         resumePreview={(resume?.text ?? '').replace(/\s+/g, ' ').slice(0, 120) + ((resume?.text.length ?? 0) > 120 ? '…' : '')}

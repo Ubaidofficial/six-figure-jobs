@@ -278,6 +278,8 @@ function toDigestJob(job: ListingRow, base: string): DigestJob {
     url: `${base}${buildJobSlugHref(job as never)}?${UTM}&utm_campaign=digest`,
     // Email clients need absolute URLs; the site's own /logo/ route is made absolute.
     logo: logo ? (logo.startsWith('/') ? `${base}${logo}` : logo) : null,
+    listedAt: job.createdAt ? job.createdAt.toISOString() : undefined,
+    remote: (job as { remoteMode?: string | null }).remoteMode === 'remote' || (job as { remote?: boolean | null }).remote === true,
   }
 }
 

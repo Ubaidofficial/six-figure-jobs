@@ -48,6 +48,10 @@ export default async function ApplicationsPage() {
             <Link href="/account/swipe" className={styles.link}>
               Swipe to apply
             </Link>
+            {' · '}
+            <Link href="/account/answers" className={styles.link}>
+              Saved answers
+            </Link>
           </>
         ) : null}
       </p>

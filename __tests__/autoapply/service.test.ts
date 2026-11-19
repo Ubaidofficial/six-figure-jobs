@@ -15,6 +15,8 @@ import type { Plan } from '@/lib/autoapply/plan'
 type Row = Record<string, any>
 const matches = (row: Row, where: Row = {}): boolean =>
   Object.entries(where).every(([k, c]) => {
+    if (k === 'OR') return (c as Row[]).some((w) => matches(row, w))
+    if (k === 'userId_questionKey_type') return Object.entries(c as Row).every(([kk, vv]) => row[kk] === vv)
     if (k === 'userId_jobId') return row.userId === (c as Row).userId && row.jobId === (c as Row).jobId
     if (c && typeof c === 'object' && !(c instanceof Date)) {
       if ('in' in c) return (c.in as unknown[]).includes(row[k])
@@ -31,6 +33,7 @@ function table(rows: Row[], key: string, defaults: () => Row = () => ({})) {
     rows,
     async findUnique({ where }: Row) { return pick(where) },
     async findFirst({ where }: Row) { return pick(where) },
+    async findMany({ where }: Row = {}) { return rows.filter((r) => matches(r, where)) },
     async findUniqueOrThrow({ where }: Row) { const r = pick(where); if (!r) throw new Error('not found'); return r },
     async count({ where }: Row) { return rows.filter((r) => matches(r, where)).length },
     async create({ data }: Row) { const r = { [key]: `${key}${++n}`, ...defaults(), ...data }; rows.push(r); return r },
@@ -52,6 +55,7 @@ function setup(credits = 20) {
   db.applyProfile = table([], 'userId')
   db.applicationKit = table([{ userId: 'u1', jobId: 'job1', coverLetter: 'Dear team' }], 'id')
   db.autoApplication = table([], 'id', () => ({ status: 'draft', charge: 'none', createdAt: new Date(), planHash: null }))
+  db.savedAnswer = table([], 'id')
   // user.findUnique in the fake returns the row incl. email
   mockDb = db
   const grant = (n: number) => db.$transaction((tx: any) => grantCredits(tx, { userId: 'u1', credits: n, kind: 'pack', reason: 'test', refId: 'pi', idempotencyKey: `g${Math.random()}` }))
@@ -186,6 +190,19 @@ describe('approveApplication', () => {
     await expect(approveApplication('u1', id, hash)).rejects.toMatchObject({ code: 'daily_limit', status: 429 })
   })
 
+  it('counts a send we could not confirm toward the daily limit (it may have gone through), but not other hand-backs', async () => {
+    for (const [reason, allowed] of [['captcha', true], ['unconfirmed', false]] as const) {
+      const s = setup()
+      await s.grant(20)
+      for (let i = 0; i < MAX_APPLICATIONS_PER_USER_PER_DAY; i++)
+        s.db.autoApplication.rows.push({ id: `nu${i}`, userId: 'u1', jobId: `n${i}`, status: 'needs_user', reason, createdAt: new Date(), board: 'b' })
+      const { id, hash } = await readyDraft(s)
+      const approving = approveApplication('u1', id, hash)
+      if (allowed) await expect(approving).resolves.toBeDefined()
+      else await expect(approving).rejects.toMatchObject({ code: 'daily_limit' })
+    }
+  })
+
   it('lets the owner cancel a draft or an approved application, and nothing else', async () => {
     const s = setup()
     await s.grant(20)
@@ -317,6 +334,13 @@ describe('runApplication: what is charged and when', () => {
     expect(driver).not.toHaveBeenCalled()
     expect(row().status).toBe('approved') // still waiting, not failed
   })
+
+  it('counts unconfirmed sends to a board toward its hourly limit', async () => {
+    const { s, id } = await approved()
+    for (let i = 0; i < MAX_PER_BOARD_PER_HOUR; i++)
+      s.db.autoApplication.rows.push({ id: `u${i}`, userId: 'u2', board: 'andurilindustries', status: 'needs_user', reason: 'unconfirmed', startedAt: new Date(), createdAt: new Date() })
+    expect(await runApplication(id, jest.fn(submitted), { live: true })).toEqual({ done: 'skipped', why: 'board_busy' })
+  })
 })
 
 describe('recoverStuckApplications', () => {
@@ -335,5 +359,38 @@ describe('recoverStuckApplications', () => {
     expect(by('fresh').status).toBe('submitting')
     expect(by('done').status).toBe('submitted')
     expect(balance(s)).toBe(20)
+  })
+})
+
+describe('saved answers across applications', () => {
+  it('remembers the answers, pre-fills the same questions next time, and will not approve until each is ticked', async () => {
+    const s = setup()
+    await s.grant(20)
+    const first = await readyDraft(s)
+    expect(s.db.savedAnswer.rows.length).toBeGreaterThan(0)
+    expect(JSON.stringify(s.db.savedAnswer.rows)).not.toMatch(/ada@example|Lovelace/) // only employer questions, not the profile
+    await cancelApplication('u1', first.id)
+
+    const next = await prepareApplication('u1', 'slug', s.deps)
+    const plan = next.plan as Plan
+    const prefilled = plan.fields.filter((f) => f.saved === 'exact')
+    expect(prefilled.length).toBe(s.db.savedAnswer.rows.length)
+    expect(prefilled.every((f) => f.confirmed === false && f.value != null)).toBe(true)
+
+    const unticked = await saveDraft('u1', next.id, { profile: goodProfile })
+    await expect(approveApplication('u1', next.id, unticked.hash)).rejects.toBeInstanceOf(AutoApplyError)
+
+    const ticked = await saveDraft('u1', next.id, { confirm: prefilled.map((f) => f.key) })
+    expect(ticked.missing).toEqual([])
+    await expect(approveApplication('u1', next.id, ticked.hash)).resolves.toBeDefined()
+  })
+
+  it('keeps nothing when the user opts out', async () => {
+    const s = setup()
+    const draft = await prepareApplication('u1', 'slug', s.deps)
+    const answers: Record<string, unknown> = {}
+    for (const f of (draft.plan as Plan).fields) if (f.source === 'user' && f.required) answers[f.key] = f.type === 'single' ? f.options![0].value : f.type === 'multi' ? [f.options![0].value] : 'answer'
+    await saveDraft('u1', draft.id, { profile: goodProfile, answers, remember: false })
+    expect(s.db.savedAnswer.rows).toHaveLength(0)
   })
 })

@@ -65,3 +65,19 @@ describe('owner run report', () => {
     expect(r.clean).toBe(3)
   })
 })
+
+describe('phone with country code', () => {
+  const { isIntlPhone, missingFields } = jest.requireActual('@/lib/autoapply/plan') as typeof import('@/lib/autoapply/plan')
+  it('accepts + country code and number, refuses a number a form could read as another country', () => {
+    expect(isIntlPhone('+44 20 7946 0958')).toBe(true)
+    expect(isIntlPhone('+1 (415) 555-0100')).toBe(true)
+    expect(isIntlPhone('415 555 0100')).toBe(false)
+    expect(isIntlPhone('+12')).toBe(false)
+    expect(isIntlPhone('+1 415 555 0100 ext 2')).toBe(false)
+    expect(isIntlPhone(null)).toBe(false)
+  })
+  it('a required phone without a country code blocks approval', () => {
+    const plan = { fields: [{ key: 'phone', label: 'Phone', type: 'text', required: true, source: 'profile', value: '555 0100' }] } as never
+    expect(missingFields(plan).map((f: { key: string }) => f.key)).toEqual(['phone'])
+  })
+})
