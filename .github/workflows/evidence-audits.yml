@@ -7,6 +7,8 @@ name: evidence audits
 #      JSON-LD (jobLocationType TELECOMMUTE), so read the dry run's sample sentences first. updatedAt is not touched.
 #   3. which live jobs with an empty benefitsJson state time off / benefits in a sentence (scripts/backfillBenefitsEvidence.ts):
 #      a DRY RUN unless "apply_benefits" is ticked. Applying writes benefitsJson (label strings) on jobs that had none.
+#   4. which live freehire jobs carry a pay reading the reader now rejects (scripts/recheckDescriptionPay.ts): a figure that
+#      includes bonus/incentive pay; a DRY RUN unless "apply_pay" is ticked, which expires those jobs.
 # Same production-database fingerprint guard as the other manual workflows.
 
 on:
@@ -29,6 +31,11 @@ on:
         default: false
       apply_workmode:
         description: "Write remoteMode on board jobs stored on-site whose own text says remote or hybrid (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+      apply_pay:
+        description: "Expire live jobs whose pay reading includes bonus/incentive pay (leave unticked for a dry run)"
         type: boolean
         required: false
         default: false
@@ -84,6 +91,14 @@ jobs:
           [ "$APPLY" = "true" ] && args="$args --apply"
           npx tsx scripts/backfillRemoteEvidence.ts $args
 
+      - name: Pay readings that include bonus or incentive pay
+        env:
+          LIMIT: ${{ inputs.limit }}
+          APPLY: ${{ inputs.apply_pay }}
+        run: |
+          args="--limit=$LIMIT"
+          [ "$APPLY" = "true" ] && args="$args --apply"
+          npx tsx scripts/recheckDescriptionPay.ts $args
       - name: Benefits evidence
         env:
           LIMIT: ${{ inputs.limit }}
