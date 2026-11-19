@@ -235,8 +235,16 @@
 
 /* With the first-name field the form needs about 40rem: below this width the text goes above it instead of beside it. */
 @media (max-width: 1439px) {
+  /* minmax(0, ...): the column is the box's width, not the fields' natural width, so the fields below can shrink. */
   .box {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The two text fields share what the select and button leave, so four controls fit in a narrow box. */
+  .input {
+    flex: 1 1 10rem;
+    width: auto;
+    min-width: 0;
   }
 }
 
