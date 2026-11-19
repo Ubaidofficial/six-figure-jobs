@@ -32,8 +32,7 @@ export default async function AutoApplyAdminPage({ searchParams }: { searchParam
   }
 
   return (
-    // The admin layout is dark and sets no text colour.
-    <div style={{ color: '#e5e5e5' }}>
+    <div>
       <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Auto-apply runs</h1>
       <p style={{ color: '#888', marginBottom: 8 }}>
         Every time the worker opened an employer form in the last {days} days: did it fill every required question, and if
