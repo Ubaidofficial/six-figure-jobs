@@ -12,7 +12,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const newFeedback = await prisma.feedback.count({ where: { status: 'new' } }).catch(() => 0)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex' }}>
+    // Text colour set here: the site's own text colour is near-black, which disappears on this background.
+    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#e5e5e5', display: 'flex' }}>
       <AdminNav newFeedback={newFeedback} />
       <main style={{ flex: 1, padding: '32px 40px', maxWidth: 1200, overflowX: 'hidden' }}>
         {children}
