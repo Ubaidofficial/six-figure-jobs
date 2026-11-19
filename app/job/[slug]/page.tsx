@@ -1,5 +1,6 @@
 // app/job/[slug]/page.tsx
 
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import type { Metadata } from 'next'
 import NextLink from '@/components/ui/Link'
 import NextImage from 'next/image'
@@ -763,6 +764,19 @@ export default async function JobPage({
           </div>
         </section>
       ) : null}
+
+      {/* Jobs like this one by email: the same role (or, failing that, title words) and country as "Similar six-figure
+          roles" above. No popup on job pages (lib/alerts/popup.ts), so this is the page's own signup besides the footer. */}
+      <div className="mt-10">
+        <JobAlertBox
+          query={{
+            roleSlugs: canonicalRoleSlug ? [canonicalRoleSlug] : undefined,
+            keyword: canonicalRoleSlug ? undefined : similarKeyword ?? undefined,
+            countryCode: typedJob.countryCode || undefined,
+          }}
+          title="Get jobs like this one by email"
+        />
+      </div>
 
       {moreLinks.length > 0 ? (
         <section className="mt-10" aria-labelledby="explore-more">

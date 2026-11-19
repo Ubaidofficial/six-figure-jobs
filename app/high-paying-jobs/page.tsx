@@ -3,6 +3,7 @@
 // "High-paying jobs, ranked by real pay": roles ranked by the median of their live listings, and the highest-paying
 // open jobs right now. Targets "high paying jobs" (about 201,000 US searches a month per DataForSEO, 2026-11-09), a
 // search mostly answered by listicles; this page answers it from live published salaries (lib/jobs/highPayingJobs.ts).
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import type { Metadata } from 'next'
 import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
@@ -175,6 +176,8 @@ export default async function HighPayingJobsPage() {
             ]}
           />
         </ListingSection>
+
+        <JobAlertBox query={{}} title="Get new six-figure jobs by email" />
 
         <ListingSection title="Questions about high-paying jobs">
           <Faq items={faq} />

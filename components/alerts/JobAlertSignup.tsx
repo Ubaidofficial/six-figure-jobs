@@ -19,6 +19,8 @@ type Props = {
   /** What the alert is for, e.g. "Senior Software Engineer jobs · Remote". */
   label: string
   variant?: 'inline' | 'footer' | 'popup'
+  /** The box's heading (default "Get new jobs like these by email"); placements word it for where they sit. */
+  title?: string
   className?: string
   /** Called once, when the signup was accepted (the popup remembers it and stops showing). */
   onSuccess?: () => void
@@ -44,7 +46,7 @@ const ROLE_IDEAS = [
 
 const titleCase = (s: string) => s.replace(/(^|[\s-])\p{L}/gu, (m) => m.toUpperCase())
 
-export function JobAlertSignup({ filters, label, variant = 'inline', className, onSuccess }: Props) {
+export function JobAlertSignup({ filters, label, variant = 'inline', title = 'Get new jobs like these by email', className, onSuccess }: Props) {
   const [email, setEmail] = React.useState('')
   const [firstName, setFirstName] = React.useState('')
   const [frequency, setFrequency] = React.useState<'weekly' | 'daily' | 'instant'>('weekly')
@@ -113,7 +115,7 @@ export function JobAlertSignup({ filters, label, variant = 'inline', className, 
       <div className={styles.text}>
         <p id={`${id}-title`} className={styles.title}>
           <BellRing aria-hidden className={styles.icon} />
-          Get new jobs like these by email
+          {title}
         </p>
         <p className={styles.label}>
           {canNarrow && (role.trim() || remote)

@@ -156,7 +156,7 @@ export function ListingLayout({
   sidebar?: ReactNode
   /** Above the results: the match count and active filters (ActiveFilters). */
   bar?: ReactNode
-  /** The page's job query: offers an email alert for it above the results (nothing while alerts are off). */
+  /** The page's job query: offers an email alert for it above the results and again after them (nothing while alerts are off). */
   alert?: JobQueryInput
   children: ReactNode
 }) {
@@ -175,6 +175,13 @@ export function ListingLayout({
           </div>
         ) : null}
         {children}
+        {/* Again after the list, for the reader who scrolled through it without finding the one (owner's request,
+            2026-11-19: the signup on every page, more than once). */}
+        {alert ? (
+          <div className={styles.alertAfter}>
+            <JobAlertBox query={alert} title="Not the right one yet? Get new matches by email" />
+          </div>
+        ) : null}
       </div>
     </div>
   )
