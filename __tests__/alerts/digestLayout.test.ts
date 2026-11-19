@@ -72,3 +72,20 @@ describe('digest in light and dark mode', () => {
     expect(mail.text).toContain('Remote · 2d ago')
   })
 })
+
+describe('digest hero', () => {
+  it('shows top pay, how many are remote and the total, and features the best-paid job', async () => {
+    const { topOfRange } = await import('@/lib/alerts/digest')
+    expect(topOfRange('$230K – $290K')).toBe('$290K')
+    expect(topOfRange('£110K')).toBe('£110K')
+    expect(topOfRange(null)).toBeNull()
+    const mail = buildDigestEmail({
+      label: 'L', frequency: 'daily', totalNew: 9, links, postalAddress: 'A',
+      jobs: [job({ salary: '$230K – $290K', remote: true }), job({ id: '2', salary: '$150K', remote: false })],
+    })
+    expect(mail.html).toContain('>$290K</div>')
+    expect(mail.html).toContain('>Top pay</div>')
+    expect(mail.html).toContain('>New in total</div>')
+    expect(mail.html.match(/>Top paid</g)).toHaveLength(1)
+  })
+})

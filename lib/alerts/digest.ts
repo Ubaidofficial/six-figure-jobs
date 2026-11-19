@@ -101,68 +101,89 @@ export const escapeHtml = (s: string) =>
 const oneLine = (s: string) => s.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim()
 
 const BRAND = 'Six Figure Jobs'
-const INK = '#0e0f0c'
-const MUTED = '#5c5c55'
-const ACCENT = '#84cc16'
-const LINE = '#e7e7e1'
+const INK = '#0b0c0a'
+const MUTED = '#62625b'
+const ACCENT = '#a3e635'
+const LINE = '#e6e6df'
+const HERO = '#0f1110'
 
 // Dark mode. Apple Mail, Outlook for Mac/iOS and others apply these when the reader's device is dark; Outlook.com uses the
-// [data-ogsc]/[data-ogsb] hooks. Gmail ignores them and recolours on its own, so the design also has to survive that: the
-// wordmark is text (an image of dark text vanishes on a dark inbox), and company logos sit on a white tile painted with a
-// background image, which Gmail does not invert.
+// [data-ogsc]/[data-ogsb] hooks. Gmail ignores them and recolours on its own, so the design also survives that: the hero
+// band is already dark (it looks the same either way), the wordmark is text (an image of dark text vanishes on a dark
+// inbox), and company logos sit on a white tile painted with a background image, which Gmail does not invert.
 const HEAD = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">
 <style>
 :root{color-scheme:light dark;supported-color-schemes:light dark}
 a{text-decoration:none}
 @media (prefers-color-scheme:dark){
-.x-bg{background:#0c0d0b!important}
-.x-card{background:#16171a!important;border-color:#2a2b2f!important}
-.x-job{background:#1c1d21!important;border-color:#2a2b2f!important}
-.x-ink{color:#f4f4f1!important}
-.x-muted{color:#a6a69e!important}
-.x-pill{background:#25340f!important;color:#d9f99d!important}
-.x-chip{background:#1d2a3f!important;color:#c7dcff!important}
+.x-bg{background:#08090a!important}
+.x-card{background:#121316!important;border-color:#24252a!important}
+.x-job{background:#17181c!important;border-color:#26272c!important}
+.x-top{background:#151b0e!important;border-color:#4d7c0f!important}
+.x-ink{color:#f5f5f2!important}
+.x-muted{color:#9d9d96!important}
+.x-pill{color:#bef264!important}
+.x-chip{background:#1f2633!important;color:#c7dcff!important}
+.x-tag{background:#202126!important;color:#b9b9b2!important}
 .x-badge{background:#25340f!important;color:#d9f99d!important}
-.x-link{color:#a3e635!important}
-.x-rule{border-color:#2a2b2f!important}
+.x-link{color:#bef264!important}
+.x-go{background:#f5f5f2!important;color:#0b0c0a!important}
+.x-rule{border-color:#26272c!important}
 }
-[data-ogsc] .x-ink{color:#f4f4f1!important}
-[data-ogsc] .x-muted{color:#a6a69e!important}
-[data-ogsc] .x-link{color:#a3e635!important}
-[data-ogsb] .x-bg{background:#0c0d0b!important}
-[data-ogsb] .x-card{background:#16171a!important}
-[data-ogsb] .x-job{background:#1c1d21!important}
-@media (max-width:520px){.x-pad{padding:20px!important}.x-h1{font-size:22px!important}}
+[data-ogsc] .x-ink{color:#f5f5f2!important}
+[data-ogsc] .x-muted{color:#9d9d96!important}
+[data-ogsc] .x-link{color:#bef264!important}
+[data-ogsb] .x-bg{background:#08090a!important}
+[data-ogsb] .x-card{background:#121316!important}
+[data-ogsb] .x-job{background:#17181c!important}
+@media (max-width:520px){.x-pad{padding-left:18px!important;padding-right:18px!important}.x-big{font-size:34px!important;line-height:38px!important}.x-hide{display:none!important}}
 </style>`
 
-const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`
+const FONT = `Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`
 
-function shell(inner: string, footer: string, preview: string): string {
+function shell(body: string, footer: string, preview: string, right: string): string {
   return `<!doctype html><html lang="en"><head>${HEAD}<title>${escapeHtml(BRAND)}</title></head>
-<body class="x-bg" style="margin:0;padding:0;background:#f3f4ef;font-family:${FONT};color:${INK};-webkit-font-smoothing:antialiased">
+<body class="x-bg" style="margin:0;padding:0;background:#f2f3ee;font-family:${FONT};color:${INK};-webkit-font-smoothing:antialiased">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">${escapeHtml(preview)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="x-bg" style="background:#f3f4ef"><tr><td align="center" style="padding:28px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="x-bg" style="background:#f2f3ee"><tr><td align="center" style="padding:28px 12px 36px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
-<tr><td style="padding:0 4px 16px">${wordmark()}</td></tr>
-<tr><td class="x-card x-pad" style="background:#ffffff;border:1px solid ${LINE};border-radius:20px;padding:28px">${inner}</td></tr>
-<tr><td class="x-muted" style="padding:20px 8px 0;font-size:12px;line-height:19px;color:${MUTED}">${footer}</td></tr>
+<tr><td style="padding:0 6px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td valign="middle">${wordmark()}</td>
+<td valign="middle" align="right" class="x-muted" style="font-size:12px;font-weight:600;color:${MUTED}">${right}</td>
+</tr></table></td></tr>
+<tr><td class="x-card" style="background:#ffffff;border:1px solid ${LINE};border-radius:24px;overflow:hidden">${body}</td></tr>
+<tr><td class="x-muted" style="padding:22px 10px 0;font-size:12px;line-height:19px;color:${MUTED}">${footer}</td></tr>
 </table></td></tr></table></body></html>`
 }
 
 /** The brand as text, so no dark inbox can hide it, with the $100k+ badge in the site's lime. */
 function wordmark(): string {
-  return `<span class="x-ink" style="font-size:19px;font-weight:800;letter-spacing:-0.03em;color:${INK}">six figure jobs</span>
+  return `<span class="x-ink" style="font-size:19px;font-weight:800;letter-spacing:-0.035em;color:${INK}">six figure jobs</span>
 <span class="x-badge" style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#ecfccb;color:#3f6212;font-size:11px;font-weight:700;vertical-align:2px">$100k+</span>`
 }
 
+/** The dark band at the top of the card, with a soft lime glow: the same in light and dark mode. */
+function hero(inner: string): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td class="x-pad" style="background:${HERO};background-image:radial-gradient(120% 140% at 100% 0%,#3f6212 0%,${HERO} 55%);padding:30px 28px 28px;border-radius:24px 24px 0 0">${inner}</td>
+</tr></table>`
+}
+
 const button = (href: string, label: string) =>
-  `<a href="${escapeHtml(href)}" style="display:inline-block;background:${ACCENT};color:#0a0a0a;font-size:15px;font-weight:700;padding:14px 24px;border-radius:999px;mso-padding-alt:0">${escapeHtml(label)}</a>`
+  `<a href="${escapeHtml(href)}" style="display:inline-block;background:${ACCENT};color:#0b0c0a;font-size:15px;font-weight:800;letter-spacing:-0.01em;padding:15px 26px;border-radius:999px;mso-padding-alt:0">${escapeHtml(label)} &rarr;</a>`
+
+const statChip = (value: string, label: string) =>
+  `<td style="padding:0 8px 0 0"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#ffffff1a;background-color:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:14px;padding:10px 14px">
+<div style="font-size:16px;font-weight:800;color:#ffffff;letter-spacing:-0.01em">${escapeHtml(value)}</div>
+<div style="font-size:11px;font-weight:600;color:#a8b29a;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">${escapeHtml(label)}</div>
+</td></tr></table></td>`
 
 function footerHtml(links: AlertLinks, postalAddress: string, why: string): string {
-  const link = (href: string, label: string) => `<a href="${escapeHtml(href)}" class="x-muted" style="color:${MUTED};text-decoration:underline">${label}</a>`
-  return `${escapeHtml(why)}<br>
-${link(links.manage, 'Change frequency')} &nbsp;·&nbsp; ${link(links.manage, 'Unsubscribe')}<br>
+  const pill = (href: string, label: string) =>
+    `<a href="${escapeHtml(href)}" class="x-tag" style="display:inline-block;margin:0 6px 8px 0;padding:6px 12px;border-radius:999px;background:#e8e9e3;color:#3a3a35;font-size:12px;font-weight:600">${label}</a>`
+  return `${pill(links.manage, 'Change frequency')}${pill(links.manage, 'Unsubscribe')}<br>
+${escapeHtml(why)}<br>
 ${escapeHtml(BRAND)} · ${escapeHtml(oneLine(postalAddress))}`
 }
 
@@ -197,22 +218,22 @@ export function buildConfirmationEmail(input: { label: string; frequency: string
     `${BRAND} · ${oneLine(input.postalAddress)}`,
   ].join('\n')
   const manage = escapeHtml(input.links.manage)
-  const tick = `<span class="x-pill" style="display:inline-block;width:20px;height:20px;border-radius:999px;background:#ecfccb;color:#3f6212;font-size:12px;font-weight:800;line-height:20px;text-align:center">&#10003;</span>`
-  const inner = `<p class="x-muted" style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED}">One step left</p>
-<h1 class="x-ink x-h1" style="margin:0 0 10px;font-size:26px;line-height:32px;font-weight:800;letter-spacing:-0.02em;color:${INK}">Confirm your job alert</h1>
-<p class="x-muted" style="margin:0 0 24px;font-size:15px;line-height:23px;color:${MUTED}">You asked for <strong class="x-ink" style="color:${INK}">${escapeHtml(label)}</strong>, ${freq}.</p>
-<p style="margin:0 0 10px">${button(input.links.manage, 'Confirm alert')}</p>
-<p class="x-muted" style="margin:0 0 28px;font-size:13px;line-height:19px;color:${MUTED}">Opens a page on our site with one last Confirm button.</p>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="x-job" style="background:#f8f9f4;border:1px solid ${LINE};border-radius:14px"><tr><td style="padding:18px 20px">
-<p class="x-ink" style="margin:0 0 12px;font-size:14px;font-weight:700;color:${INK}">What you will get</p>
+  const tick = `<span class="x-badge" style="display:inline-block;width:22px;height:22px;border-radius:999px;background:#ecfccb;color:#3f6212;font-size:12px;font-weight:800;line-height:22px;text-align:center">&#10003;</span>`
+  const top = hero(`<p style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${ACCENT}">One step left</p>
+<h1 class="x-big" style="margin:0 0 12px;font-size:38px;line-height:42px;font-weight:800;letter-spacing:-0.035em;color:#ffffff">Confirm your<br>job alert</h1>
+<p style="margin:0 0 24px;font-size:15px;line-height:23px;color:#c9cfc0">You asked for <strong style="color:#ffffff">${escapeHtml(label)}</strong>, ${freq}.</p>
+${button(input.links.manage, 'Confirm alert')}
+<p style="margin:14px 0 0;font-size:12px;line-height:18px;color:#9aa38e">Opens a page on our site with one last Confirm button.</p>`)
+  const bodyHtml = `${top}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td class="x-pad" style="padding:26px 28px 28px">
+<p class="x-muted" style="margin:0 0 14px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED}">What you will get</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${promises
-    .map((p) => `<tr><td width="30" valign="top" style="width:30px;padding:0 0 10px">${tick}</td><td class="x-muted" valign="top" style="padding:0 0 10px;font-size:14px;line-height:20px;color:${MUTED}">${escapeHtml(p)}</td></tr>`)
+    .map((p) => `<tr><td width="34" valign="top" style="width:34px;padding:0 0 14px">${tick}</td><td class="x-ink" valign="top" style="padding:1px 0 14px;font-size:15px;line-height:21px;color:${INK}">${escapeHtml(p)}</td></tr>`)
     .join('')}</table>
-</td></tr></table>
-<p class="x-muted" style="margin:24px 0 8px;font-size:12px;line-height:18px;color:${MUTED}">Button not working? Paste this into your browser:<br><span class="x-ink" style="word-break:break-all;color:${INK}">${manage}</span></p>
-<p class="x-muted" style="margin:0;font-size:12px;line-height:18px;color:${MUTED}">If you did not sign up, ignore this email: nothing more will be sent.</p>`
+<p class="x-muted x-rule" style="margin:10px 0 0;padding-top:18px;border-top:1px solid ${LINE};font-size:12px;line-height:18px;color:${MUTED}">Button not working? Paste this into your browser:<br><span class="x-ink" style="word-break:break-all;color:${INK}">${manage}</span><br>If you did not sign up, ignore this email: nothing more will be sent.</p>
+</td></tr></table>`
   const footer = `${escapeHtml(BRAND)} · ${escapeHtml(oneLine(input.postalAddress))}`
-  return { subject, text, html: shell(inner, footer, preview) }
+  return { subject, text, html: shell(bodyHtml, footer, preview, 'Job alert') }
 }
 
 /** Inbox preview line: the best-paid job, so the reason to open is visible before opening. */
@@ -230,41 +251,55 @@ export function listedAgo(iso: string | undefined, now = Date.now()): string {
   return days <= 0 ? 'today' : `${days}d ago`
 }
 
+/** The top of a pay range ("$230K – $290K" -> "$290K"), for the hero's "Top pay". */
+export function topOfRange(salary: string | null): string | null {
+  if (!salary) return null
+  const parts = salary.split(/\s[–-]\s|–/).map((s) => s.trim()).filter(Boolean)
+  return parts.length ? parts[parts.length - 1] : null
+}
+
 /**
  * Company logo on a white tile (a dark logo on a dark tile disappears), or the company's initials. The tile's white is
  * also a background image, which Gmail's dark mode leaves alone.
  */
 function logoCell(j: DigestJob): string {
-  const box = `width:44px;height:44px;border-radius:10px;border:1px solid ${LINE};background:#ffffff;background-image:linear-gradient(#ffffff,#ffffff)`
+  const box = `width:48px;height:48px;border-radius:12px;border:1px solid ${LINE};background:#ffffff;background-image:linear-gradient(#ffffff,#ffffff)`
   if (j.logo && /^https:\/\//.test(j.logo)) {
-    return `<img src="${escapeHtml(j.logo)}" width="44" height="44" alt="" style="${box};display:block;object-fit:contain">`
+    return `<img src="${escapeHtml(j.logo)}" width="48" height="48" alt="" style="${box};display:block;object-fit:contain">`
   }
   const hue = fallbackHue(j.company)
-  return `<div style="${box};background:hsl(${hue},45%,92%);background-image:linear-gradient(hsl(${hue},45%,92%),hsl(${hue},45%,92%));color:hsl(${hue},45%,28%);font-size:15px;font-weight:800;line-height:44px;text-align:center">${escapeHtml(getInitials(j.company))}</div>`
+  return `<div style="${box};background:hsl(${hue},45%,92%);background-image:linear-gradient(hsl(${hue},45%,92%),hsl(${hue},45%,92%));color:hsl(${hue},45%,28%);font-size:16px;font-weight:800;line-height:48px;text-align:center">${escapeHtml(getInitials(j.company))}</div>`
 }
 
-function digestJobRow(j: DigestJob, now: number): string {
+function digestJobRow(j: DigestJob, now: number, featured: boolean): string {
   const url = escapeHtml(j.url)
-  const where = [oneLine(j.company), j.location ? oneLine(j.location) : ''].filter(Boolean).map(escapeHtml).join(' · ')
-  const chips = [
-    j.salary
-      ? `<span class="x-pill" style="display:inline-block;margin:10px 6px 0 0;padding:4px 11px;border-radius:999px;background:#ecfccb;color:#365314;font-size:13px;font-weight:800">${escapeHtml(oneLine(j.salary))}</span>`
-      : '',
-    j.remote
-      ? `<span class="x-chip" style="display:inline-block;margin:10px 6px 0 0;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#1e40af;font-size:12px;font-weight:700">Remote</span>`
-      : '',
-    listedAgo(j.listedAt, now)
-      ? `<span class="x-muted" style="display:inline-block;margin:10px 6px 0 0;font-size:12px;color:${MUTED}">${escapeHtml(listedAgo(j.listedAt, now))}</span>`
-      : '',
+  const where = [oneLine(j.company), j.location ? oneLine(j.location) : ''].filter(Boolean).map(escapeHtml).join('&nbsp;&middot;&nbsp;')
+  const tag = (cls: string, style: string, text: string) =>
+    `<span class="${cls}" style="display:inline-block;margin:0 6px 6px 0;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;${style}">${escapeHtml(text)}</span>`
+  const ago = listedAgo(j.listedAt, now)
+  const tags = [
+    j.remote ? tag('x-chip', 'background:#eef4ff;color:#1d4ed8', 'Remote') : '',
+    ago ? tag('x-tag', 'background:#f0f0ea;color:#5a5a53;font-weight:600', ago) : '',
   ].join('')
+  const pay = j.salary
+    ? `<span class="x-pill" style="font-size:20px;font-weight:800;letter-spacing:-0.02em;color:#3f6212">${escapeHtml(oneLine(j.salary))}</span>`
+    : `<span class="x-muted" style="font-size:13px;color:${MUTED}">Pay on the job page</span>`
+  const frame = featured
+    ? `class="x-top" style="background:#f7fde9;border:2px solid #a3e635;border-radius:18px"`
+    : `class="x-job" style="background:#ffffff;border:1px solid ${LINE};border-radius:18px"`
   return `<tr><td style="padding:0 0 12px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="x-job" style="background:#fbfbf8;border:1px solid ${LINE};border-radius:14px"><tr>
-<td width="44" valign="top" style="width:44px;padding:16px 0 16px 16px">${logoCell(j)}</td>
-<td valign="top" style="padding:14px 16px 16px 14px">
-<a href="${url}" class="x-ink" style="font-size:16px;font-weight:700;line-height:22px;color:${INK}">${escapeHtml(oneLine(j.title))}</a>
-<div class="x-muted" style="font-size:14px;line-height:20px;color:${MUTED};margin-top:2px">${where}</div>
-${chips}
-<div style="margin-top:10px"><a href="${url}" class="x-link" style="font-size:13px;font-weight:700;color:#3f6212">View job &rarr;</a></div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ${frame}><tr><td style="padding:18px">
+${featured ? `<div style="margin:0 0 12px"><span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#0b0c0a;color:${ACCENT};font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase">Top paid</span></div>` : ''}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td width="48" valign="top" style="width:48px">${logoCell(j)}</td>
+<td valign="top" style="padding-left:14px">
+<a href="${url}" class="x-ink" style="font-size:17px;font-weight:700;line-height:23px;letter-spacing:-0.01em;color:${INK}">${escapeHtml(oneLine(j.title))}</a>
+<div class="x-muted" style="font-size:13px;line-height:19px;color:${MUTED};margin-top:3px">${where}</div>
+</td></tr></table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px"><tr>
+<td valign="middle">${pay}<div style="margin-top:8px">${tags}</div></td>
+<td valign="bottom" align="right" style="padding-left:10px;white-space:nowrap"><a href="${url}" class="x-go" style="display:inline-block;padding:9px 14px;border-radius:999px;background:#0b0c0a;color:#ffffff;font-size:13px;font-weight:700">View job &rarr;</a></td>
+</tr></table>
 </td></tr></table>
 </td></tr>`
 }
@@ -306,20 +341,32 @@ export function buildDigestEmail(input: {
     `${BRAND} · ${oneLine(input.postalAddress)}`,
   ].join('\n')
 
-  const rows = input.jobs.map((j) => digestJobRow(j, now)).join('\n')
-  const lead = more > 0 ? `Best paid first. ${more} more on the site.` : 'Best paid first.'
+  const topPay = topOfRange(input.jobs[0]?.salary ?? null)
+  const remote = input.jobs.filter((j) => j.remote).length
+  const stats = [
+    topPay ? statChip(topPay, 'Top pay') : '',
+    remote ? statChip(String(remote), 'Remote') : '',
+    input.totalNew > n ? statChip(String(input.totalNew), 'New in total') : '',
+  ].join('')
+  const top = hero(`<p style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${ACCENT}">Your ${escapeHtml(freq)} alert</p>
+<p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#d6dccd">${escapeHtml(label)}</p>
+<h1 class="x-big" style="margin:0 0 18px;font-size:44px;line-height:48px;font-weight:800;letter-spacing:-0.04em;color:#ffffff">${n} new ${n === 1 ? 'job' : 'jobs'}</h1>
+${stats ? `<table role="presentation" cellpadding="0" cellspacing="0"><tr>${stats}</tr></table>` : ''}`)
 
-  const inner = `<p class="x-muted" style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED}">Your alert &middot; ${escapeHtml(freq)}</p>
-<p class="x-ink" style="margin:0 0 4px;font-size:15px;font-weight:700;color:${INK}">${escapeHtml(label)}</p>
-<h1 class="x-ink x-h1" style="margin:0 0 6px;font-size:28px;line-height:34px;font-weight:800;letter-spacing:-0.02em;color:${INK}">${n} new ${n === 1 ? 'job' : 'jobs'}</h1>
-<p class="x-muted" style="margin:0 0 22px;font-size:14px;line-height:21px;color:${MUTED}">Every job shows its pay. ${escapeHtml(lead)}</p>
+  const rows = input.jobs.map((j, i) => digestJobRow(j, now, i === 0 && n > 1 && Boolean(j.salary))).join('\n')
+  const lead = more > 0 ? `Best paid first · ${more} more on the site` : 'Best paid first · every job shows its pay'
+
+  const bodyHtml = `${top}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td class="x-pad" style="padding:22px 22px 26px">
+<p class="x-muted" style="margin:0 6px 14px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED}">${escapeHtml(lead)}</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
-<p style="margin:12px 0 0;text-align:center">${button(input.links.search, more > 0 ? `See ${more} more` : 'See all matching jobs')}</p>`
+<p style="margin:14px 0 0;text-align:center">${button(input.links.search, more > 0 ? `See ${more} more` : 'See all matching jobs')}</p>
+</td></tr></table>`
 
   return {
     subject,
     text,
-    html: shell(inner, footerHtml(input.links, input.postalAddress, why), previewOf(input.jobs)),
+    html: shell(bodyHtml, footerHtml(input.links, input.postalAddress, why), previewOf(input.jobs), `${n} new`),
     headers: {
       'List-Unsubscribe': `<${input.links.unsubscribe}>`,
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
