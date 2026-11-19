@@ -243,8 +243,49 @@ export type AlertAction = 'confirm' | 'unsubscribe' | 'daily' | 'weekly'
 export const isAlertAction = (a: unknown): a is AlertAction =>
   a === 'confirm' || a === 'unsubscribe' || a === 'daily' || a === 'weekly'
 
+/** "jane.doe@gmail.com" -> "j***@gmail.com": enough for the owner to tell subscribers apart, not the full address. */
+export function maskEmail(email: string): string {
+  const [user, domain] = email.split('@')
+  return domain ? `${user.slice(0, 1)}***@${domain}` : '***'
+}
+
+/**
+ * Tells the site owner that someone confirmed a job alert (owner's request, 2026-11-19: "update me every time there's a
+ * new subscriber for job alerts"). Sent to ALERTS_OWNER_EMAIL, an environment setting so no address lives in the code;
+ * nothing is sent while it is unset. The subscriber's address is masked. A failure is logged and never stops the
+ * confirmation.
+ */
+export async function notifyOwnerOfConfirmation(
+  alert: { email: string; filters: unknown; frequency: string; source: string | null },
+  send: SendMail = sendMail,
+): Promise<void> {
+  const to = process.env.ALERTS_OWNER_EMAIL?.trim()
+  if (!to) return
+  try {
+    const filters = sanitizeAlertFilters(alert.filters)
+    const label = filters ? buildAlertLabel(filters) : 'All six-figure jobs'
+    const active = await prisma.jobAlert.count({ where: { status: 'active' } })
+    const lines = [
+      `${maskEmail(alert.email)} confirmed a job alert.`,
+      `Alert: ${label}`,
+      `Frequency: ${alert.frequency}`,
+      `Signed up from: ${alert.source ?? 'unknown'}`,
+      `Active alerts now: ${active.toLocaleString('en-US')}`,
+    ]
+    const escape = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    await send({
+      to,
+      subject: `New job alert subscriber: ${label}`,
+      text: lines.join('\n'),
+      html: `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5">${lines.map((l) => `<p style="margin:0 0 6px">${escape(l)}</p>`).join('')}</div>`,
+    })
+  } catch (error) {
+    console.error('[alerts] owner notification failed:', error instanceof Error ? error.message.split('\n')[0] : error)
+  }
+}
+
 /** Applies one action from the alert's page or email. Returns false when the token matches no alert. */
-export async function applyAlertAction(token: string, action: AlertAction, now = new Date()): Promise<boolean> {
+export async function applyAlertAction(token: string, action: AlertAction, now = new Date(), send: SendMail = sendMail): Promise<boolean> {
   const alert = await findAlertByToken(token)
   if (!alert) return false
   const data: Prisma.JobAlertUpdateInput =
@@ -254,6 +295,8 @@ export async function applyAlertAction(token: string, action: AlertAction, now =
         ? { status: 'active', confirmedAt: alert.confirmedAt ?? now, unsubscribedAt: null }
         : { frequency: action }
   await prisma.jobAlert.update({ where: { id: alert.id }, data })
+  // Only the first confirmation is a new subscriber; a second click on the link, or re-confirming later, is not.
+  if (action === 'confirm' && !alert.confirmedAt) await notifyOwnerOfConfirmation(alert, send)
   return true
 }
 
