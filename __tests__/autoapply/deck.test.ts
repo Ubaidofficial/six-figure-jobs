@@ -56,6 +56,35 @@ describe('swipe card', () => {
   })
 })
 
+describe('swipe card: summary, skills, seniority and résumé match', () => {
+  const job = {
+    id: 'job_9', title: 'Senior Product Designer', company: 'Figma', companyLogo: null, companyRef: null,
+    minAnnual: BigInt(190000), maxAnnual: BigInt(240000), currency: 'USD', locationRaw: 'San Francisco, CA', countryCode: 'US',
+    createdAt: new Date('2026-11-18T10:00:00Z'), experienceLevel: 'senior',
+    aiOneLiner: '  Lead design for collaboration   features. ', aiSnippet: 'Longer snippet',
+    techStack: JSON.stringify(['Figma', 'Prototyping']), skillsJson: JSON.stringify(['figma', 'design-systems', 'user-research']),
+  }
+  it('takes the AI one-liner as the summary, de-duplicates skills and names the seniority', () => {
+    const card = toSwipeCard(job as never)
+    expect(card.summary).toBe('Lead design for collaboration features.')
+    expect(card.skills.map((k) => k.name)).toEqual(['Figma', 'Prototyping', 'Design systems', 'User research'])
+    expect(card.seniority).toBe('Senior')
+    expect(card.match).toBeNull() // no résumé, no score
+  })
+  it('scores the job against the résumé and ticks the skills it names', () => {
+    const card = toSwipeCard(job as never, 'Senior Product Designer at Acme. Figma, design systems, prototyping.')
+    expect(card.skills.filter((k) => k.have).map((k) => k.name)).toEqual(['Figma', 'Prototyping', 'Design systems'])
+    expect(card.match?.reasons[0]).toBe('3 of 4 skills on your résumé')
+    expect(card.match?.score).toBeGreaterThanOrEqual(75)
+  })
+  it('shows at most 6 skills and no summary when there is none', () => {
+    const many = { ...job, aiOneLiner: null, aiSnippet: null, techStack: JSON.stringify(['A1', 'B2', 'C3', 'D4', 'E5', 'F6', 'G7']), skillsJson: null }
+    const card = toSwipeCard(many as never)
+    expect(card.skills).toHaveLength(6)
+    expect(card.summary).toBeNull()
+  })
+})
+
 describe('deck endpoint', () => {
   it('refuses another origin and anonymous visitors', async () => {
     expect((await postDeck(req({}, 'https://evil.test'))).status).toBe(403)

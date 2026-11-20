@@ -1,0 +1,15 @@
+/* Bottom tab bar for the account area, phones only. */
+.tabs { display: none; }
+
+@media (max-width: 767px) {
+  .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px 8px calc(10px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--color-bg-1) 94%, transparent); border-top: 1px solid var(--color-border); backdrop-filter: blur(8px); }
+  .tab { position: relative; display: grid; justify-items: center; gap: 2px; padding: 4px 0; font-size: 11.5px; font-weight: var(--font-weight-semibold); color: var(--color-text-2); text-decoration: none; }
+  .tab.on { color: var(--color-text-0); }
+  .icon { display: grid; place-items: center; width: 46px; height: 28px; border-radius: var(--radius-full); }
+  .icon svg { width: 21px; height: 21px; }
+  .on .icon { background: #ecfccb; color: #365314; }
+  .tab:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 12px; }
+  .badge { position: absolute; top: 0; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; display: grid; place-items: center; font-size: 10.5px; font-weight: 800; color: #0a0a0a; background: var(--color-primary); border-radius: var(--radius-full); }
+  /* Room at the bottom of the page so the bar never covers its last lines. */
+  :global(body):has(.tabs) { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+}
