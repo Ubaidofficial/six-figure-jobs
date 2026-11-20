@@ -43,7 +43,14 @@ async function chooseOption(page: Page, id: string, label: string): Promise<bool
   await el.evaluate((e) => (e as HTMLElement).scrollIntoView({ block: 'center' }))
   await el.click()
   await el.type(label.slice(0, 40), { delay: 0 })
-  await sleep(250)
+  // Wait for the list to show the option (React lists render a moment after typing), up to 2 s, instead of a fixed pause.
+  await page
+    .waitForFunction(
+      (want: string) => Array.from(document.querySelectorAll('[role="option"]')).some((o) => (o.textContent || '').trim().toLowerCase() === want),
+      { timeout: 2000 },
+      label.trim().toLowerCase(),
+    )
+    .catch(() => {})
   const options = await page.$$('[role="option"]')
   for (const o of options) {
     const t = ((await o.evaluate((n) => n.textContent)) || '').trim().toLowerCase()
@@ -76,6 +83,52 @@ async function makeResumePdf(browser: Browser, text: string, dir: string): Promi
   } finally {
     await page.close()
   }
+}
+
+const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase()
+
+/**
+ * Reads a control back after filling it: does the employer's form now hold exactly what the user approved? A text box
+ * must hold the text, a dropdown must show the approved option's label, a checkbox group the approved boxes, the resume
+ * input a file, and a phone field with a separate country picker must show the same dialling code as the number.
+ * Fields with nothing to enter, and a country/city the form does not ask for, count as set.
+ */
+async function isSet(page: Page, f: PlanField): Promise<boolean> {
+  const v = f.value
+  if (v == null || (typeof v === 'string' && v.trim() === '')) return true
+  if (f.type === 'file') {
+    if (f.key !== 'resume') return true
+    return page.evaluate((id: string) => {
+      const input = document.getElementById(id) as HTMLInputElement | null
+      if (!input) return false
+      return (input.files?.length ?? 0) > 0 || /\.(pdf|docx?|txt)\b/i.test(input.closest('div')?.textContent || '')
+    }, f.key)
+  }
+  if (f.type === 'multi') {
+    const list = (Array.isArray(v) ? v : [v]).map((valueId) => `${f.key}[]_${valueId}`)
+    return page.evaluate((ids: string[]) => ids.every((id) => (document.getElementById(id) as HTMLInputElement | null)?.checked === true), list)
+  }
+  const optional = f.key === 'country' || f.key === 'candidate-location'
+  const want = f.type === 'single' ? f.options?.find((o) => o.value === v)?.label ?? '' : String(v)
+  const state = await page.evaluate((id: string) => {
+    const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null
+    if (!el) return null
+    const box = el.closest('.select__container, [class*="select"]')
+    const shown = box?.querySelector('.select__single-value, [class*="singleValue"]')?.textContent ?? null
+    // intl-tel-input and similar widgets show the chosen country's dialling code next to the phone box.
+    const scope = el.closest('[class*="phone"], [class*="iti"], .field') ?? el.parentElement
+    const dial = scope?.querySelector('.iti__selected-dial-code, [class*="dial-code"], [class*="dialCode"]')?.textContent ?? null
+    return { value: el.value ?? '', shown, dial, combobox: el.getAttribute('role') === 'combobox' }
+  }, f.key)
+  if (!state) return optional
+  if (f.key === 'phone' && state.dial) {
+    const code = state.dial.replace(/[^\d+]/g, '')
+    if (!code || !String(v).replace(/[\s().-]/g, '').startsWith(code)) return false
+  }
+  if (f.type === 'single' || (state.combobox && state.shown !== null && f.key !== 'candidate-location')) return norm(state.shown ?? '') === norm(want)
+  // A city box may be an autocomplete that keeps the typed text or shows the chosen place: either is the user's own text.
+  if (state.combobox) return norm(state.value) === norm(want) || norm(state.shown ?? '') === norm(want)
+  return norm(state.value) === norm(want)
 }
 
 /** Fills one field from the plan. Returns true when the control was found and set. */
@@ -144,6 +197,22 @@ function unfilledRequired(page: Page): Promise<string[]> {
   })
 }
 
+/** The employer's label text for each control id (label[for], aria-label or aria-labelledby), cut to 120 characters. */
+function labelsFor(page: Page, ids: string[]): Promise<Record<string, string>> {
+  return page.evaluate((list: string[]) => {
+    const out: Record<string, string> = {}
+    for (const id of list) {
+      const el = document.getElementById(id) ?? document.querySelector(`[id^="${CSS.escape(id)}"]`)
+      const byFor = document.querySelector(`label[for="${CSS.escape(id)}"]`) as HTMLElement | null
+      const by = el?.getAttribute('aria-labelledby')
+      const text = byFor?.innerText || el?.getAttribute('aria-label') || (by ? document.getElementById(by)?.innerText : '') || ''
+      const clean = text.replace(/\s+/g, ' ').replace(/\*$/, '').trim().slice(0, 120)
+      if (clean) out[id] = clean
+    }
+    return out
+  }, ids)
+}
+
 export function createBrowserDriver(opts: BrowserDriverOptions): ApplyDriver {
   const formTimeout = opts.formTimeoutMs ?? 20_000
   const confirmTimeout = opts.confirmTimeoutMs ?? 30_000
@@ -168,15 +237,42 @@ export function createBrowserDriver(opts: BrowserDriverOptions): ApplyDriver {
 
       const filled: string[] = []
       const missed: string[] = []
-      for (const f of req.plan.fields) {
-        const ok = await fillField(page, f, resumePath)
-        const has = f.value != null && !(typeof f.value === 'string' && f.value.trim() === '')
-        if (has) (ok ? filled : missed).push(f.key)
+      const notSet: string[] = []
+      const has = (f: PlanField) => f.value != null && !(typeof f.value === 'string' && f.value.trim() === '')
+      // Fill, read back, and try once more if the form did not take it. A control that still does not hold the approved
+      // value is never guessed at: the application stops and goes back to the user.
+      const fillAndCheck = async (f: PlanField): Promise<'ok' | 'missing' | 'not_set'> => {
+        if (!(await fillField(page, f, resumePath))) return 'missing'
+        if (await isSet(page, f)) return 'ok'
+        await sleep(300)
+        if ((await fillField(page, f, resumePath)) && (await isSet(page, f))) return 'ok'
+        return 'not_set'
       }
-      const unfilled = [...new Set([...(await unfilledRequired(page)), ...missed])]
+      for (const f of req.plan.fields) {
+        if (!has(f)) {
+          await fillField(page, f, resumePath)
+          continue
+        }
+        const r = await fillAndCheck(f)
+        ;(r === 'ok' ? filled : r === 'missing' ? missed : notSet).push(f.key)
+      }
+      // Some forms read the uploaded resume and overwrite fields already filled. Check every one again at the end.
+      if (req.plan.fields.some((f) => f.type === 'file' && has(f))) {
+        await sleep(500)
+        for (const f of req.plan.fields) {
+          if (!filled.includes(f.key) || f.type === 'file' || (await isSet(page, f))) continue
+          if ((await fillAndCheck(f)) !== 'ok') {
+            filled.splice(filled.indexOf(f.key), 1)
+            notSet.push(f.key)
+          }
+        }
+      }
+      const unfilled = [...new Set([...(await unfilledRequired(page)), ...missed, ...notSet])]
 
-      if (!req.live) return { kind: 'dry_run', filled, unfilled }
-      if (unfilled.length > 0) return { kind: 'needs_user', reason: 'unexpected_field' }
+      const labels = unfilled.length > 0 ? await labelsFor(page, unfilled).catch(() => ({})) : {}
+      if (!req.live) return { kind: 'dry_run', filled, unfilled, labels, ...(notSet.length ? { notSet } : {}) }
+      if (notSet.length > 0) return { kind: 'needs_user', reason: 'control_not_set', unfilled: notSet, labels }
+      if (unfilled.length > 0) return { kind: 'needs_user', reason: 'unexpected_field', unfilled, labels }
 
       const before = await bodyText(page)
       const baseline = { captcha: CAPTCHA.test(before), security: SECURITY.test(before) }

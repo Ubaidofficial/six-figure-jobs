@@ -1,24 +1,27 @@
 'use client'
 
-// The homepage live feed: the newest jobs we added, with how long ago. The server renders the first list (so it is in
-// the HTML and the page stays static); after load this asks /api/jobs/latest once a minute while the tab is visible.
-// New jobs wait behind a "Show N new jobs" button instead of being pushed into the list, so nothing moves under a
-// reader's thumb. Polling stops after 30 minutes of one visit and resumes when the tab is shown again.
+// The homepage "Latest Six Figure Opportunities": the newest jobs we added, live, with how long ago (owner's request,
+// 2026-11-19: one list that updates in real time like freehire's "Just added", in place of a static list plus a separate
+// live block). The server renders the first list (so it is in the HTML and the page stays static); after load this asks
+// /api/jobs/latest every 20 seconds while the tab is visible, and new jobs slide in at the top. So nothing moves under a
+// reader's thumb, arrivals wait while the pointer or keyboard focus is in the list, and Pause holds them behind a
+// "Show N new jobs" button. Polling stops after 30 minutes of one visit and resumes when the tab is shown again.
 
 import * as React from 'react'
 import Link from '@/components/ui/Link'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { CountryFlag } from '@/components/ui/CountryFlag'
+import { SectionHeading } from '@/components/ui/SectionHeading'
 import { FEED_SIZE, formatAgo, newestAddedAt, type FeedItem } from '@/lib/jobs/latestFeed'
 
 import styles from './LiveJobFeed.module.css'
 
-const POLL_MS = 60_000
-const TICK_MS = 30_000
-const MAX_POLLS_PER_VISIT = 30
+const POLL_MS = 20_000
+const TICK_MS = 5_000
+const MAX_POLLS_PER_VISIT = 90
 
-export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedItem[]; serverNow: string }) {
+export function LiveJobFeed({ initialItems, serverNow, totalJobs }: { initialItems: FeedItem[]; serverNow: string; totalJobs: number }) {
   const [items, setItems] = React.useState(initialItems)
   const [pending, setPending] = React.useState<FeedItem[]>([])
   const [fresh, setFresh] = React.useState<Set<string>>(new Set())
@@ -27,6 +30,9 @@ export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedIte
   const known = React.useRef(initialItems)
   const lastPoll = React.useRef(0)
   const polls = React.useRef(0)
+  const [paused, setPaused] = React.useState(false)
+  // The pointer or keyboard focus is in the list: arrivals wait so a row does not move under a tap.
+  const [holding, setHolding] = React.useState(false)
 
   const newest = newestAddedAt([...items, ...pending])
   known.current = [...items, ...pending]
@@ -71,69 +77,98 @@ export function LiveJobFeed({ initialItems, serverNow }: { initialItems: FeedIte
     }
   }, [poll])
 
-  const showPending = () => {
-    setFresh(new Set(pending.map((i) => i.id)))
-    setItems((cur) => [...pending, ...cur].slice(0, FEED_SIZE))
-    setPending([])
-  }
+  const showPending = React.useCallback(() => {
+    setPending((queued) => {
+      if (queued.length) {
+        setFresh(new Set(queued.map((i) => i.id)))
+        setItems((cur) => [...queued, ...cur].slice(0, FEED_SIZE))
+      }
+      return []
+    })
+  }, [])
 
-  if (items.length === 0 && pending.length === 0) return null
+  // Live unless paused or held: new jobs go straight into the list.
+  React.useEffect(() => {
+    if (!paused && !holding && pending.length) showPending()
+  }, [paused, holding, pending.length, showPending])
 
   return (
-    <section className={styles.section} aria-labelledby="live-feed-heading">
+    <section className={styles.section} aria-labelledby="latest-jobs-heading">
       <header className={styles.header}>
         <div>
-          <h2 id="live-feed-heading" className={styles.title}>
+          <SectionHeading id="latest-jobs-heading" eyebrow="Latest jobs" light="Latest" strong="Six Figure Opportunities" />
+          <p className={styles.live}>
             <span className={styles.dot} aria-hidden="true" />
             <span>
-              <span className="font-light">New jobs,</span> live
+              <strong>Live.</strong> {newest ? `Latest job added ${formatAgo(newest, now)}.` : 'Updated continuously.'}{' '}
+              {paused ? 'Paused: new jobs wait until you resume.' : 'New jobs appear here as we add them.'}
             </span>
-          </h2>
-          <p className={styles.sub}>
-            {newest ? `Latest job added ${formatAgo(newest, now)}.` : 'Updated continuously.'} This list refreshes while you
-            are here.
           </p>
         </div>
-        {/* The "Show N new jobs" button sits beside the link, in a row that is always there, so it never moves the list. */}
+        {/* The buttons sit beside the link, in a row that is always there, so they never move the list. */}
         <div className={styles.actions}>
+          <button type="button" className={styles.pause} aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
+            {paused ? 'Resume' : 'Pause'}
+          </button>
           <span aria-live="polite">
-            {pending.length > 0 ? (
+            {paused && pending.length > 0 ? (
               <button type="button" className={styles.pending} onClick={showPending}>
                 Show {pending.length} new {pending.length === 1 ? 'job' : 'jobs'}
               </button>
             ) : null}
           </span>
           <Link href="/jobs?sort=recent" className={`arrow-link ${styles.all}`}>
-            <span className="arrow-link-label">All new jobs</span>
+            <span className="arrow-link-label">Explore all opportunities</span>
             <span className="arrow-chip" aria-hidden="true">&#8599;</span>
           </Link>
         </div>
       </header>
 
-      <ul className={styles.list}>
-        {items.map((job) => (
-          <li key={job.id} className={fresh.has(job.id) ? styles.fresh : undefined}>
-            <Link href={job.href} prefetch={false} className={styles.row}>
-              <span className={styles.logo}>
-                <CompanyLogo name={job.company} src={job.logo} size="fill" />
-              </span>
-              <span className={styles.body}>
-                <span className={styles.jobTitle}>{job.title}</span>
-                <span className={styles.company}>{job.company}</span>
-                <span className={styles.meta}>
-                  <span className={styles.ago}>{formatAgo(job.addedAt, now)}</span>
+      {items.length === 0 ? (
+        <p className={styles.empty}>New jobs appear here as we add them.</p>
+      ) : (
+        <ul
+          className={styles.list}
+          onPointerEnter={() => setHolding(true)}
+          onPointerLeave={() => setHolding(false)}
+          onFocus={() => setHolding(true)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHolding(false)
+          }}
+        >
+          {items.map((job) => (
+            <li key={job.id} className={fresh.has(job.id) ? styles.fresh : undefined}>
+              <Link href={job.href} prefetch={false} className={styles.row}>
+                <span className={styles.logo}>
+                  <CompanyLogo name={job.company} src={job.logo} size="fill" />
+                </span>
+                <span className={styles.body}>
+                  <span className={styles.jobTitle}>{job.title}</span>
+                  <span className={styles.byline}>
+                    <span className={styles.company}>{job.company}</span>
+                    <span aria-hidden="true">·</span>
+                    <span className={styles.ago}>{formatAgo(job.addedAt, now)}</span>
+                  </span>
+                </span>
+                <span className={styles.side}>
+                  {job.salary ? <span className={styles.salary}>{job.salary}</span> : null}
                   {job.location ? (
                     <span className={styles.place}>
                       <CountryFlag code={job.countryCode} /> {job.location}
                     </span>
                   ) : null}
-                  {job.salary ? <span className={styles.salary}>{job.salary}</span> : null}
                 </span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className={styles.cta}>
+        <Link href="/jobs" className={styles.ctaButton}>
+          Explore all {totalJobs.toLocaleString('en-US')} opportunities <span aria-hidden="true">→</span>
+        </Link>
+      </div>
     </section>
   )
 }

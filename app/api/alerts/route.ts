@@ -1,5 +1,5 @@
 // app/api/alerts/route.ts
-// POST /api/alerts { email, frequency, filters, source, website } -> { ok, message }
+// POST /api/alerts { email, firstName?, frequency, filters, source, website } -> { ok, message }
 // Signs an address up for an email job alert (double opt-in: only a confirmation email is sent). The answer is the same
 // whether or not the address already has alerts. 404 while alerts are off (lib/alerts/config.ts).
 import { createHash } from 'node:crypto'
@@ -60,6 +60,7 @@ export async function POST(req: Request) {
       filters: body.filters,
       frequency: body.frequency,
       source: body.source,
+      firstName: body.firstName,
       pro: proEmail !== null && proEmail === email,
     })
     if (result === 'invalid') return json({ ok: false, message: 'Enter a valid email address.' }, 400)

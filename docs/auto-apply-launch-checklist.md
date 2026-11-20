@@ -30,7 +30,7 @@ Verified (tests, and a browser run on a local machine):
 ## Before turning it on
 
 1. **Legal.** Terms and Privacy must say we submit applications on the user's behalf, which data goes to which employer and to the AI provider, and how long we keep applications. Refund policy for the credit price. A lawyer should read this; it is a service that acts in a user's name on third-party sites.
-2. **Apply the migration** `20261106210000_add_auto_apply` (two new tables, `ApplyProfile` and `AutoApplication`; no existing table changes) through the `database migrate` workflow, after the accounts migrations.
+2. **Apply the migration** `20261106210000_add_auto_apply` (two new tables, `ApplyProfile` and `AutoApplication`; no existing table changes) through the `database migrate` workflow, after the accounts migrations. Then `20261119010000_add_auto_apply_runs` (one new table, `AutoApplyRun`: the run history behind `/ubaid93/autoapply`). Without it applications still work; runs are just not recorded. Then `20261119020000_add_apply_profile_fields_saved_answers` (adds seven optional columns to `ApplyProfile` for common questions, and one new table, `SavedAnswer`). Without it, preparing a draft still works but the review page's new details and saved answers fail to save, so apply it before anyone uses auto-apply.
 3. **Set the price.** `AUTO_APPLY_CREDITS` (placeholder 5) is a product decision. Also set `BILLING_*` credits so a user can afford it.
 4. **Dry-run first, on your own application.** Set `AUTO_APPLY_ENABLED=true` (not live). Create an application for a real Greenhouse job as yourself, approve it, and run the worker once:
 
@@ -38,7 +38,7 @@ Verified (tests, and a browser run on a local machine):
    npx tsx scripts/autoapply-worker.ts --once
    ```
 
-   Each line says how many fields were filled and which required ones it could not. Fix the driver until your own forms fill cleanly.
+   Each line says how many fields were filled and which required ones it could not. Every run (dry or live) is also kept in `AutoApplyRun` and summarised on **`/ubaid93/autoapply`**: per employer board, how often the worker got through the whole form and why it stopped otherwise, and which questions it most often left empty (by the employer's own label). It holds no names, answers or résumé text. Do several dry runs on different employers and fix the driver until your own forms fill cleanly; read that page before step 5.
 5. **Then one live application as yourself**, to a role you really want, with `AUTO_APPLY_LIVE=true`. Check the employer received it and that exactly one price was charged.
 6. **Where the worker runs.** It needs puppeteer (a dev dependency here) and a Chromium. Run it as its own process or Railway service with dev dependencies installed; set `AUTOAPPLY_CHROME_PATH` to use an existing Chromium. The web app never imports the driver or puppeteer.
 

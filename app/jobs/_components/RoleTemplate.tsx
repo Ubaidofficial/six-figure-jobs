@@ -16,6 +16,7 @@ import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
+import { salaryFilterAmount, salaryFilterCurrency } from '@/lib/jobs/salaryFilter'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
@@ -99,20 +100,6 @@ function toTitleCase(slug: string): string {
     .replace(/^Senior Senior /, 'Senior ')
     .replace(/^Staff Staff /, 'Staff ')
     .replace(/^Principal Principal /, 'Principal ')
-}
-
-function resolveCurrencyFromCountryCode(code?: string | null): string | null {
-  const cc = (code || '').toUpperCase()
-  if (!cc) return null
-  const map: Record<string, string> = {
-    US: 'USD',
-    GB: 'GBP',
-    CA: 'CAD',
-    DE: 'EUR',
-    NL: 'EUR',
-    AU: 'AUD',
-  }
-  return map[cc] ?? null
 }
 
 function asNumber(value: unknown): number | null {
@@ -266,11 +253,11 @@ export async function RoleTemplate({
   const selectedSkills = allParams(sp, 'skill')
 
   const minSalaryRaw = Number(firstParam(sp, 'minSalary') || '') || null
+  // Same rule as /jobs (lib/jobs/jobsListQuery.ts): the $100k floor is not a filter, and a step compares in the country's
+  // currency (lib/jobs/salaryFilter.ts).
   const minSalary =
-    minSalaryRaw && Number.isFinite(minSalaryRaw)
-      ? Math.min(450_000, Math.max(100_000, minSalaryRaw))
-      : null
-  const salaryCurrency = minSalary ? resolveCurrencyFromCountryCode(country) ?? 'USD' : null
+    minSalaryRaw && Number.isFinite(minSalaryRaw) && minSalaryRaw > 100_000 ? Math.min(450_000, minSalaryRaw) : null
+  const salaryCurrency = minSalary ? salaryFilterCurrency(country) : null
 
   const queryInput: JobQueryInput = {
     page,
@@ -283,7 +270,7 @@ export async function RoleTemplate({
     seniorityLevels: seniority.length ? seniority : undefined,
     companySizeBuckets: companySizes.length ? companySizes : undefined,
     skillSlugs: selectedSkills.length ? selectedSkills : undefined,
-    ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: minSalary } : {}),
+    ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: salaryFilterAmount(minSalary, salaryCurrency) } : {}),
   }
 
   const scopeLabels = [

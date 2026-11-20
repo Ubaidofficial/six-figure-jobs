@@ -6,6 +6,7 @@ import { connection } from 'next/server'
 import { ResumeForm } from '@/components/applykit/ResumeForm'
 import { TrackerList } from '@/components/applykit/TrackerList'
 import { accountsEnabled } from '@/lib/accounts/enabled'
+import { autoApplyEnabled } from '@/lib/autoapply/config'
 import { getSessionUser } from '@/lib/auth/session'
 import { prisma } from '@/lib/prisma'
 
@@ -41,6 +42,18 @@ export default async function ApplicationsPage() {
         <Link href="/account" className={styles.link}>
           Back to your account
         </Link>
+        {autoApplyEnabled() ? (
+          <>
+            {' · '}
+            <Link href="/account/swipe" className={styles.link}>
+              Swipe to apply
+            </Link>
+            {' · '}
+            <Link href="/account/answers" className={styles.link}>
+              Saved answers
+            </Link>
+          </>
+        ) : null}
       </p>
 
       <section className={styles.card} aria-labelledby="resume-heading">

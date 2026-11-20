@@ -1,5 +1,11 @@
 name: Scheduled Job Scraper (GitHub Runner)
 
+# The scheduled ATS scrape: every Company row with a supported atsProvider and atsUrl, plus all board scrapers.
+# GitHub disabled this workflow for inactivity on 2026-10-08; brought back on 2026-11-19 (owner's request), with the
+# topstartups.io step tried and then taken out again the same day: 175 of its 183 employer boards are already on
+# freehire, so scripts/addTopStartupsCompanies.ts stays for a manual run only. Google Indexing is drained only by freehire-sync.yml (its full run holds the
+# credentials and the 180-a-day cap), so this workflow no longer drains the queue or receives those credentials.
+
 on:
   schedule:
     - cron: "0 6 * * 1,4" # Monday and Thursday at 6am UTC (twice weekly)
@@ -46,7 +52,6 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       AI_ENRICHMENT_PAUSED: "true"
-      GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON }}
 
     steps:
       - name: Checkout
@@ -229,13 +234,6 @@ jobs:
         run: |
           set -euo pipefail
           npm run scrape:pseo:health | tee /tmp/daily-scrape-pseo-health.log
-
-      - name: Drain Google Indexing queue
-        if: steps.prep.outputs.dry_run != 'true'
-        env:
-          INDEXING_API_DRY_RUN: "0"
-          INDEXING_API_DAILY_LIMIT: "180"
-        run: npx tsx scripts/process-google-indexing-queue.ts | tee /tmp/daily-scrape-indexing.log
 
       - name: Data quality remediation (self-heal)
         if: steps.prep.outputs.dry_run != 'true'

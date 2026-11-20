@@ -6,8 +6,8 @@ import type { JobQueryInput } from '@/lib/jobs/queryJobs'
 
 import { JobAlertSignup } from './JobAlertSignup'
 
-export function JobAlertBox({ query, variant }: { query: JobQueryInput; variant?: 'inline' | 'footer' }) {
+export function JobAlertBox({ query, variant, title }: { query: JobQueryInput; variant?: 'inline' | 'footer'; title?: string }) {
   if (!alertsEnabled()) return null
   const filters = sanitizeAlertFilters(query) ?? {}
-  return <JobAlertSignup filters={filters} label={buildAlertLabel(filters)} variant={variant} />
+  return <JobAlertSignup filters={filters} label={buildAlertLabel(filters)} variant={variant} title={title} />
 }

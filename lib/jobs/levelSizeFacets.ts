@@ -2,8 +2,8 @@
 //
 // How many jobs each Seniority and Company size option of the listing filter would show, with the page's other filters
 // applied (a group's own choice is left out, so picking "Senior" still shows how many "Staff" jobs there are). The
-// options had no counts, so a visitor could pick one that leaves nothing. Seniority lives on RoleInference (one row
-// per job), counted in one query; company size is on the company, so each bucket is one count.
+// options had no counts, so a visitor could pick one that leaves nothing. Seniority is Job.experienceLevel (read from the
+// title at ingest), counted in one query; company size is on the company, so each bucket is one count.
 import { prisma } from '../prisma'
 import { buildWhere, type JobQueryInput } from './queryJobs'
 
@@ -16,9 +16,9 @@ export type LevelSizeCounts = {
 
 export async function loadLevelSizeCounts(base: JobQueryInput): Promise<LevelSizeCounts> {
   const [levelRows, sizeCounts] = await Promise.all([
-    prisma.roleInference.groupBy({
-      by: ['seniority'],
-      where: { seniority: { not: null }, job: buildWhere({ ...base, seniorityLevels: undefined }) },
+    prisma.job.groupBy({
+      by: ['experienceLevel'],
+      where: { AND: [buildWhere({ ...base, seniorityLevels: undefined }), { experienceLevel: { not: null } }] },
       _count: { _all: true },
     }),
     Promise.all(
@@ -29,7 +29,7 @@ export async function loadLevelSizeCounts(base: JobQueryInput): Promise<LevelSiz
   ])
 
   const seniority: Record<string, number> = {}
-  for (const row of levelRows) if (row.seniority) seniority[row.seniority] = row._count._all
+  for (const row of levelRows) if (row.experienceLevel) seniority[row.experienceLevel] = row._count._all
 
   return {
     seniority,

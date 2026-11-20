@@ -1,6 +1,7 @@
 // app/s/[slug]/page.tsx
 // Phase-4 Programmatic SEO Slice Page (Role, Salary, Country, Remote, etc.)
 
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
@@ -102,6 +103,10 @@ export default async function SliceSeoPage({
           __html: JSON.stringify(breadcrumbJsonLd),
         }}
       />
+
+      <div className="mx-auto mt-10 max-w-5xl px-4">
+        <JobAlertBox query={{}} title="Get new six-figure jobs by email" />
+      </div>
 
       {/* Internal links cluster */}
       {internalLinks.length > 0 && (

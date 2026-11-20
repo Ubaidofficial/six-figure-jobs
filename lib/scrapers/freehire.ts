@@ -12,6 +12,7 @@ import { readPayFromDescription } from '../jobs/payEvidence'
 import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 import { freehireStructuredLocationText } from './freehireStructured'
+import { companiesToLookUp, freehireCompanyKey, loadKnownCompanies, markWebsiteChecked, WEBSITE_RECHECK_DAYS } from './freehireCompanyWebsites'
 
 const BOARD = 'freehire'
 // The /agent/ variant takes the same filters and returns the same jobs, but each carries its description in full.
@@ -25,6 +26,9 @@ const MAX_OFFSET = 10_000
 const LOOKBACK_DAYS = Number(process.env.FREEHIRE_LOOKBACK_DAYS) || 30
 // Public limit is 120 requests/minute without a key; stay well under it.
 const PAGE_DELAY_MS = 700
+// Companies written to the database at once by ingestFreehireJobs. Below the 5-connection Prisma pool the sync scripts
+// get outside production (lib/prisma.ts), so no write waits for a free connection.
+const INGEST_CONCURRENCY = 4
 
 /**
  * One query per currency. `geo` narrows by freehire's region/country facets (unset = anywhere). `lookbackDays` gives a
@@ -37,6 +41,8 @@ export type FreehireMarket = {
   lookbackDays?: number
   /** Ask without any salary filter, to find jobs whose posting states the pay but freehire's fields do not. */
   anyPay?: boolean
+  /** Most pages this market reads in one run (default: until the window ends or freehire's 10,000-row limit). */
+  maxPages?: number
 }
 
 // Worldwide-remote jobs (freehire's `regions=global`), read over 30 days. The daily 1.5-day window missed most of them
@@ -66,9 +72,20 @@ export const FREEHIRE_MARKETS: ReadonlyArray<FreehireMarket> = [
  * freehire's newest jobs with NO salary filter, so jobs whose pay is only in the posting text are seen too (2026-11-15
  * audit: 82% of freehire's jobs carry no pay in its fields, and the description states a yearly range for about 1.8% of
  * them). Only jobs without freehire pay fields are taken from this pass; mapFreehireJob reads the range with
- * lib/jobs/payEvidence.ts and keeps the sentence. About 5,000 jobs a day, 50 pages.
+ * lib/jobs/payEvidence.ts and keeps the sentence.
+ *
+ * Read in three slices (owner's request, 2026-11-19: use more of the daily request budget for this). freehire adds about
+ * 117,000 jobs a day and one query stops at 10,000 rows, so a single worldwide pass saw only the newest 3-5 hours of each
+ * window. 78% of the readings are in US dollars (359 of 458 logged, 2026-11-19; then CAD 34, EUR 27, GBP 23, AUD 15), so
+ * the US (about 32,000 jobs a day) gets its own 100 pages, about 7 hours; Canada, Australia and the UK (about 13,600 a
+ * day) 50 pages, about 9 hours; the rest of the world (about 72,000 a day, mostly the euro readings) 50 pages. The three
+ * slices cover every job exactly once (their totals add up to freehire's, measured 2026-11-19).
  */
-export const DESCRIPTION_PAY_MARKET: FreehireMarket = { currency: 'ANY', geo: {}, label: 'pay in description', anyPay: true }
+export const DESCRIPTION_PAY_MARKETS: ReadonlyArray<FreehireMarket> = [
+  { currency: 'ANY', geo: { countries: 'us' }, label: 'pay in description (US)', anyPay: true, maxPages: 100 },
+  { currency: 'ANY', geo: { countries: 'ca,au', regions: 'uk' }, label: 'pay in description (CA, AU, UK)', anyPay: true, maxPages: 50 },
+  { currency: 'ANY', geo: { countries_exclude: 'us,ca,au', regions_exclude: 'uk' }, label: 'pay in description (rest)', anyPay: true, maxPages: 50 },
+]
 
 export type FreehireJob = {
   public_slug: string
@@ -129,6 +146,8 @@ export type FreehireSyncOptions = {
   maxPagesPerMarket?: number
   /** Only jobs posted at or after this moment (default: now minus FREEHIRE_LOOKBACK_DAYS). */
   since?: Date
+  /** Also read DESCRIPTION_PAY_MARKETS (default true): 200 pages a run, too many for the 5-minute recent pull. */
+  withDescriptionPay?: boolean
 }
 
 /** freehire tags outbound links with utm_source=freehire.me; drop only that tag. */
@@ -289,6 +308,9 @@ export function freehireHeaders(): Record<string, string> {
   return headers
 }
 
+/** freehire's rate-limit headers on the last search page read (logged after a sync, to see how much budget is left). */
+export let lastRateLimit: { limit?: string; remaining?: string; reset?: string } | null = null
+
 async function fetchPage(market: FreehireMarket, offset: number): Promise<FreehireResponse> {
   const res = await axios.get<FreehireResponse>(API_URL, {
     headers: freehireHeaders(),
@@ -310,6 +332,8 @@ async function fetchPage(market: FreehireMarket, offset: number): Promise<Freehi
       ...market.geo,
     },
   })
+  const h = (res.headers ?? {}) as Record<string, string | undefined>
+  lastRateLimit = { limit: h['x-ratelimit-limit'], remaining: h['x-ratelimit-remaining'], reset: h['x-ratelimit-reset'] }
   return res.data
 }
 
@@ -332,7 +356,12 @@ export function decideRateLimitWait(
   return { action: seconds > capSeconds ? 'give-up' : 'wait', seconds }
 }
 
-/** fetchPage that waits out short 429 rate limits (Retry-After) and fails fast, with a clear message, on a long one. */
+const NETWORK_RETRY_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ECONNABORTED', 'EAI_AGAIN', 'ECONNREFUSED', 'EPIPE', 'ERR_SOCKET_CONNECTION_TIMEOUT'])
+
+/**
+ * fetchPage that waits out short 429 rate limits (Retry-After) and fails fast, with a clear message, on a long one, and
+ * retries a dropped connection or a timeout up to 3 times.
+ */
 async function fetchPageWithRetry(market: FreehireMarket, offset: number): Promise<FreehireResponse> {
   for (let attempt = 0; ; attempt++) {
     try {
@@ -354,6 +383,14 @@ async function fetchPageWithRetry(market: FreehireMarket, offset: number): Promi
           await sleep(decision.seconds * 1000)
           continue
         }
+      }
+      // A dropped connection or a timeout, not an answer from freehire: try again a few times. One "read ECONNRESET" at
+      // USD offset 3400 failed the whole sync on 2026-11-19 14:24, so that day's closed-job check never ran.
+      const code = (error as { code?: string }).code
+      if (!response && code && NETWORK_RETRY_CODES.has(code) && attempt < 3) {
+        console.warn(`[freehire] ${code} on ${market.label ?? market.currency} offset=${offset}, retrying (attempt ${attempt + 1})`)
+        await sleep(5_000 * (attempt + 1))
+        continue
       }
       throw error
     }
@@ -377,7 +414,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
   let unmappable = 0
   const cutoff = options.since?.getTime() ?? Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
-  for (const market of [...FREEHIRE_MARKETS, DESCRIPTION_PAY_MARKET]) {
+  for (const market of [...FREEHIRE_MARKETS, ...(options.withDescriptionPay === false ? [] : DESCRIPTION_PAY_MARKETS)]) {
     // A market with its own window reads at least that far back.
     const marketCutoff = market.lookbackDays
       ? Math.min(cutoff, Date.now() - market.lookbackDays * 24 * 60 * 60 * 1000)
@@ -402,6 +439,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
       let oldPages = 0
       for (let offset = 0; offset < MAX_OFFSET; offset += PAGE_SIZE) {
         if (options.maxPagesPerMarket && pages >= options.maxPagesPerMarket) break
+        if (market.maxPages && pages >= market.maxPages) break
         const page = await fetchPageWithRetry(market, offset)
         assertFiltersApplied(page.meta)
         report.available = page.meta.total
@@ -474,6 +512,8 @@ export async function loadFreehireCompanyWebsites(
   fetchFn: typeof fetch = fetch,
   pauseMs = 150,
   budgetMs = 4 * 60_000,
+  /** Filled with every slug freehire answered for (website or not); one cut short by the time budget or an error is not. */
+  answered?: Set<string>,
 ): Promise<Map<string, string>> {
   const out = new Map<string, string>()
   // Overall time budget: this is a nice-to-have, so when freehire is slow or rate-limiting we stop looking up more
@@ -500,12 +540,15 @@ export async function loadFreehireCompanyWebsites(
         if (!res.ok) {
           // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
           await res.body?.cancel().catch(() => undefined)
+          // A 404 is an answer (freehire has no such company); a server error is not.
+          if (res.status === 404) answered?.add(slug)
           return
         }
         const json = (await res.json()) as { data?: { company?: { company_info?: { website?: unknown } | null } } }
         const raw = json?.data?.company?.company_info?.website
         const site = typeof raw === 'string' ? normalizePublicCompanyWebsite(raw) : null
         if (site) out.set(slug, site)
+        answered?.add(slug)
         return
       } catch {
         return
@@ -525,22 +568,68 @@ export async function loadFreehireCompanyWebsites(
 }
 
 /** Write already-collected jobs through the normal board ingest (dedupe, priority, salary gate). */
-export async function ingestFreehireJobs(inputs: BoardJobInput[]): Promise<ScraperStats> {
+export async function ingestFreehireJobs(
+  inputs: BoardJobInput[],
+  opts: { lookUpWebsites?: boolean } = {},
+): Promise<ScraperStats> {
   const stats: ScraperStats = { created: 0, updated: 0, skipped: 0 }
   // Give each job its employer's website (when freehire has one) so its logo comes from a real domain, not a name guess.
-  try {
-    const wanted = [...new Set(inputs.filter((i) => !i.companyWebsiteUrl).map((i) => i.companyRef ?? '').filter(Boolean))]
-    const t0 = Date.now()
-    const sites = await loadFreehireCompanyWebsites(wanted)
-    console.log(`[freehire] company websites: ${sites.size} found for ${wanted.length} companies in ${Math.round((Date.now() - t0) / 1000)}s`)
-    for (const input of inputs) {
-      const site = input.companyRef ? sites.get(input.companyRef) : undefined
-      if (site && !input.companyWebsiteUrl) input.companyWebsiteUrl = site
+  // The 5-minute recent pull skips this (one request per company, against freehire's daily quota); the regular syncs
+  // read the same jobs again and fill the websites then.
+  // Companies already holding a website, or asked in the last 30 days, are not asked again
+  // (lib/scrapers/freehireCompanyWebsites.ts); they were 400-1,100 requests a run.
+  const answeredKeys: string[] = []
+  if (opts.lookUpWebsites !== false) {
+    try {
+      const keyBySlug = new Map<string, string | null>()
+      for (const i of inputs) if (!i.companyWebsiteUrl && i.companyRef && !keyBySlug.has(i.companyRef)) keyBySlug.set(i.companyRef, freehireCompanyKey(i.rawCompanyName))
+      const wanted = [...keyBySlug].map(([slug, key]) => ({ slug, key }))
+      let plan = { lookUp: wanted.map((w) => w.slug), hasWebsite: 0, checkedRecently: 0 }
+      try {
+        const keys = [...new Set(wanted.map((w) => w.key).filter((k): k is string => Boolean(k)))]
+        plan = companiesToLookUp(wanted, await loadKnownCompanies(keys), new Date())
+      } catch (error) {
+        console.warn('[freehire] company website cache unavailable, asking about every company:', error instanceof Error ? error.message.split('\n')[0] : error)
+      }
+      const t0 = Date.now()
+      const answered = new Set<string>()
+      const sites = await loadFreehireCompanyWebsites(plan.lookUp, fetch, 150, 4 * 60_000, answered)
+      console.log(
+        `[freehire] company websites: ${sites.size} found for ${plan.lookUp.length} companies asked in ${Math.round((Date.now() - t0) / 1000)}s; ` +
+          `not asked: ${plan.hasWebsite} with a website already, ${plan.checkedRecently} asked in the last ${WEBSITE_RECHECK_DAYS} days`,
+      )
+      for (const slug of answered) {
+        const key = keyBySlug.get(slug)
+        if (key) answeredKeys.push(key)
+      }
+      for (const input of inputs) {
+        const site = input.companyRef ? sites.get(input.companyRef) : undefined
+        if (site && !input.companyWebsiteUrl) input.companyWebsiteUrl = site
+      }
+    } catch (error) {
+      console.warn('[freehire] company website lookup skipped:', error instanceof Error ? error.message : error)
     }
-  } catch (error) {
-    console.warn('[freehire] company website lookup skipped:', error instanceof Error ? error.message : error)
   }
-  for (const input of inputs) addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
+  // Each ingest waits on many sequential database round trips (about 1-1.6 s a job from GitHub's runners to the database
+  // in Europe), so one at a time the full sync ran past its 150-minute job limit on 2026-11-18. Jobs are written a few
+  // companies at a time; one company's jobs stay in order, so two of them never race to create the same company.
+  const groups = new Map<string, BoardJobInput[]>()
+  for (const input of inputs) {
+    const key = (input.rawCompanyName ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '') || `#${input.externalId}`
+    groups.set(key, [...(groups.get(key) ?? []), input])
+  }
+  const queue = [...groups.values()]
+  await Promise.all(
+    Array.from({ length: Math.min(INGEST_CONCURRENCY, queue.length) }, async () => {
+      for (let group = queue.shift(); group; group = queue.shift()) {
+        for (const input of group) addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
+      }
+    }),
+  )
+  // After the ingest, so a company created in this run is marked too.
+  await markWebsiteChecked([...new Set(answeredKeys)], new Date()).catch((error) =>
+    console.warn('[freehire] could not record the website lookups:', error instanceof Error ? error.message.split('\n')[0] : error),
+  )
   return stats
 }
 

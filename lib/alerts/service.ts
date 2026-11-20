@@ -11,6 +11,7 @@ import { createTransport, type Transporter } from 'nodemailer'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, jobListingSelect } from '@/lib/jobs/queryJobs'
 import { buildSalaryText } from '@/lib/jobs/salary'
+import { buildLogoUrl } from '@/lib/companies/logo'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import { describeJobLocation } from '@/lib/location/jobLocation'
 import { createRateLimiter } from '@/lib/jobs/jobReport'
@@ -76,8 +77,29 @@ export async function sendViaResend(mail: OutgoingMail, apiKey: string, from: st
       await sleep(1500)
       continue
     }
-    throw new Error(`email provider refused the email (HTTP ${res.status})`)
+    throw new Error(`email provider refused the email (HTTP ${res.status}${await resendReason(res)})`)
   }
+}
+
+/**
+ * Resend's error name and message (https://resend.com/docs/api-reference/errors), on one line, with every email address
+ * replaced, so the log says which field or key was refused without recording anyone's address.
+ */
+async function resendReason(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { name?: unknown; message?: unknown }
+    const reason = [body.name, body.message].filter((v) => typeof v === 'string' && v).join(': ')
+    const safe = reason.replace(/[^\s<>"'`@]+@[^\s<>"'`]+/g, '[address]').replace(/\s+/g, ' ').trim().slice(0, 300)
+    return safe ? ` ${safe}` : ''
+  } catch {
+    return ''
+  }
+}
+
+/** EMAIL_FROM with the site's name in front when it is a bare address, so inboxes show "Six Figure Jobs", not the address. */
+export function senderWithName(from: string | undefined): string {
+  const f = String(from ?? '').trim()
+  return f && !f.includes('<') ? `Six Figure Jobs <${f}>` : f
 }
 
 /**
@@ -93,10 +115,11 @@ export const sendMail: SendMail = async (mail) => {
     await writeFile(`${base}.txt`, [`To: ${mail.to}`, `Subject: ${mail.subject}`, ...Object.entries(mail.headers ?? {}).map(([k, v]) => `${k}: ${v}`), '', mail.text].join('\n'))
     return
   }
+  const from = senderWithName(process.env.EMAIL_FROM)
   const apiKey = process.env.RESEND_API_KEY?.trim()
-  if (apiKey) return sendViaResend(mail, apiKey, String(process.env.EMAIL_FROM))
+  if (apiKey) return sendViaResend(mail, apiKey, from)
   transport ??= createTransport(String(process.env.EMAIL_SERVER))
-  const result = await transport.sendMail({ from: process.env.EMAIL_FROM, ...mail })
+  const result = await transport.sendMail({ from, ...mail })
   // Deliberately generic: the transport's message can contain the recipient address.
   if ((result.rejected ?? []).length > 0) throw new Error('alert email was not accepted')
 }
@@ -143,6 +166,16 @@ export function readSource(raw: unknown): string | null {
   return /^\/[a-z0-9\-/._~%]{0,199}$/i.test(path) ? path : null
 }
 
+/**
+ * The optional first name from the signup form, or null. Letters (any script), spaces, apostrophes, dots and hyphens,
+ * at most 40 characters; anything else (digits, links, markup) is dropped rather than refusing the signup.
+ */
+export function readFirstName(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const name = raw.normalize('NFC').replace(/\s+/g, ' ').trim()
+  return /^\p{L}[\p{L}\p{M}' .\u2019-]{0,39}$/u.test(name) ? name : null
+}
+
 const confirmationsPerEmail = createRateLimiter()
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -158,6 +191,8 @@ export async function subscribe(input: {
   frequency: unknown
   /** The page the form was on. */
   source?: unknown
+  /** Optional first name typed on the form. */
+  firstName?: unknown
   /**
    * True only when the caller has verified that the visitor is signed in, holds an active subscription and that this
    * address is their own (app/api/alerts/route.ts). It unlocks instant alerts and the higher cap.
@@ -172,6 +207,7 @@ export async function subscribe(input: {
   const frequency: AlertFrequency =
     input.frequency === 'instant' ? 'instant' : input.frequency === 'daily' ? 'daily' : 'weekly'
   const filtersKey = alertFiltersKey(filters)
+  const firstName = readFirstName(input.firstName)
 
   const existing = await prisma.jobAlert.findUnique({ where: { email_filtersKey: { email, filtersKey } } })
   if (existing?.status === 'active') return 'nothing_to_do'
@@ -183,7 +219,7 @@ export async function subscribe(input: {
   if (!confirmationsPerEmail.allow(email, MAX_CONFIRMATIONS_PER_EMAIL_PER_DAY, DAY_MS)) return 'limited'
 
   const alert = existing
-    ? await prisma.jobAlert.update({ where: { id: existing.id }, data: { status: 'pending', frequency } })
+    ? await prisma.jobAlert.update({ where: { id: existing.id }, data: { status: 'pending', frequency, ...(firstName ? { firstName } : {}) } })
     : await prisma.jobAlert.create({
         data: {
           email,
@@ -191,6 +227,7 @@ export async function subscribe(input: {
           filtersKey,
           frequency,
           source: readSource(input.source),
+          firstName,
           token: randomBytes(32).toString('hex'),
         },
       })
@@ -220,8 +257,49 @@ export type AlertAction = 'confirm' | 'unsubscribe' | 'daily' | 'weekly'
 export const isAlertAction = (a: unknown): a is AlertAction =>
   a === 'confirm' || a === 'unsubscribe' || a === 'daily' || a === 'weekly'
 
+/** "jane.doe@gmail.com" -> "j***@gmail.com": enough for the owner to tell subscribers apart, not the full address. */
+export function maskEmail(email: string): string {
+  const [user, domain] = email.split('@')
+  return domain ? `${user.slice(0, 1)}***@${domain}` : '***'
+}
+
+/**
+ * Tells the site owner that someone confirmed a job alert (owner's request, 2026-11-19: "update me every time there's a
+ * new subscriber for job alerts"). Sent to ALERTS_OWNER_EMAIL, an environment setting so no address lives in the code;
+ * nothing is sent while it is unset. The subscriber's address is masked. A failure is logged and never stops the
+ * confirmation.
+ */
+export async function notifyOwnerOfConfirmation(
+  alert: { email: string; firstName?: string | null; filters: unknown; frequency: string; source: string | null },
+  send: SendMail = sendMail,
+): Promise<void> {
+  const to = process.env.ALERTS_OWNER_EMAIL?.trim()
+  if (!to) return
+  try {
+    const filters = sanitizeAlertFilters(alert.filters)
+    const label = filters ? buildAlertLabel(filters) : 'All six-figure jobs'
+    const active = await prisma.jobAlert.count({ where: { status: 'active' } })
+    const lines = [
+      `${alert.firstName ? `${alert.firstName} (${maskEmail(alert.email)})` : maskEmail(alert.email)} confirmed a job alert.`,
+      `Alert: ${label}`,
+      `Frequency: ${alert.frequency}`,
+      `Signed up from: ${alert.source ?? 'unknown'}`,
+      `Active alerts now: ${active.toLocaleString('en-US')}`,
+    ]
+    const escape = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    await send({
+      to,
+      subject: `New job alert subscriber: ${label}`,
+      text: lines.join('\n'),
+      html: `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5">${lines.map((l) => `<p style="margin:0 0 6px">${escape(l)}</p>`).join('')}</div>`,
+    })
+  } catch (error) {
+    console.error('[alerts] owner notification failed:', error instanceof Error ? error.message.split('\n')[0] : error)
+  }
+}
+
 /** Applies one action from the alert's page or email. Returns false when the token matches no alert. */
-export async function applyAlertAction(token: string, action: AlertAction, now = new Date()): Promise<boolean> {
+export async function applyAlertAction(token: string, action: AlertAction, now = new Date(), send: SendMail = sendMail): Promise<boolean> {
   const alert = await findAlertByToken(token)
   if (!alert) return false
   const data: Prisma.JobAlertUpdateInput =
@@ -231,6 +309,8 @@ export async function applyAlertAction(token: string, action: AlertAction, now =
         ? { status: 'active', confirmedAt: alert.confirmedAt ?? now, unsubscribedAt: null }
         : { frequency: action }
   await prisma.jobAlert.update({ where: { id: alert.id }, data })
+  // Only the first confirmation is a new subscriber; a second click on the link, or re-confirming later, is not.
+  if (action === 'confirm' && !alert.confirmedAt) await notifyOwnerOfConfirmation(alert, send)
   return true
 }
 
@@ -244,6 +324,8 @@ const CANDIDATES = 80
 type ListingRow = Prisma.JobGetPayload<{ select: typeof jobListingSelect }>
 
 function toDigestJob(job: ListingRow, base: string): DigestJob {
+  const company = job.companyRef?.name || job.company
+  const logo = buildLogoUrl(job.companyRef?.logoUrl ?? job.companyLogo ?? null, job.companyRef?.website ?? null, company)
   return {
     id: job.id,
     title: job.title,
@@ -251,6 +333,10 @@ function toDigestJob(job: ListingRow, base: string): DigestJob {
     salary: buildSalaryText(job as never),
     location: describeJobLocation(job as never).text || null,
     url: `${base}${buildJobSlugHref(job as never)}?${UTM}&utm_campaign=digest`,
+    // Email clients need absolute URLs; the site's own /logo/ route is made absolute.
+    logo: logo ? (logo.startsWith('/') ? `${base}${logo}` : logo) : null,
+    listedAt: job.createdAt ? job.createdAt.toISOString() : undefined,
+    remote: (job as { remoteMode?: string | null }).remoteMode === 'remote' || (job as { remote?: boolean | null }).remote === true,
   }
 }
 

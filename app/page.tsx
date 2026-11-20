@@ -28,6 +28,7 @@ import { loadNewRolesByCompany } from '@/lib/jobs/newRolesByCompany'
 import { loadFreehireCatalog } from '@/lib/jobs/freehireCatalog'
 import { REMOTE_REGIONS } from '@/lib/jobs/remoteRegions'
 import { LiveJobFeed } from '@/components/home/LiveJobFeed'
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import { NewRolesStrip } from '@/components/home/NewRolesStrip'
 import { SiteStatsStrip } from '@/components/home/SiteStatsStrip'
 import { buildFeedItems } from '@/lib/jobs/latestFeed'
@@ -35,7 +36,6 @@ import {
   FeaturedCompaniesCarousel,
   type FeaturedCompany,
 } from '@/components/home/FeaturedCompaniesCarousel'
-import { LatestOpportunities } from '@/components/home/LatestOpportunities'
 import { BrowseBySalaryTier, type SalaryTier } from '@/components/home/BrowseBySalaryTier'
 import {
   ExplorePremiumRoles,
@@ -122,7 +122,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-const PAGE_SIZE = 80 // newest jobs fetched for the live feed and the market-balanced "Latest" list (lib/jobs/latestSelection.ts)
+const PAGE_SIZE = 80 // newest jobs fetched for the live "Latest" list (FEED_SIZE of them, at most 2 per employer)
 const SALARY_TIER_IDS: SalaryTierId[] = ['100k-plus', '200k-plus', '300k-plus', '400k-plus']
 
 const PREMIUM_ROLE_DEFS = [
@@ -510,9 +510,8 @@ async function loadHomePageData() {
   const jobs = jobsData.jobs as JobWithCompany[]
   const newestPostedAt = jobs[0]?.postedAt ?? jobs[0]?.createdAt ?? null
 
-  // Live feed: the newest jobs we added (real data), rendered here and refreshed in the browser once a minute.
+  // The live "Latest" list: the newest jobs we added (real data), rendered here and refreshed in the browser.
   const feedItems = buildFeedItems(jobs)
-  const feedItemIds = new Set(feedItems.map((item) => item.id))
   const salaryTiers: SalaryTier[] = salaryBandCounts.map(({ slug, count }) => ({
     slug,
     label: SALARY_TIERS[slug].rangeLabel,
@@ -589,7 +588,7 @@ async function loadHomePageData() {
       : withJobs
   ).slice(0, 6)
 
-  return { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, feedItemIds, newRolesCompanies, sponsors, jobs, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles }
+  return { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, newRolesCompanies, sponsors, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles }
 }
 
 /**
@@ -610,7 +609,7 @@ async function loadDirectoryCompanies(): Promise<Array<{ slug: string; name: str
 export default async function HomePage() {
   try {
     const directoryCompanies = await loadDirectoryCompanies()
-    const { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, feedItemIds, newRolesCompanies, sponsors, jobs, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles } = await memoAsync('home.page.data', DEFAULT_TTL_MS, loadHomePageData)
+    const { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, newRolesCompanies, sponsors, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles } = await memoAsync('home.page.data', DEFAULT_TTL_MS, loadHomePageData)
 
     return (
     <>
@@ -663,14 +662,15 @@ export default async function HomePage() {
         refreshedAt={refreshedAt}
       />
 
-      <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} />
-
       <NewRolesStrip companies={newRolesCompanies} />
 
       <SponsorStrip slots={sponsors} />
 
-      {/* Jobs already in the live feed above are left out, so no job appears twice with two different times. */}
-      <LatestOpportunities jobs={jobs.filter((job) => !feedItemIds.has(job.id))} totalJobs={stats.totalJobs} />
+      {/* The newest jobs, live (one list since 2026-11-19; it replaced a static "Latest" list and a separate live block). */}
+      <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} totalJobs={stats.totalJobs} />
+
+      {/* The alert signup right under the newest jobs, as well as in the footer and the corner popup. */}
+      <JobAlertBox query={{}} title="Get new six-figure jobs by email" />
 
       {priorityFeaturedCompanies.length > 0 && (
         <section className="panel-hairline mb-8 p-5">

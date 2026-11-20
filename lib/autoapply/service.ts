@@ -9,12 +9,16 @@ import { fetchGreenhouseJob, parseGreenhouseUrl, type GhJob } from './greenhouse
 import {
   applyAnswers,
   buildPlan,
+  confirmSaved,
+  isIntlPhone,
   missingFields,
   refreshProfileFields,
+  type DetailKind,
   type Plan,
   type PlanInputs,
 } from './plan'
-import { ACTIVE_STATUSES, planHash, type Outcome } from './state'
+import { ACTIVE_STATUSES, planHash, type FieldLabels, type Outcome } from './state'
+import { prefillFromSaved, toSaved } from './answers'
 
 import { findKitJob, type KitJob } from '@/lib/applykit/job'
 import { getBalance, spendCredits } from '@/lib/billing/credits'
@@ -43,6 +47,10 @@ export class AutoApplyError extends Error {
 export type ProfileInput = {
   firstName?: unknown; lastName?: unknown; phone?: unknown
   country?: unknown; city?: unknown; linkedin?: unknown; website?: unknown; github?: unknown
+} & Partial<Record<DetailKind, unknown>>
+
+const DETAIL_MAX: Record<DetailKind, number> = {
+  currentCompany: 120, currentTitle: 120, state: 80, postalCode: 20, noticePeriod: 80, salaryExpectation: 120, languages: 200,
 }
 
 const text = (v: unknown, max: number) => (typeof v === 'string' && v.trim().length <= max ? v.trim() : null)
@@ -58,7 +66,10 @@ const url = (v: unknown) => {
 
 /** Checks the profile form. Returns the clean profile or the names of the fields that are wrong. */
 export function cleanProfile(input: ProfileInput):
-  | { ok: true; profile: { firstName: string; lastName: string; phone: string; country: string | null; city: string | null; linkedin: string | null; website: string | null; github: string | null } }
+  | {
+      ok: true
+      profile: { firstName: string; lastName: string; phone: string; country: string | null; city: string | null; linkedin: string | null; website: string | null; github: string | null } & Record<DetailKind, string | null>
+    }
   | { ok: false; fields: string[] } {
   const firstName = text(input.firstName, 100)
   const lastName = text(input.lastName, 100)
@@ -67,12 +78,21 @@ export function cleanProfile(input: ProfileInput):
   const city = input.city == null ? '' : text(input.city, 80)
   const [linkedin, website, github] = [url(input.linkedin), url(input.website), url(input.github)]
   const bad = Object.entries({ firstName, lastName, phone, country, city, linkedin, website, github })
-    .filter(([k, v]) => v === null || (['firstName', 'lastName', 'phone'].includes(k) && v === ''))
+    .filter(([k, v]) => v === null || (['firstName', 'lastName', 'phone'].includes(k) && v === '') || (k === 'phone' && !isIntlPhone(v)))
     .map(([k]) => k)
+  const details = {} as Record<DetailKind, string | null>
+  for (const k of Object.keys(DETAIL_MAX) as DetailKind[]) {
+    const v = input[k] == null ? '' : text(input[k], DETAIL_MAX[k])
+    if (v === null || (typeof v === 'string' && /https?:|www\.|<[a-z]/i.test(v))) bad.push(k)
+    details[k] = v || null
+  }
   if (bad.length) return { ok: false, fields: bad }
   return {
     ok: true,
-    profile: { firstName: firstName!, lastName: lastName!, phone: phone!, country: country || null, city: city || null, linkedin: linkedin || null, website: website || null, github: github || null },
+    profile: {
+      firstName: firstName!, lastName: lastName!, phone: phone!, country: country || null, city: city || null,
+      linkedin: linkedin || null, website: website || null, github: github || null, ...details,
+    },
   }
 }
 
@@ -115,13 +135,30 @@ export async function prepareApplication(userId: string, jobSlug: string, deps: 
   const inputs = await inputsFor(userId, job)
   const gh = await deps.fetchJob(ref)
   if (!gh) throw new AutoApplyError('form_unavailable')
-  const plan = buildPlan(gh, ref, inputs)
+  const saved = await prisma.savedAnswer
+    .findMany({ where: { userId }, select: { question: true, questionKey: true, type: true, answer: true }, take: 500 })
+    .catch(() => [])
+  const plan = prefillFromSaved(buildPlan(gh, ref, inputs), saved)
   return prisma.autoApplication.create({
     data: {
       userId, jobId: job.id, jobSlug, jobTitle: job.title, companyName: job.company, applyUrl: job.applyUrl,
       board: ref.board, ghJobId: ref.jobId, plan: plan as never,
     },
   })
+}
+
+/** Saves or updates the user's answers from a plan (at most 50 per save; demographics never). Never fails the save. */
+async function rememberAnswers(userId: string, plan: Plan): Promise<void> {
+  const rows = plan.fields.map(toSaved).filter((r): r is NonNullable<ReturnType<typeof toSaved>> => r !== null).slice(0, 50)
+  for (const r of rows) {
+    await prisma.savedAnswer
+      .upsert({
+        where: { userId_questionKey_type: { userId, questionKey: r.questionKey, type: r.type } },
+        create: { userId, question: r.question, questionKey: r.questionKey, type: r.type, answer: r.answer as never },
+        update: { question: r.question, answer: r.answer as never },
+      })
+      .catch(() => {})
+  }
 }
 
 async function ownDraft(userId: string, id: string) {
@@ -135,7 +172,7 @@ async function ownDraft(userId: string, id: string) {
 export async function saveDraft(
   userId: string,
   id: string,
-  body: { profile?: ProfileInput; answers?: Record<string, unknown>; consent?: unknown },
+  body: { profile?: ProfileInput; answers?: Record<string, unknown>; consent?: unknown; confirm?: unknown; remember?: unknown },
 ) {
   const app = await ownDraft(userId, id)
   let plan = app.plan as unknown as Plan
@@ -154,6 +191,10 @@ export async function saveDraft(
     Object.assign(errors, applied.errors)
   }
   if (body.consent !== undefined) plan = { ...plan, consentGiven: body.consent === true }
+  plan = confirmSaved(plan, body.confirm)
+
+  // Keep the user's answers for their next applications unless they said not to (remember: false).
+  if (body.remember !== false) await rememberAnswers(userId, plan)
 
   const saved = await prisma.autoApplication.update({ where: { id }, data: { plan: plan as never } })
   return { application: saved, plan, errors, missing: missingFields(plan).map((f) => f.key), hash: planHash(plan) }
@@ -188,8 +229,12 @@ export async function cancelApplication(userId: string, id: string) {
 }
 
 const startOfDay = () => new Date(Date.now() - 24 * 3600_000)
+// An unconfirmed send ("we clicked submit and saw nothing") may have reached the employer, so it counts like a sent one.
+const UNCONFIRMED = { status: 'needs_user', reason: 'unconfirmed' } as const
 const countToday = (userId: string) =>
-  prisma.autoApplication.count({ where: { userId, status: { in: ['approved', 'submitting', 'submitted'] }, createdAt: { gte: startOfDay() } } })
+  prisma.autoApplication.count({
+    where: { userId, createdAt: { gte: startOfDay() }, OR: [{ status: { in: ['approved', 'submitting', 'submitted'] } }, UNCONFIRMED] },
+  })
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Worker side
@@ -215,13 +260,39 @@ export async function runApplication(id: string, driver: ApplyDriver, opts: { li
   if (!app || app.status !== 'approved') return { done: 'skipped', why: 'not_approved' }
 
   const busy = await prisma.autoApplication.count({
-    where: { board: app.board, status: { in: ['submitting', 'submitted'] }, startedAt: { gte: new Date(Date.now() - 3600_000) } },
+    where: { board: app.board, startedAt: { gte: new Date(Date.now() - 3600_000) }, OR: [{ status: { in: ['submitting', 'submitted'] } }, UNCONFIRMED] },
   })
   if (opts.live && busy >= MAX_PER_BOARD_PER_HOUR) return { done: 'skipped', why: 'board_busy' }
 
   const plan = app.plan as unknown as Plan
-  const stop = async (reason: string, status: 'failed' | 'needs_user' = 'failed'): Promise<RunResult> => {
+  const started = Date.now()
+  // Every attempt is kept for the owner's report (AutoApplyRun), dry runs too. It must never change the outcome.
+  const record = async (outcome: string, reason: string | null, extra: { filled?: number; unfilled?: string[]; labels?: FieldLabels } = {}) => {
+    try {
+      const labelOf = (key: string) => extra.labels?.[key] ?? plan.fields?.find((f) => f.key === key)?.label ?? ''
+      await prisma.autoApplyRun.create({
+        data: {
+          applicationId: id,
+          board: app.board,
+          mode: opts.live ? 'live' : 'dry_run',
+          outcome,
+          reason,
+          filledCount: extra.filled ?? 0,
+          unfilled: extra.unfilled?.length ? extra.unfilled.slice(0, 50).map((key) => ({ key, label: labelOf(key) })) : undefined,
+          durationMs: Date.now() - started,
+        },
+      })
+    } catch {
+      // The table may not exist yet (migration not applied); the application itself is unaffected.
+    }
+  }
+  const stop = async (
+    reason: string,
+    status: 'failed' | 'needs_user' = 'failed',
+    extra: { unfilled?: string[]; labels?: FieldLabels } = {},
+  ): Promise<RunResult> => {
     if (opts.live) await finish(id, { status, reason })
+    await record(status, reason, extra)
     return { done: 'finished', status, reason }
   }
 
@@ -245,14 +316,19 @@ export async function runApplication(id: string, driver: ApplyDriver, opts: { li
     return stop('driver_error')
   }
 
-  if (!opts.live) return { done: 'dry_run', outcome }
-  if (outcome.kind === 'needs_user') return stop(outcome.reason, 'needs_user')
+  if (!opts.live) {
+    if (outcome.kind === 'dry_run') await record('dry_run', null, { filled: outcome.filled.length, unfilled: outcome.unfilled, labels: outcome.labels })
+    else await record(outcome.kind, outcome.kind === 'submitted' ? null : outcome.reason, outcome.kind === 'needs_user' ? outcome : {})
+    return { done: 'dry_run', outcome }
+  }
+  if (outcome.kind === 'needs_user') return stop(outcome.reason, 'needs_user', outcome)
   if (outcome.kind === 'failed') return stop(outcome.reason)
   if (outcome.kind === 'dry_run') return stop('driver_did_not_submit')
 
   // Confirmed by the employer: now, and only now, take the credits.
   const spent = await spendCredits(app.userId, 'auto-apply', cost, `autoapply:${id}`)
   await finish(id, { status: 'submitted', evidence: outcome.evidence.slice(0, 2000), charge: spent.ok ? 'charged' : 'unpaid' })
+  await record('submitted', null)
   return { done: 'finished', status: 'submitted' }
 }
 

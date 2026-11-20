@@ -249,7 +249,7 @@ export async function withCardSummaries<
 }
 
 /** Most matches ranked per search; beyond this, results are ordered by recency instead of score. */
-const RELEVANCE_CANDIDATE_CAP = 1500
+export const RELEVANCE_CANDIDATE_CAP = 1500
 
 /**
  * Pure: "Most relevant" order. Jobs that carry the "New" tag (posted within NEW_TAG_WINDOW_MS) come first, so a fresh
@@ -721,11 +721,10 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
     })
   }
 
-  // Seniority via RoleInference relation
+  // Seniority: the level ingest reads from the title (Job.experienceLevel: senior, staff, principal, lead, director, vp,
+  // c-level). It used to read RoleInference, which nothing writes, so every level showed 0 jobs (2026-11-19 audit).
   if (filters.seniorityLevels?.length) {
-    where.roleInference = {
-      seniority: { in: filters.seniorityLevels },
-    }
+    addAnd({ experienceLevel: { in: filters.seniorityLevels } })
   }
 
   // Employment type + optional internship exclusion (kept for legacy call sites)

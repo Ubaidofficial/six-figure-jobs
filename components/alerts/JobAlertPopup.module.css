@@ -1,0 +1,62 @@
+/* The alert popup: a card in the bottom-left corner (the feedback tab is on the right edge). Under the feedback button's
+   layer (1000) and never full screen. */
+.card {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 900;
+  width: min(26rem, calc(100vw - 48px));
+  padding: 18px 18px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  border-radius: 16px;
+  background: var(--color-bg-1, #fff);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.18);
+  animation: rise 220ms ease-out;
+}
+
+.close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-1);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: color-mix(in srgb, var(--color-text-0) 8%, transparent);
+}
+
+.close:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}
+
+/* Phones: full width above the feedback button, clear of the home indicator. */
+@media (max-width: 767px) {
+  .card {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+}

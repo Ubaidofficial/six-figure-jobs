@@ -16,6 +16,9 @@ import { buildSalaryText } from '@/lib/jobs/salary'
 import { matchRolePages } from '@/lib/roles/relatedRoles'
 import { loadRoleSlugCounts } from '@/lib/roles/roleSlugCounts'
 import { guardUiApi } from '@/lib/security/scrapeGuard'
+import { getInstantIndex, searchInstantIndex } from '@/lib/search/instantIndex'
+import { buildKeywordPlan } from '@/lib/search/keywordPlan'
+import { getSearchVocabulary } from '@/lib/search/vocabulary'
 
 const MAX_QUERY_LENGTH = 60
 const MIN_QUERY_LENGTH = 2
@@ -39,7 +42,8 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams
   const q = (params.get('q') ?? '').trim().slice(0, MAX_QUERY_LENGTH)
   const salary = Number(params.get('minSalary'))
-  const minAnnual = Number.isFinite(salary) && salary >= 50_000 && salary <= 1_000_000 ? salary : undefined
+  // The $100k floor is not a filter (the boxes always send it); filtering at it kept only US-dollar jobs, as on /search.
+  const minAnnual = Number.isFinite(salary) && salary > 100_000 && salary <= 1_000_000 ? salary : undefined
   const remoteMode = REMOTE_MODES.find((m) => m === params.get('remoteMode'))
 
   const result: SuggestResult = { total: 0, jobs: [], roles: [] }
@@ -55,53 +59,36 @@ export async function GET(request: Request) {
   }
 
   if (q.length >= MIN_QUERY_LENGTH) {
+    // From the in-memory index (lib/search/instantIndex.ts): milliseconds instead of the 4-6 s the database search took.
+    // If the index cannot be loaded, the database search below still answers.
+    let titles: Array<{ label: string; count: number }> = []
     try {
-      const found = await memoAsync(stableKey('suggest', q.toLowerCase(), minAnnual, remoteMode), TTL_MS, async () => {
-        const data = await queryJobs({
-          keyword: q,
-          sortBy: 'relevant',
-          // Best matches by title first; the results page puts jobs tagged New first instead.
-          newFirst: false,
-          page: 1,
-          pageSize: SHOWN,
-          ...(minAnnual ? { minAnnual } : {}),
-          ...(remoteMode ? { remoteMode } : {}),
-        })
-        return {
-          total: data.total,
-          jobs: data.jobs.map((job) => ({
-            title: job.title,
-            company: job.company,
-            pay: buildSalaryText(job),
-            href: buildJobSlugHref(job as any),
-            logo: buildLogoUrl(job.companyRef?.logoUrl ?? null, job.companyRef?.website ?? null, job.company),
-          })),
-        }
+      const [jobs, vocabulary] = await Promise.all([getInstantIndex(), getSearchVocabulary().catch(() => null)])
+      const found = searchInstantIndex(jobs, buildKeywordPlan(q, vocabulary), q, { minAnnual, remoteMode }, {
+        now: Date.now(),
+        shown: SHOWN,
+        maxTitles: MAX_ROLE_ROWS,
+        maxTitleWords: MAX_TITLE_WORDS,
       })
       result.total = found.total
-      result.jobs = found.jobs
+      result.jobs = found.jobs.map((j) => ({ title: j.title, company: j.company, pay: j.pay, href: j.href, logo: j.logo }))
+      titles = found.titles
     } catch (error) {
-      console.error('[suggest] search failed:', error instanceof Error ? error.message : error)
+      console.error('[suggest] instant index failed, using the database:', error instanceof Error ? error.message : error)
+      titles = await databaseSuggestions(q, { minAnnual, remoteMode }, result)
     }
 
     // Job titles from live listings ("Solutions Architect", 42), so a search finds roles that have no role page yet.
-    try {
-      const titles = await memoAsync(stableKey('suggest-titles', q.toLowerCase(), minAnnual, remoteMode), TTL_MS, () =>
-        loadMatchingTitles(q, { minAnnual, remoteMode }),
-      )
-      const shown = new Set(result.roles.map((r) => r.label.toLowerCase()))
-      for (const t of titles) {
-        if (result.roles.length >= MAX_ROLE_ROWS) break
-        if (shown.has(t.label.toLowerCase())) continue
-        shown.add(t.label.toLowerCase())
-        result.roles.push({
-          label: t.label,
-          href: `/jobs?${new URLSearchParams({ q: t.label, exact: '1' }).toString()}`,
-          count: t.count,
-        })
-      }
-    } catch (error) {
-      console.error('[suggest] titles failed:', error instanceof Error ? error.message : error)
+    const shown = new Set(result.roles.map((r) => r.label.toLowerCase()))
+    for (const t of titles) {
+      if (result.roles.length >= MAX_ROLE_ROWS) break
+      if (shown.has(t.label.toLowerCase())) continue
+      shown.add(t.label.toLowerCase())
+      result.roles.push({
+        label: t.label,
+        href: `/jobs?${new URLSearchParams({ q: t.label, exact: '1' }).toString()}`,
+        count: t.count,
+      })
     }
   }
   return NextResponse.json(
@@ -109,6 +96,50 @@ export async function GET(request: Request) {
     // Counts move slowly; let the CDN and browser reuse an answer for a few minutes.
     { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } },
   )
+}
+
+/** The database search the suggestions used before the index; fills `result` and returns the matching titles. */
+async function databaseSuggestions(
+  q: string,
+  filters: { minAnnual?: number; remoteMode?: (typeof REMOTE_MODES)[number] },
+  result: SuggestResult,
+): Promise<Array<{ label: string; count: number }>> {
+  try {
+    const found = await memoAsync(stableKey('suggest', q.toLowerCase(), filters.minAnnual, filters.remoteMode), TTL_MS, async () => {
+      const data = await queryJobs({
+        keyword: q,
+        sortBy: 'relevant',
+        // Best matches by title first; the results page puts jobs tagged New first instead.
+        newFirst: false,
+        page: 1,
+        pageSize: SHOWN,
+        ...(filters.minAnnual ? { minAnnual: filters.minAnnual } : {}),
+        ...(filters.remoteMode ? { remoteMode: filters.remoteMode } : {}),
+      })
+      return {
+        total: data.total,
+        jobs: data.jobs.map((job) => ({
+          title: job.title,
+          company: job.company,
+          pay: buildSalaryText(job),
+          href: buildJobSlugHref(job as any),
+          logo: buildLogoUrl(job.companyRef?.logoUrl ?? null, job.companyRef?.website ?? null, job.company),
+        })),
+      }
+    })
+    result.total = found.total
+    result.jobs = found.jobs
+  } catch (error) {
+    console.error('[suggest] search failed:', error instanceof Error ? error.message : error)
+  }
+  try {
+    return await memoAsync(stableKey('suggest-titles', q.toLowerCase(), filters.minAnnual, filters.remoteMode), TTL_MS, () =>
+      loadMatchingTitles(q, filters),
+    )
+  } catch (error) {
+    console.error('[suggest] titles failed:', error instanceof Error ? error.message : error)
+    return []
+  }
 }
 
 /**

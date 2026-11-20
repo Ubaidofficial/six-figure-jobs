@@ -99,3 +99,12 @@ describe('what a keyword search finds (the generated filter run against realisti
     expect(found('swe', job('Software Engineer II'))).toBe(true)
   })
 })
+
+describe('buildWhere seniority', () => {
+  // It filtered on RoleInference, which nothing writes, so /jobs?seniority=senior showed 0 jobs (2026-11-19 audit).
+  it('filters on the level read from the title (Job.experienceLevel)', () => {
+    const where: any = buildWhere({ seniorityLevels: ['senior', 'staff'] })
+    expect(where.roleInference).toBeUndefined()
+    expect(andOf(where)).toContainEqual({ experienceLevel: { in: ['senior', 'staff'] } })
+  })
+})

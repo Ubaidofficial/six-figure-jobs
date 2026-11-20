@@ -191,6 +191,9 @@ model Company {
   employeeCount      Int?
   fundingStage       String?
   foundedYear        Int?
+  // When the freehire sync last asked freehire for this company's website (found or not). The sync skips companies
+  // asked in the last 30 days, and those that already have a website (lib/scrapers/freehireCompanyWebsites.ts).
+  freehireWebsiteCheckedAt DateTime?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
   sources            CompanySource[]
@@ -406,6 +409,7 @@ model User {
   applicationKits  ApplicationKit[]
   applyProfile     ApplyProfile?
   autoApplications AutoApplication[]
+  savedAnswers     SavedAnswer[]
 }
 
 // OAuth link (Google). Provider tokens are not stored: lib/auth/config.ts drops them before the adapter writes.
@@ -530,8 +534,37 @@ model ApplyProfile {
   linkedin  String?
   website   String?
   github    String?
+  // Answers to common application questions, typed by the user, matched to questions by their label (plan.ts).
+  currentCompany    String?
+  currentTitle      String?
+  state             String?
+  postalCode        String?
+  noticePeriod      String?
+  salaryExpectation String?
+  languages         String?
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// An answer the user gave to an employer's question, kept (unless they opt out) so the same question on a later
+// application can start from it. Never used without the user ticking it on that application; questions about
+// demographics (EEO) are never kept. Choices are stored as the option wording, not one employer's option ids.
+model SavedAnswer {
+  id          String   @id @default(cuid())
+  userId      String
+  // The question as the employer worded it last time, and its normalised form used for exact matching.
+  question    String
+  questionKey String
+  // 'text' | 'textarea' | 'single' | 'multi'
+  type        String
+  // A string for text, an array of option labels for choices.
+  answer      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionKey, type])
+  @@index([userId])
 }
 
 // One hosted application the user reviewed and approved. `plan` is the exact set of answers that gets submitted;
@@ -567,11 +600,37 @@ model AutoApplication {
   @@index([status])
 }
 
+// One attempt by the auto-apply worker (dry run or live), kept so the owner can see where real employer forms stop before
+// selling auto-apply. Append-only. Holds no answers, names or résumé text: only the board, the outcome, why it stopped and
+// which form questions were left empty (their key and the employer's own label). applicationId has no foreign key on
+// purpose: the statistics must outlive an application deleted with its user.
+model AutoApplyRun {
+  id            String   @id @default(cuid())
+  applicationId String
+  board         String
+  // 'dry_run' | 'live'
+  mode          String
+  // 'dry_run' | 'submitted' | 'needs_user' | 'failed'
+  outcome       String
+  // Why it stopped (the same codes as AutoApplication.reason); null for a submission or a dry run.
+  reason        String?
+  filledCount   Int      @default(0)
+  // [{ key, label }] of required questions still empty when the worker stopped.
+  unfilled      Json?
+  durationMs    Int?
+  createdAt     DateTime @default(now())
+
+  @@index([board, createdAt])
+  @@index([createdAt])
+}
+
 // An email job alert: a saved search (the listing page's own job query) mailed daily or weekly. No account needed:
 // double opt-in, and every link carries the alert's random token (confirm, change frequency, unsubscribe).
 model JobAlert {
   id             String         @id @default(cuid())
   email          String
+  // Optional, typed by the subscriber on the signup form (letters, spaces, ' . - only; at most 40 characters).
+  firstName      String?
   // 32 random bytes, hex. The only secret in the alert's links; never derived from the email.
   token          String         @unique
   // The saved search: a whitelisted subset of JobQueryInput (lib/alerts/filters.ts), run through buildWhere.

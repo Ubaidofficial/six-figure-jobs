@@ -3,6 +3,8 @@
 import { CountryFlag } from '@/components/ui/CountryFlag'
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
+import { cleanAlertKeyword } from '@/lib/alerts/keyword'
 import Link from '@/components/ui/Link'
 import { notFound, redirect } from 'next/navigation'
 import { CompanyUnavailablePage } from '@/components/runtime/FallbackPresets'
@@ -314,6 +316,15 @@ export default async function CompanyPage({
               end={jobsWindow.end}
               total={qualifiedJobs.length}
             />
+            {/* Alerts have no company filter: the company's name as the keyword (it matches the employer field), or the
+                all-jobs alert when the name is not a plain keyword (lib/alerts/keyword.ts). */}
+            <div className="mt-6">
+              {cleanAlertKeyword(company.name) ? (
+                <JobAlertBox query={{ keyword: company.name }} title={`Get new ${company.name} jobs by email`} />
+              ) : (
+                <JobAlertBox query={{}} title="Get new six-figure jobs by email" />
+              )}
+            </div>
           </ListingSection>
 
           {stats.topRoles.length > 0 || stats.topLocations.length > 0 || stats.salaryBands.some((b) => b.count > 0) ? (

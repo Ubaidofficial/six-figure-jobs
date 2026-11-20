@@ -34,8 +34,24 @@ export function planHash(plan: Plan): string {
   return createHash('sha256').update(canonical).digest('hex')
 }
 
+/** The employer's label for each question key the worker could not fill (their wording, never the user's answers). */
+export type FieldLabels = Record<string, string>
+
 export type Outcome =
   | { kind: 'submitted'; evidence: string }
-  | { kind: 'needs_user'; reason: 'captcha' | 'security_code' | 'login' | 'unexpected_field' | 'validation' | 'unconfirmed' }
+  | {
+      kind: 'needs_user'
+      reason: 'captcha' | 'security_code' | 'login' | 'unexpected_field' | 'control_not_set' | 'validation' | 'unconfirmed'
+      /** For 'unexpected_field' / 'control_not_set': the questions still empty, or not holding the approved answer. */
+      unfilled?: string[]
+      labels?: FieldLabels
+    }
   | { kind: 'failed'; reason: string }
-  | { kind: 'dry_run'; filled: string[]; unfilled: string[] }
+  | {
+      kind: 'dry_run'
+      filled: string[]
+      unfilled: string[]
+      labels?: FieldLabels
+      /** Fields the form did not take even after a second try (also listed in `unfilled`). */
+      notSet?: string[]
+    }

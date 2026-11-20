@@ -55,3 +55,45 @@ describe('readPayFromDescription: leaves alone what is not a yearly salary', () 
     expect(read(html)).toBeNull()
   })
 })
+
+// Wrong readings found in the freehire sync's quality report, 2026-11-18/19 (runs 44423652371 and earlier): the figure was
+// pay including bonus or incentive pay, which is not a base salary, or a range stated in US dollars was stored as CAD.
+describe('readPayFromDescription: a figure that includes bonus or incentive pay is not a base salary', () => {
+  it.each([
+    ['Annual Salary Range Including Bonuses: $105,000 - $135,000'],
+    ['The expected compensation range for this position is $145,676 - $178,049, which includes base pay plus variable incentive pay, if eligible.'],
+    ['The estimated salary range for a new hire into this position is €81,900 - €134,550 which may include potential sales incentive payments (if applicable).'],
+    ['For roles located in the US, the estimated salary range for this position is $109,800 to $175,700 USD per year, which may include potential sales incentive payments (if applicable).'],
+    ['Salary range: $120,000 - $150,000, inclusive of annual bonus.'],
+  ])('%s', (sentence) => {
+    expect(read(sentence)).toBeNull()
+  })
+
+  it('still reads a base that excludes the bonus, or with the bonus on top', () => {
+    expect(read('A reasonable estimate of the current salary range for this role is $130,000 - $150,000 per year not inclusive of bonus potential.')).toMatchObject({ min: 130000, max: 150000 })
+    expect(read('The position includes a competitive salary of £95,000–£115,000 and a discretionary annual bonus.')).toMatchObject({ min: 95000, max: 115000, currency: 'GBP' })
+    expect(read('For positions in this location, we offer a base pay of $163,380 - $269,570 , plus equity (when applicable), variable/incentive compensation and benefits.')).toMatchObject({ min: 163380, max: 269570 })
+    expect(read('The base salary range for this full-time position is $110,000 - 130,000 plus commission.')).toMatchObject({ min: 110000, max: 130000 })
+  })
+
+  // Found by the evidence audits dry run of 2026-11-19 (Check Point): the bonus is IN ADDITION to the base range, but
+  // "including an annual bonus" made the whole sentence read as a figure that includes bonus pay.
+  it('still reads a base when the bonus is "in addition", even if a list of the extra pay says "including"', () => {
+    expect(
+      read('A reasonable estimate of the current base wage range for this role is $220,000-$255,000 In addition to the base compensation, certain roles are eligible for additional compensation, including an annual bonus, commission, and equity.'),
+    ).toMatchObject({ min: 220000, max: 255000, currency: 'USD' })
+    // An extra-pay list after "eligible for" is also on top of the base.
+    expect(read('The base salary range is $150,000 - $180,000. This role is eligible for incentives including annual bonus.')).toMatchObject({ min: 150000, max: 180000 })
+    // The rejections above still hold when "additional" appears before the amounts, not between them and "including".
+    expect(read('Additional details: the salary range for this role is $120,000 - $150,000, including bonus.')).toBeNull()
+  })
+})
+
+describe('readPayFromDescription: a US-dollar range for a job abroad', () => {
+  it('reads "USD" written after the amounts, even for a job in Canada', () => {
+    expect(read('The US yearly salary range for this role is: $129,000 - $238,000 USD in addition to competitive perks & benefits.', { countries: ['ca'] })).toMatchObject({ currency: 'USD' })
+  })
+  it('gives no answer when the sentence names two dollars', () => {
+    expect(read('Base salary: $150,000 - $180,000 USD or $190,000 - $230,000 CAD.')).toBeNull()
+  })
+})

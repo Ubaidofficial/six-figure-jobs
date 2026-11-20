@@ -2,7 +2,7 @@
 //
 // The homepage "live feed": the newest jobs we added, in the shape a small client component can poll for. Real data
 // only: the order and the times are when WE added each job (createdAt), the same date-first ranking the homepage list
-// uses. Loaded at most once a minute per server instance, however many visitors poll.
+// uses. Loaded at most every 15 seconds per server instance, however many visitors poll (the feed asks every 20 s).
 
 import { memoAsync } from '@/lib/cache/memo'
 import { buildLogoUrl } from '@/lib/companies/logo'
@@ -13,8 +13,8 @@ import { describeJobLocation } from '@/lib/location/jobLocation'
 import { isHomepageFeatured } from '@/lib/jobs/latestSelection'
 import { publicJobId } from './publicJob'
 
-export const LATEST_FEED_TTL_MS = 60 * 1000
-export const FEED_SIZE = 12
+export const LATEST_FEED_TTL_MS = 15 * 1000
+export const FEED_SIZE = 20
 const MAX_PER_COMPANY = 2
 
 export type FeedItem = {
@@ -86,10 +86,11 @@ export function loadLatestFeed(): Promise<LatestFeed> {
   })
 }
 
-/** "just now", "5 min ago", "3 hr ago", "2 days ago". Pure, so the client can tick it and the tests can pin the clock. */
+/** "just now", "40 sec ago", "5 min ago", "3 hr ago", "2 days ago". Pure, so the client can tick it and the tests can pin the clock. */
 export function formatAgo(iso: string, nowMs: number): string {
   const ms = nowMs - Date.parse(iso)
-  if (!Number.isFinite(ms) || ms < 60_000) return 'just now'
+  if (!Number.isFinite(ms) || ms < 10_000) return 'just now'
+  if (ms < 60_000) return `${Math.floor(ms / 10_000) * 10} sec ago`
   const min = Math.floor(ms / 60_000)
   if (min < 60) return `${min} min ago`
   const hr = Math.floor(min / 60)

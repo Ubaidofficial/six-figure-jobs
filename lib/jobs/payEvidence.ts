@@ -41,11 +41,42 @@ const PAY_WORDS =
 // compensation: $200,000 - $350,000+ (Including Base Salary, Commissions...)", "$200k-$300k OTE", "($100k-$150k+ Yearly
 // Potential for Top Performers)", "$80 per routine visit, or an annual salary option of $100,000-$120,000".
 const NOT_BASE_SALARY =
-  /\b(?:on[- ]target|OTE|total (?:cash|compensation|earnings|comp)|earnings? potential|top performers?|uncapped|commissions? (?:are |is )?included|including[^.]{0,60}commission|per (?:routine |home |patient )?(?:visit|patient|case|shift|project|piece|mile|delivery|call))\b/i
+  /\b(?:on[- ]target|OTE|total (?:cash|compensation|earnings|comp)|earnings? potential|top performers?|uncapped|commissions? (?:are |is )?included|per (?:routine |home |patient )?(?:visit|patient|case|shift|project|piece|mile|delivery|call))\b/i
+
+// A figure that INCLUDES bonus, incentive, variable or commission pay is not a base salary (owner's rule, CLAUDE.md). Found
+// in the sync's quality report, 2026-11-18/19: "Annual Salary Range Including Bonuses: $105,000 - $135,000", "$145,676 -
+// $178,049, which includes base pay plus variable incentive pay" (3M), "€81,900 - €134,550 which may include potential
+// sales incentive payments" (Visa). Only the words that can sit between "include" and the extra pay are allowed, so "includes
+// a competitive salary of £95,000–£115,000 and a discretionary annual bonus" (base, bonus on top) is still read, and "not
+// inclusive of bonus potential" is base only.
+const INCLUDES_EXTRA_PAY =
+  /(?<!\bnot\s)\b(?:includ(?:e|es|ing|ed)|inclusive of)\s+(?:(?:all|any|potential|possible|annual|target|eligible|applicable|the|an?|base(?: pay| salary)?\s+(?:plus|and|\+))\s+){0,4}(?:sales\s+)?(?:bonus(?:es)?|incentives?|variable|commissions?)\b/i
 
 // Money that is not the salary, when it sits just before the amount ("bonus of $10,000", "equity valued at $2M").
 const NOT_SALARY_BEFORE =
   /(?:bonus|commission|stipend|sign[- ]?on|signing|referral|relocation|equity|stock|rsus?|options|grant|allowance|per diem|reimburs\w*|raised|funding|revenue|valuation|budget|invoice|up to|prizes?|cash prizes?|discount)\b[^.\n]{0,40}$/i
+
+// Between the figure and "including ... bonus", these words say the extra pay comes on top of the base: Check Point's
+// "$220,000-$255,000 In addition to the base compensation, certain roles are eligible for additional compensation,
+// including an annual bonus" (evidence audits dry run, 2026-11-19) is a base range.
+const EXTRA_PAY_ON_TOP = /\b(?:in addition|additional|on top|eligible)\b/i
+const AMOUNT = /\d[\d,.]*\s?[kK]?\b/g
+// "Total compensation $200,000 - $350,000 (Including Base Salary, Commissions...)": commission listed in what the figure
+// includes (was part of NOT_BASE_SALARY until 2026-11-19; moved here so the same "on top" check applies).
+const INCLUDING_COMMISSION = /\bincluding[^.]{0,60}commission/i
+
+/** Does this sentence say its figure includes bonus, incentive, variable or commission pay? (For re-checking stored readings.) */
+export function includesExtraPay(sentence: string): boolean {
+  const all = new RegExp(`${INCLUDES_EXTRA_PAY.source}|${INCLUDING_COMMISSION.source}`, 'gi')
+  for (let m = all.exec(sentence); m; m = all.exec(sentence)) {
+    const before = sentence.slice(0, m.index)
+    const amounts = [...before.matchAll(AMOUNT)]
+    const last = amounts[amounts.length - 1]
+    const between = last ? before.slice(last.index! + last[0].length) : before
+    if (!EXTRA_PAY_ON_TOP.test(between)) return true
+  }
+  return false
+}
 
 const CURRENCY_CODE = '(?:USD|CAD|AUD|GBP|EUR|CHF)'
 const MONEY = `(?:(${CURRENCY_CODE})\\s?|(US\\$|C\\$|CA\\$|A\\$|AU\\$|\\$|£|€|CHF\\s?))?`
@@ -73,8 +104,15 @@ function currencyOf(codeA: string | undefined, symA: string | undefined, codeB: 
   if (/^(?:A\$|AU\$)$/i.test(sym)) return 'AUD'
   if (sym === 'US$') return 'USD'
   if (sym === '$') {
-    if (/\bcanad(?:a|ian)\b|\bCAD\b/i.test(sentence)) return 'CAD'
-    if (/\baustrali(?:a|an)\b|\bAUD\b/i.test(sentence)) return 'AUD'
+    // The sentence names the dollar, before or after the amounts ("$129,000 - $238,000 USD" for a job in Canada was
+    // stored as CAD, 2026-11-19). Two different dollars named: no answer.
+    const named = [
+      /\bcanad(?:a|ian)\b|\bCAD\b/i.test(sentence) && 'CAD',
+      /\baustrali(?:a|an)\b|\bAUD\b/i.test(sentence) && 'AUD',
+      /\bUSD\b|\bU\.?S\.? dollars?\b/i.test(sentence) && 'USD',
+    ].filter(Boolean) as Currency[]
+    if (named.length > 1) return null
+    if (named.length === 1) return named[0]
     const countries = (ctx.countries ?? []).map((c) => c.toLowerCase())
     const location = (ctx.location ?? '').toLowerCase()
     if (countries.length === 1 && countries[0] === 'ca') return 'CAD'
@@ -92,7 +130,7 @@ export function readPayFromDescription(html: string | null | undefined, ctx: Pay
 
   const found: Array<{ min: number; max: number; currency: Currency; sentence: string }> = []
   for (const sentence of splitSentences(text)) {
-    if (!PAY_WORDS.test(sentence) || NOT_BASE_SALARY.test(sentence)) continue
+    if (!PAY_WORDS.test(sentence) || NOT_BASE_SALARY.test(sentence) || includesExtraPay(sentence)) continue
     RANGE.lastIndex = 0
     let m: RegExpExecArray | null
     while ((m = RANGE.exec(sentence))) {

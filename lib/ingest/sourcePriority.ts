@@ -35,6 +35,7 @@ export const BOARD_SOURCES = {
   WORKINGNOMADS: 'board:workingnomads',
   SPAINJOBS: 'board:spainjobs',
   UIUXJOBSBOARD: 'board:uiuxjobsboard',
+  YCOMBINATOR: 'board:ycombinator',
 } as const
 
 export const OTHER_SOURCES = {
@@ -74,6 +75,7 @@ export const SOURCE_PRIORITY: Record<string, number> = {
   [BOARD_SOURCES.WORKINGNOMADS]: 30,
   [BOARD_SOURCES.SPAINJOBS]: 30,
   [BOARD_SOURCES.UIUXJOBSBOARD]: 30,
+  [BOARD_SOURCES.YCOMBINATOR]: 30,
 
   // Fallback for unknown sources
   [OTHER_SOURCES.OTHER]: 20,

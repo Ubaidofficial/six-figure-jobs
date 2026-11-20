@@ -1,3 +1,4 @@
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import type { Metadata } from 'next'
 import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
@@ -298,6 +299,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
           </>
         ) : null}
+        <JobAlertBox query={{}} title="Get new six-figure jobs by email" />
       </ListingPage>
     )
   } catch (error) {

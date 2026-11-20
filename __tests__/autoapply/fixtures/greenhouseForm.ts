@@ -1,7 +1,9 @@
 // A local stand-in for an employer's Greenhouse application page (the newer job-boards form): same control ids, searchable
 // dropdowns, a résumé upload, a cover letter behind "Enter manually". It records exactly what is submitted and can end the
-// submission in each way the real site can (?mode=confirm | captcha | code | silent | invalid). Used to exercise the browser
-// driver without ever touching a real employer.
+// submission in each way the real site can (?mode=confirm | captcha | code | silent | invalid). Form quirks seen on real
+// forms: ?quirk=stubborn (the work-authorization dropdown ignores clicks), autofill (reading the uploaded resume overwrites
+// the first name), iti / iti-stuck (a phone country picker that follows the typed +code, or stays on +1). Used to exercise
+// the browser driver without ever touching a real employer.
 
 import { createServer, type Server } from 'http'
 
@@ -15,7 +17,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>Job</title
   <label for="email">Email*</label><input id="email" type="text" required aria-required="true">
   <div class="select__container"><label for="country">Country*</label>
     <input id="country" type="text" role="combobox" required aria-required="true" autocomplete="off"><div class="opts"></div></div>
-  <label for="phone">Phone*</label><input id="phone" type="tel" required aria-required="true">
+  <div class="phone-field"><label for="phone">Phone*</label><span class="iti__selected-dial-code" hidden>+1</span><input id="phone" type="tel" required aria-required="true"></div>
   <label for="candidate-location">Location (City)</label><input id="candidate-location" type="text" role="combobox" autocomplete="off">
   <div class="upload"><label>Resume/CV</label><input id="resume" type="file"><button type="button">Attach</button><button type="button">Enter manually</button></div>
   <div class="upload"><label>Cover Letter</label><input id="cover_letter" type="file"><button type="button">Attach</button>
@@ -31,6 +33,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>Job</title
 </form>
 <script>
   const OPTIONS = { country: ['United States', 'Canada', 'United Kingdom'], question_1: ['Yes', 'No'] }
+  const QUIRK = new URLSearchParams(location.search).get('quirk') || ''
   document.querySelectorAll('.select__container').forEach((box) => {
     const input = box.querySelector('input'); const list = box.querySelector('.opts')
     const show = () => {
@@ -39,6 +42,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>Job</title
       OPTIONS[input.id].filter((o) => o.toLowerCase().includes(q)).forEach((o) => {
         const d = document.createElement('div'); d.setAttribute('role', 'option'); d.textContent = o
         d.addEventListener('click', () => {
+          if (QUIRK === 'stubborn' && input.id === 'question_1') return
           input.value = ''; list.innerHTML = ''
           box.querySelector('.select__single-value')?.remove()
           const v = document.createElement('div'); v.className = 'select__single-value'; v.textContent = o; box.appendChild(v)
@@ -48,6 +52,20 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>Job</title
     }
     input.addEventListener('focus', show); input.addEventListener('input', show); input.addEventListener('click', show)
   })
+  if (QUIRK === 'iti' || QUIRK === 'iti-stuck') {
+    const dial = document.querySelector('.iti__selected-dial-code'); dial.hidden = false
+    document.getElementById('phone').addEventListener('input', (e) => {
+      if (QUIRK === 'iti-stuck') return
+      const m = /^\\+(44|33|49|1)/.exec(e.target.value.replace(/\\s/g, '')); if (m) dial.textContent = '+' + m[1]
+    })
+  }
+  if (QUIRK === 'autofill') {
+    let done = false
+    document.getElementById('resume').addEventListener('change', () => {
+      if (done) return; done = true
+      setTimeout(() => { document.getElementById('first_name').value = 'Parsed From CV' }, 100)
+    })
+  }
   document.getElementById('cl-manual').addEventListener('click', () => {
     document.getElementById('cl-slot').innerHTML = '<textarea id="cover_letter_text"></textarea>'
   })

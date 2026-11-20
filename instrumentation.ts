@@ -1,10 +1,26 @@
 // instrumentation.ts
-// Runs once when the server starts. In production, warms the busiest pages a few seconds after start, then keeps
-// every hub page in the sitemaps warm with a slow pass every 45 minutes (lib/runtime/warmPages.ts).
-// WARM_ON_START=0 turns both off.
+// Runs once when the server starts. In production:
+//  - warms the busiest pages a few seconds after start, then keeps every hub page in the sitemaps warm with a slow pass
+//    every 45 minutes (lib/runtime/warmPages.ts); WARM_ON_START=0 turns both off;
+//  - saves freehire's newest jobs every 5 minutes (lib/scrapers/freehireRecent.ts), first 2 minutes after start;
+//    FREEHIRE_RECENT_EVERY_MIN sets the minutes, 0 turns it off.
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
-  if (process.env.NODE_ENV !== 'production' || process.env.WARM_ON_START === '0') return
+  if (process.env.NODE_ENV !== 'production') return
+
+  const { freehireRecentEveryMs, runFreehireRecent } = await import('./lib/scrapers/freehireRecent')
+  const everyMs = freehireRecentEveryMs()
+  if (everyMs) {
+    const tick = () => {
+      runFreehireRecent().catch((e) => console.error('[freehire-recent] run failed:', e instanceof Error ? e.message.split('\n')[0] : e))
+    }
+    setTimeout(() => {
+      tick()
+      setInterval(tick, everyMs).unref()
+    }, 2 * 60_000).unref()
+  }
+
+  if (process.env.WARM_ON_START === '0') return
 
   const { REWARM_EVERY_MS, REWARM_GAP_MS, WARM_PATHS, hubPaths, warmPages } = await import('./lib/runtime/warmPages')
   const base = `http://127.0.0.1:${process.env.PORT || 3000}`

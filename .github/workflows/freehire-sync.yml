@@ -15,8 +15,10 @@ on:
     # late and drops some (2026-11-12: the 11:17 and 17:17 runs never started), so fixed times were not reliable.
     # - full run (every step below): when no full run started in the last 20 hours
     # - light run, 5.5+ hours after the last sync (owner's request 2026-11-12: new jobs within hours, not once a day):
-    #   only the freehire sync over the last 18 hours, the self-heal and the slices. ~10 search requests and a few
-    #   hundred company lookups each, well inside the key's daily quota.
+    #   the freehire sync over the last 18 hours, a 500-job closed check, the self-heal and the slices. Measured
+    #   2026-11-19: about 120-170 search pages and 400-1,100 company lookups a run before the description-pay pass was
+    #   split (200 pages a run since) and light runs began the closed check; the sync logs freehire's rate-limit headers
+    #   at the end ("rate limit after the sync"), against the key's 10,000-a-day budget.
     # - otherwise nothing (the run takes a few seconds)
     # On 2026-11-13 GitHub created only one of these hourly runs in 13 hours, so a cron job outside GitHub (the
     # owner's VPS) also starts this workflow every hour through the API with planned=true; see that input below.
@@ -116,9 +118,14 @@ jobs:
         timeout-minutes: 20
         run: npm run check-closed:freehire -- --dry-run
 
+      # Light runs check 500 jobs too (owner's request, 2026-11-19: use more of the daily request budget), so with about 4
+      # light runs a day every active job is checked about twice as often; full runs check 2,000. Least recently checked
+      # first, so the runs share the work.
       - name: Expire jobs freehire has closed
-        if: ${{ success() && env.LIGHT_RUN != 'true' && (github.event_name == 'schedule' || inputs.planned || inputs.closed_apply) }}
+        if: ${{ success() && (github.event_name == 'schedule' || inputs.planned || inputs.closed_apply) }}
         timeout-minutes: 20
+        env:
+          FREEHIRE_CLOSED_MAX_LOOKUPS: ${{ env.LIGHT_RUN == 'true' && '500' || '' }}
         run: npm run check-closed:freehire
 
       # Employers read straight from their own applicant tracking system (lib/constants/directEmployers.ts: OpenAI,
@@ -151,13 +158,15 @@ jobs:
       # scraper applies the same $100k salary gate as every source and takes no Google credentials here (the queue
       # drain below is the only step that gets them). Runs on every sync, light ones too, so these boards are read each time freehire
       # is, about five minutes of the run. Independent of the steps above; a failure here stops nothing.
+      # Y Combinator's board (owner's request 2026-11-19) reads its public jobs sitemap, at most 160 pages a run at one a
+      # second, only companies with a job changed in the last 30 days (lib/scrapers/ycombinator.ts).
       - name: Sync pay-stating job boards
         if: ${{ !cancelled() }}
         continue-on-error: true
         timeout-minutes: 20
         env:
           BOARD_SCRAPE_TIMEOUT_MS: "300000"
-        run: npx tsx scripts/dailyScrapeV2.ts --mode=boards --source=jobicy,spainjobs,uiuxjobsboard,workingnomads,remotive
+        run: npx tsx scripts/dailyScrapeV2.ts --mode=boards --source=jobicy,spainjobs,uiuxjobsboard,workingnomads,remotive,ycombinator
       # What the description readers (pay, who a remote job is open to) just did, with each sentence, in the run summary:
       # read-only, the material the daily review uses to catch wrong readings the day they appear.
       - name: Quality report (read-only)

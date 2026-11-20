@@ -8,9 +8,11 @@ import Script from 'next/script'
 import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
+import { JobAlertPopup } from '@/components/alerts/JobAlertPopup'
 import ErrorTracker from '@/components/ErrorTracker'
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
 import { RouteTransition } from '@/components/ui/RouteTransition'
+import { GtmStartIfMissing } from '@/components/analytics/GtmStartIfMissing'
 import { getSiteUrl } from '../lib/seo/site'
 import { PreloadResources } from './preload-resources'
 
@@ -104,12 +106,32 @@ export default function RootLayout({
       className={`light h-full ${bodyFont.variable} ${displayFont.variable} ${logoFont.variable} ${monoFont.variable}`}
     >
       <head>
+        {/* Google Tag Manager: first element in <head>, snippet exactly as Google gave it */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-PV6WJZ8J');`,
+          }}
+        />
         {/* Public job feeds, so feed readers and aggregators can find them from any page. */}
         <link rel="alternate" type="application/rss+xml" title="Newest $100k+ jobs" href="/feeds/jobs.rss" />
         <link rel="alternate" type="application/rss+xml" title="Newest remote $100k+ jobs" href="/feeds/remote-jobs.rss" />
       </head>
       <body className="min-h-full bg-background text-foreground">
+        {/* Google Tag Manager (noscript): right after the opening <body> tag */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-PV6WJZ8J"
+            height="0"
+            width="0"
+            style={{ display: 'none', visibility: 'hidden' }}
+          />
+        </noscript>
         <PreloadResources />
+        <GtmStartIfMissing id="GTM-PV6WJZ8J" />
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
 
@@ -120,9 +142,12 @@ export default function RootLayout({
           <Footer />
         </div>
         <FeedbackWidget />
+        <JobAlertPopup />
         <ErrorTracker />
         <ScrollReveal />
         <RouteTransition />
+        {/* SourceTrack attribution tag (loads before the other analytics scripts below) */}
+        <Script src="https://api.srctk.com/tracker.min.js" strategy="afterInteractive" data-site-key="929382d1-ca2b-4559-9896-580f499039f6" />
         {/* Google Analytics 4: loads only when NEXT_PUBLIC_GA_MEASUREMENT_ID is set to a G- id (inlined at build time) */}
         {GA_MEASUREMENT_ID ? (
           <>
