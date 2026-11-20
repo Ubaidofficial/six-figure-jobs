@@ -191,6 +191,9 @@ model Company {
   employeeCount      Int?
   fundingStage       String?
   foundedYear        Int?
+  // When the freehire sync last asked freehire for this company's website (found or not). The sync skips companies
+  // asked in the last 30 days, and those that already have a website (lib/scrapers/freehireCompanyWebsites.ts).
+  freehireWebsiteCheckedAt DateTime?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
   sources            CompanySource[]

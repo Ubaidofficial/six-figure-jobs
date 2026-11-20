@@ -12,6 +12,7 @@ import { readPayFromDescription } from '../jobs/payEvidence'
 import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 import { freehireStructuredLocationText } from './freehireStructured'
+import { companiesToLookUp, freehireCompanyKey, loadKnownCompanies, markWebsiteChecked, WEBSITE_RECHECK_DAYS } from './freehireCompanyWebsites'
 
 const BOARD = 'freehire'
 // The /agent/ variant takes the same filters and returns the same jobs, but each carries its description in full.
@@ -511,6 +512,8 @@ export async function loadFreehireCompanyWebsites(
   fetchFn: typeof fetch = fetch,
   pauseMs = 150,
   budgetMs = 4 * 60_000,
+  /** Filled with every slug freehire answered for (website or not); one cut short by the time budget or an error is not. */
+  answered?: Set<string>,
 ): Promise<Map<string, string>> {
   const out = new Map<string, string>()
   // Overall time budget: this is a nice-to-have, so when freehire is slow or rate-limiting we stop looking up more
@@ -537,12 +540,15 @@ export async function loadFreehireCompanyWebsites(
         if (!res.ok) {
           // Discard the unread body: left paused, it crashed undici when the server closed the connection (2026-11-10).
           await res.body?.cancel().catch(() => undefined)
+          // A 404 is an answer (freehire has no such company); a server error is not.
+          if (res.status === 404) answered?.add(slug)
           return
         }
         const json = (await res.json()) as { data?: { company?: { company_info?: { website?: unknown } | null } } }
         const raw = json?.data?.company?.company_info?.website
         const site = typeof raw === 'string' ? normalizePublicCompanyWebsite(raw) : null
         if (site) out.set(slug, site)
+        answered?.add(slug)
         return
       } catch {
         return
@@ -570,12 +576,32 @@ export async function ingestFreehireJobs(
   // Give each job its employer's website (when freehire has one) so its logo comes from a real domain, not a name guess.
   // The 5-minute recent pull skips this (one request per company, against freehire's daily quota); the regular syncs
   // read the same jobs again and fill the websites then.
+  // Companies already holding a website, or asked in the last 30 days, are not asked again
+  // (lib/scrapers/freehireCompanyWebsites.ts); they were 400-1,100 requests a run.
+  const answeredKeys: string[] = []
   if (opts.lookUpWebsites !== false) {
     try {
-      const wanted = [...new Set(inputs.filter((i) => !i.companyWebsiteUrl).map((i) => i.companyRef ?? '').filter(Boolean))]
+      const keyBySlug = new Map<string, string | null>()
+      for (const i of inputs) if (!i.companyWebsiteUrl && i.companyRef && !keyBySlug.has(i.companyRef)) keyBySlug.set(i.companyRef, freehireCompanyKey(i.rawCompanyName))
+      const wanted = [...keyBySlug].map(([slug, key]) => ({ slug, key }))
+      let plan = { lookUp: wanted.map((w) => w.slug), hasWebsite: 0, checkedRecently: 0 }
+      try {
+        const keys = [...new Set(wanted.map((w) => w.key).filter((k): k is string => Boolean(k)))]
+        plan = companiesToLookUp(wanted, await loadKnownCompanies(keys), new Date())
+      } catch (error) {
+        console.warn('[freehire] company website cache unavailable, asking about every company:', error instanceof Error ? error.message.split('\n')[0] : error)
+      }
       const t0 = Date.now()
-      const sites = await loadFreehireCompanyWebsites(wanted)
-      console.log(`[freehire] company websites: ${sites.size} found for ${wanted.length} companies in ${Math.round((Date.now() - t0) / 1000)}s`)
+      const answered = new Set<string>()
+      const sites = await loadFreehireCompanyWebsites(plan.lookUp, fetch, 150, 4 * 60_000, answered)
+      console.log(
+        `[freehire] company websites: ${sites.size} found for ${plan.lookUp.length} companies asked in ${Math.round((Date.now() - t0) / 1000)}s; ` +
+          `not asked: ${plan.hasWebsite} with a website already, ${plan.checkedRecently} asked in the last ${WEBSITE_RECHECK_DAYS} days`,
+      )
+      for (const slug of answered) {
+        const key = keyBySlug.get(slug)
+        if (key) answeredKeys.push(key)
+      }
       for (const input of inputs) {
         const site = input.companyRef ? sites.get(input.companyRef) : undefined
         if (site && !input.companyWebsiteUrl) input.companyWebsiteUrl = site
@@ -599,6 +625,10 @@ export async function ingestFreehireJobs(
         for (const input of group) addBoardIngestResult(stats, await ingestBoardJob(BOARD, input))
       }
     }),
+  )
+  // After the ingest, so a company created in this run is marked too.
+  await markWebsiteChecked([...new Set(answeredKeys)], new Date()).catch((error) =>
+    console.warn('[freehire] could not record the website lookups:', error instanceof Error ? error.message.split('\n')[0] : error),
   )
   return stats
 }
