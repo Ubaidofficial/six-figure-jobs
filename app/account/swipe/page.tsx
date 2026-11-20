@@ -7,10 +7,11 @@ import { notFound, redirect } from 'next/navigation'
 import { connection } from 'next/server'
 import { FileText, ShieldCheck } from 'lucide-react'
 
+import { AccountTabs } from '@/components/account/AccountTabs'
 import { SwipeDeck, type QueueItem } from '@/components/autoapply/SwipeDeck'
 import { accountsEnabled } from '@/lib/accounts/enabled'
 import { autoApplyEnabled, getAutoApplyCredits } from '@/lib/autoapply/config'
-import { swipeDeck, type SwipeCard } from '@/lib/autoapply/deck'
+import { newDeckJobsToday, swipeDeck, type SwipeCard } from '@/lib/autoapply/deck'
 import { getSessionUser } from '@/lib/auth/session'
 import { getBalance } from '@/lib/billing/credits'
 import { prisma } from '@/lib/prisma'
@@ -28,7 +29,7 @@ export default async function SwipePage() {
   const user = await getSessionUser()
   if (!user) redirect(`/sign-in?callbackUrl=${encodeURIComponent('/account/swipe')}`)
 
-  const [resume, queue, balance] = await Promise.all([
+  const [resume, queue, balance, newToday] = await Promise.all([
     prisma.resume.findUnique({ where: { userId: user.id }, select: { userId: true } }),
     prisma.autoApplication.findMany({
       where: { userId: user.id, status: { in: ['draft', 'approved', 'submitting'] } },
@@ -37,21 +38,21 @@ export default async function SwipePage() {
       select: { id: true, jobTitle: true, companyName: true, status: true },
     }),
     getBalance(user.id).catch(() => 0),
+    newDeckJobsToday().catch(() => 0),
   ])
   const cards: SwipeCard[] = resume ? await swipeDeck(user.id, {}).catch(() => []) : []
   const items: QueueItem[] = queue.map((q) => ({ id: q.id, key: q.id, title: q.jobTitle, company: q.companyName, status: q.status }))
 
   return (
     <main className={a.page}>
-      <p className={a.kicker}>Auto-apply</p>
-      <h1 className={a.title}>Swipe to apply</h1>
-      <p className={a.sub} style={{ maxWidth: 640 }}>
-        One $100k+ job at a time, all with forms we can fill. Swipe right and we prepare the application with your details
-        and résumé. You check every answer and approve it before anything is sent.
-      </p>
+      {/* A short header: the card is the page (owner's request, 2026-11-20). What a right swipe does is said under the
+          buttons ("Apply makes a free draft. Nothing is sent until you approve it."). */}
+      <h1 className={a.title} style={{ fontSize: 'var(--text-2xl)' }}>
+        Swipe to apply
+      </h1>
 
       {resume ? (
-        <SwipeDeck initialCards={cards} initialQueue={items} cost={getAutoApplyCredits()} balance={balance} />
+        <SwipeDeck initialCards={cards} initialQueue={items} cost={getAutoApplyCredits()} balance={balance} newToday={newToday} />
       ) : (
         <section className={a.card} style={{ marginTop: 'var(--space-32)', maxWidth: 560 }}>
           <div className={a.result}>
@@ -81,6 +82,7 @@ export default async function SwipePage() {
           charge when the employer confirms an application we sent.
         </span>
       </p>
+      <AccountTabs queueCount={items.filter((q) => q.status === 'draft').length} />
     </main>
   )
 }

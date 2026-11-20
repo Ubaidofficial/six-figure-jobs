@@ -6,6 +6,7 @@ import { notFound, redirect } from 'next/navigation'
 import { connection } from 'next/server'
 import { ChevronRight, ShieldCheck } from 'lucide-react'
 
+import { AccountTabs } from '@/components/account/AccountTabs'
 import { SavedAnswers } from '@/components/autoapply/SavedAnswers'
 import { autoApplyEnabled } from '@/lib/autoapply/config'
 import { getSessionUser } from '@/lib/auth/session'
@@ -60,6 +61,7 @@ export default async function SavedAnswersPage() {
           &ldquo;Save my answers&rdquo; on an application.
         </span>
       </p>
+      <AccountTabs />
     </main>
   )
 }

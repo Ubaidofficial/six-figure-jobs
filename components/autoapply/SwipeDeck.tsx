@@ -1,11 +1,13 @@
 'use client'
 
-// Swipe through jobs one card at a time. Right (→, the ✓ button or a drag right) makes an auto-apply draft for that job:
+// Swipe through jobs one card at a time. Apply (→, the button or a drag right) makes an auto-apply draft for that job:
 // we read the employer's form and fill what is yours, for free. Nothing is sent until you review and approve each draft
-// in your queue. Left (←, ✕ or a drag left) skips the job; skips are remembered in this browser and can be undone.
+// in your queue. "Not for me" (←, the button or a drag left) hides the job, remembered in this browser, with Undo;
+// "Later" (↓) moves it to the back of the deck. Each card shows how the job matches the user's résumé
+// (lib/autoapply/match.ts), its summary, skills (ticked when the résumé names them) and seniority.
 import * as React from 'react'
 import Link from 'next/link'
-import { Check, ExternalLink, Loader2, MapPin, RotateCcw, Search, Sparkles, X } from 'lucide-react'
+import { ExternalLink, Loader2, MapPin, Plus, Search, Sparkles, Target } from 'lucide-react'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import type { SwipeCard } from '@/lib/autoapply/deck'
@@ -41,7 +43,7 @@ function writeSkipped(ids: string[]) {
     // Private mode or storage off: skips last for this visit only.
   }
 }
-function track(direction: 'right' | 'left' | 'undo') {
+function track(direction: 'right' | 'left' | 'later' | 'undo') {
   try {
     const w = window as Window & { dataLayer?: Array<Record<string, unknown>> }
     w.dataLayer = w.dataLayer || []
@@ -53,7 +55,7 @@ function track(direction: 'right' | 'left' | 'undo') {
 
 const ago = (iso: string) => {
   const h = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 3_600_000))
-  return h < 1 ? 'Listed just now' : h < 24 ? `Listed ${h}h ago` : `Listed ${Math.round(h / 24)}d ago`
+  return h < 1 ? 'listed just now' : h < 24 ? `listed ${h}h ago` : `listed ${Math.round(h / 24)}d ago`
 }
 
 async function post(path: string, body: unknown) {
@@ -68,20 +70,23 @@ export function SwipeDeck({
   initialQueue,
   cost,
   balance,
+  newToday,
 }: {
   initialCards: SwipeCard[]
   initialQueue: QueueItem[]
   cost: number
   /** The user's credits now; shown so they know how many approvals they can afford. */
   balance: number
+  /** Jobs the deck could deal that were added in the last 24 hours. */
+  newToday: number
 }) {
   const [cards, setCards] = React.useState(initialCards)
   const [queue, setQueue] = React.useState(initialQueue)
   const [skipped, setSkipped] = React.useState<string[]>([])
   const [lastSkip, setLastSkip] = React.useState<SwipeCard | null>(null)
   const [drag, setDrag] = React.useState({ x: 0, y: 0, active: false })
-  const [leaving, setLeaving] = React.useState<'left' | 'right' | null>(null)
-  const [toast, setToast] = React.useState<{ text: string; href?: string } | null>(null)
+  const [leaving, setLeaving] = React.useState<'left' | 'right' | 'later' | null>(null)
+  const [toast, setToast] = React.useState<{ text: string; href?: string; undo?: boolean } | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [done, setDone] = React.useState(initialCards.length === 0)
   // False once the server has nothing new for these filters, so the deck stops asking.
@@ -127,20 +132,23 @@ export function SwipeDeck({
   const top = cards[0]
 
   const decide = React.useCallback(
-    (dir: 'left' | 'right') => {
+    (dir: 'left' | 'right' | 'later') => {
       if (!top || leaving) return
       setLeaving(dir)
       track(dir)
       window.setTimeout(() => {
-        setCards((c) => c.slice(1))
+        // Later: the job goes to the back of the deck, not away.
+        setCards((c) => (dir === 'later' ? [...c.slice(1), c[0]] : c.slice(1)))
         setLeaving(null)
         setDrag({ x: 0, y: 0, active: false })
       }, 220)
+      if (dir === 'later') return
       if (dir === 'left') {
         const next = [...skipped, top.id]
         setSkipped(next)
         writeSkipped(next)
         setLastSkip(top)
+        setToast({ text: `Hidden: ${top.title}.`, undo: true })
         return
       }
       setLastSkip(null)
@@ -177,6 +185,7 @@ export function SwipeDeck({
     setCards((c) => [lastSkip, ...c])
     setDone(false)
     setLastSkip(null)
+    setToast(null)
     track('undo')
   }
 
@@ -186,6 +195,10 @@ export function SwipeDeck({
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
       if (e.key === 'ArrowRight') decide('right')
       else if (e.key === 'ArrowLeft') decide('left')
+      else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        decide('later')
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -225,8 +238,8 @@ export function SwipeDeck({
     void load(true, skipped)
   }
 
-  const x = leaving ? (leaving === 'right' ? 900 : -900) : drag.x
-  const intent = leaving ?? (drag.x > 40 ? 'right' : drag.x < -40 ? 'left' : null)
+  const x = leaving === 'right' ? 900 : leaving === 'left' ? -900 : drag.x
+  const intent = leaving && leaving !== 'later' ? leaving : drag.x > 40 ? 'right' : drag.x < -40 ? 'left' : null
   const strength = leaving ? 1 : Math.min(1, Math.abs(drag.x) / THRESHOLD)
   const waiting = queue.filter((q) => q.status === 'draft' || q.status === 'preparing').length
   // The oldest draft that is ready, so "Review next" works through the queue in the order it was swiped.
@@ -235,6 +248,19 @@ export function SwipeDeck({
   return (
     <div className={s.wrap}>
       <div className={s.deckCol}>
+        <div className={s.topBar}>
+          <span className={s.livePill}>
+            <span className={s.liveDot} aria-hidden />
+            {newToday > 0 ? `Live · ${newToday.toLocaleString('en-US')} new today` : 'Live'}
+          </span>
+          <Link href="/pricing" className={s.creditPill} aria-label={`${balance} credits. Add credits`}>
+            {balance} {balance === 1 ? 'credit' : 'credits'}
+            <span className={s.creditPlus} aria-hidden>
+              <Plus />
+            </span>
+          </Link>
+        </div>
+
         <form className={s.filters} onSubmit={applyFilters} role="search">
           <label className={s.search}>
             <Search aria-hidden />
@@ -243,10 +269,10 @@ export function SwipeDeck({
           </label>
           <label className={s.toggle}>
             <input type="checkbox" checked={remote} onChange={(e) => setRemote(e.target.checked)} />
-            Remote only
+            Remote
           </label>
           <button type="submit" className={s.filterBtn}>
-            Show jobs
+            Show
           </button>
         </form>
 
@@ -255,12 +281,14 @@ export function SwipeDeck({
             cards.slice(0, 3).map((c, i) => {
               const isTop = i === 0
               const style: React.CSSProperties = isTop
-                ? { transform: `translate(${x}px, ${leaving ? drag.y : drag.y}px) rotate(${x / 18}deg)`, transition: drag.active && !leaving ? 'none' : undefined, zIndex: 3 }
-                : { transform: `translateY(${i * 12}px) scale(${1 - i * 0.04})`, zIndex: 3 - i }
+                ? leaving === 'later'
+                  ? { transform: 'translateY(40px) scale(0.94)', opacity: 0, zIndex: 3 }
+                  : { transform: `translate(${x}px, ${drag.y}px) rotate(${x / 18}deg)`, transition: drag.active && !leaving ? 'none' : undefined, zIndex: 3 }
+                : { transform: `translateY(${i * 10}px) scale(${1 - i * 0.04})`, zIndex: 3 - i }
               return (
                 <article
                   key={c.id}
-                  className={cn(s.card, isTop && s.cardTop, leaving && isTop && s.leaving)}
+                  className={cn(s.card, isTop && s.cardTop, leaving && leaving !== 'later' && isTop && s.leaving)}
                   style={style}
                   aria-hidden={!isTop}
                   aria-label={isTop ? `${c.title} at ${c.company}` : undefined}
@@ -275,31 +303,62 @@ export function SwipeDeck({
                         Apply
                       </span>
                       <span className={cn(s.stamp, s.stampSkip)} style={{ opacity: intent === 'left' ? strength : 0 }}>
-                        Skip
+                        Not for me
                       </span>
                     </>
                   ) : null}
-                  <div className={s.cardTopRow}>
-                    <CompanyLogo name={c.company} src={c.logo} size="xl" />
-                    <span className={s.listed}>{ago(c.listedAt)}</span>
+                  <div className={s.head}>
+                    <CompanyLogo name={c.company} src={c.logo} size="lg" />
+                    <div className={s.headText}>
+                      <h2 className={s.jobTitle}>{c.title}</h2>
+                      <p className={s.company}>
+                        {c.company} <span className={s.listed}>· {ago(c.listedAt)}</span>
+                      </p>
+                    </div>
                   </div>
-                  <p className={s.company}>{c.company}</p>
-                  <h2 className={s.jobTitle}>{c.title}</h2>
-                  {c.salary ? <p className={s.salary}>{c.salary}</p> : null}
                   <div className={s.chips}>
-                    {c.location ? (
-                      <span className={s.chip}>
-                        <MapPin aria-hidden /> {c.location}
+                    {c.match ? (
+                      <span className={cn(s.chip, s.chipMatch, c.match.score < 35 && s.chipMatchLow)} title={c.match.label}>
+                        <Target aria-hidden /> {c.match.score} résumé match
                       </span>
                     ) : null}
-                    {c.remote ? <span className={cn(s.chip, s.chipRemote)}>Remote</span> : null}
-                    <span className={cn(s.chip, s.chipAuto)}>
-                      <Sparkles aria-hidden /> Auto-apply ready
-                    </span>
+                    {c.salary ? <span className={cn(s.chip, s.chipPay)}>{c.salary}</span> : null}
+                    {c.seniority ? <span className={s.chip}>{c.seniority}</span> : null}
+                    {c.location || c.remote ? (
+                      <span className={s.chip}>
+                        <MapPin aria-hidden /> {[c.location, c.remote && !/remote/i.test(c.location ?? '') ? 'Remote' : null].filter(Boolean).join(' · ')}
+                      </span>
+                    ) : null}
                   </div>
-                  <Link href={`/job/${c.slug}`} target="_blank" className={s.viewJob}>
-                    Read the full job <ExternalLink aria-hidden />
-                  </Link>
+                  {c.summary ? (
+                    <>
+                      <p className={s.sectionLabel}>Summary</p>
+                      <p className={s.summary}>{c.summary}</p>
+                    </>
+                  ) : null}
+                  {c.skills.length ? (
+                    <ul className={s.skills} aria-label="Skills">
+                      {c.skills.map((k) => (
+                        <li key={k.name} className={cn(s.skill, k.have && s.skillHave)}>
+                          {k.have ? <span className={s.srOnly}>On your résumé: </span> : null}
+                          {k.name}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {c.match && c.match.reasons.length ? (
+                    <p className={s.why}>
+                      <strong>{c.match.label}:</strong> {c.match.reasons.join(' · ')}.
+                    </p>
+                  ) : null}
+                  <div className={s.cardFoot}>
+                    <span className={s.ready}>
+                      <Sparkles aria-hidden /> We can fill this form
+                    </span>
+                    <Link href={`/job/${c.slug}`} target="_blank" className={s.viewJob}>
+                      Full job <ExternalLink aria-hidden />
+                    </Link>
+                  </div>
                 </article>
               )
             })
@@ -313,7 +372,7 @@ export function SwipeDeck({
               ) : (
                 <>
                   <p className={s.emptyTitle}>You have seen every matching job</p>
-                  <p>New $100k+ jobs arrive every day. Try another role, or switch off Remote only.</p>
+                  <p>New $100k+ jobs arrive every day. Try another role, or switch off Remote.</p>
                 </>
               )}
             </div>
@@ -321,24 +380,28 @@ export function SwipeDeck({
         </div>
 
         <div className={s.controls}>
-          <button type="button" className={cn(s.round, s.roundSkip)} onClick={() => decide('left')} disabled={!top || !!leaving} aria-label="Skip this job (left arrow)">
-            <X aria-hidden />
+          <button type="button" className={cn(s.action, s.actionNo)} onClick={() => decide('left')} disabled={!top || !!leaving} aria-keyshortcuts="ArrowLeft">
+            Not for me
           </button>
-          <button type="button" className={cn(s.round, s.roundUndo)} onClick={undo} disabled={!lastSkip} aria-label="Undo last skip">
-            <RotateCcw aria-hidden />
+          <button type="button" className={cn(s.action, s.actionLater)} onClick={() => decide('later')} disabled={!top || !!leaving || cards.length < 2} aria-keyshortcuts="ArrowDown">
+            Later
           </button>
-          <button type="button" className={cn(s.round, s.roundApply)} onClick={() => decide('right')} disabled={!top || !!leaving} aria-label="Queue an application for this job (right arrow)">
-            <Check aria-hidden />
+          <button type="button" className={cn(s.action, s.actionApply)} onClick={() => decide('right')} disabled={!top || !!leaving} aria-keyshortcuts="ArrowRight">
+            Apply
           </button>
         </div>
         <p className={s.keys}>
-          Drag the card, or use <kbd>←</kbd> skip and <kbd>→</kbd> apply.
+          Apply makes a free draft. Nothing is sent until you approve it. Keys: <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd>
         </p>
 
         {toast ? (
           <div role="status" className={s.toast}>
             <span>{toast.text}</span>
-            {toast.href ? (
+            {toast.undo && lastSkip ? (
+              <button type="button" className={s.toastLink} onClick={undo}>
+                Undo
+              </button>
+            ) : toast.href ? (
               <Link href={toast.href} className={s.toastLink}>
                 Review
               </Link>
@@ -347,7 +410,7 @@ export function SwipeDeck({
         ) : null}
       </div>
 
-      <aside className={s.queue} aria-labelledby="queue-h">
+      <aside id="queue" className={s.queue} aria-labelledby="queue-h">
         <h2 id="queue-h" className={s.queueTitle}>
           Your apply queue {waiting ? <span className={s.badge}>{waiting}</span> : null}
         </h2>
