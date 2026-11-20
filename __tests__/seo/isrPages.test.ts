@@ -11,6 +11,7 @@ const PAGES = [
   'app/jobs/skills/[skill]/remote/page.tsx',
   'app/jobs/level/[level]/page.tsx',
   'app/jobs/city/[city]/page.tsx',
+  'app/jobs/[role]/skills/[skill]/page.tsx',
 ]
 
 describe.each(PAGES)('%s', (file) => {

@@ -2,6 +2,7 @@
 
 import type { Job, Company, Prisma, RoleInference } from '@prisma/client'
 import { prisma } from '../prisma'
+import { DEFAULT_TTL_MS, memoAsync, stableKey } from '../cache/memo'
 import { getDateThreshold, MAX_DISPLAY_AGE_DAYS } from '../ingest/jobAgeFilter'
 import { HIGH_SALARY_THRESHOLDS } from '../currency/thresholds'
 import { inferCurrencyFromCountryCode } from '../normalizers/salary'
@@ -443,6 +444,17 @@ async function queryBlendedByPay(args: {
     pageSize,
     totalPages: total === 0 ? 1 : Math.ceil(total / pageSize),
   }
+}
+
+/**
+ * queryJobs for a listing page's own query, kept for DEFAULT_TTL_MS and refreshed in the background once it is stale
+ * (lib/cache/memo.ts). These pages read `searchParams`, so Next renders them on every request and `revalidate` does not
+ * apply; without this each visit ran the same list and count queries again (measured 2026-11-20: /salary/<role> 0.5-1.1 s,
+ * /jobs/no-degree 0.4 s, /remote/<role> 0.3 s on every repeat request, against 0.04 s once cached). `label` names the page
+ * so two pages never share an entry. The input must be plain data (stableKey cannot read a Set).
+ */
+export function queryJobsCached(label: string, input: JobQueryInput): Promise<JobQueryResult> {
+  return memoAsync(stableKey(label, input), DEFAULT_TTL_MS, () => queryJobs(input))
 }
 
 export async function queryJobs(input: JobQueryInput): Promise<JobQueryResult> {

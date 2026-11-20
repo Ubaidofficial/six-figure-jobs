@@ -9,7 +9,7 @@
 import type { Metadata } from 'next'
 import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
-import { memoAsync } from '../../../lib/cache/memo'
+import { DEFAULT_TTL_MS, memoAsync } from '../../../lib/cache/memo'
 import { loadDegreeRequiredJobIds } from '../../../lib/jobs/degreeRequirement'
 import { buildWhere, queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { prisma } from '../../../lib/prisma'
@@ -129,8 +129,11 @@ export default async function NoDegreeJobsPage({
   const page = parsePage(sp)
 
   const pass = await loadDegreeRequiredJobIds()
+  // The key carries the pass's own time, not the job-id set inside it (a JSON key cannot hold a Set); kept for the default 5 minutes like the other listing pages.
   const [result, counts] = await Promise.all([
-    queryJobs({ page, pageSize: PAGE_SIZE, sortBy: 'date', noDegreeRequired: pass }),
+    memoAsync(`no-degree-list:${page}:${pass.classifiedAt.toISOString()}`, DEFAULT_TTL_MS, () =>
+      queryJobs({ page, pageSize: PAGE_SIZE, sortBy: 'date', noDegreeRequired: pass }),
+    ),
     loadCounts(),
   ])
 

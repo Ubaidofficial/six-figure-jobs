@@ -8,7 +8,7 @@ import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
-import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
+import { buildWhere, queryJobsCached, type JobQueryInput, type JobWithCompany } from '../../../../lib/jobs/queryJobs'
 import { loadTopRolePages, topRolesRow } from '../../../../lib/roles/topRolePages'
 import { Faq, JobRows, LinkChips, ListingHeader, ListingLayout, ListingPage, ListingSection, Pagination, Prose } from '@/components/listing/ListingParts'
 import { LOCATIONS } from '@/lib/constants/homepage'
@@ -103,7 +103,7 @@ export async function generateMetadata({
     }
   }
 
-  const { total } = await queryJobs({
+  const { total } = await queryJobsCached('category-meta', {
     roleSlugs: cfg.roleSlugs,
     isHundredKLocal: true,
     page: 1,
@@ -150,7 +150,7 @@ export default async function CategoryPage({
   const sp = (await searchParams) || {}
   const page = Math.max(1, Number(sp.page || '1') || 1)
 
-  const { jobs, total } = await queryJobs({
+  const { jobs, total } = await queryJobsCached('category-list', {
     roleSlugs: cfg.roleSlugs,
     isHundredKLocal: true,
     page,

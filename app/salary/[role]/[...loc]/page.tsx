@@ -6,7 +6,7 @@ import Link from '@/components/ui/Link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { prisma } from '../../../../lib/prisma'
 import {
-  queryJobs,
+  queryJobsCached,
   type JobWithCompany,
   buildGlobalExclusionsWhere,
   buildHighSalaryEligibilityWhere,
@@ -390,7 +390,7 @@ export default async function SalaryRoleLocationPage(props: PageProps) {
     }
   })
 
-  const jobsResult = await queryJobs({
+  const jobsResult = await queryJobsCached('salary-loc-list', {
     roleSlugs: [roleSlug],
     countryCode,
     citySlug: citySlug || undefined,
