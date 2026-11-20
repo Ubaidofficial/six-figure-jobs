@@ -6,7 +6,7 @@ import { keywordsFor } from '@/lib/seo/keywordMap'
 import Link from '@/components/ui/Link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import {
-  queryJobs,
+  queryJobsCached,
   type JobWithCompany,
 } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
@@ -260,7 +260,7 @@ export default async function SalaryRolePage(props: PageProps) {
   const allowIndex = totalListings >= 1
 
   // Jobs list for this role (live $100k+)
-  const data = await queryJobs({
+  const data = await queryJobsCached('salary-role-list', {
     roleSlugs: [roleSlug],
     minAnnual,
     page,

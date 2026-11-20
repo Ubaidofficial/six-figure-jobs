@@ -17,7 +17,7 @@ import { JobsUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
 import { prisma } from '@/lib/prisma'
-import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { buildWhere, queryJobsCached, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { LISTING_REMOTE_REGIONS, normalizeRemoteRegionSlug } from '@/lib/jobs/remoteRegions'
 import { withRuntimeFallback } from '@/lib/runtime/fallback'
 import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
@@ -208,7 +208,7 @@ export async function SalaryTierTemplate({
   return withRuntimeFallback(
     `jobs.salary-tier.${tierId}.page`,
     async () => {
-  const data = await queryJobs(queryInput)
+  const data = await queryJobsCached(`tier-list:${tierId}`, queryInput)
   const topRoles = await loadTopRolePages(tierQueryInput(tierId))
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
   const totalPages = data.totalPages

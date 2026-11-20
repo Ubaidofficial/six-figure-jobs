@@ -5,7 +5,7 @@
 import type { Metadata } from 'next'
 import Link from '@/components/ui/Link'
 import { prisma } from '../../../lib/prisma'
-import { queryJobs, buildWhere, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { queryJobsCached, buildWhere, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import JobList from '../../components/JobList'
 import { SITE_NAME, getSiteUrl, defaultOgImages } from '../../../lib/seo/site'
 import { isPhaseIndexable } from '../../../lib/seo/indexingPhase'
@@ -63,7 +63,7 @@ export async function generateMetadata({
 
   let total = 0
   try {
-    const result = await queryJobs({ page: 1, pageSize: 1, visaSponsorship: true })
+    const result = await queryJobsCached('visa-meta', { page: 1, pageSize: 1, visaSponsorship: true })
     total = result.total
   } catch (error) {
     void error
@@ -96,12 +96,12 @@ export default async function VisaSponsorshipPage({
   const page = parsePage(sp)
 
   // Primary: jobs explicitly flagged as visa sponsorship
-  let result = await queryJobs({ page, pageSize: PAGE_SIZE, visaSponsorship: true, sortBy: 'date' })
+  let result = await queryJobsCached('visa-list', { page, pageSize: PAGE_SIZE, visaSponsorship: true, sortBy: 'date' })
 
   // Fallback: if no flagged jobs yet, use keyword search in descriptions
   // This ensures the page is never empty while the batch marking catches up
   if (result.total === 0) {
-    result = await queryJobs({ page, pageSize: PAGE_SIZE, keyword: 'visa sponsorship', sortBy: 'date' })
+    result = await queryJobsCached('visa-list-keyword', { page, pageSize: PAGE_SIZE, keyword: 'visa sponsorship', sortBy: 'date' })
   }
 
   const topCompanies = await prisma.company.findMany({

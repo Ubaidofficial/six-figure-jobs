@@ -18,6 +18,12 @@ const PAGE_SIZE = 40
 
 type Params = Promise<{ role: string; skill: string }>
 
+// Without generateStaticParams a dynamic route is rendered on every request and `revalidate` does nothing; an empty list builds
+// nothing at deploy time but lets each page be cached on its first request (see app/jobs/skills/[skill]/page.tsx).
+export async function generateStaticParams(): Promise<Array<Record<string, string>>> {
+  return []
+}
+
 function prettyRole(slug: string) {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }

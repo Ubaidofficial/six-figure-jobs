@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
-import { queryJobs } from '@/lib/jobs/queryJobs'
+import { queryJobsCached } from '@/lib/jobs/queryJobs'
 import { buildRuntimeFallbackMetadata, withRuntimeFallback } from '@/lib/runtime/fallback'
 import { SALARY_TIERS } from '@/lib/jobs/salaryTiers'
 import { buildNormalizedListingPath, hasNonPaginationQueryParams } from '@/lib/seo/listingSearchParams'
@@ -24,7 +24,7 @@ export async function generateMetadata({
   return withRuntimeFallback<Metadata>(
     'jobs.400k-plus.metadata',
     async () => {
-      const { total } = await queryJobs({
+      const { total } = await queryJobsCached('tier-400k-meta', {
         page: 1,
         pageSize: 1,
         currency: 'USD',

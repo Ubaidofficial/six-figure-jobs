@@ -15,7 +15,7 @@ import {
 } from '@/components/listing/ListingParts'
 
 import { prisma } from '@/lib/prisma'
-import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { buildWhere, queryJobsCached, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { loadTopRolePages, topRolesRow } from '@/lib/roles/topRolePages'
 import { buildItemListJsonLd } from '@/lib/seo/itemListJsonLd'
 import { SITE_NAME, getSiteUrl } from '@/lib/seo/site'
@@ -289,7 +289,7 @@ export async function CountryLocationTemplate({
     companySizeBuckets: companySizes.length ? companySizes : undefined,
   }
 
-  const data = await queryJobs(queryInput)
+  const data = await queryJobsCached(`country-list:${countryCode}`, queryInput)
   const topRoles = await loadTopRolePages({ countryCode })
   const jobs = dedupeJobs(data.jobs as JobWithCompany[])
   const totalPages = data.totalPages

@@ -7,7 +7,7 @@ import { TARGET_COUNTRIES } from '../../../../lib/seo/regions'
 import { countryCodeToSlug } from '../../../../lib/seo/countrySlug'
 import { notFound, redirect } from 'next/navigation'
 import { getSiteUrl, SITE_NAME, defaultOgImages } from '../../../../lib/seo/site'
-import { queryJobs } from '../../../../lib/jobs/queryJobs'
+import { queryJobsCached } from '../../../../lib/jobs/queryJobs'
 import { getThresholdLabelForCountry } from '../../../../lib/seo/salaryLabels'
 import { buildCountryTitle, buildListingDescription, inCountry } from '../../../../lib/seo/metaText'
 
@@ -66,7 +66,7 @@ export async function generateMetadata({
     redirect(`/jobs/location/${(loc as any).slug}`)
   }
 
-  const { total } = await queryJobs({
+  const { total } = await queryJobsCached(`country-meta:${country}`, {
     isHundredKLocal: true,
     countryCode: loc.countryCode ?? undefined,
     remoteMode: loc.remoteOnly ? 'remote' : undefined,

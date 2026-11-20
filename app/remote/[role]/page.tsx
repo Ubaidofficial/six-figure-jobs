@@ -9,7 +9,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { RemoteUnavailablePage } from '@/components/runtime/FallbackPresets'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 import { findBestMatchingRole, slugToLabel } from '@/lib/roles/slugMatcher'
-import { buildWhere, queryJobs, type JobWithCompany } from '../../../lib/jobs/queryJobs'
+import { buildWhere, queryJobsCached, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { DEFAULT_TTL_MS, memoAsync } from '@/lib/cache/memo'
 import { prisma } from '@/lib/prisma'
 import { rankRelatedRoles } from '@/lib/roles/relatedRoles'
@@ -263,7 +263,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return withRuntimeFallback<Metadata>(
     `remote.role.${roleSlug}.metadata`,
     async () => {
-      const result = await queryJobs({
+      const result = await queryJobsCached('remote-role-meta', {
         roleSlugs: [roleSlug],
         remoteOnly: true,
         countryCode: selectedCountry || undefined,
@@ -359,7 +359,7 @@ export default async function RemoteRolePage({ params, searchParams }: Props) {
   return withRuntimeFallback(
     `remote.role.${roleSlug}.page`,
     async () => {
-      const data = await queryJobs({
+      const data = await queryJobsCached('remote-role-list', {
         roleSlugs: [roleSlug],
         remoteOnly: true,
         countryCode: selectedCountry || undefined,
