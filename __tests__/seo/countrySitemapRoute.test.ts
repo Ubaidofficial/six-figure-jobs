@@ -1,3 +1,4 @@
+import { __clearMemoForTests } from '../../lib/cache/memo'
 import { GET } from '../../app/sitemap-country.xml/route'
 import { prisma } from '../../lib/prisma'
 import { __resetIndexingPhaseCacheForTests } from '../../lib/seo/indexingPhase'
@@ -11,6 +12,9 @@ jest.mock('../../lib/prisma', () => ({
 }))
 
 const aggregateMock = (prisma.job.aggregate as unknown) as jest.Mock
+
+// The routes keep a good answer for 10 minutes (lib/seo/cachedSitemap.ts); each test here sets its own data.
+beforeEach(() => __clearMemoForTests())
 
 describe('country sitemap route filters', () => {
   beforeEach(() => {

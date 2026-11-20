@@ -1,5 +1,6 @@
 // app/sitemap.xml/route.ts
 
+import { cachedXmlResponse } from '../../lib/seo/cachedSitemap'
 import { BLOG_POSTS } from '../../lib/blog/posts'
 import { getSiteUrl } from '../../lib/seo/site'
 import { hasCountrySitemapEntries } from '../../lib/seo/countrySitemap'
@@ -93,7 +94,7 @@ async function ownLastmod(path: string): Promise<string | null> {
 
 const OWN_DATE_PATHS = /^(sitemap-(hubs|salary|country)\.xml|sitemap-batch\/)/
 
-export async function GET() {
+async function buildIndex(): Promise<Response> {
   // `lastmod` must be the day the child's content last changed, not the time of this request: Google stops trusting
   // lastmod on sites where every entry always says "now". When the date is unknown it is omitted. The files this site
   // submits today (hubs, released batches, salary bands, countries) are dated by their own entries; the families that
@@ -134,4 +135,8 @@ ${sitemaps
       ...buildSitemapMetaHeaders('sitemap'),
     },
   })
+}
+
+export async function GET() {
+  return cachedXmlResponse('sitemap-index', buildIndex)
 }

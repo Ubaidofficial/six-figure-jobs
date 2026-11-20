@@ -3,11 +3,14 @@
 // runs after it.
 const originalSiteUrl = process.env.SITE_URL
 let GET: typeof import('../../app/sitemap.xml/route').GET
+let clearMemo: () => void
 
 beforeAll(async () => {
   process.env.SITE_URL = 'https://www.6figjobs.com'
   jest.resetModules()
   ;({ GET } = await import('../../app/sitemap.xml/route'))
+  // Loaded after resetModules, so it is the cache the route itself uses.
+  ;({ __clearMemoForTests: clearMemo } = await import('../../lib/cache/memo'))
 })
 
 afterAll(() => {
@@ -37,6 +40,9 @@ jest.mock('../../app/sitemap-slices.xml/route', () => ({
 // Whether the country sitemap has any URL needs the database too.
 const mockHasCountries = jest.fn()
 jest.mock('../../lib/seo/countrySitemap', () => ({ hasCountrySitemapEntries: (...a: unknown[]) => mockHasCountries(...a) }))
+
+// The routes keep a good answer for 10 minutes (lib/seo/cachedSitemap.ts); each test here sets its own data.
+beforeEach(() => clearMemo())
 
 describe('sitemap.xml route', () => {
   beforeEach(() => mockHasCountries.mockReset().mockResolvedValue(false))
@@ -72,9 +78,11 @@ describe('sitemap.xml route', () => {
     mockHasCountries.mockResolvedValue(true)
     expect(await (await GET()).text()).toContain('/sitemap-country.xml')
 
+    clearMemo() // a good answer is kept for 10 minutes; this test changes the data between requests
     mockHasCountries.mockResolvedValue(false)
     expect(await (await GET()).text()).not.toContain('/sitemap-country.xml')
 
+    clearMemo()
     mockHasCountries.mockRejectedValue(new Error('database down'))
     const down = await GET()
     expect(down.status).toBe(200)

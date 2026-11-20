@@ -1,3 +1,4 @@
+import { __clearMemoForTests } from '../../lib/cache/memo'
 import { GET as getCompanySitemapIndex } from '../../app/sitemap-company.xml/route'
 import { GET as getCompanySitemapPage } from '../../app/sitemap-company/[page]/route'
 import { prisma } from '../../lib/prisma'
@@ -11,6 +12,9 @@ jest.mock('../../lib/prisma', () => ({
 }))
 
 const findManyMock = (prisma.company.findMany as unknown) as jest.Mock
+
+// The routes keep a good answer for 10 minutes (lib/seo/cachedSitemap.ts); each test here sets its own data.
+beforeEach(() => __clearMemoForTests())
 
 describe('company sitemap routes', () => {
   beforeEach(() => {

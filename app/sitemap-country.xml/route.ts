@@ -1,3 +1,4 @@
+import { cachedXmlResponse } from '../../lib/seo/cachedSitemap'
 import { getCountrySitemapUrls } from '../../lib/seo/countrySitemap'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 import {
@@ -7,7 +8,7 @@ import {
 
 export const dynamic = 'force-dynamic' // built per request: the deploy-time build cannot reach the database
 
-export async function GET() {
+async function buildCountrySitemap(): Promise<Response> {
   if (!isSitemapFamilyEnabled('sitemap-country')) {
     return buildPhase1SilencedSitemapResponse('sitemap-country')
   }
@@ -30,4 +31,8 @@ ${urls.map(u => `  <url>
       ...buildSitemapMetaHeaders('sitemap-country'),
     },
   })
+}
+
+export async function GET() {
+  return cachedXmlResponse('sitemap-country', buildCountrySitemap)
 }
