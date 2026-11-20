@@ -150,6 +150,11 @@ async function ensureUniqueSlug(baseName: string): Promise<string> {
   }
 }
 
+/** The company name a board job is saved under (cleaned and sanitized), or null for a name that is not a company. */
+export function boardCompanyName(rawName: string | null, source: string): string | null {
+  return sanitizeBoardCompanyName(cleanCompanyName(rawName), source)
+}
+
 /**
  * Centralized helper for board → Company ingestion:
  *
@@ -167,11 +172,7 @@ export async function upsertCompanyFromBoard(
   const websiteAts = input.websiteUrl ? detectAtsFromUrl(input.websiteUrl) : null
   const inferredWebsite = resolveCompanyWebsite(input)
 
-  const cleanedFromNormalizer = cleanCompanyName(input.rawName ?? null)
-  const cleanedName = sanitizeBoardCompanyName(
-    cleanedFromNormalizer,
-    input.source,
-  )
+  const cleanedName = boardCompanyName(input.rawName ?? null, input.source)
 
   if (!cleanedName) {
     // Garbage name, skip creating a company
