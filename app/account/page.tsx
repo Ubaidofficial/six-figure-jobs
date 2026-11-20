@@ -2,8 +2,10 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { connection } from 'next/server'
 
+import { AccountTabs } from '@/components/account/AccountTabs'
 import { AccountView } from '@/components/account/AccountView'
 import { accountsEnabled, billingEnabled } from '@/lib/accounts/enabled'
+import { autoApplyEnabled } from '@/lib/autoapply/config'
 import { getSessionUser } from '@/lib/auth/session'
 import { getProducts } from '@/lib/billing/config'
 import { loadAccountSummary } from '@/lib/billing/summary'
@@ -30,13 +32,16 @@ export default async function AccountPage({
   const products = billingEnabled() ? getProducts().map(({ key, credits }) => ({ key, credits })) : []
 
   return (
-    <AccountView
-      email={user.email}
-      balance={summary.balance}
-      subscription={summary.subscription}
-      products={products}
-      hasBillingAccount={summary.hasBillingAccount}
-      checkout={params.checkout === 'success' || params.checkout === 'cancelled' ? params.checkout : undefined}
-    />
+    <>
+      <AccountView
+        email={user.email}
+        balance={summary.balance}
+        subscription={summary.subscription}
+        products={products}
+        hasBillingAccount={summary.hasBillingAccount}
+        checkout={params.checkout === 'success' || params.checkout === 'cancelled' ? params.checkout : undefined}
+      />
+      {autoApplyEnabled() ? <AccountTabs /> : null}
+    </>
   )
 }

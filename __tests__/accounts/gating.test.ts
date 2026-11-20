@@ -111,6 +111,7 @@ describe('pages are not found when disabled', () => {
       '@/components/account/account.module.css',
       '@/components/account/SignInForm',
       '@/components/account/AccountView',
+      '@/components/account/AccountTabs',
       '@/components/account/PlansView',
       '@/lib/auth/session',
       '@/lib/billing/summary',
