@@ -24,6 +24,14 @@ const PAGE_SIZE = 40
 
 type Params = Promise<{ skill: string }>
 
+// Without generateStaticParams a dynamic route is rendered on every request and `revalidate` does nothing (measured 2026-11-20:
+// 2-6 s to first byte in production, repeated, with no x-nextjs-cache header in a local build). Returning an empty list builds
+// nothing at deploy time (the build may not reach the database) but lets each page be cached on its first request and refreshed
+// in the background every `revalidate` seconds. Unknown slugs still 404 (dynamicParams stays true).
+export async function generateStaticParams(): Promise<Array<Record<string, string>>> {
+  return []
+}
+
 function resolveSkill(slug: string) {
   return SKILL_TARGETS.find((s) => s.slug === slug.toLowerCase()) || null
 }
