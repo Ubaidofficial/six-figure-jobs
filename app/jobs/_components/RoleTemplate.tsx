@@ -18,6 +18,7 @@ import { buildLogoUrl } from '@/lib/companies/logo'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { salaryFilterAmount, salaryFilterCurrency } from '@/lib/jobs/salaryFilter'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
+import { toPublicJob } from '@/lib/jobs/publicJob'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
 import { LISTING_REMOTE_REGIONS, normalizeRemoteRegionSlug } from '@/lib/jobs/remoteRegions'
@@ -34,6 +35,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 
 import { JobsFiltersPanel, type JobsFacets } from './JobsFilters'
 import { JobsToolbar } from './JobsToolbar'
+import { InfiniteJobsList } from './InfiniteJobsList'
 import { ActiveFilters } from './ActiveFilters'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { RelatedSearches } from '@/components/listing/RelatedSearches'
@@ -611,14 +613,25 @@ export async function RoleTemplate({
         }
         alert={queryInput}
       >
-        <JobRows
-          jobs={jobs}
-          empty={{
-            title: 'No jobs match these filters.',
-            body: `Clear the filters to see every ${roleTitle} job.`,
-            href: basePath,
-          }}
-        />
+        {jobs.length === 0 ? (
+          <JobRows
+            jobs={[]}
+            empty={{
+              title: 'No jobs match these filters.',
+              body: `Clear the filters to see every ${roleTitle} job.`,
+              href: basePath,
+            }}
+          />
+        ) : (
+          <InfiniteJobsList
+            initialJobs={jobs.map(toPublicJob)}
+            initialPage={page}
+            totalPages={totalPages}
+            scopeRole={roleSlug}
+            live={sort === 'recent' && page === 1}
+            serverNow={new Date().toISOString()}
+          />
+        )}
         <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} />
       </ListingLayout>
 
