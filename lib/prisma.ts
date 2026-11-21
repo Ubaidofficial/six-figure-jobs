@@ -45,11 +45,24 @@ const pooledUrl = addUrlParam(
   process.env.PRISMA_POOL_TIMEOUT ?? '10',
 )
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    datasources: baseUrl ? { db: { url: pooledUrl } } : undefined,
-    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+// Off unless set (e.g. SLOW_QUERY_LOG_MS=3000): logs `[slow-query] <ms> <SQL without values>` for every query that took that long,
+// to tell a database stall from a blocked server (see lib/runtime/stallWatch.ts). Off by default because subscribing to Prisma's
+// query event makes it build an event, with every bound value, for each query, a cost not measured here for queries with very
+// large lists.
+const slowQueryMs = Number(process.env.SLOW_QUERY_LOG_MS) || 0
+
+function createClient(): PrismaClient {
+  const datasources = baseUrl ? { db: { url: pooledUrl } } : undefined
+  if (!slowQueryMs) {
+    return new PrismaClient({ datasources, log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'] })
+  }
+  const client = new PrismaClient({ datasources, log: [{ emit: 'event', level: 'query' }, 'error'] })
+  client.$on('query', (e) => {
+    if (e.duration >= slowQueryMs) console.warn(`[slow-query] ${e.duration}ms ${e.query.replace(/\s+/g, ' ').slice(0, 300)}`)
   })
+  return client as unknown as PrismaClient
+}
+
+export const prisma = globalForPrisma.prisma ?? createClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
