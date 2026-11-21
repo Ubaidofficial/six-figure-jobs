@@ -50,6 +50,9 @@ export async function runFreehireRecent(): Promise<FreehireRecentResult> {
   }
 }
 
+/** How long after the server starts the first run waits (was 2 minutes; see HUBS_WARM_DELAY_MS in lib/runtime/warmPages.ts). */
+export const FREEHIRE_RECENT_START_DELAY_MS = 5 * 60_000
+
 /** Minutes between the app's own runs: FREEHIRE_RECENT_EVERY_MIN (default 5, at least 5); 0 turns them off. */
 export function freehireRecentEveryMs(env: Record<string, string | undefined> = process.env): number | null {
   const raw = env.FREEHIRE_RECENT_EVERY_MIN?.trim()

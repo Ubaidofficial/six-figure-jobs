@@ -8,6 +8,7 @@ import {
   getMaxCompanySitemapPages,
   getMaxCompanyUrlsPerPage,
 } from '../../../lib/seo/sitemapPolicy'
+import { cachedXmlResponse } from '../../../lib/seo/cachedSitemap'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
@@ -46,8 +47,7 @@ async function fetchCompanyPage(page: number): Promise<CompanyRow[]> {
   }))
 }
 
-export async function GET(
-  _req: Request,
+async function buildCompanyPage(
   ctx: { params: Promise<{ page: string }> },
 ) {
   const params = await ctx.params
@@ -103,4 +103,12 @@ ${urls.join('\n')}
       ...buildSitemapMetaHeaders('sitemap-company-page'),
     },
   })
+}
+
+export async function GET(
+  _req: Request,
+  ctx: { params: Promise<{ page: string }> },
+) {
+  const { page } = await ctx.params
+  return cachedXmlResponse(`company-page:${page}`, () => buildCompanyPage(ctx))
 }

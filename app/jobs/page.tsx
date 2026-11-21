@@ -700,7 +700,13 @@ export default async function JobsIndexPage({
           ) : (
             <>
               <SponsorStrip slots={sponsors} />
-              <InfiniteJobsList initialJobs={dedupedJobs.map(toPublicJob)} initialPage={page} totalPages={totalPages} />
+              <InfiniteJobsList
+                initialJobs={dedupedJobs.map(toPublicJob)}
+                initialPage={page}
+                totalPages={totalPages}
+                live={sort === 'recent' && page === 1}
+                serverNow={new Date().toISOString()}
+              />
               {/* Server-rendered pagination links so Google can crawl pages beyond 1; the client list above
                   appends pages for people. */}
               <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} numbered />
