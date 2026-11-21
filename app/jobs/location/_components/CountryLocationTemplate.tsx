@@ -29,6 +29,7 @@ import { JobsToolbar } from '../../_components/JobsToolbar'
 import { ActiveFilters } from '../../_components/ActiveFilters'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
+import { loadWorkTypeAndRegionCounts } from '@/lib/jobs/listingFacets'
 import { ListingSalaryAside } from '@/components/listing/ListingSalaryAside'
 import { RelatedSearches } from '@/components/listing/RelatedSearches'
 import { loadRelatedSearches, relatedInput } from '@/lib/jobs/relatedSearches'
@@ -387,7 +388,7 @@ export async function CountryLocationTemplate({
     pageSize: 1,
   }
 
-  const [roleRows, remoteCount, hybridCount, onsiteCount] = await memoAsync(stableKey('country-facets', countryCode, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
+  const [roleRows, facetCounts] = await memoAsync(stableKey('country-facets', countryCode, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
     (prisma.job.groupBy as any)({
       by: ['roleSlug'],
       where: {
@@ -397,15 +398,7 @@ export async function CountryLocationTemplate({
       _count: { _all: true },
       orderBy: { _count: { roleSlug: 'desc' } } as any,
     }),
-    prisma.job.count({
-      where: buildWhere({ ...baseFacetInput, remoteMode: 'remote' }),
-    }),
-    prisma.job.count({
-      where: buildWhere({ ...baseFacetInput, remoteMode: 'hybrid' }),
-    }),
-    prisma.job.count({
-      where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
-    }),
+    loadWorkTypeAndRegionCounts(baseFacetInput, []),
   ]))
 
   const levelSize = await memoAsync(stableKey('country-level-size', countryCode, baseFacetInput), DEFAULT_TTL_MS, () =>
@@ -415,11 +408,7 @@ export async function CountryLocationTemplate({
   const facets: JobsFacets = {
     roles: roleFacetsFromRows(roleRows),
     countries: [],
-    workTypes: {
-      remote: remoteCount,
-      hybrid: hybridCount,
-      onsite: onsiteCount,
-    },
+    workTypes: facetCounts.workTypes,
     ...levelSize,
   }
 

@@ -18,6 +18,7 @@ import { buildLogoUrl } from '@/lib/companies/logo'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { salaryFilterAmount, salaryFilterCurrency } from '@/lib/jobs/salaryFilter'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
+import { loadWorkTypeAndRegionCounts } from '@/lib/jobs/listingFacets'
 import { toPublicJob } from '@/lib/jobs/publicJob'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
@@ -308,7 +309,7 @@ export async function RoleTemplate({
     pageSize: 1,
   }
 
-  const [countryRows, remoteCount, hybridCount, onsiteCount, regionCounts] = await memoAsync(stableKey('role-facets', roleSlug, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
+  const [countryRows, facetCounts] = await memoAsync(stableKey('role-facets', roleSlug, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
     (prisma.job.groupBy as any)({
       by: ['countryCode'],
       where: {
@@ -319,18 +320,7 @@ export async function RoleTemplate({
       orderBy: { _count: { countryCode: 'desc' } } as any,
       take: 40,
     }),
-    prisma.job.count({
-      where: buildWhere({ ...baseFacetInput, remoteMode: 'remote' }),
-    }),
-    prisma.job.count({
-      where: buildWhere({ ...baseFacetInput, remoteMode: 'hybrid' }),
-    }),
-    prisma.job.count({
-      where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
-    }),
-    Promise.all(
-      LISTING_REMOTE_REGIONS.map((r) => prisma.job.count({ where: buildWhere({ ...baseFacetInput, remoteRegion: r.slug }) })),
-    ),
+    loadWorkTypeAndRegionCounts(baseFacetInput, LISTING_REMOTE_REGIONS),
   ]))
 
   const levelSize = await memoAsync(stableKey('role-level-size', roleSlug, baseFacetInput), DEFAULT_TTL_MS, () =>
@@ -345,8 +335,8 @@ export async function RoleTemplate({
         count: Number((r as any)._count?._all ?? 0),
       }))
       .filter((r: any) => r.value),
-    workTypes: { remote: remoteCount, hybrid: hybridCount, onsite: onsiteCount },
-    remoteRegions: LISTING_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
+    workTypes: facetCounts.workTypes,
+    remoteRegions: LISTING_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: facetCounts.regions[i] ?? 0 })),
     ...levelSize,
   }
 

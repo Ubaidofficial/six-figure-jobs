@@ -23,6 +23,7 @@ import { dropEmptyRoleBandLinks } from '../../lib/jobs/bandLinks'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { parseJobsListing } from '@/lib/jobs/jobsListQuery'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
+import { loadWorkTypeAndRegionCounts } from '@/lib/jobs/listingFacets'
 import { SponsorStrip } from '@/components/sponsors/SponsorStrip'
 import { loadSponsorSlots } from '@/lib/sponsors/slots'
 import { displayKeyword } from '@/lib/search/displayKeyword'
@@ -374,7 +375,7 @@ export default async function JobsIndexPage({
     pageSize: 1,
   }
 
-    const [roleRows, countryRows, remoteCount, hybridCount, onsiteCount, regionCounts] =
+    const [roleRows, countryRows, facetCounts] =
       await memoAsync(stableKey('jobs-hub-facets', { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
         prisma.job.groupBy({
           by: ['roleSlug'],
@@ -395,20 +396,7 @@ export default async function JobsIndexPage({
           orderBy: { _count: { countryCode: 'desc' } },
           take: 40,
         }),
-        prisma.job.count({
-          where: buildWhere({ ...baseFacetInput, remoteMode: 'remote' }),
-        }),
-        prisma.job.count({
-          where: buildWhere({ ...baseFacetInput, remoteMode: 'hybrid' }),
-        }),
-        prisma.job.count({
-          where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
-        }),
-        Promise.all(
-          JOBS_REMOTE_REGIONS.map((r) =>
-            prisma.job.count({ where: buildWhere({ ...baseFacetInput, remoteRegion: r.slug }) }),
-          ),
-        ),
+        loadWorkTypeAndRegionCounts(baseFacetInput, JOBS_REMOTE_REGIONS),
       ]))
 
   const vocabulary = await getSearchVocabulary().catch(() => null)
@@ -424,14 +412,10 @@ export default async function JobsIndexPage({
         count: Number((r as any)._count?._all ?? 0),
       }))
       .filter((r) => r.value),
-    workTypes: {
-      remote: remoteCount,
-      hybrid: hybridCount,
-      onsite: onsiteCount,
-    },
+    workTypes: facetCounts.workTypes,
     techs: vocabulary?.topSkills.map((t) => ({ value: t.term, count: t.count })),
     visaFilter: true,
-    remoteRegions: JOBS_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
+    remoteRegions: JOBS_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: facetCounts.regions[i] ?? 0 })),
     ...levelSize,
   }
 
