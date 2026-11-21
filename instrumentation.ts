@@ -2,11 +2,18 @@
 // Runs once when the server starts. In production:
 //  - warms the busiest pages a few seconds after start, then keeps every hub page in the sitemaps warm with a slow pass
 //    every 45 minutes (lib/runtime/warmPages.ts); WARM_ON_START=0 turns both off;
+//  - logs a `[stall]` line when the event loop was blocked for 500 ms or more (lib/runtime/stallWatch.ts); STALL_LOG_MS
+//    sets the milliseconds, STALL_WATCH=0 turns it off;
 //  - saves freehire's newest jobs every 5 minutes (lib/scrapers/freehireRecent.ts), first 2 minutes after start;
 //    FREEHIRE_RECENT_EVERY_MIN sets the minutes, 0 turns it off.
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
   if (process.env.NODE_ENV !== 'production') return
+
+  if (process.env.STALL_WATCH !== '0') {
+    const { startStallWatch } = await import('./lib/runtime/stallWatch')
+    startStallWatch({ thresholdMs: Number(process.env.STALL_LOG_MS) || undefined })
+  }
 
   const { freehireRecentEveryMs, runFreehireRecent } = await import('./lib/scrapers/freehireRecent')
   const everyMs = freehireRecentEveryMs()

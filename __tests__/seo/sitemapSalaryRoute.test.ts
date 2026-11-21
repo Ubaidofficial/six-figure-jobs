@@ -1,3 +1,4 @@
+import { __clearMemoForTests } from '../../lib/cache/memo'
 import { GET } from '../../app/sitemap-salary.xml/route'
 import { prisma } from '../../lib/prisma'
 
@@ -12,6 +13,9 @@ jest.mock('../../lib/prisma', () => ({
 
 const countMock = prisma.job.count as jest.MockedFunction<typeof prisma.job.count>
 const aggregateMock = prisma.job.aggregate as jest.MockedFunction<typeof prisma.job.aggregate>
+
+// The routes keep a good answer for 10 minutes (lib/seo/cachedSitemap.ts); each test here sets its own data.
+beforeEach(() => __clearMemoForTests())
 
 describe('sitemap-salary.xml route', () => {
   beforeEach(() => {

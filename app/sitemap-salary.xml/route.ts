@@ -3,6 +3,7 @@ import { buildWhere } from '../../lib/jobs/queryJobs'
 import { buildSliceCanonicalPath } from '../../lib/seo/canonical'
 import { SALARY_TIERS, type SalaryTierId } from '../../lib/jobs/salaryTiers'
 import { isSalaryTierPageIndexable } from '../../lib/seo/indexabilityGates'
+import { cachedXmlResponse } from '../../lib/seo/cachedSitemap'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { sitemapDate } from '../../lib/seo/lastmod'
 import { getSiteUrl } from '../../lib/seo/site'
@@ -17,7 +18,7 @@ type SalarySitemapUrl = {
   lastModified: string | null
 }
 
-export async function GET() {
+async function buildSalarySitemap(): Promise<Response> {
   try {
     const urls = (
       await Promise.all(
@@ -70,4 +71,8 @@ ${urls.map(u => `  <url>
   } catch (error) {
     return buildFallbackUrlsetResponse('sitemap-salary', [], error)
   }
+}
+
+export async function GET() {
+  return cachedXmlResponse('sitemap-salary', buildSalarySitemap)
 }

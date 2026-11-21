@@ -1,6 +1,7 @@
 // app/sitemap-company.xml/route.ts
 // Sitemap index for /company/[slug] pages (sharded)
 
+import { cachedXmlResponse } from '../../lib/seo/cachedSitemap'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
 import { getPublishedCompanyCandidateCount } from '../../lib/seo/companyPublishing'
@@ -34,7 +35,7 @@ function escapeXml(s: string) {
     .replace(/'/g, '&apos;')
 }
 
-export async function GET() {
+async function buildCompanyIndex(): Promise<Response> {
   try {
     const [total, lastmod] = await Promise.all([
       getPublishedCompanyCandidateCount(),
@@ -68,4 +69,8 @@ ${entries.join('\n')}
   } catch (error) {
     return buildFallbackUrlsetResponse('sitemap-company', [], error)
   }
+}
+
+export async function GET() {
+  return cachedXmlResponse('sitemap-company', buildCompanyIndex)
 }

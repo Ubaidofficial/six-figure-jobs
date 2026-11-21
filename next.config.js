@@ -97,6 +97,12 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // Old country shortcuts (they were pages that issued a temporary 307): one permanent hop to the country page. Done here so
+      // the path is answered without rendering a page, which stalled for 10 s on production on 2026-11-20.
+      { source: '/jobs/usa', destination: '/jobs/location/united-states', permanent: true },
+      { source: '/jobs/uk', destination: '/jobs/location/united-kingdom', permanent: true },
+      { source: '/jobs/canada', destination: '/jobs/location/canada', permanent: true },
+      { source: '/jobs/germany', destination: '/jobs/location/germany', permanent: true },
       // 2-segment: bare country slug + salary band → location page
       {
         source: `/jobs/:country${countrySlugPattern}/:band${salaryBandPattern}`,
