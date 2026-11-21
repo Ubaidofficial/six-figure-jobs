@@ -10,6 +10,7 @@ import { SITE_NAME } from '@/lib/seo/site'
 import { isCanonicalSlug, isTier1Role } from '@/lib/roles/canonicalSlugs'
 import { findBestMatchingRole } from '@/lib/roles/slugMatcher'
 import { isPhaseIndexable } from '@/lib/seo/indexingPhase'
+import { loadRoleFacets } from '@/lib/jobs/roleFacetCube'
 import { isPseoRoleUnlocked } from '@/lib/seo/pseoUnlock'
 
 import { RoleTemplate, buildRoleMetadata } from '../_components/RoleTemplate'
@@ -84,17 +85,21 @@ export async function generateMetadata({
     async () => {
       const where = buildWhere({ roleSlugs: [role], page: 1, pageSize: 1 })
       // Same role-wide numbers on every request: cached like the page's own facets (pages render per request).
-      const [total, avgAgg] = await memoAsync(stableKey('role-meta', role), DEFAULT_TTL_MS, () => Promise.all([
-        prisma.job.count({ where }),
-        prisma.job.aggregate({
-          where: {
-            ...where,
-            currency: 'USD',
-            OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
-          },
-          _avg: { maxAnnual: true, minAnnual: true },
-        }),
-      ]))
+      // The role-wide numbers come from the shared grouped counts of every role when they can be built (lib/jobs/roleFacetCube.ts).
+      const cubeFacets = await loadRoleFacets(role)
+      const [total, avgAgg] = cubeFacets
+        ? ([cubeFacets.total, cubeFacets.avgUsd] as const)
+        : await memoAsync(stableKey('role-meta', role), DEFAULT_TTL_MS, () => Promise.all([
+            prisma.job.count({ where }),
+            prisma.job.aggregate({
+              where: {
+                ...where,
+                currency: 'USD',
+                OR: [{ maxAnnual: { not: null } }, { minAnnual: { not: null } }],
+              },
+              _avg: { maxAnnual: true, minAnnual: true },
+            }),
+          ]))
 
       // Phase-aware gate: even tier-1 roles with enough jobs stay noindex until
       // the indexing rollout phase has unlocked /jobs/<role> pages.
