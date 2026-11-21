@@ -2,8 +2,6 @@ import { __clearMemoForTests } from '../../lib/cache/memo'
 import { getCompanyPublishingManifest } from '../../lib/seo/companyPublishing'
 import { prisma } from '../../lib/prisma'
 
-// The Next data cache is not available in jest; a passthrough stands in so only the in-process cache is under test.
-jest.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }))
 jest.mock('../../lib/prisma', () => ({ prisma: { job: { findMany: jest.fn() }, company: { findMany: jest.fn() } } }))
 
 const jobs = prisma.job.findMany as unknown as jest.Mock
