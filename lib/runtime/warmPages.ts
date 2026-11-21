@@ -67,6 +67,14 @@ export async function warmPages(
  */
 export const REWARM_EVERY_MS = 45 * 60 * 1000
 
+/**
+ * How long after the server starts the long pass over every hub page waits. Only the few busiest pages (WARM_PATHS) are requested
+ * at start. After the 2026-11-21 deploy pages took 20-50 s for about 15 minutes and /sitemap.xml gave a 504; the long pass
+ * (about 200 cold pages, one after another) ran in exactly that time, and so may have competed with visitors and crawlers.
+ * Whether it did is not known: the `[warm:...] begin` lines can be compared with `[stall]` lines (lib/runtime/stallWatch.ts).
+ */
+export const HUBS_WARM_DELAY_MS = 5 * 60 * 1000
+
 /** Pause between re-warm requests, so their background refreshes do not all hit the database at once. */
 export const REWARM_GAP_MS = 2000
 
