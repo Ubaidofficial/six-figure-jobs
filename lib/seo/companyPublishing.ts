@@ -1,5 +1,3 @@
-import { unstable_cache } from 'next/cache'
-
 import { memoAsync } from '@/lib/cache/memo'
 import { prisma } from '@/lib/prisma'
 import { buildWhere } from '@/lib/jobs/queryJobs'
@@ -414,42 +412,22 @@ async function buildCompanyPublishingManifestData(
   }
 }
 
-// `unstable_cache` requires Next.js's incremental cache context. In jest /
-// plain-Node environments (CI's SEO Gates tests) that context is missing and
-// the helper throws `Invariant: incrementalCache missing`. Wrap in a
-// try/catch so the route stays callable from tests — the live runtime still
-// benefits from the cache; tests just fall back to a fresh build per call.
-const cachedManifest = unstable_cache(
-  async () => buildCompanyPublishingManifestData(new Date(), { throwOnError: true }),
-  ['company-pseo-manifest-v1'],
-  { revalidate: 3600, tags: ['company-pseo', 'sitemap'] },
-)
-
-async function loadManifest(): Promise<CompanyPublishingManifest> {
-  try {
-    return await cachedManifest()
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    if (msg.includes('incrementalCache missing')) {
-      return buildCompanyPublishingManifestData(new Date(), { throwOnError: true })
-    }
-    throw err
-  }
-}
-
-// The build reads every live job. /companies and /sitemap-company/<n> (both rendered per request) took 8-12 s on every
-// request in production (2026-11-21) although the answer is meant to be cached for an hour; the Next data cache refuses
-// items over 2 MB, which a manifest of every company may be (not confirmed: no production log is readable). So the answer
-// is also kept in this process (lib/cache/memo.ts: 10 minutes, then served stale while it refreshes, one build shared by
-// concurrent requests). The unlock schedule inside it moves by whole batches of days, so a 10-minute-old answer changes
-// nothing visible. A FAILED build is kept by neither cache (the loader throws, so neither stores it) and callers still get
-// an empty manifest for that one request, as before: before this, a database error during the build was turned into an
-// empty manifest inside the build and the one-hour cache kept it, so for up to an hour no company counted as published.
+// The manifest is built from every live job and is about 2.5 MB as JSON (2,513,841 bytes in the production log of 2026-11-21).
+// It used to be wrapped in `unstable_cache` (one hour), but the Next data cache refuses items over 2 MB ("Failed to set
+// Next.js data cache ... items over 2MB can not be cached"), so that cache never kept it: /companies and /sitemap-company/<n>
+// took 8-44 s on every request and each failed store logged an error. The answer is kept in this process instead
+// (lib/cache/memo.ts: 10 minutes, then served stale while it refreshes, one build shared by concurrent requests). The unlock
+// schedule inside it moves by whole batches of days, so a 10-minute-old answer changes nothing visible. A FAILED build is
+// kept by no cache (the loader throws, so the memo stores nothing) and callers still get an empty manifest for that one
+// request: before, a database error during the build was turned into an empty manifest and the one-hour cache kept it, so for
+// up to an hour no company counted as published. If the manifest outgrows memory, slim its fields before caching it elsewhere.
 const MANIFEST_MEMO_TTL_MS = 10 * 60 * 1000
 
 export async function getCompanyPublishingManifest(): Promise<CompanyPublishingManifest> {
   try {
-    return await memoAsync('company-pseo-manifest', MANIFEST_MEMO_TTL_MS, loadManifest)
+    return await memoAsync('company-pseo-manifest', MANIFEST_MEMO_TTL_MS, () =>
+      buildCompanyPublishingManifestData(new Date(), { throwOnError: true }),
+    )
   } catch (err) {
     console.error('[companyPublishing] manifest build failed, returning empty:', err)
     return buildEmptyManifest(new Date())
