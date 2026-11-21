@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 
+import { memoAsync } from '@/lib/cache/memo'
 import { prisma } from '@/lib/prisma'
 import { buildWhere } from '@/lib/jobs/queryJobs'
 import {
@@ -242,7 +243,10 @@ function buildEmptyManifest(now: Date): CompanyPublishingManifest {
   }
 }
 
-async function buildCompanyPublishingManifestData(now = new Date()): Promise<CompanyPublishingManifest> {
+async function buildCompanyPublishingManifestData(
+  now = new Date(),
+  opts: { throwOnError?: boolean } = {},
+): Promise<CompanyPublishingManifest> {
   // Defensive: in test environments where this function gets called without
   // a real Prisma client (e.g. mocked modules that didn't replace the
   // companyPublishing surface cleanly), return an empty manifest rather
@@ -276,6 +280,8 @@ async function buildCompanyPublishingManifestData(now = new Date()): Promise<Com
       },
     })) as CandidateJob[]
   } catch (err) {
+    // A cache must not keep this: an empty manifest unlocks no company, so company pages turn noindex and the sitemap loses them.
+    if (opts.throwOnError) throw err
     console.error('[companyPublishing] manifest build failed, returning empty:', err)
     return buildEmptyManifest(now)
   }
@@ -414,20 +420,39 @@ async function buildCompanyPublishingManifestData(now = new Date()): Promise<Com
 // try/catch so the route stays callable from tests — the live runtime still
 // benefits from the cache; tests just fall back to a fresh build per call.
 const cachedManifest = unstable_cache(
-  async () => buildCompanyPublishingManifestData(new Date()),
+  async () => buildCompanyPublishingManifestData(new Date(), { throwOnError: true }),
   ['company-pseo-manifest-v1'],
   { revalidate: 3600, tags: ['company-pseo', 'sitemap'] },
 )
 
-export async function getCompanyPublishingManifest(): Promise<CompanyPublishingManifest> {
+async function loadManifest(): Promise<CompanyPublishingManifest> {
   try {
     return await cachedManifest()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     if (msg.includes('incrementalCache missing')) {
-      return buildCompanyPublishingManifestData(new Date())
+      return buildCompanyPublishingManifestData(new Date(), { throwOnError: true })
     }
     throw err
+  }
+}
+
+// The build reads every live job. /companies and /sitemap-company/<n> (both rendered per request) took 8-12 s on every
+// request in production (2026-11-21) although the answer is meant to be cached for an hour; the Next data cache refuses
+// items over 2 MB, which a manifest of every company may be (not confirmed: no production log is readable). So the answer
+// is also kept in this process (lib/cache/memo.ts: 10 minutes, then served stale while it refreshes, one build shared by
+// concurrent requests). The unlock schedule inside it moves by whole batches of days, so a 10-minute-old answer changes
+// nothing visible. A FAILED build is kept by neither cache (the loader throws, so neither stores it) and callers still get
+// an empty manifest for that one request, as before: before this, a database error during the build was turned into an
+// empty manifest inside the build and the one-hour cache kept it, so for up to an hour no company counted as published.
+const MANIFEST_MEMO_TTL_MS = 10 * 60 * 1000
+
+export async function getCompanyPublishingManifest(): Promise<CompanyPublishingManifest> {
+  try {
+    return await memoAsync('company-pseo-manifest', MANIFEST_MEMO_TTL_MS, loadManifest)
+  } catch (err) {
+    console.error('[companyPublishing] manifest build failed, returning empty:', err)
+    return buildEmptyManifest(new Date())
   }
 }
 
