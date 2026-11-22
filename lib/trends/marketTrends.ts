@@ -13,9 +13,10 @@ import { prisma } from '../prisma'
 import { getPublicJobWhere } from '../jobs/publicStats'
 import { AGGREGATOR_PATTERNS } from '../research/method'
 import { JOB_CATEGORY_MAP } from '../seo/jobCategories'
+import { TITLE_AREAS, TITLE_AREA_LABELS, areaOfTitle, type TitleArea } from './titleArea'
 
-/** The areas shown: disjoint groups of JOB_CATEGORY_MAP (its "devops" and "ML / AI" overlap engineering and data). */
-export const TREND_AREAS = ['engineering', 'product', 'data', 'design', 'sales', 'marketing'] as const
+/** The category groups that have a page (/jobs/category/<slug>): disjoint ones of JOB_CATEGORY_MAP (its "devops" and "ML / AI" overlap engineering and data). */
+export const CATEGORY_AREAS = ['engineering', 'product', 'data', 'design', 'sales', 'marketing'] as const satisfies readonly TitleArea[]
 
 export const TOP_COUNTRIES = 8
 export const TOP_COMPANIES = 10
@@ -35,6 +36,7 @@ export const MIN_DEMAND_ROLES = 3
 export type TrendJobRow = {
   companyId: string | null
   roleSlug: string | null
+  title?: string | null
   remote: boolean | null
   remoteMode: string | null
   countryCode: string | null
@@ -68,8 +70,14 @@ export type MarketTrends = {
   companies: CompanyTrend[]
 }
 
-const AREA_OF_ROLE = new Map<string, string>()
-for (const slug of TREND_AREAS) for (const role of JOB_CATEGORY_MAP[slug].roleSlugs) if (!AREA_OF_ROLE.has(role)) AREA_OF_ROLE.set(role, slug)
+const AREA_OF_ROLE = new Map<string, TitleArea>()
+for (const slug of CATEGORY_AREAS) for (const role of JOB_CATEGORY_MAP[slug].roleSlugs) if (!AREA_OF_ROLE.has(role)) AREA_OF_ROLE.set(role, slug)
+
+/**
+ * A job's area: the role we stored for it when that is one of the category groups (so an area is never smaller than its category
+ * page), else the area its title reads as (lib/trends/titleArea.ts), else none. Most jobs are stored with the role `other`.
+ */
+export const areaOfJob = (job: Pick<TrendJobRow, 'roleSlug' | 'title'>): TitleArea | null => AREA_OF_ROLE.get(job.roleSlug ?? '') ?? areaOfTitle(job.title)
 
 type Acc = { open: number; remote: number; newThisWeek: number; newPreviousWeek: number; usd: number[] }
 const acc = (): Acc => ({ open: 0, remote: 0, newThisWeek: 0, newPreviousWeek: 0, usd: [] })
@@ -90,14 +98,14 @@ export function buildMarketTrends(rows: readonly TrendJobRow[], now: Date = new 
   const newness = newnessOf(rows, now)
   const overall = acc()
   const other = acc()
-  const byArea = new Map<string, Acc>(TREND_AREAS.map((slug) => [slug, acc()]))
+  const byArea = new Map<string, Acc>(TITLE_AREAS.map((slug) => [slug, acc()]))
   const byCountry = new Map<string, { open: number; remote: number }>()
   const byCompany = new Map<string, { open: number; newThisWeek: number }>()
 
   rows.forEach((row, i) => {
     const isRemote = row.remote === true || row.remoteMode === 'remote'
     const pay = annualMidpoint(row)
-    const area = byArea.get(AREA_OF_ROLE.get(row.roleSlug ?? '') ?? '') ?? other
+    const area = byArea.get(areaOfJob(row) ?? '') ?? other
 
     for (const a of [overall, area]) {
       a.open += 1
@@ -127,7 +135,8 @@ export function buildMarketTrends(rows: readonly TrendJobRow[], now: Date = new 
 
   return {
     overall: cell(overall),
-    areas: TREND_AREAS.map((slug) => ({ slug, label: JOB_CATEGORY_MAP[slug].label, ...cell(byArea.get(slug)!) })),
+    // Most jobs first; areas with the same count keep their order in TITLE_AREAS (the sort is stable).
+    areas: TITLE_AREAS.map((slug) => ({ slug, label: TITLE_AREA_LABELS[slug], ...cell(byArea.get(slug)!) })).sort((a, b) => b.open - a.open),
     other: cell(other),
     countries: top(byCountry, TOP_COUNTRIES).map(([code, v]) => ({ code, ...v })),
     // The first COMPANY_CANDIDATES; the loader takes job boards out and keeps TOP_COMPANIES.
@@ -148,6 +157,7 @@ export function loadMarketTrends(): Promise<TrendsData> {
       select: {
         companyId: true,
         roleSlug: true,
+        title: true,
         remote: true,
         remoteMode: true,
         countryCode: true,
