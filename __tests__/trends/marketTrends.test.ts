@@ -1,4 +1,12 @@
-import { MIN_DEMAND_CLICKS, TOP_COMPANIES, TOP_COUNTRIES, buildMarketTrends, demandRoles, type TrendJobRow } from '../../lib/trends/marketTrends'
+import {
+  COMPANY_CANDIDATES,
+  MIN_DEMAND_CLICKS,
+  TOP_COUNTRIES,
+  buildMarketTrends,
+  demandRoles,
+  isAggregatorName,
+  type TrendJobRow,
+} from '../../lib/trends/marketTrends'
 
 const NOW = new Date('2026-11-22T12:00:00Z')
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 86_400_000)
@@ -82,7 +90,9 @@ describe('buildMarketTrends', () => {
     expect(t.countries).toHaveLength(TOP_COUNTRIES)
     expect(t.countries[0]).toMatchObject({ code: `C${String(TOP_COUNTRIES + 2).padStart(2, '0')}`, open: TOP_COUNTRIES + 3 })
     expect(t.countries.map((c) => c.open)).toEqual([...t.countries.map((c) => c.open)].sort((a, b) => b - a))
-    expect(t.companies.length).toBeLessThanOrEqual(TOP_COMPANIES)
+    // the loader takes job boards out of these candidates, then keeps the top few (TOP_COMPANIES)
+    expect(t.companies.length).toBeLessThanOrEqual(COMPANY_CANDIDATES)
+    expect(t.companies[0].open).toBeGreaterThanOrEqual(t.companies[t.companies.length - 1].open)
     expect(buildMarketTrends([job({ countryCode: 'B' }), job({ countryCode: 'A' })], NOW).countries.map((c) => c.code)).toEqual(['A', 'B'])
   })
 
@@ -97,6 +107,20 @@ describe('buildMarketTrends', () => {
     expect(t.overall).toMatchObject({ open: 0, remote: 0, newThisWeek: 0, medianUsd: null })
     expect(t.countries).toEqual([])
     expect(t.companies).toEqual([])
+  })
+})
+
+describe('isAggregatorName', () => {
+  it('matches the pay report\'s job boards by name, as its ILIKE patterns do (prefix, any case)', () => {
+    for (const name of ['Jobgether', 'jobgether', '  Jobgether  ', 'Jobgether Inc', 'Jooble', 'Adzuna UK', 'Talent.com', 'ZipRecruiter', 'Remote Rocketship', 'RemoteRocketship']) {
+      expect(isAggregatorName(name)).toBe(true)
+    }
+  })
+
+  it('leaves employers alone, including names that only contain a board\'s name or differ at the dot', () => {
+    for (const name of ['Anthropic', 'Capital One', 'Not Jobgether', 'Talentxcom', 'Zlensa Labs', '']) {
+      expect(isAggregatorName(name)).toBe(false)
+    }
   })
 })
 

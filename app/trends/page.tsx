@@ -155,9 +155,13 @@ export default async function TrendsPage() {
             columns={areaColumns}
             rows={[
               ...areas.filter((a) => a.open > 0).map((a) => ({ key: a.slug, label: link(`/jobs/category/${a.slug}`, a.label), cells: cells(a) })),
-              { key: 'other', label: 'All other roles', cells: cells(other) },
+              { key: 'other', label: 'Other roles', cells: cells(other) },
             ]}
           />
+          <p className="mt-2 text-xs text-muted-foreground">
+            These six groups cover {share(overall.open - other.open, overall.open)} of the open jobs. The rest have a role we do not place in one of them, so
+            read the table as these groups, not the whole market.
+          </p>
         </ListingSection>
 
         {weeks.length >= 2 ? (
@@ -193,7 +197,7 @@ export default async function TrendsPage() {
         {companies.length > 0 ? (
           <ListingSection title="Hiring the most">
             <TrendTable
-              caption="Employers with the most open six-figure jobs"
+              caption="Employers with the most open six-figure jobs, leaving out job boards that list other employers' jobs"
               first="Company"
               columns={[{ head: 'Open jobs' }, { head: 'New this week' }]}
               rows={companies.map((c) => ({ key: c.companyId, label: c.slug ? link(`/company/${c.slug}`, c.name) : c.name, cells: [n(c.open), n(c.newThisWeek)] }))}
@@ -231,7 +235,8 @@ export default async function TrendsPage() {
                 the same rule as the company pages.
               </li>
               <li>
-                <strong>Areas</strong> group role titles ({areas.map((a) => a.label).join(', ')}); everything else is under &quot;All other roles&quot;.
+                <strong>Areas</strong> group jobs by the role we stored for them, the same groups as the category pages ({areas.map((a) => a.label).join(', ')}); a job
+                whose role is not in one of them is under &quot;Other roles&quot;.
               </li>
               <li>
                 <strong>Pay, week by week</strong> comes from a weekly snapshot with its own rules (validated pay, job boards that list other employers&apos; jobs
