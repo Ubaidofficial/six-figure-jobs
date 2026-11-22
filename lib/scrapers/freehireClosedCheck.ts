@@ -36,11 +36,22 @@ export const MAX_CLOSE_FRACTION = 0.4
 /**
  * Most jobs looked up per run, least recently confirmed first. Until 2026-11-22 the key had a daily quota of 10,000
  * requests shared with the syncs (2026-11-11: checking every active job used it up, 4,985 errors), so runs checked
- * 2,000 (full) and 1,000 (light). The owner's plan of 2026-11-22 has no daily cap, only 300 requests a minute: the
- * check ran at about 290 a minute (1,000 in 205 s, 2026-11-22), so 4,500 take about 16 minutes, and the four or so runs
- * a day look at about 18,000 jobs, every active job (16,433 that day) about once a day.
+ * 2,000 (full) and 1,000 (light). The owner's API plan (2026-11-22) has no daily cap and allows 1,200 requests a minute
+ * (`limit=1200` in the sync log of 2026-11-22 20:01 UTC). At DEFAULT_REQUEST_GAP_MS the check runs at about 1,111 a
+ * minute, so 10,000 take about 9 minutes, and the four or so runs a day look at every active job (16,433 that day)
+ * about twice a day.
  */
-export const MAX_LOOKUPS_PER_RUN = 4500
+export const MAX_LOOKUPS_PER_RUN = 10_000
+
+/**
+ * One request starts every DEFAULT_REQUEST_GAP_MS across all workers together (owner's request, 2026-11-22: "1100+ a
+ * minute"): 60,000 / 54 = 1,111 a minute however fast or slow freehire answers, under the plan's 1,200, which the whole
+ * account shares with the site's 5-minute live feed (about 10 requests every 5 minutes). The workers only absorb slow
+ * answers: a lookup took about 0.27 s on 2026-11-22, so about 5 are in flight, and 16 keep the pace up to about 0.85 s an
+ * answer. These requests carry no `offset`, so freehire's per-IP 2-a-second offset limit does not apply.
+ */
+export const DEFAULT_CONCURRENCY = 16
+export const DEFAULT_REQUEST_GAP_MS = 54
 
 /** `quota`: freehire refused with a long Retry-After, i.e. the key's daily quota is used up; no lookup will work now. */
 export type Lookup =
@@ -128,8 +139,8 @@ export type ActiveJob = {
 export type ClosedCheckOptions = {
   dryRun?: boolean
   concurrency?: number
-  /** Minimum gap between requests per worker, to stay under freehire's rate limit. */
-  paceMs?: number
+  /** Minimum gap between the starts of any two requests (all workers together), to stay under freehire's rate limit. */
+  requestGapMs?: number
   maxErrorFraction?: number
   maxCloseFraction?: number
   /** Total time the check may take. When exceeded it stops and expires NOTHING (status `skipped`). */
@@ -191,23 +202,30 @@ async function applyRefreshToDatabase({ keepAliveIds, descriptions }: { keepAliv
   }
 }
 
+/** Runs `work` over `items` with `concurrency` workers; the workers share one pacer, so starts are `gapMs` apart. */
 async function pool<T>(
   items: T[],
   concurrency: number,
-  paceMs: number,
+  gapMs: number,
   work: (item: T) => Promise<void>,
   opts: { stop?: () => boolean; onProgress?: (done: number, total: number) => void } = {},
 ) {
   let next = 0
   let done = 0
+  let nextStart = Date.now()
   await Promise.all(
     Array.from({ length: Math.min(concurrency, items.length) }, async () => {
       while (next < items.length && !opts.stop?.()) {
         const item = items[next++]
+        if (gapMs) {
+          const now = Date.now()
+          const wait = nextStart - now
+          nextStart = Math.max(now, nextStart) + gapMs
+          if (wait > 0) await sleep(wait)
+        }
         await work(item)
         done++
         if (opts.onProgress && done % 250 === 0) opts.onProgress(done, items.length)
-        if (paceMs) await sleep(paceMs)
       }
     }),
   )
@@ -230,8 +248,8 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     options.stillListed ??
     (options.resolve ? async (t: string, e: string) => (await resolve(t, e)) !== null : isStillListed)
   const maxLookups = options.maxLookups ?? MAX_LOOKUPS_PER_RUN
-  const concurrency = options.concurrency ?? 3
-  const paceMs = options.paceMs ?? 350
+  const concurrency = options.concurrency ?? DEFAULT_CONCURRENCY
+  const gapMs = options.requestGapMs ?? DEFAULT_REQUEST_GAP_MS
   const started = Date.now()
   const deadline = options.deadlineMs ? started + options.deadlineMs : Number.POSITIVE_INFINITY
   const timedOut = () => Date.now() > deadline
@@ -253,7 +271,7 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
   await pool(
     missing,
     concurrency,
-    paceMs,
+    gapMs,
     async (j) => {
       const slug = await resolve(j.title, j.externalId as string)
       if (!slug) return
@@ -279,7 +297,7 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
   await pool(
     toCheck,
     concurrency,
-    paceMs,
+    gapMs,
     async (j) => {
       const r = await lookup(slugOf.get(j.id) as string)
       if (r.state === 'closed') reportedClosed.push({ ...j, sourceRef: slugOf.get(j.id) ?? null })
@@ -311,7 +329,7 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
   await pool(
     reportedClosed,
     concurrency,
-    paceMs,
+    gapMs,
     async (j) => {
       const listed = await stillListed(j.title, j.externalId as string)
       if (listed === false) closed.push(j)

@@ -73,8 +73,8 @@ jobs:
     # The plan job reads this name back from earlier runs: keep the "sync (<mode>)" form.
     name: sync (${{ needs.plan.outputs.mode || 'manual' }})
     runs-on: ubuntu-latest
-    # 180 since 2026-11-22: the closed check looks up 4,500 jobs (about 16 minutes) and the sync reads 400 description-pay
-    # pages; a full run took up to 129 minutes before that (2026-11-21).
+    # 180 since 2026-11-22: the closed check looks up 10,000 jobs (about 9 minutes) and the sync reads 400 description-pay
+    # pages (the freehire step took 16 minutes, 2026-11-22); a full run took up to 129 minutes before that (2026-11-21).
     timeout-minutes: 180
     permissions:
       contents: read
@@ -121,9 +121,10 @@ jobs:
         timeout-minutes: 30
         run: npm run check-closed:freehire -- --dry-run
 
-      # Every run, light or full, checks 4,500 jobs (MAX_LOOKUPS_PER_RUN), about 16 minutes at freehire's 300 a minute.
-      # Light runs checked 1,000 and full runs 2,000 while the key had a daily quota; it has none since the owner's plan
-      # of 2026-11-22. Least recently checked first, so the runs share the work: every active job about once a day.
+      # Every run, light or full, checks 10,000 jobs (MAX_LOOKUPS_PER_RUN), about 9 minutes at 1,111 a minute (one request
+      # every 54 ms; the plan allows 1,200). Light runs checked 1,000 and full runs 2,000 while the key had a daily quota; it has none
+      # since the owner's plan of 2026-11-22. Least recently checked first, so the runs share the work: every active job
+      # about twice a day.
       - name: Expire jobs freehire has closed
         if: ${{ success() && (github.event_name == 'schedule' || inputs.planned || inputs.closed_apply) }}
         timeout-minutes: 30
