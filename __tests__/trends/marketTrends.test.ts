@@ -44,6 +44,43 @@ describe('buildMarketTrends', () => {
     expect(t.areas.reduce((s, a) => s + a.open, 0) + t.other.open).toBe(t.overall.open)
   })
 
+  it('reads the area from the title when the stored role is "other", and counts every job exactly once', () => {
+    const jobs = [
+      job({ roleSlug: 'other', title: 'Senior Customer Success Manager' }),
+      job({ roleSlug: 'other', title: 'Senior Customer Success Manager' }),
+      job({ roleSlug: 'other', title: 'Director of Compliance' }),
+      job({ roleSlug: 'other', title: 'Primary Care Nurse Practitioner' }),
+      job({ roleSlug: 'other', title: 'Strategic Partner' }), // no rule is sure
+      job({ roleSlug: null, title: null }),
+    ]
+    const t = buildMarketTrends(jobs, NOW)
+    const open = Object.fromEntries(t.areas.map((a) => [a.slug, a.open]))
+    expect(open).toMatchObject({ customer: 2, legal: 1, healthcare: 1 })
+    expect(t.other.open).toBe(2)
+    expect(t.areas.reduce((s, a) => s + a.open, 0) + t.other.open).toBe(t.overall.open)
+  })
+
+  it('lets the stored role decide when it is one of the category groups (so an area is never smaller than its category page)', () => {
+    const t = buildMarketTrends([job({ roleSlug: 'account-executive', title: 'Product Manager' }), job({ roleSlug: 'software-engineer', title: 'Sales Engineer' })], NOW)
+    const open = Object.fromEntries(t.areas.map((a) => [a.slug, a.open]))
+    expect(open).toMatchObject({ sales: 1, engineering: 1, product: 0 })
+  })
+
+  it('lists the areas with the most jobs first, same counts in the fixed order', () => {
+    const t = buildMarketTrends(
+      [
+        job({ roleSlug: 'other', title: 'Senior Accountant' }),
+        job({ roleSlug: 'other', title: 'Nurse Practitioner' }),
+        job({ roleSlug: 'other', title: 'Nurse Practitioner' }),
+        job({ roleSlug: 'other', title: 'Senior Recruiter' }),
+      ],
+      NOW,
+    )
+    const order = t.areas.map((a) => a.slug)
+    expect(order.slice(0, 3)).toEqual(['healthcare', 'finance', 'people']) // 2, then 1 and 1 in the fixed order (finance before people)
+    expect(t.areas.map((a) => a.open)).toEqual([...t.areas.map((a) => a.open)].sort((a, b) => b - a))
+  })
+
   it('does not count an overlapping category twice (ML / data-scientist stays in data only)', () => {
     const t = buildMarketTrends([job({ roleSlug: 'data-scientist' })], NOW)
     expect(t.areas.find((a) => a.slug === 'data')?.open).toBe(1)

@@ -10,7 +10,7 @@ import { unstable_rethrow } from 'next/navigation'
 
 import Link from '@/components/ui/Link'
 import { ListingHeader, ListingPage, ListingSection, Prose } from '@/components/listing/ListingParts'
-import { MIN_DEMAND_CLICKS, loadMarketTrends, loadPayWeeks, loadRoleDemand, type TrendCell } from '@/lib/trends/marketTrends'
+import { CATEGORY_AREAS, MIN_DEMAND_CLICKS, loadMarketTrends, loadPayWeeks, loadRoleDemand, type TrendCell } from '@/lib/trends/marketTrends'
 import { buildRuntimeFallbackMetadata, logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
 import { roleLabelFor } from '@/lib/roles/relatedRoles'
 import { countryCodeToName, countryCodeToSlug } from '@/lib/seo/countrySlug'
@@ -154,13 +154,16 @@ export default async function TrendsPage() {
             first="Area"
             columns={areaColumns}
             rows={[
-              ...areas.filter((a) => a.open > 0).map((a) => ({ key: a.slug, label: link(`/jobs/category/${a.slug}`, a.label), cells: cells(a) })),
+              ...areas
+                .filter((a) => a.open > 0)
+                // Only the groups that have a category page link to it; its list is smaller than the count here (see below).
+                .map((a) => ({ key: a.slug, label: (CATEGORY_AREAS as readonly string[]).includes(a.slug) ? link(`/jobs/category/${a.slug}`, a.label) : a.label, cells: cells(a) })),
               { key: 'other', label: 'Other roles', cells: cells(other) },
             ]}
           />
           <p className="mt-2 text-xs text-muted-foreground">
-            These six groups cover {share(overall.open - other.open, overall.open)} of the open jobs. The rest have a role we do not place in one of them, so
-            read the table as these groups, not the whole market.
+            Jobs are grouped by the words in their title, so {share(overall.open - other.open, overall.open)} of the open jobs are placed. The rest have a title no
+            rule is sure about, and sit under &quot;Other roles&quot;.
           </p>
         </ListingSection>
 
@@ -235,8 +238,10 @@ export default async function TrendsPage() {
                 the same rule as the company pages.
               </li>
               <li>
-                <strong>Areas</strong> group jobs by the role we stored for them, the same groups as the category pages ({areas.map((a) => a.label).join(', ')}); a job
-                whose role is not in one of them is under &quot;Other roles&quot;.
+                <strong>Areas</strong> group jobs by the words in the job title, using a fixed list of rules (a &quot;Sales Engineer&quot; is Sales, a &quot;Data
+                Engineer&quot; is Data &amp; AI, a &quot;Product Designer&quot; is Design). Where the role we stored for a job is one of the category groups, that
+                decides instead, so an area is never smaller than its category page, and can be larger because the category pages read the stored role only. A title no rule
+                is sure about is under &quot;Other roles&quot; rather than guessed.
               </li>
               <li>
                 <strong>Pay, week by week</strong> comes from a weekly snapshot with its own rules (validated pay, job boards that list other employers&apos; jobs
