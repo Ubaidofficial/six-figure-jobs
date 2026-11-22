@@ -34,12 +34,13 @@ const SEARCH_URL = 'https://freehire.me/api/v1/jobs/search'
 export const MAX_ERROR_FRACTION = 0.05
 export const MAX_CLOSE_FRACTION = 0.4
 /**
- * Most jobs looked up per run. Each lookup is one request against the API key's daily quota (10,000 when last seen,
- * 2026-11-05), shared with the syncs. Checking all ~6,000 active jobs every run used the quota up and every later
- * lookup failed (2026-11-11: 4,985 errors, nothing expired). Least recently confirmed first, so every job is still
- * looked at every few days; the 7-day expiry catches anything not confirmed open meanwhile.
+ * Most jobs looked up per run, least recently confirmed first. Until 2026-11-22 the key had a daily quota of 10,000
+ * requests shared with the syncs (2026-11-11: checking every active job used it up, 4,985 errors), so runs checked
+ * 2,000 (full) and 1,000 (light). The owner's plan of 2026-11-22 has no daily cap, only 300 requests a minute: the
+ * check ran at about 290 a minute (1,000 in 205 s, 2026-11-22), so 4,500 take about 16 minutes, and the four or so runs
+ * a day look at about 18,000 jobs, every active job (16,433 that day) about once a day.
  */
-export const MAX_LOOKUPS_PER_RUN = 2000
+export const MAX_LOOKUPS_PER_RUN = 4500
 
 /** `quota`: freehire refused with a long Retry-After, i.e. the key's daily quota is used up; no lookup will work now. */
 export type Lookup =

@@ -24,8 +24,9 @@ export const MAX_LISTED_AGE_DAYS = 30
 // freehire refuses offset + limit > 10000, so one query can reach at most this many newest jobs.
 const MAX_OFFSET = 10_000
 const LOOKBACK_DAYS = Number(process.env.FREEHIRE_LOOKBACK_DAYS) || 30
-// Public limit is 120 requests/minute without a key; stay well under it.
-const PAGE_DELAY_MS = 700
+// freehire allows 300 requests a minute on the key (x-ratelimit-limit, 2026-11-22; no daily cap since the owner's plan of
+// 2026-11-22). One request at a time with this gap stays well under it; a short 429 is waited out anyway.
+const PAGE_DELAY_MS = 350
 // Companies written to the database at once by ingestFreehireJobs. Below the 5-connection Prisma pool the sync scripts
 // get outside production (lib/prisma.ts), so no write waits for a free connection.
 const INGEST_CONCURRENCY = 4
@@ -74,17 +75,21 @@ export const FREEHIRE_MARKETS: ReadonlyArray<FreehireMarket> = [
  * them). Only jobs without freehire pay fields are taken from this pass; mapFreehireJob reads the range with
  * lib/jobs/payEvidence.ts and keeps the sentence.
  *
- * Read in three slices (owner's request, 2026-11-19: use more of the daily request budget for this). freehire adds about
- * 117,000 jobs a day and one query stops at 10,000 rows, so a single worldwide pass saw only the newest 3-5 hours of each
- * window. 78% of the readings are in US dollars (359 of 458 logged, 2026-11-19; then CAD 34, EUR 27, GBP 23, AUD 15), so
- * the US (about 32,000 jobs a day) gets its own 100 pages, about 7 hours; Canada, Australia and the UK (about 13,600 a
- * day) 50 pages, about 9 hours; the rest of the world (about 72,000 a day, mostly the euro readings) 50 pages. The three
- * slices cover every job exactly once (their totals add up to freehire's, measured 2026-11-19).
+ * Read in four slices of 100 pages each, the most one query can reach (freehire refuses offset + limit > 10,000).
+ * freehire adds about 117,000 jobs a day, so a single worldwide pass saw only the newest 3-5 hours of each window. 78%
+ * of the readings are in US dollars (359 of 458 logged, 2026-11-19; then CAD 34, EUR 27, GBP 23, AUD 15). Weekday
+ * volumes (2026-11-19): the US about 32,000 jobs a day (100 pages, about 7 hours); Canada, Australia and the UK about
+ * 13,600 (about 17 hours); the rest of the world about 72,000, split into the EU (about 37% of it) and everything else
+ * (about 63%), roughly 9 and 5 hours each. Until 2026-11-22 the last two slices were one, read for 50 pages (about 1.7
+ * hours of a run's 5.5-hour gap), and CA/AU/UK read 50; raised once freehire's daily cap was gone (owner's plan,
+ * 2026-11-22). The four slices cover every job exactly once (their totals add up to freehire's: 2026-11-19, and the EU
+ * split 2026-11-22: 1,239,552 + 2,144,470 = 3,384,022).
  */
 export const DESCRIPTION_PAY_MARKETS: ReadonlyArray<FreehireMarket> = [
   { currency: 'ANY', geo: { countries: 'us' }, label: 'pay in description (US)', anyPay: true, maxPages: 100 },
-  { currency: 'ANY', geo: { countries: 'ca,au', regions: 'uk' }, label: 'pay in description (CA, AU, UK)', anyPay: true, maxPages: 50 },
-  { currency: 'ANY', geo: { countries_exclude: 'us,ca,au', regions_exclude: 'uk' }, label: 'pay in description (rest)', anyPay: true, maxPages: 50 },
+  { currency: 'ANY', geo: { countries: 'ca,au', regions: 'uk' }, label: 'pay in description (CA, AU, UK)', anyPay: true, maxPages: 100 },
+  { currency: 'ANY', geo: { regions: 'eu', countries_exclude: 'us,ca,au', regions_exclude: 'uk' }, label: 'pay in description (EU)', anyPay: true, maxPages: 100 },
+  { currency: 'ANY', geo: { countries_exclude: 'us,ca,au', regions_exclude: 'uk,eu' }, label: 'pay in description (rest)', anyPay: true, maxPages: 100 },
 ]
 
 export type FreehireJob = {
