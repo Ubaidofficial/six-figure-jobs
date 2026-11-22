@@ -18,6 +18,8 @@ import { buildLogoUrl } from '@/lib/companies/logo'
 import { DEFAULT_TTL_MS, memoAsync, stableKey } from '@/lib/cache/memo'
 import { salaryFilterAmount, salaryFilterCurrency } from '@/lib/jobs/salaryFilter'
 import { loadLevelSizeCounts } from '@/lib/jobs/levelSizeFacets'
+import { loadWorkTypeAndRegionCounts } from '@/lib/jobs/listingFacets'
+import { isPlainRoleInput, loadRoleFacets } from '@/lib/jobs/roleFacetCube'
 import { toPublicJob } from '@/lib/jobs/publicJob'
 import { prisma } from '@/lib/prisma'
 import { buildWhere, queryJobs, type JobQueryInput, type JobWithCompany } from '@/lib/jobs/queryJobs'
@@ -308,7 +310,13 @@ export async function RoleTemplate({
     pageSize: 1,
   }
 
-  const [countryRows, remoteCount, hybridCount, onsiteCount, regionCounts] = await memoAsync(stableKey('role-facets', roleSlug, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
+  // With no filter chosen (the page a crawler fetches) the whole-role numbers come from the shared grouped counts of every role
+  // (lib/jobs/roleFacetCube.ts); null if they cannot be built, or a filter is chosen: then the separate queries below run.
+  const cubeFacets = isPlainRoleInput(queryInput) ? await loadRoleFacets(roleSlug) : null
+
+  const [countryRows, facetCounts] = cubeFacets
+    ? ([cubeFacets.countryRows, { workTypes: cubeFacets.workTypes, regions: cubeFacets.regions }] as const)
+    : await memoAsync(stableKey('role-facets', roleSlug, { ...queryInput, page: undefined }), DEFAULT_TTL_MS, () => Promise.all([
     (prisma.job.groupBy as any)({
       by: ['countryCode'],
       where: {
@@ -319,23 +327,12 @@ export async function RoleTemplate({
       orderBy: { _count: { countryCode: 'desc' } } as any,
       take: 40,
     }),
-    prisma.job.count({
-      where: buildWhere({ ...baseFacetInput, remoteMode: 'remote' }),
-    }),
-    prisma.job.count({
-      where: buildWhere({ ...baseFacetInput, remoteMode: 'hybrid' }),
-    }),
-    prisma.job.count({
-      where: buildWhere({ ...baseFacetInput, remoteMode: 'onsite' }),
-    }),
-    Promise.all(
-      LISTING_REMOTE_REGIONS.map((r) => prisma.job.count({ where: buildWhere({ ...baseFacetInput, remoteRegion: r.slug }) })),
-    ),
+    loadWorkTypeAndRegionCounts(baseFacetInput, LISTING_REMOTE_REGIONS),
   ]))
 
-  const levelSize = await memoAsync(stableKey('role-level-size', roleSlug, baseFacetInput), DEFAULT_TTL_MS, () =>
-    loadLevelSizeCounts(baseFacetInput),
-  )
+  const levelSize = cubeFacets
+    ? { seniority: cubeFacets.seniority, companySizes: cubeFacets.companySizes }
+    : await memoAsync(stableKey('role-level-size', roleSlug, baseFacetInput), DEFAULT_TTL_MS, () => loadLevelSizeCounts(baseFacetInput))
 
   const facets: JobsFacets = {
     roles: [],
@@ -345,15 +342,17 @@ export async function RoleTemplate({
         count: Number((r as any)._count?._all ?? 0),
       }))
       .filter((r: any) => r.value),
-    workTypes: { remote: remoteCount, hybrid: hybridCount, onsite: onsiteCount },
-    remoteRegions: LISTING_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: regionCounts[i] ?? 0 })),
+    workTypes: facetCounts.workTypes,
+    remoteRegions: LISTING_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: facetCounts.regions[i] ?? 0 })),
     ...levelSize,
   }
 
   // Insights are computed for the role overall (USD-only where needed), independent of sidebar filters.
   const insightsWhere = buildWhere({ roleSlugs: [roleSlug], page: 1, pageSize: 1 })
 
-  const [avgAggUsd, topCityRows] = await memoAsync(stableKey('role-insights', roleSlug), DEFAULT_TTL_MS, () => Promise.all([
+  const [avgAggUsd, topCityRows] = cubeFacets
+    ? ([cubeFacets.avgUsd, cubeFacets.topCityRows] as const)
+    : await memoAsync(stableKey('role-insights', roleSlug), DEFAULT_TTL_MS, () => Promise.all([
     prisma.job.aggregate({
       where: {
         ...insightsWhere,
@@ -404,13 +403,15 @@ export async function RoleTemplate({
         orderBy: [{ postedAt: 'desc' }, { updatedAt: 'desc' }],
         take: 2000,
       }),
-      (prisma.job.groupBy as any)({
-        by: ['companyId'],
-        where: { ...insightsWhere, companyId: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { companyId: 'desc' } } as any,
-        take: 24,
-      }) as Promise<any[]>,
+      cubeFacets
+        ? Promise.resolve(cubeFacets.topCompanyGroups as any[])
+        : ((prisma.job.groupBy as any)({
+            by: ['companyId'],
+            where: { ...insightsWhere, companyId: { not: null } },
+            _count: { _all: true },
+            orderBy: { _count: { companyId: 'desc' } } as any,
+            take: 24,
+          }) as Promise<any[]>),
     ])
     const ids = Array.from(new Set(groups.map((r) => String(r.companyId)).filter(Boolean)))
     const companyRows = ids.length

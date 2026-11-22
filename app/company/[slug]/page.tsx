@@ -34,6 +34,8 @@ import { CompanyJobsMore } from '@/components/companies/CompanyJobsMore'
 import { CITY_TARGET_SLUG_SET } from '../../../lib/seo/pseoTargets'
 import { resolveIndexableRoleSlug } from '../../../lib/roles/indexableRole'
 import { roleLabelFor } from '../../../lib/roles/relatedRoles'
+import { companyRemoteAndNewest, daysAgoLabel } from '../../../lib/companies/hiringFigures'
+import { summarizeCompanyJobs } from '../../../lib/jobs/companyHiringStats'
 
 export const revalidate = 3600
 
@@ -180,6 +182,11 @@ export default async function CompanyPage({
         company.countryCode ? countryCodeToSlug(company.countryCode) : null
 
       const stats = buildCompanySeoStats(qualifiedJobs)
+      // The same numbers as the company's tile on /companies (new this week, median pay), plus the remote count and newest posting.
+      const pace = summarizeCompanyJobs(qualifiedJobs.map((j) => ({ ...j, companyId: company.id }))).get(company.id)
+      const { remote: remoteCount, newestDaysAgo } = companyRemoteAndNewest(qualifiedJobs)
+      const medianPay = pace?.medianPay
+      const medianSymbol = medianPay?.currency === 'USD' ? '$' : `${medianPay?.currency} `
       const organizationJsonLd = buildOrganizationJsonLd(company)
       const breadcrumbJsonLd = buildBreadcrumbJsonLd(company)
       const itemListJsonLd = buildCompanyJobsItemListJsonLd(company, pageJobs, jobsWindow.start)
@@ -287,6 +294,27 @@ export default async function CompanyPage({
               </div>
             </div>
           </header>
+
+          {qualifiedJobs.length > 0 ? (
+            <section aria-label={`${company.name} hiring at a glance`} className="mt-4">
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  { label: 'Open $100k+ jobs', value: qualifiedJobs.length.toLocaleString('en-US') },
+                  { label: 'Remote', value: remoteCount.toLocaleString('en-US') },
+                  ...(medianPay ? [{ label: 'Median pay', value: `${medianSymbol}${Math.round(medianPay.amount / 1000)}k` }] : []),
+                  ...(newestDaysAgo != null ? [{ label: 'Newest posting', value: daysAgoLabel(newestDaysAgo) }] : []),
+                ].map((tile) => (
+                  <div key={tile.label} className="rounded-lg border border-border bg-card p-4">
+                    <dt className="text-xs text-muted-foreground">{tile.label}</dt>
+                    <dd className="mt-1 font-mono text-xl font-semibold text-foreground">{tile.value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {(pace?.newThisWeek ?? 0).toLocaleString('en-US')} posted in the last 7 days, {(pace?.newPreviousWeek ?? 0).toLocaleString('en-US')} in the 7 days before.
+              </p>
+            </section>
+          ) : null}
 
           <ListingSection title={`Open positions at ${company.name}`}>
             {jobsWindow.page > 1 ? (
