@@ -90,6 +90,8 @@ export const ALWAYS_INDEXABLE_HUBS = new Set<string>([
   '/high-paying-jobs-report',
   // Its versioned method and data dictionary (2026-11-15), the page that makes the report's numbers checkable.
   '/high-paying-jobs-report/method',
+  // What is being hired for right now, from the listings (2026-11-22); noindex itself below 50 open jobs.
+  '/trends',
   '/jobs/no-degree',
   // Four-day-week jobs paying $100k+ (2026-11-09), for "4 day work week jobs"; indexable only with enough jobs.
   '/jobs/4-day-week',
