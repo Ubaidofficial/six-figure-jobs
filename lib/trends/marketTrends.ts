@@ -11,6 +11,7 @@ import { memoAsync } from '../cache/memo'
 import { MIN_JOBS_FOR_MEDIAN, annualMidpoint, median, newnessOf } from '../jobs/companyHiringStats'
 import { prisma } from '../prisma'
 import { getPublicJobWhere } from '../jobs/publicStats'
+import { AGGREGATOR_PATTERNS } from '../research/method'
 import { JOB_CATEGORY_MAP } from '../seo/jobCategories'
 
 /** The areas shown: disjoint groups of JOB_CATEGORY_MAP (its "devops" and "ML / AI" overlap engineering and data). */
@@ -18,6 +19,15 @@ export const TREND_AREAS = ['engineering', 'product', 'data', 'design', 'sales',
 
 export const TOP_COUNTRIES = 8
 export const TOP_COMPANIES = 10
+/** Employers read before job boards are taken out: a board can have hundreds of jobs and rank in the first few. */
+export const COMPANY_CANDIDATES = 30
+
+// The pay report's list of job boards (lib/research/method.ts, SQL ILIKE patterns) as case-insensitive regular expressions: a
+// board lists other employers' jobs under its own name, so it is not an employer "hiring" those jobs.
+const AGGREGATOR_RES = AGGREGATOR_PATTERNS.map((p) => new RegExp(`^${p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*')}$`, 'i'))
+
+/** Is this a job board that reposts other employers' jobs (by name, as the pay report's method does)? */
+export const isAggregatorName = (name: string): boolean => AGGREGATOR_RES.some((re) => re.test(name.trim()))
 /** A week of apply clicks must reach this for a role to be shown, so a handful of clicks is not presented as demand. */
 export const MIN_DEMAND_CLICKS = 10
 export const MIN_DEMAND_ROLES = 3
@@ -120,7 +130,8 @@ export function buildMarketTrends(rows: readonly TrendJobRow[], now: Date = new 
     areas: TREND_AREAS.map((slug) => ({ slug, label: JOB_CATEGORY_MAP[slug].label, ...cell(byArea.get(slug)!) })),
     other: cell(other),
     countries: top(byCountry, TOP_COUNTRIES).map(([code, v]) => ({ code, ...v })),
-    companies: top(byCompany, TOP_COMPANIES).map(([companyId, v]) => ({ companyId, ...v })),
+    // The first COMPANY_CANDIDATES; the loader takes job boards out and keeps TOP_COMPANIES.
+    companies: top(byCompany, COMPANY_CANDIDATES).map(([companyId, v]) => ({ companyId, ...v })),
   }
 }
 
@@ -154,10 +165,12 @@ export function loadMarketTrends(): Promise<TrendsData> {
     const byId = new Map(companies.map((c) => [c.id, c]))
     return {
       ...trends,
-      companies: trends.companies.flatMap((c) => {
-        const company = byId.get(c.companyId)
-        return company?.name ? [{ ...c, name: company.name, slug: company.slug ?? null }] : []
-      }),
+      companies: trends.companies
+        .flatMap((c) => {
+          const company = byId.get(c.companyId)
+          return company?.name && !isAggregatorName(company.name) ? [{ ...c, name: company.name, slug: company.slug ?? null }] : []
+        })
+        .slice(0, TOP_COMPANIES),
     }
   })
 }
