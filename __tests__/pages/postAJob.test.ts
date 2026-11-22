@@ -23,8 +23,8 @@ describe('advertise page', () => {
     ;(loadSiteCounts as jest.Mock).mockResolvedValue({ byCountry: new Array(24).fill({ code: 'US', count: 1 }) })
   })
 
-  it('stays out of search results and keeps its canonical', () => {
-    expect(metadata.robots).toEqual({ index: false, follow: true })
+  it('is indexable (first sitemap wave) and keeps its canonical', () => {
+    expect(metadata.robots).toEqual({ index: true, follow: true })
     expect(String((metadata.alternates as { canonical: string }).canonical)).toMatch(/\/post-a-job$/)
   })
 

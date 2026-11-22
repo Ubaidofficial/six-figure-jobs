@@ -4,6 +4,7 @@
 import { sitemapDate } from '../../../lib/seo/lastmod'
 import { getSiteUrl } from '../../../lib/seo/site'
 import { getPublishedCompanyCandidatesPage } from '../../../lib/seo/companyPublishing'
+import { areCompanyPagesReleased } from '../../../lib/seo/sitemapWaves'
 import {
   getMaxCompanySitemapPages,
   getMaxCompanyUrlsPerPage,
@@ -40,6 +41,8 @@ type CompanyRow = {
 }
 
 async function fetchCompanyPage(page: number): Promise<CompanyRow[]> {
+  // Company pages are noindex before their sitemap wave, so the file lists none of them until then.
+  if (!areCompanyPagesReleased()) return []
   const candidates = await getPublishedCompanyCandidatesPage(page, PAGE_SIZE)
   return candidates.map((candidate) => ({
     slug: candidate.slug,

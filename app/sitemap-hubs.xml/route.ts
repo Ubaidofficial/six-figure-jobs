@@ -10,6 +10,7 @@ import { memoAsync } from '../../lib/cache/memo'
 import { getSiteUrl } from '../../lib/seo/site'
 import { collectEvergreenEntries } from '../../lib/seo/evergreenSitemap'
 import { sitemapDate } from '../../lib/seo/lastmod'
+import { isHubPathInWave } from '../../lib/seo/sitemapWaves'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
 
 const SITE_URL = getSiteUrl()
@@ -30,7 +31,11 @@ function escapeXml(value: string) {
 }
 
 export async function GET() {
-  const entries = await memoAsync('sitemap-hubs', ENTRIES_TTL_MS, () => collectEvergreenEntries())
+  // The cached list holds every eligible page; the sitemap wave (lib/seo/sitemapWaves.ts) picks the ones submitted now,
+  // so raising SITEMAP_WAVE takes effect on the next request without waiting for the cache.
+  const entries = (await memoAsync('sitemap-hubs', ENTRIES_TTL_MS, () => collectEvergreenEntries())).filter((e) =>
+    isHubPathInWave(e.path),
+  )
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
