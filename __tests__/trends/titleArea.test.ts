@@ -95,6 +95,48 @@ const CASES: Array<[string, TitleArea | null]> = [
   ['Mid-Level Litigation Associate', 'legal'],
   ['Director, Regulatory Affairs', 'legal'],
   ['Technical Program Manager', 'operations'], // no engineer word: stays Operations
+  // Found auditing 2,747 live titles (2026-11-22): each was placed wrongly, or not at all, by the first rules.
+  ['Senior Electrical Design Manager', null], // an electrical design manager is not Design
+  ['Law and Motion Associate', 'legal'], // "motion" is not motion graphics
+  ['Motion Designer Automotive (all gender) gs', 'design'],
+  ['Sr. Director Eng, Seller User Experience', 'engineering'], // "Eng" is engineering; the team after the comma is not Design
+  ['IT Support Specialist', 'engineering'], // internal IT help desk work is not Customer success
+  ['Senior IT Support Engineer', 'engineering'],
+  ['Change Manager Service Desk - H/F', 'engineering'],
+  ['Senior Enterprise Application Support Analyst', 'engineering'],
+  ['Product Support Engineer', 'customer'], // customer-facing support stays Customer
+  ['Senior Federal Technical Support Engineer', 'customer'],
+  ['Senior Software Engineer: Assets', 'engineering'], // a team after the colon, not an employer before it
+  ['Senior Back-End Engineer: Dynamic Copay Engine', 'engineering'],
+  ['Member of Technical Staff: Alignment', 'engineering'],
+  ['Global Alliance Director, AWS', 'sales'], // not Engineering because of "AWS"
+  ['Private Market Infrastructure Secondaries Professional', null], // "infrastructure" here is an asset class
+  ['Director, Platform Activation', null],
+  ['Platform Services Program Manager (Remote)', 'operations'],
+  ['Project - Manager, Forensics and Investigations, eDiscovery & Litigation Support', 'legal'],
+  ['Associate Director Digital Forensics & Incident Management', 'engineering'],
+  ['Azure Cloud Architect', 'engineering'],
+  ['IT Infrastructure Lead, Networking Technologies - NA', 'engineering'],
+  ['Vice President of Platform Infrastructure', 'engineering'],
+  ['Staff Software Engineer- Agentic AI - Federal', 'engineering'], // a software engineer with "AI" in the title is Engineering
+  ['AI/ML Software Engineer', 'engineering'],
+  ['Principal AI Software Engineer, Platform', 'engineering'],
+  ['Staff Backend AI Platform Engineer', 'engineering'],
+  ['Staff Data Platform Software Engineer', 'engineering'],
+  ['Senior Machine Learning Engineer', 'data'], // AI and ML specialists stay Data & AI
+  ['Applied AI Engineer', 'data'],
+  ['Director of Strategic Data Partnerships', 'sales'], // partnerships are business development, not Data
+  ['Director, Data & Distribution Partnerships', 'sales'],
+  ['Strategic Partnerships Program Manager', 'operations'],
+  ['Vice President of Product', 'product'],
+  ['SOX Director - ITGC', 'finance'],
+  ['Sr. Technical Character Artist I', 'design'],
+  ['Principal VFX Artist - Unpublished R&D Product', 'design'],
+  ['IAM Manager', 'engineering'],
+  ['Ingénieur Commercial IT - Grands comptes H/F', null], // French for a sales engineer: only German compounds (Elektroingenieur) read as Engineering, so this is left out
+  ['Elektroingenieur*in: Mit uns schlagen Sie Wellen statt nur mit dem Strom zu schwimmen!', 'engineering'],
+  ['Projektleiter Siedlungsentwässerung (m/w/d)', 'operations'],
+  ['BAULEITER (m/w/d)', 'operations'],
   // No rule is sure: left out rather than guessed.
   ['Strategic Partner', null],
   ['Administrator', null],
