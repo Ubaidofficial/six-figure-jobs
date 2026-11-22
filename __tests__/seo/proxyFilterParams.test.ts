@@ -6,6 +6,17 @@ import { proxy } from '../../proxy'
 const run = (path: string) => proxy(new NextRequest(`https://www.sixfigurejobs.net${path}`, { headers: { host: 'www.sixfigurejobs.net', 'user-agent': 'Mozilla/5.0 (Macintosh) Chrome/130.0 Safari/537.36' } }))
 const redirected = (res: Response) => (res.status >= 300 && res.status < 400 ? res.headers.get('location') : null)
 
+// The proxy sends our other hosts to getSiteUrl()'s host, and CI sets SITE_URL=http://localhost:3000; pin the production
+// canonical host so these requests are on it.
+const savedSiteUrl = process.env.SITE_URL
+beforeAll(() => {
+  process.env.SITE_URL = 'https://www.sixfigurejobs.net'
+})
+afterAll(() => {
+  if (savedSiteUrl === undefined) delete process.env.SITE_URL
+  else process.env.SITE_URL = savedSiteUrl
+})
+
 describe('proxy: listing filter parameters reach the page', () => {
   // Every parameter the filter panel writes (app/jobs/_components/JobsFilters.tsx). role, seniority and companySize were
   // removed with a 301 on /jobs, and seniority and tech with a 308 on role pages, so those filters never applied.

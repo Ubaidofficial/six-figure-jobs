@@ -17,7 +17,12 @@ describe('canonical host', () => {
     delete process.env.SITE_URL
     delete process.env.NEXT_PUBLIC_SITE_URL
   })
-  afterAll(() => Object.assign(process.env, saved))
+  afterAll(() => {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  })
 
   it('defaults to https://www.sixfigurejobs.net', () => {
     expect(getSiteUrl()).toBe('https://www.sixfigurejobs.net')
