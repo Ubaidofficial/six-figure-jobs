@@ -641,7 +641,7 @@ async function notifyGoogleOfNewJobs(since: Date, dryRun: boolean) {
     return
   }
 
-  const siteUrl = (process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.6figjobs.com').replace(/\/+$/, '')
+  const siteUrl = (process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sixfigurejobs.net').replace(/\/+$/, '')
 
   try {
     const newJobs = await prisma.job.findMany({

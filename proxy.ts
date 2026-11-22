@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { checkJobAvailability } from './lib/jobs/jobAvailabilityCheck'
 import { guardJobPage } from './lib/security/scrapeGuard'
+import { canonicalHostFor, getSiteUrl } from './lib/seo/site'
 
 // Next.js 16 `proxy.ts` always runs in the Node.js runtime (no `runtime`
 // override allowed — that errors at build time). Node access is what lets us
@@ -18,9 +19,6 @@ export const config = {
 const ADMIN_ROOT = '/ubaid93'
 const PUBLIC_PATHS = [`${ADMIN_ROOT}/login`, `${ADMIN_ROOT}/setup`]
 
-// Canonical host — ensure apex redirects to www for consistent PageRank consolidation
-const WWW_HOST = 'www.6figjobs.com'
-const APEX_HOST = '6figjobs.com'
 // `seniority` and `tech` were here too, but the filter panel on role pages writes them, so the 308 silently undid those
 // filters (2026-11-11). Filtered views are noindex, so they need no redirect.
 const LEGACY_ROLE_QUERY_KEYS = ['skill'] as const
@@ -139,11 +137,19 @@ async function handleJobDetailStatus(request: NextRequest): Promise<NextResponse
 export async function proxy(request: NextRequest) {
   const host = request.headers.get('host') ?? ''
 
-  // 301 apex → www (SEO: consolidate PageRank on canonical www host)
-  if (host === APEX_HOST) {
-    const url = request.nextUrl.clone()
-    url.host = WWW_HOST
-    return NextResponse.redirect(url, { status: 301 })
+  // 301 every other host of ours (apex, the old 6figjobs.com) to the same path on the canonical host. Only page loads
+  // (GET/HEAD outside /api/): a 301 turns a POST into a GET in most clients and Stripe does not follow redirects, so
+  // webhooks, cron calls and the MCP endpoint keep answering on every host.
+  const { pathname: requestPath } = request.nextUrl
+  if ((request.method === 'GET' || request.method === 'HEAD') && !requestPath.startsWith('/api/')) {
+    const target = canonicalHostFor(host, new URL(getSiteUrl()).host)
+    if (target) {
+      const url = request.nextUrl.clone()
+      url.protocol = 'https:'
+      url.host = target
+      url.port = ''
+      return NextResponse.redirect(url, { status: 301 })
+    }
   }
 
   // Command-line tools and scraping libraries get a 403 on the job pages; search engines and link previews never do.

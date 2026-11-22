@@ -43,7 +43,7 @@ export const SERVER_INFO: ServerInfo = {
   title: SITE_NAME,
   version: '1.0.0',
   instructions: [
-    `${SITE_NAME} (6figjobs.com) lists only jobs whose employer publishes the pay, and only when that pay is six figures `,
+    `${SITE_NAME} (sixfigurejobs.net) lists only jobs whose employer publishes the pay, and only when that pay is six figures `,
     `or the local equivalent (yearly minimums: ${floors}). Listings are checked against their source and removed when `,
     'the employer closes them. Use search_jobs to find jobs, get_job for one job\'s full posting, salary_benchmark for what ',
     'a role pays (or how an offer compares), and list_filters for the roles, countries and remote regions that have jobs. ',
@@ -428,7 +428,7 @@ const salaryBenchmark: McpTool = {
           ? { offer: { salary, pays_more_than_percent: rank.percent, of_listings: rank.peers } }
           : {}),
         method:
-          'Live listings on 6figjobs.com with published pay, each counted at the midpoint of its range. The site lists ' +
+          'Live listings on sixfigurejobs.net with published pay, each counted at the midpoint of its range. The site lists ' +
           'only jobs paying six figures or more (or the local equivalent), so lower-paid jobs with this title are not included.',
         browse_url: `${browse.toString()}&${UTM}`,
       }),

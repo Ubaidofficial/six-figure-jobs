@@ -7,6 +7,7 @@
 
 const AGGREGATOR_APPLY_HOSTS = [
   '6figjobs.com',
+  'sixfigurejobs.net',
   'nodesk.co',
   'remote100k.com',
   'builtin.com',

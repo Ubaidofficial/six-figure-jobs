@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.6figjobs.com' }}
+  PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.sixfigurejobs.net' }}
 
 jobs:
   schema-smoke-test:

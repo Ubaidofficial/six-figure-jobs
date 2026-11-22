@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
+import { getSiteUrl } from '@/lib/seo/site'
 
 export const metadata: Metadata = {
   title: 'Terms of Service | Six Figure Jobs',
   description:
     'Terms of Service for Six Figure Jobs. Rules for using the site, disclaimers, and limitations of liability.',
   alternates: {
-    canonical: 'https://www.6figjobs.com/terms',
+    canonical: `${getSiteUrl()}/terms`,
   },
 }
 
