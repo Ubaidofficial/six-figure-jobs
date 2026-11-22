@@ -24,9 +24,11 @@ export const MAX_LISTED_AGE_DAYS = 30
 // freehire refuses offset + limit > 10000, so one query can reach at most this many newest jobs.
 const MAX_OFFSET = 10_000
 const LOOKBACK_DAYS = Number(process.env.FREEHIRE_LOOKBACK_DAYS) || 30
-// freehire allows 300 requests a minute on the key (x-ratelimit-limit, 2026-11-22; no daily cap since the owner's plan of
-// 2026-11-22). One request at a time with this gap stays well under it; a short 429 is waited out anyway.
-const PAGE_DELAY_MS = 350
+// freehire's API docs (freehire.me/docs/api, "API plans", read 2026-11-22): the API plan allows 1,200 requests a minute
+// with no daily cap (300 without a plan key), and "requests carrying offset ... pass through separate per-IP nginx limits
+// of 2 requests per second each, including paid requests" (bursts of 50 allowed). Every search page carries offset, so
+// one request at a time with at least this gap never goes over 2 a second, however fast freehire answers.
+const PAGE_DELAY_MS = 500
 // Companies written to the database at once by ingestFreehireJobs. Below the 5-connection Prisma pool the sync scripts
 // get outside production (lib/prisma.ts), so no write waits for a free connection.
 const INGEST_CONCURRENCY = 4
