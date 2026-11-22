@@ -33,6 +33,9 @@ import { shouldAdvertiseSitemapFamily } from './sitemapPolicy'
 export type SitemapEntry = { path: string; lastmod: Date | null }
 
 const PILLAR_PATHS = ['/', '/jobs', '/salary', '/companies', '/remote', '/remote/companies']
+// Trust and business pages (owner's request, 2026-11-22: part of the first sitemap wave). Static text with no known
+// change date, so they carry no lastmod rather than an invented one.
+const TRUST_PAGE_PATHS = ['/about', '/privacy', '/terms', '/post-a-job']
 const MIN_ROLE_PAGE_JOBS = 3
 const CACHE_TTL_MS = 60 * 60 * 1000
 
@@ -253,6 +256,7 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
 
   const latestJob = await getLatestJobUpdate()
   const entries: SitemapEntry[] = PILLAR_PATHS.map((path) => ({ path, lastmod: latestJob }))
+  for (const path of TRUST_PAGE_PATHS) entries.push({ path, lastmod: null })
   // Static research page: its lastmod is the report's own update date, so it moves only when a new edition is published.
   entries.push({ path: PAY_REPORT.path, lastmod: new Date(PAY_REPORT.updatedAt) })
   // The report's versioned method page: moves only when a method change is added to METHOD_CHANGELOG.

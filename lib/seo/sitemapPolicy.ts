@@ -1,3 +1,5 @@
+import { COUNTRY_WAVE, LONG_TAIL_WAVE, SALARY_BANDS_WAVE, getSitemapWave } from './sitemapWaves'
+
 type CoreSitemapFamily =
   | 'jobs'
   | 'company'
@@ -24,12 +26,18 @@ export function getSeoPhase(): number {
   return Number.isFinite(parsed) ? parsed : 1
 }
 
+// The hub families Phase 1 submits, each from its sitemap wave (lib/seo/sitemapWaves.ts).
+const WAVED_FAMILIES: Partial<Record<CoreSitemapFamily, number>> = {
+  salary: SALARY_BANDS_WAVE,
+  country: COUNTRY_WAVE,
+  company: LONG_TAIL_WAVE,
+}
+
 export function shouldAdvertiseSitemapFamily(family: CoreSitemapFamily): boolean {
   const phase = getSeoPhase()
   // Phase 1 submits hub pages only; job sitemaps wait for phase 2 (see PHASE_1_ENABLED_SITEMAP_FAMILIES).
-  const p1 = new Set(['company', 'salary', 'country'])
-  
-  if (p1.has(family)) return true
+  const wave = WAVED_FAMILIES[family]
+  if (wave !== undefined) return getSitemapWave() >= wave
   return phase >= 2
 }
 

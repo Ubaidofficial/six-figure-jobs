@@ -5,6 +5,7 @@ import { cachedXmlResponse } from '../../lib/seo/cachedSitemap'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
 import { getPublishedCompanyCandidateCount } from '../../lib/seo/companyPublishing'
+import { areCompanyPagesReleased } from '../../lib/seo/sitemapWaves'
 import { prisma } from '../../lib/prisma'
 import {
   getMaxCompanySitemapPages,
@@ -37,10 +38,12 @@ function escapeXml(s: string) {
 
 async function buildCompanyIndex(): Promise<Response> {
   try {
-    const [total, lastmod] = await Promise.all([
+    const [published, lastmod] = await Promise.all([
       getPublishedCompanyCandidateCount(),
       getCompaniesLastmod(),
     ])
+    // Company pages are noindex before their sitemap wave (lib/seo/sitemapWaves.ts), so no files are listed until then.
+    const total = areCompanyPagesReleased() ? published : 0
     const totalPages = Math.min(
       Math.ceil(total / PAGE_SIZE),
       getMaxCompanySitemapPages(),

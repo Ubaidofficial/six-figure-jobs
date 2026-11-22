@@ -11,3 +11,8 @@
 // access for performance.
 
 process.env.INDEXING_PHASE = '2'
+
+// Same reason for the sitemap wave (lib/seo/sitemapWaves.ts): production starts at wave 1, which withholds the pSEO
+// batches, company pages, salary bands and countries. Tests default to the last wave so they exercise those families;
+// __tests__/seo/sitemapWaves.test.ts sets the wave per test and covers the default of 1.
+process.env.SITEMAP_WAVE = '8'

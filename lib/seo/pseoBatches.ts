@@ -13,8 +13,11 @@
 //   PSEO_RELEASED_BATCH=<n>       highest released batch, default 1 (clamped to 1..PSEO_BATCH_COUNT)
 //   PSEO_BATCH_SCHEDULE=<dates>   optional comma-separated ISO dates; batch 2 is released on the first date, batch 3
 //                                 on the second, and so on. The higher of the two controls wins.
+//   SITEMAP_WAVE=<n>              caps both: no batch before wave 5, then batch n - 4 (lib/seo/sitemapWaves.ts).
 //
 // Pages in the Phase 1 allowlist (role pages, salary guides, remote, blog) and the job sitemap are not batched.
+
+import { getPseoBatchCapForWave } from './sitemapWaves'
 
 export const PSEO_BATCH_COUNT = 4
 
@@ -59,7 +62,10 @@ function clampBatch(n: number): number {
   return Math.min(PSEO_BATCH_COUNT, Math.max(1, Math.trunc(n)))
 }
 
-/** Highest released batch right now: the manual variable or the schedule, whichever is further along. */
+/**
+ * Highest released batch right now: the manual variable or the schedule, whichever is further along, but never past
+ * what the sitemap wave allows (lib/seo/sitemapWaves.ts). 0 means no batch is released.
+ */
 export function getReleasedPseoBatch(now: number = Date.now()): number {
   const manual = clampBatch(Number.parseInt(process.env.PSEO_RELEASED_BATCH ?? '1', 10))
   const dates = String(process.env.PSEO_BATCH_SCHEDULE ?? '')
@@ -68,7 +74,7 @@ export function getReleasedPseoBatch(now: number = Date.now()): number {
     .filter((t) => Number.isFinite(t))
     .sort((a, b) => a - b)
   const scheduled = clampBatch(1 + dates.filter((t) => t <= now).length)
-  return Math.max(manual, scheduled)
+  return Math.min(Math.max(manual, scheduled), getPseoBatchCapForWave())
 }
 
 /** True when the path is not batched, or its batch has been released. */

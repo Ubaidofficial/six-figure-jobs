@@ -12,13 +12,13 @@ import styles from './page.module.css'
 const SITE_URL = getSiteUrl()
 const CONTACT = 'support@6figjobs.com'
 
-// A sales page, not a search landing page: noindex keeps it out of the results (no thin page to rank), and it carries no
-// hreflang. It is linked from the header and footer and left out of the sitemaps.
+// The advertise page. Indexable and in the first sitemap wave since 2026-11-22 (owner's request: a business page a
+// new site should have in search, like /about). It carries no hreflang. Linked from the header and footer.
 export const metadata: Metadata = {
   title: `Advertise on ${SITE_NAME}`,
   description: 'Put your company in front of people searching for $100k+ jobs, with a clearly labelled sponsored placement.',
   alternates: { canonical: `${SITE_URL}/post-a-job` },
-  robots: { index: false, follow: true },
+  robots: { index: true, follow: true },
 }
 
 // The live numbers come from the database; kept for ten minutes. If they cannot be read, the strip is left out.
