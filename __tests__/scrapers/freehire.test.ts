@@ -336,13 +336,14 @@ describe('freehire jobs whose pay is only in the posting text', () => {
     expect(mapped).toMatchObject({ salaryMin: 150000, salaryMax: 180000 })
     expect(mapped.raw).toBeUndefined()
   })
-  it('reads the no-filter pass in three slices that cover every country once: US, CA/AU/UK, the rest', () => {
+  it('reads the no-filter pass in four slices that cover every country once: US, CA/AU/UK, EU, the rest', () => {
     expect(DESCRIPTION_PAY_MARKETS.every((m: { anyPay?: boolean }) => m.anyPay)).toBe(true)
     expect(DESCRIPTION_PAY_MARKETS.map((m: { geo: Record<string, string> }) => m.geo)).toEqual([
       { countries: 'us' },
       { countries: 'ca,au', regions: 'uk' },
-      { countries_exclude: 'us,ca,au', regions_exclude: 'uk' },
+      { regions: 'eu', countries_exclude: 'us,ca,au', regions_exclude: 'uk' },
+      { countries_exclude: 'us,ca,au', regions_exclude: 'uk,eu' },
     ])
-    expect(DESCRIPTION_PAY_MARKETS.map((m: { maxPages?: number }) => m.maxPages)).toEqual([100, 50, 50])
+    expect(DESCRIPTION_PAY_MARKETS.map((m: { maxPages?: number }) => m.maxPages)).toEqual([100, 100, 100, 100])
   })
 })

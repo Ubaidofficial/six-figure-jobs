@@ -6,7 +6,7 @@
 // (instrumentation.ts; every 15 until the owner asked for a list that moves more continuously, 2026-11-19) and on demand
 // through GET /api/cron/freehire-recent.
 //
-// Frugal with freehire's daily quota (10,000 requests on the key, 2026-11-08): one page of the newest jobs per currency
+// Frugal with freehire's requests (written for the key's old daily quota of 10,000; no daily cap since 2026-11-22): one page of the newest jobs per currency
 // market (about 10 requests a run, about 2,900 a day every 5 minutes; without FREEHIRE_API_KEY in the app these use
 // freehire's public access, 300 requests a minute), no "pay in description" pass (about 200 pages a run)
 // and no company-website lookups; the regular syncs read the same jobs again and fill those in. It reads jobs posted in

@@ -113,7 +113,7 @@ describe('collectFreehireJobs: description-pay slices and dropped connections', 
   const since = new Date(Date.now() - 48 * 3_600_000)
   const full = Array.from({ length: 100 }, (_, i) => rec(i, hoursAgo(1)))
 
-  it('reads each description-pay slice up to its own page cap (US 100, CA/AU/UK 50, rest 50)', async () => {
+  it('reads each description-pay slice up to its own page cap (100 each: US, CA/AU/UK, EU, rest)', async () => {
     const pagesBySlice: Record<string, number> = {}
     get.mockImplementation(async (_url: string, config: { params: Record<string, unknown> }) => {
       const p = config.params
@@ -125,8 +125,8 @@ describe('collectFreehireJobs: description-pay slices and dropped connections', 
       return page([], 0)
     })
     const r = await withImmediateTimers(() => collectFreehireJobs({ since }))
-    expect(Object.values(pagesBySlice)).toEqual([100, 50, 50])
-    expect(r.markets.filter((m) => m.currency.startsWith('pay in description')).map((m) => m.complete)).toEqual([false, false, false])
+    expect(Object.values(pagesBySlice)).toEqual([100, 100, 100, 100])
+    expect(r.markets.filter((m) => m.currency.startsWith('pay in description')).map((m) => m.complete)).toEqual([false, false, false, false])
   })
 
   it('reads no description-pay slice when withDescriptionPay is false (the 15-minute pull)', async () => {

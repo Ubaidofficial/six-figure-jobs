@@ -18,7 +18,8 @@ on:
     #   the freehire sync over the last 18 hours, a 1,000-job closed check, the self-heal and the slices. Measured
     #   2026-11-19: about 120-170 search pages and 400-1,100 company lookups a run before the description-pay pass was
     #   split (200 pages a run since) and light runs began the closed check; the sync logs freehire's rate-limit headers
-    #   at the end ("rate limit after the sync"), against the key's 10,000-a-day budget.
+    #   at the end ("rate limit after the sync"): that is freehire's 300-a-minute window. The key's 10,000-a-day quota
+    #   ended with the owner's plan of 2026-11-22 (no daily cap since).
     # - otherwise nothing (the run takes a few seconds)
     # On 2026-11-13 GitHub created only one of these hourly runs in 13 hours, so a cron job outside GitHub (the
     # owner's VPS) also starts this workflow every hour through the API with planned=true; see that input below.
@@ -72,7 +73,9 @@ jobs:
     # The plan job reads this name back from earlier runs: keep the "sync (<mode>)" form.
     name: sync (${{ needs.plan.outputs.mode || 'manual' }})
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    # 180 since 2026-11-22: the closed check looks up 4,500 jobs (about 16 minutes) and the sync reads 400 description-pay
+    # pages; a full run took up to 129 minutes before that (2026-11-21).
+    timeout-minutes: 180
     permissions:
       contents: read
     env:
@@ -110,23 +113,20 @@ jobs:
       # run is report-only unless closed_apply is ticked. The check skips itself with a warning if more than 5% of lookups
       # fail, and aborts (failing the run, so the owner is emailed) if it would expire more than 40% of what it
       # checked. To switch it off, change the schedule condition below to report-only.
-      # Both closed-check steps stop themselves after 15 minutes (nothing is expired) and the step timeout is a second
+      # Both closed-check steps stop themselves after 25 minutes (nothing is expired) and the step timeout is a second
       # guard, so a stall here can no longer eat the whole job (on 2026-11-05 the scheduled run sat 42 minutes in this
       # step with no output, hit the job timeout and never reached the 7-day expiry below).
       - name: Closed-job check (report only)
         if: ${{ success() && github.event_name != 'schedule' && !inputs.planned && !inputs.closed_apply }}
-        timeout-minutes: 20
+        timeout-minutes: 30
         run: npm run check-closed:freehire -- --dry-run
 
-      # Light runs check 1,000 jobs too (owner's requests: 500 on 2026-11-19 to use more of the daily request budget,
-      # raised to 1,000 on 2026-11-20 once the website cache freed about 500 requests a run); full runs check 2,000.
-      # 500 lookups took 108 s on 2026-11-20, so 1,000 take about 4 minutes. Least recently checked first, so the runs
-      # share the work.
+      # Every run, light or full, checks 4,500 jobs (MAX_LOOKUPS_PER_RUN), about 16 minutes at freehire's 300 a minute.
+      # Light runs checked 1,000 and full runs 2,000 while the key had a daily quota; it has none since the owner's plan
+      # of 2026-11-22. Least recently checked first, so the runs share the work: every active job about once a day.
       - name: Expire jobs freehire has closed
         if: ${{ success() && (github.event_name == 'schedule' || inputs.planned || inputs.closed_apply) }}
-        timeout-minutes: 20
-        env:
-          FREEHIRE_CLOSED_MAX_LOOKUPS: ${{ env.LIGHT_RUN == 'true' && '1000' || '' }}
+        timeout-minutes: 30
         run: npm run check-closed:freehire
 
       # Employers read straight from their own applicant tracking system (lib/constants/directEmployers.ts: OpenAI,
