@@ -7,7 +7,7 @@ import { prisma } from '../lib/prisma'
 import { checkClosedFreehireJobs } from '../lib/scrapers/freehireClosedCheck'
 
 const dryRun = process.argv.includes('--dry-run')
-// FREEHIRE_CLOSED_MAX_LOOKUPS: most jobs looked up this run (default MAX_LOOKUPS_PER_RUN, 4,500).
+// FREEHIRE_CLOSED_MAX_LOOKUPS: most jobs looked up this run (default MAX_LOOKUPS_PER_RUN, 10,000).
 const maxLookups = Number(process.env.FREEHIRE_CLOSED_MAX_LOOKUPS) || undefined
 
 checkClosedFreehireJobs({ dryRun, maxLookups, deadlineMs: 25 * 60 * 1000, onProgress: (m) => console.log(m) })

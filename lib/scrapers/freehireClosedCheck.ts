@@ -36,11 +36,21 @@ export const MAX_CLOSE_FRACTION = 0.4
 /**
  * Most jobs looked up per run, least recently confirmed first. Until 2026-11-22 the key had a daily quota of 10,000
  * requests shared with the syncs (2026-11-11: checking every active job used it up, 4,985 errors), so runs checked
- * 2,000 (full) and 1,000 (light). The owner's plan of 2026-11-22 has no daily cap, only 300 requests a minute: the
- * check ran at about 290 a minute (1,000 in 205 s, 2026-11-22), so 4,500 take about 16 minutes, and the four or so runs
- * a day look at about 18,000 jobs, every active job (16,433 that day) about once a day.
+ * 2,000 (full) and 1,000 (light). The owner's API plan (2026-11-22) has no daily cap and allows 1,200 requests a minute
+ * (`limit=1200` in the sync log of 2026-11-22 20:01 UTC). At DEFAULT_CONCURRENCY / DEFAULT_PACE_MS the check runs at
+ * about 700 a minute, so 10,000 take about 14 minutes, and the four or so runs a day look at every active job (16,433
+ * that day) about twice a day.
  */
-export const MAX_LOOKUPS_PER_RUN = 4500
+export const MAX_LOOKUPS_PER_RUN = 10_000
+
+/**
+ * Workers and the pause each takes after a request. A lookup took about 0.27 s plus the pause (3 workers, 1,000 in 205 s,
+ * 2026-11-22), so 9 workers run at about 700 a minute, and even with instant answers they cannot exceed
+ * 9 x 60 / 0.5 = 1,080 a minute: under the plan's 1,200 (one budget for the whole account, shared with the site's
+ * 5-minute live feed). These requests carry no `offset`, so freehire's per-IP 2-a-second offset limit does not apply.
+ */
+export const DEFAULT_CONCURRENCY = 9
+export const DEFAULT_PACE_MS = 500
 
 /** `quota`: freehire refused with a long Retry-After, i.e. the key's daily quota is used up; no lookup will work now. */
 export type Lookup =
@@ -230,8 +240,8 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
     options.stillListed ??
     (options.resolve ? async (t: string, e: string) => (await resolve(t, e)) !== null : isStillListed)
   const maxLookups = options.maxLookups ?? MAX_LOOKUPS_PER_RUN
-  const concurrency = options.concurrency ?? 3
-  const paceMs = options.paceMs ?? 350
+  const concurrency = options.concurrency ?? DEFAULT_CONCURRENCY
+  const paceMs = options.paceMs ?? DEFAULT_PACE_MS
   const started = Date.now()
   const deadline = options.deadlineMs ? started + options.deadlineMs : Number.POSITIVE_INFINITY
   const timedOut = () => Date.now() > deadline

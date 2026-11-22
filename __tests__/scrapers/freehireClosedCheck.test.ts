@@ -1,6 +1,8 @@
 import axios from 'axios'
 
 import {
+  DEFAULT_CONCURRENCY,
+  DEFAULT_PACE_MS,
   checkClosedFreehireJobs,
   lookupFreehireJob,
   resolveFreehireSlug,
@@ -279,5 +281,11 @@ describe('keeping open jobs alive and upgrading truncated descriptions', () => {
     expect(upgradedDescription(full, preview)).toBeNull()
     expect(upgradedDescription(preview, null)).toBeNull()
     expect(upgradedDescription(preview, '<p>Meet JobCopilot. Stop applying. ' + 'x'.repeat(600) + '</p>')).toBeNull()
+  })
+})
+
+describe('closed check pacing', () => {
+  it('cannot exceed the API plan\'s 1,200 requests a minute even if freehire answered instantly', () => {
+    expect((DEFAULT_CONCURRENCY * 60_000) / DEFAULT_PACE_MS).toBeLessThanOrEqual(1200)
   })
 })
