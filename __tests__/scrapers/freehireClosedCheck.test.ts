@@ -1,8 +1,7 @@
 import axios from 'axios'
 
 import {
-  DEFAULT_CONCURRENCY,
-  DEFAULT_PACE_MS,
+  DEFAULT_REQUEST_GAP_MS,
   checkClosedFreehireJobs,
   lookupFreehireJob,
   resolveFreehireSlug,
@@ -29,7 +28,7 @@ const applyRefresh = jest.fn()
 
 const run = (active: ActiveJob[], lookups: Record<string, Lookup>, extra: object = {}) =>
   checkClosedFreehireJobs({
-    paceMs: 0,
+    requestGapMs: 0,
     applyRefresh,
     loadActive: async () => active,
     lookup: async (slug) => lookups[slug] ?? { state: 'open' },
@@ -203,7 +202,7 @@ describe('time budget and progress', () => {
   it('stops when the budget is exceeded and expires nothing, even if jobs were reported closed', async () => {
     const active = Array.from({ length: 6 }, (_, i) => job(i + 1))
     const r = await checkClosedFreehireJobs({
-      paceMs: 0,
+      requestGapMs: 0,
       concurrency: 1,
       deadlineMs: 15,
       loadActive: async () => active,
@@ -285,7 +284,26 @@ describe('keeping open jobs alive and upgrading truncated descriptions', () => {
 })
 
 describe('closed check pacing', () => {
-  it('cannot exceed the API plan\'s 1,200 requests a minute even if freehire answered instantly', () => {
-    expect((DEFAULT_CONCURRENCY * 60_000) / DEFAULT_PACE_MS).toBeLessThanOrEqual(1200)
+  it('runs at 1,100+ a minute and never above the API plan\'s 1,200', () => {
+    expect(60_000 / DEFAULT_REQUEST_GAP_MS).toBeGreaterThanOrEqual(1100)
+    expect(60_000 / DEFAULT_REQUEST_GAP_MS).toBeLessThanOrEqual(1200)
+  })
+
+  it('spaces request starts across all workers, however fast freehire answers', async () => {
+    const starts: number[] = []
+    await checkClosedFreehireJobs({
+      dryRun: true,
+      loadActive: async () => [1, 2, 3, 4, 5, 6].map((n) => job(n)),
+      lookup: async () => {
+        starts.push(Date.now())
+        return { state: 'open', description: null, reality: null }
+      },
+      applyRefresh: async () => {},
+      concurrency: 6,
+      requestGapMs: 40,
+    })
+    expect(starts).toHaveLength(6)
+    const gaps = starts.slice(1).map((t, i) => t - starts[i])
+    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(35) // timer slack
   })
 })
