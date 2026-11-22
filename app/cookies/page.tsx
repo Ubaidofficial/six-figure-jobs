@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
+import { getSiteUrl } from '@/lib/seo/site'
 import Link from '@/components/ui/Link'
 
 export const metadata: Metadata = {
   title: 'Cookie Policy | Six Figure Jobs',
   description:
     'Cookie Policy for Six Figure Jobs. Learn how cookies are used and how to control them.',
-  alternates: { canonical: 'https://www.6figjobs.com/cookies' },
+  alternates: { canonical: `${getSiteUrl()}/cookies` },
 }
 
 export default function CookiesPage() {

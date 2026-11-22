@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto'
 
 import { clientIp } from '@/lib/auth/signInRateLimit'
 import { createRateLimiter } from '@/lib/jobs/jobReport'
+import { SITE_HOSTS } from '@/lib/seo/site'
 
 /** Command-line tools, HTTP client libraries and headless browsers that identify themselves as such. */
 const AUTOMATION_UA =
@@ -41,7 +42,7 @@ const sameSiteHost = (value: string | null): boolean => {
   if (!value) return false
   try {
     const host = new URL(value).hostname.toLowerCase()
-    return host === 'www.6figjobs.com' || host === '6figjobs.com' || host === 'localhost'
+    return (SITE_HOSTS as readonly string[]).includes(host) || host === 'localhost'
   } catch {
     return false
   }

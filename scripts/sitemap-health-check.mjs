@@ -5,7 +5,7 @@
 // - Validates sitemap XML responses
 // - Samples URLs and checks for non-200/redirects
 
-const SITE_URL = process.env.SITE_URL || 'https://www.6figjobs.com'
+const SITE_URL = process.env.SITE_URL || 'https://www.sixfigurejobs.net'
 const ROBOTS_URL = new URL('/robots.txt', SITE_URL).toString()
 
 const CHILD_SITEMAP_SAMPLE = toInt(process.env.CHILD_SITEMAP_SAMPLE, 3)

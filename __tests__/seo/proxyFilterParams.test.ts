@@ -3,8 +3,19 @@ jest.mock('../../lib/jobs/jobAvailabilityCheck', () => ({ checkJobAvailability: 
 import { NextRequest } from 'next/server'
 import { proxy } from '../../proxy'
 
-const run = (path: string) => proxy(new NextRequest(`https://www.6figjobs.com${path}`, { headers: { host: 'www.6figjobs.com', 'user-agent': 'Mozilla/5.0 (Macintosh) Chrome/130.0 Safari/537.36' } }))
+const run = (path: string) => proxy(new NextRequest(`https://www.sixfigurejobs.net${path}`, { headers: { host: 'www.sixfigurejobs.net', 'user-agent': 'Mozilla/5.0 (Macintosh) Chrome/130.0 Safari/537.36' } }))
 const redirected = (res: Response) => (res.status >= 300 && res.status < 400 ? res.headers.get('location') : null)
+
+// The proxy sends our other hosts to getSiteUrl()'s host, and CI sets SITE_URL=http://localhost:3000; pin the production
+// canonical host so these requests are on it.
+const savedSiteUrl = process.env.SITE_URL
+beforeAll(() => {
+  process.env.SITE_URL = 'https://www.sixfigurejobs.net'
+})
+afterAll(() => {
+  if (savedSiteUrl === undefined) delete process.env.SITE_URL
+  else process.env.SITE_URL = savedSiteUrl
+})
 
 describe('proxy: listing filter parameters reach the page', () => {
   // Every parameter the filter panel writes (app/jobs/_components/JobsFilters.tsx). role, seniority and companySize were
@@ -23,10 +34,10 @@ describe('proxy: listing filter parameters reach the page', () => {
   })
 
   it('still removes unknown parameters', async () => {
-    expect(redirected(await run('/jobs?foo=1&remoteMode=remote'))).toBe('https://www.6figjobs.com/jobs?remoteMode=remote')
+    expect(redirected(await run('/jobs?foo=1&remoteMode=remote'))).toBe('https://www.sixfigurejobs.net/jobs?remoteMode=remote')
   })
 
   it('still removes the legacy skill parameter on role pages', async () => {
-    expect(redirected(await run('/jobs/software-engineer?skill=python'))).toBe('https://www.6figjobs.com/jobs/software-engineer')
+    expect(redirected(await run('/jobs/software-engineer?skill=python'))).toBe('https://www.sixfigurejobs.net/jobs/software-engineer')
   })
 })

@@ -5,7 +5,7 @@
 //
 // POST body (JSON):
 //   {
-//     "urls": ["https://www.6figjobs.com/job/some-slug"],
+//     "urls": ["https://www.sixfigurejobs.net/job/some-slug"],
 //     "type": "URL_UPDATED" | "URL_DELETED",
 //     "dryRun": boolean (optional, defaults to true)
 //   }

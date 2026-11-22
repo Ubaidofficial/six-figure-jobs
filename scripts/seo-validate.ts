@@ -24,8 +24,8 @@ import {
  *   npm run seo:validate:strict
  *
  * Env:
- *   SEO_BASE_URL=https://www.6figjobs.com
- *   SEO_SITEMAP_URL=https://www.6figjobs.com/sitemap.xml
+ *   SEO_BASE_URL=https://www.sixfigurejobs.net
+ *   SEO_SITEMAP_URL=https://www.sixfigurejobs.net/sitemap.xml
  *   SEO_SAMPLE_PER_SITEMAP=200
  *   SEO_FULL=1
  *   SEO_STRICT=1
@@ -65,7 +65,7 @@ type SitemapCollection = {
   structureFailures: Failure[]
 }
 
-const BASE_URL = (process.env.SEO_BASE_URL || 'https://www.6figjobs.com').replace(/\/+$/, '')
+const BASE_URL = (process.env.SEO_BASE_URL || 'https://www.sixfigurejobs.net').replace(/\/+$/, '')
 const ROOT_SITEMAP_URL = (process.env.SEO_SITEMAP_URL || `${BASE_URL}/sitemap.xml`).trim()
 const SAMPLE_PER_SITEMAP = Math.max(1, Number(process.env.SEO_SAMPLE_PER_SITEMAP || '200'))
 const FULL = process.env.SEO_FULL === '1'

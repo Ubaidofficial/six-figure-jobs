@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 env:
-  SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.6figjobs.com' }}
+  SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://www.sixfigurejobs.net' }}
 
 jobs:
   # Only the webhook call (a few seconds) is serialized: one request at a time, a newer merge replaces a waiting one,

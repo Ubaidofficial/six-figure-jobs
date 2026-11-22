@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio/slim'
 
-const PROD_URL = 'https://www.6figjobs.com'
+const PROD_URL = 'https://www.sixfigurejobs.net'
 const HEADERS = {
   'user-agent': 'seo-validator-bot/2.1',
   'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'

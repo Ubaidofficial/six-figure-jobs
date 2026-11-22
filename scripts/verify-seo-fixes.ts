@@ -21,7 +21,7 @@ type Check = {
 }
 
 const root = process.cwd()
-const siteUrl = 'https://www.6figjobs.com'
+const siteUrl = 'https://www.sixfigurejobs.net'
 process.env.SITE_URL = siteUrl
 
 const DB_RETRY_ATTEMPTS = Math.max(1, Number(process.env.DB_RETRY_ATTEMPTS || '3'))
@@ -449,7 +449,7 @@ ${eligible ? 'ELIGIBLE ✅' : `NOT ELIGIBLE ❌ — ${checks.find((check) => che
 
 NEXT MANUAL STEPS:
 1. Validate a live job URL at https://search.google.com/test/rich-results
-2. Submit sitemap to Google Search Console: https://www.6figjobs.com/sitemap.xml
+2. Submit sitemap to Google Search Console: https://www.sixfigurejobs.net/sitemap.xml
 3. Monitor Google Search Console > Enhancements > Job Postings for indexing errors
 4. Verify Google Indexing API service account has Search Console Owner permissions
 5. Run PageSpeed Insights on homepage + 1 job page: https://pagespeed.web.dev

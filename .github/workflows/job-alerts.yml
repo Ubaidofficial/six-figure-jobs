@@ -34,7 +34,7 @@ jobs:
       EMAIL_SERVER: ${{ secrets.EMAIL_SERVER }}
       EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
       ALERTS_POSTAL_ADDRESS: ${{ secrets.ALERTS_POSTAL_ADDRESS }}
-      SITE_URL: https://www.6figjobs.com
+      SITE_URL: https://www.sixfigurejobs.net
 
     steps:
       - uses: actions/checkout@v6
