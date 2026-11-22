@@ -498,6 +498,10 @@ export default async function JobsIndexPage({
     Promise.all(bandCanonicalLinksAll.map((links) => dropEmptyRoleBandLinks(links))),
   )
 
+  const releasedCityChips = CITY_TARGETS.filter((city) => isPseoBatchReleased(`/jobs/city/${city.slug}`))
+    .slice(0, 12)
+    .map((city) => ({ label: `Jobs in ${city.label}`, href: `/jobs/city/${city.slug}` }))
+
   const basePath = '/jobs'
   const totalPages = data.totalPages
   const breadcrumbJsonLd = buildJobsBreadcrumbJsonLd()
@@ -742,14 +746,12 @@ export default async function JobsIndexPage({
           </ListingSection>
         ) : null}
 
-        <ListingSection title="Browse by city">
-          <LinkChips
-            label="Cities with six-figure jobs"
-            items={CITY_TARGETS.filter((city) => isPseoBatchReleased(`/jobs/city/${city.slug}`))
-              .slice(0, 12)
-              .map((city) => ({ label: `Jobs in ${city.label}`, href: `/jobs/city/${city.slug}` }))}
-          />
-        </ListingSection>
+        {/* Only released city pages are linked; before their sitemap wave there are none, so the heading goes too. */}
+        {releasedCityChips.length > 0 ? (
+          <ListingSection title="Browse by city">
+            <LinkChips label="Cities with six-figure jobs" items={releasedCityChips} />
+          </ListingSection>
+        ) : null}
 
         <ListingSection title="Browse by salary band">
           <LinkChips

@@ -57,6 +57,8 @@ Loop until verified. Don't stop at "should work."
 
 **Sitemap**: The sitemap index at `/sitemap.xml` references child sitemaps. `robots.txt` should only list `sitemap.xml` (+ `sitemap-jobs.xml` for Google Jobs discovery, from `INDEXING_PHASE=2`). Do not list all child sitemaps in `robots.txt`. In phase 1 the sitemaps submit hub pages only (home, hubs, salary bands, released pSEO batch, salary guides, countries, published companies); job sitemaps return an empty `<urlset>` until phase 2 (`lib/seo/indexingPhase.ts`, `lib/seo/sitemapPolicy.ts`).
 
+**Sitemap waves (owner's plan, 2026-11-22, for the new domain):** inside phase 1, `SITEMAP_WAVE` (Openship env, default 1, read at request time; `lib/seo/sitemapWaves.ts`) decides what is submitted. Wave 1: home, /jobs, /remote, /companies, /salary, /high-paying-jobs, /high-paying-jobs-report, /blog (index only), /privacy, /terms, /about, /post-a-job. Wave 2 adds the salary bands and blog articles; 3 the Phase 1 role hubs and countries; 4 salary guides, remote role pages and the remaining hubs; 5 pSEO batch 1 and company pages; 6+ one more pSEO batch each. Waves 1-4 change only the sitemap (those pages stay indexable); pSEO batch pages and company pages stay `noindex, follow` until wave 5+. Raise the wave only when Search Console (SEOConsole's indexing monitor) shows most of the current wave indexed. Tests run at wave 8 (`jest.setup.js`).
+
 **Component patterns**:
 - `JobCard` uses `variant` prop: `'listing'` | `'homepage'` | `'grid'`
 - Company logos use white background containers (dark card → invisible logo problem)

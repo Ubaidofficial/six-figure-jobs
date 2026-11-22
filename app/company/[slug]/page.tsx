@@ -24,6 +24,7 @@ import { buildCompanyPageDescription, buildCompanyPageTitle } from '../../../lib
 import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 import { getCompanyPublishingDecision } from '../../../lib/seo/companyPublishing'
+import { areCompanyPagesReleased } from '../../../lib/seo/sitemapWaves'
 import { COMPANY_JOBS_ORDER_BY, buildCompanyJobsWhere } from '../../../lib/companies/companyJobs'
 import {
   companyJobsPagePath,
@@ -100,7 +101,8 @@ export async function generateMetadata({
         pageNumber === 1 &&
         isCompanyPageIndexable(jobCount) &&
         publishingDecision.ready &&
-        publishingDecision.unlocked
+        publishingDecision.unlocked &&
+        areCompanyPagesReleased()
 
       const baseTitle = buildCompanyPageTitle(company.name)
       // Pages 2+ are noindex but still get a distinct title
