@@ -86,12 +86,20 @@ export const FREEHIRE_MARKETS: ReadonlyArray<FreehireMarket> = [
  * hours of a run's 5.5-hour gap), and CA/AU/UK read 50; raised once freehire's daily cap was gone (owner's plan,
  * 2026-11-22). The four slices cover every job exactly once (their totals add up to freehire's: 2026-11-19, and the EU
  * split 2026-11-22: 1,239,552 + 2,144,470 = 3,384,022).
+ *
+ * Two more slices reach further back for remote and worldwide jobs (owner's choice, 2026-11-22: "more remote and
+ * worldwide jobs"). They overlap the four above on purpose; the collection keeps each job once. Remote: freehire had
+ * 337,287 open remote jobs and its newest 10,000 reached back 55 hours (a Sunday, 2026-11-22), where the four regional
+ * slices see each region's newest hours only. Worldwide (`regions=global`): 6,184 open jobs in all, so the slice reads
+ * the whole 30 days, about 62 pages, every run.
  */
 export const DESCRIPTION_PAY_MARKETS: ReadonlyArray<FreehireMarket> = [
   { currency: 'ANY', geo: { countries: 'us' }, label: 'pay in description (US)', anyPay: true, maxPages: 100 },
   { currency: 'ANY', geo: { countries: 'ca,au', regions: 'uk' }, label: 'pay in description (CA, AU, UK)', anyPay: true, maxPages: 100 },
   { currency: 'ANY', geo: { regions: 'eu', countries_exclude: 'us,ca,au', regions_exclude: 'uk' }, label: 'pay in description (EU)', anyPay: true, maxPages: 100 },
   { currency: 'ANY', geo: { countries_exclude: 'us,ca,au', regions_exclude: 'uk,eu' }, label: 'pay in description (rest)', anyPay: true, maxPages: 100 },
+  { currency: 'ANY', geo: { work_mode: 'remote' }, label: 'pay in description (remote)', anyPay: true, maxPages: 100 },
+  { currency: 'ANY', geo: { regions: 'global' }, label: 'pay in description (worldwide)', anyPay: true, maxPages: 100, lookbackDays: MAX_LISTED_AGE_DAYS },
 ]
 
 export type FreehireJob = {
