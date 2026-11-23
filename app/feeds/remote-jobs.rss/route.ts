@@ -11,5 +11,6 @@ export function GET() {
     title: 'Six Figure Jobs: newest remote $100k+ jobs',
     description: 'The newest remote jobs paying $100k+ (or the local equivalent) with a published salary.',
     selfPath: '/feeds/remote-jobs.rss',
+    fullDescriptions: true,
   })
 }

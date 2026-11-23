@@ -44,6 +44,44 @@ describe('buildJobsRss', () => {
     expect(desc).toContain('Hybrid')
   })
 
+  it('gives the company its own element, and leaves it out when unknown', () => {
+    expect(xml).toContain('<company><![CDATA[Acme & Co]]></company>')
+    const unknown = buildJobsRss([job({ company: '', companyRef: null })], { siteUrl: 'https://x.test', title: 't', description: 'd', selfPath: '/f' })
+    expect(unknown).not.toContain('<company>')
+    expect(unknown).toContain('<title>A hiring company: ')
+  })
+
+  it('keeps the short description unless full descriptions are asked for', () => {
+    expect(xml).not.toContain('CDATA[<p>')
+  })
+
+  describe('with full descriptions', () => {
+    const full = (descriptionHtml: string | null) =>
+      buildJobsRss([job({ descriptionHtml })], { siteUrl: 'https://x.test', title: 't', description: 'd', selfPath: '/f', fullDescriptions: true })
+    const bodyOf = (feed: string) => feed.match(/<item>[\s\S]*<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ?? ''
+
+    it('puts the facts first, then the description as escaped paragraphs', () => {
+      const body = bodyOf(
+        full('<p>We build payments infrastructure for thousands of businesses around the world, every day.</p><ul><li>Own the ledger &amp; the APIs</li></ul><script>alert(1)</script>'),
+      )
+      expect(body).toMatch(/^<p>\$180.*Hybrid<\/p>/)
+      expect(body).toContain('<p>We build payments infrastructure for thousands of businesses around the world, every day.</p>')
+      expect(body).toContain('<p>- Own the ledger &amp; the APIs</p>')
+      expect(body).not.toContain('script')
+      expect(body).not.toContain('alert')
+    })
+
+    it('escapes markup in the text so none reaches a reader', () => {
+      const body = bodyOf(full('<p>Work with &lt;img src=x onerror=alert(1)&gt; tags across a large distributed team of engineers.</p>'))
+      expect(body).not.toContain('<img')
+      expect(body).toContain('&lt;img')
+    })
+
+    it('keeps just the facts when there is no description', () => {
+      expect(bodyOf(full(null))).toMatch(/^<p>\$180[^<]*<\/p>$/)
+    })
+  })
+
   it('escapes all five XML characters', () => {
     expect(escapeXml(`a&b<c>d"e'f`)).toBe('a&amp;b&lt;c&gt;d&quot;e&apos;f')
   })
