@@ -25,5 +25,6 @@ export function GET(request: Request) {
     title: 'Six Figure Jobs: newest $100k+ jobs',
     description: 'The newest jobs paying $100k+ (or the local equivalent) with a published salary.',
     selfPath: '/feeds/jobs.rss',
+    fullDescriptions: true,
   })
 }

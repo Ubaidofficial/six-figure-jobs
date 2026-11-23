@@ -1,7 +1,9 @@
 // lib/feeds/jobsRss.ts
 // Public RSS 2.0 feeds of the newest $100k+ jobs (/feeds/jobs.rss, /feeds/remote-jobs.rss), for feed readers,
 // aggregators and newsletters. Each item links to the job's page on this site; title "Company: Job title", like the
-// big remote boards, with pay, location and work arrangement in the description.
+// big remote boards, with pay, location and work arrangement in the description, then (when asked) the job's full
+// description as plain-text paragraphs, and the company in its own <company> element for job aggregators.
+import { cdata, descriptionToText } from '@/lib/feeds/joobleFeed'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
 import { buildSalaryText } from '@/lib/jobs/salary'
@@ -16,14 +18,37 @@ export function escapeXml(text: string): string {
     .replace(/'/g, '&apos;')
 }
 
+// Same cap as the Jooble feed.
+const MAX_DESCRIPTION_CHARS = 50_000
+
+/**
+ * The item's description as HTML: the facts line, then the job's description read as plain text (the Jooble feed's
+ * reader, which drops markup and noise), one escaped paragraph per line, so no markup from the source reaches a reader.
+ */
+function itemDescriptionHtml(facts: string, html: string | null | undefined): string {
+  const lines = html ? descriptionToText(html).slice(0, MAX_DESCRIPTION_CHARS).split('\n') : []
+  return [facts, ...lines]
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => `<p>${escapeXml(l)}</p>`)
+    .join('')
+}
+
 const WORK_MODE: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site', 'on-site': 'On-site' }
 
 export function buildJobsRss(
   jobs: JobWithCompany[],
-  { siteUrl, title, description, selfPath }: { siteUrl: string; title: string; description: string; selfPath: string },
+  {
+    siteUrl,
+    title,
+    description,
+    selfPath,
+    fullDescriptions = false,
+  }: { siteUrl: string; title: string; description: string; selfPath: string; fullDescriptions?: boolean },
 ): string {
   const items = jobs.map((job) => {
-    const company = String(job.companyRef?.name ?? job.company ?? '').trim() || 'A hiring company'
+    const companyName = String(job.companyRef?.name ?? job.company ?? '').trim()
+    const company = companyName || 'A hiring company'
     const url = `${siteUrl}${buildJobSlugHref(job)}`
     const pay = buildSalaryText(job)
     const where = describeJobLocation(job)
@@ -37,7 +62,10 @@ export function buildJobsRss(
       `      <link>${escapeXml(url)}</link>`,
       `      <guid isPermaLink="true">${escapeXml(url)}</guid>`,
       date ? `      <pubDate>${new Date(date).toUTCString()}</pubDate>` : null,
-      `      <description>${escapeXml(facts)}</description>`,
+      fullDescriptions
+        ? `      <description>${cdata(itemDescriptionHtml(facts, job.descriptionHtml))}</description>`
+        : `      <description>${escapeXml(facts)}</description>`,
+      companyName ? `      <company>${cdata(companyName)}</company>` : null,
       '    </item>',
     ]
       .filter(Boolean)
