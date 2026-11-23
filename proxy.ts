@@ -53,6 +53,7 @@ const ALLOWED_PUBLIC_QUERY_PARAMS = new Set([
   'companySize',
   'tech',
   'visa',
+  'equity',
   'exact',
   'country',
   'remoteMode',

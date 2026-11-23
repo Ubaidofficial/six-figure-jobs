@@ -120,6 +120,8 @@ export type FreehireJob = {
   closed_at?: string | null
   /** Skill / technology slugs, e.g. ['python', 'react', 'terraform']. */
   skills?: string[] | null
+  /** `salary_and_equity`, `equity_only` or `not_stated` (none read, not "no equity"); absent when unknown. */
+  equity?: string | null
   /** Benefit slugs, e.g. ['health_insurance', 'unlimited_pto', 'retirement_plan']. */
   perks?: string[] | null
   /** freehire's own freshness verdict; `stale`/`fake_freshness` are old postings with a bumped date. */
@@ -283,6 +285,7 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     benefits: freehireBenefitLabels(job.perks),
     requirements: freehireRequirementTexts(e.requirements),
     visaSponsorship: e.visa_sponsorship === true,
+    offersEquity: job.equity === 'salary_and_equity',
   }
 }
 

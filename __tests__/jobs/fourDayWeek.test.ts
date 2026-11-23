@@ -68,6 +68,11 @@ describe('matching our jobs to the listings', () => {
     expect(fourDayWeekWhere([])).toEqual({ id: { in: [] } })
   })
 
+  it('buildWhere filters on offersEquity only when asked for', () => {
+    expect(json(buildWhere({ offersEquity: true }))).toContain('"offersEquity":true')
+    expect(json(buildWhere({}))).not.toContain('offersEquity')
+  })
+
   it('is part of buildWhere when asked for, on top of the usual public-job rules', () => {
     expect(json(buildWhere({ fourDayWeek: listings }))).toContain('lead-security-engineer-at-buffer')
     expect(json(buildWhere({}))).not.toContain('4dayweek.io')

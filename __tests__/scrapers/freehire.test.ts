@@ -246,6 +246,15 @@ describe('skills and visa sponsorship', () => {
     expect(withVisa(null)).toBe(false)
     expect(withVisa(undefined)).toBe(false)
   })
+
+  it('marks pay plus equity only for equity=salary_and_equity', () => {
+    const withEquity = (equity: string | null | undefined) => mapFreehireJob({ ...job, equity })?.offersEquity
+    expect(withEquity('salary_and_equity')).toBe(true)
+    expect(withEquity('not_stated')).toBe(false) // "none read", not "no equity"
+    expect(withEquity('equity_only')).toBe(false)
+    expect(withEquity(null)).toBe(false)
+    expect(withEquity(undefined)).toBe(false)
+  })
 })
 
 describe('sourceRef', () => {

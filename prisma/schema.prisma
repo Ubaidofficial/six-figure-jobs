@@ -58,6 +58,8 @@ model Job {
   employmentType            String?        @default("full-time")
   workArrangement           String?
   visaSponsorship           Boolean        @default(false)
+  /// The posting states pay plus equity (freehire's `equity: salary_and_equity`); only ever turned on. /jobs?equity=1.
+  offersEquity              Boolean        @default(false)
   noDegreeMention           Boolean        @default(false)
   techStack                 String?
   industry                  String?

@@ -430,6 +430,7 @@ async function createNewJob(
     techStack: enrichment.techStack ?? null,
     sourceRef: input.sourceRef ?? null,
     visaSponsorship: input.visaSponsorship === true,
+    offersEquity: input.offersEquity === true,
 
     // v2.7+: never write NULL roleSlug (breaks routing/sitemaps); fallback to "other"
     roleSlug: roleData.roleSlug || 'other',
@@ -598,6 +599,7 @@ async function upgradeJob(
     skillsJson: input.skills?.length ? JSON.stringify(input.skills) : existing.skillsJson,
     sourceRef: input.sourceRef ?? existing.sourceRef,
     visaSponsorship: input.visaSponsorship === true ? true : existing.visaSponsorship,
+    offersEquity: input.offersEquity === true ? true : existing.offersEquity,
 
     // ✅ Force type fields to update (prevents old “Contract” from lingering)
     type: input.employmentType ?? existing.type,
@@ -721,6 +723,7 @@ async function refreshJob(
   if (input.skills?.length) updateData.skillsJson = JSON.stringify(input.skills)
   if (input.sourceRef) updateData.sourceRef = input.sourceRef
   if (input.visaSponsorship === true) updateData.visaSponsorship = true
+  if (input.offersEquity === true) updateData.offersEquity = true
   // Structured benefits and requirements fill only an empty field: a list a person, the AI writer or an earlier pass
   // stored is never replaced.
   if (!existing.benefitsJson && input.benefits?.length) updateData.benefitsJson = JSON.stringify(input.benefits)

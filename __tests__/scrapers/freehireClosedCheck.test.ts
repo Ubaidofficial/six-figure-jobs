@@ -56,7 +56,9 @@ describe('lookupFreehireJob', () => {
     get.mockResolvedValueOnce({ data: { data: { closed_at: '2026-11-04T10:00:00Z' } } })
     expect(await lookupFreehireJob('a')).toEqual({ state: 'closed', closedAt: '2026-11-04T10:00:00Z' })
     get.mockResolvedValueOnce({ data: { data: { closed_at: null } } })
-    expect(await lookupFreehireJob('b')).toEqual({ state: 'open', description: null, reality: null })
+    expect(await lookupFreehireJob('b')).toEqual({ state: 'open', description: null, reality: null, equity: null })
+    get.mockResolvedValueOnce({ data: { data: { closed_at: null, equity: 'salary_and_equity' } } })
+    expect(await lookupFreehireJob('c')).toMatchObject({ state: 'open', equity: 'salary_and_equity' })
   })
 
   it('treats 404 as "gone" (never as a closure) and other failures as errors', async () => {
@@ -251,6 +253,15 @@ describe('keeping open jobs alive and upgrading truncated descriptions', () => {
     expect(arg.descriptions).toHaveLength(1) // job 2 already has the full text
     expect(arg.descriptions[0].id).toBe('job-1')
     expect(r).toMatchObject({ refreshed: 2, descriptionsUpgraded: 1, status: 'ok' })
+  })
+
+  it('marks open jobs that freehire says offer pay plus equity, so older jobs gain the filter field', async () => {
+    await run([job(1), job(2), job(3)], {
+      'slug-1': { state: 'open', reality: fresh, equity: 'salary_and_equity' },
+      'slug-2': { state: 'open', reality: fresh, equity: 'not_stated' },
+      'slug-3': { state: 'open', reality: fresh },
+    })
+    expect(applyRefresh.mock.calls[0][0].equityIds).toEqual(['job-1'])
   })
 
   it('lets jobs freehire flags as re-stamped, or stale beyond 30 days, run into the 7-day expiry', async () => {
