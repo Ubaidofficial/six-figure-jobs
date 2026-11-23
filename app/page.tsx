@@ -43,7 +43,7 @@ import {
 } from '@/components/home/ExplorePremiumRoles'
 import { HIGH_SALARY_THRESHOLDS } from '@/lib/currency/thresholds'
 import { getThresholdLabelForCountry } from '@/lib/seo/salaryLabels'
-import { getSiteUrl } from '@/lib/seo/site'
+import { getSiteUrl, SITE_NAME } from '@/lib/seo/site'
 import { buildHomeDescription } from '@/lib/seo/metaText'
 import { TopLocations, type TopLocationCard } from '@/components/home/TopLocations'
 import { logRuntimeFallback, skipPrerenderWhileBuilding } from '@/lib/runtime/fallback'
@@ -81,7 +81,7 @@ export async function generateMetadata(): Promise<Metadata> {
         title: HOME_TITLE,
         description: ogDescription,
         url: getSiteUrl(),
-        siteName: '6FigJobs - Six Figure Jobs',
+        siteName: SITE_NAME,
         type: 'website',
         images: [
           {
