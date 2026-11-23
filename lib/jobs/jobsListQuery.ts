@@ -16,6 +16,8 @@ export function parseJobsListing(params: ListingParams, page: number, pageSize: 
   const keyword = (params.get('q') || '').trim() || undefined
   const tech = (params.get('tech') || '').trim() || undefined
   const visa = params.get('visa') === '1'
+  // equity=1: only jobs whose posting states pay plus equity (Job.offersEquity).
+  const equity = params.get('equity') === '1'
   // exact=1: the visitor chose to search for the words as typed, without typo correction.
   const exact = params.get('exact') === '1'
   const rawCountry = (params.get('country') || '').trim().toUpperCase()
@@ -51,9 +53,10 @@ export function parseJobsListing(params: ListingParams, page: number, pageSize: 
     tech,
     keyword,
     ...(visa ? { visaSponsorship: true } : {}),
+    ...(equity ? { offersEquity: true } : {}),
     ...(keyword && exact ? { keywordPlan: buildKeywordPlan(keyword, null) } : {}),
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: salaryFilterAmount(minSalary, salaryCurrency) } : {}),
   }
 
-  return { queryInput, keyword, tech, visa, exact, rawCountry, country, remoteMode, remoteRegion, sort, roles, seniority, companySizes, minSalary }
+  return { queryInput, keyword, tech, visa, equity, exact, rawCountry, country, remoteMode, remoteRegion, sort, roles, seniority, companySizes, minSalary }
 }

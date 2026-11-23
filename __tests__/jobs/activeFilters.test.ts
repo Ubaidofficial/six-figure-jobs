@@ -41,8 +41,8 @@ describe('active filter chips', () => {
 
   it('names each filter as the panel does, in the panel’s order', () => {
     expect(
-      labels('remoteMode=remote&minSalary=200000&country=GB&role=software-engineer&seniority=senior&companySize=51-200&tech=Go&visa=1'),
-    ).toEqual(['£200k+', 'Remote', 'UK', 'Software Engineer', 'Senior', '51–200 employees', 'Go', 'Visa sponsorship'])
+      labels('remoteMode=remote&minSalary=200000&country=GB&role=software-engineer&seniority=senior&companySize=51-200&tech=Go&visa=1&equity=1'),
+    ).toEqual(['£200k+', 'Remote', 'UK', 'Software Engineer', 'Senior', '51–200 employees', 'Go', 'Visa sponsorship', 'Salary + equity'])
   })
 
   it('gives one chip per value of a repeatable filter, comma-separated or repeated', () => {

@@ -22,6 +22,8 @@ export type JobsFacets = {
   techs?: JobsFacetItem[]
   /** When true, the panel shows the Visa sponsorship toggle (the page must apply the `visa` param). */
   visaFilter?: boolean
+  /** When true, the panel shows the Salary + equity toggle (the page must apply the `equity` param). */
+  equityFilter?: boolean
   /** Remote jobs per region ("global" = can be done from anywhere). When present, the panel shows a Remote region filter. */
   remoteRegions?: Array<{ value: string; label: string; count: number }>
   /** Jobs per seniority level and company size with the other filters on (lib/jobs/levelSizeFacets.ts). */
@@ -211,6 +213,7 @@ export function JobsFiltersPanel({
   const selectedCompanySizes = multiParam(searchParams, 'companySize')
   const selectedTech = (searchParams.get('tech') || '').toLowerCase()
   const visaOn = searchParams.get('visa') === '1'
+  const equityOn = searchParams.get('equity') === '1'
   const minSalary = Number(searchParams.get('minSalary') || '') || 0
   const currency = salaryFilterCurrency(locationPreset?.countryCode || selectedCountry)
 
@@ -450,6 +453,14 @@ export function JobsFiltersPanel({
           <Section title="Visa" open={visaOn}>
             <Option on={visaOn} onClick={() => set('visa', visaOn ? null : '1')}>
               Offers visa sponsorship
+            </Option>
+          </Section>
+        ) : null}
+
+        {facets.equityFilter ? (
+          <Section title="Equity" open={equityOn}>
+            <Option on={equityOn} onClick={() => set('equity', equityOn ? null : '1')}>
+              Salary + equity
             </Option>
           </Section>
         ) : null}

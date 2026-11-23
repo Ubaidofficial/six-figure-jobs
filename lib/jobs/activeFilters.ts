@@ -83,6 +83,7 @@ export function activeFilterChips(params: Params, pinned: readonly string[] = []
   const tech = params.get('tech')?.trim()
   if (tech) add({ key: 'tech', label: tech, param: 'tech' })
   if (params.get('visa') === '1') add({ key: 'visa', label: 'Visa sponsorship', param: 'visa' })
+  if (params.get('equity') === '1') add({ key: 'equity', label: 'Salary + equity', param: 'equity' })
 
   return chips
 }
@@ -100,4 +101,5 @@ export const FILTER_PARAMS = [
   'companySize',
   'tech',
   'visa',
+  'equity',
 ] as const

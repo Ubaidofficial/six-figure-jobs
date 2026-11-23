@@ -26,6 +26,7 @@ describe('proxy: listing filter parameters reach the page', () => {
     '/jobs?seniority=senior',
     '/jobs?companySize=1000%2B',
     '/jobs?minSalary=200000&remoteMode=remote&country=GB&remoteRegion=global&tech=Python&visa=1&sort=salary',
+    '/jobs?equity=1',
     '/jobs/software-engineer?seniority=staff&tech=Go',
     '/jobs/200k-plus?seniority=staff&role=product-manager',
     '/jobs/location/united-states?companySize=51-200',

@@ -29,4 +29,11 @@ describe('parseJobsListing (shared by /jobs and /api/jobs)', () => {
     expect(r.queryInput).toMatchObject({ keyword: 'react', roleSlugs: ['software-engineer'], seniorityLevels: ['senior'], remoteMode: 'remote', visaSponsorship: true, tech: 'go', sortBy: 'relevant' })
     expect(parse('remoteMode=anywhere').queryInput.remoteMode).toBeUndefined()
   })
+
+  it('reads equity=1 as jobs offering pay plus equity, and nothing else as that filter', () => {
+    expect(parse('equity=1').queryInput).toMatchObject({ offersEquity: true })
+    expect(parse('equity=1').equity).toBe(true)
+    expect(parse('equity=yes').queryInput.offersEquity).toBeUndefined()
+    expect(parse('').queryInput.offersEquity).toBeUndefined()
+  })
 })

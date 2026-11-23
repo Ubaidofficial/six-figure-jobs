@@ -95,6 +95,8 @@ export interface ScrapedJobInput {
 
   /** Whether the posting says visa sponsorship is available, when the source states it. */
   visaSponsorship?: boolean | null
+  /** Whether the posting states pay plus equity, when the source says so. */
+  offersEquity?: boolean | null
 
   /** Benefits the source lists as structured data (readable labels), shown in the job page's Benefits section. */
   benefits?: string[] | null

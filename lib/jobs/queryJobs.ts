@@ -77,6 +77,8 @@ export type JobQueryInput = {
 
   // Specialty filters
   visaSponsorship?: boolean
+  /** Only jobs whose posting states pay plus equity. */
+  offersEquity?: boolean
   /**
    * Only jobs whose description asks for no degree, or accepts equivalent experience: pass the latest
    * loadDegreeRequiredJobIds() result (lib/jobs/degreeRequirement.ts).
@@ -786,6 +788,10 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 
   if (filters.visaSponsorship === true) {
     where.visaSponsorship = true
+  }
+
+  if (filters.offersEquity === true) {
+    where.offersEquity = true
   }
 
   if (filters.noDegreeRequired) {
