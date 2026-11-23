@@ -10,9 +10,11 @@ import { canonicalHostFor, getSiteUrl } from './lib/seo/site'
 // edge-only middleware setup we couldn't tell Google the difference between a
 // removed job (410) and an unknown URL (404), which caused the "Not found
 // (404)" pile-up in Google Search Console.
+// `.xml` (sitemaps, RSS) goes through the proxy so the old domain's sitemaps 301 to the new host like its pages; other
+// static files (images, `.txt` key files, `.json`) do not.
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json)).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|json)).*)',
   ],
 }
 

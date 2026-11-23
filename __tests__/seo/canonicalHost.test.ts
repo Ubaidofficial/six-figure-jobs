@@ -1,7 +1,7 @@
 jest.mock('../../lib/jobs/jobAvailabilityCheck', () => ({ checkJobAvailability: jest.fn(async () => null) }))
 
 import { NextRequest } from 'next/server'
-import { proxy } from '../../proxy'
+import { config, proxy } from '../../proxy'
 import { canonicalHostFor, getSiteUrl } from '../../lib/seo/site'
 
 // The site moved from www.6figjobs.com to www.sixfigurejobs.net (2026-11-22). Page loads on any other host of ours must
@@ -57,6 +57,22 @@ describe('canonical host', () => {
     ['POST', '/api/revalidate'],
   ])('%s %s on the old host is not redirected', async (method, path) => {
     expect(redirected(await run('www.6figjobs.com', path, method))).toBeNull()
+  })
+
+  // The matcher once skipped every .xml file, so www.6figjobs.com/sitemap.xml answered 200 with the new domain's URLs
+  // (2026-11-23). Sitemaps must reach the proxy; images, .txt key files and .json must not.
+  it('the proxy runs on .xml files but not on other static files', () => {
+    const inner = config.matcher[0].slice(1)
+    const runsOn = (path: string) => new RegExp(`^/${inner}$`).test(path)
+    for (const path of ['/sitemap.xml', '/sitemap-hubs.xml', '/feed.xml', '/jobs']) expect([path, runsOn(path)]).toEqual([path, true])
+    for (const path of ['/icon1.png', '/b2700620b9ead52c521249c2c119fe2a.txt', '/robots.txt', '/manifest.json', '/favicon.ico']) expect([path, runsOn(path)]).toEqual([path, false])
+  })
+
+  it.each(['/sitemap.xml', '/sitemap-hubs.xml'])('%s on the old host gets a 301 to the new host', async (path) => {
+    const res = await run('www.6figjobs.com', path)
+    expect(res.status).toBe(301)
+    expect(res.headers.get('location')).toBe(`https://www.sixfigurejobs.net${path}`)
+    expect(redirected(await run('www.sixfigurejobs.net', path))).toBeNull()
   })
 
   it('pages on the canonical host are served as is', async () => {
