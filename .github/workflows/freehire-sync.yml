@@ -109,10 +109,10 @@ jobs:
         run: npm run sync:freehire
 
       # freehire's change feed (lib/scrapers/freehireChanges.ts): every closing since the last run, read from the cursor
-      # stored in SiteConfig (about 1,400 pages, about 9 minutes, on a 5.5-hour gap). Our jobs whose posting closed and that
-      # freehire's open search no longer lists are expired; the cursor moves only after that. Same rule as the per-job
-      # check below: LIVE on scheduled, planned and closed_apply runs, report-only on other manual runs. The per-job check
-      # stays as the safety net (and refreshes the jobs it confirms open).
+      # stored in SiteConfig (a weekday's 5.5-hour gap is about 2,500 pages, about 6 minutes; at most 8,000 pages a run).
+      # Our jobs whose posting closed and that freehire's open search no longer lists are expired; the cursor moves only
+      # after that. Same rule as the per-job check below: LIVE on scheduled, planned and closed_apply runs, report-only on
+      # other manual runs. The per-job check stays as the safety net (and refreshes the jobs it confirms open).
       - name: Expire jobs closed in freehire's change feed
         if: ${{ !cancelled() && steps.sync.conclusion == 'success' && (github.event_name == 'schedule' || inputs.planned || inputs.closed_apply) }}
         timeout-minutes: 30

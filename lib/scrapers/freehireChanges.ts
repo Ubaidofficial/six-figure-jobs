@@ -31,8 +31,13 @@ const CHANGES_URL = 'https://freehire.me/api/v1/jobs/changes'
 export const CURSOR_KEY = 'freehire.changes.cursor'
 /** With no stored cursor (the first run), start this far back. The per-job check covers anything older. */
 export const FIRST_RUN_LOOKBACK_HOURS = 24
-/** Most pages one run reads (about 2 days of changes); the rest waits for the next run, from the saved cursor. */
-export const MAX_PAGES_PER_RUN = 3000
+/**
+ * Most pages one run reads; the rest waits for the next run, from the saved cursor. Was 3,000 until the first live run
+ * (2026-11-23 11:36 UTC): a weekday carries about 45,000 changes an hour (25,700 on the Sunday it was measured), so 3,000
+ * pages ended about 4 hours behind. Pages came at 0.13 s each, so 8,000 take about 17 minutes, within the script's
+ * 20-minute read deadline, and cover about 18 hours of weekday changes against a 5.5-hour gap between runs.
+ */
+export const MAX_PAGES_PER_RUN = 8000
 /** Abort, expiring nothing, if the closings would take more than this share of our active freehire jobs. */
 export const MAX_CLOSE_FRACTION = 0.2
 /** Skip, expiring nothing, if more than this share of the "still listed?" searches fail. */
@@ -131,17 +136,19 @@ export type ChangesOptions = {
 
 const FREEHIRE = makeBoardSource('freehire')
 
-async function findActiveFreehireJobsBySlugs(slugs: string[]): Promise<OurJob[]> {
-  const out: OurJob[] = []
-  for (let i = 0; i < slugs.length; i += 1000) {
-    out.push(
-      ...(await prisma.job.findMany({
-        where: { source: FREEHIRE, isExpired: false, sourceRef: { in: slugs.slice(i, i + 1000) } },
-        select: { id: true, title: true, externalId: true, sourceRef: true },
-      })),
-    )
-  }
-  return out
+/**
+ * Our active freehire jobs among these postings. One query for all our active freehire jobs (about 21,000 rows), matched
+ * in memory: the closings in one run run to hundreds of thousands (236,399 on 2026-11-23), and asking the database 1,000
+ * slugs at a time took 190 s for those, which would not fit the step's time limit at 8,000 pages.
+ */
+export async function findActiveFreehireJobsBySlugs(slugs: string[]): Promise<OurJob[]> {
+  if (slugs.length === 0) return []
+  const wanted = new Set(slugs)
+  const active = await prisma.job.findMany({
+    where: { source: FREEHIRE, isExpired: false, sourceRef: { not: null } },
+    select: { id: true, title: true, externalId: true, sourceRef: true },
+  })
+  return active.filter((j) => j.sourceRef !== null && wanted.has(j.sourceRef))
 }
 
 export async function syncFreehireChanges(options: ChangesOptions = {}): Promise<ChangesResult> {
