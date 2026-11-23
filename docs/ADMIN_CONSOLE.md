@@ -47,10 +47,27 @@ One person runs the site. The console should answer, in this order:
 - Every number has its context in words ("8 min ago", "420 in 14 days").
 - Charts are inline SVG bars; no chart library.
 
+## Second pass, built 2026-11-24 (owner's choice: items 5, 1 and 2)
+
+- **Alert emails** (`lib/admin/health.ts`, `lib/admin/healthAlerts.ts`, run from `instrumentation.ts`). Every
+  `HEALTH_ALERTS_EVERY_MIN` minutes (default 30, first run 10 minutes after a deploy, 0 = off) the app evaluates the
+  health checks and emails `OPS_ALERT_EMAIL` (else `ALERTS_OWNER_EMAIL`) when one turns red, again daily while it stays
+  red, and once when it recovers. Red means: fewer than 1,000 live jobs; no new job in 12 h; freehire's change feed not
+  read in 24 h; 20 failed Google notices in 24 h; 100 reports of one browser error in an hour. Uses the job-alert
+  sender, so it needs `RESEND_API_KEY` (or `EMAIL_SERVER`) and `EMAIL_FROM` in Openship. What was reported is kept in
+  SiteConfig `ops.health.alerts`. System page: address (masked), last run, what is open, "Send a test email".
+  It cannot tell you the site itself is down (it runs inside it): use an outside uptime monitor on `/api/health`.
+- **Job reports you can act on** (`lib/admin/jobReports.ts`). Feedback reads the job id from a report's "Job: … (id)"
+  line, shows the job (pay shown, live/expired, open reports on it) with Edit job, Expire and resolve (all its
+  reports), Resolve all, Employer page. Filter: Job reports.
+- **Review queue** (`/ubaid93/review`, `lib/admin/reviewQueue.ts`). Pay over $600k a year (the import's `needsReview`
+  flag, read nowhere before; "Pay is right" clears it, and the import does not set it again once a job has pay) and odd
+  titles ("---", a `$` amount or a "150K-200K" range in the title, over 110 characters). Edit / Expire / Employer page.
+  Counts in the navigation and on Overview.
+
 ## Next, not built yet (each needs the owner's go-ahead)
 
-1. **Keep admin visits out of analytics.** GTM and SourceTrack still load on `/ubaid93`, so the owner's own visits count
-   as traffic.
+1. ~~Keep admin visits out of analytics~~ (done 2026-11-24, PR #231). The owner's visits to public pages still count.
 2. **Wrong-salary fixes that reach the page.** The page shows `minAnnual`/`maxAnnual` (read at import), so editing pay
    in the console changes only the fallback. A proper fix writes the yearly range and recomputes the salary flags
    (`isHundredKLocal`, `isHighSalary`) through the ingest's own rules.

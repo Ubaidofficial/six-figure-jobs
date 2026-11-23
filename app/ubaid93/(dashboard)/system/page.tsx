@@ -3,9 +3,12 @@
 import { accountsEnabled } from '../../../../lib/accounts/enabled'
 import { alertsEnabled } from '../../../../lib/alerts/config'
 import { autoApplyEnabled, autoApplyLive } from '../../../../lib/autoapply/config'
+import { ALERT_STATE_KEY, alertRecipient, emailConfigured, healthAlertsEveryMs, parseAlertState } from '../../../../lib/admin/healthAlerts'
+import { maskEmail } from '../../../../lib/alerts/service'
 import { prisma } from '../../../../lib/prisma'
 import { loadHealthChecks } from '../overview'
 import { PageHead, Section, Status, ago, s, stamp } from '../ui'
+import TestAlertButton from './TestAlertButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +16,7 @@ type SourceRow = { source: string; live: number; added24h: number; added7d: numb
 
 export default async function SystemPage() {
   const now = Date.now()
-  const [checks, sources, queue, failures, lastScrape, stuckScrapes, users, subs] = await Promise.all([
+  const [checks, sources, queue, failures, lastScrape, stuckScrapes, users, subs, alertRow] = await Promise.all([
     loadHealthChecks(now),
     prisma.$queryRaw<SourceRow[]>`
       SELECT source,
@@ -35,7 +38,13 @@ export default async function SystemPage() {
     prisma.scrapeRun.count({ where: { status: 'running', startedAt: { lt: new Date(now - 86_400_000) } } }),
     prisma.user.groupBy({ by: ['emailVerified'], _count: { _all: true } }).catch(() => []),
     prisma.subscription.groupBy({ by: ['status'], _count: { _all: true } }).catch(() => []),
+    prisma.siteConfig.findUnique({ where: { key: ALERT_STATE_KEY } }),
   ])
+  const alertState = parseAlertState(alertRow?.value)
+  const recipient = alertRecipient()
+  const canEmail = Boolean(recipient) && emailConfigured()
+  const everyMs = healthAlertsEveryMs()
+  const openAlerts = Object.keys(alertState.open)
 
   const userTotal = users.reduce((n, u) => n + u._count._all, 0)
   const verified = users.filter((u) => u.emailVerified).reduce((n, u) => n + u._count._all, 0)
@@ -61,6 +70,34 @@ export default async function SystemPage() {
               </span>
             </li>
           ))}
+        </ul>
+      </Section>
+
+      <Section title="Alert emails" note="When a check above turns red, and when it is fixed">
+        <ul className={`${s.panel} ${s.checks}`}>
+          <li className={s.check}>
+            <span className={s.checkLabel}>Sends to</span>
+            <span>
+              <Status tone={canEmail ? 'ok' : 'warn'}>
+                {recipient ? maskEmail(recipient) : 'No address set'}
+                {recipient && !emailConfigured() ? ' (no email provider set)' : ''}
+              </Status>
+              <span className={s.checkDetail}>OPS_ALERT_EMAIL, else ALERTS_OWNER_EMAIL</span>
+            </span>
+          </li>
+          <li className={s.check}>
+            <span className={s.checkLabel}>Checks</span>
+            <span>
+              {everyMs ? `Every ${Math.round(everyMs / 60_000)} minutes` : 'Off (HEALTH_ALERTS_EVERY_MIN=0)'}
+              <span className={s.checkDetail}>
+                {alertState.lastRunAt ? `last run ${ago(alertState.lastRunAt, now)}` : 'not run yet (first run 10 minutes after a deploy)'}
+                {openAlerts.length ? ` · reported now: ${openAlerts.join(', ')}` : ''}
+              </span>
+            </span>
+          </li>
+          <li className={s.check} style={{ gridTemplateColumns: '1fr' }}>
+            <TestAlertButton disabled={!canEmail} />
+          </li>
         </ul>
       </Section>
 

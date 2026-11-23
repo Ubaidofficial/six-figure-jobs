@@ -1,37 +1,28 @@
 import { NextResponse } from 'next/server'
+
 import { getAdminSession } from '../../../../lib/admin/auth'
+import { JOB_REPORT_TYPES, reportMarker } from '../../../../lib/admin/jobReports'
 import { prisma } from '../../../../lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: Request) {
-  if (!(await getAdminSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { searchParams } = new URL(req.url)
-  const page = Math.max(1, Number(searchParams.get('page') || 1))
-  const status = searchParams.get('status') || ''
-  const pageSize = 50
+const STATUSES = ['new', 'reviewed', 'resolved']
 
-  const where = status ? { status } : {}
-  const [items, total] = await Promise.all([
-    prisma.feedback.findMany({
-      where,
-      select: { id: true, type: true, message: true, url: true, hasScreenshot: true, userAgent: true, status: true, createdAt: true },
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.feedback.count({ where }),
-  ])
-
-  return NextResponse.json({ items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) })
-}
-
+/** Sets the status of one message (`id`), or of every report about one job (`jobId`). */
 export async function PATCH(req: Request) {
   if (!(await getAdminSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { id, status } = await req.json()
-  if (!id || !['new', 'reviewed', 'resolved'].includes(status)) {
-    return NextResponse.json({ error: 'Send id and a status of new, reviewed or resolved' }, { status: 400 })
+  const { id, jobId, status } = (await req.json().catch(() => ({}))) as { id?: unknown; jobId?: unknown; status?: unknown }
+  if (typeof status !== 'string' || !STATUSES.includes(status)) {
+    return NextResponse.json({ error: 'Send a status of new, reviewed or resolved' }, { status: 400 })
   }
+  if (typeof jobId === 'string' && jobId.length > 0 && jobId.length <= 80) {
+    const { count } = await prisma.feedback.updateMany({
+      where: { type: { in: JOB_REPORT_TYPES }, message: { contains: reportMarker(jobId) }, status: { not: status } },
+      data: { status },
+    })
+    return NextResponse.json({ ok: true, updated: count })
+  }
+  if (typeof id !== 'string' || !id) return NextResponse.json({ error: 'Send id or jobId' }, { status: 400 })
   const item = await prisma.feedback.update({ where: { id }, data: { status }, select: { id: true, status: true } })
   return NextResponse.json({ ok: true, item })
 }

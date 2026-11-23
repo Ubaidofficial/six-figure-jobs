@@ -1,6 +1,8 @@
 import Link from 'next/link'
 
 import { prisma } from '../../../lib/prisma'
+import { JOB_REPORT_TYPES, reportedJobId } from '../../../lib/admin/jobReports'
+import { countReviewQueue } from '../../../lib/admin/reviewQueue'
 import { countNewErrorGroups } from './errors/groups'
 import { loadDaily, loadHealthChecks } from './overview'
 import { DailyBars, Figures, PageHead, Section, Status, lastDays, s } from './ui'
@@ -27,11 +29,21 @@ export default async function AdminOverview() {
     countNewErrorGroups().catch(() => 0),
     prisma.jobAlert.count({ where: { status: 'active' } }).catch(() => 0),
   ])
+  const [review, openReports] = await Promise.all([
+    countReviewQueue({ cached: true }).catch(() => ({ pay: 0, titles: 0 })),
+    prisma.feedback
+      .findMany({ where: { type: { in: JOB_REPORT_TYPES }, status: { not: 'resolved' } }, select: { type: true, message: true }, take: 5000 })
+      .catch(() => []),
+  ])
+  const reportedJobs = new Set(openReports.map((r) => reportedJobId(r.type, r.message)).filter(Boolean)).size
 
   const sum = (a: number[]) => a.reduce((x, y) => x + y, 0)
   const todo = [
     newFeedback > 0 && { href: '/ubaid93/feedback?status=new', text: `${newFeedback} new feedback message${newFeedback === 1 ? '' : 's'}` },
     openIssues > 0 && { href: '/ubaid93/errors', text: `${openIssues} open error issue${openIssues === 1 ? '' : 's'}` },
+    reportedJobs > 0 && { href: '/ubaid93/feedback?kind=reports', text: `${reportedJobs} job${reportedJobs === 1 ? '' : 's'} reported by visitors` },
+    review.pay > 0 && { href: '/ubaid93/review', text: `${review.pay.toLocaleString()} job${review.pay === 1 ? '' : 's'} with pay over $600k to check` },
+    review.titles > 0 && { href: '/ubaid93/review?kind=titles', text: `${review.titles.toLocaleString()} job${review.titles === 1 ? '' : 's'} with odd titles` },
     ...checks.filter((c) => c.tone === 'bad' || c.tone === 'warn').map((c) => ({ href: c.href ?? '/ubaid93/system', text: `${c.label}: ${c.state}` })),
   ].filter(Boolean) as Array<{ href: string; text: string }>
 

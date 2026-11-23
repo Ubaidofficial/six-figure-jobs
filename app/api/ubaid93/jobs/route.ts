@@ -54,6 +54,12 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: true })
   }
 
+  // "Pay is right" in the review queue: the import flags pay over $600k a year and does not flag it again once set.
+  if (data.needsReview === false && Object.keys(data).length === 1) {
+    await prisma.job.update({ where: { id }, data: { needsReview: false } })
+    return NextResponse.json({ ok: true })
+  }
+
   const allowed = [
     'title', 'company', 'companyLogo', 'locationRaw', 'remoteMode', 'employmentType',
     'salaryMin', 'salaryMax', 'salaryCurrency', 'salaryPeriod',
