@@ -1,53 +1,47 @@
-import { prisma } from '../../../../lib/prisma'
-import ErrorLogList from './ErrorLogList'
+import { ERROR_WINDOW_DAYS, loadErrorGroups } from './groups'
+import ErrorGroups from './ErrorGroups'
+import { PageHead, Tabs, s } from '../ui'
 
-type SearchParams = Record<string, string | undefined>
+export const dynamic = 'force-dynamic'
 
-export default async function ErrorsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const sp = (await searchParams) || {}
-  const page = Math.max(1, Number(sp.page || 1))
-  const status = sp.status || ''
-  const severity = sp.severity || ''
-  const pageSize = 50
+type View = 'open' | 'all' | 'noise'
 
-  const where: Record<string, unknown> = {}
-  if (status) where.status = status
-  if (severity) where.severity = severity
+export default async function ErrorsPage({ searchParams }: { searchParams?: Promise<{ view?: string }> }) {
+  const raw = (await searchParams)?.view
+  const view: View = raw === 'all' || raw === 'noise' ? raw : 'open'
+  const groups = await loadErrorGroups()
 
-  const [items, total, newCount] = await Promise.all([
-    prisma.errorLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
-    prisma.errorLog.count({ where }),
-    prisma.errorLog.count({ where: { status: 'new' } }),
-  ])
+  const real = groups.filter((g) => !g.noise)
+  const open = real.filter((g) => g.newCount > 0)
+  const noise = groups.filter((g) => g.noise)
+  const shown = view === 'open' ? open : view === 'noise' ? noise : real
+  const reports = (list: typeof groups) => list.reduce((n, g) => n + g.count, 0)
 
   return (
-    <div>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Error Log</h1>
-      <p style={{ color: '#666', marginBottom: 24 }}>JS errors and unhandled rejections captured from users</p>
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-        {[
-          { label: `All (${total})`, status: '', severity: '' },
-          { label: `New (${newCount})`, status: 'new', severity: '' },
-          { label: 'Resolved', status: 'resolved', severity: '' },
-        ].map((tab) => {
-          const active = status === tab.status && severity === tab.severity
-          return (
-            <a key={tab.label}
-              href={tab.status ? `/ubaid93/errors?status=${tab.status}` : '/ubaid93/errors'}
-              style={{
-                padding: '6px 16px', borderRadius: 100, fontSize: 13, textDecoration: 'none',
-                background: active ? '#f87171' : '#1a1a1a',
-                color: active ? '#000' : '#a3a3a3',
-                fontWeight: active ? 700 : 400,
-              }}>
-              {tab.label}
-            </a>
-          )
-        })}
+    <>
+      <PageHead
+        title="Errors"
+        lede={`JavaScript errors visitors' browsers reported in the last ${ERROR_WINDOW_DAYS} days, one row per issue. Resolve an issue once it is fixed; if it comes back, its new reports open it again.`}
+      />
+      <div className={s.toolbar}>
+        <Tabs
+          current={view}
+          items={[
+            { label: 'Open', value: 'open', href: '/ubaid93/errors', count: open.length },
+            { label: 'All issues', value: 'all', href: '/ubaid93/errors?view=all', count: real.length },
+            { label: 'Browser noise', value: 'noise', href: '/ubaid93/errors?view=noise', count: noise.length },
+          ]}
+        />
       </div>
-
-      <ErrorLogList items={items} total={total} page={page} pageSize={pageSize} />
-    </div>
+      <ErrorGroups
+        view={view}
+        reportCount={reports(shown)}
+        groups={shown.map((g) => ({
+          ...g,
+          firstSeen: g.firstSeen.toISOString(),
+          lastSeen: g.lastSeen.toISOString(),
+        }))}
+      />
+    </>
   )
 }

@@ -29,7 +29,9 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
   if (!(await getAdminSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id, status } = await req.json()
-  if (!id || !status) return NextResponse.json({ error: 'Missing id or status' }, { status: 400 })
+  if (!id || !['new', 'reviewed', 'resolved'].includes(status)) {
+    return NextResponse.json({ error: 'Send id and a status of new, reviewed or resolved' }, { status: 400 })
+  }
   const item = await prisma.feedback.update({ where: { id }, data: { status }, select: { id: true, status: true } })
   return NextResponse.json({ ok: true, item })
 }

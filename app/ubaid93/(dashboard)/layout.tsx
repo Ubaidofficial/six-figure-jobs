@@ -1,23 +1,32 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+
 import { getAdminSession } from '../../../lib/admin/auth'
 import { prisma } from '../../../lib/prisma'
+import s from '../admin.module.css'
 import AdminNav from './AdminNav'
+import { countNewErrorGroups } from './errors/groups'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Admin · Six Figure Jobs',
+  robots: { index: false, follow: false },
+}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const isLoggedIn = await getAdminSession()
   if (!isLoggedIn) redirect('/ubaid93/login')
-  // Unread feedback, shown as a badge on every admin page so new feedback is seen without opening the list.
-  const newFeedback = await prisma.feedback.count({ where: { status: 'new' } }).catch(() => 0)
+  // Counts shown beside Feedback and Errors on every page, so new items are seen without opening the lists.
+  const [feedback, errors] = await Promise.all([
+    prisma.feedback.count({ where: { status: 'new' } }).catch(() => 0),
+    countNewErrorGroups().catch(() => 0),
+  ])
 
   return (
-    // Text colour set here: the site's own text colour is near-black, which disappears on this background.
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#e5e5e5', display: 'flex' }}>
-      <AdminNav newFeedback={newFeedback} />
-      <main style={{ flex: 1, padding: '32px 40px', maxWidth: 1200, overflowX: 'hidden' }}>
-        {children}
-      </main>
+    <div className={s.shell}>
+      <AdminNav counts={{ feedback, errors }} />
+      <main className={s.main}>{children}</main>
     </div>
   )
 }

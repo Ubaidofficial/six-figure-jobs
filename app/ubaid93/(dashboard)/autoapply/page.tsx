@@ -5,11 +5,11 @@ import { prisma } from '../../../../lib/prisma'
 import { autoApplyEnabled, autoApplyLive } from '../../../../lib/autoapply/config'
 import { reasonText } from '../../../../lib/autoapply/reasons'
 import { LEFT_EMPTY, summarizeRuns } from '../../../../lib/autoapply/runReport'
+import { Figures, PageHead, Section, Tabs, s } from '../ui'
 
 export const dynamic = 'force-dynamic'
 
 const DAY = 24 * 60 * 60 * 1000
-const cell = { padding: '6px 8px', verticalAlign: 'top' as const, borderBottom: '1px solid #1f1f1f' }
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : '–')
 
 export default async function AutoApplyAdminPage({ searchParams }: { searchParams?: Promise<{ days?: string }> }) {
@@ -32,99 +32,98 @@ export default async function AutoApplyAdminPage({ searchParams }: { searchParam
   }
 
   return (
-    <div>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Auto-apply runs</h1>
-      <p style={{ color: '#888', marginBottom: 8 }}>
-        Every time the worker opened an employer form in the last {days} days: did it fill every required question, and if
-        not, why it stopped. <a href="?days=7" style={{ color: '#84cc16' }}>7 days</a> ·{' '}
-        <a href="?days=30" style={{ color: '#84cc16' }}>30 days</a> · <a href="?days=365" style={{ color: '#84cc16' }}>1 year</a>
-      </p>
-      <p style={{ color: '#888', marginBottom: 24 }}>
-        Auto-apply is {autoApplyEnabled() ? 'on' : 'off'}; submitting is {autoApplyLive() ? 'LIVE' : 'off (dry runs only)'}.
-      </p>
+    <>
+      <PageHead
+        title="Auto-apply"
+        lede={`Every time the worker opened an employer form in the last ${days} days: did it fill every required question, and if not, why it stopped. Auto-apply is ${autoApplyEnabled() ? 'on' : 'off'}; submitting is ${autoApplyLive() ? 'live' : 'off (dry runs only)'}.`}
+      />
+      <div className={s.toolbar}>
+        <Tabs
+          current={String(days)}
+          items={[7, 30, 365].map((d) => ({ label: d === 365 ? '1 year' : `${d} days`, value: String(d), href: `?days=${d}` }))}
+        />
+      </div>
 
       {error ? (
-        <p style={{ color: '#f87171' }}>{error}</p>
+        <p className={s.notice}>{error}</p>
       ) : report && report.total === 0 ? (
-        <p style={{ color: '#888' }}>
+        <p className={s.notice}>
           No runs yet. Approve an application of your own and run <code>npx tsx scripts/autoapply-worker.ts --once</code> (a
           dry run unless AUTO_APPLY_LIVE=true).
         </p>
       ) : report ? (
         <>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-            {(
-              [
-                ['Runs', report.total.toLocaleString()],
-                ['Dry runs', (byMode.dry_run ?? 0).toLocaleString()],
-                ['Live runs', (byMode.live ?? 0).toLocaleString()],
-                ['Got through the whole form', pct(report.clean, report.total)],
-              ] as Array<[string, string]>
-            ).map(([label, value]) => (
-              <div key={label} style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 12, padding: '14px 18px', minWidth: 150 }}>
-                <div style={{ color: '#888', fontSize: 12 }}>{label}</div>
-                <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
-              </div>
-            ))}
-          </div>
+          <Figures
+            items={[
+              { label: 'Runs', value: report.total.toLocaleString() },
+              { label: 'Dry runs', value: (byMode.dry_run ?? 0).toLocaleString() },
+              { label: 'Live runs', value: (byMode.live ?? 0).toLocaleString() },
+              { label: 'Got through the whole form', value: pct(report.clean, report.total) },
+            ]}
+          />
 
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '8px 0' }}>By employer board</h2>
-          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14, marginBottom: 28 }}>
-            <thead>
-              <tr style={{ color: '#888', textAlign: 'left' }}>
-                <th style={cell}>Board</th>
-                <th style={cell}>Runs</th>
-                <th style={cell}>Whole form</th>
-                <th style={cell}>Submitted</th>
-                <th style={cell}>Stopped because</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.boards.map((b) => (
-                <tr key={b.board}>
-                  <td style={cell}>{b.board}</td>
-                  <td style={cell}>{b.runs}</td>
-                  <td style={cell}>{pct(b.clean, b.runs)}</td>
-                  <td style={cell}>{b.submitted}</td>
-                  <td style={cell}>
-                    {Object.entries(b.stops)
-                      .sort((x, y) => y[1] - x[1])
-                      .map(([why, n]) => (
-                        <div key={why} title={why === LEFT_EMPTY ? undefined : reasonText(why).what}>
-                          {why} × {n}
-                        </div>
-                      ))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Section title="By employer board">
+            <div className={`${s.panel} ${s.tableWrap}`}>
+              <table className={s.table}>
+                <thead>
+                  <tr>
+                    <th>Board</th>
+                    <th className={s.num}>Runs</th>
+                    <th className={s.num}>Whole form</th>
+                    <th className={s.num}>Submitted</th>
+                    <th>Stopped because</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.boards.map((b) => (
+                    <tr key={b.board}>
+                      <td className={s.mono}>{b.board}</td>
+                      <td className={s.num}>{b.runs}</td>
+                      <td className={s.num}>{pct(b.clean, b.runs)}</td>
+                      <td className={s.num}>{b.submitted}</td>
+                      <td>
+                        {Object.entries(b.stops)
+                          .sort((x, y) => y[1] - x[1])
+                          .map(([why, n]) => (
+                            <div key={why} title={why === LEFT_EMPTY ? undefined : reasonText(why).what}>
+                              {why} × {n}
+                            </div>
+                          ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
 
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '8px 0' }}>Questions most often left empty</h2>
-          <p style={{ color: '#888', marginBottom: 8 }}>
-            Required questions still empty when the worker stopped, by the employer&apos;s label. Questions the user must
-            answer themselves (work authorization, sponsorship…) belong here only if the user left them blank.
-          </p>
-          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14 }}>
-            <thead>
-              <tr style={{ color: '#888', textAlign: 'left' }}>
-                <th style={cell}>Question</th>
-                <th style={cell}>Times</th>
-                <th style={cell}>Boards</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.fields.slice(0, 30).map((f) => (
-                <tr key={`${f.key}:${f.label}`}>
-                  <td style={cell}>{f.label || <code>{f.key}</code>}</td>
-                  <td style={cell}>{f.count}</td>
-                  <td style={cell}>{f.boards}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Section
+            title="Questions most often left empty"
+            note="Required questions still empty when the worker stopped, by the employer's label"
+          >
+            <div className={`${s.panel} ${s.tableWrap}`}>
+              <table className={s.table}>
+                <thead>
+                  <tr>
+                    <th>Question</th>
+                    <th className={s.num}>Times</th>
+                    <th className={s.num}>Boards</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.fields.slice(0, 30).map((f) => (
+                    <tr key={`${f.key}:${f.label}`}>
+                      <td>{f.label || <code>{f.key}</code>}</td>
+                      <td className={s.num}>{f.count}</td>
+                      <td className={s.num}>{f.boards}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
         </>
       ) : null}
-    </div>
+    </>
   )
 }

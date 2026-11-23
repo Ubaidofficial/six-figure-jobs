@@ -1,0 +1,41 @@
+name: email list counts
+
+# Manual only, read-only. Prints how many email addresses the site stores: job alert signups by status (pending,
+# active, unsubscribed), new signups, the pages they came from, and user accounts. Counts only, never an address or a
+# name: run logs and summaries are kept by GitHub. The list itself is on the admin page /ubaid93/alerts.
+# One READ ONLY transaction (scripts/countEmailLists.ts), behind the same production-database fingerprint guard as the
+# other database workflows.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Email list counts (read-only)
+        run: npx tsx scripts/countEmailLists.ts

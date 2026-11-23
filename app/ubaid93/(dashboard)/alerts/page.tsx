@@ -2,11 +2,11 @@
 import { prisma } from '../../../../lib/prisma'
 import { buildAlertLabel, sanitizeAlertFilters } from '../../../../lib/alerts/filters'
 import { alertsEnabled } from '../../../../lib/alerts/config'
+import { Figures, PageHead, Section, s } from '../ui'
 
 export const dynamic = 'force-dynamic'
 
 const DAY = 24 * 60 * 60 * 1000
-const cell = { padding: '6px 8px', verticalAlign: 'top' as const }
 const date = (d: Date | null) => (d ? d.toISOString().slice(0, 16).replace('T', ' ') : '–')
 
 export default async function AlertsAdminPage() {
@@ -49,95 +49,107 @@ export default async function AlertsAdminPage() {
     error = 'Alert tables not available yet. Apply the add_job_alerts migration, then reload.'
   }
 
-  const tiles: Array<[string, string]> = [
-    ['Subscribers (active, unique emails)', subscribers.toLocaleString()],
-    ['Active alerts', (byStatus.active ?? 0).toLocaleString()],
-    ['Waiting for confirmation', (byStatus.pending ?? 0).toLocaleString()],
-    ['Unsubscribed', (byStatus.unsubscribed ?? 0).toLocaleString()],
-    ['Signups, 7 days', new7.toLocaleString()],
-    ['Signups, 30 days', new30.toLocaleString()],
-    ['Confirmed, of 30-day signups', new30 ? `${Math.round((confirmed30 / new30) * 100)}%` : '–'],
-  ]
+  const statusTone = (st: string) => (st === 'active' ? s.ok : st === 'pending' ? s.warn : s.muted)
 
   return (
-    <div>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Job alerts</h1>
-      <p style={{ color: '#666', marginBottom: 24 }}>
-        Email alert signups. An address counts as a subscriber only after it clicked the confirmation link.
-        {alertsEnabled() ? '' : ' Alerts are switched off: no form is shown and nothing is sent (see docs/job-alerts-launch-checklist.md).'}
-      </p>
+    <>
+      <PageHead
+        title="Job alerts"
+        lede={
+          <>
+            Email alert signups. An address counts as a subscriber only after it clicked the confirmation link.
+            {alertsEnabled() ? '' : ' Alerts are switched off: no form is shown and nothing is sent (docs/job-alerts-launch-checklist.md).'}
+          </>
+        }
+        actions={
+          <a className={s.btn} href="/api/ubaid93/alerts/export">
+            Download active subscribers (CSV)
+          </a>
+        }
+      />
 
       {error ? (
-        <p style={{ color: '#f87171' }}>{error}</p>
+        <p className={s.notice}>{error}</p>
       ) : (
         <>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-            {tiles.map(([label, value]) => (
-              <div key={label} style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 12, padding: '14px 18px', minWidth: 150 }}>
-                <div style={{ color: '#888', fontSize: 12 }}>{label}</div>
-                <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
-              </div>
-            ))}
-          </div>
+          <Figures
+            items={[
+              { label: 'Subscribers', value: subscribers.toLocaleString(), sub: 'unique confirmed emails' },
+              { label: 'Active alerts', value: (byStatus.active ?? 0).toLocaleString() },
+              { label: 'Awaiting confirmation', value: (byStatus.pending ?? 0).toLocaleString() },
+              { label: 'Unsubscribed', value: (byStatus.unsubscribed ?? 0).toLocaleString() },
+              { label: 'Signups, 7 days', value: new7.toLocaleString(), sub: `${new30.toLocaleString()} in 30 days` },
+              {
+                label: 'Confirmed',
+                value: new30 ? `${Math.round((confirmed30 / new30) * 100)}%` : '–',
+                sub: 'of 30-day signups',
+              },
+            ]}
+          />
 
-          <p style={{ marginBottom: 24 }}>
-            <a href="/api/ubaid93/alerts/export" style={{ color: '#84cc16' }}>
-              Download active subscribers (CSV)
-            </a>
-          </p>
-
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Where signups come from (30 days)</h2>
-          {sources.length === 0 ? (
-            <p style={{ color: '#888', marginBottom: 24 }}>No signups yet.</p>
-          ) : (
-            <table style={{ borderCollapse: 'collapse', fontSize: 14, marginBottom: 24 }}>
-              <tbody>
-                {sources.map((s) => (
-                  <tr key={s.source} style={{ borderTop: '1px solid #1f1f1f' }}>
-                    <td style={{ ...cell, fontWeight: 700 }}>{s.n}</td>
-                    <td style={cell}>{s.source}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Latest 100 signups</h2>
-          {recent.length === 0 ? (
-            <p style={{ color: '#888' }}>No signups yet.</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ textAlign: 'left', color: '#888' }}>
-                    {['Email', 'First name', 'Alert', 'How often', 'Status', 'From page', 'Signed up', 'Confirmed', 'Last email'].map((h) => (
-                      <th key={h} style={cell}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {recent.map((r) => (
-                    <tr key={r.id} style={{ borderTop: '1px solid #1f1f1f' }}>
-                      <td style={cell}>{r.email}</td>
-                      <td style={cell}>{r.firstName ?? '–'}</td>
-                      <td style={cell}>{buildAlertLabel(sanitizeAlertFilters(r.filters) ?? {})}</td>
-                      <td style={cell}>{r.frequency}</td>
-                      <td style={{ ...cell, color: r.status === 'active' ? '#84cc16' : r.status === 'pending' ? '#facc15' : '#888' }}>{r.status}</td>
-                      <td style={{ ...cell, color: '#aaa' }}>{r.source ?? '–'}</td>
-                      <td style={cell}>{date(r.createdAt)}</td>
-                      <td style={cell}>{date(r.confirmedAt)}</td>
-                      <td style={cell}>{date(r.lastSentAt)}</td>
+          <Section title="Latest signups" note="Newest 100. Emails are personal data: do not copy them elsewhere.">
+            <div className={`${s.panel} ${s.tableWrap}`}>
+              {recent.length === 0 ? (
+                <p className={s.empty}>No signups yet.</p>
+              ) : (
+                <table className={s.table}>
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Name</th>
+                      <th>Alert</th>
+                      <th>Status</th>
+                      <th>From page</th>
+                      <th>Signed up</th>
+                      <th>Confirmed</th>
+                      <th>Last email</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recent.map((r) => (
+                      <tr key={r.id}>
+                        <td className={s.mono}>{r.email}</td>
+                        <td>{r.firstName ?? <span className={s.dim}>–</span>}</td>
+                        <td>
+                          {buildAlertLabel(sanitizeAlertFilters(r.filters) ?? {})}
+                          <div className={s.cellSub}>{r.frequency}</div>
+                        </td>
+                        <td>
+                          <span className={`${s.status} ${statusTone(r.status)}`}>{r.status}</span>
+                        </td>
+                        <td className={`${s.mono} ${s.dim}`}>{r.source ?? '–'}</td>
+                        <td className={s.mono}>{date(r.createdAt)}</td>
+                        <td className={s.mono}>{date(r.confirmedAt)}</td>
+                        <td className={s.mono}>{date(r.lastSentAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
-          )}
+          </Section>
+
+          <Section title="Where signups come from" note="30 days">
+            <div className={s.panel}>
+              {sources.length === 0 ? (
+                <p className={s.empty}>No signups in 30 days.</p>
+              ) : (
+                <table className={s.table}>
+                  <tbody>
+                    {sources.map((x) => (
+                      <tr key={x.source}>
+                        <td className={s.mono}>{x.source}</td>
+                        <td className={s.num}>{x.n.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </Section>
         </>
       )}
-    </div>
+    </>
   )
 }
 

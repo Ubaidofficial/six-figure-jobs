@@ -1,15 +1,7 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 14px', background: '#1a1a1a', border: '1px solid #2a2a2a',
-  borderRadius: 8, color: '#fff', fontSize: 15, boxSizing: 'border-box', display: 'block',
-}
-const btnStyle: React.CSSProperties = {
-  width: '100%', padding: '10px', background: '#84cc16', color: '#000', fontWeight: 700,
-  fontSize: 15, border: 'none', borderRadius: 8, cursor: 'pointer',
-}
+import s from '../admin.module.css'
 
 export default function AdminLoginPage() {
   const [error, setError] = useState('')
@@ -49,27 +41,29 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <form onSubmit={handleSubmit} style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 16, padding: '40px 48px', width: 380 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, color: '#fff' }}>Admin Login</h1>
-        <p style={{ color: '#555', fontSize: 13, marginBottom: 28 }}>Six Figure Jobs</p>
-
-        <label style={{ display: 'block', fontSize: 13, color: '#a3a3a3', marginBottom: 6 }}>Username</label>
-        <input name="username" type="text" autoFocus required autoComplete="username"
-          style={{ ...inputStyle, marginBottom: 14 }} />
-
-        <label style={{ display: 'block', fontSize: 13, color: '#a3a3a3', marginBottom: 6 }}>Password</label>
-        <input name="password" type="password" required autoComplete="current-password"
-          style={{ ...inputStyle, marginBottom: 16 }} />
-
-        {error && <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{error}</p>}
-        <button type="submit" disabled={loading} style={btnStyle}>
-          {loading ? 'Signing in...' : 'Sign in'}
+    <div className={s.authWrap}>
+      <form onSubmit={handleSubmit} className={`${s.panel} ${s.authCard}`}>
+        <div className={s.brand} style={{ padding: 0, border: 0, marginBottom: 22 }}>
+          <span className={s.brandMark} aria-hidden>
+            6
+          </span>
+          <span className={s.brandName}>
+            Six Figure Jobs
+            <span className={s.brandSub}>Admin sign-in</span>
+          </span>
+        </div>
+        <label className={s.field}>
+          Username
+          <input className={s.input} name="username" type="text" autoFocus required autoComplete="username" />
+        </label>
+        <label className={s.field}>
+          Password
+          <input className={s.input} name="password" type="password" required autoComplete="current-password" />
+        </label>
+        {error ? <p className={s.error} role="alert">{error}</p> : null}
+        <button type="submit" disabled={loading} className={`${s.btn} ${s.btnPrimary}`} style={{ width: '100%', justifyContent: 'center', height: 36 }}>
+          {loading ? 'Signing in…' : 'Sign in'}
         </button>
-        <p style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: '#555' }}>
-          No account?{' '}
-          <Link href="/ubaid93/setup" style={{ color: '#84cc16' }}>Create admin account →</Link>
-        </p>
       </form>
     </div>
   )

@@ -1,319 +1,300 @@
 'use client'
-import { useState, useTransition } from 'react'
-import type { JobRow } from './page'
+// Edit drawer for one job. Loads the job when opened (the list leaves descriptions out). The description preview is a
+// sandboxed iframe: descriptions come from other sites, and HTML put straight into this page could run script with
+// the admin's session (an <img onerror>, for example).
+import { useEffect, useRef, useState } from 'react'
+import { X } from 'lucide-react'
 
-const inp: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', background: '#1a1a1a', border: '1px solid #2a2a2a',
-  borderRadius: 8, color: '#fff', fontSize: 13, boxSizing: 'border-box',
-}
-const label: React.CSSProperties = {
-  display: 'block', fontSize: 12, color: '#666', marginBottom: 4, fontWeight: 500,
-}
-const field: React.CSSProperties = { marginBottom: 14 }
+import s from '../../admin.module.css'
 
-interface EditState {
+type Job = {
+  id: string
   title: string
-  company: string
-  companyLogo: string
-  locationRaw: string
-  remoteMode: string
-  employmentType: string
-  salaryMin: string
-  salaryMax: string
-  salaryCurrency: string
-  salaryPeriod: string
-  applyUrl: string
-  postedAt: string
-  expiresAt: string
+  company: string | null
+  companyLogo: string | null
+  source: string
+  locationRaw: string | null
+  remoteMode: string | null
+  employmentType: string | null
+  salaryMin: string | null
+  salaryMax: string | null
+  salaryCurrency: string | null
+  salaryPeriod: string | null
+  applyUrl: string | null
+  url: string | null
+  postedAt: string | null
+  expiresAt: string | null
   visaSponsorship: boolean
-  descriptionHtml: string
+  descriptionHtml: string | null
 }
 
-export default function JobEditModal({
-  job,
-  onClose,
-  onSaved,
-}: {
-  job: JobRow
-  onClose: () => void
-  onSaved: (updated: Partial<JobRow>) => void
-}) {
-  const [data, setData] = useState<EditState>({
-    title: job.title ?? '',
-    company: job.company ?? '',
-    companyLogo: job.companyLogo ?? '',
-    locationRaw: job.locationRaw ?? '',
-    remoteMode: job.remoteMode ?? '',
-    employmentType: job.employmentType ?? '',
-    salaryMin: job.salaryMin != null ? String(job.salaryMin) : '',
-    salaryMax: job.salaryMax != null ? String(job.salaryMax) : '',
-    salaryCurrency: job.salaryCurrency ?? 'USD',
-    salaryPeriod: job.salaryPeriod ?? 'year',
-    applyUrl: job.applyUrl ?? '',
-    postedAt: job.postedAt ? new Date(job.postedAt).toISOString().slice(0, 10) : '',
-    expiresAt: job.expiresAt ? new Date(job.expiresAt).toISOString().slice(0, 10) : '',
-    visaSponsorship: job.visaSponsorship ?? false,
-    descriptionHtml: job.descriptionHtml ?? '',
-  })
-  const [descTab, setDescTab] = useState<'edit' | 'preview'>('edit')
-  const [saving, startSave] = useTransition()
+type Form = Record<
+  | 'title' | 'company' | 'companyLogo' | 'locationRaw' | 'remoteMode' | 'employmentType' | 'salaryMin' | 'salaryMax'
+  | 'salaryCurrency' | 'salaryPeriod' | 'applyUrl' | 'postedAt' | 'expiresAt' | 'descriptionHtml',
+  string
+> & { visaSponsorship: boolean }
+
+// The values the site reads (lib/seo/jobJsonLd.ts, filters): other spellings are not recognised as remote or hybrid.
+const MODES = [
+  ['', 'Not set'],
+  ['remote', 'Remote'],
+  ['hybrid', 'Hybrid'],
+  ['onsite', 'On-site'],
+]
+const TYPES = ['', 'full-time', 'part-time', 'contract', 'temporary', 'internship']
+const day = (v: string | null) => (v ? v.slice(0, 10) : '')
+
+function toForm(j: Job): Form {
+  return {
+    title: j.title ?? '',
+    company: j.company ?? '',
+    companyLogo: j.companyLogo ?? '',
+    locationRaw: j.locationRaw ?? '',
+    remoteMode: j.remoteMode ?? '',
+    employmentType: j.employmentType ?? '',
+    salaryMin: j.salaryMin ?? '',
+    salaryMax: j.salaryMax ?? '',
+    salaryCurrency: j.salaryCurrency ?? 'USD',
+    salaryPeriod: j.salaryPeriod ?? 'year',
+    applyUrl: j.applyUrl ?? '',
+    postedAt: day(j.postedAt),
+    expiresAt: day(j.expiresAt),
+    descriptionHtml: j.descriptionHtml ?? '',
+    visaSponsorship: j.visaSponsorship,
+  }
+}
+
+export default function JobEditDrawer({ id, onClose, onSaved }: { id: string; onClose: () => void; onSaved: () => void }) {
+  const [job, setJob] = useState<Job | null>(null)
+  const [meta, setMeta] = useState<{ shownPay: string | null; hasYearlyRange: boolean } | null>(null)
+  const [form, setForm] = useState<Form | null>(null)
+  const [preview, setPreview] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // Kept in a ref so a parent re-render (a new onClose function) does not reload the job and lose edits.
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
 
-  function set(key: keyof EditState, value: string | boolean) {
-    setData((d) => ({ ...d, [key]: value }))
-  }
-
-  function save() {
-    startSave(async () => {
-      setError('')
-      const body: Record<string, unknown> = {
-        id: job.id,
-        title: data.title,
-        company: data.company,
-        companyLogo: data.companyLogo || null,
-        locationRaw: data.locationRaw || null,
-        remoteMode: data.remoteMode || null,
-        employmentType: data.employmentType || null,
-        salaryCurrency: data.salaryCurrency || null,
-        salaryPeriod: data.salaryPeriod || null,
-        applyUrl: data.applyUrl || null,
-        visaSponsorship: data.visaSponsorship,
-        descriptionHtml: data.descriptionHtml || null,
-      }
-      if (data.salaryMin) body.salaryMin = Number(data.salaryMin)
-      else body.salaryMin = null
-      if (data.salaryMax) body.salaryMax = Number(data.salaryMax)
-      else body.salaryMax = null
-      if (data.postedAt) body.postedAt = new Date(data.postedAt).toISOString()
-      else body.postedAt = null
-      if (data.expiresAt) body.expiresAt = new Date(data.expiresAt).toISOString()
-      else body.expiresAt = null
-
-      const res = await fetch('/api/ubaid93/jobs', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+  useEffect(() => {
+    let live = true
+    fetch(`/api/ubaid93/jobs?id=${encodeURIComponent(id)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: { job: Job; shownPay: string | null; hasYearlyRange: boolean }) => {
+        if (!live) return
+        setJob(d.job)
+        setMeta({ shownPay: d.shownPay, hasYearlyRange: d.hasYearlyRange })
+        setForm(toForm(d.job))
       })
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        setError(d?.error || 'Save failed')
-        return
-      }
-      onSaved({
-        title: data.title,
-        company: data.company,
-        companyLogo: data.companyLogo || null,
-        locationRaw: data.locationRaw || null,
-        remoteMode: data.remoteMode || null,
-        employmentType: data.employmentType || null,
-        salaryMin: data.salaryMin ? BigInt(data.salaryMin) : null,
-        salaryMax: data.salaryMax ? BigInt(data.salaryMax) : null,
-        salaryCurrency: data.salaryCurrency || null,
-        salaryPeriod: data.salaryPeriod || null,
-        applyUrl: data.applyUrl || null,
-        visaSponsorship: data.visaSponsorship,
-        descriptionHtml: data.descriptionHtml || null,
-        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-      })
-      onClose()
+      .catch(() => live && setError('Could not load this job.'))
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current()
+    window.addEventListener('keydown', onKey)
+    return () => {
+      live = false
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [id])
+
+  const set = (key: keyof Form, value: string | boolean) => setForm((f) => (f ? { ...f, [key]: value } : f))
+  const orNull = (v: string) => (v.trim() ? v.trim() : null)
+
+  async function save() {
+    if (!form) return
+    setSaving(true)
+    setError('')
+    const res = await fetch('/api/ubaid93/jobs', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        title: form.title.trim(),
+        company: orNull(form.company),
+        companyLogo: orNull(form.companyLogo),
+        locationRaw: orNull(form.locationRaw),
+        remoteMode: orNull(form.remoteMode),
+        employmentType: orNull(form.employmentType),
+        salaryMin: form.salaryMin ? Number(form.salaryMin) : null,
+        salaryMax: form.salaryMax ? Number(form.salaryMax) : null,
+        salaryCurrency: orNull(form.salaryCurrency),
+        salaryPeriod: orNull(form.salaryPeriod),
+        applyUrl: orNull(form.applyUrl),
+        visaSponsorship: form.visaSponsorship,
+        descriptionHtml: orNull(form.descriptionHtml),
+        postedAt: form.postedAt ? new Date(form.postedAt).toISOString() : null,
+        expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+      }),
     })
+    setSaving(false)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setError(d?.error || 'Save failed')
+      return
+    }
+    onSaved()
   }
 
-  const tabBtn = (tab: 'edit' | 'preview'): React.CSSProperties => ({
-    padding: '4px 14px', fontSize: 12, border: 'none', cursor: 'pointer', borderRadius: 6,
-    background: descTab === tab ? '#2a2a2a' : 'transparent',
-    color: descTab === tab ? '#fff' : '#555', fontWeight: descTab === tab ? 600 : 400,
-  })
+  const text = (key: keyof Form, label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
+    <label className={s.field}>
+      {label}
+      <input className={s.input} value={form ? (form[key] as string) : ''} onChange={(e) => set(key, e.target.value)} {...props} />
+    </label>
+  )
 
   return (
     <>
-      {/* Backdrop */}
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 40 }} />
-
-      {/* Drawer */}
-      <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: 600,
-        background: '#0f0f0f', borderLeft: '1px solid #1f1f1f',
-        zIndex: 50, display: 'flex', flexDirection: 'column', overflowY: 'auto',
-      }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #1f1f1f', flexShrink: 0 }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Edit Job</div>
-            <div style={{ color: '#444', fontSize: 11, marginTop: 2, fontFamily: 'monospace' }}>{job.source} · {job.id}</div>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(12,13,14,0.28)', zIndex: 40 }} />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit job"
+        className={s.panel}
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(640px, 100vw)', zIndex: 50, borderRadius: 0,
+          display: 'flex', flexDirection: 'column',
+        }}
+      >
+        <div className={s.pageHead} style={{ padding: '18px 20px', margin: 0, borderBottom: '1px solid var(--color-border)' }}>
+          <div style={{ minWidth: 0 }}>
+            <h2 className={s.sectionTitle} style={{ margin: 0 }}>
+              {job?.title ?? 'Loading…'}
+            </h2>
+            {job ? <div className={`${s.cellSub} ${s.mono}`}>{job.source} · {job.id}</div> : null}
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#666', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>✕</button>
-        </div>
-
-        {/* Body */}
-        <div style={{ padding: '24px', flex: 1 }}>
-
-          {/* Company logo + name row */}
-          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: 14 }}>
-            {/* Logo preview */}
-            <div style={{
-              width: 56, height: 56, borderRadius: 10, border: '1px solid #2a2a2a',
-              background: '#1a1a1a', flexShrink: 0, overflow: 'hidden',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {data.companyLogo
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={data.companyLogo} alt={`${data.company || 'Company'} logo`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                : <span style={{ color: '#333', fontSize: 22 }}>🏢</span>}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={field}>
-                <label style={label}>Company Name</label>
-                <input style={inp} value={data.company} onChange={(e) => set('company', e.target.value)} />
-              </div>
-              <div>
-                <label style={label}>Company Logo URL</label>
-                <input style={inp} value={data.companyLogo} onChange={(e) => set('companyLogo', e.target.value)} placeholder="https://logo.clearbit.com/company.com" />
-              </div>
-            </div>
-          </div>
-
-          <div style={field}>
-            <label style={label}>Job Title</label>
-            <input style={inp} value={data.title} onChange={(e) => set('title', e.target.value)} />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-            <div>
-              <label style={label}>Location</label>
-              <input style={inp} value={data.locationRaw} onChange={(e) => set('locationRaw', e.target.value)} placeholder="e.g. New York, NY" />
-            </div>
-            <div>
-              <label style={label}>Remote Mode</label>
-              <select style={inp} value={data.remoteMode} onChange={(e) => set('remoteMode', e.target.value)}>
-                <option value="">— unset —</option>
-                <option value="fully-remote">Fully Remote</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="on-site">On-site</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-            <div>
-              <label style={label}>Employment Type</label>
-              <select style={inp} value={data.employmentType} onChange={(e) => set('employmentType', e.target.value)}>
-                <option value="">— unset —</option>
-                <option value="full-time">Full-time</option>
-                <option value="part-time">Part-time</option>
-                <option value="contract">Contract</option>
-                <option value="freelance">Freelance</option>
-                <option value="internship">Internship</option>
-              </select>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 20 }}>
-              <input type="checkbox" id="visa" checked={data.visaSponsorship}
-                onChange={(e) => set('visaSponsorship', e.target.checked)}
-                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#84cc16' }} />
-              <label htmlFor="visa" style={{ ...label, margin: 0, color: '#a3a3a3', cursor: 'pointer' }}>Visa Sponsorship</label>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px', gap: 8, marginBottom: 14 }}>
-            <div>
-              <label style={label}>Salary Min</label>
-              <input style={inp} value={data.salaryMin} onChange={(e) => set('salaryMin', e.target.value)} placeholder="100000" type="number" />
-            </div>
-            <div>
-              <label style={label}>Salary Max</label>
-              <input style={inp} value={data.salaryMax} onChange={(e) => set('salaryMax', e.target.value)} placeholder="150000" type="number" />
-            </div>
-            <div>
-              <label style={label}>Currency</label>
-              <select style={inp} value={data.salaryCurrency} onChange={(e) => set('salaryCurrency', e.target.value)}>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="CAD">CAD</option>
-                <option value="AUD">AUD</option>
-              </select>
-            </div>
-            <div>
-              <label style={label}>Period</label>
-              <select style={inp} value={data.salaryPeriod} onChange={(e) => set('salaryPeriod', e.target.value)}>
-                <option value="year">Year</option>
-                <option value="month">Month</option>
-                <option value="hour">Hour</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={field}>
-            <label style={label}>Apply URL</label>
-            <input style={inp} value={data.applyUrl} onChange={(e) => set('applyUrl', e.target.value)} placeholder="https://..." />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-            <div>
-              <label style={label}>Posted Date</label>
-              <input style={inp} type="date" value={data.postedAt} onChange={(e) => set('postedAt', e.target.value)} />
-            </div>
-            <div>
-              <label style={label}>Expiry Date</label>
-              <input style={inp} type="date" value={data.expiresAt} onChange={(e) => set('expiresAt', e.target.value)} />
-            </div>
-          </div>
-
-          {/* Description with edit/preview tabs */}
-          <div style={field}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <label style={{ ...label, margin: 0 }}>Description</label>
-              <div style={{ display: 'flex', gap: 2, background: '#111', borderRadius: 8, padding: 2 }}>
-                <button type="button" style={tabBtn('edit')} onClick={() => setDescTab('edit')}>HTML</button>
-                <button type="button" style={tabBtn('preview')} onClick={() => setDescTab('preview')}>Preview</button>
-              </div>
-            </div>
-
-            {descTab === 'edit' ? (
-              <textarea
-                style={{ ...inp, minHeight: 220, resize: 'vertical', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.5 }}
-                value={data.descriptionHtml}
-                onChange={(e) => set('descriptionHtml', e.target.value)}
-                placeholder="<p>Job description HTML...</p>"
-              />
-            ) : (
-              <div
-                style={{
-                  minHeight: 220, padding: '12px 16px', background: '#1a1a1a', border: '1px solid #2a2a2a',
-                  borderRadius: 8, fontSize: 13, lineHeight: 1.7, color: '#d4d4d4', overflowY: 'auto',
-                }}
-                dangerouslySetInnerHTML={{ __html: data.descriptionHtml || '<p style="color:#555">No description yet.</p>' }}
-              />
-            )}
-          </div>
-
-          {error && <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{error}</p>}
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #1f1f1f', display: 'flex', gap: 10, flexShrink: 0 }}>
-          {job.url && (
-            <a href={job.url} target="_blank" rel="noopener" style={{
-              padding: '10px 16px', background: '#1a1f2e', color: '#60a5fa',
-              borderRadius: 8, fontSize: 13, textDecoration: 'none', whiteSpace: 'nowrap',
-            }}>
-              View live ↗
-            </a>
-          )}
-          <button onClick={save} disabled={saving} style={{
-            flex: 1, padding: '10px', background: '#84cc16', color: '#000',
-            fontWeight: 700, border: 'none', borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', fontSize: 14,
-          }}>
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-          <button onClick={onClose} style={{
-            padding: '10px 20px', background: '#1a1a1a', color: '#a3a3a3',
-            border: '1px solid #2a2a2a', borderRadius: 8, cursor: 'pointer', fontSize: 14,
-          }}>
-            Cancel
+          <button className={s.btn} onClick={onClose} aria-label="Close">
+            <X size={16} />
           </button>
         </div>
-      </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px' }}>
+          {error && !form ? <p className={s.error}>{error}</p> : null}
+          {form && meta ? (
+            <>
+              {text('title', 'Title')}
+              <div className={s.grid2}>
+                {text('company', 'Company')}
+                {text('companyLogo', 'Logo URL', { type: 'url' })}
+              </div>
+              <div className={s.grid2}>
+                {text('locationRaw', 'Location')}
+                <label className={s.field}>
+                  Work arrangement
+                  <select className={s.select} value={form.remoteMode} onChange={(e) => set('remoteMode', e.target.value)}>
+                    {MODES.map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
+                    {form.remoteMode && !MODES.some(([v]) => v === form.remoteMode) ? (
+                      <option value={form.remoteMode}>{form.remoteMode} (not recognised)</option>
+                    ) : null}
+                  </select>
+                </label>
+              </div>
+              <div className={s.grid2}>
+                <label className={s.field}>
+                  Employment type
+                  <select className={s.select} value={form.employmentType} onChange={(e) => set('employmentType', e.target.value)}>
+                    {TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t || 'Not set'}
+                      </option>
+                    ))}
+                    {form.employmentType && !TYPES.includes(form.employmentType) ? (
+                      <option value={form.employmentType}>{form.employmentType}</option>
+                    ) : null}
+                  </select>
+                </label>
+                <label className={s.field} style={{ alignContent: 'end' }}>
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={form.visaSponsorship}
+                      onChange={(e) => set('visaSponsorship', e.target.checked)}
+                      style={{ marginRight: 8 }}
+                    />
+                    Sponsors visas
+                  </span>
+                </label>
+              </div>
+
+              <div className={s.notice} style={{ margin: '4px 0 14px' }}>
+                Pay on the job page: <strong className={s.mono}>{meta.shownPay ?? 'not shown'}</strong>.{' '}
+                {meta.hasYearlyRange
+                  ? 'It comes from the yearly range read at import, so the source pay below does not change it.'
+                  : 'This job has no yearly range, so the source pay below is what the page uses.'}
+              </div>
+              <div className={s.grid2}>
+                {text('salaryMin', 'Source pay, from', { inputMode: 'numeric' })}
+                {text('salaryMax', 'Source pay, to', { inputMode: 'numeric' })}
+              </div>
+              <div className={s.grid2}>
+                {text('salaryCurrency', 'Currency (ISO code)', { maxLength: 3 })}
+                <label className={s.field}>
+                  Period
+                  <select className={s.select} value={form.salaryPeriod} onChange={(e) => set('salaryPeriod', e.target.value)}>
+                    {['year', 'month', 'hour'].map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {text('applyUrl', 'Apply URL', { type: 'url' })}
+              <div className={s.grid2}>
+                {text('postedAt', 'Posted', { type: 'date' })}
+                {text('expiresAt', 'Expires', { type: 'date' })}
+              </div>
+
+              <div className={s.toolbar} style={{ justifyContent: 'space-between', marginTop: 6 }}>
+                <span className={s.figureLabel}>Description (HTML)</span>
+                <div className={s.tabs}>
+                  <button type="button" className={s.tab} aria-current={!preview ? 'page' : undefined} onClick={() => setPreview(false)}>
+                    Edit
+                  </button>
+                  <button type="button" className={s.tab} aria-current={preview ? 'page' : undefined} onClick={() => setPreview(true)}>
+                    Preview
+                  </button>
+                </div>
+              </div>
+              {preview ? (
+                <iframe
+                  title="Description preview"
+                  sandbox=""
+                  srcDoc={`<!doctype html><meta charset="utf-8"><style>body{font:14px/1.55 system-ui,sans-serif;color:#0c0d0e;margin:12px}</style>${form.descriptionHtml}`}
+                  style={{ width: '100%', height: 360, border: '1px solid var(--color-border)', borderRadius: 8, background: '#fff' }}
+                />
+              ) : (
+                <textarea
+                  className={s.input}
+                  style={{ width: '100%', minHeight: 360, padding: 10, fontFamily: 'var(--font-mono)', fontSize: 12 }}
+                  value={form.descriptionHtml}
+                  onChange={(e) => set('descriptionHtml', e.target.value)}
+                />
+              )}
+            </>
+          ) : null}
+        </div>
+
+        <div className={s.toolbar} style={{ margin: 0, padding: '12px 20px', borderTop: '1px solid var(--color-border)', justifyContent: 'space-between' }}>
+          <span>
+            {job?.url ? (
+              <a className={s.link} href={job.url} target="_blank" rel="noopener noreferrer">
+                Original posting ↗
+              </a>
+            ) : null}
+          </span>
+          <span className={s.actions}>
+            {error && form ? <span className={s.error} style={{ margin: 0 }}>{error}</span> : null}
+            <button className={s.btn} onClick={onClose}>
+              Cancel
+            </button>
+            <button className={`${s.btn} ${s.btnPrimary}`} disabled={!form || saving || !form.title.trim()} onClick={save}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </span>
+        </div>
+      </aside>
     </>
   )
 }
