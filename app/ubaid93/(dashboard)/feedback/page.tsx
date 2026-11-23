@@ -1,57 +1,53 @@
 import { prisma } from '../../../../lib/prisma'
+import { PageHead, Pager, Tabs, hrefWith, intParam, s } from '../ui'
 import FeedbackList from './FeedbackList'
 
-type SearchParams = Record<string, string | undefined>
+export const dynamic = 'force-dynamic'
 
-export default async function FeedbackPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
+const STATUSES = ['new', 'reviewed', 'resolved'] as const
+const PAGE_SIZE = 30
+
+export default async function FeedbackPage({ searchParams }: { searchParams?: Promise<Record<string, string | undefined>> }) {
   const sp = (await searchParams) || {}
-  const page = Math.max(1, Number(sp.page || 1))
-  const status = sp.status || ''
-  const pageSize = 50
+  const page = intParam(sp.page, 1, 1, 1000)
+  const status = (STATUSES as readonly string[]).includes(sp.status ?? '') ? (sp.status as string) : ''
 
   const where = status ? { status } : {}
-  const [items, total, newCount, resolvedCount] = await Promise.all([
+  const [items, total, counts] = await Promise.all([
     prisma.feedback.findMany({
       where,
       select: { id: true, type: true, message: true, url: true, hasScreenshot: true, userAgent: true, status: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
     prisma.feedback.count({ where }),
-    prisma.feedback.count({ where: { status: 'new' } }),
-    prisma.feedback.count({ where: { status: 'resolved' } }),
+    prisma.feedback.groupBy({ by: ['status'], _count: { _all: true } }),
   ])
+  const by = Object.fromEntries(counts.map((c) => [c.status, c._count._all])) as Record<string, number>
+  const all = counts.reduce((n, c) => n + c._count._all, 0)
 
   return (
-    <div>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Feedback</h1>
-      <p style={{ color: '#666', marginBottom: 24 }}>User-submitted feedback and bug reports</p>
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-        {[
-          { label: `All (${total})`, value: '' },
-          { label: `New (${newCount})`, value: 'new' },
-          { label: `Reviewed`, value: 'reviewed' },
-          { label: `Resolved (${resolvedCount})`, value: 'resolved' },
-        ].map((tab) => (
-          <a
-            key={tab.value}
-            href={tab.value ? `/ubaid93/feedback?status=${tab.value}` : '/ubaid93/feedback'}
-            style={{
-              padding: '6px 16px', borderRadius: 100, fontSize: 13, textDecoration: 'none',
-              background: status === tab.value ? '#84cc16' : '#1a1a1a',
-              color: status === tab.value ? '#000' : '#a3a3a3',
-              fontWeight: status === tab.value ? 700 : 400,
-              border: '1px solid transparent',
-            }}
-          >
-            {tab.label}
-          </a>
-        ))}
+    <>
+      <PageHead title="Feedback" lede="Messages and job reports sent from the Feedback tab on the site." />
+      <div className={s.toolbar}>
+        <Tabs
+          current={status}
+          items={[
+            { label: 'All', value: '', href: '/ubaid93/feedback', count: all },
+            ...STATUSES.map((st) => ({
+              label: st[0].toUpperCase() + st.slice(1),
+              value: st,
+              href: hrefWith('/ubaid93/feedback', { status: st }),
+              count: by[st] ?? 0,
+            })),
+          ]}
+        />
       </div>
-
-      <FeedbackList items={items} total={total} page={page} pageSize={pageSize} />
-    </div>
+      <div className={s.panel}>
+        <FeedbackList items={items.map((i) => ({ ...i, createdAt: i.createdAt.toISOString() }))} />
+        {total > PAGE_SIZE ? <Pager path="/ubaid93/feedback" params={{ status }} page={page} pageSize={PAGE_SIZE} total={total} /> : null}
+      </div>
+    </>
   )
 }

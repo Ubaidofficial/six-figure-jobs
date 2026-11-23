@@ -1,53 +1,63 @@
 import { NextResponse } from 'next/server'
+
 import { getAdminSession } from '../../../../lib/admin/auth'
+import { expireJobsByIds } from '../../../../lib/jobs/expiry'
+import { buildSalaryText } from '../../../../lib/jobs/salary'
 import { prisma } from '../../../../lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
+/** One job with everything the edit drawer shows (the list leaves descriptions out). */
 export async function GET(req: Request) {
   if (!(await getAdminSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { searchParams } = new URL(req.url)
-  const page = Math.max(1, Number(searchParams.get('page') || 1))
-  const q = searchParams.get('q') || ''
-  const source = searchParams.get('source') || ''
-  const expired = searchParams.get('expired')
-  const pageSize = 50
-
-  const where: Record<string, unknown> = {}
-  if (q) where.OR = [{ title: { contains: q, mode: 'insensitive' } }, { company: { contains: q, mode: 'insensitive' } }]
-  if (source) where.source = source
-  if (expired === '1') where.isExpired = true
-  else if (expired === '0') where.isExpired = false
-
-  const [jobs, total] = await Promise.all([
-    prisma.job.findMany({
-      where,
-      select: {
-        id: true, title: true, company: true, companyLogo: true, source: true,
-        locationRaw: true, remoteMode: true, employmentType: true,
-        salaryMin: true, salaryMax: true, salaryCurrency: true, salaryPeriod: true,
-        isExpired: true, remote: true, postedAt: true, expiresAt: true, createdAt: true,
-        applyUrl: true, url: true, visaSponsorship: true, descriptionHtml: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.job.count({ where }),
-  ])
-
-  return NextResponse.json({ jobs, total, page, pageSize, totalPages: Math.ceil(total / pageSize) })
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  const job = await prisma.job.findUnique({
+    where: { id },
+    select: {
+      id: true, title: true, company: true, companyLogo: true, source: true,
+      locationRaw: true, remoteMode: true, employmentType: true,
+      salaryMin: true, salaryMax: true, salaryCurrency: true, salaryPeriod: true,
+      minAnnual: true, maxAnnual: true, currency: true,
+      isExpired: true, postedAt: true, expiresAt: true, createdAt: true,
+      applyUrl: true, url: true, visaSponsorship: true, descriptionHtml: true,
+    },
+  })
+  if (!job) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const { minAnnual, maxAnnual, currency, salaryMin, salaryMax, ...rest } = job
+  void currency
+  const shownPay = buildSalaryText(job as Parameters<typeof buildSalaryText>[0])
+  return NextResponse.json(
+    {
+      // BigInt cannot go into JSON.
+      job: { ...rest, salaryMin: salaryMin?.toString() ?? null, salaryMax: salaryMax?.toString() ?? null },
+      shownPay,
+      hasYearlyRange: minAnnual != null || maxAnnual != null,
+    },
+    { headers: { 'Cache-Control': 'no-store' } },
+  )
 }
 
 export async function PATCH(req: Request) {
   if (!(await getAdminSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id, ...data } = await req.json()
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  if (!id || typeof id !== 'string') return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+
+  // Expiring goes through the same path as the automatic checks, so Google is told the page is gone and the sitemap
+  // drops it; restoring clears the expiry dates those checks set, or the freshness rules would still hide the job.
+  if (data.isExpired === true) {
+    await expireJobsByIds([id])
+    return NextResponse.json({ ok: true })
+  }
+  if (data.isExpired === false) {
+    await prisma.job.update({ where: { id }, data: { isExpired: false, validThrough: null, expiresAt: null } })
+    return NextResponse.json({ ok: true })
+  }
 
   const allowed = [
     'title', 'company', 'companyLogo', 'locationRaw', 'remoteMode', 'employmentType',
     'salaryMin', 'salaryMax', 'salaryCurrency', 'salaryPeriod',
-    'isExpired', 'remote', 'applyUrl', 'descriptionHtml',
+    'remote', 'applyUrl', 'descriptionHtml',
     'visaSponsorship', 'postedAt', 'expiresAt',
   ]
   const update: Record<string, unknown> = {}
@@ -55,6 +65,6 @@ export async function PATCH(req: Request) {
     if (key in data) update[key] = data[key]
   }
 
-  const job = await prisma.job.update({ where: { id }, data: update })
-  return NextResponse.json({ ok: true, job })
+  await prisma.job.update({ where: { id }, data: update })
+  return NextResponse.json({ ok: true })
 }

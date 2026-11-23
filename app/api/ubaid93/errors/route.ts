@@ -1,32 +1,33 @@
 import { NextResponse } from 'next/server'
+
 import { getAdminSession } from '../../../../lib/admin/auth'
+import { errorGroupKey, isNoiseError } from '../../../../lib/admin/errorReports'
 import { prisma } from '../../../../lib/prisma'
+import { loadErrorRows } from '../../../ubaid93/(dashboard)/errors/groups'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: Request) {
-  if (!(await getAdminSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { searchParams } = new URL(req.url)
-  const page = Math.max(1, Number(searchParams.get('page') || 1))
-  const status = searchParams.get('status') || ''
-  const severity = searchParams.get('severity') || ''
-  const pageSize = 50
+const STATUSES = new Set(['new', 'resolved'])
 
-  const where: Record<string, unknown> = {}
-  if (status) where.status = status
-  if (severity) where.severity = severity
-
-  const [items, total] = await Promise.all([
-    prisma.errorLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
-    prisma.errorLog.count({ where }),
-  ])
-  return NextResponse.json({ items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) })
-}
-
+/**
+ * Sets the status of every report of one issue (`key`, from errorGroupKey), or of all known noise (`noise: true`),
+ * within the console's window. One report by `id` still works.
+ */
 export async function PATCH(req: Request) {
   if (!(await getAdminSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { id, status } = await req.json()
-  if (!id || !status) return NextResponse.json({ error: 'Missing id or status' }, { status: 400 })
-  const item = await prisma.errorLog.update({ where: { id }, data: { status } })
-  return NextResponse.json({ ok: true, item })
+  const body = (await req.json().catch(() => ({}))) as { id?: unknown; key?: unknown; noise?: unknown; status?: unknown }
+  const status = typeof body.status === 'string' && STATUSES.has(body.status) ? body.status : null
+  if (!status) return NextResponse.json({ error: 'status must be new or resolved' }, { status: 400 })
+
+  let ids: string[]
+  if (typeof body.id === 'string') ids = [body.id]
+  else if (typeof body.key === 'string' || body.noise === true) {
+    const rows = await loadErrorRows()
+    ids = rows
+      .filter((r) => (body.noise === true ? isNoiseError(r.message, r.stack) : errorGroupKey(r.message) === body.key))
+      .map((r) => r.id)
+  } else return NextResponse.json({ error: 'Send id, key or noise' }, { status: 400 })
+
+  const { count } = await prisma.errorLog.updateMany({ where: { id: { in: ids }, status: { not: status } }, data: { status } })
+  return NextResponse.json({ ok: true, updated: count })
 }

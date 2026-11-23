@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
 import { adminUserExists } from '../../../lib/admin/auth'
+import s from '../admin.module.css'
 import SetupForm from './SetupForm'
 
 export default async function SetupPage() {
@@ -9,17 +10,12 @@ export default async function SetupPage() {
   if (exists) redirect('/ubaid93')
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: 16, padding: '40px 48px', width: 400 }}>
-        <div style={{ marginBottom: 28 }}>
-          <span style={{ background: '#1a2e1a', color: '#84cc16', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100 }}>
-            FIRST-TIME SETUP
-          </span>
-          <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 12, marginBottom: 4, color: '#fff' }}>Create Admin Account</h1>
-          <p style={{ color: '#555', fontSize: 13, margin: 0 }}>
-            This page is only available until an account is created. After setup it will be permanently disabled.
-          </p>
-        </div>
+    <div className={s.authWrap}>
+      <div className={`${s.panel} ${s.authCard}`}>
+        <h1 className={s.title} style={{ fontSize: 20 }}>Create the admin account</h1>
+        <p className={s.lede} style={{ marginBottom: 20, fontSize: 13 }}>
+          This page works only until an account exists; after that it sends you to the console.
+        </p>
         <SetupForm />
       </div>
     </div>

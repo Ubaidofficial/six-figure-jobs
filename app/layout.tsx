@@ -8,6 +8,7 @@ import Script from 'next/script'
 import { Footer } from '@/components/layout/Footer'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
+import { HideOnAdmin } from '@/components/layout/HideOnAdmin'
 import { JobAlertPopup } from '@/components/alerts/JobAlertPopup'
 import ErrorTracker from '@/components/ErrorTracker'
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
@@ -133,16 +134,22 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <PreloadResources />
         <GtmStartIfMissing id="GTM-PV6WJZ8J" />
         <div className="flex min-h-screen flex-col">
-          <SiteHeader />
+          <HideOnAdmin>
+            <SiteHeader />
+          </HideOnAdmin>
 
           <div id="main-content" className="flex-1">
             {children}
           </div>
 
-          <Footer />
+          <HideOnAdmin>
+            <Footer />
+          </HideOnAdmin>
         </div>
-        <FeedbackWidget />
-        <JobAlertPopup />
+        <HideOnAdmin>
+          <FeedbackWidget />
+          <JobAlertPopup />
+        </HideOnAdmin>
         <ErrorTracker />
         <ScrollReveal />
         <RouteTransition />

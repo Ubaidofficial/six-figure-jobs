@@ -1,79 +1,96 @@
+import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
+import { buildSalaryText } from '../../../../lib/jobs/salary'
 import { prisma } from '../../../../lib/prisma'
+import { PageHead, Pager, intParam, s } from '../ui'
 import JobsTable from './JobsTable'
 
-type SearchParams = Record<string, string | undefined>
+export const dynamic = 'force-dynamic'
 
+/** A job as the list shows it: plain values only (no BigInt), the pay as the site shows it, and its public link. */
 export type JobRow = {
   id: string
   title: string
   company: string | null
-  companyLogo: string | null
   source: string
-  locationRaw: string | null
+  location: string | null
   remoteMode: string | null
-  employmentType: string | null
-  salaryMin: bigint | null
-  salaryMax: bigint | null
-  salaryCurrency: string | null
-  salaryPeriod: string | null
+  pay: string | null
   isExpired: boolean
-  remote: boolean | null
-  postedAt: Date | null
-  expiresAt: Date | null
-  createdAt: Date
+  posted: string
+  href: string
   applyUrl: string | null
-  url: string | null
-  visaSponsorship: boolean
-  descriptionHtml: string | null
 }
 
-export default async function AdminJobsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
+const PAGE_SIZE = 50
+
+export default async function AdminJobsPage({ searchParams }: { searchParams?: Promise<Record<string, string | undefined>> }) {
   const sp = (await searchParams) || {}
-  const page = Math.max(1, Number(sp.page || 1))
-  const q = sp.q || ''
-  const source = sp.source || ''
-  const expired = sp.expired
-  const pageSize = 50
+  const page = intParam(sp.page, 1, 1, 10_000)
+  const q = (sp.q ?? '').trim().slice(0, 100)
+  const source = sp.source ?? ''
+  const status = sp.status === 'live' || sp.status === 'expired' ? sp.status : ''
 
   const where: Record<string, unknown> = {}
   if (q) where.OR = [{ title: { contains: q, mode: 'insensitive' } }, { company: { contains: q, mode: 'insensitive' } }]
   if (source) where.source = source
-  if (expired === '1') where.isExpired = true
-  else if (expired === '0') where.isExpired = false
+  if (status) where.isExpired = status === 'expired'
 
   const [jobs, total, sources] = await Promise.all([
     prisma.job.findMany({
       where,
       select: {
-        id: true, title: true, company: true, companyLogo: true, source: true,
-        locationRaw: true, remoteMode: true, employmentType: true,
-        salaryMin: true, salaryMax: true, salaryCurrency: true, salaryPeriod: true,
-        isExpired: true, remote: true, postedAt: true, expiresAt: true, createdAt: true,
-        applyUrl: true, url: true, visaSponsorship: true, descriptionHtml: true,
+        id: true, shortId: true, title: true, company: true, source: true, locationRaw: true, remoteMode: true,
+        minAnnual: true, maxAnnual: true, currency: true, salaryMin: true, salaryMax: true, salaryCurrency: true,
+        salaryPeriod: true, isExpired: true, postedAt: true, createdAt: true, applyUrl: true,
       },
       orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
     prisma.job.count({ where }),
-    prisma.job.groupBy({ by: ['source'], _count: { id: true }, orderBy: { _count: { id: 'desc' } }, take: 20 }),
+    prisma.job.groupBy({ by: ['source'], _count: { id: true }, orderBy: { _count: { id: 'desc' } }, take: 30 }),
   ])
 
-  return (
-    <div>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Jobs</h1>
-      <p style={{ color: '#666', marginBottom: 24 }}>{total.toLocaleString()} jobs matching filters</p>
+  const rows: JobRow[] = jobs.map((j) => ({
+    id: j.id,
+    title: j.title,
+    company: j.company,
+    source: j.source.replace(/^board:/, ''),
+    location: j.locationRaw,
+    remoteMode: j.remoteMode,
+    pay: buildSalaryText(j as Parameters<typeof buildSalaryText>[0]),
+    isExpired: j.isExpired,
+    posted: (j.postedAt ?? j.createdAt).toISOString().slice(0, 10),
+    href: buildJobSlugHref(j),
+    applyUrl: j.applyUrl,
+  }))
 
-      <JobsTable
-        jobs={jobs as unknown as JobRow[]}
-        total={total}
-        page={page}
-        pageSize={pageSize}
-        sources={sources.map((s) => ({ source: s.source, count: s._count.id }))}
-        initialQ={q}
-        initialSource={source}
-        initialExpired={expired ?? ''}
-      />
-    </div>
+  return (
+    <>
+      <PageHead title="Jobs" lede="Every job in the database, newest first. Pay is shown as the job page shows it." />
+      <form className={s.toolbar} action="/ubaid93/jobs">
+        <input className={s.input} name="q" defaultValue={q} placeholder="Title or company" aria-label="Title or company" />
+        <select className={s.select} name="source" defaultValue={source} aria-label="Source">
+          <option value="">All sources</option>
+          {sources.map((x) => (
+            <option key={x.source} value={x.source}>
+              {x.source.replace(/^board:/, '')} ({x._count.id.toLocaleString()})
+            </option>
+          ))}
+        </select>
+        <select className={s.select} name="status" defaultValue={status} aria-label="Status">
+          <option value="">Live and expired</option>
+          <option value="live">Live</option>
+          <option value="expired">Expired</option>
+        </select>
+        <button className={`${s.btn} ${s.btnPrimary}`} type="submit">
+          Search
+        </button>
+      </form>
+      <div className={s.panel}>
+        <JobsTable jobs={rows} />
+        <Pager path="/ubaid93/jobs" params={{ q, source, status }} page={page} pageSize={PAGE_SIZE} total={total} />
+      </div>
+    </>
   )
 }
