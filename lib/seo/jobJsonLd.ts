@@ -10,6 +10,7 @@ import { resolveSalaryCurrency } from '../jobs/salary'
 import { countryName, normalizeCountryCode } from '../location/country'
 import { countriesFromText, countryFromCity, countryFromText, isPlaceholderLocation } from '../location/jobLocation'
 import { isWorldwideLocationText, remoteRegionDef } from '../jobs/remoteRegions'
+import { evaluateJobIndexability } from '../jobs/qualityGate'
 import { WORLDWIDE_COUNTRY_CODES, EXCLUDED_ELIGIBLE_COUNTRIES } from '../location/worldwideCountries'
 import { AMERICAS, NORTH_AMERICA_REMOTE } from '../location/regionCountries'
 import {
@@ -20,6 +21,15 @@ import {
 export type JobWithCompany = Job & { companyRef: Company | null }
 
 const SITE_URL = getSiteUrl()
+
+/**
+ * The JobPosting for a job page, or null when the quality gate makes that page `noindex` (app/job/[slug]/page.tsx uses
+ * the same gate for its robots tag). Google reads JobPosting only on indexable pages; a live audit (2026-11-23, 70
+ * sampled job pages) found one noindex page still carrying it, so the markup and the robots tag disagreed.
+ */
+export function buildIndexableJobJsonLd(job: JobWithCompany): any | null {
+  return evaluateJobIndexability(job).indexable ? buildJobJsonLd(job) : null
+}
 
 export function buildJobJsonLd(job: JobWithCompany): any {
   const company = job.companyRef
