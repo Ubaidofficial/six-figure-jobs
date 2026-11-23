@@ -108,6 +108,20 @@ jobs:
         id: sync
         run: npm run sync:freehire
 
+      # freehire's change feed (lib/scrapers/freehireChanges.ts): every closing since the last run, read from the cursor
+      # stored in SiteConfig (about 1,400 pages, about 9 minutes, on a 5.5-hour gap). Our jobs whose posting closed and that
+      # freehire's open search no longer lists are expired; the cursor moves only after that. Same rule as the per-job
+      # check below: LIVE on scheduled, planned and closed_apply runs, report-only on other manual runs. The per-job check
+      # stays as the safety net (and refreshes the jobs it confirms open).
+      - name: Expire jobs closed in freehire's change feed
+        if: ${{ !cancelled() && steps.sync.conclusion == 'success' && (github.event_name == 'schedule' || inputs.planned || inputs.closed_apply) }}
+        timeout-minutes: 30
+        run: npx tsx scripts/freehire-changes.ts
+      - name: Change feed (report only)
+        if: ${{ !cancelled() && steps.sync.conclusion == 'success' && github.event_name != 'schedule' && !inputs.planned && !inputs.closed_apply }}
+        timeout-minutes: 30
+        run: npx tsx scripts/freehire-changes.ts --dry-run
+
       # Asks freehire about each active job individually and expires those it reports as closed AND that its open
       # search no longer lists (lib/scrapers/freehireClosedCheck.ts). LIVE on scheduled and planned full runs; a manual
       # run is report-only unless closed_apply is ticked. The check skips itself with a warning if more than 5% of lookups
@@ -116,8 +130,9 @@ jobs:
       # Both closed-check steps stop themselves after 25 minutes (nothing is expired) and the step timeout is a second
       # guard, so a stall here can no longer eat the whole job (on 2026-11-05 the scheduled run sat 42 minutes in this
       # step with no output, hit the job timeout and never reached the 7-day expiry below).
+      # Both closed-job steps depend on the freehire sync only, so a failed or aborted change-feed step never skips them.
       - name: Closed-job check (report only)
-        if: ${{ success() && github.event_name != 'schedule' && !inputs.planned && !inputs.closed_apply }}
+        if: ${{ !cancelled() && steps.sync.conclusion == 'success' && github.event_name != 'schedule' && !inputs.planned && !inputs.closed_apply }}
         timeout-minutes: 30
         run: npm run check-closed:freehire -- --dry-run
 
@@ -126,7 +141,7 @@ jobs:
       # since the owner's plan of 2026-11-22. Least recently checked first, so the runs share the work: every active job
       # about twice a day.
       - name: Expire jobs freehire has closed
-        if: ${{ success() && (github.event_name == 'schedule' || inputs.planned || inputs.closed_apply) }}
+        if: ${{ !cancelled() && steps.sync.conclusion == 'success' && (github.event_name == 'schedule' || inputs.planned || inputs.closed_apply) }}
         timeout-minutes: 30
         run: npm run check-closed:freehire
 
