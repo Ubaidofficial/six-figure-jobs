@@ -1,4 +1,4 @@
-import { FIRST_RUN_LOOKBACK_HOURS, latestBySlug, syncFreehireChanges, type FeedChange, type FeedPage, type OurJob } from '../../lib/scrapers/freehireChanges'
+import { FIRST_RUN_LOOKBACK_HOURS, findActiveFreehireJobsBySlugs, latestBySlug, syncFreehireChanges, type FeedChange, type FeedPage, type OurJob } from '../../lib/scrapers/freehireChanges'
 
 jest.mock('../../lib/prisma', () => ({ prisma: {} }))
 jest.mock('../../lib/jobs/expiry', () => ({ expireJobsByIds: jest.fn() }))
@@ -126,5 +126,20 @@ describe('syncFreehireChanges', () => {
     expect(r.pages).toBe(2)
     expect(r.caughtUp).toBe(false)
     expect(d.saved).toEqual(['c1'])
+  })
+})
+
+describe('findActiveFreehireJobsBySlugs', () => {
+  // 2026-11-23: 236,399 closings in one run; asking the database 1,000 slugs at a time took 190 s.
+  it('loads our active freehire jobs in one query and matches the closed slugs in memory', async () => {
+    const { prisma } = jest.requireMock('../../lib/prisma') as { prisma: any }
+    const findMany = jest.fn(async () => [ours('our-1'), ours('our-2'), { ...ours('x'), sourceRef: null }])
+    prisma.job = { findMany }
+    const closed = Array.from({ length: 50_000 }, (_, i) => `other-${i}`).concat('our-2')
+    const r = await findActiveFreehireJobsBySlugs(closed)
+    expect(findMany).toHaveBeenCalledTimes(1)
+    expect(r.map((j) => j.sourceRef)).toEqual(['our-2'])
+    expect(await findActiveFreehireJobsBySlugs([])).toEqual([])
+    expect(findMany).toHaveBeenCalledTimes(1) // nothing closed: no query
   })
 })
