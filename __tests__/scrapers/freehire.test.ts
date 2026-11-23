@@ -336,14 +336,18 @@ describe('freehire jobs whose pay is only in the posting text', () => {
     expect(mapped).toMatchObject({ salaryMin: 150000, salaryMax: 180000 })
     expect(mapped.raw).toBeUndefined()
   })
-  it('reads the no-filter pass in four slices that cover every country once: US, CA/AU/UK, EU, the rest', () => {
+  it('reads the no-filter pass in four slices that cover every country once (US, CA/AU/UK, EU, the rest), then remote and worldwide', () => {
     expect(DESCRIPTION_PAY_MARKETS.every((m: { anyPay?: boolean }) => m.anyPay)).toBe(true)
     expect(DESCRIPTION_PAY_MARKETS.map((m: { geo: Record<string, string> }) => m.geo)).toEqual([
       { countries: 'us' },
       { countries: 'ca,au', regions: 'uk' },
       { regions: 'eu', countries_exclude: 'us,ca,au', regions_exclude: 'uk' },
       { countries_exclude: 'us,ca,au', regions_exclude: 'uk,eu' },
+      { work_mode: 'remote' },
+      { regions: 'global' },
     ])
-    expect(DESCRIPTION_PAY_MARKETS.map((m: { maxPages?: number }) => m.maxPages)).toEqual([100, 100, 100, 100])
+    expect(DESCRIPTION_PAY_MARKETS.map((m: { maxPages?: number }) => m.maxPages)).toEqual([100, 100, 100, 100, 100, 100])
+    // Worldwide jobs are few (6,184 open on 2026-11-22): the slice reads all 30 days every run.
+    expect(DESCRIPTION_PAY_MARKETS[5]).toMatchObject({ lookbackDays: 30 })
   })
 })
