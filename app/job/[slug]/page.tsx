@@ -11,7 +11,7 @@ import { prisma } from '../../../lib/prisma'
 import { parseJobSlugParam, buildJobSlug } from '../../../lib/jobs/jobSlug'
 import { ApplicationKitLink } from '@/components/applykit/ApplicationKitLink'
 import { buildJobMetadata } from '../../../lib/seo/jobMeta'
-import { buildJobJsonLd } from '../../../lib/seo/jobJsonLd'
+import { buildIndexableJobJsonLd } from '../../../lib/seo/jobJsonLd'
 import { buildJobBreadcrumbJsonLd } from '../../../lib/seo/jobBreadcrumbJsonLd'
 import { queryJobs, type JobQueryResult, type JobWithCompany } from '../../../lib/jobs/queryJobs'
 import { filterSimilarJobs } from '../../../lib/jobs/similarJobs'
@@ -287,7 +287,8 @@ export default async function JobPage({
   const foreignLanguage = detectedLanguage && detectedLanguage !== 'en' ? detectedLanguage : null
   const descriptionLang = foreignLanguage && foreignLanguage !== 'other' ? foreignLanguage : undefined
 
-  const jsonLd = buildJobJsonLd(typedJob)
+  // None on a noindex page (the quality gate in generateMetadata above decides both).
+  const jsonLd = buildIndexableJobJsonLd(typedJob)
   // The id the apply, save and report buttons send: the code in this page's URL, not the internal id (publicJob.ts).
   const publicId = publicJobId(typedJob.id)
   const breadcrumbJsonLd = buildJobBreadcrumbJsonLd(typedJob, canonicalSlug)
@@ -800,7 +801,7 @@ export default async function JobPage({
       <MobileApplyBar salaryText={salaryText || null} applyHref={applyHref} jobId={publicId} />
 
       {/* JSON-LD (keep existing schema) */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {jsonLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /> : null}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
