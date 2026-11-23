@@ -107,8 +107,10 @@ export default function RootLayout({
       className={`light h-full ${bodyFont.variable} ${displayFont.variable} ${logoFont.variable} ${monoFont.variable}`}
     >
       <head>
-        {/* Google Tag Manager: first element in <head>, snippet exactly as Google gave it */}
-        <script
+        {/* Google Tag Manager: first element in <head>, snippet exactly as Google gave it. Not on the admin console
+            (/ubaid93), so the owner's own visits there are not counted as traffic. */}
+        <HideOnAdmin>
+          <script
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -117,22 +119,27 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','GTM-PV6WJZ8J');`,
           }}
         />
+        </HideOnAdmin>
         {/* Public job feeds, so feed readers and aggregators can find them from any page. */}
         <link rel="alternate" type="application/rss+xml" title="Newest $100k+ jobs" href="/feeds/jobs.rss" />
         <link rel="alternate" type="application/rss+xml" title="Newest remote $100k+ jobs" href="/feeds/remote-jobs.rss" />
       </head>
       <body className="min-h-full bg-background text-foreground">
         {/* Google Tag Manager (noscript): right after the opening <body> tag */}
-        <noscript>
-          <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-PV6WJZ8J"
-            height="0"
-            width="0"
-            style={{ display: 'none', visibility: 'hidden' }}
-          />
-        </noscript>
+        <HideOnAdmin>
+          <noscript>
+            <iframe
+              src="https://www.googletagmanager.com/ns.html?id=GTM-PV6WJZ8J"
+              height="0"
+              width="0"
+              style={{ display: 'none', visibility: 'hidden' }}
+            />
+          </noscript>
+        </HideOnAdmin>
         <PreloadResources />
-        <GtmStartIfMissing id="GTM-PV6WJZ8J" />
+        <HideOnAdmin>
+          <GtmStartIfMissing id="GTM-PV6WJZ8J" />
+        </HideOnAdmin>
         <div className="flex min-h-screen flex-col">
           <HideOnAdmin>
             <SiteHeader />
@@ -153,25 +160,28 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <ErrorTracker />
         <ScrollReveal />
         <RouteTransition />
-        {/* SourceTrack attribution tag (loads before the other analytics scripts below) */}
-        <Script src="https://api.srctk.com/tracker.min.js" strategy="afterInteractive" data-site-key="929382d1-ca2b-4559-9896-580f499039f6" />
-        {/* Google Analytics 4: loads only when NEXT_PUBLIC_GA_MEASUREMENT_ID is set to a G- id (inlined at build time) */}
-        {GA_MEASUREMENT_ID ? (
-          <>
-            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}');`}
-            </Script>
-          </>
-        ) : null}
-        {/* Microsoft Clarity (project zagoogkx9a) */}
-        <Script id="microsoft-clarity" strategy="afterInteractive">
-          {`(function(c,l,a,r,i,t,y){
+        {/* Analytics: not on the admin console (/ubaid93), so the owner's own visits there are not counted. */}
+        <HideOnAdmin>
+          {/* SourceTrack attribution tag (loads before the other analytics scripts below) */}
+          <Script src="https://api.srctk.com/tracker.min.js" strategy="afterInteractive" data-site-key="929382d1-ca2b-4559-9896-580f499039f6" />
+          {/* Google Analytics 4: loads only when NEXT_PUBLIC_GA_MEASUREMENT_ID is set to a G- id (inlined at build time) */}
+          {GA_MEASUREMENT_ID ? (
+            <>
+              <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+              <Script id="google-analytics" strategy="afterInteractive">
+                {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}');`}
+              </Script>
+            </>
+          ) : null}
+          {/* Microsoft Clarity (project zagoogkx9a) */}
+          <Script id="microsoft-clarity" strategy="afterInteractive">
+            {`(function(c,l,a,r,i,t,y){
     c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
     t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
     y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 })(window, document, "clarity", "script", "zagoogkx9a");`}
-        </Script>
+          </Script>
+        </HideOnAdmin>
       </body>
     </html>
   )

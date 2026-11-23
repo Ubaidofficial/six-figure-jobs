@@ -314,7 +314,10 @@ describe('closed check pacing', () => {
       requestGapMs: 40,
     })
     expect(starts).toHaveLength(6)
-    const gaps = starts.slice(1).map((t, i) => t - starts[i])
-    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(35) // timer slack
+    // Each start waits for its own slot, 40 ms after the one before, so the nth start comes at least n × 40 ms after the
+    // first: never more requests in a stretch of time than the pace allows. Single gaps are not checked: on a busy
+    // machine one timer can fire late and the next on time, so one gap is short (32 ms in CI on 2026-11-24) while the
+    // pace holds. (2 ms slack: Date.now() is whole milliseconds and Node can fire a timer about 1 ms early.)
+    starts.forEach((t, i) => expect(t - starts[0]).toBeGreaterThanOrEqual(i * 40 - 2))
   })
 })
