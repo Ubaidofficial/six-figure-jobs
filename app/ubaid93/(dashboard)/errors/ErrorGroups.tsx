@@ -1,35 +1,19 @@
 'use client'
 import { Fragment, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
 import s from '../../admin.module.css'
 import type { ErrorGroup } from '../../../../lib/admin/errorReports'
+import { Sparkline } from '../visuals'
+import { ActionError, useAction } from '../useAction'
+import { ago } from '../ui'
 
-type Group = Omit<ErrorGroup, 'firstSeen' | 'lastSeen'> & { firstSeen: string; lastSeen: string }
-
-function ago(iso: string): string {
-  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60_000)
-  if (min < 60) return `${Math.max(min, 1)} min ago`
-  const h = Math.round(min / 60)
-  return h < 48 ? `${h} h ago` : `${Math.round(h / 24)} days ago`
-}
+type Group = Omit<ErrorGroup, 'firstSeen' | 'lastSeen' | 'ids' | 'daily'> & { firstSeen: string; lastSeen: string; recent: number[] }
 
 export default function ErrorGroups({ groups, view, reportCount }: { groups: Group[]; view: string; reportCount: number }) {
-  const router = useRouter()
   const [open, setOpen] = useState<string | null>(null)
-  const [busy, setBusy] = useState<string | null>(null)
-
-  async function patch(body: Record<string, unknown>, busyKey: string) {
-    setBusy(busyKey)
-    const res = await fetch('/api/ubaid93/errors', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    setBusy(null)
-    if (res.ok) router.refresh()
-  }
+  const { busy, failed, run } = useAction()
+  const patch = (body: Record<string, unknown>, key: string) => run(key, '/api/ubaid93/errors', body)
 
   if (groups.length === 0) {
     return (
@@ -41,6 +25,7 @@ export default function ErrorGroups({ groups, view, reportCount }: { groups: Gro
 
   return (
     <div className={s.panel}>
+      <ActionError message={failed} />
       {view === 'noise' ? (
         <div className={s.toolbar} style={{ padding: '12px 14px 0', justifyContent: 'space-between' }}>
           <span className={s.dim}>
@@ -57,6 +42,7 @@ export default function ErrorGroups({ groups, view, reportCount }: { groups: Gro
             <tr>
               <th style={{ width: 28 }} />
               <th>Issue</th>
+              <th>14 days</th>
               <th className={s.num}>Reports</th>
               <th>Last seen</th>
               <th>First seen</th>
@@ -91,8 +77,11 @@ export default function ErrorGroups({ groups, view, reportCount }: { groups: Gro
                         {g.browsers.map((b) => b.name).join(', ')}
                       </div>
                     </td>
+                    <td>
+                      <Sparkline values={g.recent} width={84} height={22} />
+                    </td>
                     <td className={s.num}>
-                      {g.count.toLocaleString()}
+                      {g.count.toLocaleString('en-US')}
                       {g.newCount > 0 && g.newCount < g.count ? <div className={s.cellSub}>{g.newCount} new</div> : null}
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{ago(g.lastSeen)}</td>
@@ -114,13 +103,13 @@ export default function ErrorGroups({ groups, view, reportCount }: { groups: Gro
                   {expanded ? (
                     <tr>
                       <td />
-                      <td colSpan={5}>
+                      <td colSpan={6}>
                         <div className={s.grid2}>
                           <div>
                             <div className={s.figureLabel}>Pages</div>
                             {g.pages.map((p) => (
                               <div key={p.path} className={s.mono}>
-                                {p.count.toLocaleString()} · {p.path}
+                                {p.count.toLocaleString('en-US')} · {p.path}
                               </div>
                             ))}
                           </div>
@@ -128,7 +117,7 @@ export default function ErrorGroups({ groups, view, reportCount }: { groups: Gro
                             <div className={s.figureLabel}>Browsers</div>
                             {g.browsers.map((b) => (
                               <div key={b.name} className={s.mono}>
-                                {b.count.toLocaleString()} · {b.name}
+                                {b.count.toLocaleString('en-US')} · {b.name}
                               </div>
                             ))}
                           </div>
@@ -150,7 +139,7 @@ export default function ErrorGroups({ groups, view, reportCount }: { groups: Gro
       </div>
       <div className={s.pager}>
         <span>
-          {groups.length.toLocaleString()} issue{groups.length === 1 ? '' : 's'} · {reportCount.toLocaleString()} reports
+          {groups.length.toLocaleString('en-US')} issue{groups.length === 1 ? '' : 's'} · {reportCount.toLocaleString('en-US')} reports
         </span>
       </div>
     </div>

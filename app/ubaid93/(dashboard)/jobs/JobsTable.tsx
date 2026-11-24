@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import s from '../../admin.module.css'
+import { ActionError, useAction } from '../useAction'
 import JobEditDrawer from './JobEditModal'
 import type { JobRow } from './page'
 
@@ -11,18 +12,11 @@ const MODE: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', onsit
 export default function JobsTable({ jobs }: { jobs: JobRow[] }) {
   const router = useRouter()
   const [editing, setEditing] = useState<string | null>(null)
-  const [busy, setBusy] = useState<string | null>(null)
+  const { busy, failed, run } = useAction()
 
   async function toggleExpired(job: JobRow) {
     if (!job.isExpired && !window.confirm(`Expire "${job.title}"? Its page will answer "gone" and Google is told.`)) return
-    setBusy(job.id)
-    const res = await fetch('/api/ubaid93/jobs', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: job.id, isExpired: !job.isExpired }),
-    })
-    setBusy(null)
-    if (res.ok) router.refresh()
+    await run(job.id, '/api/ubaid93/jobs', { id: job.id, isExpired: !job.isExpired })
   }
 
   if (jobs.length === 0) return <p className={s.empty}>No jobs match.</p>
@@ -39,6 +33,7 @@ export default function JobsTable({ jobs }: { jobs: JobRow[] }) {
           }}
         />
       ) : null}
+      <ActionError message={failed} />
       <div className={s.tableWrap}>
         <table className={s.table}>
           <thead>

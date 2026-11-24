@@ -7,7 +7,8 @@ import { ALERT_STATE_KEY, alertRecipient, emailConfigured, healthAlertsEveryMs, 
 import { maskEmail } from '../../../../lib/alerts/service'
 import { prisma } from '../../../../lib/prisma'
 import { loadHealthChecks } from '../overview'
-import { PageHead, Section, Status, ago, s, stamp } from '../ui'
+import { PageHead, Section, Status, ago, lastDays, s, stamp } from '../ui'
+import { Sparkline } from '../visuals'
 import TestAlertButton from './TestAlertButton'
 
 export const dynamic = 'force-dynamic'
@@ -16,7 +17,8 @@ type SourceRow = { source: string; live: number; added24h: number; added7d: numb
 
 export default async function SystemPage() {
   const now = Date.now()
-  const [checks, sources, queue, failures, lastScrape, stuckScrapes, users, subs, alertRow] = await Promise.all([
+  const days14 = lastDays(14)
+  const [checks, sources, queue, failures, lastScrape, stuckScrapes, users, subs, alertRow, perDay] = await Promise.all([
     loadHealthChecks(now),
     prisma.$queryRaw<SourceRow[]>`
       SELECT source,
@@ -39,7 +41,19 @@ export default async function SystemPage() {
     prisma.user.groupBy({ by: ['emailVerified'], _count: { _all: true } }).catch(() => []),
     prisma.subscription.groupBy({ by: ['status'], _count: { _all: true } }).catch(() => []),
     prisma.siteConfig.findUnique({ where: { key: ALERT_STATE_KEY } }),
+    prisma.$queryRaw<Array<{ source: string; d: string; n: number }>>`
+      SELECT source, to_char(date_trunc('day', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS d, count(*)::int AS n
+      FROM "Job" WHERE "isExpired" IN (true, false) AND "createdAt" >= ${new Date(`${days14[0]}T00:00:00Z`)}
+      GROUP BY 1, 2`,
   ])
+  const added = new Map<string, number[]>()
+  for (const r of perDay) {
+    const row = added.get(r.source) ?? days14.map(() => 0)
+    const i = days14.indexOf(r.d)
+    if (i >= 0) row[i] = Number(r.n)
+    added.set(r.source, row)
+  }
+  const liveTotal = sources.reduce((n, r) => n + r.live, 0) || 1
   const alertState = parseAlertState(alertRow?.value)
   const recipient = alertRecipient()
   const canEmail = Boolean(recipient) && emailConfigured()
@@ -107,7 +121,9 @@ export default async function SystemPage() {
             <thead>
               <tr>
                 <th>Source</th>
-                <th className={s.num}>Live</th>
+                <th className={s.num}>Not expired</th>
+                <th>Share</th>
+                <th>Added per day, 14 days</th>
                 <th className={s.num}>Added 24 h</th>
                 <th className={s.num}>Added 7 days</th>
                 <th>Last job added</th>
@@ -119,8 +135,16 @@ export default async function SystemPage() {
                 return (
                   <tr key={r.source}>
                     <td className={s.mono}>{r.source.replace(/^board:/, '')}</td>
-                    <td className={s.num}>{r.live.toLocaleString()}</td>
-                    <td className={s.num}>{r.added24h.toLocaleString()}</td>
+                    <td className={s.num}>{r.live.toLocaleString('en-US')}</td>
+                    <td style={{ minWidth: 120 }}>
+                      <span className={s.barTrack} style={{ display: 'block' }} title={`${Math.round((r.live / liveTotal) * 100)}% of jobs not expired`}>
+                        <span className={s.barFill} style={{ width: `${Math.max(1, (r.live / liveTotal) * 100)}%` }} />
+                      </span>
+                    </td>
+                    <td>
+                      <Sparkline values={added.get(r.source) ?? days14.map(() => 0)} width={110} height={22} />
+                    </td>
+                    <td className={s.num}>{r.added24h.toLocaleString('en-US')}</td>
                     <td className={s.num}>{r.added7d.toLocaleString()}</td>
                     <td>
                       <Status tone={hours <= 24 ? 'ok' : hours <= 72 ? 'warn' : 'muted'}>{ago(r.newest, now)}</Status>

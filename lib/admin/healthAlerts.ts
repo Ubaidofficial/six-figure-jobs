@@ -9,6 +9,7 @@
 // (ALERT_STATE_KEY), so a restart or a second container does not send the same email twice in a row.
 import { prisma } from '../prisma'
 import { sendMail, type SendMail } from '../alerts/service'
+import { getSiteUrl } from '../seo/site'
 import { evaluateHealth, loadHealthFacts, type Check, type CheckKey } from './health'
 
 export const ALERT_STATE_KEY = 'ops.health.alerts'
@@ -53,7 +54,8 @@ export type AlertPlan = {
   turnedBad: Check[]
   stillBad: Check[]
   remind: Check[]
-  recovered: Array<{ key: CheckKey; since: string }>
+  /** Checks no longer failing, with how they read now (amber or green). */
+  recovered: Array<{ key: CheckKey; since: string; now?: Check }>
   next: AlertState
 }
 
@@ -70,7 +72,7 @@ export function planAlerts(checks: Check[], prev: AlertState, now: Date, sent: b
   const badKeys = new Set(bad.map((c) => c.key))
   const recovered = (Object.keys(prev.open) as CheckKey[])
     .filter((k) => !badKeys.has(k))
-    .map((key) => ({ key, since: prev.open[key]!.since }))
+    .map((key) => ({ key, since: prev.open[key]!.since, now: checks.find((c) => c.key === key) }))
 
   const willEmail = sent && (turnedBad.length > 0 || remind.length > 0 || recovered.length > 0)
   const open: AlertState['open'] = {}
@@ -81,11 +83,16 @@ export function planAlerts(checks: Check[], prev: AlertState, now: Date, sent: b
       lastSentAt: willEmail && (turnedBad.includes(c) || remind.includes(c)) ? nowIso : (before?.lastSentAt ?? null),
     }
   }
+  // A recovery the owner was told about but not yet told is over is kept until an email says so (a failed send
+  // would otherwise lose it). One never emailed about (no email set up then) is simply dropped.
+  if (!willEmail) {
+    for (const r of recovered) if (prev.open[r.key]?.lastSentAt) open[r.key] = prev.open[r.key]
+  }
   return { turnedBad, stillBad, remind, recovered, next: { lastRunAt: nowIso, open } }
 }
 
 const LABELS: Record<CheckKey, string> = {
-  live: 'Live jobs',
+  live: 'Jobs not expired',
   arrivals: 'New jobs arriving',
   closings: 'Closed jobs removed',
   indexing: 'Google Indexing queue',
@@ -101,7 +108,10 @@ export function buildAlertEmail(plan: AlertPlan, consoleUrl: string): { subject:
   for (const c of plan.remind) {
     if (!plan.turnedBad.includes(c)) lines.push(`STILL    ${c.label}: ${c.state}${c.detail ? ` (${c.detail})` : ''}`)
   }
-  for (const r of plan.recovered) lines.push(`FIXED    ${LABELS[r.key]} is back to normal (was failing since ${r.since.slice(0, 16).replace('T', ' ')} UTC)`)
+  for (const r of plan.recovered) {
+    const where = r.now ? ` (now: ${r.now.state})` : ''
+    lines.push(`FIXED    ${LABELS[r.key]} is no longer failing${where}; it had been since ${r.since.slice(0, 16).replace('T', ' ')} UTC`)
+  }
   const subject =
     problems.length > 0
       ? `Six Figure Jobs alert: ${problems.map((c) => c.label).join(', ')}`
@@ -132,7 +142,7 @@ export async function runHealthAlerts(
   const to = alertRecipient(env)
   const canSend = Boolean(to) && emailConfigured(env)
   let plan = planAlerts(checks, prev, now, canSend)
-  const mail = buildAlertEmail(plan, options.consoleUrl ?? 'https://www.sixfigurejobs.net/ubaid93')
+  const mail = buildAlertEmail(plan, options.consoleUrl ?? `${getSiteUrl()}/ubaid93`)
   let emailed = false
   if (mail && canSend && to) {
     try {

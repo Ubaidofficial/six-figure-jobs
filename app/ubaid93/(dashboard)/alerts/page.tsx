@@ -2,12 +2,13 @@
 import { prisma } from '../../../../lib/prisma'
 import { buildAlertLabel, sanitizeAlertFilters } from '../../../../lib/alerts/filters'
 import { alertsEnabled } from '../../../../lib/alerts/config'
-import { Figures, PageHead, Section, s } from '../ui'
+import { TrendChart } from '../charts'
+import { Figures, PageHead, Section, lastDays, s, stamp as date } from '../ui'
+import { BarList, SplitBar } from '../visuals'
 
 export const dynamic = 'force-dynamic'
 
 const DAY = 24 * 60 * 60 * 1000
-const date = (d: Date | null) => (d ? d.toISOString().slice(0, 16).replace('T', ' ') : '–')
 
 export default async function AlertsAdminPage() {
   const since7 = new Date(Date.now() - 7 * DAY)
@@ -21,6 +22,8 @@ export default async function AlertsAdminPage() {
   let confirmed30 = 0
   let sources: Array<{ source: string; n: number }> = []
   let recent: Awaited<ReturnType<typeof loadRecent>> = []
+  const days = lastDays(30)
+  let signups: number[] = days.map(() => 0)
 
   try {
     const [statuses, distinct, n7, n30, c30, src, rows] = await Promise.all([
@@ -38,6 +41,11 @@ export default async function AlertsAdminPage() {
       }),
       loadRecent(),
     ])
+    const perDay = await prisma.$queryRaw<Array<{ d: string; n: number }>>`
+      SELECT to_char(date_trunc('day', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS d, count(*)::int AS n
+      FROM "JobAlert" WHERE "createdAt" >= ${new Date(`${days[0]}T00:00:00Z`)} GROUP BY 1`
+    const m = new Map(perDay.map((r) => [r.d, Number(r.n)]))
+    signups = days.map((d) => m.get(d) ?? 0)
     byStatus = Object.fromEntries(statuses.map((s) => [s.status, s._count._all]))
     subscribers = distinct[0]?.n ?? 0
     new7 = n7
@@ -87,6 +95,25 @@ export default async function AlertsAdminPage() {
             ]}
           />
 
+          <div className={`${s.grid2} ${s.grid21}`}>
+            <Section title="Signups per day" note="complete UTC days">
+              <div className={`${s.panel} ${s.panelPad}`}>
+                <TrendChart label="Job alert signups per day" days={days.slice(0, -1)} height={150} series={[{ label: 'signups', values: signups.slice(0, -1), kind: 'column' }]} />
+              </div>
+            </Section>
+            <Section title="All signups by status">
+              <div className={`${s.panel} ${s.panelPad}`}>
+                <SplitBar
+                  parts={[
+                    { label: 'Active', value: byStatus.active ?? 0, color: '#2a78d6' },
+                    { label: 'Awaiting confirmation', value: byStatus.pending ?? 0, color: '#eb6834' },
+                    { label: 'Unsubscribed', value: byStatus.unsubscribed ?? 0, color: '#c3c2b7' },
+                  ]}
+                />
+              </div>
+            </Section>
+          </div>
+
           <Section title="Latest signups" note="Newest 100. Emails are personal data: do not copy them elsewhere.">
             <div className={`${s.panel} ${s.tableWrap}`}>
               {recent.length === 0 ? (
@@ -131,20 +158,7 @@ export default async function AlertsAdminPage() {
 
           <Section title="Where signups come from" note="30 days">
             <div className={s.panel}>
-              {sources.length === 0 ? (
-                <p className={s.empty}>No signups in 30 days.</p>
-              ) : (
-                <table className={s.table}>
-                  <tbody>
-                    {sources.map((x) => (
-                      <tr key={x.source}>
-                        <td className={s.mono}>{x.source}</td>
-                        <td className={s.num}>{x.n.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <BarList items={sources.map((x) => ({ label: x.source, value: x.n }))} total={new30 || undefined} />
             </div>
           </Section>
         </>

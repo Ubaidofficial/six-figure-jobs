@@ -22,7 +22,7 @@ export function titleProblems(title: string): string[] {
 }
 
 // The same rules in SQL, so the database finds the rows (titleProblems says why for each one shown).
-const ODD_TITLE_SQL = `"isExpired" = false AND ("title" LIKE '%---%' OR "title" ~ '\\$\\s?[0-9]' OR "title" ~ '[0-9]{2,3}\\s?[kK]\\s?[-–]\\s?\\$?[0-9]{2,3}\\s?[kK]' OR length("title") > ${MAX_TITLE_LENGTH})`
+const ODD_TITLE_SQL = `"isExpired" = false AND ("title" LIKE '%---%' OR "title" ~ '\\$\\s?[0-9]' OR "title" ~ '\\y[0-9]{2,3}\\s?[kK]\\s?[-–]\\s?\\$?[0-9]{2,3}\\s?[kK]\\y' OR length("title") > ${MAX_TITLE_LENGTH})`
 
 export type ReviewKind = 'pay' | 'titles'
 
@@ -34,9 +34,9 @@ async function countNow(): Promise<Record<ReviewKind, number>> {
   return { pay, titles: Number(titles[0]?.n ?? 0) }
 }
 
-/** `cached`: kept 5 minutes, for the badge on every admin page (the title rule scans the live jobs). */
+/** `cached`: kept a minute, for the badge on every admin page (the title rule scans the live jobs). */
 export async function countReviewQueue({ cached = false }: { cached?: boolean } = {}): Promise<Record<ReviewKind, number>> {
-  return cached ? memoAsync('admin:review-counts', 5 * 60_000, countNow) : countNow()
+  return cached ? memoAsync('admin:review-counts', 60_000, countNow) : countNow()
 }
 
 export async function loadReviewIds(kind: ReviewKind, limit: number): Promise<string[]> {

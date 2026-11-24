@@ -18,6 +18,9 @@ type Job = {
   employmentType: string | null
   salaryMin: string | null
   salaryMax: string | null
+  minAnnual: string | null
+  maxAnnual: string | null
+  currency: string | null
   salaryCurrency: string | null
   salaryPeriod: string | null
   applyUrl: string | null
@@ -30,7 +33,8 @@ type Job = {
 
 type Form = Record<
   | 'title' | 'company' | 'companyLogo' | 'locationRaw' | 'remoteMode' | 'employmentType' | 'salaryMin' | 'salaryMax'
-  | 'salaryCurrency' | 'salaryPeriod' | 'applyUrl' | 'postedAt' | 'expiresAt' | 'descriptionHtml',
+  | 'salaryCurrency' | 'salaryPeriod' | 'applyUrl' | 'postedAt' | 'expiresAt' | 'descriptionHtml'
+  | 'minAnnual' | 'maxAnnual' | 'currency',
   string
 > & { visaSponsorship: boolean }
 
@@ -54,8 +58,11 @@ function toForm(j: Job): Form {
     employmentType: j.employmentType ?? '',
     salaryMin: j.salaryMin ?? '',
     salaryMax: j.salaryMax ?? '',
-    salaryCurrency: j.salaryCurrency ?? 'USD',
-    salaryPeriod: j.salaryPeriod ?? 'year',
+    salaryCurrency: j.salaryCurrency ?? '',
+    salaryPeriod: j.salaryPeriod ?? '',
+    minAnnual: j.minAnnual ?? '',
+    maxAnnual: j.maxAnnual ?? '',
+    currency: j.currency ?? '',
     applyUrl: j.applyUrl ?? '',
     postedAt: day(j.postedAt),
     expiresAt: day(j.expiresAt),
@@ -97,35 +104,47 @@ export default function JobEditDrawer({ id, onClose, onSaved }: { id: string; on
   const set = (key: keyof Form, value: string | boolean) => setForm((f) => (f ? { ...f, [key]: value } : f))
   const orNull = (v: string) => (v.trim() ? v.trim() : null)
 
+  // Only the fields that changed are sent, so opening a job and fixing its title cannot rewrite its pay, currency or
+  // posting time (the old drawer sent every field, filling an empty currency with USD).
+  const AMOUNTS: Array<keyof Form> = ['salaryMin', 'salaryMax', 'minAnnual', 'maxAnnual']
+  const PAY_SHOWN: Array<keyof Form> = ['minAnnual', 'maxAnnual', 'currency']
+
   async function save() {
-    if (!form) return
+    if (!form || !job) return
+    const before = toForm(job)
+    const body: Record<string, unknown> = { id }
+    for (const key of Object.keys(form) as Array<keyof Form>) {
+      const v = form[key]
+      if (v === before[key]) continue
+      if (typeof v === 'boolean') body[key] = v
+      else if (AMOUNTS.includes(key)) {
+        const digits = v.replace(/[\s,_]/g, '')
+        if (digits && !/^\d+$/.test(digits)) {
+          setError(`"${v}" is not a whole number`)
+          return
+        }
+        body[key] = digits ? Number(digits) : null
+      } else if (key === 'postedAt' || key === 'expiresAt') body[key] = v ? new Date(v).toISOString() : null
+      else if (key === 'title') body[key] = v.trim()
+      else if (key === 'currency' || key === 'salaryCurrency') body[key] = v.trim() ? v.trim().toUpperCase() : null
+      else body[key] = orNull(v)
+    }
+    // Correcting the pay the page shows is the review the queue asks for.
+    if (PAY_SHOWN.some((k) => k in body)) body.needsReview = false
+    if (Object.keys(body).length === 1) {
+      onClose()
+      return
+    }
     setSaving(true)
     setError('')
     const res = await fetch('/api/ubaid93/jobs', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id,
-        title: form.title.trim(),
-        company: orNull(form.company),
-        companyLogo: orNull(form.companyLogo),
-        locationRaw: orNull(form.locationRaw),
-        remoteMode: orNull(form.remoteMode),
-        employmentType: orNull(form.employmentType),
-        salaryMin: form.salaryMin ? Number(form.salaryMin) : null,
-        salaryMax: form.salaryMax ? Number(form.salaryMax) : null,
-        salaryCurrency: orNull(form.salaryCurrency),
-        salaryPeriod: orNull(form.salaryPeriod),
-        applyUrl: orNull(form.applyUrl),
-        visaSponsorship: form.visaSponsorship,
-        descriptionHtml: orNull(form.descriptionHtml),
-        postedAt: form.postedAt ? new Date(form.postedAt).toISOString() : null,
-        expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
-      }),
-    })
+      body: JSON.stringify(body),
+    }).catch(() => null)
     setSaving(false)
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}))
+    if (!res || !res.ok) {
+      const d = res ? await res.json().catch(() => ({})) : {}
       setError(d?.error || 'Save failed')
       return
     }
@@ -219,26 +238,40 @@ export default function JobEditDrawer({ id, onClose, onSaved }: { id: string; on
               <div className={s.notice} style={{ margin: '4px 0 14px' }}>
                 Pay on the job page: <strong className={s.mono}>{meta.shownPay ?? 'not shown'}</strong>.{' '}
                 {meta.hasYearlyRange
-                  ? 'It comes from the yearly range read at import, so the source pay below does not change it.'
+                  ? 'It comes from the yearly range below. If the real pay is under $100k a year, expire the job instead.'
                   : 'This job has no yearly range, so the source pay below is what the page uses.'}
               </div>
-              <div className={s.grid2}>
-                {text('salaryMin', 'Source pay, from', { inputMode: 'numeric' })}
-                {text('salaryMax', 'Source pay, to', { inputMode: 'numeric' })}
-              </div>
-              <div className={s.grid2}>
-                {text('salaryCurrency', 'Currency (ISO code)', { maxLength: 3 })}
-                <label className={s.field}>
-                  Period
-                  <select className={s.select} value={form.salaryPeriod} onChange={(e) => set('salaryPeriod', e.target.value)}>
-                    {['year', 'month', 'hour'].map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+              {meta.hasYearlyRange ? (
+                <>
+                  <div className={s.grid2}>
+                    {text('minAnnual', 'Yearly pay, from', { inputMode: 'numeric' })}
+                    {text('maxAnnual', 'Yearly pay, to', { inputMode: 'numeric' })}
+                  </div>
+                  {text('currency', 'Currency of the yearly pay (ISO code)', { maxLength: 3 })}
+                </>
+              ) : null}
+              <details open={!meta.hasYearlyRange} style={{ marginBottom: 14 }}>
+                <summary className={s.figureLabel} style={{ cursor: 'pointer', marginBottom: 10 }}>
+                  Source pay, as the posting gave it
+                </summary>
+                <div className={s.grid2}>
+                  {text('salaryMin', 'From', { inputMode: 'numeric' })}
+                  {text('salaryMax', 'To', { inputMode: 'numeric' })}
+                </div>
+                <div className={s.grid2}>
+                  {text('salaryCurrency', 'Currency (ISO code)', { maxLength: 3 })}
+                  <label className={s.field}>
+                    Period
+                    <select className={s.select} value={form.salaryPeriod} onChange={(e) => set('salaryPeriod', e.target.value)}>
+                      {['', 'year', 'month', 'hour'].map((p) => (
+                        <option key={p} value={p}>
+                          {p || 'Not set'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </details>
 
               {text('applyUrl', 'Apply URL', { type: 'url' })}
               <div className={s.grid2}>

@@ -70,14 +70,22 @@ export type ErrorGroup = {
   browsers: Array<{ name: string; count: number }>
   latestStack: string | null
   latestUrl: string | null
+  /** The reports in this issue (server only: not sent to the page). */
+  ids: string[]
+  /** Reports per UTC day over `days` (oldest first), when grouped with a day list. */
+  daily: number[]
 }
 
 function top(counts: Map<string, number>, n: number) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, n)
 }
 
-/** Groups reports (any order) into issues, the most recently seen first. */
-export function groupErrorReports(rows: ErrorReportRow[]): ErrorGroup[] {
+/**
+ * Groups reports (any order) into issues, the most recently seen first. An issue is noise only when every one of its
+ * reports is, so the list, the navigation count and "Resolve all noise" always agree.
+ */
+export function groupErrorReports(rows: ErrorReportRow[], days: string[] = []): ErrorGroup[] {
+  const dayIndex = new Map(days.map((d, i) => [d, i]))
   const groups = new Map<string, ErrorGroup & { pageCounts: Map<string, number>; browserCounts: Map<string, number> }>()
   for (const r of rows) {
     const key = errorGroupKey(r.message)
@@ -90,17 +98,24 @@ export function groupErrorReports(rows: ErrorReportRow[]): ErrorGroup[] {
         newCount: 0,
         firstSeen: r.createdAt,
         lastSeen: r.createdAt,
-        noise: isNoiseError(r.message, r.stack),
+        noise: true,
         pages: [],
         browsers: [],
         latestStack: r.stack,
         latestUrl: r.url,
+        ids: [],
+        daily: days.map(() => 0),
         pageCounts: new Map(),
         browserCounts: new Map(),
       }
       groups.set(key, g)
     }
     g.count++
+    g.ids.push(r.id)
+    // The first 300 characters of a stack, as every caller reads them, so the answer never depends on how much was loaded.
+    if (!isNoiseError(r.message, r.stack?.slice(0, 300))) g.noise = false
+    const di = dayIndex.get(new Date(r.createdAt).toISOString().slice(0, 10))
+    if (di !== undefined) g.daily[di]++
     if (r.status === 'new') g.newCount++
     if (r.createdAt < g.firstSeen) g.firstSeen = r.createdAt
     if (r.createdAt >= g.lastSeen) {

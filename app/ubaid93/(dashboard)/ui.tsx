@@ -2,6 +2,8 @@
 import Link from 'next/link'
 
 import s from '../admin.module.css'
+import { since } from '../../../lib/admin/timeAgo'
+import { Sparkline } from './visuals'
 
 export { s }
 
@@ -31,7 +33,8 @@ export function Section({ title, note, children }: { title: string; note?: React
   )
 }
 
-export function Figures({ items }: { items: Array<{ label: string; value: React.ReactNode; sub?: React.ReactNode }> }) {
+/** A row of figures in one panel; a figure with `spark` shows its recent trend (oldest to newest) under the number. */
+export function Figures({ items }: { items: Array<{ label: string; value: React.ReactNode; sub?: React.ReactNode; spark?: number[] }> }) {
   return (
     <div className={`${s.panel} ${s.figures}`}>
       {items.map((f) => (
@@ -39,6 +42,11 @@ export function Figures({ items }: { items: Array<{ label: string; value: React.
           <div className={s.figureLabel}>{f.label}</div>
           <div className={s.figureValue}>{f.value}</div>
           {f.sub ? <div className={s.figureSub}>{f.sub}</div> : null}
+          {f.spark ? (
+            <div className={s.spark}>
+              <Sparkline values={f.spark} />
+            </div>
+          ) : null}
         </div>
       ))}
     </div>
@@ -50,9 +58,17 @@ export function Status({ tone, children }: { tone: Tone; children: React.ReactNo
 }
 
 /** Filter links that look like a segmented control; `current` is the active value. */
-export function Tabs({ items, current }: { items: Array<{ label: string; href: string; value: string; count?: number }>; current: string }) {
+export function Tabs({
+  items,
+  current,
+  label = 'Filter',
+}: {
+  items: Array<{ label: string; href: string; value: string; count?: number }>
+  current: string
+  label?: string
+}) {
   return (
-    <nav className={s.tabs} aria-label="Filter">
+    <nav className={s.tabs} aria-label={label}>
       {items.map((t) => (
         <Link key={t.value || 'all'} href={t.href} className={s.tab} aria-current={t.value === current ? 'page' : undefined}>
           {t.label}
@@ -109,63 +125,11 @@ export function Pager({
   )
 }
 
-/**
- * Daily bars as inline SVG: one or two series (the second drawn behind, lighter). No chart library: a dependency for
- * two bar charts is not worth it, and the numbers are also given as text in the title of each bar.
- */
-export function DailyBars({
-  days,
-  series,
-  labels,
-}: {
-  days: string[]
-  series: number[][]
-  labels: string[]
-}) {
-  const max = Math.max(1, ...series.flat())
-  const n = days.length
-  const w = 100 / n
-  return (
-    <div>
-      <svg className={s.chart} viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label={labels.join(' and ') + ' per day'}>
-        {days.map((day, i) =>
-          series.map((values, k) => {
-            const h = (values[i] / max) * 38
-            const inset = k === 0 && series.length > 1 ? w * 0.15 : w * 0.28
-            return (
-              <rect
-                key={`${day}-${k}`}
-                className={k === 0 && series.length > 1 ? s.chartBarAlt : s.chartBar}
-                x={i * w + inset}
-                y={40 - h}
-                width={Math.max(0.4, w - inset * 2)}
-                height={h}
-              >
-                <title>{`${day}: ${labels[k]} ${values[i].toLocaleString()}`}</title>
-              </rect>
-            )
-          }),
-        )}
-      </svg>
-      <div className={s.chartAxis}>
-        <span>{days[0]?.slice(5)}</span>
-        <span>{days[n - 1]?.slice(5)}</span>
-      </div>
-    </div>
-  )
-}
-
-/** "4 min ago", "3 h ago", "2 days ago"; "–" for no date. */
+/** "4 min ago", "3 h ago", "2 days ago"; "–" for no date. The same wording as the health checks and alert emails. */
 export function ago(date: Date | string | null | undefined, now: number = Date.now()): string {
   if (!date) return '–'
-  const ms = now - new Date(date).getTime()
-  if (!Number.isFinite(ms)) return '–'
-  const min = Math.round(ms / 60_000)
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min} min ago`
-  const h = Math.round(min / 60)
-  if (h < 48) return `${h} h ago`
-  return `${Math.round(h / 24)} days ago`
+  const d = new Date(date)
+  return Number.isFinite(d.getTime()) ? since(d, now) : '–'
 }
 
 /** 2026-11-23 14:05 (UTC), the format used across the console. */

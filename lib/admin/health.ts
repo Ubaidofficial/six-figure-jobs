@@ -1,6 +1,7 @@
 // Health checks of the site's data pipeline, shared by the admin console (Overview, System) and the alert emails
 // (lib/admin/healthAlerts.ts). Loading reads a handful of small queries; evaluating is pure, so the rules are tested.
 import { errorGroupKey, isNoiseError } from './errorReports'
+import { since } from './timeAgo'
 import { prisma } from '../prisma'
 import { CURSOR_KEY } from '../scrapers/freehireChanges'
 import { getIndexingPhase } from '../seo/indexingPhase'
@@ -8,7 +9,16 @@ import { getSitemapWave, SITEMAP_WAVE_COUNT } from '../seo/sitemapWaves'
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'muted'
 export type CheckKey = 'live' | 'arrivals' | 'closings' | 'indexing' | 'errors' | 'search'
-export type Check = { key: CheckKey; label: string; tone: Tone; state: string; detail?: string; href?: string }
+export type Check = {
+  key: CheckKey
+  label: string
+  tone: Tone
+  state: string
+  detail?: string
+  href?: string
+  /** How the problem reads in the Overview's "Needs a look" list, when it is red. */
+  todo?: string
+}
 
 const HOUR = 3_600_000
 const DAY = 24 * HOUR
@@ -92,13 +102,6 @@ function freshness(at: Date | null | undefined, okH: number, badH: number, now: 
   return h <= okH ? 'ok' : h <= badH ? 'warn' : 'bad'
 }
 
-export function since(at: Date, now: number = Date.now()): string {
-  const min = Math.round((now - at.getTime()) / 60_000)
-  if (min < 60) return `${Math.max(min, 1)} min ago`
-  const h = Math.round(min / 60)
-  return h < 48 ? `${h} h ago` : `${Math.round(h / 24)} days ago`
-}
-
 export function evaluateHealth(f: HealthFacts, now: number = Date.now()): Check[] {
   const L = HEALTH_LIMITS
   const pending = f.indexing.pending ?? 0
@@ -106,10 +109,11 @@ export function evaluateHealth(f: HealthFacts, now: number = Date.now()): Check[
   return [
     {
       key: 'live',
-      label: 'Live jobs',
+      label: 'Jobs not expired',
       tone: f.liveJobs < L.minLiveJobs ? 'bad' : 'ok',
-      state: `${f.liveJobs.toLocaleString('en-US')} live`,
+      state: `${f.liveJobs.toLocaleString('en-US')}`,
       detail: f.liveJobs < L.minLiveJobs ? 'Fewer than expected: is the site on the right database?' : undefined,
+      todo: `Only ${f.liveJobs.toLocaleString('en-US')} jobs not expired: is the site on the right database?`,
     },
     {
       key: 'arrivals',
@@ -155,6 +159,8 @@ export function evaluateHealth(f: HealthFacts, now: number = Date.now()): Check[
     },
   ]
 }
+
+export { since }
 
 export async function loadHealthChecks(now: number = Date.now()): Promise<Check[]> {
   return evaluateHealth(await loadHealthFacts(now), now)

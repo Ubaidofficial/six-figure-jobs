@@ -25,10 +25,28 @@ export function sign(payload: string): string {
   return createHmac('sha256', getSecret()).update(payload).digest('hex')
 }
 
-export function createSessionToken(): string {
-  const payload = `admin:${Date.now()}`
+/**
+ * A session for one admin account: `admin:<user id>:<password fingerprint>:<issued at>`, signed. getAdminSession checks
+ * the account still exists with the same password, so a password change, or the account being removed, ends every
+ * session made before it (found 2026-11-24: the token named no account, so it outlived both). Without `user` (tests and
+ * the Edge check of the cookie) the payload is `admin:<issued at>`, which getAdminSession refuses.
+ */
+export function createSessionToken(user?: { id: string; fingerprint: string }): string {
+  const payload = user ? `admin:${user.id}:${user.fingerprint}:${Date.now()}` : `admin:${Date.now()}`
   const sig = sign(payload)
   return Buffer.from(`${payload}:${sig}`).toString('base64url')
+}
+
+/** The account a signed token names (no signature or age check: call verifySessionToken first). */
+export function sessionAccount(token: string): { id: string; fingerprint: string } | null {
+  try {
+    const decoded = Buffer.from(token, 'base64url').toString('utf8')
+    const parts = decoded.split(':')
+    // admin, id, fingerprint, issuedAt, signature
+    return parts.length === 5 && parts[0] === 'admin' && parts[1] && parts[2] ? { id: parts[1], fingerprint: parts[2] } : null
+  } catch {
+    return null
+  }
 }
 
 export function verifySessionToken(token: string, now: number = Date.now()): boolean {
@@ -58,14 +76,4 @@ export function cookieAttrs() {
     maxAge: COOKIE_MAX_AGE,
     path: '/',
   }
-}
-
-/** @deprecated use res.cookies.set(COOKIE_NAME, token, cookieAttrs()) */
-export function sessionCookieOptions(token: string) {
-  return { name: COOKIE_NAME, value: token, ...cookieAttrs() }
-}
-
-/** @deprecated use res.cookies.set(COOKIE_NAME, '', { ...cookieAttrs(), maxAge: 0 }) */
-export function clearCookieOptions() {
-  return { name: COOKIE_NAME, value: '', ...cookieAttrs(), maxAge: 0 }
 }
