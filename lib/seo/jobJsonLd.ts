@@ -382,24 +382,66 @@ function countryNameFromCode(code: string): string | null {
  */
 export function cleanLocality(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined
-  const v = value.replace(/\s+/g, ' ').trim().replace(/\s+office$/i, '')
+  // "San Francisco Office (Fremont St)", "Seattle Campus", LinkedIn's "Greater Phoenix Area" / "London Area": the city.
+  // "San Francisco Bay Area" is a place of its own and stays.
+  const v = value
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\s*\([^()]*\)$/, '')
+    .replace(/\s+(office|campus)$/i, '')
+    .replace(/^greater\s+(.+?)(\s+metropolitan)?\s+area$/i, '$1')
+    .replace(/^(?!.*\bbay\s+area$)(.+?)(\s+metropolitan)?\s+area$/i, '$1')
   if (!v || v.length > 60) return undefined
   if (/[•|;]/.test(v)) return undefined
   if (/^[A-Za-z]{1,3}([-_ ][A-Za-z]+)?$/.test(v) && v === v.toUpperCase()) return undefined
   if (/\b(remote|hq|headquarters|anywhere|worldwide|global|hybrid|on-?site|virtual|multiple locations)\b/i.test(v)) return undefined
+  // A region or a choice of regions ("Europe or US") is not a town.
+  if (/\b(europe|emea|apac|latam|americas|north america|south america|asia|(?<!south )africa|oceania)\b|\sor\s/i.test(v)) return undefined
   if (v.split(' ').length > 8) return undefined // a sentence, not a place
   return v
 }
 
+function usStateCode(token: string): string | undefined {
+  const t = token.trim()
+  if (t.length === 2) return US_STATE_CODES.has(t.toUpperCase()) ? t.toUpperCase() : undefined
+  return US_STATE_CODE_BY_NAME[t.toLowerCase()]
+}
+
+const US_COUNTRY_TOKEN = /^(us|usa|u\.s\.a?\.?|united states( of america)?)$/i
+
+/**
+ * The city and state code in a US place written as "USA, CO, Boulder", "Eden Prairie, Minnesota, United States",
+ * "San Jose, CA" or "Washington - Seattle Campus", or null when the text is not one of those. For US jobs only:
+ * "Perth, WA" is in Western Australia.
+ */
+function splitUsPlace(text: unknown): { locality: string; region: string } | null {
+  if (typeof text !== 'string') return null
+  const t = text.replace(/\s+/g, ' ').trim()
+  const dash = t.match(/^([A-Za-z .]+?) - (.+)$/)
+  if (dash) {
+    const region = usStateCode(dash[1])
+    const locality = region ? cleanLocality(dash[2]) : undefined
+    return region && locality ? { locality, region } : null
+  }
+  let segs = t.split(',').map((s) => s.trim()).filter(Boolean)
+  // Country first ("USA, CO, Boulder"): put it last like the usual order.
+  if (segs.length === 3 && US_COUNTRY_TOKEN.test(segs[0]) && usStateCode(segs[1])) segs = [segs[2], segs[1]]
+  if (segs.length === 3 && US_COUNTRY_TOKEN.test(segs[2])) segs = segs.slice(0, 2)
+  if (segs.length !== 2) return null
+  const region = usStateCode(segs[1])
+  const locality = region ? cleanLocality(segs[0]) : undefined
+  return region && locality ? { locality, region } : null
+}
+
 function buildJobLocation(job: any): any {
-  const city = cleanLocality(job.city)
-  const region = job.stateCode ? String(job.stateCode).toUpperCase() : undefined
+  const storedRegion = job.stateCode ? String(job.stateCode).toUpperCase() : undefined
+  const cleanedCity = cleanLocality(job.city)
   // The stored country wins; the text is read only when it clearly names a country; then the company and the currency.
   const country = normalizeCountryCode(job.countryCode) ?? undefined
   // A placeholder ("Defer to Job Opening Location") is no place: never an addressLocality.
   const locationRaw = job.locationRaw && !isPlaceholderLocation(job.locationRaw) ? String(job.locationRaw).trim() : ''
 
-  if (!country && !locationRaw && !city) {
+  if (!country && !locationRaw && !cleanedCity) {
     return undefined
   }
 
@@ -407,14 +449,23 @@ function buildJobLocation(job: any): any {
 
   // "Los Angeles, CA, USA; Mountain View, CA, USA" is two workplaces, not one place named with a semicolon: Google
   // reads jobLocation as an array of places. Each place gets its own country; one whose country is unknown is left out.
-  const places = !city ? splitMultiLocation(locationRaw, addressCountry) : null
+  const places = !cleanedCity ? splitMultiLocation(locationRaw, addressCountry) : null
   if (places) return places.length > 0 ? places : undefined
 
   if (!addressCountry) {
     return undefined
   }
 
-  const locality = city ?? (countryOnly(locationRaw) ? undefined : cleanLocality(locationRaw))
+  // A US city stored with its state ("USA, CO, Boulder") or with the state only in the text ("Eden Prairie, Minnesota,
+  // United States"): the city is the locality and the state the region. The text's state is used for a stored city
+  // only when the text names that same city.
+  const cityPlace = addressCountry === 'US' ? splitUsPlace(job.city) : null
+  const city = cityPlace?.locality ?? cleanedCity
+  const textPlace = addressCountry === 'US' ? splitUsPlace(locationRaw) : null
+  const textRegion =
+    textPlace && (!city || textPlace.locality.toLowerCase() === city.toLowerCase()) ? textPlace.region : undefined
+  const locality = city ?? textPlace?.locality ?? (countryOnly(locationRaw) ? undefined : cleanLocality(locationRaw))
+  const region = storedRegion ?? cityPlace?.region ?? textRegion
   return {
     '@type': 'Place',
     address: {
@@ -444,11 +495,13 @@ function splitMultiLocation(locationRaw: string, fallbackCountry: string | undef
     const addressCountry = inferCountryFromLocationRaw(part) || fallbackCountry
     const code = segments.length >= 2 ? segments[1].toUpperCase() : ''
     // A state or province code only when it fits the country ("CA" after a US place, "BC" after a Canadian one).
+    const usPlace = addressCountry === 'US' ? splitUsPlace(part) : null
     const region =
-      (addressCountry === 'US' && US_STATE_CODES.has(code)) || (addressCountry === 'CA' && CA_PROVINCE_CODES.has(code))
+      usPlace?.region ??
+      ((addressCountry === 'US' && US_STATE_CODES.has(code)) || (addressCountry === 'CA' && CA_PROVINCE_CODES.has(code))
         ? code
-        : undefined
-    const locality = countryOnly(part) ? undefined : cleanLocality(segments[0] || part)
+        : undefined)
+    const locality = usPlace?.locality ?? (countryOnly(part) ? undefined : cleanLocality(segments[0] || part))
     if (!addressCountry) continue
     out.push({
       '@type': 'Place',
@@ -724,59 +777,61 @@ const US_STATE_CODES = new Set([
   'WY',
 ])
 
-const US_STATE_NAMES = new Set([
-  'alabama',
-  'alaska',
-  'arizona',
-  'arkansas',
-  'california',
-  'colorado',
-  'connecticut',
-  'delaware',
-  'district of columbia',
-  'florida',
-  'georgia',
-  'hawaii',
-  'idaho',
-  'illinois',
-  'indiana',
-  'iowa',
-  'kansas',
-  'kentucky',
-  'louisiana',
-  'maine',
-  'maryland',
-  'massachusetts',
-  'michigan',
-  'minnesota',
-  'mississippi',
-  'missouri',
-  'montana',
-  'nebraska',
-  'nevada',
-  'new hampshire',
-  'new jersey',
-  'new mexico',
-  'new york',
-  'north carolina',
-  'north dakota',
-  'ohio',
-  'oklahoma',
-  'oregon',
-  'pennsylvania',
-  'rhode island',
-  'south carolina',
-  'south dakota',
-  'tennessee',
-  'texas',
-  'utah',
-  'vermont',
-  'virginia',
-  'washington',
-  'west virginia',
-  'wisconsin',
-  'wyoming',
-])
+const US_STATE_CODE_BY_NAME: Record<string, string> = {
+  'alabama': 'AL',
+  'alaska': 'AK',
+  'arizona': 'AZ',
+  'arkansas': 'AR',
+  'california': 'CA',
+  'colorado': 'CO',
+  'connecticut': 'CT',
+  'delaware': 'DE',
+  'district of columbia': 'DC',
+  'florida': 'FL',
+  'georgia': 'GA',
+  'hawaii': 'HI',
+  'idaho': 'ID',
+  'illinois': 'IL',
+  'indiana': 'IN',
+  'iowa': 'IA',
+  'kansas': 'KS',
+  'kentucky': 'KY',
+  'louisiana': 'LA',
+  'maine': 'ME',
+  'maryland': 'MD',
+  'massachusetts': 'MA',
+  'michigan': 'MI',
+  'minnesota': 'MN',
+  'mississippi': 'MS',
+  'missouri': 'MO',
+  'montana': 'MT',
+  'nebraska': 'NE',
+  'nevada': 'NV',
+  'new hampshire': 'NH',
+  'new jersey': 'NJ',
+  'new mexico': 'NM',
+  'new york': 'NY',
+  'north carolina': 'NC',
+  'north dakota': 'ND',
+  'ohio': 'OH',
+  'oklahoma': 'OK',
+  'oregon': 'OR',
+  'pennsylvania': 'PA',
+  'rhode island': 'RI',
+  'south carolina': 'SC',
+  'south dakota': 'SD',
+  'tennessee': 'TN',
+  'texas': 'TX',
+  'utah': 'UT',
+  'vermont': 'VT',
+  'virginia': 'VA',
+  'washington': 'WA',
+  'west virginia': 'WV',
+  'wisconsin': 'WI',
+  'wyoming': 'WY',
+}
+
+const US_STATE_NAMES = new Set(Object.keys(US_STATE_CODE_BY_NAME))
 
 function toNumberSafe(v: any): number | null {
   if (v == null) return null
