@@ -1,7 +1,7 @@
 import { ERROR_WINDOW_DAYS, loadErrorGroups } from './groups'
 import ErrorGroups from './ErrorGroups'
 import { TrendChart } from '../charts'
-import { PageHead, Section, Tabs, lastDays, s } from '../ui'
+import { PageHead, Section, Tabs, ago, lastDays, s } from '../ui'
 import { requireAdmin } from '../requireAdmin'
 
 export const dynamic = 'force-dynamic'
@@ -46,11 +46,12 @@ export default async function ErrorsPage({ searchParams }: { searchParams?: Prom
       <ErrorGroups
         view={view}
         reportCount={reports(shown)}
-        groups={shown.map(({ ids, daily, ...g }) => ({
+        groups={shown.map(({ ids, daily, firstSeen, lastSeen, ...g }) => ({
           ...g,
-          recent: daily.slice(-14),
-          firstSeen: g.firstSeen.toISOString(),
-          lastSeen: g.lastSeen.toISOString(),
+          // The last 14 complete days: today's partial count would read as a drop.
+          recent: daily.slice(-15, -1),
+          firstSeenAgo: ago(firstSeen),
+          lastSeenAgo: ago(lastSeen),
         }))}
       />
     </>

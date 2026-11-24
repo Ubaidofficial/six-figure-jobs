@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { forgetMemo } from '../../../../lib/cache/memo'
 
 import { getAdminSession } from '../../../../lib/admin/auth'
 import { errorGroupKey, groupErrorReports } from '../../../../lib/admin/errorReports'
@@ -30,5 +31,6 @@ export async function PATCH(req: Request) {
   } else return NextResponse.json({ error: 'Send id, key or noise' }, { status: 400 })
 
   const { count } = await prisma.errorLog.updateMany({ where: { id: { in: ids }, status: { not: status } }, data: { status } })
+  forgetMemo('admin:error-badge') // the navigation count, so it is right on the next page
   return NextResponse.json({ ok: true, updated: count })
 }

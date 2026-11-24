@@ -2,6 +2,7 @@
 import { useState } from 'react'
 
 import s from '../admin.module.css'
+import { Logo } from '@/components/brand/Logo'
 
 export default function AdminLoginPage() {
   const [error, setError] = useState('')
@@ -44,13 +45,8 @@ export default function AdminLoginPage() {
     <div className={s.authWrap}>
       <form onSubmit={handleSubmit} className={`${s.panel} ${s.authCard}`}>
         <div className={s.brand} style={{ padding: 0, border: 0, marginBottom: 22 }}>
-          <span className={s.brandMark} aria-hidden>
-            6
-          </span>
-          <span className={s.brandName}>
-            Six Figure Jobs
-            <span className={s.brandSub}>Admin sign-in</span>
-          </span>
+          <Logo variant="wide" className={s.brandLogo} />
+          <span className={s.brandSub}>Admin sign-in</span>
         </div>
         <label className={s.field}>
           Username

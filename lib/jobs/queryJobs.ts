@@ -79,6 +79,10 @@ export type JobQueryInput = {
   visaSponsorship?: boolean
   /** Only jobs whose posting states pay plus equity. */
   offersEquity?: boolean
+  /** Leave out postings that say a recruiter publishes them for a client. */
+  excludeRecruiters?: boolean
+  /** Leave out postings that need a government security clearance. */
+  excludeClearance?: boolean
   /**
    * Only jobs whose description asks for no degree, or accepts equivalent experience: pass the latest
    * loadDegreeRequiredJobIds() result (lib/jobs/degreeRequirement.ts).
@@ -135,6 +139,8 @@ export const jobListingSelect = {
   type: true,
   employmentType: true,
   visaSponsorship: true,
+  viaRecruiter: true,
+  requiresClearance: true,
   experienceLevel: true,
   industry: true,
   workArrangement: true,
@@ -792,6 +798,14 @@ export function buildWhere(filters: JobQueryInput): Prisma.JobWhereInput {
 
   if (filters.offersEquity === true) {
     where.offersEquity = true
+  }
+
+  if (filters.excludeRecruiters === true) {
+    where.viaRecruiter = false
+  }
+
+  if (filters.excludeClearance === true) {
+    where.requiresClearance = false
   }
 
   if (filters.noDegreeRequired) {

@@ -30,14 +30,25 @@ export default function SponsorSlotForm({ id, initial, liveHref }: { id: number;
   async function save(values: SlotValues) {
     setSaving(true)
     setMsg(null)
-    const res = await fetch('/api/ubaid93/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: Object.fromEntries(Object.entries(values).map(([k, val]) => [`sponsor.${id}.${k}`, val])) }),
-    })
-    setSaving(false)
-    setMsg(res.ok ? 'Saved' : 'Could not save')
-    if (res.ok) router.refresh()
+    // A network failure used to throw here and leave the button stuck on "saving" with no message.
+    try {
+      const res = await fetch('/api/ubaid93/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: Object.fromEntries(Object.entries(values).map(([k, val]) => [`sponsor.${id}.${k}`, val])) }),
+      })
+      if (res.ok) {
+        setMsg('Saved')
+        router.refresh()
+      } else {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null
+        setMsg(`Could not save: ${body?.error ?? `HTTP ${res.status}`}`)
+      }
+    } catch {
+      setMsg('Could not save: no connection to the server')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const field = (key: keyof SlotValues, label: string, hint?: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (

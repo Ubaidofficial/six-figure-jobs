@@ -55,7 +55,14 @@ export const DEFAULT_REQUEST_GAP_MS = 54
 
 /** `quota`: freehire refused with a long Retry-After, i.e. the key's daily quota is used up; no lookup will work now. */
 export type Lookup =
-  | { state: 'open'; description?: string | null; reality?: FreehireJob['reality']; equity?: string | null }
+  | {
+      state: 'open'
+      description?: string | null
+      reality?: FreehireJob['reality']
+      equity?: string | null
+      viaRecruiter?: boolean
+      requiresClearance?: boolean
+    }
   | { state: 'closed'; closedAt: string }
   | { state: 'gone' }
   | { state: 'error'; message: string; quota?: boolean }
@@ -72,7 +79,16 @@ export async function lookupFreehireJob(slug: string): Promise<Lookup> {
       })
       const data = res.data?.data
       const closedAt = data?.closed_at
-      return closedAt ? { state: 'closed', closedAt } : { state: 'open', description: data?.description ?? null, reality: data?.reality ?? null, equity: data?.equity ?? null }
+      return closedAt
+        ? { state: 'closed', closedAt }
+        : {
+            state: 'open',
+            description: data?.description ?? null,
+            reality: data?.reality ?? null,
+            equity: data?.equity ?? null,
+            viaRecruiter: data?.via_recruiter === true,
+            requiresClearance: data?.requires_clearance === true,
+          }
     } catch (error) {
       const response = (error as { response?: { status?: number; headers?: Record<string, string> } }).response
       if (response?.status === 404) return { state: 'gone' }
@@ -192,13 +208,28 @@ export function upgradedDescription(stored: string | null | undefined, fetched: 
 /**
  * What the lookups found for jobs freehire confirmed open: refresh these, replace these descriptions, and mark these as
  * offering pay plus equity (freehire's `equity: salary_and_equity`; the lookups fill `offersEquity` on jobs imported
- * before it was stored, owner's choice 2026-11-23: "Salary + equity" filter).
+ * before it was stored, owner's choice 2026-11-23: "Salary + equity" filter), as published by a recruiter, or as needing
+ * a security clearance (the same for those flags, stored from 2026-11-24).
  */
-export type Refresh = { keepAliveIds: string[]; descriptions: Array<{ id: string; html: string }>; equityIds?: string[] }
+export type Refresh = {
+  keepAliveIds: string[]
+  descriptions: Array<{ id: string; html: string }>
+  equityIds?: string[]
+  recruiterIds?: string[]
+  clearanceIds?: string[]
+}
 
-async function applyRefreshToDatabase({ keepAliveIds, descriptions, equityIds = [] }: Refresh) {
-  for (let i = 0; i < equityIds.length; i += 500) {
-    await prisma.job.updateMany({ where: { id: { in: equityIds.slice(i, i + 500) }, offersEquity: false }, data: { offersEquity: true } })
+async function applyRefreshToDatabase({ keepAliveIds, descriptions, equityIds = [], recruiterIds = [], clearanceIds = [] }: Refresh) {
+  // Flags are only ever turned on.
+  const flags = [
+    [equityIds, 'offersEquity'],
+    [recruiterIds, 'viaRecruiter'],
+    [clearanceIds, 'requiresClearance'],
+  ] as const
+  for (const [ids, field] of flags) {
+    for (let i = 0; i < ids.length; i += 500) {
+      await prisma.job.updateMany({ where: { id: { in: ids.slice(i, i + 500) }, [field]: false }, data: { [field]: true } })
+    }
   }
   const now = new Date()
   for (let i = 0; i < keepAliveIds.length; i += 500) {
@@ -304,6 +335,8 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
   const keepAliveIds: string[] = []
   const descriptions: Array<{ id: string; html: string }> = []
   const equityIds: string[] = []
+  const recruiterIds: string[] = []
+  const clearanceIds: string[] = []
   say(`checking ${toCheck.length} jobs`)
   await pool(
     toCheck,
@@ -316,6 +349,8 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
         counts.open++
         if (isListableByReality(r.reality)) keepAliveIds.push(j.id)
         if (r.equity === 'salary_and_equity') equityIds.push(j.id)
+        if (r.viaRecruiter) recruiterIds.push(j.id)
+        if (r.requiresClearance) clearanceIds.push(j.id)
         const html = upgradedDescription(j.descriptionHtml, r.description)
         if (html) descriptions.push({ id: j.id, html })
       } else if (r.state === 'gone') counts.gone++
@@ -353,7 +388,7 @@ export async function checkClosedFreehireJobs(options: ClosedCheckOptions = {}):
 
   // Confirmed-open jobs are refreshed even when the run is later skipped or aborted: that says nothing about them.
   // A dry run reports only.
-  if (!options.dryRun) await applyRefresh({ keepAliveIds, descriptions, equityIds })
+  if (!options.dryRun) await applyRefresh({ keepAliveIds, descriptions, equityIds, recruiterIds, clearanceIds })
   say(`${options.dryRun ? 'would refresh' : 'refreshed'} ${keepAliveIds.length} open jobs, ${descriptions.length} descriptions upgraded`)
 
   const base = {

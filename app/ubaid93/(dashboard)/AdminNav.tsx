@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import s from '../admin.module.css'
+import { Logo } from '@/components/brand/Logo'
 
 type Item = { href: string; label: string; icon: typeof Activity; count?: 'feedback' | 'errors' | 'review' }
 
@@ -59,13 +60,8 @@ export default function AdminNav({ counts }: { counts: { feedback: number; error
   return (
     <aside className={s.sidebar}>
       <Link href="/ubaid93" className={s.brand}>
-        <span className={s.brandMark} aria-hidden>
-          6
-        </span>
-        <span className={s.brandName}>
-          Six Figure Jobs
-          <span className={s.brandSub}>Admin</span>
-        </span>
+        <Logo variant="wide" className={s.brandLogo} />
+        <span className={s.brandSub}>Admin</span>
       </Link>
       <nav className={s.navScroll} aria-label="Admin">
         {GROUPS.map((g) => (

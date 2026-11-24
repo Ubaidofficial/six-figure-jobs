@@ -5,10 +5,11 @@ import { since } from './timeAgo'
 import { prisma } from '../prisma'
 import { CURSOR_KEY } from '../scrapers/freehireChanges'
 import { getIndexingPhase } from '../seo/indexingPhase'
-import { getSitemapWave, SITEMAP_WAVE_COUNT } from '../seo/sitemapWaves'
+import { getSitemapWave, SITEMAP_WAVE_ADDS, SITEMAP_WAVE_COUNT } from '../seo/sitemapWaves'
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'muted'
-export type CheckKey = 'live' | 'arrivals' | 'closings' | 'indexing' | 'errors' | 'search'
+/** `database` is raised only by the alert run (lib/admin/healthAlerts.ts), when the facts cannot be read at all. */
+export type CheckKey = 'live' | 'arrivals' | 'closings' | 'indexing' | 'errors' | 'search' | 'database'
 export type Check = {
   key: CheckKey
   label: string
@@ -127,7 +128,7 @@ export function evaluateHealth(f: HealthFacts, now: number = Date.now()): Check[
       key: 'closings',
       label: 'Closed jobs removed',
       tone: freshness(f.closingsReadAt, L.closingsOkHours, L.closingsBadHours, now),
-      state: f.closingsReadAt ? `Change feed read ${since(f.closingsReadAt, now)}` : 'Change feed never read',
+      state: f.closingsReadAt ? `freehire's list of closed jobs read ${since(f.closingsReadAt, now)}` : "freehire's list of closed jobs never read",
       detail: 'freehire closings, every sync',
     },
     {
@@ -154,8 +155,18 @@ export function evaluateHealth(f: HealthFacts, now: number = Date.now()): Check[
       key: 'search',
       label: 'Search engines',
       tone: 'muted',
-      state: `Indexing phase ${f.phase} · sitemap wave ${f.wave} of ${SITEMAP_WAVE_COUNT}`,
-      detail: 'SITEMAP_WAVE in Openship',
+      // The wave is what the sitemap submits now (SITEMAP_WAVE); the phase decides whether job pages are submitted
+      // (INDEXING_PHASE; from 2, sitemap-jobs.xml).
+      state: `Sitemap wave ${f.wave} of ${SITEMAP_WAVE_COUNT}`,
+      detail: [
+        `Live: up to ${SITEMAP_WAVE_ADDS[f.wave]}.`,
+        f.wave < SITEMAP_WAVE_COUNT
+          ? `Next: ${SITEMAP_WAVE_ADDS[f.wave + 1]}, once Search Console shows most of wave ${f.wave} indexed (SITEMAP_WAVE in Openship).`
+          : '',
+        Number(f.phase) >= 2 ? `Job pages submitted (phase ${f.phase}).` : 'Job pages not submitted yet (phase 1).',
+      ]
+        .filter(Boolean)
+        .join(' '),
     },
   ]
 }

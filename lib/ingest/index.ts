@@ -253,7 +253,9 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
     }
 
     // A job the owner expired by hand stays expired, even when its source still lists it (lib/admin/adminExpired.ts).
-    if (existing.isExpired && (await isAdminExpired(existing.id))) {
+    // One found live was reactivated in a race (a sync that read it just before the owner's Expire): expire it again.
+    if (await isAdminExpired(existing.id)) {
+      if (!existing.isExpired) await prisma.job.update({ where: { id: existing.id }, data: { isExpired: true } })
       return { status: 'skipped', reason: 'expired-by-admin', jobId: existing.id, dedupeKey: existing.dedupeKey ?? undefined }
     }
 
@@ -437,6 +439,8 @@ async function createNewJob(
     sourceRef: input.sourceRef ?? null,
     visaSponsorship: input.visaSponsorship === true,
     offersEquity: input.offersEquity === true,
+    viaRecruiter: input.viaRecruiter === true,
+    requiresClearance: input.requiresClearance === true,
 
     // v2.7+: never write NULL roleSlug (breaks routing/sitemaps); fallback to "other"
     roleSlug: roleData.roleSlug || 'other',
@@ -606,6 +610,8 @@ async function upgradeJob(
     sourceRef: input.sourceRef ?? existing.sourceRef,
     visaSponsorship: input.visaSponsorship === true ? true : existing.visaSponsorship,
     offersEquity: input.offersEquity === true ? true : existing.offersEquity,
+    viaRecruiter: input.viaRecruiter === true ? true : existing.viaRecruiter,
+    requiresClearance: input.requiresClearance === true ? true : existing.requiresClearance,
 
     // ✅ Force type fields to update (prevents old “Contract” from lingering)
     type: input.employmentType ?? existing.type,
@@ -730,6 +736,8 @@ async function refreshJob(
   if (input.sourceRef) updateData.sourceRef = input.sourceRef
   if (input.visaSponsorship === true) updateData.visaSponsorship = true
   if (input.offersEquity === true) updateData.offersEquity = true
+  if (input.viaRecruiter === true) updateData.viaRecruiter = true
+  if (input.requiresClearance === true) updateData.requiresClearance = true
   // Structured benefits and requirements fill only an empty field: a list a person, the AI writer or an earlier pass
   // stored is never replaced.
   if (!existing.benefitsJson && input.benefits?.length) updateData.benefitsJson = JSON.stringify(input.benefits)

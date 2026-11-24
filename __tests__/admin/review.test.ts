@@ -9,10 +9,11 @@ import { buildReportMessage } from '../../lib/jobs/jobReport'
 
 const feedbackUpdateMany = jest.fn(async (_a: unknown) => ({ count: 2 }))
 const jobUpdate = jest.fn(async (_a: unknown) => ({}))
+const jobFindUnique = jest.fn(async (_a: unknown) => ({ title: 'Staff Engineer', minAnnual: BigInt(900_000), maxAnnual: BigInt(1_200_000), currency: 'USD' }))
 jest.mock('../../lib/prisma', () => ({
   prisma: {
     feedback: { updateMany: (a: unknown) => feedbackUpdateMany(a), update: jest.fn() },
-    job: { update: (a: unknown) => jobUpdate(a) },
+    job: { update: (a: unknown) => jobUpdate(a), findUnique: (a: unknown) => jobFindUnique(a) },
   },
 }))
 jest.mock('../../lib/admin/auth', () => ({ getAdminSession: async () => true }))
@@ -66,5 +67,16 @@ describe('admin API actions', () => {
     const { PATCH } = await import('../../app/api/ubaid93/jobs/route')
     await PATCH(patch({ id: 'board:a:1', needsReview: false }))
     expect(jobUpdate).toHaveBeenCalledWith({ where: { id: 'board:a:1' }, data: { needsReview: false } })
+  })
+  it('runs a new yearly range through the pay rules, so the listings follow it', async () => {
+    const { PATCH } = await import('../../app/api/ubaid93/jobs/route')
+    jobUpdate.mockClear()
+    await PATCH(patch({ id: 'board:a:1', minAnnual: 150_000, maxAnnual: 180_000, needsReview: false }))
+    expect(jobUpdate.mock.calls[0][0]).toMatchObject({
+      data: { minAnnual: BigInt(150_000), maxAnnual: BigInt(180_000), isHighSalary: true, salaryValidated: true, salaryRejectedReason: null },
+    })
+    jobUpdate.mockClear()
+    await PATCH(patch({ id: 'board:a:1', minAnnual: 60_000, maxAnnual: 80_000 }))
+    expect(jobUpdate.mock.calls[0][0]).toMatchObject({ data: { isHighSalary: false, salaryValidated: false } })
   })
 })

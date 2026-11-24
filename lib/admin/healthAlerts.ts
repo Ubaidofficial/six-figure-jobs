@@ -13,6 +13,10 @@ import { getSiteUrl } from '../seo/site'
 import { evaluateHealth, loadHealthFacts, type Check, type CheckKey } from './health'
 
 export const ALERT_STATE_KEY = 'ops.health.alerts'
+/** A state this process could not save (the database was unreachable); newer than the stored one until it is saved. */
+let unsavedState: string | null = null
+/** The state last read from or written to the database by this process, for a run that cannot read it. */
+let lastKnownState: string | null = null
 export const REMIND_AFTER_MS = 24 * 3_600_000
 export const DEFAULT_EVERY_MIN = 30
 /** The first run waits this long after the server starts, so a deploy's first minutes do not raise alarms. */
@@ -36,8 +40,10 @@ export function emailConfigured(env: Env = process.env): boolean {
 
 export function healthAlertsEveryMs(env: Env = process.env): number {
   const raw = env.HEALTH_ALERTS_EVERY_MIN
-  const min = raw === undefined || raw.trim() === '' ? DEFAULT_EVERY_MIN : Number(raw)
-  return Number.isFinite(min) && min > 0 ? Math.max(5, min) * 60_000 : 0
+  const n = raw === undefined || raw.trim() === '' ? DEFAULT_EVERY_MIN : Number(raw)
+  // A value that is not a number keeps the default: a typo must not switch the alerts off.
+  const min = Number.isFinite(n) ? n : DEFAULT_EVERY_MIN
+  return min > 0 ? Math.max(5, min) * 60_000 : 0
 }
 
 export function parseAlertState(raw: string | null | undefined): AlertState {
@@ -70,12 +76,16 @@ export function planAlerts(checks: Check[], prev: AlertState, now: Date, sent: b
     return !last || now.getTime() - new Date(last).getTime() >= REMIND_AFTER_MS
   })
   const badKeys = new Set(bad.map((c) => c.key))
+  // A check this run could not evaluate (the database was unreachable, so only `database` ran) is neither bad nor fixed:
+  // it stays as it was. `database` itself is fixed as soon as a run gets through.
+  const evaluated = (k: CheckKey) => k === 'database' || checks.some((c) => c.key === k)
   const recovered = (Object.keys(prev.open) as CheckKey[])
-    .filter((k) => !badKeys.has(k))
+    .filter((k) => !badKeys.has(k) && evaluated(k))
     .map((key) => ({ key, since: prev.open[key]!.since, now: checks.find((c) => c.key === key) }))
 
   const willEmail = sent && (turnedBad.length > 0 || remind.length > 0 || recovered.length > 0)
   const open: AlertState['open'] = {}
+  for (const k of Object.keys(prev.open) as CheckKey[]) if (!evaluated(k)) open[k] = prev.open[k]
   for (const c of bad) {
     const before = prev.open[c.key]
     open[c.key] = {
@@ -91,31 +101,34 @@ export function planAlerts(checks: Check[], prev: AlertState, now: Date, sent: b
   return { turnedBad, stillBad, remind, recovered, next: { lastRunAt: nowIso, open } }
 }
 
-const LABELS: Record<CheckKey, string> = {
+export const ALERT_LABELS: Record<CheckKey, string> = {
   live: 'Jobs not expired',
   arrivals: 'New jobs arriving',
   closings: 'Closed jobs removed',
   indexing: 'Google Indexing queue',
   errors: 'Browser errors',
   search: 'Search engines',
+  database: 'Database',
 }
 
 export function buildAlertEmail(plan: AlertPlan, consoleUrl: string): { subject: string; text: string } | null {
   const problems = [...plan.turnedBad, ...plan.remind.filter((c) => !plan.turnedBad.includes(c))]
   if (problems.length === 0 && plan.recovered.length === 0) return null
   const lines: string[] = []
-  for (const c of plan.turnedBad) lines.push(`PROBLEM  ${c.label}: ${c.state}${c.detail ? ` (${c.detail})` : ''}`)
+  // The browser-error check's detail is a visitor's error message: anyone can send one, so it stays in the console.
+  const detail = (c: Check) => (c.detail && c.key !== 'errors' ? ` (${c.detail})` : '')
+  for (const c of plan.turnedBad) lines.push(`PROBLEM  ${c.label}: ${c.state}${detail(c)}`)
   for (const c of plan.remind) {
-    if (!plan.turnedBad.includes(c)) lines.push(`STILL    ${c.label}: ${c.state}${c.detail ? ` (${c.detail})` : ''}`)
+    if (!plan.turnedBad.includes(c)) lines.push(`STILL    ${c.label}: ${c.state}${detail(c)}`)
   }
   for (const r of plan.recovered) {
     const where = r.now ? ` (now: ${r.now.state})` : ''
-    lines.push(`FIXED    ${LABELS[r.key]} is no longer failing${where}; it had been since ${r.since.slice(0, 16).replace('T', ' ')} UTC`)
+    lines.push(`FIXED    ${ALERT_LABELS[r.key]} is no longer failing${where}; it had been since ${r.since.slice(0, 16).replace('T', ' ')} UTC`)
   }
   const subject =
     problems.length > 0
       ? `Six Figure Jobs alert: ${problems.map((c) => c.label).join(', ')}`
-      : `Six Figure Jobs fixed: ${plan.recovered.map((r) => LABELS[r.key]).join(', ')}`
+      : `Six Figure Jobs fixed: ${plan.recovered.map((r) => ALERT_LABELS[r.key]).join(', ')}`
   return { subject, text: [...lines, '', `Open the console: ${consoleUrl}`].join('\n') }
 }
 
@@ -135,10 +148,27 @@ export async function runHealthAlerts(
   const now = options.now ?? new Date()
   const env = options.env ?? process.env
   const send = options.send ?? sendMail
-  const checks = await (options.loadChecks ?? (async (t: number) => evaluateHealth(await loadHealthFacts(t), t)))(now.getTime())
-  const prev = parseAlertState(
-    await (options.loadState ?? (async () => (await prisma.siteConfig.findUnique({ where: { key: ALERT_STATE_KEY } }))?.value ?? null))(),
-  )
+  const load = options.loadChecks ?? (async (t: number) => evaluateHealth(await loadHealthFacts(t), t))
+  // When the facts cannot be read at all (the database is unreachable), that is the problem to report.
+  const checks = await load(now.getTime()).catch((error: unknown): Check[] => [
+    {
+      key: 'database',
+      label: ALERT_LABELS.database,
+      tone: 'bad',
+      state: `The health checks could not read the database: ${error instanceof Error ? error.message.split('\n')[0].slice(0, 200) : String(error)}`,
+    },
+  ])
+  // The reported state lives in the database too; while it cannot be written, this process keeps it, so an outage is
+  // emailed once (and daily), not on every run, and its end is reported once the database answers again.
+  const loadState = options.loadState ?? (async () => (await prisma.siteConfig.findUnique({ where: { key: ALERT_STATE_KEY } }))?.value ?? null)
+  let stored: string | null
+  try {
+    stored = await loadState()
+    lastKnownState = stored
+  } catch {
+    stored = lastKnownState
+  }
+  const prev = parseAlertState(unsavedState ?? stored)
   const to = alertRecipient(env)
   const canSend = Boolean(to) && emailConfigured(env)
   let plan = planAlerts(checks, prev, now, canSend)
@@ -164,6 +194,14 @@ export async function runHealthAlerts(
     (async (value: string) => {
       await prisma.siteConfig.upsert({ where: { key: ALERT_STATE_KEY }, update: { value }, create: { key: ALERT_STATE_KEY, value } })
     })
-  await save(JSON.stringify(plan.next))
+  const value = JSON.stringify(plan.next)
+  try {
+    await save(value)
+    unsavedState = null
+    lastKnownState = value
+  } catch (error) {
+    unsavedState = value
+    console.error('[health-alerts] state not saved:', error instanceof Error ? error.message.split('\n')[0] : error)
+  }
   return { plan, emailed }
 }

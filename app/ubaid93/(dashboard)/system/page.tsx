@@ -3,7 +3,8 @@
 import { accountsEnabled } from '../../../../lib/accounts/enabled'
 import { alertsEnabled } from '../../../../lib/alerts/config'
 import { autoApplyEnabled, autoApplyLive } from '../../../../lib/autoapply/config'
-import { ALERT_STATE_KEY, alertRecipient, emailConfigured, healthAlertsEveryMs, parseAlertState } from '../../../../lib/admin/healthAlerts'
+import { ALERT_LABELS, ALERT_STATE_KEY, alertRecipient, emailConfigured, healthAlertsEveryMs, parseAlertState } from '../../../../lib/admin/healthAlerts'
+import type { CheckKey } from '../../../../lib/admin/health'
 import { maskEmail } from '../../../../lib/alerts/service'
 import { prisma } from '../../../../lib/prisma'
 import { loadHealthChecks } from '../overview'
@@ -19,8 +20,9 @@ type SourceRow = { source: string; live: number; added24h: number; added7d: numb
 export default async function SystemPage() {
   await requireAdmin()
   const now = Date.now()
-  const days14 = lastDays(14)
-  const [checks, sources, queue, failures, lastScrape, stuckScrapes, users, subs, alertRow, perDay] = await Promise.all([
+  // The 14 complete days before today, for the per-source sparklines (today's partial count would read as a drop).
+  const days14 = lastDays(15).slice(0, -1)
+  const [checks, sources, queue, failures, users, subs, alertRow, perDay] = await Promise.all([
     loadHealthChecks(now),
     prisma.$queryRaw<SourceRow[]>`
       SELECT source,
@@ -28,7 +30,10 @@ export default async function SystemPage() {
         count(*) FILTER (WHERE "createdAt" >= now() - interval '24 hours')::int AS "added24h",
         count(*) FILTER (WHERE "createdAt" >= now() - interval '7 days')::int AS "added7d",
         max("createdAt") AS newest
-      FROM "Job" GROUP BY source
+      FROM "Job"
+      -- Only rows that can pass the HAVING below, so the long tail of old expired jobs is not read on every visit.
+      WHERE "isExpired" = false OR "createdAt" >= now() - interval '30 days'
+      GROUP BY source
       HAVING count(*) FILTER (WHERE "isExpired" = false) > 0 OR max("createdAt") >= now() - interval '30 days'
       ORDER BY live DESC LIMIT 40`,
     prisma.jobIndexingQueue.groupBy({ by: ['status', 'type'], _count: { _all: true } }),
@@ -38,8 +43,6 @@ export default async function SystemPage() {
       take: 5,
       select: { url: true, type: true, lastError: true, attempts: true, updatedAt: true },
     }),
-    prisma.scrapeRun.findFirst({ orderBy: { startedAt: 'desc' }, select: { startedAt: true, status: true } }),
-    prisma.scrapeRun.count({ where: { status: 'running', startedAt: { lt: new Date(now - 86_400_000) } } }),
     prisma.user.groupBy({ by: ['emailVerified'], _count: { _all: true } }).catch(() => []),
     prisma.subscription.groupBy({ by: ['status'], _count: { _all: true } }).catch(() => []),
     prisma.siteConfig.findUnique({ where: { key: ALERT_STATE_KEY } }),
@@ -60,7 +63,7 @@ export default async function SystemPage() {
   const recipient = alertRecipient()
   const canEmail = Boolean(recipient) && emailConfigured()
   const everyMs = healthAlertsEveryMs()
-  const openAlerts = Object.keys(alertState.open)
+  const openAlerts = (Object.keys(alertState.open) as CheckKey[]).map((k) => ALERT_LABELS[k] ?? k)
 
   const userTotal = users.reduce((n, u) => n + u._count._all, 0)
   const verified = users.filter((u) => u.emailVerified).reduce((n, u) => n + u._count._all, 0)
@@ -80,10 +83,10 @@ export default async function SystemPage() {
           {checks.map((c) => (
             <li key={c.label} className={s.check}>
               <span className={s.checkLabel}>{c.label}</span>
-              <span>
+              <div>
                 <Status tone={c.tone}>{c.state}</Status>
-                {c.detail ? <span className={s.checkDetail}>{c.detail}</span> : null}
-              </span>
+                {c.detail ? <div className={s.checkNote}>{c.detail}</div> : null}
+              </div>
             </li>
           ))}
         </ul>
@@ -99,20 +102,20 @@ export default async function SystemPage() {
                 {recipient && !emailConfigured() ? ' (no email provider set)' : ''}
               </Status>
               <span className={s.checkDetail}>OPS_ALERT_EMAIL, else ALERTS_OWNER_EMAIL</span>
+              <div style={{ marginTop: 8 }}>
+                <TestAlertButton disabled={!canEmail} />
+              </div>
             </span>
           </li>
           <li className={s.check}>
             <span className={s.checkLabel}>Checks</span>
             <span>
-              {everyMs ? `Every ${Math.round(everyMs / 60_000)} minutes` : 'Off (HEALTH_ALERTS_EVERY_MIN=0)'}
+              {everyMs ? `Every ${Math.round(everyMs / 60_000)} minutes` : 'Off (HEALTH_ALERTS_EVERY_MIN is 0 or below)'}
               <span className={s.checkDetail}>
                 {alertState.lastRunAt ? `last run ${ago(alertState.lastRunAt, now)}` : 'not run yet (first run 10 minutes after a deploy)'}
-                {openAlerts.length ? ` · reported now: ${openAlerts.join(', ')}` : ''}
+                {openAlerts.length ? ` · emailed about, still open: ${openAlerts.join(', ')}` : ''}
               </span>
             </span>
-          </li>
-          <li className={s.check} style={{ gridTemplateColumns: '1fr' }}>
-            <TestAlertButton disabled={!canEmail} />
           </li>
         </ul>
       </Section>
@@ -242,18 +245,6 @@ export default async function SystemPage() {
           </ul>
         </Section>
 
-        <Section title="Old in-app scraper">
-          <div className={`${s.panel} ${s.panelPad}`}>
-            <p className={s.dim} style={{ margin: 0 }}>
-              Jobs now come in through the GitHub Actions syncs, not the in-app scraper, so its run table is no longer a
-              sign of health.{' '}
-              {lastScrape
-                ? `Its last run started ${stamp(lastScrape.startedAt)} (${lastScrape.status}).`
-                : 'It has no runs.'}
-              {stuckScrapes > 0 ? ` ${stuckScrapes} old run${stuckScrapes === 1 ? ' is' : 's are'} still marked running.` : ''}
-            </p>
-          </div>
-        </Section>
       </div>
     </>
   )

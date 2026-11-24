@@ -84,6 +84,8 @@ export function activeFilterChips(params: Params, pinned: readonly string[] = []
   if (tech) add({ key: 'tech', label: tech, param: 'tech' })
   if (params.get('visa') === '1') add({ key: 'visa', label: 'Visa sponsorship', param: 'visa' })
   if (params.get('equity') === '1') add({ key: 'equity', label: 'Salary + equity', param: 'equity' })
+  if (params.get('hideRecruiters') === '1') add({ key: 'hideRecruiters', label: 'No recruiter postings', param: 'hideRecruiters' })
+  if (params.get('hideClearance') === '1') add({ key: 'hideClearance', label: 'No clearance needed', param: 'hideClearance' })
 
   return chips
 }
@@ -102,4 +104,6 @@ export const FILTER_PARAMS = [
   'tech',
   'visa',
   'equity',
+  'hideRecruiters',
+  'hideClearance',
 ] as const

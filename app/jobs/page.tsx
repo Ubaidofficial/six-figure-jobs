@@ -328,6 +328,8 @@ export default async function JobsIndexPage({
     tech: techFilter,
     visa,
     equity,
+    hideRecruiters,
+    hideClearance,
     rawCountry,
     country,
     remoteMode: parsedRemoteMode,
@@ -363,6 +365,8 @@ export default async function JobsIndexPage({
     (techFilter ? 1 : 0) +
     (visa ? 1 : 0) +
     (equity ? 1 : 0) +
+    (hideRecruiters ? 1 : 0) +
+    (hideClearance ? 1 : 0) +
     (keyword ? 1 : 0) +
     (minSalary ? 1 : 0)
 
@@ -418,6 +422,7 @@ export default async function JobsIndexPage({
     techs: vocabulary?.topSkills.map((t) => ({ value: t.term, count: t.count })),
     visaFilter: true,
     equityFilter: true,
+    postingFilters: true,
     remoteRegions: JOBS_REMOTE_REGIONS.map((r, i) => ({ value: r.slug, label: r.label, count: facetCounts.regions[i] ?? 0 })),
     ...levelSize,
   }

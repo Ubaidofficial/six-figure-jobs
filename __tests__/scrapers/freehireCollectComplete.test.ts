@@ -113,20 +113,21 @@ describe('collectFreehireJobs: description-pay slices and dropped connections', 
   const since = new Date(Date.now() - 48 * 3_600_000)
   const full = Array.from({ length: 100 }, (_, i) => rec(i, hoursAgo(1)))
 
-  it('reads each description-pay slice up to its own page cap (100 each: US, CA/AU/UK, EU, rest, remote, worldwide)', async () => {
+  it('reads each description-pay slice up to its own page cap (100 each, 11 slices)', async () => {
     const pagesBySlice: Record<string, number> = {}
     get.mockImplementation(async (_url: string, config: { params: Record<string, unknown> }) => {
       const p = config.params
       if (!('salary_currency' in p)) {
-        const key = JSON.stringify({ c: p.countries, r: p.regions, ce: p.countries_exclude, re: p.regions_exclude })
+        const filters = Object.fromEntries(Object.entries(p).filter(([k]) => !['offset', 'limit', 'sort', 'order'].includes(k)))
+        const key = JSON.stringify(filters)
         pagesBySlice[key] = (pagesBySlice[key] ?? 0) + 1
         return page(full, 1_000_000)
       }
       return page([], 0)
     })
     const r = await withImmediateTimers(() => collectFreehireJobs({ since }))
-    expect(Object.values(pagesBySlice)).toEqual([100, 100, 100, 100, 100, 100])
-    expect(r.markets.filter((m) => m.currency.startsWith('pay in description')).map((m) => m.complete)).toEqual([false, false, false, false, false, false])
+    expect(Object.values(pagesBySlice)).toEqual(Array(11).fill(100))
+    expect(r.markets.filter((m) => m.currency.startsWith('pay in description')).map((m) => m.complete)).toEqual(Array(11).fill(false))
   })
 
   it('reads no description-pay slice when withDescriptionPay is false (the 15-minute pull)', async () => {
@@ -157,5 +158,22 @@ describe('collectFreehireJobs: description-pay slices and dropped connections', 
     expect(r.errors[0]).toMatch(/ECONNRESET/)
     warn.mockRestore()
     err.mockRestore()
+  })
+
+  it('reads by the day freehire first saw a job, and skips postings over 30 days old', async () => {
+    const seen = (i: number, firstSeenH: number, postedDaysAgo: number): FreehireJob => ({
+      ...rec(i, new Date(Date.now() - postedDaysAgo * 86_400_000)),
+      created_at: hoursAgo(firstSeenH).toISOString(),
+    })
+    // Found 1 hour ago but posted 5 days ago: read (the old posting-date window dropped it). Posted 40 days ago: not
+    // listed. First seen 3 days ago: outside a 48-hour window.
+    get.mockResolvedValue(page([seen(1, 1, 5), seen(2, 2, 40), seen(3, 72, 3)], 3))
+    const r = await collectFreehireJobs({ since, withDescriptionPay: false })
+    const usd = r.markets[0]
+    expect(usd.fetched).toBe(1)
+    expect(usd.tooOld).toBe(1)
+    // Job 3 still comes in through the worldwide markets, which read 30 days; job 2 through none.
+    expect(r.inputs.map((i) => i.externalId).sort()).toEqual(['ext-1', 'ext-3'])
+    expect(get.mock.calls[0][1].params).toMatchObject({ sort: 'created_at', order: 'desc' })
   })
 })

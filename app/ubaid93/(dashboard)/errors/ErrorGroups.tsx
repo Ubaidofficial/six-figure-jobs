@@ -6,9 +6,10 @@ import s from '../../admin.module.css'
 import type { ErrorGroup } from '../../../../lib/admin/errorReports'
 import { Sparkline } from '../visuals'
 import { ActionError, useAction } from '../useAction'
-import { ago } from '../ui'
 
-type Group = Omit<ErrorGroup, 'firstSeen' | 'lastSeen' | 'ids' | 'daily'> & { firstSeen: string; lastSeen: string; recent: number[] }
+// "3 min ago" is worked out on the server: computed here, the server's and the browser's clocks gave different text and
+// React reported a hydration mismatch.
+type Group = Omit<ErrorGroup, 'firstSeen' | 'lastSeen' | 'ids' | 'daily'> & { firstSeenAgo: string; lastSeenAgo: string; recent: number[] }
 
 export default function ErrorGroups({ groups, view, reportCount }: { groups: Group[]; view: string; reportCount: number }) {
   const [open, setOpen] = useState<string | null>(null)
@@ -84,9 +85,9 @@ export default function ErrorGroups({ groups, view, reportCount }: { groups: Gro
                       {g.count.toLocaleString('en-US')}
                       {g.newCount > 0 && g.newCount < g.count ? <div className={s.cellSub}>{g.newCount} new</div> : null}
                     </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{ago(g.lastSeen)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{g.lastSeenAgo}</td>
                     <td className={s.dim} style={{ whiteSpace: 'nowrap' }}>
-                      {ago(g.firstSeen)}
+                      {g.firstSeenAgo}
                     </td>
                     <td>
                       <div className={s.actions}>
@@ -139,7 +140,7 @@ export default function ErrorGroups({ groups, view, reportCount }: { groups: Gro
       </div>
       <div className={s.pager}>
         <span>
-          {groups.length.toLocaleString('en-US')} issue{groups.length === 1 ? '' : 's'} · {reportCount.toLocaleString('en-US')} reports
+          {groups.length.toLocaleString('en-US')} issue{groups.length === 1 ? '' : 's'} · {reportCount.toLocaleString('en-US')} report{reportCount === 1 ? '' : 's'}
         </span>
       </div>
     </div>

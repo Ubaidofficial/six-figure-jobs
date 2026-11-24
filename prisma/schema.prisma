@@ -60,6 +60,10 @@ model Job {
   visaSponsorship           Boolean        @default(false)
   /// The posting states pay plus equity (freehire's `equity: salary_and_equity`); only ever turned on. /jobs?equity=1.
   offersEquity              Boolean        @default(false)
+  /// Published by a recruiter or agency for a client (freehire's `via_recruiter`); only ever turned on. /jobs?direct=1 hides these.
+  viaRecruiter              Boolean        @default(false)
+  /// The posting requires a government security clearance (freehire's `requires_clearance`); only ever turned on.
+  requiresClearance         Boolean        @default(false)
   noDegreeMention           Boolean        @default(false)
   techStack                 String?
   industry                  String?

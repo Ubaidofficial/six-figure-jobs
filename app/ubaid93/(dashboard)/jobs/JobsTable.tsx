@@ -9,6 +9,11 @@ import type { JobRow } from './page'
 
 const MODE: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' }
 
+function modeLabel(j: JobRow): string | null {
+  const mode = j.remoteMode ? MODE[j.remoteMode] ?? j.remoteMode : null
+  return mode && mode.toLowerCase() !== (j.location ?? '').trim().toLowerCase() ? mode : null
+}
+
 export default function JobsTable({ jobs }: { jobs: JobRow[] }) {
   const router = useRouter()
   const [editing, setEditing] = useState<string | null>(null)
@@ -56,7 +61,8 @@ export default function JobsTable({ jobs }: { jobs: JobRow[] }) {
                     </span>
                   </a>
                   <div className={s.cellSub}>
-                    {[j.company, j.location, j.remoteMode ? MODE[j.remoteMode] ?? j.remoteMode : null].filter(Boolean).join(' · ')}
+                    {/* The work arrangement only when the location does not already say it ("Remote · Remote"). */}
+                    {[j.company, j.location, modeLabel(j)].filter(Boolean).join(' · ')}
                   </div>
                 </td>
                 <td className={s.mono} style={{ whiteSpace: 'nowrap' }}>
@@ -81,11 +87,6 @@ export default function JobsTable({ jobs }: { jobs: JobRow[] }) {
                     >
                       {j.isExpired ? 'Restore' : 'Expire'}
                     </button>
-                    {j.applyUrl ? (
-                      <a className={s.btn} href={j.applyUrl} target="_blank" rel="noopener noreferrer" title="The employer's apply page">
-                        Apply ↗
-                      </a>
-                    ) : null}
                   </div>
                 </td>
               </tr>

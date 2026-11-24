@@ -12,7 +12,7 @@ export default function TestAlertButton({ disabled }: { disabled: boolean }) {
     setState({ busy: false, msg: res.ok ? 'Sent. Check your inbox (and spam).' : d?.error ?? 'Could not send.' })
   }
   return (
-    <span className={s.actions} style={{ alignItems: 'center' }}>
+    <span className={s.actions} style={{ alignItems: 'center', justifyContent: 'flex-start' }}>
       {state.msg ? <span className={s.dim}>{state.msg}</span> : null}
       <button className={s.btn} disabled={disabled || state.busy} onClick={send}>
         {state.busy ? 'Sending…' : 'Send a test email'}

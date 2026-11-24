@@ -124,9 +124,51 @@ describe('alert emails', () => {
     expect(sent).toEqual(['Six Figure Jobs fixed: Jobs not expired'])
   })
 
-  it('runs every 30 minutes by default; 0 turns it off; never more often than every 5', () => {
+  it('runs every 30 minutes by default; 0 turns it off; never more often than every 5; a typo keeps the default', () => {
     expect(healthAlertsEveryMs({})).toBe(30 * 60_000)
     expect(healthAlertsEveryMs({ HEALTH_ALERTS_EVERY_MIN: '0' })).toBe(0)
     expect(healthAlertsEveryMs({ HEALTH_ALERTS_EVERY_MIN: '1' })).toBe(5 * 60_000)
+    expect(healthAlertsEveryMs({ HEALTH_ALERTS_EVERY_MIN: '30m' })).toBe(30 * 60_000)
+  })
+
+  it('emails when the database cannot be read, without calling the other open problems fixed, and once it is back', async () => {
+    const env = { OPS_ALERT_EMAIL: 'ops@example.test', RESEND_API_KEY: 'k', EMAIL_FROM: 'a@example.test' }
+    const sent: string[] = []
+    let state: string | null = null
+    let dbUp = true
+    const run = (at: Date, checks: () => ReturnType<typeof checksWith>) =>
+      runHealthAlerts({
+        now: at,
+        env,
+        send: async (m) => void sent.push(m.subject),
+        loadChecks: async () => {
+          if (!dbUp) throw new Error("Can't reach database server at postgres:5432")
+          return checks()
+        },
+        loadState: async () => {
+          if (!dbUp) throw new Error('down')
+          return state
+        },
+        saveState: async (v) => {
+          if (!dbUp) throw new Error('down')
+          state = v
+        },
+      })
+    await run(NOW, () => checksWith({ liveJobs: 0 }))
+    dbUp = false
+    await run(new Date(NOW.getTime() + 60_000), () => [])
+    await run(new Date(NOW.getTime() + 120_000), () => [])
+    dbUp = true
+    await run(new Date(NOW.getTime() + 180_000), () => checksWith({ liveJobs: 0 }))
+    expect(sent).toEqual([
+      'Six Figure Jobs alert: Jobs not expired',
+      'Six Figure Jobs alert: Database', // once, not on every run, and "Jobs not expired" is not called fixed
+      'Six Figure Jobs fixed: Database',
+    ])
+  })
+
+  it('keeps a visitor-sent error message out of the email', () => {
+    const plan = planAlerts(checksWith({ errorBurst: { message: '<script>buy pills</script>', count: 150 } }), empty, NOW, true)
+    expect(buildAlertEmail(plan, 'u')?.text).not.toContain('pills')
   })
 })

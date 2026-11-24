@@ -59,6 +59,12 @@ export interface BoardJobInput {
   visaSponsorship?: boolean | null
   /** Pay plus equity, when the board states it */
   offersEquity?: boolean | null
+  /** The source's last day to apply: stored as the job's expiry and its JobPosting validThrough */
+  validThrough?: Date | null
+  /** Published by a recruiter or agency for a client */
+  viaRecruiter?: boolean | null
+  /** Requires a government security clearance */
+  requiresClearance?: boolean | null
 
   /** Benefits and requirements the board lists as structured data (readable labels / sentences) */
   benefits?: string[] | null
@@ -141,6 +147,9 @@ export async function ingestBoardJob(
     skills: job.skills ?? null,
     visaSponsorship: job.visaSponsorship ?? null,
     offersEquity: job.offersEquity ?? null,
+    validThrough: job.validThrough ?? null,
+    viaRecruiter: job.viaRecruiter ?? null,
+    requiresClearance: job.requiresClearance ?? null,
     benefits: job.benefits ?? null,
     requirements: job.requirements ?? null,
 

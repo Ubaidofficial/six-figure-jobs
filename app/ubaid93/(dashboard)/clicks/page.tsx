@@ -23,6 +23,8 @@ export default async function ApplyClicksPage() {
   let total7 = 0
   let total30 = 0
   let rows: Row[] = []
+  // Clicks on jobs no longer stored: one line under the list instead of a row each (they cannot be opened or acted on).
+  let removed = { jobs: 0, clicks: 0 }
   let companies: Array<{ company: string; clicks: number }> = []
   let byDevice: Array<{ device: string; clicks: number }> = []
   let byPlace: Array<{ surface: string; clicks: number }> = []
@@ -64,7 +66,9 @@ export default async function ApplyClicksPage() {
         href: j ? buildJobSlugHref(j) : null,
       }
     })
-    rows = all.slice(0, 25)
+    rows = all.filter((r) => r.href).slice(0, 10)
+    const gone = all.filter((r) => !r.href)
+    removed = { jobs: gone.length, clicks: gone.reduce((n, r) => n + r.clicks, 0) }
     const perCompany = new Map<string, number>()
     for (const r of all) if (r.company) perCompany.set(r.company, (perCompany.get(r.company) ?? 0) + r.clicks)
     companies = [...perCompany.entries()]
@@ -134,7 +138,7 @@ export default async function ApplyClicksPage() {
           </div>
 
           <div className={`${s.grid2} ${s.grid21}`}>
-            <Section title="Most-clicked jobs" note="30 days">
+            <Section title="Most-clicked jobs" note="30 days, top 10">
               <div className={`${s.panel} ${s.tableWrap}`}>
                 {rows.length === 0 ? (
                   <p className={s.empty}>No clicks recorded yet.</p>
@@ -165,6 +169,12 @@ export default async function ApplyClicksPage() {
                     </tbody>
                   </table>
                 )}
+                {removed.jobs > 0 ? (
+                  <p className={s.cellSub} style={{ padding: '10px 14px', margin: 0, borderTop: '1px solid var(--color-border)' }}>
+                    Also {removed.clicks.toLocaleString()} click{removed.clicks === 1 ? '' : 's'} on {removed.jobs.toLocaleString()} job
+                    {removed.jobs === 1 ? '' : 's'} no longer in the database.
+                  </p>
+                ) : null}
               </div>
             </Section>
             <Section title="Most-clicked companies" note="30 days, top 300 jobs">

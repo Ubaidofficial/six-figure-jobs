@@ -523,6 +523,9 @@ export default async function JobPage({
   // Type and level are already chips in the hero, so the sidebar does not repeat them.
   const jobFacts = [
     { label: 'Team size', value: teamSize },
+    // Each only when the posting says so (freehire's via_recruiter / requires_clearance).
+    { label: 'Posted by', value: typedJob.viaRecruiter ? 'A recruiter, for a client' : null },
+    { label: 'Security clearance', value: typedJob.requiresClearance ? 'Required' : null },
     { label: 'Last checked', value: lastCheckedLabel },
   ].filter((f): f is { label: string; value: string } => Boolean(f.value))
 
