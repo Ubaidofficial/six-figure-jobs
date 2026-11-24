@@ -191,7 +191,7 @@ describe('JobPosting jobLocation: US city and state from the text', () => {
   })
 
   it('never takes a state from text that names another city', () => {
-    expect(address({ city: 'Austin', locationRaw: 'Dallas, TX' }).addressRegion).toBeUndefined()
+    expect(address({ city: 'Springfield', locationRaw: 'Dallas, TX' }).addressRegion).toBeUndefined()
   })
 
   it('keeps a stored state code over the text', () => {
@@ -250,5 +250,72 @@ describe('countryFromCity', () => {
   it('is null for anything else', () => {
     expect(countryFromCity('Kleve')).toBeNull()
     expect(countryFromCity(null)).toBeNull()
+  })
+})
+
+describe('JobPosting jobLocation: state from a well-known US city', () => {
+  const address = (fields: Record<string, unknown>) => ld({ countryCode: 'US', ...fields }).jobLocation.address
+
+  it.each([
+    ['Mountain View', 'CA'],
+    ['New York City', 'NY'],
+    ['Seattle', 'WA'],
+    ['St. Louis', 'MO'],
+    ['Saint Paul', 'MN'],
+    ['San Francisco Bay Area', 'CA'],
+    ['Greater Phoenix Area', 'AZ'],
+  ])('"%s" is in %s', (city, region) => {
+    expect(address({ city, locationRaw: city }).addressRegion).toBe(region)
+  })
+
+  it('reads the city from the location text when no city is stored', () => {
+    expect(address({ city: null, locationRaw: 'Milpitas' })).toMatchObject({ addressLocality: 'Milpitas', addressRegion: 'CA' })
+  })
+
+  // Both seen live on 2026-11-24 with no addressRegion.
+  it('reads "United States-Massachusetts-Boston"', () => {
+    expect(address({ city: null, locationRaw: 'United States-Massachusetts-Boston' })).toEqual({
+      '@type': 'PostalAddress',
+      addressLocality: 'Boston',
+      addressRegion: 'MA',
+      addressCountry: 'US',
+    })
+  })
+
+  it('a state named as the town ("New Jersey") is the region, not the locality', () => {
+    expect(address({ city: 'New Jersey', locationRaw: 'New Jersey' })).toEqual({
+      '@type': 'PostalAddress',
+      addressRegion: 'NJ',
+      addressCountry: 'US',
+    })
+  })
+
+  it('"New York" and "Washington" stay towns, not states', () => {
+    expect(address({ city: 'New York', locationRaw: 'New York' })).toMatchObject({ addressLocality: 'New York', addressRegion: 'NY' })
+    expect(address({ city: 'Washington', locationRaw: 'Washington' })).toEqual({
+      '@type': 'PostalAddress',
+      addressLocality: 'Washington',
+      addressCountry: 'US',
+    })
+  })
+
+  it('fills each part of a list', () => {
+    const j = ld({ city: null, locationRaw: 'Seattle; New York', countryCode: 'US' })
+    expect(places(j).map((p) => p.address.addressRegion)).toEqual(['WA', 'NY'])
+  })
+
+  it.each(['Portland', 'Columbus', 'Kansas City', 'Arlington', 'Springfield', 'Richmond', 'Bellevue', 'Redmond', 'Washington'])(
+    'leaves "%s" (shared by more than one US city) without a state',
+    (city) => expect(address({ city, locationRaw: city }).addressRegion).toBeUndefined(),
+  )
+
+  it('never overrides a state that is stored or in the text', () => {
+    expect(address({ city: 'Seattle', stateCode: 'OR', locationRaw: 'Seattle' }).addressRegion).toBe('OR')
+    expect(address({ city: null, locationRaw: 'Austin, MN' }).addressRegion).toBe('MN')
+  })
+
+  it('is for US jobs only', () => {
+    expect(ld({ city: 'Cambridge', locationRaw: 'Cambridge', countryCode: 'GB' }).jobLocation.address.addressRegion).toBeUndefined()
+    expect(ld({ city: 'Vancouver', locationRaw: 'Vancouver', countryCode: 'CA' }).jobLocation.address.addressRegion).toBeUndefined()
   })
 })
