@@ -156,13 +156,78 @@ describe('JobPosting jobLocation: addressLocality', () => {
   })
 })
 
+// Values seen in live JobPosting markup on 2026-11-24 (Search Console: "Missing field 'addressRegion'").
+describe('JobPosting jobLocation: US city and state from the text', () => {
+  const address = (fields: Record<string, unknown>) => ld({ countryCode: 'US', ...fields }).jobLocation.address
+
+  it.each([
+    ['USA, CO, Boulder', 'Boulder', 'CO'],
+    ['US, Oregon, Hillsboro', 'Hillsboro', 'OR'],
+    ['USA, CA, Pleasanton', 'Pleasanton', 'CA'],
+    ['Washington - Seattle Campus', 'Seattle', 'WA'],
+  ])('reads "%s" held as the city', (city, locality, region) => {
+    expect(address({ city, locationRaw: city })).toEqual({
+      '@type': 'PostalAddress',
+      addressLocality: locality,
+      addressRegion: region,
+      addressCountry: 'US',
+    })
+  })
+
+  it.each([
+    ['Eden Prairie, Minnesota, United States', 'Eden Prairie', 'MN'],
+    ['San Jose, CA', 'San Jose', 'CA'],
+    ['St Joseph, MO', 'St Joseph', 'MO'],
+    ['USA, CO, Boulder', 'Boulder', 'CO'],
+  ])('reads "%s" when only the location text is stored', (locationRaw, locality, region) => {
+    expect(address({ city: null, locationRaw })).toMatchObject({ addressLocality: locality, addressRegion: region })
+  })
+
+  it('takes the state from the text when the stored city is the same place', () => {
+    expect(address({ city: 'Eden Prairie', locationRaw: 'Eden Prairie, Minnesota, United States' })).toMatchObject({
+      addressLocality: 'Eden Prairie',
+      addressRegion: 'MN',
+    })
+  })
+
+  it('never takes a state from text that names another city', () => {
+    expect(address({ city: 'Austin', locationRaw: 'Dallas, TX' }).addressRegion).toBeUndefined()
+  })
+
+  it('keeps a stored state code over the text', () => {
+    expect(address({ city: 'Austin', stateCode: 'TX', locationRaw: 'Austin, Texas' }).addressRegion).toBe('TX')
+  })
+
+  it('reads states only for US jobs: "Perth, WA" in Australia has no US region', () => {
+    expect(ld({ city: null, locationRaw: 'Perth, WA', countryCode: 'AU' }).jobLocation.address.addressRegion).toBeUndefined()
+  })
+
+  it('reads the state in each part of a list', () => {
+    const j = ld({ city: null, locationRaw: 'Eden Prairie, Minnesota, United States; USA, CO, Boulder', countryCode: 'US' })
+    expect(places(j).map((p) => [p.address.addressLocality, p.address.addressRegion])).toEqual([
+      ['Eden Prairie', 'MN'],
+      ['Boulder', 'CO'],
+    ])
+  })
+})
+
 describe('cleanLocality', () => {
   it.each([
     ['Melbourne', 'Melbourne'],
     ['San Francisco Office', 'San Francisco'],
     ['Frankfurt am Main', 'Frankfurt am Main'],
     ['St. Louis', 'St. Louis'],
+    ['San Francisco Office (Fremont St)', 'San Francisco'],
+    ['Seattle Campus', 'Seattle'],
+    ['Greater Phoenix Area', 'Phoenix'],
+    ['London Area', 'London'],
+    ['San Francisco Bay Area', 'San Francisco Bay Area'],
+    ['Johannesburg, South Africa', 'Johannesburg, South Africa'],
   ])('keeps %s', (input, out) => expect(cleanLocality(input)).toBe(out))
+
+  it.each(['Europe or US', 'Europe', 'EMEA', 'Americas', 'North America', 'LATAM'])('drops the region "%s"', (input) =>
+    expect(cleanLocality(input)).toBeUndefined(),
+  )
 
   it.each(['US-REMOTE', 'HQ', 'SF', 'Remote', 'HQ - Sunnyvale', 'A • B', 'A; B', 'Multiple Locations', '', 'x'.repeat(61)])(
     'drops "%s"',
