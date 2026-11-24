@@ -7,6 +7,7 @@ import {
   Bot,
   Briefcase,
   Bug,
+  ClipboardCheck,
   LayoutGrid,
   Megaphone,
   MessageSquareText,
@@ -15,7 +16,7 @@ import {
 
 import s from '../admin.module.css'
 
-type Item = { href: string; label: string; icon: typeof Activity; count?: 'feedback' | 'errors' }
+type Item = { href: string; label: string; icon: typeof Activity; count?: 'feedback' | 'errors' | 'review' }
 
 const GROUPS: Array<{ label: string; items: Item[] }> = [
   {
@@ -30,6 +31,7 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
     label: 'Content',
     items: [
       { href: '/ubaid93/jobs', label: 'Jobs', icon: Briefcase },
+      { href: '/ubaid93/review', label: 'Review', icon: ClipboardCheck, count: 'review' },
       { href: '/ubaid93/sponsors', label: 'Sponsors', icon: Megaphone },
     ],
   },
@@ -44,7 +46,7 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
   },
 ]
 
-export default function AdminNav({ counts }: { counts: { feedback: number; errors: number } }) {
+export default function AdminNav({ counts }: { counts: { feedback: number; errors: number; review: number } }) {
   const pathname = usePathname() ?? ''
   const router = useRouter()
 
@@ -77,7 +79,7 @@ export default function AdminNav({ counts }: { counts: { feedback: number; error
                   <Icon size={16} strokeWidth={1.75} aria-hidden />
                   {label}
                   {n > 0 ? (
-                    <span className={s.navCount} aria-label={`${n} new`}>
+                    <span className={s.navCount} aria-label={count === 'review' ? `${n} to review` : `${n} new`}>
                       {n > 999 ? '999+' : n}
                     </span>
                   ) : null}

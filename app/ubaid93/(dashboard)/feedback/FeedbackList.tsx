@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import s from '../../admin.module.css'
+import JobEditDrawer from '../jobs/JobEditModal'
 
 const TYPE_LABELS: Record<string, string> = {
   bug: 'Bug',
@@ -16,6 +17,19 @@ const TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 }
 
+/** The job a report is about, as the job page shows it. */
+export type ReportedJob = {
+  id: string
+  title: string
+  company: string | null
+  source: string
+  isExpired: boolean
+  pay: string | null
+  href: string
+  applyUrl: string | null
+  openReports: number
+}
+
 type Item = {
   id: string
   type: string
@@ -25,6 +39,7 @@ type Item = {
   userAgent: string | null
   status: string
   createdAt: string
+  jobId: string | null
 }
 
 const NEXT: Record<string, Array<[string, string]>> = {
@@ -43,53 +58,136 @@ function pageOf(url: string): string {
   }
 }
 
-export default function FeedbackList({ items }: { items: Item[] }) {
+/** A report's message without the "Job: … (id)" line, which the job card replaces. */
+function reportText(message: string): string {
+  return message
+    .split('\n')
+    .filter((l) => !/^Job: .*\([^()]+\)\s*$/.test(l))
+    .join('\n')
+}
+
+export default function FeedbackList({ items, jobs }: { items: Item[]; jobs: Record<string, ReportedJob> }) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
+
+  async function patch(url: string, body: Record<string, unknown>) {
+    return fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  }
 
   async function setStatus(id: string, status: string) {
     setBusy(id)
-    const res = await fetch('/api/ubaid93/feedback', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status }),
-    })
+    const res = await patch('/api/ubaid93/feedback', { id, status })
     setBusy(null)
     if (res.ok) router.refresh()
+  }
+
+  /** Expires the job (Google is told, as by the automatic checks) and resolves every report about it. */
+  async function expireAndResolve(itemId: string, job: ReportedJob) {
+    if (!window.confirm(`Expire "${job.title}" and resolve its ${job.openReports} open report${job.openReports === 1 ? '' : 's'}?`)) return
+    setBusy(itemId)
+    const expired = await patch('/api/ubaid93/jobs', { id: job.id, isExpired: true })
+    if (expired.ok) await patch('/api/ubaid93/feedback', { jobId: job.id, status: 'resolved' })
+    setBusy(null)
+    router.refresh()
+  }
+
+  async function resolveAll(itemId: string, job: ReportedJob) {
+    setBusy(itemId)
+    await patch('/api/ubaid93/feedback', { jobId: job.id, status: 'resolved' })
+    setBusy(null)
+    router.refresh()
   }
 
   if (items.length === 0) return <p className={s.empty}>No messages here.</p>
 
   return (
-    <ul className={s.checks}>
-      {items.map((item) => (
-        <li key={item.id} className={s.check} style={{ gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'start' }}>
-          <div style={{ minWidth: 0 }}>
-            <div className={s.cellSub} style={{ marginTop: 0, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <span className={`${s.status} ${item.status === 'new' ? s.warn : item.status === 'reviewed' ? s.muted : s.ok}`}>
-                {TYPE_LABELS[item.type] ?? item.type}
-              </span>
-              <span className={s.mono}>{item.createdAt.slice(0, 16).replace('T', ' ')}</span>
-              <span>{item.status}</span>
-            </div>
-            <p style={{ margin: '6px 0 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{item.message}</p>
-            {item.url ? (
-              <a className={`${s.link} ${s.cellSub}`} style={{ display: 'inline-block', wordBreak: 'break-all' }} href={item.url} target="_blank" rel="noopener">
-                {pageOf(item.url)}
-              </a>
-            ) : null}
-            {item.hasScreenshot ? <ScreenshotThumb id={item.id} /> : null}
-          </div>
-          <div className={s.actions}>
-            {(NEXT[item.status] ?? NEXT.new).map(([to, label]) => (
-              <button key={to} className={s.btn} disabled={busy === item.id} onClick={() => setStatus(item.id, to)}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </li>
-      ))}
-    </ul>
+    <>
+      {editing ? (
+        <JobEditDrawer
+          id={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null)
+            router.refresh()
+          }}
+        />
+      ) : null}
+      <ul className={s.checks}>
+        {items.map((item) => {
+          const job = item.jobId ? jobs[item.jobId] : undefined
+          return (
+            <li key={item.id} className={s.check} style={{ gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'start' }}>
+              <div style={{ minWidth: 0 }}>
+                <div className={s.cellSub} style={{ marginTop: 0, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <span className={`${s.status} ${item.status === 'new' ? s.warn : item.status === 'reviewed' ? s.muted : s.ok}`}>
+                    {TYPE_LABELS[item.type] ?? item.type}
+                  </span>
+                  <span className={s.mono}>{item.createdAt.slice(0, 16).replace('T', ' ')}</span>
+                  <span>{item.status}</span>
+                </div>
+                <p style={{ margin: '6px 0 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {item.jobId ? reportText(item.message) : item.message}
+                </p>
+
+                {item.jobId ? (
+                  job ? (
+                    <div className={s.notice} style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                      <div>
+                        <a className={`${s.cellTitle} ${s.link}`} href={job.href} target="_blank" rel="noopener">
+                          {job.title}
+                        </a>
+                        <div className={s.cellSub}>
+                          {[job.company, job.source, job.pay ?? 'no pay shown'].filter(Boolean).join(' · ')}
+                        </div>
+                        <div className={s.cellSub}>
+                          <span className={`${s.status} ${job.isExpired ? s.muted : s.ok}`}>{job.isExpired ? 'Expired' : 'Live'}</span>
+                          {job.openReports > 1 ? <span className={s.checkDetail}>{job.openReports} open reports on this job</span> : null}
+                        </div>
+                      </div>
+                      <div className={s.toolbar} style={{ margin: 0 }}>
+                        <button className={s.btn} onClick={() => setEditing(job.id)}>
+                          Edit job
+                        </button>
+                        {!job.isExpired ? (
+                          <button className={`${s.btn} ${s.btnDanger}`} disabled={busy === item.id} onClick={() => expireAndResolve(item.id, job)}>
+                            Expire and resolve
+                          </button>
+                        ) : null}
+                        {job.openReports > 1 ? (
+                          <button className={s.btn} disabled={busy === item.id} onClick={() => resolveAll(item.id, job)}>
+                            Resolve all {job.openReports}
+                          </button>
+                        ) : null}
+                        {job.applyUrl ? (
+                          <a className={s.btn} href={job.applyUrl} target="_blank" rel="noopener noreferrer" title="Check the employer's page">
+                            Employer page ↗
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className={s.cellSub}>The reported job is no longer in the database.</p>
+                  )
+                ) : item.url ? (
+                  <a className={`${s.link} ${s.cellSub}`} style={{ display: 'inline-block', wordBreak: 'break-all' }} href={item.url} target="_blank" rel="noopener">
+                    {pageOf(item.url)}
+                  </a>
+                ) : null}
+                {item.hasScreenshot ? <ScreenshotThumb id={item.id} /> : null}
+              </div>
+              <div className={s.actions}>
+                {(NEXT[item.status] ?? NEXT.new).map(([to, label]) => (
+                  <button key={to} className={s.btn} disabled={busy === item.id} onClick={() => setStatus(item.id, to)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </>
   )
 }
 

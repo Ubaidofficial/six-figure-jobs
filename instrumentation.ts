@@ -5,7 +5,9 @@
 //  - logs a `[stall]` line when the event loop was blocked for 500 ms or more (lib/runtime/stallWatch.ts); STALL_LOG_MS
 //    sets the milliseconds, STALL_WATCH=0 turns it off;
 //  - saves freehire's newest jobs every 5 minutes (lib/scrapers/freehireRecent.ts), first 5 minutes after start;
-//    FREEHIRE_RECENT_EVERY_MIN sets the minutes, 0 turns it off.
+//    FREEHIRE_RECENT_EVERY_MIN sets the minutes, 0 turns it off;
+//  - checks the data pipeline's health every 30 minutes and emails the owner when a check turns bad or recovers
+//    (lib/admin/healthAlerts.ts), first 10 minutes after start; HEALTH_ALERTS_EVERY_MIN sets the minutes, 0 turns it off.
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
   if (process.env.NODE_ENV !== 'production') return
@@ -26,6 +28,17 @@ export async function register() {
       tick()
       setInterval(tick, everyMs).unref()
     }, FREEHIRE_RECENT_START_DELAY_MS).unref()
+  }
+
+  const { START_DELAY_MS, healthAlertsEveryMs, runHealthAlerts } = await import('./lib/admin/healthAlerts')
+  const healthEveryMs = healthAlertsEveryMs()
+  if (healthEveryMs) {
+    const check = () =>
+      runHealthAlerts().catch((e) => console.error('[health-alerts] run failed:', e instanceof Error ? e.message.split('\n')[0] : e))
+    setTimeout(() => {
+      void check()
+      setInterval(check, healthEveryMs).unref()
+    }, START_DELAY_MS).unref()
   }
 
   if (process.env.WARM_ON_START === '0') return
