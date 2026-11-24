@@ -9,6 +9,7 @@ import { getAnnualSalaryCapForCurrency } from '../normalizers/salary'
 import { resolveSalaryCurrency } from '../jobs/salary'
 import { countryName, normalizeCountryCode } from '../location/country'
 import { countriesFromText, countryFromCity, countryFromText, isPlaceholderLocation } from '../location/jobLocation'
+import { usStateOfCity } from '../location/usCityStates'
 import { isWorldwideLocationText, remoteRegionDef } from '../jobs/remoteRegions'
 import { evaluateJobIndexability } from '../jobs/qualityGate'
 import { WORLDWIDE_COUNTRY_CODES, EXCLUDED_ELIGIBLE_COUNTRIES } from '../location/worldwideCountries'
@@ -486,7 +487,9 @@ function splitUsPlace(text: unknown): { locality: string; region: string } | nul
     const locality = region ? cleanLocality(dash[2]) : undefined
     return region && locality ? { locality, region } : null
   }
-  let segs = t.split(',').map((s) => s.trim()).filter(Boolean)
+  // "United States-Massachusetts-Boston": the country first, joined by hyphens.
+  const hyphened = t.match(/^(?:us|usa|united states)-([a-z .]+)-(.+)$/i)
+  let segs = hyphened ? [t.split('-')[0], hyphened[1], hyphened[2]] : t.split(',').map((s) => s.trim()).filter(Boolean)
   // Country first ("USA, CO, Boulder"): put it last like the usual order.
   if (segs.length === 3 && US_COUNTRY_TOKEN.test(segs[0]) && usStateCode(segs[1])) segs = [segs[2], segs[1]]
   if (segs.length === 3 && US_COUNTRY_TOKEN.test(segs[2])) segs = segs.slice(0, 2)
@@ -527,8 +530,20 @@ function buildJobLocation(job: any): any {
   const textPlace = addressCountry === 'US' ? splitUsPlace(locationRaw) : null
   const textRegion =
     textPlace && (!city || textPlace.locality.toLowerCase() === city.toLowerCase()) ? textPlace.region : undefined
-  const locality = city ?? textPlace?.locality ?? (countryOnly(locationRaw) ? undefined : cleanLocality(locationRaw))
-  const region = storedRegion ?? cityPlace?.region ?? textRegion
+  const placeName = city ?? textPlace?.locality ?? (countryOnly(locationRaw) ? undefined : cleanLocality(locationRaw))
+  // A state named as the town ("New Jersey") is the region. "New York" and "Washington" are towns as well.
+  const stateAsTown =
+    addressCountry === 'US' && placeName && !/^(new york|washington)$/i.test(placeName)
+      ? US_STATE_CODE_BY_NAME[placeName.toLowerCase()]
+      : undefined
+  const locality = stateAsTown ? undefined : placeName
+  // Last, a well-known US city named alone ("Mountain View"): lib/location/usCityStates.ts leaves shared names out.
+  const region =
+    storedRegion ??
+    cityPlace?.region ??
+    textRegion ??
+    stateAsTown ??
+    (addressCountry === 'US' ? usStateOfCity(locality) : undefined)
   return {
     '@type': 'Place',
     address: {
@@ -565,13 +580,14 @@ function splitMultiLocation(locationRaw: string, fallbackCountry: string | undef
         ? code
         : undefined)
     const locality = usPlace?.locality ?? (countryOnly(part) ? undefined : cleanLocality(segments[0] || part))
+    const cityRegion = !region && addressCountry === 'US' ? usStateOfCity(locality) : undefined
     if (!addressCountry) continue
     out.push({
       '@type': 'Place',
       address: {
         '@type': 'PostalAddress',
         ...(locality ? { addressLocality: locality } : {}),
-        ...(region ? { addressRegion: region } : {}),
+        ...(region || cityRegion ? { addressRegion: region ?? cityRegion } : {}),
         addressCountry,
       },
     })
