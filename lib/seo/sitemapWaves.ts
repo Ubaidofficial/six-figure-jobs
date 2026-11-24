@@ -10,8 +10,9 @@
 //   3  + the Phase 1 role hubs (/jobs/<role>) and the country pages
 //   4  + salary guides (/salary/<role>), remote role pages, /remote/companies, /jobs/no-degree, /jobs/4-day-week and
 //      the pay report's method page and older editions (everything else the hubs sitemap lists)
-//   5  + pSEO batch 1 and the company pages
-//   6+ + pSEO batch 2, 3, 4 (wave n releases batch n - 4, never past PSEO_RELEASED_BATCH / PSEO_BATCH_SCHEDULE)
+//   5  + pSEO batch 1 and the 25 best company pages
+//   6+ + pSEO batch 2, 3, 4 (wave n releases batch n - 4, never past PSEO_RELEASED_BATCH / PSEO_BATCH_SCHEDULE), and
+//      more company pages: 50, 100, 200 (getCompanyReleaseLimit)
 //
 // Waves 1-4 decide only what the sitemap submits: those pages stay indexable before their wave. The long-tail pages
 // (pSEO batches, company pages) also stay `noindex, follow` until wave 5+, as unreleased batches always have.
@@ -25,10 +26,10 @@ export const SITEMAP_WAVE_ADDS = [
   'salary bands and blog articles',
   'role hubs and country pages',
   'salary guides, remote role pages and the other hubs',
-  'pSEO batch 1 and company pages',
-  'pSEO batch 2',
-  'pSEO batch 3',
-  'pSEO batch 4',
+  'pSEO batch 1 and the 25 best company pages',
+  'pSEO batch 2 and up to 50 company pages',
+  'pSEO batch 3 and up to 100 company pages',
+  'pSEO batch 4 and up to 200 company pages',
 ] as const
 
 export const SALARY_BANDS_WAVE = 2
@@ -79,4 +80,24 @@ export function getPseoBatchCapForWave(wave: number = getSitemapWave()): number 
 /** Company pages may be indexed and submitted only from LONG_TAIL_WAVE. */
 export function areCompanyPagesReleased(wave: number = getSitemapWave()): boolean {
   return wave >= LONG_TAIL_WAVE
+}
+
+// How many company pages each wave releases (owner's request, 2026-11-24). The drip in lib/seo/companyPublishing.ts
+// counts 5 every 3 days from 2026-06-04, about 290 by wave 5, which would all have gone live and into the sitemap at
+// once. Google does not publish a safe rate; this keeps each step near the size of waves 2-4 (10-23 pages).
+const COMPANY_RELEASE_BY_WAVE: Record<number, number> = { 5: 25, 6: 50, 7: 100, 8: 200 }
+
+/**
+ * The most company pages released now (the best-ranked first, lib/seo/companyPublishing.ts): the wave's number, or
+ * `COMPANY_RELEASE_LIMIT` (Openship env, a whole number >= 0) from wave 5 when it is set. Unlimited before wave 5,
+ * where company pages are noindex anyway and the drip alone orders the homepage and /companies lists as before.
+ */
+export function getCompanyReleaseLimit(
+  wave: number = getSitemapWave(),
+  override: string | undefined = process.env.COMPANY_RELEASE_LIMIT,
+): number {
+  if (wave < LONG_TAIL_WAVE) return Infinity
+  const n = /^\s*\d+\s*$/.test(override ?? '') ? Number.parseInt(String(override), 10) : NaN
+  if (Number.isFinite(n)) return n
+  return COMPANY_RELEASE_BY_WAVE[Math.min(wave, SITEMAP_WAVE_COUNT)] ?? Infinity
 }

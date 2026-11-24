@@ -6,6 +6,7 @@ import {
   QUALITY_MIN_AI_SNIPPET_CHARS,
 } from '@/lib/jobs/qualityGate'
 import { getPriorityCompanyRank } from '@/lib/seo/priorityCompanies'
+import { getCompanyReleaseLimit } from '@/lib/seo/sitemapWaves'
 
 export const COMPANY_PSEO_MIN_JOBS = Math.max(
   1,
@@ -216,11 +217,15 @@ function getUnlockedCount(readyCount: number, now: Date): number {
 
   const intervalMs = COMPANY_PSEO_BATCH_DAYS * 24 * 60 * 60 * 1000
   const windowsElapsed = Math.floor((now.getTime() - start.getTime()) / intervalMs) + 1
-  return Math.min(readyCount, windowsElapsed * COMPANY_PSEO_BATCH_SIZE)
+  // The sitemap wave caps the drip (lib/seo/sitemapWaves.ts), so the page's robots tag, the company sitemap and the
+  // homepage and /companies links all use the same best-ranked set.
+  return Math.min(readyCount, windowsElapsed * COMPANY_PSEO_BATCH_SIZE, getCompanyReleaseLimit())
 }
 
 function getNextUnlockAt(readyCount: number, unlockedCount: number, now: Date): string | null {
   if (readyCount <= unlockedCount) return null
+  // Held at the wave's number: more come with the next wave, not on a date.
+  if (unlockedCount >= getCompanyReleaseLimit()) return null
 
   const start = readStartDate(now)
   if (now.getTime() < start.getTime()) return start.toISOString()
