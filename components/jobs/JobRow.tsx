@@ -4,7 +4,7 @@
 // summary, pills and skills. Used by the listing pages; the homepage, company pages and search keep JobCard.
 import { useId, useState, type ReactNode } from 'react'
 import Link from '@/components/ui/Link'
-import { ArrowRight, Briefcase, ChevronDown, ExternalLink, FileText, Gift, GraduationCap, Plane, TrendingUp } from 'lucide-react'
+import { ArrowRight, Briefcase, ChevronDown, ExternalLink, FileText, Gift, GraduationCap, Plane, ShieldCheck, TrendingUp, UserRound } from 'lucide-react'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
 import { CountryFlag } from '@/components/ui/CountryFlag'
@@ -112,6 +112,9 @@ export function JobRow({
         ? { key: 'degree', Icon: GraduationCap, label: 'Degree required' }
         : null,
     (job as any).visaSponsorship ? { key: 'visa', Icon: Plane, label: 'Visa sponsorship' } : null,
+    (job as any).requiresClearance ? { key: 'clearance', Icon: ShieldCheck, label: 'Security clearance required' } : null,
+    // Only when the posting says so; a recruiter who does not say so is not detected.
+    (job as any).viaRecruiter ? { key: 'recruiter', Icon: UserRound, label: 'Posted by a recruiter' } : null,
     /contract|part[- ]?time|temp|freelance/.test(employment)
       ? { key: 'type', Icon: FileText, label: /part/.test(employment) ? 'Part-time' : /freelance/.test(employment) ? 'Freelance' : 'Contract' }
       : null,

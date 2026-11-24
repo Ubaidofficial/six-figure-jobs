@@ -97,6 +97,10 @@ export interface ScrapedJobInput {
   visaSponsorship?: boolean | null
   /** Whether the posting states pay plus equity, when the source says so. */
   offersEquity?: boolean | null
+  /** Published by a recruiter or agency for a client, when the source says so (only ever turned on). */
+  viaRecruiter?: boolean | null
+  /** The posting requires a government security clearance, when the source says so (only ever turned on). */
+  requiresClearance?: boolean | null
 
   /** Benefits the source lists as structured data (readable labels), shown in the job page's Benefits section. */
   benefits?: string[] | null

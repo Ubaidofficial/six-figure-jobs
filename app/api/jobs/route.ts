@@ -9,8 +9,9 @@ const PAGE_SIZE = 24
 const MAX_PAGE = 60
 // The "live" poll (page 1 again, to find jobs added since the page loaded) is the same for everyone with the same filters.
 const LIVE_TTL_MS = 15_000
-// A role page (/jobs/<role>) reads fewer parameters than /jobs: not q, tech, visa, equity or exact, and one role, set by the path.
-const ROLE_PAGE_IGNORES = new Set(['q', 'tech', 'visa', 'equity', 'exact'])
+// A role page (/jobs/<role>) reads fewer parameters than /jobs: not q, tech, visa, equity, hideRecruiters, hideClearance or
+// exact, and one role, set by the path.
+const ROLE_PAGE_IGNORES = new Set(['q', 'tech', 'visa', 'equity', 'hideRecruiters', 'hideClearance', 'exact'])
 export async function GET(request: Request) {
   const blocked = guardUiApi(request)
   if (blocked) return blocked

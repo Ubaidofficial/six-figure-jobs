@@ -18,6 +18,10 @@ export function parseJobsListing(params: ListingParams, page: number, pageSize: 
   const visa = params.get('visa') === '1'
   // equity=1: only jobs whose posting states pay plus equity (Job.offersEquity).
   const equity = params.get('equity') === '1'
+  // hideRecruiters=1 / hideClearance=1: leave out postings that say a recruiter publishes them, or that need a security
+  // clearance (Job.viaRecruiter / Job.requiresClearance; a recruiter who never says so is not detected).
+  const hideRecruiters = params.get('hideRecruiters') === '1'
+  const hideClearance = params.get('hideClearance') === '1'
   // exact=1: the visitor chose to search for the words as typed, without typo correction.
   const exact = params.get('exact') === '1'
   const rawCountry = (params.get('country') || '').trim().toUpperCase()
@@ -54,9 +58,11 @@ export function parseJobsListing(params: ListingParams, page: number, pageSize: 
     keyword,
     ...(visa ? { visaSponsorship: true } : {}),
     ...(equity ? { offersEquity: true } : {}),
+    ...(hideRecruiters ? { excludeRecruiters: true } : {}),
+    ...(hideClearance ? { excludeClearance: true } : {}),
     ...(keyword && exact ? { keywordPlan: buildKeywordPlan(keyword, null) } : {}),
     ...(minSalary && salaryCurrency ? { currency: salaryCurrency, minAnnual: salaryFilterAmount(minSalary, salaryCurrency) } : {}),
   }
 
-  return { queryInput, keyword, tech, visa, equity, exact, rawCountry, country, remoteMode, remoteRegion, sort, roles, seniority, companySizes, minSalary }
+  return { queryInput, keyword, tech, visa, equity, hideRecruiters, hideClearance, exact, rawCountry, country, remoteMode, remoteRegion, sort, roles, seniority, companySizes, minSalary }
 }

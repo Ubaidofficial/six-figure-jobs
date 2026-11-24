@@ -32,3 +32,13 @@ describe('skill filter', () => {
     expect(clause.skillsJson.mode).toBe('insensitive')
   })
 })
+
+describe('posting filters', () => {
+  it('leaves out recruiter and clearance postings when asked', () => {
+    const where = buildWhere({ excludeRecruiters: true, excludeClearance: true, page: 1, pageSize: 1 }) as Record<string, unknown>
+    expect(where.viaRecruiter).toBe(false)
+    expect(where.requiresClearance).toBe(false)
+    const none = buildWhere({ page: 1, pageSize: 1 }) as Record<string, unknown>
+    expect(none.viaRecruiter).toBeUndefined()
+  })
+})

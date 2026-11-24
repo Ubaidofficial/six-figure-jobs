@@ -57,6 +57,8 @@ const ALLOWED_PUBLIC_QUERY_PARAMS = new Set([
   'tech',
   'visa',
   'equity',
+  'hideRecruiters',
+  'hideClearance',
   'exact',
   'country',
   'remoteMode',

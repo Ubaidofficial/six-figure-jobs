@@ -24,6 +24,8 @@ export type JobsFacets = {
   visaFilter?: boolean
   /** When true, the panel shows the Salary + equity toggle (the page must apply the `equity` param). */
   equityFilter?: boolean
+  /** When true, the panel shows the recruiter and clearance toggles (the page must apply `hideRecruiters` / `hideClearance`). */
+  postingFilters?: boolean
   /** Remote jobs per region ("global" = can be done from anywhere). When present, the panel shows a Remote region filter. */
   remoteRegions?: Array<{ value: string; label: string; count: number }>
   /** Jobs per seniority level and company size with the other filters on (lib/jobs/levelSizeFacets.ts). */
@@ -214,6 +216,8 @@ export function JobsFiltersPanel({
   const selectedTech = (searchParams.get('tech') || '').toLowerCase()
   const visaOn = searchParams.get('visa') === '1'
   const equityOn = searchParams.get('equity') === '1'
+  const hideRecruitersOn = searchParams.get('hideRecruiters') === '1'
+  const hideClearanceOn = searchParams.get('hideClearance') === '1'
   const minSalary = Number(searchParams.get('minSalary') || '') || 0
   const currency = salaryFilterCurrency(locationPreset?.countryCode || selectedCountry)
 
@@ -461,6 +465,17 @@ export function JobsFiltersPanel({
           <Section title="Equity" open={equityOn}>
             <Option on={equityOn} onClick={() => set('equity', equityOn ? null : '1')}>
               Salary + equity
+            </Option>
+          </Section>
+        ) : null}
+
+        {facets.postingFilters ? (
+          <Section title="Posting" open={hideRecruitersOn || hideClearanceOn}>
+            <Option on={hideRecruitersOn} onClick={() => set('hideRecruiters', hideRecruitersOn ? null : '1')}>
+              Hide recruiter postings
+            </Option>
+            <Option on={hideClearanceOn} onClick={() => set('hideClearance', hideClearanceOn ? null : '1')}>
+              Hide security clearance jobs
             </Option>
           </Section>
         ) : null}

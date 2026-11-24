@@ -255,6 +255,18 @@ describe('skills and visa sponsorship', () => {
     expect(withEquity(null)).toBe(false)
     expect(withEquity(undefined)).toBe(false)
   })
+
+  it('marks recruiter and clearance postings only when freehire says so', () => {
+    expect(mapFreehireJob({ ...job, via_recruiter: true, requires_clearance: true })).toMatchObject({ viaRecruiter: true, requiresClearance: true })
+    expect(mapFreehireJob({ ...job })).toMatchObject({ viaRecruiter: false, requiresClearance: false })
+  })
+
+  it('does not publish a role reposted 10 times or more (an evergreen posting more often than an opening)', () => {
+    const reposted = (n: number) => mapFreehireJob({ ...job, reality: { class: 'fresh', age_days: 0, repost_count: n } })
+    expect(reposted(20)).toBeNull()
+    expect(reposted(10)).toBeNull()
+    expect(reposted(9)).not.toBeNull()
+  })
 })
 
 describe('sourceRef', () => {

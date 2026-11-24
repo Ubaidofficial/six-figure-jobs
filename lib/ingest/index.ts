@@ -437,6 +437,8 @@ async function createNewJob(
     sourceRef: input.sourceRef ?? null,
     visaSponsorship: input.visaSponsorship === true,
     offersEquity: input.offersEquity === true,
+    viaRecruiter: input.viaRecruiter === true,
+    requiresClearance: input.requiresClearance === true,
 
     // v2.7+: never write NULL roleSlug (breaks routing/sitemaps); fallback to "other"
     roleSlug: roleData.roleSlug || 'other',
@@ -606,6 +608,8 @@ async function upgradeJob(
     sourceRef: input.sourceRef ?? existing.sourceRef,
     visaSponsorship: input.visaSponsorship === true ? true : existing.visaSponsorship,
     offersEquity: input.offersEquity === true ? true : existing.offersEquity,
+    viaRecruiter: input.viaRecruiter === true ? true : existing.viaRecruiter,
+    requiresClearance: input.requiresClearance === true ? true : existing.requiresClearance,
 
     // ✅ Force type fields to update (prevents old “Contract” from lingering)
     type: input.employmentType ?? existing.type,
@@ -730,6 +734,8 @@ async function refreshJob(
   if (input.sourceRef) updateData.sourceRef = input.sourceRef
   if (input.visaSponsorship === true) updateData.visaSponsorship = true
   if (input.offersEquity === true) updateData.offersEquity = true
+  if (input.viaRecruiter === true) updateData.viaRecruiter = true
+  if (input.requiresClearance === true) updateData.requiresClearance = true
   // Structured benefits and requirements fill only an empty field: a list a person, the AI writer or an earlier pass
   // stored is never replaced.
   if (!existing.benefitsJson && input.benefits?.length) updateData.benefitsJson = JSON.stringify(input.benefits)

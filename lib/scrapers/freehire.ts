@@ -288,6 +288,9 @@ export function applicationDeadline(raw: string | null | undefined): Date | null
   return Number.isFinite(d.getTime()) ? d : null
 }
 
+/** Reposted this many times, a role is not published (see mapFreehireJob). */
+export const MAX_REPOSTS = 10
+
 /** Map a freehire record to the board ingest input, or null if it must not be published. */
 export function mapFreehireJob(job: FreehireJob, now: number = Date.now()): BoardJobInput | null {
   const e = job.enrichment ?? {}
@@ -296,6 +299,9 @@ export function mapFreehireJob(job: FreehireJob, now: number = Date.now()): Boar
   const deadline = applicationDeadline(job.application_deadline)
   if (deadline && deadline.getTime() < now) return null
   if (!isListableByReality(job.reality)) return null
+  // A role reposted again and again is an evergreen or pipeline posting more often than an opening (1 of 500 sampled
+  // $100k+ US jobs, 2026-11-24, at 20). freehire's own ghost verdict is not sent by the search endpoint this reads.
+  if ((job.reality?.repost_count ?? 0) >= MAX_REPOSTS) return null
   // Pay: freehire's own fields when it has any; only when it has NONE does the posting's own sentence stand in (a range
   // read by payEvidence, quoted and verified). Pay freehire has but we cannot use (monthly, an unqueried currency) is
   // never replaced by a reading of the text.
@@ -362,6 +368,8 @@ export function mapFreehireJob(job: FreehireJob, now: number = Date.now()): Boar
     offersEquity: job.equity === 'salary_and_equity',
     // The source's deadline becomes the job's expiry and its JobPosting validThrough (else the ingest's 45-day default).
     validThrough: deadline,
+    viaRecruiter: job.via_recruiter === true,
+    requiresClearance: job.requires_clearance === true,
   }
 }
 

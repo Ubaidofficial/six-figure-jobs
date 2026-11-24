@@ -36,4 +36,10 @@ describe('parseJobsListing (shared by /jobs and /api/jobs)', () => {
     expect(parse('equity=yes').queryInput.offersEquity).toBeUndefined()
     expect(parse('').queryInput.offersEquity).toBeUndefined()
   })
+
+  it('reads hideRecruiters=1 and hideClearance=1 as leaving those postings out', () => {
+    expect(parse('hideRecruiters=1&hideClearance=1').queryInput).toMatchObject({ excludeRecruiters: true, excludeClearance: true })
+    expect(parse('hideRecruiters=yes').queryInput.excludeRecruiters).toBeUndefined()
+    expect(parse('').queryInput.excludeClearance).toBeUndefined()
+  })
 })
