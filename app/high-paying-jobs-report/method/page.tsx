@@ -79,7 +79,8 @@ export default function PayReportMethodPage() {
       inLanguage: 'en',
       author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
       publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL, logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo.png` } },
-      about: { '@type': 'Dataset', name: `${PAY_REPORT_HEADING}`, url: `${SITE_URL}${PAY_REPORT_PATH}` },
+      // The Dataset itself is marked up on the report page; a nested Dataset here counts as a second, incomplete one.
+      about: { '@type': 'Report', name: PAY_REPORT_HEADING, url: `${SITE_URL}${PAY_REPORT_PATH}` },
     },
     {
       '@context': 'https://schema.org',
