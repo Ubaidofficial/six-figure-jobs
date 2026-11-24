@@ -99,7 +99,9 @@ export function HeroSearchInput({
   const [examplePlaceholder, setExamplePlaceholder] = useState<string | null>(null)
   // The query whose suggestions are on their way: the list shows placeholder rows until they arrive.
   const [loadingQuery, setLoadingQuery] = useState<string | null>(null)
-  const lastTyped = useRef('')
+  // The text the box opened with counts as already seen, not typed: a results page (/jobs?q=seo) opened its suggestion
+  // list on load, with the box never focused, so nothing closed it (owner's report, 2026-11-24).
+  const lastTyped = useRef(defaultValue ?? '')
 
   // The typing placeholder starts after load (the server HTML has the plain one) and only runs while the box is empty,
   // not focused and the tab is visible; focusing the box shows the plain placeholder. Off under reduced motion.
@@ -247,6 +249,17 @@ export function HeroSearchInput({
   // Placeholder rows while a new query's suggestions load (instead of the previous query's, or nothing).
   const skeleton = open && !showingPopular && loadingQuery !== null && results?.query !== loadingQuery
   const listOpen = open && (rows.length > 0 || skeleton)
+
+  // A press anywhere outside the box closes the list, even when focus never left the input (a tap on empty page area
+  // does not always blur it, e.g. in Safari).
+  useEffect(() => {
+    if (!listOpen) return
+    const onDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node | null)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [listOpen])
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!listOpen) {

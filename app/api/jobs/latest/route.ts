@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const feed = await loadLatestFeed()
     const items = Number.isFinite(since) ? feed.items.filter((i) => Date.parse(i.addedAt) > since) : feed.items
     return NextResponse.json(
-      { items, newestAt: feed.newestAt, checkedAt: new Date().toISOString() },
+      { items, newestAt: feed.newestAt, addedLastHour: feed.addedLastHour, checkedAt: new Date().toISOString() },
       { headers: { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30' } },
     )
   } catch {

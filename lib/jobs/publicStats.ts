@@ -28,6 +28,10 @@ export const getPublicJobWhere = cache(() => buildWhere({}))
 // and the groupBy over every public job plus the directory's per-company counts ran on each visit.
 export const loadPublicSiteStats = cache(() => memoAsync('public-site-stats', DEFAULT_TTL_MS, loadPublicSiteStatsUncached))
 
+/** The same numbers counted at most once a minute, for the live band (/api/stats/live), which a visitor watches move. */
+export const LIVE_STATS_TTL_MS = 60_000
+export const loadLivePublicSiteStats = () => memoAsync('public-site-stats:live', LIVE_STATS_TTL_MS, loadPublicSiteStatsUncached)
+
 async function loadPublicSiteStatsUncached() {
   const publicJobWhere = getPublicJobWhere()
 

@@ -40,12 +40,12 @@ describe('GET /api/cron/freehire-recent', () => {
   })
 })
 
-describe('the app runs it on its own every 5 minutes', () => {
-  it('every 5 minutes by default, FREEHIRE_RECENT_EVERY_MIN to change it (at least 5), 0 to turn it off', () => {
-    expect(freehireRecentEveryMs({})).toBe(5 * 60_000)
+describe('the app runs it on its own every 2 minutes', () => {
+  it('every 2 minutes by default, FREEHIRE_RECENT_EVERY_MIN to change it (at least 2), 0 to turn it off', () => {
+    expect(freehireRecentEveryMs({})).toBe(2 * 60_000)
     expect(freehireRecentEveryMs({ FREEHIRE_RECENT_EVERY_MIN: '30' })).toBe(30 * 60_000)
-    expect(freehireRecentEveryMs({ FREEHIRE_RECENT_EVERY_MIN: '1' })).toBe(5 * 60_000)
-    expect(freehireRecentEveryMs({ FREEHIRE_RECENT_EVERY_MIN: 'abc' })).toBe(5 * 60_000)
+    expect(freehireRecentEveryMs({ FREEHIRE_RECENT_EVERY_MIN: '1' })).toBe(2 * 60_000)
+    expect(freehireRecentEveryMs({ FREEHIRE_RECENT_EVERY_MIN: 'abc' })).toBe(2 * 60_000)
     expect(freehireRecentEveryMs({ FREEHIRE_RECENT_EVERY_MIN: '0' })).toBeNull()
   })
 

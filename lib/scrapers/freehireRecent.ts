@@ -2,7 +2,7 @@
 //
 // The newest freehire jobs whose pay clears our thresholds, saved within minutes of freehire listing them, so the
 // homepage live feed and the listings move during the day (owner's request, 2026-11-19: a feed that updates live like
-// freehire's "Just added"; the regular syncs ran about every 5.5 hours). Run every 5 minutes by the app itself
+// freehire's "Just added"; the regular syncs ran about every 5.5 hours). Run every 2 minutes by the app itself
 // (instrumentation.ts; every 15 until the owner asked for a list that moves more continuously, 2026-11-19) and on demand
 // through GET /api/cron/freehire-recent.
 //
@@ -53,11 +53,17 @@ export async function runFreehireRecent(): Promise<FreehireRecentResult> {
 /** How long after the server starts the first run waits (was 2 minutes; see HUBS_WARM_DELAY_MS in lib/runtime/warmPages.ts). */
 export const FREEHIRE_RECENT_START_DELAY_MS = 5 * 60_000
 
-/** Minutes between the app's own runs: FREEHIRE_RECENT_EVERY_MIN (default 5, at least 5); 0 turns them off. */
+/**
+ * Minutes between the app's own runs: FREEHIRE_RECENT_EVERY_MIN (default 2, at least 2); 0 turns them off. Every 5 until
+ * 2026-11-24 (owner: the homepage numbers and feed "should feel like real time moving"): freehire adds about 100 USD
+ * $100k+ jobs an hour, steadily (8-23 per 10 minutes, measured that day), so a 2-minute run brings a few jobs each time
+ * instead of a batch every 5 minutes. About 10 requests a run, about 7,200 a day; freehire has no daily cap since 2026-11-22.
+ */
+export const DEFAULT_RECENT_EVERY_MIN = 2
 export function freehireRecentEveryMs(env: Record<string, string | undefined> = process.env): number | null {
   const raw = env.FREEHIRE_RECENT_EVERY_MIN?.trim()
   if (raw === '0') return null
-  const minutes = raw ? Number(raw) : 5
-  if (!Number.isFinite(minutes) || minutes <= 0) return 5 * 60_000
-  return Math.max(5, minutes) * 60_000
+  const minutes = raw ? Number(raw) : DEFAULT_RECENT_EVERY_MIN
+  if (!Number.isFinite(minutes) || minutes <= 0) return DEFAULT_RECENT_EVERY_MIN * 60_000
+  return Math.max(DEFAULT_RECENT_EVERY_MIN, minutes) * 60_000
 }
