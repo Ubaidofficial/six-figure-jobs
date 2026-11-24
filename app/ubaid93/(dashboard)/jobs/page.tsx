@@ -3,6 +3,7 @@ import { buildSalaryText } from '../../../../lib/jobs/salary'
 import { prisma } from '../../../../lib/prisma'
 import { PageHead, Pager, intParam, s } from '../ui'
 import JobsTable from './JobsTable'
+import { requireAdmin } from '../requireAdmin'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,7 @@ export type JobRow = {
 const PAGE_SIZE = 50
 
 export default async function AdminJobsPage({ searchParams }: { searchParams?: Promise<Record<string, string | undefined>> }) {
+  await requireAdmin()
   const sp = (await searchParams) || {}
   const page = intParam(sp.page, 1, 1, 10_000)
   const q = (sp.q ?? '').trim().slice(0, 100)

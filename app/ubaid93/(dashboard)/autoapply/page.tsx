@@ -6,6 +6,7 @@ import { autoApplyEnabled, autoApplyLive } from '../../../../lib/autoapply/confi
 import { reasonText } from '../../../../lib/autoapply/reasons'
 import { LEFT_EMPTY, summarizeRuns } from '../../../../lib/autoapply/runReport'
 import { Figures, PageHead, Section, Tabs, s } from '../ui'
+import { requireAdmin } from '../requireAdmin'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,7 @@ const DAY = 24 * 60 * 60 * 1000
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : '–')
 
 export default async function AutoApplyAdminPage({ searchParams }: { searchParams?: Promise<{ days?: string }> }) {
+  await requireAdmin()
   const days = Math.min(Math.max(Number((await searchParams)?.days) || 30, 1), 365)
   let error: string | null = null
   let report: ReturnType<typeof summarizeRuns> | null = null

@@ -4,6 +4,7 @@ import { loadDaily } from '../overview'
 import { TrendChart } from '../charts'
 import { Figures, PageHead, Section, lastDays, s } from '../ui'
 import { BarList, SplitBar, movingAverage } from '../visuals'
+import { requireAdmin } from '../requireAdmin'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,7 @@ const DAY = 24 * 60 * 60 * 1000
 type Row = { jobId: string; clicks: number; title: string; company: string | null; expired: boolean; href: string | null }
 
 export default async function ApplyClicksPage() {
+  await requireAdmin()
   const now = Date.now()
   const since7 = new Date(now - 7 * DAY)
   const since30 = new Date(now - 30 * DAY)

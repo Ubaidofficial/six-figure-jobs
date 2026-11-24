@@ -4,6 +4,7 @@ import { buildSalaryText } from '../../../../lib/jobs/salary'
 import { prisma } from '../../../../lib/prisma'
 import { PageHead, Pager, Tabs, hrefWith, intParam, s } from '../ui'
 import FeedbackList, { type ReportedJob } from './FeedbackList'
+import { requireAdmin } from '../requireAdmin'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,7 @@ const STATUSES = ['new', 'reviewed', 'resolved'] as const
 const PAGE_SIZE = 30
 
 export default async function FeedbackPage({ searchParams }: { searchParams?: Promise<Record<string, string | undefined>> }) {
+  await requireAdmin()
   const sp = (await searchParams) || {}
   const page = intParam(sp.page, 1, 1, 1000)
   const status = (STATUSES as readonly string[]).includes(sp.status ?? '') ? (sp.status as string) : ''

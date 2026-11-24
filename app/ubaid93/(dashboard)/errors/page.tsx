@@ -2,12 +2,14 @@ import { ERROR_WINDOW_DAYS, loadErrorGroups } from './groups'
 import ErrorGroups from './ErrorGroups'
 import { TrendChart } from '../charts'
 import { PageHead, Section, Tabs, lastDays, s } from '../ui'
+import { requireAdmin } from '../requireAdmin'
 
 export const dynamic = 'force-dynamic'
 
 type View = 'open' | 'all' | 'noise'
 
 export default async function ErrorsPage({ searchParams }: { searchParams?: Promise<{ view?: string }> }) {
+  await requireAdmin()
   const raw = (await searchParams)?.view
   const view: View = raw === 'all' || raw === 'noise' ? raw : 'open'
   const days = lastDays(ERROR_WINDOW_DAYS)
