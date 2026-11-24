@@ -345,18 +345,23 @@ describe('freehire jobs whose pay is only in the posting text', () => {
     expect(mapped).toMatchObject({ salaryMin: 150000, salaryMax: 180000 })
     expect(mapped.raw).toBeUndefined()
   })
-  it('reads the no-filter pass in four slices that cover every country once (US, CA/AU/UK, EU, the rest), then remote and worldwide', () => {
+  it('reads the no-filter pass in slices small enough for one query each, over the last 8 hours first seen', () => {
     expect(DESCRIPTION_PAY_MARKETS.every((m: { anyPay?: boolean }) => m.anyPay)).toBe(true)
-    expect(DESCRIPTION_PAY_MARKETS.map((m: { geo: Record<string, string> }) => m.geo)).toEqual([
-      { countries: 'us' },
-      { countries: 'ca,au', regions: 'uk' },
-      { regions: 'eu', countries_exclude: 'us,ca,au', regions_exclude: 'uk' },
-      { countries_exclude: 'us,ca,au', regions_exclude: 'uk,eu' },
-      { work_mode: 'remote' },
-      { regions: 'global' },
+    const geos = DESCRIPTION_PAY_MARKETS.map((m: { geo: Record<string, string> }) => m.geo)
+    // The US in four parts: tech, non-tech with a stated work mode, non-tech without one, and type not stated.
+    expect(geos.slice(0, 4)).toEqual([
+      { countries: 'us', is_tech: 'tech' },
+      { countries: 'us', is_tech: 'non_tech', work_mode: 'remote,hybrid,onsite' },
+      { countries: 'us', is_tech: 'non_tech', work_mode_exclude: 'remote,hybrid,onsite' },
+      { countries: 'us', is_tech_exclude: 'tech,non_tech' },
     ])
-    expect(DESCRIPTION_PAY_MARKETS.map((m: { maxPages?: number }) => m.maxPages)).toEqual([100, 100, 100, 100, 100, 100])
-    // Worldwide jobs are few (6,184 open on 2026-11-22): the slice reads all 30 days every run.
-    expect(DESCRIPTION_PAY_MARKETS[5]).toMatchObject({ lookbackDays: 30 })
+    // Outside the US, CA/AU and the UK only English postings (the quality gate refuses the rest).
+    expect(geos.slice(5, 9).every((g: Record<string, string>) => g.posting_language === 'en')).toBe(true)
+    expect(geos[9]).toEqual({ work_mode: 'remote' })
+    expect(geos[10]).toEqual({ regions: 'global' })
+    const last = DESCRIPTION_PAY_MARKETS[DESCRIPTION_PAY_MARKETS.length - 1]
+    expect(last).toMatchObject({ lookbackDays: 30 })
+    expect(last.windowHours).toBeUndefined()
+    expect(DESCRIPTION_PAY_MARKETS.slice(0, -1).every((m: { windowHours?: number }) => m.windowHours === 8)).toBe(true)
   })
 })

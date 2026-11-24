@@ -15,8 +15,11 @@ async function main() {
   for (const m of markets) {
     console.log(
       `${m.currency}: available=${m.available} fetched=${m.fetched} mappable=${m.mappable}` +
+        (m.tooOld ? ` postedOver30Days=${m.tooOld}` : '') +
         (dryRun ? ` gateRejected=${m.gateRejected}` : '') +
-        ` range=${m.oldest ?? '-'} → ${m.newest ?? '-'}`,
+        // First-seen dates (when freehire found the jobs), not posting dates.
+        ` firstSeen=${m.oldest ?? '-'} → ${m.newest ?? '-'}` +
+        (m.complete ? '' : ' (stopped at the page cap)'),
     )
     for (const s of m.sample) console.log(`    e.g. ${s}`)
   }

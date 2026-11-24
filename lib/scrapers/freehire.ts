@@ -12,7 +12,18 @@ import { readPayFromDescription } from '../jobs/payEvidence'
 import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 import { freehireStructuredLocationText } from './freehireStructured'
-import { companiesToLookUp, freehireCompanyKey, loadKnownCompanies, markWebsiteChecked, WEBSITE_RECHECK_DAYS } from './freehireCompanyWebsites'
+import {
+  companiesToLookUp,
+  freehireCompanyKey,
+  loadKnownCompanies,
+  markWebsiteChecked,
+  saveCompanyProfiles,
+  WEBSITE_RECHECK_DAYS,
+  type CompanyProfile,
+} from './freehireCompanyWebsites'
+import { toSiteSizeBucket } from '../companies/sizeBucket'
+import { decodeJobHtmlEntities } from '../jobs/descriptionCleaning'
+import { cleanJobTitle } from '../jobs/cleanTitle'
 
 const BOARD = 'freehire'
 // The /agent/ variant takes the same filters and returns the same jobs, but each carries its description in full.
@@ -46,6 +57,8 @@ export type FreehireMarket = {
   anyPay?: boolean
   /** Most pages this market reads in one run (default: until the window ends or freehire's 10,000-row limit). */
   maxPages?: number
+  /** Read only the jobs freehire first saw in this many hours, whatever the run's window (the description slices). */
+  windowHours?: number
 }
 
 // Worldwide-remote jobs (freehire's `regions=global`), read over 30 days. The daily 1.5-day window missed most of them
@@ -77,29 +90,43 @@ export const FREEHIRE_MARKETS: ReadonlyArray<FreehireMarket> = [
  * them). Only jobs without freehire pay fields are taken from this pass; mapFreehireJob reads the range with
  * lib/jobs/payEvidence.ts and keeps the sentence.
  *
- * Read in four slices of 100 pages each, the most one query can reach (freehire refuses offset + limit > 10,000).
- * freehire adds about 117,000 jobs a day, so a single worldwide pass saw only the newest 3-5 hours of each window. 78%
- * of the readings are in US dollars (359 of 458 logged, 2026-11-19; then CAD 34, EUR 27, GBP 23, AUD 15). Weekday
- * volumes (2026-11-19): the US about 32,000 jobs a day (100 pages, about 7 hours); Canada, Australia and the UK about
- * 13,600 (about 17 hours); the rest of the world about 72,000, split into the EU (about 37% of it) and everything else
- * (about 63%), roughly 9 and 5 hours each. Until 2026-11-22 the last two slices were one, read for 50 pages (about 1.7
- * hours of a run's 5.5-hour gap), and CA/AU/UK read 50; raised once freehire's daily cap was gone (owner's plan,
- * 2026-11-22). The four slices cover every job exactly once (their totals add up to freehire's: 2026-11-19, and the EU
- * split 2026-11-22: 1,239,552 + 2,144,470 = 3,384,022).
+ * Each slice reads the jobs freehire FIRST SAW in the last DESCRIPTION_WINDOW_HOURS (sort=created_at; runs come about
+ * every 5.5 hours, so the windows overlap), and must stay under freehire's 10,000 rows a query. Until 2026-11-24 the US,
+ * EU and rest-of-world slices each hit that ceiling and read only their newest 3-6 hours (the sync of 2026-11-23 18:48:
+ * EU and rest fetched 10,000 rows covering 6.5 of 18 hours). Volumes measured 2026-11-24 with open_within_days=1, jobs a
+ * day: US 45,358 = tech 6,608 + non-tech 23,867 (remote/hybrid/on-site 5,951, mode not stated 17,916) + type not
+ * stated 14,883; CA/AU/UK in English 15,031; EU in English 18,263; the rest of the world in English 49,476 = tech
+ * 14,781 + non-tech 18,281 + type not stated 16,414; remote 13,797. Outside the US, CA/AU and the UK only English
+ * postings are read: the quality gate refuses the others (non_english), so reading them only cost requests.
+ * At 8 hours every slice is 1,000-6,000 rows, about 530 pages a run in all.
  *
- * Two more slices reach further back for remote and worldwide jobs (owner's choice, 2026-11-22: "more remote and
- * worldwide jobs"). They overlap the four above on purpose; the collection keeps each job once. Remote: freehire had
- * 337,287 open remote jobs and its newest 10,000 reached back 55 hours (a Sunday, 2026-11-22), where the four regional
- * slices see each region's newest hours only. Worldwide (`regions=global`): 6,184 open jobs in all, so the slice reads
- * the whole 30 days, about 62 pages, every run.
+ * Remote and worldwide overlap the others on purpose (owner's choice, 2026-11-22: "more remote and worldwide jobs");
+ * the collection keeps each job once. Worldwide (`regions=global`) is small and reads its whole 30 days every run.
  */
+export const DESCRIPTION_WINDOW_HOURS = 8
+const US = { countries: 'us' }
+const REST = { countries_exclude: 'us,ca,au', regions_exclude: 'uk,eu', posting_language: 'en' }
+const slice = (label: string, geo: Record<string, string>, extra: Partial<FreehireMarket> = {}): FreehireMarket => ({
+  currency: 'ANY',
+  geo,
+  label: `pay in description (${label})`,
+  anyPay: true,
+  maxPages: 100,
+  windowHours: DESCRIPTION_WINDOW_HOURS,
+  ...extra,
+})
 export const DESCRIPTION_PAY_MARKETS: ReadonlyArray<FreehireMarket> = [
-  { currency: 'ANY', geo: { countries: 'us' }, label: 'pay in description (US)', anyPay: true, maxPages: 100 },
-  { currency: 'ANY', geo: { countries: 'ca,au', regions: 'uk' }, label: 'pay in description (CA, AU, UK)', anyPay: true, maxPages: 100 },
-  { currency: 'ANY', geo: { regions: 'eu', countries_exclude: 'us,ca,au', regions_exclude: 'uk' }, label: 'pay in description (EU)', anyPay: true, maxPages: 100 },
-  { currency: 'ANY', geo: { countries_exclude: 'us,ca,au', regions_exclude: 'uk,eu' }, label: 'pay in description (rest)', anyPay: true, maxPages: 100 },
-  { currency: 'ANY', geo: { work_mode: 'remote' }, label: 'pay in description (remote)', anyPay: true, maxPages: 100 },
-  { currency: 'ANY', geo: { regions: 'global' }, label: 'pay in description (worldwide)', anyPay: true, maxPages: 100, lookbackDays: MAX_LISTED_AGE_DAYS },
+  slice('US, tech', { ...US, is_tech: 'tech' }),
+  slice('US, non-tech, mode stated', { ...US, is_tech: 'non_tech', work_mode: 'remote,hybrid,onsite' }),
+  slice('US, non-tech, mode not stated', { ...US, is_tech: 'non_tech', work_mode_exclude: 'remote,hybrid,onsite' }),
+  slice('US, type not stated', { ...US, is_tech_exclude: 'tech,non_tech' }),
+  slice('CA, AU, UK', { countries: 'ca,au', regions: 'uk', posting_language: 'en' }),
+  slice('EU', { regions: 'eu', countries_exclude: 'us,ca,au', regions_exclude: 'uk', posting_language: 'en' }),
+  slice('rest, tech', { ...REST, is_tech: 'tech' }),
+  slice('rest, non-tech', { ...REST, is_tech: 'non_tech' }),
+  slice('rest, type not stated', { ...REST, is_tech_exclude: 'tech,non_tech' }),
+  slice('remote', { work_mode: 'remote' }),
+  { ...slice('worldwide', { regions: 'global' }), windowHours: undefined, lookbackDays: MAX_LISTED_AGE_DAYS },
 ]
 
 export type FreehireJob = {
@@ -116,8 +143,20 @@ export type FreehireJob = {
   countries?: string[] | null
   regions?: string[] | null
   posted_at?: string | null
+  /** When freehire first saw the posting. The sync reads by this date: freehire finds many jobs days after their posting date. */
+  created_at?: string | null
   updated_at?: string | null
   closed_at?: string | null
+  /** The source's last day to apply, inclusive (YYYY-MM-DD or a timestamp); absent when it states none. */
+  application_deadline?: string | null
+  /** Present and true only when the posting says an intermediary publishes it for a client. */
+  via_recruiter?: boolean | null
+  /** Present and true only when the posting states a government security-clearance requirement. */
+  requires_clearance?: boolean | null
+  /** The clearance levels stated ('secret', 'top_secret', 'ts_sci', 'public_trust', 'confidential', 'interim', 'other'). */
+  clearance_levels?: string[] | null
+  /** freehire's ghost-job evidence; `level` reads how strong it is (e.g. 'possible'). */
+  ghost?: { level?: string | null; criteria?: string[] | null } | null
   /** Skill / technology slugs, e.g. ['python', 'react', 'terraform']. */
   skills?: string[] | null
   /** `salary_and_equity`, `equity_only` or `not_stated` (none read, not "no equity"); absent when unknown. */
@@ -125,7 +164,13 @@ export type FreehireJob = {
   /** Benefit slugs, e.g. ['health_insurance', 'unlimited_pto', 'retirement_plan']. */
   perks?: string[] | null
   /** freehire's own freshness verdict; `stale`/`fake_freshness` are old postings with a bumped date. */
-  reality?: { class?: string | null; age_days?: number | null; fake_freshness?: boolean | null } | null
+  reality?: {
+    class?: string | null
+    age_days?: number | null
+    fake_freshness?: boolean | null
+    repost_count?: number | null
+    mass_posting_count?: number | null
+  } | null
   enrichment?: {
     employment_type?: string | null
     salary_min?: number | null
@@ -133,6 +178,13 @@ export type FreehireJob = {
     salary_currency?: string | null
     salary_period?: string | null
     visa_sponsorship?: boolean | null
+    /** 'intern', 'junior', 'middle', 'senior', 'lead', 'staff', 'principal' or 'c_level'. */
+    seniority?: string | null
+    experience_years_min?: number | null
+    /** 'none', 'bachelor', 'master' or 'phd'. */
+    education_level?: string | null
+    /** 'product', 'startup', 'outsource', 'outstaff', 'agency', 'inhouse' or 'government'. */
+    company_type?: string | null
     /** The posting's requirements, one sentence each. (`priority` says "required" even for "preferred" lines, so it is not used.) */
     requirements?: Array<{ text?: string | null; priority?: string | null }> | null
   } | null
@@ -149,6 +201,8 @@ export type FreehireMarketReport = {
   fetched: number
   mappable: number
   gateRejected: number
+  /** Jobs freehire saw in the window but posted more than MAX_LISTED_AGE_DAYS ago (not listed). */
+  tooOld: number
   oldest: string | null
   newest: string | null
   sample: string[]
@@ -165,6 +219,11 @@ export type FreehireSyncOptions = {
   since?: Date
   /** Also read DESCRIPTION_PAY_MARKETS (default true): 200 pages a run, too many for the 5-minute recent pull. */
   withDescriptionPay?: boolean
+}
+
+/** When freehire first saw the job; its posting date when freehire gives no first-seen date. */
+export function firstSeen(job: Pick<FreehireJob, 'created_at' | 'posted_at'>): string | null {
+  return job.created_at || job.posted_at || null
 }
 
 /** freehire tags outbound links with utm_source=freehire.me; drop only that tag. */
@@ -218,10 +277,24 @@ export function isListableByReality(reality: FreehireJob['reality']): boolean {
   return reality.class === 'stale' && typeof reality.age_days === 'number' && reality.age_days <= MAX_LISTED_AGE_DAYS
 }
 
+/**
+ * The posting's own last day to apply, as the moment it ends: a bare date ("2026-12-15") is inclusive, so the end of
+ * that day in UTC. Null when there is none or it cannot be read.
+ */
+export function applicationDeadline(raw: string | null | undefined): Date | null {
+  const v = raw?.trim()
+  if (!v) return null
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T23:59:59.999Z`) : new Date(v)
+  return Number.isFinite(d.getTime()) ? d : null
+}
+
 /** Map a freehire record to the board ingest input, or null if it must not be published. */
-export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
+export function mapFreehireJob(job: FreehireJob, now: number = Date.now()): BoardJobInput | null {
   const e = job.enrichment ?? {}
   if (job.closed_at) return null
+  // A posting whose own deadline has passed takes no more applications.
+  const deadline = applicationDeadline(job.application_deadline)
+  if (deadline && deadline.getTime() < now) return null
   if (!isListableByReality(job.reality)) return null
   // Pay: freehire's own fields when it has any; only when it has NONE does the posting's own sentence stand in (a range
   // read by payEvidence, quoted and verified). Pay freehire has but we cannot use (monthly, an unqueried currency) is
@@ -258,7 +331,8 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
   const repaired = companyName !== given
   return {
     externalId: job.external_id || job.public_slug,
-    title: job.title,
+    // Without "---" chains, the job's own city or pay typed into it (lib/jobs/cleanTitle.ts).
+    title: cleanJobTitle(job.title, { location: job.location }),
     url,
     applyUrl: url,
     rawCompanyName: companyName,
@@ -286,6 +360,8 @@ export function mapFreehireJob(job: FreehireJob): BoardJobInput | null {
     requirements: freehireRequirementTexts(e.requirements),
     visaSponsorship: e.visa_sponsorship === true,
     offersEquity: job.equity === 'salary_and_equity',
+    // The source's deadline becomes the job's expiry and its JobPosting validThrough (else the ingest's 45-day default).
+    validThrough: deadline,
   }
 }
 
@@ -343,7 +419,10 @@ async function fetchPage(market: FreehireMarket, offset: number): Promise<Freehi
             // mapFreehireJob then applies the full rule, since freehire can only filter on the bottom.
             salary_min: getSalaryFloorAnnual(market.currency),
           }),
-      sort: 'posted_at',
+      // Newest first by the day freehire FIRST SAW the job, not its posting date: freehire finds many jobs days after
+      // they were posted, and sorting by posting date put those behind the window, never read (about 800 USD $100k+ jobs
+      // a day, 2026-11-24: of 1,847 first seen in a day, 927 were posted in the last two days).
+      sort: 'created_at',
       order: 'desc',
       limit: PAGE_SIZE,
       offset,
@@ -426,23 +505,27 @@ export type FreehireCollected = {
 
 /** Fetch and map every market without writing anything. */
 export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Promise<FreehireCollected> {
-  const inputs = new Map<string, BoardJobInput>() // paging over posted_at ties can repeat rows
+  const inputs = new Map<string, BoardJobInput>() // paging over created_at ties can repeat rows
   const markets: FreehireMarketReport[] = []
   const errors: string[] = []
   let unmappable = 0
   const cutoff = options.since?.getTime() ?? Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
   for (const market of [...FREEHIRE_MARKETS, ...(options.withDescriptionPay === false ? [] : DESCRIPTION_PAY_MARKETS)]) {
-    // A market with its own window reads at least that far back.
-    const marketCutoff = market.lookbackDays
-      ? Math.min(cutoff, Date.now() - market.lookbackDays * 24 * 60 * 60 * 1000)
-      : cutoff
+    // A market with its own window: the description slices read a fixed number of hours (their volume would pass
+    // freehire's 10,000-row ceiling over a longer window); lookbackDays reads at least that far back.
+    const marketCutoff = market.windowHours
+      ? Date.now() - market.windowHours * 3_600_000
+      : market.lookbackDays
+        ? Math.min(cutoff, Date.now() - market.lookbackDays * 24 * 60 * 60 * 1000)
+        : cutoff
     const report: FreehireMarketReport = {
       currency: market.label ?? market.currency,
       available: 0,
       fetched: 0,
       mappable: 0,
       gateRejected: 0,
+      tooOld: 0,
       oldest: null,
       newest: null,
       sample: [],
@@ -451,8 +534,8 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
     markets.push(report)
 
     try {
-      // Newest first. posted_at ties and bulk refreshes leave the order slightly uneven, so stop only
-      // after two consecutive pages made up entirely of jobs older than the window.
+      // Newest first by first-seen date. Ties and bulk imports leave the order slightly uneven, so stop only after two
+      // consecutive pages made up entirely of jobs older than the window.
       let pages = 0
       let oldPages = 0
       for (let offset = 0; offset < MAX_OFFSET; offset += PAGE_SIZE) {
@@ -469,16 +552,23 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
 
         let oldOnPage = 0
         for (const job of page.data) {
-          if (job.posted_at && new Date(job.posted_at).getTime() < marketCutoff) {
+          const seen = firstSeen(job)
+          if (seen && new Date(seen).getTime() < marketCutoff) {
             oldOnPage++
+            continue
+          }
+          // Read by first-seen date, a job can carry an old posting date: one posted more than MAX_LISTED_AGE_DAYS ago is
+          // not listed (the posting-date window used to keep these out).
+          if (job.posted_at && Date.now() - new Date(job.posted_at).getTime() > MAX_LISTED_AGE_DAYS * 86_400_000) {
+            report.tooOld++
             continue
           }
           report.fetched++
           // The no-filter pass takes only jobs freehire has no pay for; the currency passes above already carry the rest.
           if (market.anyPay && typeof job.enrichment?.salary_min === 'number') continue
-          if (job.posted_at) {
-            report.newest = report.newest && report.newest > job.posted_at ? report.newest : job.posted_at
-            report.oldest = report.oldest && report.oldest < job.posted_at ? report.oldest : job.posted_at
+          if (seen) {
+            report.newest = report.newest && report.newest > seen ? report.newest : seen
+            report.oldest = report.oldest && report.oldest < seen ? report.oldest : seen
           }
 
           const input = mapFreehireJob(job)
@@ -519,21 +609,49 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
 
 const COMPANY_URL = 'https://freehire.me/api/v1/companies'
 
+/** freehire's company record (`data.company`) as the fields a company page uses; empty when it has none of them. */
+export function companyProfileFrom(company: unknown): CompanyProfile {
+  const c = (company && typeof company === 'object' ? company : {}) as Record<string, unknown>
+  const info = (c.company_info && typeof c.company_info === 'object' ? c.company_info : {}) as Record<string, unknown>
+  const text = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? decodeJobHtmlEntities(v.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim().slice(0, max) : undefined)
+  const int = (v: unknown, lo: number, hi: number) => (typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi ? v : undefined)
+  const site = typeof info.website === 'string' ? normalizePublicCompanyWebsite(info.website) : null
+  const cc = typeof c.hq_country === 'string' && /^[a-z]{2}$/i.test(c.hq_country.trim()) ? c.hq_country.trim().toUpperCase() : undefined
+  const sizes = Array.isArray(c.company_sizes) ? c.company_sizes : []
+  const sizeBucket =
+    toSiteSizeBucket(sizes[0]) ??
+    toSiteSizeBucket(info.employee_range) ??
+    (typeof c.employee_count === 'number' ? toSiteSizeBucket(String(c.employee_count)) : null) ??
+    undefined
+  const linkedin = typeof info.linkedin === 'string' && /^https:\/\/([a-z]+\.)?linkedin\.com\/company\//i.test(info.linkedin.trim()) ? info.linkedin.trim() : undefined
+  const description = text(info.description, 2000)
+  return {
+    ...(site ? { website: site } : {}),
+    // Only a real description: freehire's `summary` is often a careers-page line ("Explore our open opportunities").
+    ...(description && description.length >= 40 ? { description } : {}),
+    ...(int(c.year_founded, 1800, new Date().getUTCFullYear()) ? { foundedYear: c.year_founded as number } : {}),
+    ...(int(c.employee_count, 1, 5_000_000) ? { employeeCount: c.employee_count as number } : {}),
+    ...(cc ? { countryCode: cc } : {}),
+    ...(sizeBucket ? { sizeBucket } : {}),
+    ...(linkedin ? { linkedinUrl: linkedin } : {}),
+  }
+}
+
 /**
- * freehire's company records carry the employer's website for roughly a third of companies (the job records carry no
- * company website at all). Returns slug -> website for the ones that have a real company site; a company that is not
- * found, has none, or whose lookup fails is simply absent, so ingestion never depends on it. Paced (3 workers) and
- * honours Retry-After on 429.
+ * freehire's company records: the employer's website (for roughly a third of companies; the job records carry none) and,
+ * since 2026-11-24, the profile a company page shows (companyProfileFrom). Returns slug -> profile for the companies
+ * freehire answered with anything; a company not found or whose lookup fails is simply absent, so ingestion never
+ * depends on it. Paced (3 workers) and honours Retry-After on 429.
  */
-export async function loadFreehireCompanyWebsites(
+export async function loadFreehireCompanies(
   slugs: string[],
   fetchFn: typeof fetch = fetch,
   pauseMs = 150,
   budgetMs = 4 * 60_000,
-  /** Filled with every slug freehire answered for (website or not); one cut short by the time budget or an error is not. */
+  /** Filled with every slug freehire answered for (profile or not); one cut short by the time budget or an error is not. */
   answered?: Set<string>,
-): Promise<Map<string, string>> {
-  const out = new Map<string, string>()
+): Promise<Map<string, CompanyProfile>> {
+  const out = new Map<string, CompanyProfile>()
   // Overall time budget: this is a nice-to-have, so when freehire is slow or rate-limiting we stop looking up more
   // companies (the rest keep their name-based logo) instead of holding up the job ingest behind it.
   const deadline = Date.now() + budgetMs
@@ -562,10 +680,9 @@ export async function loadFreehireCompanyWebsites(
           if (res.status === 404) answered?.add(slug)
           return
         }
-        const json = (await res.json()) as { data?: { company?: { company_info?: { website?: unknown } | null } } }
-        const raw = json?.data?.company?.company_info?.website
-        const site = typeof raw === 'string' ? normalizePublicCompanyWebsite(raw) : null
-        if (site) out.set(slug, site)
+        const json = (await res.json()) as { data?: { company?: unknown } }
+        const profile = companyProfileFrom(json?.data?.company)
+        if (Object.keys(profile).length > 0) out.set(slug, profile)
         answered?.add(slug)
         return
       } catch {
@@ -585,6 +702,18 @@ export async function loadFreehireCompanyWebsites(
   return out
 }
 
+/** slug -> website, for the companies whose freehire record has a real company website. */
+export async function loadFreehireCompanyWebsites(
+  slugs: string[],
+  fetchFn: typeof fetch = fetch,
+  pauseMs = 150,
+  budgetMs = 4 * 60_000,
+  answered?: Set<string>,
+): Promise<Map<string, string>> {
+  const profiles = await loadFreehireCompanies(slugs, fetchFn, pauseMs, budgetMs, answered)
+  return new Map([...profiles].filter(([, p]) => p.website).map(([slug, p]) => [slug, p.website!]))
+}
+
 /** Write already-collected jobs through the normal board ingest (dedupe, priority, salary gate). */
 export async function ingestFreehireJobs(
   inputs: BoardJobInput[],
@@ -597,6 +726,7 @@ export async function ingestFreehireJobs(
   // Companies already holding a website, or asked in the last 30 days, are not asked again
   // (lib/scrapers/freehireCompanyWebsites.ts); they were 400-1,100 requests a run.
   const answeredKeys: string[] = []
+  const profilesToSave: Array<{ key: string; profile: CompanyProfile }> = []
   if (opts.lookUpWebsites !== false) {
     try {
       const keyBySlug = new Map<string, string | null>()
@@ -611,17 +741,20 @@ export async function ingestFreehireJobs(
       }
       const t0 = Date.now()
       const answered = new Set<string>()
-      const sites = await loadFreehireCompanyWebsites(plan.lookUp, fetch, 150, 4 * 60_000, answered)
+      const profiles = await loadFreehireCompanies(plan.lookUp, fetch, 150, 4 * 60_000, answered)
+      const sites = [...profiles.values()].filter((p) => p.website).length
       console.log(
-        `[freehire] company websites: ${sites.size} found for ${plan.lookUp.length} companies asked in ${Math.round((Date.now() - t0) / 1000)}s; ` +
-          `not asked: ${plan.hasWebsite} with a website already, ${plan.checkedRecently} asked in the last ${WEBSITE_RECHECK_DAYS} days`,
+        `[freehire] companies: ${profiles.size} answered with a profile (${sites} with a website) of ${plan.lookUp.length} asked in ${Math.round((Date.now() - t0) / 1000)}s; ` +
+          `not asked: ${plan.hasWebsite} with a website and description already, ${plan.checkedRecently} asked in the last ${WEBSITE_RECHECK_DAYS} days`,
       )
       for (const slug of answered) {
         const key = keyBySlug.get(slug)
         if (key) answeredKeys.push(key)
+        const profile = profiles.get(slug)
+        if (key && profile) profilesToSave.push({ key, profile })
       }
       for (const input of inputs) {
-        const site = input.companyRef ? sites.get(input.companyRef) : undefined
+        const site = input.companyRef ? profiles.get(input.companyRef)?.website : undefined
         if (site && !input.companyWebsiteUrl) input.companyWebsiteUrl = site
       }
     } catch (error) {
@@ -644,10 +777,15 @@ export async function ingestFreehireJobs(
       }
     }),
   )
-  // After the ingest, so a company created in this run is marked too.
+  // After the ingest, so a company created in this run is marked and filled too.
   await markWebsiteChecked([...new Set(answeredKeys)], new Date()).catch((error) =>
     console.warn('[freehire] could not record the website lookups:', error instanceof Error ? error.message.split('\n')[0] : error),
   )
+  if (profilesToSave.length > 0) {
+    await saveCompanyProfiles(profilesToSave)
+      .then((n) => console.log(`[freehire] company profiles: ${n} companies got empty fields filled from freehire`))
+      .catch((error) => console.warn('[freehire] could not save company profiles:', error instanceof Error ? error.message.split('\n')[0] : error))
+  }
   return stats
 }
 

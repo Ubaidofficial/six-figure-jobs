@@ -9,8 +9,8 @@
 // Frugal with freehire's requests (written for the key's old daily quota of 10,000; no daily cap since 2026-11-22): one page of the newest jobs per currency
 // market (about 10 requests a run, about 2,900 a day every 5 minutes; without FREEHIRE_API_KEY in the app these use
 // freehire's public access, 300 requests a minute), no "pay in description" pass (about 200 pages a run)
-// and no company-website lookups; the regular syncs read the same jobs again and fill those in. It reads jobs posted in
-// the last 2 hours, so a late or missed run loses nothing. It goes through the normal ingest (dedupe, salary gate, source
+// and no company-website lookups; the regular syncs read the same jobs again and fill those in. It reads the jobs freehire
+// first saw in the last 2 hours (since 2026-11-24; it read by posting date before), so a late or missed run loses nothing. It goes through the normal ingest (dedupe, salary gate, source
 // priority). One run at a time per server: a call while one runs does nothing.
 import { collectFreehireJobs, ingestFreehireJobs } from './freehire'
 
