@@ -18,6 +18,19 @@
 
 export const SITEMAP_WAVE_COUNT = 8
 
+/** What each wave adds to the sitemap, in words, for the admin console (index = wave; the list above in short). */
+export const SITEMAP_WAVE_ADDS = [
+  '',
+  'home and core pages',
+  'salary bands and blog articles',
+  'role hubs and country pages',
+  'salary guides, remote role pages and the other hubs',
+  'pSEO batch 1 and company pages',
+  'pSEO batch 2',
+  'pSEO batch 3',
+  'pSEO batch 4',
+] as const
+
 export const SALARY_BANDS_WAVE = 2
 export const COUNTRY_WAVE = 3
 export const LONG_TAIL_WAVE = 5

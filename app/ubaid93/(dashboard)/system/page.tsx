@@ -80,10 +80,10 @@ export default async function SystemPage() {
           {checks.map((c) => (
             <li key={c.label} className={s.check}>
               <span className={s.checkLabel}>{c.label}</span>
-              <span>
+              <div>
                 <Status tone={c.tone}>{c.state}</Status>
-                {c.detail ? <span className={s.checkDetail}>{c.detail}</span> : null}
-              </span>
+                {c.detail ? <div className={s.checkNote}>{c.detail}</div> : null}
+              </div>
             </li>
           ))}
         </ul>

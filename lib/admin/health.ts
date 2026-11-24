@@ -5,7 +5,7 @@ import { since } from './timeAgo'
 import { prisma } from '../prisma'
 import { CURSOR_KEY } from '../scrapers/freehireChanges'
 import { getIndexingPhase } from '../seo/indexingPhase'
-import { getSitemapWave, SITEMAP_WAVE_COUNT } from '../seo/sitemapWaves'
+import { getSitemapWave, SITEMAP_WAVE_ADDS, SITEMAP_WAVE_COUNT } from '../seo/sitemapWaves'
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'muted'
 export type CheckKey = 'live' | 'arrivals' | 'closings' | 'indexing' | 'errors' | 'search'
@@ -154,8 +154,15 @@ export function evaluateHealth(f: HealthFacts, now: number = Date.now()): Check[
       key: 'search',
       label: 'Search engines',
       tone: 'muted',
-      state: `Indexing phase ${f.phase} · sitemap wave ${f.wave} of ${SITEMAP_WAVE_COUNT}`,
-      detail: 'SITEMAP_WAVE in Openship',
+      // The wave is what the sitemap submits now (SITEMAP_WAVE); the phase decides whether job pages are submitted
+      // (INDEXING_PHASE; from 2, sitemap-jobs.xml).
+      state: `Sitemap wave ${f.wave} of ${SITEMAP_WAVE_COUNT} live: up to ${SITEMAP_WAVE_ADDS[f.wave]}`,
+      detail: [
+        f.wave < SITEMAP_WAVE_COUNT
+          ? `Next, wave ${f.wave + 1}: ${SITEMAP_WAVE_ADDS[f.wave + 1]}. Raise SITEMAP_WAVE in Openship once Search Console shows most of wave ${f.wave} indexed.`
+          : 'Every wave is live.',
+        Number(f.phase) >= 2 ? `Job pages are submitted (indexing phase ${f.phase}).` : 'Job pages are not submitted yet (indexing phase 1).',
+      ].join(' '),
     },
   ]
 }
