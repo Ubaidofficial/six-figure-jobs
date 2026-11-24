@@ -24,21 +24,29 @@ async function load(): Promise<string[]> {
   return parse(row?.value)
 }
 
-async function save(ids: string[]): Promise<void> {
-  const value = JSON.stringify(ids.slice(-MAX_IDS))
-  await prisma.siteConfig.upsert({ where: { key: ADMIN_EXPIRED_KEY }, update: { value }, create: { key: ADMIN_EXPIRED_KEY, value } })
-  cache = { at: Date.now(), ids: new Set(ids.slice(-MAX_IDS)) }
+/**
+ * Read, change and write the list under a row lock, so two admin actions at once (two tabs, "Expire" on several jobs)
+ * cannot each write a list without the other's id.
+ */
+async function updateIds(change: (ids: string[]) => string[]): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    // Create the row if missing without racing another first write (Prisma's upsert is a read then a write).
+    await tx.$executeRaw`INSERT INTO "SiteConfig" ("key", "value", "updatedAt") VALUES (${ADMIN_EXPIRED_KEY}, '[]', now()) ON CONFLICT ("key") DO NOTHING`
+    const rows = await tx.$queryRaw<Array<{ value: string }>>`SELECT "value" FROM "SiteConfig" WHERE "key" = ${ADMIN_EXPIRED_KEY} FOR UPDATE`
+    const before = parse(rows[0]?.value)
+    const after = change(before).slice(-MAX_IDS)
+    if (after.length === before.length && after.every((x, i) => x === before[i])) return
+    await tx.siteConfig.update({ where: { key: ADMIN_EXPIRED_KEY }, data: { value: JSON.stringify(after) } })
+  })
+  cache = null
 }
 
 export async function markAdminExpired(id: string): Promise<void> {
-  const ids = (await load()).filter((x) => x !== id)
-  ids.push(id)
-  await save(ids)
+  await updateIds((ids) => [...ids.filter((x) => x !== id), id])
 }
 
 export async function unmarkAdminExpired(id: string): Promise<void> {
-  const ids = await load()
-  if (ids.includes(id)) await save(ids.filter((x) => x !== id))
+  await updateIds((ids) => ids.filter((x) => x !== id))
 }
 
 /** True when the owner expired this job by hand. Read at most every 5 minutes; a failure counts as "no". */

@@ -1,5 +1,6 @@
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../../lib/jobs/salary'
+import { memoAsync } from '../../../../lib/cache/memo'
 import { prisma } from '../../../../lib/prisma'
 import { PageHead, Pager, intParam, s } from '../ui'
 import JobsTable from './JobsTable'
@@ -19,7 +20,6 @@ export type JobRow = {
   isExpired: boolean
   posted: string
   href: string
-  applyUrl: string | null
 }
 
 const PAGE_SIZE = 50
@@ -43,14 +43,17 @@ export default async function AdminJobsPage({ searchParams }: { searchParams?: P
       select: {
         id: true, shortId: true, title: true, company: true, source: true, locationRaw: true, remoteMode: true,
         minAnnual: true, maxAnnual: true, currency: true, salaryMin: true, salaryMax: true, salaryCurrency: true,
-        salaryPeriod: true, isExpired: true, postedAt: true, createdAt: true, applyUrl: true,
+        salaryPeriod: true, isExpired: true, postedAt: true, createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
     prisma.job.count({ where }),
-    prisma.job.groupBy({ by: ['source'], _count: { id: true }, orderBy: { _count: { id: 'desc' } }, take: 30 }),
+    // The source menu: a count over the whole table, so read at most every 10 minutes (it changes slowly).
+    memoAsync('admin:job-sources', 10 * 60_000, () =>
+      prisma.job.groupBy({ by: ['source'], _count: { id: true }, orderBy: { _count: { id: 'desc' } }, take: 30 }),
+    ),
   ])
 
   const rows: JobRow[] = jobs.map((j) => ({
@@ -64,7 +67,6 @@ export default async function AdminJobsPage({ searchParams }: { searchParams?: P
     isExpired: j.isExpired,
     posted: (j.postedAt ?? j.createdAt).toISOString().slice(0, 10),
     href: buildJobSlugHref(j),
-    applyUrl: j.applyUrl,
   }))
 
   return (

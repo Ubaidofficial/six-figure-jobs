@@ -21,7 +21,8 @@ export function niceTicks(max: number): number[] {
   if (max <= 0) return [0, 1]
   const rough = max / 3
   const mag = 10 ** Math.floor(Math.log10(rough))
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((x) => x >= rough) ?? 10 * mag
+  // Every chart here counts things, so steps are whole numbers (a max of 1 gave 0, 0.5, 1; a max of 7 gave 2.5 steps).
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((x) => x >= rough && Number.isInteger(x)) ?? Math.max(1, 10 * mag)
   const ticks: number[] = []
   for (let v = 0; v <= max + step * 0.001; v += step) ticks.push(Math.round(v * 1000) / 1000)
   if (ticks[ticks.length - 1] < max) ticks.push(ticks[ticks.length - 1] + step)
@@ -190,7 +191,7 @@ export function TrendChart({ days, series, height = 180, label }: { days: string
             <tr key={d}>
               <td>{d}</td>
               {series.map((sr) => (
-                <td key={sr.label}>{sr.values[i] ?? 0}</td>
+                <td key={sr.label}>{(sr.values[i] ?? 0).toLocaleString('en-US', { maximumFractionDigits: 1 })}</td>
               ))}
             </tr>
           ))}

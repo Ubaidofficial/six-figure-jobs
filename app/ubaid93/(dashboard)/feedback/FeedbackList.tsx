@@ -98,8 +98,10 @@ export default function FeedbackList({ items, jobs }: { items: Item[]; jobs: Rec
       ) : null}
       <ActionError message={failed} />
       <ul className={s.checks}>
-        {items.map((item) => {
+        {items.map((item, i) => {
           const job = item.jobId ? jobs[item.jobId] : undefined
+          // A job with several reports in this list gets its card (and its actions) once, on the newest report.
+          const shownAbove = Boolean(item.jobId) && items.slice(0, i).some((other) => other.jobId === item.jobId)
           return (
             <li key={item.id} className={s.check} style={{ gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'start' }}>
               <div style={{ minWidth: 0 }}>
@@ -114,7 +116,9 @@ export default function FeedbackList({ items, jobs }: { items: Item[]; jobs: Rec
                   {item.jobId ? reportText(item.message) : item.message}
                 </p>
 
-                {item.jobId ? (
+                {item.jobId && shownAbove && job ? (
+                  <p className={s.cellSub}>Same job as above: {job.title}</p>
+                ) : item.jobId ? (
                   job ? (
                     <div className={s.notice} style={{ marginTop: 10, display: 'grid', gap: 8 }}>
                       <div>

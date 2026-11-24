@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
+import { forgetMemo } from '../../../../lib/cache/memo'
 
 import { getAdminSession } from '../../../../lib/admin/auth'
 import { markAdminExpired, unmarkAdminExpired } from '../../../../lib/admin/adminExpired'
 import { expireJobsByIds } from '../../../../lib/jobs/expiry'
 import { buildSalaryText } from '../../../../lib/jobs/salary'
+import { validateHighSalaryEligibility } from '../../../../lib/normalizers/salary'
 import { prisma } from '../../../../lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -55,17 +57,20 @@ export async function PATCH(req: Request) {
   if (data.isExpired === true) {
     await expireJobsByIds([id])
     await markAdminExpired(id)
+    forgetMemo('admin:review-counts')
     return NextResponse.json({ ok: true })
   }
   if (data.isExpired === false) {
     await prisma.job.update({ where: { id }, data: { isExpired: false, validThrough: null, expiresAt: null } })
     await unmarkAdminExpired(id)
+    forgetMemo('admin:review-counts')
     return NextResponse.json({ ok: true })
   }
 
   // "Pay is right" in the review queue: the import flags pay over $600k a year and does not flag it again once set.
   if (data.needsReview === false && Object.keys(data).length === 1) {
     await prisma.job.update({ where: { id }, data: { needsReview: false } })
+    forgetMemo('admin:review-counts')
     return NextResponse.json({ ok: true })
   }
 
@@ -89,6 +94,33 @@ export async function PATCH(req: Request) {
   }
   if (Object.keys(update).length === 0) return NextResponse.json({ error: 'Nothing to save' }, { status: 400 })
 
+  // A new yearly range goes through the import's own pay rules (lib/normalizers/salary.ts), so the job is listed, or not,
+  // as if a source had stated that pay: the listings show only jobs whose pay is validated as six figures. The owner's
+  // figure is trusted like an ATS's.
+  if ('minAnnual' in update || 'maxAnnual' in update || 'currency' in update) {
+    const job = await prisma.job.findUnique({ where: { id }, select: { title: true, minAnnual: true, maxAnnual: true, currency: true } })
+    if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+    const minAnnual = ('minAnnual' in update ? update.minAnnual : job.minAnnual) as bigint | null
+    const maxAnnual = ('maxAnnual' in update ? update.maxAnnual : job.maxAnnual) as bigint | null
+    const currency = ('currency' in update ? update.currency : job.currency) as string | null
+    const v = validateHighSalaryEligibility({
+      normalized: { minAnnual, maxAnnual, currency, interval: 'year', isHighSalary: false },
+      source: 'ats',
+      title: (update.title as string | undefined) ?? job.title,
+    })
+    Object.assign(update, {
+      isHighSalary: v.salaryValidated,
+      salaryValidated: v.salaryValidated,
+      salaryConfidence: v.salaryConfidence,
+      salaryParseReason: v.salaryParseReason,
+      salaryNormalizedAt: v.salaryNormalizedAt,
+      salaryRejectedAt: v.salaryRejectedAt ?? null,
+      salaryRejectedReason: v.salaryRejectedReason ?? null,
+    })
+  }
+
   await prisma.job.update({ where: { id }, data: update })
+  // The review queue's counts in the navigation, so they are right on the next page.
+  forgetMemo('admin:review-counts')
   return NextResponse.json({ ok: true })
 }

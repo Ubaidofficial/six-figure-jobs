@@ -29,7 +29,7 @@ One person runs the site. The console should answer, in this order:
 | Group | Page | What it shows |
 |---|---|---|
 | Monitor | Overview | Live / added / expired / clicks / subscribers; four health checks with a state and age; "Needs a look"; jobs added vs expired per day and apply clicks per day (14 days). |
-| | System | The same checks; every source with live jobs, added in 24 h and 7 days, and when it last added a job; Google Indexing queue by status with the latest failures; feature switches (on/off only, never values); users and subscriptions; a note on the old scraper. |
+| | System | The same checks; every source with live jobs, added in 24 h and 7 days, and when it last added a job; Google Indexing queue by status with the latest failures; feature switches (on/off only, never values); users and subscriptions. |
 | | Errors | One row per issue (same message, long numbers ignored): reports, last and first seen, pages, browsers, latest stack. Open / All / Browser noise. Resolve or reopen a whole issue. |
 | Content | Jobs | Search, source and status filters kept across pages; pay as the job page shows it; title links to the public page; edit drawer loads the job on open, previews the description in a sandboxed iframe, explains which pay fields the page uses. Expire uses the same path as the automatic checks. |
 | | Sponsors | The two slots with their live state ("Showing until …", "Not shown: no name", "Ended …"), the link visitors get, save and clear. `/ubaid93/config` redirects here. |
@@ -112,11 +112,10 @@ Where they appear:
 ## Next, not built yet (each needs the owner's go-ahead)
 
 1. ~~Keep admin visits out of analytics~~ (done 2026-11-24, PR #231). The owner's visits to public pages still count.
-2. **Wrong-salary fixes that reach the page.** The page shows `minAnnual`/`maxAnnual` (read at import), so editing pay
-   in the console changes only the fallback. A proper fix writes the yearly range and recomputes the salary flags
-   (`isHundredKLocal`, `isHighSalary`) through the ingest's own rules.
-3. **Reports to action.** Link job reports (wrong salary, fake job, recruiter posting) to the job, with one-click expire
-   or edit.
+2. ~~Wrong-salary fixes that reach the page~~ (done 2026-11-24: the drawer edits the yearly range, and the API runs it
+   through `validateHighSalaryEligibility`, setting `isHighSalary` / `salaryValidated` as the import would;
+   `isHundredKLocal` is not used by the import, which always writes false).
+3. ~~Reports to action~~ (done 2026-11-24, PR #232).
 4. **Audit log** of admin actions (who expired or edited what, when). Needs a new table and migration.
 5. **Search Console in the console**: indexed share of the current sitemap wave, so raising `SITEMAP_WAVE` is a
    decision made from one screen.

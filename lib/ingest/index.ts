@@ -253,7 +253,9 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
     }
 
     // A job the owner expired by hand stays expired, even when its source still lists it (lib/admin/adminExpired.ts).
-    if (existing.isExpired && (await isAdminExpired(existing.id))) {
+    // One found live was reactivated in a race (a sync that read it just before the owner's Expire): expire it again.
+    if (await isAdminExpired(existing.id)) {
+      if (!existing.isExpired) await prisma.job.update({ where: { id: existing.id }, data: { isExpired: true } })
       return { status: 'skipped', reason: 'expired-by-admin', jobId: existing.id, dedupeKey: existing.dedupeKey ?? undefined }
     }
 

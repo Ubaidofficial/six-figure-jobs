@@ -57,8 +57,9 @@ export default async function AdminOverview() {
   // Live jobs at the end of each day, walked back from today: minus the jobs added after that day, plus the ones
   // expired after it. Close enough for a trend (a job reopened after expiry is counted once).
   const liveByDay = days.map((_, i) => live - sum(daily.added.slice(i + 1)) + sum(daily.expired.slice(i + 1)))
-  const last14 = (a: number[]) => a.slice(-14)
-  // Flows (added, expired, clicks) are charted over complete days only: today's partial count would look like a drop.
+  // Flows (added, expired, clicks) are charted and summed over complete days only: today's partial count would look like
+  // a drop. The 14 days before today.
+  const last14 = (a: number[]) => a.slice(-15, -1)
   const full = days.slice(0, -1)
   const modeCount = (m: string | null) => modes.filter((r) => r.remoteMode === m).reduce((n, r) => n + r._count._all, 0)
   const known = ['remote', 'hybrid', 'onsite']

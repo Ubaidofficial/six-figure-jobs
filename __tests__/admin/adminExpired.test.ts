@@ -63,6 +63,15 @@ it('keeps a job expired by hand expired when the source lists it again', async (
   expect(result.updated).toBe(0)
 })
 
+it('expires again a job marked by hand that a racing sync left live', async () => {
+  configFind.mockResolvedValue({ key: 'admin.expired.jobIds', value: JSON.stringify(['ats:greenhouse:1']) })
+  findMany.mockResolvedValue([{ ...stored, isExpired: false }])
+  const result = await upsertJobsForCompanyFromAts(company, [raw])
+  expect(update).toHaveBeenCalledTimes(1)
+  expect(update.mock.calls[0][0]).toEqual({ where: { id: 'ats:greenhouse:1' }, data: { isExpired: true } })
+  expect(result.updated).toBe(0)
+})
+
 it('still reactivates a job the checks expired', async () => {
   configFind.mockResolvedValue(null)
   const result = await upsertJobsForCompanyFromAts(company, [raw])

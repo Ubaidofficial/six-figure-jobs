@@ -52,7 +52,8 @@ export default function ReviewTable({ rows, kind }: { rows: ReviewRow[]; kind: '
             <tr>
               <th>Job</th>
               <th>Pay shown</th>
-              <th>Why</th>
+              {/* On the pay tab every row's reason is the tab itself. */}
+              {kind === 'titles' ? <th>Why</th> : null}
               <th>Posted</th>
               <th />
             </tr>
@@ -69,7 +70,7 @@ export default function ReviewTable({ rows, kind }: { rows: ReviewRow[]; kind: '
                 <td className={s.mono} style={{ whiteSpace: 'nowrap' }}>
                   {r.pay ?? <span className={s.dim}>not shown</span>}
                 </td>
-                <td className={s.dim}>{r.reasons.join(', ') || 'odd title'}</td>
+                {kind === 'titles' ? <td className={s.dim}>{r.reasons.join(', ') || 'odd title'}</td> : null}
                 <td className={s.mono}>{r.posted}</td>
                 <td>
                   <div className={s.actions}>

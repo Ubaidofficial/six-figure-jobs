@@ -80,3 +80,8 @@ export function __clearMemoForTests() {
   store.clear()
   inFlight.clear()
 }
+
+/** Drop one entry, so the next read loads it again (the admin console after an action changes the count it caches). */
+export function forgetMemo(key: string) {
+  store.delete(key)
+}
