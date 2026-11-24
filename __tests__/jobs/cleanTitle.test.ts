@@ -9,6 +9,8 @@ describe('cleanJobTitle', () => {
     // Live, 2026-11-24 dry run: the pay went but "to" stayed.
     ['Audit Senior (Non Profit OR For Profit) - Public - to $120k', null, 'Audit Senior (Non Profit OR For Profit) - Public'],
     ['Engineering Manager - from $150k', null, 'Engineering Manager'],
+    ['AI Engineer South London Hybrid £100-150k', null, 'AI Engineer South London Hybrid'],
+    ['Data Engineer - Berlin - €90,000', null, 'Data Engineer - Berlin'],
     ['Family Nurse Practitioner – Outpatient Primary Care | Connecticut | $120K–$145K+ Base', null, 'Family Nurse Practitioner – Outpatient Primary Care | Connecticut'],
     ['Firmware / HW Engineering Manager (Austin): $180-200K', null, 'Firmware / HW Engineering Manager (Austin)'],
     ['Financial Controller - 100k-140k', null, 'Financial Controller'],

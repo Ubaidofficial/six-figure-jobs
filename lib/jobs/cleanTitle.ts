@@ -4,13 +4,14 @@
 // end "(150K-200K)" or "Los Angeles 160K". The title shows on the job page (H1, <title>) and in its JobPosting, so this
 // is an SEO change: it is precise rather than thorough, and a title it cannot make better is returned as it was.
 
-// A pay amount: "$120k", "$120,000", "120K", "$1.2M"; with an optional range and "+" / "/yr".
-const AMOUNT = String.raw`\$?\d{2,3}(?:[.,]\d{3})*(?:\.\d+)?\s?[kKmM]?`
+// A pay amount: "$120k", "£100k", "€90,000", "120K", "$1.2M"; with an optional range and "+" / "/yr". (Pounds and euros
+// since the 2026-11-24 dry run: "AI Engineer South London Hybrid £100-150k" lost only "-150k".)
+const AMOUNT = String.raw`[$£€]?\d{2,3}(?:[.,]\d{3})*(?:\.\d+)?\s?[kKmM]?`
 // "to $120k" and "from $150k" are pay too (the 2026-11-24 dry run left "Audit Senior ... - Public - to").
 const PAY = String.raw`(?:(?:up\s+)?to\s+|from\s+)?${AMOUNT}(?:\s?(?:-|–|to)\s?${AMOUNT})?\+?(?:\s?(?:\/\s?(?:yr|year)|per year|a year|base|DOE))?`
 /** A whole segment that is only pay. A bare number needs a "$" or a "k" to count ("2025652" is a requisition id). */
 const PAY_ONLY = new RegExp(String.raw`^${PAY}$`, 'i')
-const HAS_PAY_MARK = /\$|\d\s?[kKmM]\b/
+const HAS_PAY_MARK = /[$£€]|\d\s?[kKmM]\b/
 
 function isPay(segment: string): boolean {
   const s = segment.trim()
