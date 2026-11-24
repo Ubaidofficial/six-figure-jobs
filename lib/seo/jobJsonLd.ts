@@ -190,6 +190,14 @@ function buildApplicantLocationRequirements(job: any): any | undefined {
   }
 
   const explicitCountry = normalizeCountryCode(job.countryCode)
+
+  // "Europe or US" is open in Europe and the United States. A stored country the text names does not narrow it to that
+  // country alone; one the text does not name still wins.
+  const regionsOrCountries = regionsOrCountriesCodes(job.locationRaw)
+  if (regionsOrCountries && (!explicitCountry || regionsOrCountries.includes(explicitCountry))) {
+    return regionsOrCountries.map(buildCountryRequirement)
+  }
+
   if (explicitCountry) {
     return buildCountryRequirement(explicitCountry)
   }
@@ -272,11 +280,66 @@ function parseRemoteRegionApplicantRequirements(raw: string): any | undefined {
  * (Kosovo's XK has no ISO code, so no name Google would know). Undefined for a single country or an unknown region.
  */
 function regionCountryRequirements(slug: string): any[] | undefined {
+  return regionCountryCodes(slug)?.map(buildCountryRequirement)
+}
+
+function regionCountryCodes(slug: string): string[] | undefined {
   const countries = remoteRegionDef(slug)?.countries ?? EXTRA_REGIONS[slug]
   if (!countries || countries.length < 2) return undefined
   // Not the countries an employer cannot lawfully hire in (EXCLUDED_ELIGIBLE_COUNTRIES), the same rule as a worldwide job.
   const codes = countries.filter((code) => normalizeCountryCode(code) && !EXCLUDED_ELIGIBLE_COUNTRIES.has(code))
-  return codes.length >= 2 ? codes.map(buildCountryRequirement) : undefined
+  return codes.length >= 2 ? codes : undefined
+}
+
+const REGION_WORDS: Record<string, string> = {
+  emea: 'emea',
+  europe: 'europe',
+  apac: 'apac',
+  'asia pacific': 'apac',
+  'asia-pacific': 'apac',
+  'middle east': 'middle-east',
+  'north america': 'north-america',
+  americas: 'americas',
+}
+
+/**
+ * The regions and countries a location text lists when it lists nothing else ("Europe or US", "Remote (US/Canada)",
+ * "United States"), or null. A part that is neither ("Eastern Europe", "Asia", "Berlin") makes the whole text null.
+ */
+function regionsAndCountriesOnly(raw: unknown): { regions: string[]; countries: string[] } | null {
+  if (typeof raw !== 'string') return null
+  const text = raw
+    .replace(/\bremote\b/gi, ' ')
+    .replace(/[()]/g, ' ')
+    .replace(/^[\s\-–:,]+|[\s\-–:,]+$/g, '')
+  const parts = text
+    .split(/\s*(?:[,;/&|]|\s[-–]\s|\bor\b|\band\b)\s*/i)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (parts.length === 0) return null
+  const regions: string[] = []
+  const countries: string[] = []
+  for (const part of parts) {
+    const region = REGION_WORDS[part.toLowerCase().replace(/\s+/g, ' ')]
+    const country = region ? null : countryOnly(part) ? countryFromText(part) : null
+    if (region) regions.push(region)
+    else if (country) countries.push(country)
+    else return null
+  }
+  return { regions, countries }
+}
+
+/** "Europe or US": every country of the named regions and the named countries, or undefined when the text is not that. */
+function regionsOrCountriesCodes(raw: unknown): string[] | undefined {
+  const listed = regionsAndCountriesOnly(raw)
+  if (!listed || listed.regions.length === 0 || listed.countries.length === 0) return undefined
+  const codes = new Set<string>(listed.countries)
+  for (const slug of listed.regions) {
+    const regionCodes = regionCountryCodes(slug)
+    if (!regionCodes) return undefined
+    for (const code of regionCodes) codes.add(code)
+  }
+  return [...codes]
 }
 
 const EXTRA_REGIONS: Record<string, readonly string[]> = { 'north-america': NORTH_AMERICA_REMOTE, americas: AMERICAS }
@@ -531,10 +594,12 @@ function buildCountryFallbackLocation(job: any): any | undefined {
 
 function hasPhysicalWorkplace(job: any): boolean {
   if (job.remoteMode === 'hybrid' || job.remoteMode === 'onsite') return true
-  if (typeof job.city === 'string' && job.city.trim()) return true
+  if (typeof job.city === 'string' && job.city.trim() && !regionsAndCountriesOnly(job.city)) return true
 
   const locationRaw = typeof job.locationRaw === 'string' ? job.locationRaw.trim().toLowerCase() : ''
   if (!locationRaw) return false
+  // "United States" or "Europe or US" on a remote job is where applicants may live, not an office.
+  if (regionsAndCountriesOnly(locationRaw)) return false
 
   return !/^(remote|work from home|worldwide|global|anywhere)(\b|$)/i.test(locationRaw)
 }
