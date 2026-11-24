@@ -5,12 +5,14 @@ import { buildSalaryText } from '../../../../lib/jobs/salary'
 import { prisma } from '../../../../lib/prisma'
 import { PageHead, Tabs, s } from '../ui'
 import ReviewTable, { type ReviewRow } from './ReviewTable'
+import { requireAdmin } from '../requireAdmin'
 
 export const dynamic = 'force-dynamic'
 
 const LIMIT = 100
 
 export default async function ReviewPage({ searchParams }: { searchParams?: Promise<{ kind?: string }> }) {
+  await requireAdmin()
   const kind: ReviewKind = (await searchParams)?.kind === 'titles' ? 'titles' : 'pay'
   const [counts, ids] = await Promise.all([countReviewQueue(), loadReviewIds(kind, LIMIT)])
   const jobs = await prisma.job.findMany({

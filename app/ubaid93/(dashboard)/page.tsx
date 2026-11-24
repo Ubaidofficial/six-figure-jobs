@@ -8,12 +8,14 @@ import { loadDaily, loadHealthChecks } from './overview'
 import { TrendChart } from './charts'
 import { Figures, PageHead, Section, Status, lastDays, s } from './ui'
 import { BarList, SplitBar, movingAverage } from './visuals'
+import { requireAdmin } from './requireAdmin'
 
 export const dynamic = 'force-dynamic'
 
 const DAY = 86_400_000
 
 export default async function AdminOverview() {
+  await requireAdmin()
   const now = Date.now()
   const days = lastDays(30)
   const since24h = new Date(now - DAY)

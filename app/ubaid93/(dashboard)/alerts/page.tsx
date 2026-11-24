@@ -5,12 +5,14 @@ import { alertsEnabled } from '../../../../lib/alerts/config'
 import { TrendChart } from '../charts'
 import { Figures, PageHead, Section, lastDays, s, stamp as date } from '../ui'
 import { BarList, SplitBar } from '../visuals'
+import { requireAdmin } from '../requireAdmin'
 
 export const dynamic = 'force-dynamic'
 
 const DAY = 24 * 60 * 60 * 1000
 
 export default async function AlertsAdminPage() {
+  await requireAdmin()
   const since7 = new Date(Date.now() - 7 * DAY)
   const since30 = new Date(Date.now() - 30 * DAY)
 

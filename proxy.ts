@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { checkJobAvailability } from './lib/jobs/jobAvailabilityCheck'
 import { guardJobPage } from './lib/security/scrapeGuard'
 import { canonicalHostFor, getSiteUrl } from './lib/seo/site'
+import { sessionAccount, verifySessionToken } from './lib/admin/session'
 
 // Next.js 16 `proxy.ts` always runs in the Node.js runtime (no `runtime`
 // override allowed — that errors at build time). Node access is what lets us
@@ -177,8 +178,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // The cookie must carry a valid, unexpired signature that names an account, not merely exist (found 2026-11-24: any
+  // value passed here, and a client-router request can make Next skip the dashboard layout's session check, so a page
+  // could render for a forged cookie). Each admin page also checks the full session itself (requireAdmin).
   const token = request.cookies.get('admin_session')?.value
-  if (!token) {
+  if (!token || !verifySessionToken(token) || !sessionAccount(token)) {
     return NextResponse.redirect(new URL(`${ADMIN_ROOT}/login`, request.url))
   }
 

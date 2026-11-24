@@ -10,12 +10,14 @@ import { loadHealthChecks } from '../overview'
 import { PageHead, Section, Status, ago, lastDays, s, stamp } from '../ui'
 import { Sparkline } from '../visuals'
 import TestAlertButton from './TestAlertButton'
+import { requireAdmin } from '../requireAdmin'
 
 export const dynamic = 'force-dynamic'
 
 type SourceRow = { source: string; live: number; added24h: number; added7d: number; newest: Date | null }
 
 export default async function SystemPage() {
+  await requireAdmin()
   const now = Date.now()
   const days14 = lastDays(14)
   const [checks, sources, queue, failures, lastScrape, stuckScrapes, users, subs, alertRow, perDay] = await Promise.all([
