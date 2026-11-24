@@ -6,6 +6,11 @@ describe('cleanJobTitle', () => {
     ['Attorney---Commercial Real Estate---Charlotte---$120k-$180k', 'Charlotte, NC', 'Attorney - Commercial Real Estate'],
     ['Sr. Attorney---Tax Attorney---Charlotte---$180k-$225k', 'Charlotte, NC', 'Sr. Attorney - Tax Attorney'],
     ['Staff Engineer - Payments (150K-200K)', null, 'Staff Engineer - Payments'],
+    // Live, 2026-11-24 dry run: the pay went but "to" stayed.
+    ['Audit Senior (Non Profit OR For Profit) - Public - to $120k', null, 'Audit Senior (Non Profit OR For Profit) - Public'],
+    ['Engineering Manager - from $150k', null, 'Engineering Manager'],
+    ['Family Nurse Practitioner – Outpatient Primary Care | Connecticut | $120K–$145K+ Base', null, 'Family Nurse Practitioner – Outpatient Primary Care | Connecticut'],
+    ['Firmware / HW Engineering Manager (Austin): $180-200K', null, 'Firmware / HW Engineering Manager (Austin)'],
     ['Financial Controller - 100k-140k', null, 'Financial Controller'],
     ['Attorney (Insurance Coverage) Los Angeles 160K', null, 'Attorney (Insurance Coverage) Los Angeles'],
     ['Senior Product Manager [$180k + equity]', null, 'Senior Product Manager'],

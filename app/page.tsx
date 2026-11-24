@@ -31,7 +31,7 @@ import { LiveJobFeed } from '@/components/home/LiveJobFeed'
 import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import { NewRolesStrip } from '@/components/home/NewRolesStrip'
 import { SiteStatsStrip } from '@/components/home/SiteStatsStrip'
-import { buildFeedItems } from '@/lib/jobs/latestFeed'
+import { buildFeedItems, loadLatestFeed } from '@/lib/jobs/latestFeed'
 import {
   FeaturedCompaniesCarousel,
   type FeaturedCompany,
@@ -510,8 +510,11 @@ async function loadHomePageData() {
   const jobs = jobsData.jobs as JobWithCompany[]
   const newestPostedAt = jobs[0]?.postedAt ?? jobs[0]?.createdAt ?? null
 
-  // The live "Latest" list: the newest jobs we added (real data), rendered here and refreshed in the browser.
-  const feedItems = buildFeedItems(jobs)
+  // The live "Latest" list: the jobs we added most recently (lib/jobs/latestFeed.ts, the same list the browser then polls),
+  // rendered here and refreshed in the browser. Falls back to the homepage's own newest jobs if that load fails.
+  const latestFeed = await loadLatestFeed().catch(() => null)
+  const feedItems = latestFeed?.items.length ? latestFeed.items : buildFeedItems(jobs)
+  const feedAddedLastHour = latestFeed?.addedLastHour ?? null
   const salaryTiers: SalaryTier[] = salaryBandCounts.map(({ slug, count }) => ({
     slug,
     label: SALARY_TIERS[slug].rangeLabel,
@@ -588,7 +591,7 @@ async function loadHomePageData() {
       : withJobs
   ).slice(0, 6)
 
-  return { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, newRolesCompanies, sponsors, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles }
+  return { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, feedAddedLastHour, newRolesCompanies, sponsors, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles }
 }
 
 /**
@@ -609,7 +612,7 @@ async function loadDirectoryCompanies(): Promise<Array<{ slug: string; name: str
 export default async function HomePage() {
   try {
     const directoryCompanies = await loadDirectoryCompanies()
-    const { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, newRolesCompanies, sponsors, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles } = await memoAsync('home.page.data', DEFAULT_TTL_MS, loadHomePageData)
+    const { stats, newestPostedAt, salarySnapshot, siteCounts, bandSamples, featuredCompanies, freehireCatalog, refreshedAt, feedItems, feedAddedLastHour, newRolesCompanies, sponsors, priorityFeaturedCompanies, topLocations, salaryTiers, premiumRoles } = await memoAsync('home.page.data', DEFAULT_TTL_MS, loadHomePageData)
 
     return (
     <>
@@ -667,7 +670,7 @@ export default async function HomePage() {
       <SponsorStrip slots={sponsors} />
 
       {/* The newest jobs, live (one list since 2026-11-19; it replaced a static "Latest" list and a separate live block). */}
-      <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} totalJobs={stats.totalJobs} />
+      <LiveJobFeed initialItems={feedItems} serverNow={new Date().toISOString()} totalJobs={stats.totalJobs} addedLastHour={feedAddedLastHour} />
 
       {/* The alert signup right under the newest jobs, as well as in the footer and the corner popup. */}
       <JobAlertBox query={{}} title="Get new six-figure jobs by email" />

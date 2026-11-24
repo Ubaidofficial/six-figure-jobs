@@ -7,7 +7,9 @@
 import { memoAsync } from '@/lib/cache/memo'
 import { buildLogoUrl } from '@/lib/companies/logo'
 import { buildJobSlugHref } from '@/lib/jobs/jobSlug'
-import { queryJobs, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { buildWhere, jobListingSelect, type JobWithCompany } from '@/lib/jobs/queryJobs'
+import { newThisWeekClause } from '@/lib/jobs/postedRecently'
+import { prisma } from '@/lib/prisma'
 import { buildSalaryText } from '@/lib/jobs/salary'
 import { describeJobLocation } from '@/lib/location/jobLocation'
 import { isHomepageFeatured } from '@/lib/jobs/latestSelection'
@@ -30,7 +32,12 @@ export type FeedItem = {
   addedAt: string
 }
 
-export type LatestFeed = { items: FeedItem[]; newestAt: string | null }
+export type LatestFeed = {
+  items: FeedItem[]
+  newestAt: string | null
+  /** Listed jobs we added in the last hour (all of them, not only the ones in the feed); null when it could not be counted. */
+  addedLastHour: number | null
+}
 
 const toKCase = (text: string) => text.replace(/(\d)K\b/g, '$1k')
 
@@ -79,10 +86,23 @@ export function newestAddedAt(items: ReadonlyArray<Pick<FeedItem, 'addedAt'>>): 
 
 export function loadLatestFeed(): Promise<LatestFeed> {
   return memoAsync('latest-feed', LATEST_FEED_TTL_MS, async () => {
-    // Same population as the homepage list.
-    const { jobs } = await queryJobs({ isHundredKLocal: true, page: 1, pageSize: 40, sortBy: 'date', excludeInternships: true })
-    const items = buildFeedItems(jobs as JobWithCompany[])
-    return { items, newestAt: newestAddedAt(items) }
+    // The jobs we added most recently, among listed jobs posted in the last week. It took the 40 most recently POSTED jobs
+    // until 2026-11-24 and labelled them by when we added them: freehire finds many jobs a day or more after their posting
+    // date, so most jobs added during the day never reached the feed (about 15 an hour shown, while the import added many
+    // more). The posting-date limit keeps an old posting found late from reading as one of the latest.
+    const listed = buildWhere({ isHundredKLocal: true, excludeInternships: true, page: 1, pageSize: 40 })
+    const hourAgo = new Date(Date.now() - 60 * 60_000)
+    const [jobs, addedLastHour] = await Promise.all([
+      prisma.job.findMany({
+        where: { AND: [listed, newThisWeekClause()] },
+        select: jobListingSelect,
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        take: 40,
+      }),
+      prisma.job.count({ where: { AND: [listed, { createdAt: { gte: hourAgo } }] } }).catch(() => null),
+    ])
+    const items = buildFeedItems(jobs as unknown as JobWithCompany[])
+    return { items, newestAt: newestAddedAt(items), addedLastHour }
   })
 }
 

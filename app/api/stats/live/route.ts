@@ -1,5 +1,5 @@
 // GET /api/stats/live -> { jobs, companies, newThisWeek, countries, catalog, refreshedAt, checkedAt }
-// The numbers in the "6figjobs today" band (homepage and pricing page), polled once a minute while a visitor has the page
+// The numbers in the "Live now" band (homepage and pricing page), polled every 30 seconds while a visitor has the page
 // open. Counts only, no job rows. The answer is the same for everyone, so it is cached at the edge for 30 seconds; the loaders
 // behind it have their own short caches.
 import { NextResponse } from 'next/server'

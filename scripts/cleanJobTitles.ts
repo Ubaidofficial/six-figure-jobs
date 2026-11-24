@@ -25,7 +25,8 @@ async function main() {
     .filter((r) => r.cleaned !== r.title)
 
   console.log(`${rows.length} live jobs checked, ${changes.length} titles to clean ${apply ? '' : '(dry run: nothing written)'}`)
-  for (const c of changes.slice(0, 40)) console.log(`  ${c.title}\n    -> ${c.cleaned}`)
+  // Every change, so the dry run can be read in full before --apply.
+  for (const c of changes) console.log(`  ${c.title}\n    -> ${c.cleaned}`)
 
   if (!apply) return
   let written = 0

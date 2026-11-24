@@ -50,8 +50,10 @@ export function formatRefreshedAt(date: Date | null | undefined): string | null 
   return `${text} UTC`
 }
 
-const POLL_MS = 60_000
-const MAX_POLLS_PER_VISIT = 30
+// The counts behind /api/stats/live are at most a minute old (plus 30 s at the edge): asking every 30 s shows a change
+// within about a minute of it happening. 60 polls = 30 minutes of one visit, as before.
+const POLL_MS = 30_000
+const MAX_POLLS_PER_VISIT = 60
 
 /** The newest answer from /api/stats/live, or null until one arrives (the server's numbers show until then). */
 function useLiveSiteStats(): LiveSiteStats | null {
@@ -138,7 +140,7 @@ export function SiteStatsStrip({
   return (
     <section className={`${styles.band} ${compact ? styles.compact : ''}`} aria-labelledby="site-stats-title">
       <h2 id="site-stats-title" className={`eyebrow-pill ${styles.eyebrow}`}>
-        6figjobs today
+        Live now
       </h2>
       <div className={`${styles.row} ${catalog ? '' : styles.noScreen}`}>
         {catalog ? (
@@ -179,8 +181,8 @@ export function SiteStatsStrip({
       </div>
       <p className={styles.note}>
         {catalog
-          ? 'Screened jobs counted across the sources and hiring platforms we read; listed jobs counted from our own database, refreshed every few minutes.'
-          : 'Counted from our own job database, refreshed every few minutes.'}
+          ? 'Screened jobs counted across the sources and hiring platforms we read; listed jobs counted from our own database every minute.'
+          : 'Counted from our own job database every minute.'}
         {refreshed && refreshedAt ? (
           <>
             {' '}

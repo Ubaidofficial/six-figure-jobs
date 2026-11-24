@@ -1,5 +1,8 @@
-const mockQuery = jest.fn()
-jest.mock('@/lib/jobs/queryJobs', () => ({ queryJobs: (...a: unknown[]) => mockQuery(...a) }))
+const mockFindMany = jest.fn()
+const mockCount = jest.fn()
+jest.mock('@/lib/prisma', () => ({
+  prisma: { job: { findMany: (...a: unknown[]) => mockFindMany(...a), count: (...a: unknown[]) => mockCount(...a) } },
+}))
 
 import { __clearMemoForTests } from '@/lib/cache/memo'
 import { publicJobId } from '@/lib/jobs/publicJob'
@@ -36,7 +39,8 @@ const job = (over: Record<string, unknown> = {}) =>
 
 beforeEach(() => {
   __clearMemoForTests()
-  mockQuery.mockReset()
+  mockFindMany.mockReset()
+  mockCount.mockReset()
 })
 
 describe('buildFeedItems', () => {
@@ -111,14 +115,18 @@ describe('formatAgo', () => {
 })
 
 describe('loadLatestFeed', () => {
-  it('uses the homepage population, newest first, and queries the database every 15 seconds at most', async () => {
-    mockQuery.mockResolvedValue({ jobs: [job({ id: 'n', createdAt: new Date('2026-11-06T12:00:00Z') }), job({ id: 'o', title: 'Older' })] })
+  it('takes the jobs we added most recently (posted in the last week), counts the last hour, and queries every 15 s at most', async () => {
+    mockFindMany.mockResolvedValue([job({ id: 'n', createdAt: new Date('2026-11-06T12:00:00Z') }), job({ id: 'o', title: 'Older' })])
+    mockCount.mockResolvedValue(47)
     const first = await loadLatestFeed()
     expect(first.newestAt).toBe('2026-11-06T12:00:00.000Z')
     expect(first.items.map((i) => i.id)).toEqual(['n', 'o'].map(publicJobId))
-    expect(mockQuery).toHaveBeenCalledWith(expect.objectContaining({ isHundredKLocal: true, sortBy: 'date', excludeInternships: true }))
+    expect(first.addedLastHour).toBe(47)
+    // Ordered by when we added the job, not by posting date (a job freehire found a day late never reached the feed).
+    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual([{ createdAt: 'desc' }, { id: 'asc' }])
+    expect(JSON.stringify(mockFindMany.mock.calls[0][0].where, (_k, v) => (typeof v === 'bigint' ? String(v) : v))).toContain('postedAt')
     expect(await loadLatestFeed()).toBe(first)
-    expect(mockQuery).toHaveBeenCalledTimes(1)
+    expect(mockFindMany).toHaveBeenCalledTimes(1)
     expect(LATEST_FEED_TTL_MS).toBe(15_000)
   })
 })

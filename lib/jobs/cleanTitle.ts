@@ -6,7 +6,8 @@
 
 // A pay amount: "$120k", "$120,000", "120K", "$1.2M"; with an optional range and "+" / "/yr".
 const AMOUNT = String.raw`\$?\d{2,3}(?:[.,]\d{3})*(?:\.\d+)?\s?[kKmM]?`
-const PAY = String.raw`(?:up to\s+)?${AMOUNT}(?:\s?(?:-|–|to)\s?${AMOUNT})?\+?(?:\s?(?:\/\s?(?:yr|year)|per year|a year|base|DOE))?`
+// "to $120k" and "from $150k" are pay too (the 2026-11-24 dry run left "Audit Senior ... - Public - to").
+const PAY = String.raw`(?:(?:up\s+)?to\s+|from\s+)?${AMOUNT}(?:\s?(?:-|–|to)\s?${AMOUNT})?\+?(?:\s?(?:\/\s?(?:yr|year)|per year|a year|base|DOE))?`
 /** A whole segment that is only pay. A bare number needs a "$" or a "k" to count ("2025652" is a requisition id). */
 const PAY_ONLY = new RegExp(String.raw`^${PAY}$`, 'i')
 const HAS_PAY_MARK = /\$|\d\s?[kKmM]\b/

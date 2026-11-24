@@ -21,8 +21,20 @@ const POLL_MS = 20_000
 const TICK_MS = 5_000
 const MAX_POLLS_PER_VISIT = 90
 
-export function LiveJobFeed({ initialItems, serverNow, totalJobs }: { initialItems: FeedItem[]; serverNow: string; totalJobs: number }) {
+export function LiveJobFeed({
+  initialItems,
+  serverNow,
+  totalJobs,
+  addedLastHour: serverAddedLastHour = null,
+}: {
+  initialItems: FeedItem[]
+  serverNow: string
+  totalJobs: number
+  /** Listed jobs added in the last hour (counted on the server, refreshed with every poll); left out when unknown. */
+  addedLastHour?: number | null
+}) {
   const [items, setItems] = React.useState(initialItems)
+  const [addedLastHour, setAddedLastHour] = React.useState(serverAddedLastHour)
   const [pending, setPending] = React.useState<FeedItem[]>([])
   const [fresh, setFresh] = React.useState<Set<string>>(new Set())
   // First client render uses the server's clock so it matches the server HTML; the effect below moves it to the real one.
@@ -53,7 +65,8 @@ export function LiveJobFeed({ initialItems, serverNow, totalJobs }: { initialIte
         headers: { accept: 'application/json' },
       })
       if (!res.ok) return
-      const data = (await res.json()) as { items?: FeedItem[] }
+      const data = (await res.json()) as { items?: FeedItem[]; addedLastHour?: number | null }
+      if (typeof data.addedLastHour === 'number') setAddedLastHour(data.addedLastHour)
       const have = new Set(known.current.map((i) => i.id))
       const added = (data.items ?? []).filter((i) => i && i.id && !have.has(i.id))
       if (added.length) setPending((p) => [...added, ...p])
@@ -100,7 +113,8 @@ export function LiveJobFeed({ initialItems, serverNow, totalJobs }: { initialIte
           <p className={styles.live}>
             <span className={styles.dot} aria-hidden="true" />
             <span>
-              <strong>Live.</strong> {newest ? `Latest job added ${formatAgo(newest, now)}.` : 'Updated continuously.'}{' '}
+              <strong>Live.</strong>{' '}
+              {addedLastHour && newest ? `${addedLastHour.toLocaleString('en-US')} added in the last hour, the latest ${formatAgo(newest, now)}.` : newest ? `Latest job added ${formatAgo(newest, now)}.` : 'Updated continuously.'}{' '}
               {paused ? 'Paused: new jobs wait until you resume.' : 'New jobs appear here as we add them.'}
             </span>
           </p>
