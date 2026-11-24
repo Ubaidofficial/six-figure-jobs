@@ -57,9 +57,49 @@ describe('remote jobs that name a region', () => {
   })
 
   it('does not widen or narrow the region when the text says more than one thing', () => {
-    for (const locationRaw of ['Remote - Eastern Europe', 'Remote (US or Europe)', 'Remote - Europe & Asia', 'Remote - Europe and EMEA', 'Remote - Nordics, Europe']) {
+    for (const locationRaw of ['Remote - Eastern Europe', 'Remote - Europe & Asia', 'Remote - Europe and EMEA', 'Remote - Nordics, Europe']) {
       expect(names({ locationRaw })).not.toContain('France')
     }
+  })
+
+  // Seen live 2026-11-24: ClickHouse's "Europe or US" job (stored country US) listed the United States alone, and an
+  // office in the US it does not have.
+  describe('a region or a country ("Europe or US")', () => {
+    it.each([
+      ['Europe or US', 'US'],
+      ['Europe or US', null],
+      ['Remote (US or Europe)', null],
+      ['Remote - United States or Europe', 'US'],
+    ])('"%s" (stored country %s) lists Europe and the United States', (locationRaw, countryCode) => {
+      const list = names({ locationRaw, countryCode })
+      expect(list).toEqual(expect.arrayContaining(['United States', 'France', 'Germany', 'Poland']))
+      expect(list.length).toBeGreaterThan(40)
+      expect(new Set(list).size).toBe(list.length)
+    })
+
+    it('a stored country the text does not name still wins', () => {
+      expect(names({ locationRaw: 'Europe or Canada', countryCode: 'US' })).toEqual(['United States'])
+    })
+
+    it.each([null, 'Europe or US'])('is TELECOMMUTE with no office (city %s), and stays eligible for Google Jobs', (city) => {
+      const jsonLd = buildJobJsonLd(remoteJob({ locationRaw: 'Europe or US', city, countryCode: 'US' }))
+      expect(jsonLd.jobLocationType).toBe('TELECOMMUTE')
+      expect(jsonLd.jobLocation).toBeUndefined()
+      expect(validateJobPostingEligibility(jsonLd)).toEqual([])
+    })
+  })
+
+  it('a remote job whose text names only countries has no office either', () => {
+    for (const locationRaw of ['United States', 'Remote (US/Canada)']) {
+      const jsonLd = buildJobJsonLd(remoteJob({ locationRaw, countryCode: 'US' }))
+      expect(jsonLd.jobLocationType).toBe('TELECOMMUTE')
+      expect(jsonLd.jobLocation).toBeUndefined()
+    }
+  })
+
+  it('a remote job that names a city keeps its office', () => {
+    const jsonLd = buildJobJsonLd(remoteJob({ locationRaw: 'San Francisco, CA, US; Remote, US', countryCode: 'US' }))
+    expect(jsonLd.jobLocation).toBeDefined()
   })
 
   it('a region stored by the older pipeline gives the same full lists; UK & Ireland stays two countries', () => {
