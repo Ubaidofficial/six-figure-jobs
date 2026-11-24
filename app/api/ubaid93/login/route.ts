@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { checkAdminCredentials, adminUserExists, createSessionToken } from '../../../../lib/admin/auth'
+import { checkAdminCredentials, adminUserExists, sessionTokenFor } from '../../../../lib/admin/auth'
 import { COOKIE_NAME, cookieAttrs } from '../../../../lib/admin/session'
 import { checkAdminLoginLimit } from '../../../../lib/admin/loginRateLimit'
 
@@ -22,11 +22,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No admin account', setup: true }, { status: 401 })
     }
 
-    if (!username || !password || !(await checkAdminCredentials(username, password))) {
+    const user = typeof username === 'string' && typeof password === 'string' ? await checkAdminCredentials(username, password) : null
+    if (!user) {
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 })
     }
 
-    const token = createSessionToken()
+    const token = sessionTokenFor(user)
     const res = NextResponse.json({ ok: true })
     res.cookies.set(COOKIE_NAME, token, cookieAttrs())
     return res

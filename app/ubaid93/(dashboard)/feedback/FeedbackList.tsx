@@ -1,9 +1,9 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 import s from '../../admin.module.css'
 import JobEditDrawer from '../jobs/JobEditModal'
+import { ActionError, useAction } from '../useAction'
 
 const TYPE_LABELS: Record<string, string> = {
   bug: 'Bug',
@@ -67,37 +67,20 @@ function reportText(message: string): string {
 }
 
 export default function FeedbackList({ items, jobs }: { items: Item[]; jobs: Record<string, ReportedJob> }) {
-  const router = useRouter()
-  const [busy, setBusy] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
+  const { busy, failed, run, refresh } = useAction()
 
-  async function patch(url: string, body: Record<string, unknown>) {
-    return fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-  }
-
-  async function setStatus(id: string, status: string) {
-    setBusy(id)
-    const res = await patch('/api/ubaid93/feedback', { id, status })
-    setBusy(null)
-    if (res.ok) router.refresh()
-  }
+  const setStatus = (id: string, status: string) => run(id, '/api/ubaid93/feedback', { id, status })
 
   /** Expires the job (Google is told, as by the automatic checks) and resolves every report about it. */
   async function expireAndResolve(itemId: string, job: ReportedJob) {
     if (!window.confirm(`Expire "${job.title}" and resolve its ${job.openReports} open report${job.openReports === 1 ? '' : 's'}?`)) return
-    setBusy(itemId)
-    const expired = await patch('/api/ubaid93/jobs', { id: job.id, isExpired: true })
-    if (expired.ok) await patch('/api/ubaid93/feedback', { jobId: job.id, status: 'resolved' })
-    setBusy(null)
-    router.refresh()
+    if (await run(itemId, '/api/ubaid93/jobs', { id: job.id, isExpired: true }, { refresh: false })) {
+      await run(itemId, '/api/ubaid93/feedback', { jobId: job.id, status: 'resolved' })
+    } else refresh()
   }
 
-  async function resolveAll(itemId: string, job: ReportedJob) {
-    setBusy(itemId)
-    await patch('/api/ubaid93/feedback', { jobId: job.id, status: 'resolved' })
-    setBusy(null)
-    router.refresh()
-  }
+  const resolveAll = (itemId: string, job: ReportedJob) => run(itemId, '/api/ubaid93/feedback', { jobId: job.id, status: 'resolved' })
 
   if (items.length === 0) return <p className={s.empty}>No messages here.</p>
 
@@ -109,10 +92,11 @@ export default function FeedbackList({ items, jobs }: { items: Item[]; jobs: Rec
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)
-            router.refresh()
+            refresh()
           }}
         />
       ) : null}
+      <ActionError message={failed} />
       <ul className={s.checks}>
         {items.map((item) => {
           const job = item.jobId ? jobs[item.jobId] : undefined

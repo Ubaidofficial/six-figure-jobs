@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { getAdminSession } from '../../../../lib/admin/auth'
+import { markAdminExpired, unmarkAdminExpired } from '../../../../lib/admin/adminExpired'
 import { expireJobsByIds } from '../../../../lib/jobs/expiry'
 import { buildSalaryText } from '../../../../lib/jobs/salary'
 import { prisma } from '../../../../lib/prisma'
@@ -24,13 +25,18 @@ export async function GET(req: Request) {
     },
   })
   if (!job) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  const { minAnnual, maxAnnual, currency, salaryMin, salaryMax, ...rest } = job
-  void currency
+  const { minAnnual, maxAnnual, salaryMin, salaryMax, ...rest } = job
   const shownPay = buildSalaryText(job as Parameters<typeof buildSalaryText>[0])
   return NextResponse.json(
     {
       // BigInt cannot go into JSON.
-      job: { ...rest, salaryMin: salaryMin?.toString() ?? null, salaryMax: salaryMax?.toString() ?? null },
+      job: {
+        ...rest,
+        salaryMin: salaryMin?.toString() ?? null,
+        salaryMax: salaryMax?.toString() ?? null,
+        minAnnual: minAnnual?.toString() ?? null,
+        maxAnnual: maxAnnual?.toString() ?? null,
+      },
       shownPay,
       hasYearlyRange: minAnnual != null || maxAnnual != null,
     },
@@ -45,12 +51,15 @@ export async function PATCH(req: Request) {
 
   // Expiring goes through the same path as the automatic checks, so Google is told the page is gone and the sitemap
   // drops it; restoring clears the expiry dates those checks set, or the freshness rules would still hide the job.
+  // Remembered as expired by hand, so the next import that still sees the job does not bring it back.
   if (data.isExpired === true) {
     await expireJobsByIds([id])
+    await markAdminExpired(id)
     return NextResponse.json({ ok: true })
   }
   if (data.isExpired === false) {
     await prisma.job.update({ where: { id }, data: { isExpired: false, validThrough: null, expiresAt: null } })
+    await unmarkAdminExpired(id)
     return NextResponse.json({ ok: true })
   }
 
@@ -63,13 +72,22 @@ export async function PATCH(req: Request) {
   const allowed = [
     'title', 'company', 'companyLogo', 'locationRaw', 'remoteMode', 'employmentType',
     'salaryMin', 'salaryMax', 'salaryCurrency', 'salaryPeriod',
+    // The yearly range is the pay the job page and its JobPosting show; editing it clears the review flag.
+    'minAnnual', 'maxAnnual', 'currency', 'needsReview',
     'remote', 'applyUrl', 'descriptionHtml',
     'visaSponsorship', 'postedAt', 'expiresAt',
   ]
+  const AMOUNTS = new Set(['salaryMin', 'salaryMax', 'minAnnual', 'maxAnnual'])
   const update: Record<string, unknown> = {}
   for (const key of allowed) {
-    if (key in data) update[key] = data[key]
+    if (!(key in data)) continue
+    const v = data[key]
+    if (AMOUNTS.has(key) && v !== null && !(Number.isSafeInteger(v) && v >= 0)) {
+      return NextResponse.json({ error: `${key} must be a whole number` }, { status: 400 })
+    }
+    update[key] = AMOUNTS.has(key) && v !== null ? BigInt(v) : v
   }
+  if (Object.keys(update).length === 0) return NextResponse.json({ error: 'Nothing to save' }, { status: 400 })
 
   await prisma.job.update({ where: { id }, data: update })
   return NextResponse.json({ ok: true })

@@ -11,7 +11,7 @@ export async function loadDaily(days: string[]): Promise<Daily> {
   const [added, expired, clicks] = await Promise.all([
     prisma.$queryRaw<Array<{ d: string; n: number }>>`
       SELECT to_char(date_trunc('day', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS d, count(*)::int AS n
-      FROM "Job" WHERE "createdAt" >= ${from} GROUP BY 1`,
+      FROM "Job" WHERE "isExpired" IN (true, false) AND "createdAt" >= ${from} GROUP BY 1`,
     // Every expiry path stamps validThrough with the day it expired the job (lib/jobs/expiry.ts).
     prisma.$queryRaw<Array<{ d: string; n: number }>>`
       SELECT to_char(date_trunc('day', "validThrough" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS d, count(*)::int AS n

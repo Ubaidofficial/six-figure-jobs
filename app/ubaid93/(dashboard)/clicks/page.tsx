@@ -1,7 +1,9 @@
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import { prisma } from '../../../../lib/prisma'
 import { loadDaily } from '../overview'
-import { DailyBars, Figures, PageHead, Section, lastDays, s } from '../ui'
+import { TrendChart } from '../charts'
+import { Figures, PageHead, Section, lastDays, s } from '../ui'
+import { BarList, SplitBar, movingAverage } from '../visuals'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,7 +62,7 @@ export default async function ApplyClicksPage() {
         href: j ? buildJobSlugHref(j) : null,
       }
     })
-    rows = all.slice(0, 50)
+    rows = all.slice(0, 25)
     const perCompany = new Map<string, number>()
     for (const r of all) if (r.company) perCompany.set(r.company, (perCompany.get(r.company) ?? 0) + r.clicks)
     companies = [...perCompany.entries()]
@@ -85,24 +87,51 @@ export default async function ApplyClicksPage() {
         <>
           <Figures
             items={[
-              { label: 'Last 7 days', value: total7.toLocaleString() },
-              { label: 'Last 30 days', value: total30.toLocaleString() },
-              ...byDevice.map((d) => ({
-                label: `${d.device[0].toUpperCase()}${d.device.slice(1)}, 30 days`,
-                value: d.clicks.toLocaleString(),
-                sub: total30 ? `${Math.round((d.clicks / total30) * 100)}%` : undefined,
-              })),
-              ...byPlace.map((p) => ({ label: `${SURFACE[p.surface] ?? p.surface}, 30 days`, value: p.clicks.toLocaleString() })),
+              { label: 'Last 7 days', value: total7.toLocaleString(), spark: daily.slice(-14) },
+              { label: 'Last 30 days', value: total30.toLocaleString(), sub: `${(total30 / 30).toFixed(1)} a day on average` },
             ]}
           />
 
-          <Section title="Per day" note="30 UTC days">
+          <Section title="Per day" note="complete UTC days, with the 7-day average">
             <div className={`${s.panel} ${s.panelPad}`}>
-              <DailyBars days={days} series={[daily]} labels={['clicks']} />
+              <TrendChart
+                label="Apply clicks per day and their 7-day average"
+                days={days.slice(0, -1)}
+                height={200}
+                series={[
+                  { label: 'clicks', values: daily.slice(0, -1), kind: 'column', color: '#b7d3f6' },
+                  { label: '7-day average', values: movingAverage(daily.slice(0, -1)), color: '#2a78d6' },
+                ]}
+              />
             </div>
           </Section>
 
-          <div className={s.grid2} style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}>
+          <div className={s.grid2}>
+            <Section title="Device" note="30 days">
+              <div className={`${s.panel} ${s.panelPad}`}>
+                <SplitBar
+                  parts={['desktop', 'mobile'].map((device) => ({
+                    label: device === 'desktop' ? 'Desktop' : 'Mobile',
+                    value: byDevice.find((d) => d.device === device)?.clicks ?? 0,
+                    color: device === 'desktop' ? '#2a78d6' : '#eb6834',
+                  }))}
+                />
+              </div>
+            </Section>
+            <Section title="Button" note="30 days">
+              <div className={`${s.panel} ${s.panelPad}`}>
+                <SplitBar
+                  parts={['apply-card', 'mobile-bar'].map((surface) => ({
+                    label: SURFACE[surface],
+                    value: byPlace.find((p) => p.surface === surface)?.clicks ?? 0,
+                    color: surface === 'apply-card' ? '#2a78d6' : '#eb6834',
+                  }))}
+                />
+              </div>
+            </Section>
+          </div>
+
+          <div className={`${s.grid2} ${s.grid21}`}>
             <Section title="Most-clicked jobs" note="30 days">
               <div className={`${s.panel} ${s.tableWrap}`}>
                 {rows.length === 0 ? (
@@ -126,10 +155,7 @@ export default async function ApplyClicksPage() {
                             ) : (
                               <span className={s.cellTitle}>{r.title}</span>
                             )}
-                            <div className={s.cellSub}>
-                              {r.company ?? ''}
-                              {r.expired ? ' · expired' : ''}
-                            </div>
+                            <div className={s.cellSub}>{[r.company, r.href && r.expired ? 'expired' : null].filter(Boolean).join(' · ')}</div>
                           </td>
                           <td className={s.num}>{r.clicks.toLocaleString()}</td>
                         </tr>
@@ -141,20 +167,7 @@ export default async function ApplyClicksPage() {
             </Section>
             <Section title="Most-clicked companies" note="30 days, top 300 jobs">
               <div className={s.panel}>
-                {companies.length === 0 ? (
-                  <p className={s.empty}>None yet.</p>
-                ) : (
-                  <table className={s.table}>
-                    <tbody>
-                      {companies.map((c) => (
-                        <tr key={c.company}>
-                          <td>{c.company}</td>
-                          <td className={s.num}>{c.clicks.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+                <BarList items={companies.map((c) => ({ label: c.company, value: c.clicks }))} total={total30} />
               </div>
             </Section>
           </div>

@@ -22,7 +22,7 @@ export default async function SponsorsPage() {
     <>
       <PageHead
         title="Sponsors"
-        lede="Paid placements shown above the job list on /jobs and on the home page. A slot shows only while it has a name, an https link and a last day that has not passed, so a placement ends by itself. Changes appear within about 5 minutes."
+        lede="Paid placements shown above the job list on /jobs and on the home page. A slot shows only while it has a name, an https link and a last day that has not passed, so a placement ends by itself. Changes reach the site within about 15 minutes (the slots and the pages that show them are cached)."
       />
       <div className={s.grid2}>
         {slots.map((slot) => (

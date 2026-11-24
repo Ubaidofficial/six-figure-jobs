@@ -13,6 +13,7 @@
 //   const result = await ingestJob(scrapedJobInput)
 
 import { prisma } from '../prisma'
+import { isAdminExpired } from '../admin/adminExpired'
 import { enrichAtIngest } from './enrichAtIngest'
 import { fixMojibake } from '../jobs/mojibake'
 import { upsertCompanyFromBoard } from '../companies/upsertFromBoard'
@@ -249,6 +250,11 @@ export async function ingestJob(input: ScrapedJobInput): Promise<IngestResult> {
         })
       }
       return result
+    }
+
+    // A job the owner expired by hand stays expired, even when its source still lists it (lib/admin/adminExpired.ts).
+    if (existing.isExpired && (await isAdminExpired(existing.id))) {
+      return { status: 'skipped', reason: 'expired-by-admin', jobId: existing.id, dedupeKey: existing.dedupeKey ?? undefined }
     }
 
     const existingPriority = existing.sourcePriority ?? 20

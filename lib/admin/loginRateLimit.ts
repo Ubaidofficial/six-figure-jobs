@@ -2,7 +2,7 @@
 // many addresses is slowed too. Every attempt counts (the one real admin logs in rarely). In memory, per server
 // instance, reset on restart, like the sign-in and report-job limiters. Keys are hashed; no IP is held in plain text.
 //
-// Behind Cloudflare and Railway the "client IP" can be a proxy address shared by many visitors, which is why the
+// Behind Cloudflare and the host's proxy the "client IP" can be a proxy address shared by many visitors, which is why the
 // global cap exists. Trade-off: someone hammering the endpoint can keep the admin out for up to 15 minutes.
 
 import { createHash } from 'node:crypto'

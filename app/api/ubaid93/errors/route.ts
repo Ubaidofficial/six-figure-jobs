@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { getAdminSession } from '../../../../lib/admin/auth'
-import { errorGroupKey, isNoiseError } from '../../../../lib/admin/errorReports'
+import { errorGroupKey, groupErrorReports } from '../../../../lib/admin/errorReports'
 import { prisma } from '../../../../lib/prisma'
 import { loadErrorRows } from '../../../ubaid93/(dashboard)/errors/groups'
 
@@ -22,10 +22,11 @@ export async function PATCH(req: Request) {
   let ids: string[]
   if (typeof body.id === 'string') ids = [body.id]
   else if (typeof body.key === 'string' || body.noise === true) {
-    const rows = await loadErrorRows()
-    ids = rows
-      .filter((r) => (body.noise === true ? isNoiseError(r.message, r.stack) : errorGroupKey(r.message) === body.key))
-      .map((r) => r.id)
+    const rows = await loadErrorRows(undefined, 300)
+    ids =
+      body.noise === true
+        ? groupErrorReports(rows).filter((g) => g.noise).flatMap((g) => g.ids)
+        : rows.filter((r) => errorGroupKey(r.message) === body.key).map((r) => r.id)
   } else return NextResponse.json({ error: 'Send id, key or noise' }, { status: 400 })
 
   const { count } = await prisma.errorLog.updateMany({ where: { id: { in: ids }, status: { not: status } }, data: { status } })

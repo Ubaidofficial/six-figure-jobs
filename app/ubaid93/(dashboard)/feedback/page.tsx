@@ -78,6 +78,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams?: Pr
       />
       <div className={s.toolbar}>
         <Tabs
+          label="Status"
           current={status}
           items={[
             { label: 'All', value: '', href: hrefWith('/ubaid93/feedback', { kind }), count: all },
@@ -90,10 +91,11 @@ export default async function FeedbackPage({ searchParams }: { searchParams?: Pr
           ]}
         />
         <Tabs
+          label="Kind"
           current={kind}
           items={[
             { label: 'Everything', value: '', href: hrefWith('/ubaid93/feedback', { status }) },
-            { label: 'Job reports', value: 'reports', href: hrefWith('/ubaid93/feedback', { status, kind: 'reports' }), count: openPerJob.size },
+            { label: 'Job reports', value: 'reports', href: hrefWith('/ubaid93/feedback', { status, kind: 'reports' }), count: openReports.length },
           ]}
         />
       </div>

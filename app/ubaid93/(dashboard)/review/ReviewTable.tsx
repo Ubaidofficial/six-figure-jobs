@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 
 import s from '../../admin.module.css'
 import JobEditDrawer from '../jobs/JobEditModal'
+import { ActionError, useAction } from '../useAction'
 
 export type ReviewRow = {
   id: string
@@ -21,22 +22,12 @@ export type ReviewRow = {
 export default function ReviewTable({ rows, kind }: { rows: ReviewRow[]; kind: 'pay' | 'titles' }) {
   const router = useRouter()
   const [editing, setEditing] = useState<string | null>(null)
-  const [busy, setBusy] = useState<string | null>(null)
   const [done, setDone] = useState<Set<string>>(new Set())
+  const { busy, failed, run } = useAction()
 
   async function act(id: string, body: Record<string, unknown>, confirmText?: string) {
     if (confirmText && !window.confirm(confirmText)) return
-    setBusy(id)
-    const res = await fetch('/api/ubaid93/jobs', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...body }),
-    })
-    setBusy(null)
-    if (res.ok) {
-      setDone((d) => new Set(d).add(id))
-      router.refresh()
-    }
+    if (await run(id, '/api/ubaid93/jobs', { id, ...body })) setDone((d) => new Set(d).add(id))
   }
 
   const visible = rows.filter((r) => !done.has(r.id))
@@ -54,6 +45,7 @@ export default function ReviewTable({ rows, kind }: { rows: ReviewRow[]; kind: '
           }}
         />
       ) : null}
+      <ActionError message={failed} />
       <div className={s.tableWrap}>
         <table className={s.table}>
           <thead>

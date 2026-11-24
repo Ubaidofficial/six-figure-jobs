@@ -73,7 +73,7 @@ describe('alert emails', () => {
     const first = planAlerts(checksWith({ liveJobs: 10 }), empty, NOW, true)
     const fixed = planAlerts(checksWith({}), first.next, new Date(NOW.getTime() + 3_600_000), true)
     expect(fixed.recovered.map((r) => r.key)).toEqual(['live'])
-    expect(buildAlertEmail(fixed, 'u')?.subject).toBe('Six Figure Jobs fixed: Live jobs')
+    expect(buildAlertEmail(fixed, 'u')?.subject).toBe('Six Figure Jobs fixed: Jobs not expired')
     expect(fixed.next.open).toEqual({})
   })
 
@@ -92,7 +92,7 @@ describe('alert emails', () => {
     await run({}, NOW)
     expect(sent).toEqual([])
     await run({ ALERTS_OWNER_EMAIL: 'owner@example.test', RESEND_API_KEY: 'k', EMAIL_FROM: 'a@example.test' }, new Date(NOW.getTime() + 60_000))
-    expect(sent).toEqual(['Six Figure Jobs alert: Live jobs'])
+    expect(sent).toEqual(['Six Figure Jobs alert: Jobs not expired'])
   })
 
   it('tries again on the next run when the email fails', async () => {
@@ -104,7 +104,24 @@ describe('alert emails', () => {
     const sent: string[] = []
     const retry = await runHealthAlerts({ ...base, now: new Date(NOW.getTime() + 30 * 60_000), send: async (m) => void sent.push(m.text) })
     expect(retry.emailed).toBe(true)
-    expect(sent[0]).toContain('STILL    Live jobs')
+    expect(sent[0]).toContain('STILL    Jobs not expired')
+  })
+
+  it('says a check that went from red to amber is no longer failing, not that it is back to normal', () => {
+    const first = planAlerts(checksWith({ newestJob: { createdAt: hoursAgo(13), source: 'x' } }), empty, NOW, true)
+    const amber = planAlerts(checksWith({ newestJob: { createdAt: hoursAgo(5), source: 'x' } }), first.next, NOW, true)
+    expect(buildAlertEmail(amber, 'u')?.text).toMatch(/FIXED {4}New jobs arriving is no longer failing \(now: Last job added 5 h ago\)/)
+  })
+
+  it('keeps a recovery to report when the email about it fails', async () => {
+    let state: string | null = null
+    const env = { OPS_ALERT_EMAIL: 'ops@example.test', RESEND_API_KEY: 'k', EMAIL_FROM: 'a@example.test' }
+    const base = { env, loadState: async () => state, saveState: async (v: string) => void (state = v) }
+    await runHealthAlerts({ ...base, now: NOW, send: async () => {}, loadChecks: async () => checksWith({ liveJobs: 0 }) })
+    await runHealthAlerts({ ...base, now: NOW, send: async () => Promise.reject(new Error('down')), loadChecks: async () => checksWith({}) })
+    const sent: string[] = []
+    await runHealthAlerts({ ...base, now: NOW, send: async (m) => void sent.push(m.subject), loadChecks: async () => checksWith({}) })
+    expect(sent).toEqual(['Six Figure Jobs fixed: Jobs not expired'])
   })
 
   it('runs every 30 minutes by default; 0 turns it off; never more often than every 5', () => {

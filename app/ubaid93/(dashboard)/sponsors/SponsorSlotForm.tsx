@@ -73,7 +73,7 @@ export default function SponsorSlotForm({ id, initial, liveHref }: { id: number;
           className={`${s.btn} ${s.btnDanger}`}
           disabled={saving || (!initial.name && !initial.url && !initial.until)}
           onClick={() => {
-            if (!window.confirm(`Clear slot ${id}? It stops showing within about 5 minutes.`)) return
+            if (!window.confirm(`Clear slot ${id}? It stops showing within about 15 minutes.`)) return
             const empty = { name: '', text: '', url: '', logo: '', until: '' }
             setV(empty)
             void save(empty)

@@ -65,6 +65,50 @@ One person runs the site. The console should answer, in this order:
   titles ("---", a `$` amount or a "150K-200K" range in the title, over 110 characters). Edit / Expire / Employer page.
   Counts in the navigation and on Overview.
 
+## Review pass and charts, 2026-11-24 (owner: "rerun the last pass", "use more bars or line charts")
+
+An independent review of the console's code found, and this pass fixed:
+
+- **An admin Expire did not stick.** The import reactivates expired jobs that their source still lists, so a reported
+  scam job came back on the next sync. Jobs expired by hand are now kept in SiteConfig `admin.expired.jobIds`
+  (`lib/admin/adminExpired.ts`), and `ingestJob` skips them. Restore removes the mark.
+- **Setup was open whenever the account table was empty**, which happens when the site points at an empty database.
+  Setup now needs `ADMIN_SETUP_TOKEN` (set in Openship, typed into the form). Sessions name their account and its
+  password fingerprint, so a password change ends the old sessions. Old cookies are refused once: sign in again.
+  The username is matched in any case.
+- **The pay review queue could not be fixed from the console.** The drawer now edits the yearly range the page
+  shows, and saving it clears the review flag. The drawer sends only the fields that changed: it used to fill an
+  empty currency with USD and reset the posting time. It also accepts "150,000".
+- Other fixes:
+  - "Noise" is one rule per issue everywhere.
+  - The error badge is lighter and cached for a minute.
+  - Alert emails say "no longer failing", with the check's current state, and keep a recovery to report if the
+    email about it fails.
+  - The 24-hour count reads by index.
+  - Failed button actions show why.
+  - "Live jobs" is renamed "Jobs not expired" (the site lists the subset that passes its quality rules).
+  - Overview's "Alert subscribers" counts unique emails, as the Alerts page does.
+  - Sponsors says changes reach the site in about 15 minutes.
+  - The SQL title rule has word boundaries like the code rule.
+  - One "time ago" helper.
+
+Charts (`charts.tsx`: an interactive trend chart; `visuals.tsx`: sparklines, ranked bars, split bars) follow the
+data-viz method:
+- one axis per chart
+- series blue then orange (validated: colour-blind ΔE 24.7)
+- 2px lines, columns at most 24px with rounded tops, hairline grid
+- a hover readout and a screen-reader table for every chart
+- flows (added, expired, clicks, reports, signups) over complete days only, since today's partial count would read
+  as a drop
+
+Where they appear:
+- **Overview:** sparklines in the figures; jobs not expired over 30 days; added and expired per day; clicks with a
+  7-day average; work-arrangement split; top countries.
+- **System:** a share bar and a 14-day sparkline per source.
+- **Errors:** reports per day, and a sparkline per issue.
+- **Apply clicks:** daily columns with the 7-day average; device and button splits; companies as ranked bars.
+- **Job alerts:** signups per day; status split; signup pages as ranked bars.
+
 ## Next, not built yet (each needs the owner's go-ahead)
 
 1. ~~Keep admin visits out of analytics~~ (done 2026-11-24, PR #231). The owner's visits to public pages still count.

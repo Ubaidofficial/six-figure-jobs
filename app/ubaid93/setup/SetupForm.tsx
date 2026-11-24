@@ -10,6 +10,7 @@ export default function SetupForm() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [token, setToken] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -22,7 +23,7 @@ export default function SetupForm() {
     const res = await fetch('/api/ubaid93/setup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, token }),
     })
     setLoading(false)
     const data = await res.json().catch(() => ({}))
@@ -38,6 +39,10 @@ export default function SetupForm() {
 
   return (
     <form onSubmit={handleSubmit}>
+      <label className={s.field}>
+        Setup token (ADMIN_SETUP_TOKEN in Openship)
+        <input className={s.input} type="password" value={token} onChange={(e) => setToken(e.target.value)} required autoComplete="off" />
+      </label>
       <label className={s.field}>
         Username
         <input className={s.input} type="text" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus autoComplete="username" />
