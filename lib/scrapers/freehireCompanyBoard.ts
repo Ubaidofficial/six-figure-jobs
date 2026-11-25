@@ -8,7 +8,8 @@ import { freehireHeaders } from './freehire'
 import { detectAtsFromUrl } from '../normalizers/ats'
 
 const COMPANY_URL = 'https://freehire.me/api/v1/companies'
-const SEARCH_URL = 'https://freehire.me/api/v1/agent/jobs/search'
+// /data/ search: the public search leaves `url` (the employer link this reads the board from) empty since 2026-11-25.
+const SEARCH_URL = 'https://freehire.me/api/v1/data/jobs/search'
 const SAMPLE_JOBS = 5
 
 export type FreehireCompany = {
