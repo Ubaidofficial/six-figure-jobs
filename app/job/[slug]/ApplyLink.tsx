@@ -40,6 +40,8 @@ export function ApplyLink({
       rel="nofollow sponsored noopener noreferrer"
       className={className}
       onClick={onClick}
+      // The job page's floating alert card moves aside from any Apply link (components/alerts/JobAlertCard.tsx).
+      data-apply-link=""
     >
       {children}
     </a>

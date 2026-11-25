@@ -18,7 +18,8 @@ export const POPUP_DISMISS_SNOOZE_MS = 14 * DAY_MS
 /** Hidden this long after a signup (the visitor already has the alert). */
 export const POPUP_SIGNUP_SNOOZE_MS = 365 * DAY_MS
 
-// Pages where it never shows: the job page (the visitor is about to apply; also the phone's sticky Apply bar sits there),
+// Pages where it never shows: the job page (the visitor is about to apply; also the phone's sticky Apply bar sits there;
+// job pages have their own card, lib/alerts/jobAlertCard.ts),
 // account and sign-in pages, the alert pages themselves, legal pages, the owner's dashboard and the API.
 const BLOCKED_PREFIXES = [
   '/job/',
