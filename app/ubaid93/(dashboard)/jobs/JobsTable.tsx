@@ -8,6 +8,11 @@ import JobEditDrawer from './JobEditModal'
 import type { JobRow } from './page'
 
 const MODE: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' }
+const STATUS: Record<JobRow['availability'], { label: string; tone: string; title: string }> = {
+  available: { label: 'Live', tone: s.ok, title: 'The job page is up' },
+  stale: { label: 'Too old', tone: s.warn, title: 'Not expired, but posted too long ago: the job page answers "gone" and no listing shows it' },
+  expired: { label: 'Expired', tone: s.muted, title: 'The job page answers "gone"' },
+}
 
 function modeLabel(j: JobRow): string | null {
   const mode = j.remoteMode ? MODE[j.remoteMode] ?? j.remoteMode : null
@@ -73,7 +78,9 @@ export default function JobsTable({ jobs }: { jobs: JobRow[] }) {
                   {j.posted}
                 </td>
                 <td>
-                  <span className={`${s.status} ${j.isExpired ? s.muted : s.ok}`}>{j.isExpired ? 'Expired' : 'Live'}</span>
+                  <span className={`${s.status} ${STATUS[j.availability].tone}`} title={STATUS[j.availability].title}>
+                    {STATUS[j.availability].label}
+                  </span>
                 </td>
                 <td>
                   <div className={s.actions}>

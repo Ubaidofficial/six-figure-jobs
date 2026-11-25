@@ -4,16 +4,27 @@
 // Job reports read back from Feedback (lib/admin/jobReports.ts), the review queue's title rules (lib/admin/reviewQueue.ts),
 // and the two admin API actions they use.
 import { reportedJobId, JOB_REPORT_TYPES } from '../../lib/admin/jobReports'
-import { titleProblems } from '../../lib/admin/reviewQueue'
+import { countReviewQueue, loadReviewIds, titleProblems } from '../../lib/admin/reviewQueue'
+import { getDateThreshold, MAX_DISPLAY_AGE_DAYS } from '../../lib/ingest/jobAgeFilter'
+import { buildStaleJobWhere } from '../../lib/jobs/freshness'
 import { buildReportMessage } from '../../lib/jobs/jobReport'
 
 const feedbackUpdateMany = jest.fn(async (_a: unknown) => ({ count: 2 }))
 const jobUpdate = jest.fn(async (_a: unknown) => ({}))
 const jobFindUnique = jest.fn(async (_a: unknown) => ({ title: 'Staff Engineer', minAnnual: BigInt(900_000), maxAnnual: BigInt(1_200_000), currency: 'USD' }))
+const jobFindMany = jest.fn(async (_a: unknown) => [{ id: 'board:a:1' }])
+const jobCount = jest.fn(async (_a: unknown) => 3)
+const queryRawUnsafe = jest.fn(async (..._a: unknown[]) => [{ id: 'board:a:2', n: 4 }])
 jest.mock('../../lib/prisma', () => ({
   prisma: {
     feedback: { updateMany: (a: unknown) => feedbackUpdateMany(a), update: jest.fn() },
-    job: { update: (a: unknown) => jobUpdate(a), findUnique: (a: unknown) => jobFindUnique(a) },
+    job: {
+      update: (a: unknown) => jobUpdate(a),
+      findUnique: (a: unknown) => jobFindUnique(a),
+      findMany: (a: unknown) => jobFindMany(a),
+      count: (a: unknown) => jobCount(a),
+    },
+    $queryRawUnsafe: (...a: unknown[]) => queryRawUnsafe(...a),
   },
 }))
 jest.mock('../../lib/admin/auth', () => ({ getAdminSession: async () => true }))
@@ -43,6 +54,40 @@ describe('odd titles', () => {
   it('leaves normal titles alone, including ones with a number and a k', () => {
     for (const t of ['Senior Software Engineer', 'Senior Engineer, 401k plan', 'Manager (Team of 12k users)', 'Director, Product Sales - 2025652'])
       expect(titleProblems(t)).toEqual([])
+  })
+})
+
+describe('review queue: only jobs whose page is up', () => {
+  // A job posted before the display window answers 410 like an expired one (lib/jobs/detailAvailability.ts), so the
+  // queue must not offer it (2026-11-25: the pay tab listed jobs posted 2024-08-01 and 2026-02-12).
+  const now = new Date('2026-11-25T12:00:00Z')
+  const cutoff = getDateThreshold(MAX_DISPLAY_AGE_DAYS, now)
+  const freshOr = { OR: [{ postedAt: { gte: cutoff } }, { postedAt: null, createdAt: { gte: cutoff } }] }
+
+  it('pay tab: not expired, flagged, and posted within the window', async () => {
+    jobFindMany.mockClear()
+    await loadReviewIds('pay', 100, now)
+    expect(jobFindMany.mock.calls[0][0]).toMatchObject({ where: { isExpired: false, needsReview: true, ...freshOr } })
+  })
+  it('titles tab: the SQL checks the posting date against the same cutoff', async () => {
+    queryRawUnsafe.mockClear()
+    expect(await loadReviewIds('titles', 100, now)).toEqual(['board:a:2'])
+    const [sql, param] = queryRawUnsafe.mock.calls[0] as [string, Date]
+    expect(sql).toContain('"isExpired" = false AND ("postedAt" >= $1 OR ("postedAt" IS NULL AND "createdAt" >= $1))')
+    expect(param).toEqual(cutoff)
+  })
+  it('the counts in the navigation use the same rules', async () => {
+    jobCount.mockClear()
+    queryRawUnsafe.mockClear()
+    expect(await countReviewQueue()).toEqual({ pay: 3, titles: 4 })
+    expect(jobCount.mock.calls[0][0]).toMatchObject({ where: { isExpired: false, needsReview: true, OR: expect.any(Array) } })
+    expect(String(queryRawUnsafe.mock.calls[0][0])).toContain('"postedAt" >= $1')
+    expect(queryRawUnsafe.mock.calls[0][1]).toBeInstanceOf(Date)
+  })
+  it('"too old" is written out, so a job with no posting date and an old stored date is still found', () => {
+    expect(buildStaleJobWhere(MAX_DISPLAY_AGE_DAYS, now)).toEqual({
+      OR: [{ postedAt: { lt: cutoff } }, { postedAt: null, createdAt: { lt: cutoff } }],
+    })
   })
 })
 

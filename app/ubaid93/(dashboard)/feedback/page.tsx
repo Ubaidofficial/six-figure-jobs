@@ -1,4 +1,5 @@
 import { JOB_REPORT_TYPES, reportedJobId } from '../../../../lib/admin/jobReports'
+import { getJobDetailAvailability } from '../../../../lib/jobs/detailAvailability'
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../../lib/jobs/salary'
 import { prisma } from '../../../../lib/prisma'
@@ -49,7 +50,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams?: Pr
     ? await prisma.job.findMany({
         where: { id: { in: ids } },
         select: {
-          id: true, shortId: true, title: true, company: true, source: true, isExpired: true,
+          id: true, shortId: true, title: true, company: true, source: true, isExpired: true, postedAt: true, createdAt: true,
           minAnnual: true, maxAnnual: true, currency: true, salaryMin: true, salaryMax: true, salaryCurrency: true,
           salaryPeriod: true, applyUrl: true,
         },
@@ -64,6 +65,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams?: Pr
         company: j.company,
         source: j.source.replace(/^board:/, ''),
         isExpired: j.isExpired,
+        availability: getJobDetailAvailability(j),
         pay: buildSalaryText(j as Parameters<typeof buildSalaryText>[0]),
         href: buildJobSlugHref(j),
         applyUrl: j.applyUrl,

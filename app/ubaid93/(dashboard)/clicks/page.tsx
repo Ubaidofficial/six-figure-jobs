@@ -1,3 +1,4 @@
+import { isJobDetailAvailable } from '../../../../lib/jobs/detailAvailability'
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import { prisma } from '../../../../lib/prisma'
 import { loadDaily } from '../overview'
@@ -52,7 +53,7 @@ export default async function ApplyClicksPage() {
     byPlace = surfaces.map((x) => ({ surface: x.surface, clicks: x._count._all }))
     const jobs = await prisma.job.findMany({
       where: { id: { in: grouped.map((g) => g.jobId) } },
-      select: { id: true, shortId: true, title: true, company: true, isExpired: true },
+      select: { id: true, shortId: true, title: true, company: true, isExpired: true, postedAt: true, createdAt: true },
     })
     const byId = new Map(jobs.map((j) => [j.id, j]))
     const all = grouped.map((g) => {
@@ -62,7 +63,8 @@ export default async function ApplyClicksPage() {
         clicks: g._count._all,
         title: j?.title ?? '(job removed)',
         company: j?.company ?? null,
-        expired: j?.isExpired ?? true,
+        // Expired, or posted too long ago: either way the job page answers "gone".
+        expired: j ? !isJobDetailAvailable(j) : true,
         href: j ? buildJobSlugHref(j) : null,
       }
     })
@@ -161,7 +163,7 @@ export default async function ApplyClicksPage() {
                             ) : (
                               <span className={s.cellTitle}>{r.title}</span>
                             )}
-                            <div className={s.cellSub}>{[r.company, r.href && r.expired ? 'expired' : null].filter(Boolean).join(' · ')}</div>
+                            <div className={s.cellSub}>{[r.company, r.href && r.expired ? 'page gone' : null].filter(Boolean).join(' · ')}</div>
                           </td>
                           <td className={s.num}>{r.clicks.toLocaleString()}</td>
                         </tr>
