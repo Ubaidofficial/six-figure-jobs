@@ -39,6 +39,8 @@ type WorkdayDetailResponse = {
     postedOn?: string
     startDate?: string
     timeType?: string
+    /** Work arrangement, published by some tenants only ("Remote", "Hybrid", "Flex", "Onsite", "Office - Flexible"…). */
+    remoteType?: string
     jobReqId?: string
     jobPostingId?: string
     externalUrl?: string
@@ -340,6 +342,19 @@ function extractExternalPathFromUrl(
   }
 }
 
+/**
+ * A Workday `remoteType` as our work mode (pure). 10 of the 33 Workday employers we read publish it (checked 2026-11-25:
+ * Salesforce, Cisco, Workday, eBay, Zillow, Etsy, Henry Schein, Dexcom, Solventum, Visa); each names its own values.
+ * Values that do not say where the work is done ("Field", "Open to Remote") give null, as does any value not listed.
+ */
+export function workplaceFromWorkday(value: string | null | undefined): AtsJob['workplaceType'] {
+  const v = String(value ?? '').toLowerCase().replace(/[^a-z]+/g, ' ').trim()
+  if (/^(?:fully )?remote$|^work from home$|^virtual$/.test(v)) return 'remote'
+  if (/^(?:hybrid|flex|flexible|partially remote|office flexible)$/.test(v)) return 'hybrid'
+  if (/^(?:fully )?on ?site$|^(?:in )?office(?: full time)?$|^assigned desk$|^non desk$/.test(v)) return 'onsite'
+  return null
+}
+
 function mapWorkdayDetailToJob(
   context: WorkdayContext,
   mapped: WorkdayMappedDetail,
@@ -353,6 +368,7 @@ function mapWorkdayDetailToJob(
     detail?.jobRequisitionLocation?.descriptor ??
     null
   const countryCode = detail?.jobRequisitionLocation?.country?.alpha2Code ?? null
+  const workplaceType = workplaceFromWorkday(detail?.remoteType)
   const parsedSalary = descriptionText
     ? parseSalaryRangeFromText(descriptionText, locationText, countryCode)
     : {
@@ -384,10 +400,13 @@ function mapWorkdayDetailToJob(
       detail?.externalUrl ||
       `${context.origin}/${context.siteId}${summary.externalPath || ''}`,
     locationText,
-    remote:
-      locationText?.toLowerCase().includes('remote') ||
-      locationText?.toLowerCase().includes('anywhere') ||
-      false,
+    // The tenant's own work arrangement decides when it publishes one; otherwise the location text, as before.
+    workplaceType,
+    remote: workplaceType
+      ? workplaceType === 'remote'
+      : locationText?.toLowerCase().includes('remote') ||
+        locationText?.toLowerCase().includes('anywhere') ||
+        false,
 
     salaryMin: parsedSalary.salaryMin,
     salaryMax: parsedSalary.salaryMax,
