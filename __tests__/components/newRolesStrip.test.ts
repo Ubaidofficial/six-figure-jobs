@@ -45,7 +45,8 @@ describe('NewRolesStrip', () => {
     expect(lists).toHaveLength(2)
     expect(lists[0]).not.toMatch(/aria-hidden|inert/)
     expect(lists[1]).toMatch(/aria-hidden="true"/)
-    expect(lists[1]).toMatch(/inert/)
+    // Not `inert`: that also ignores clicks, so half the chips on screen did nothing (fixed 2026-11-25).
+    expect(lists[1]).not.toMatch(/inert/)
     // Every link in the copy is out of the tab order.
     const copy = html.slice(html.indexOf(lists[1]))
     expect((copy.match(/tabindex="-1"/g) ?? []).length).toBe(4)

@@ -1,7 +1,7 @@
 // "Added in the last 24 hours": a slow strip of companies that got new $100k+ roles on the site today, each with how many.
 // Plain server markup and CSS motion (no JavaScript): the list is rendered twice, side by side, and the pair slides
-// left by half its width, so it loops without a seam. The second copy is `inert` (out of the tab order and from screen
-// readers). It pauses on hover and focus; under prefers-reduced-motion it stops and the strip scrolls sideways by hand.
+// left by half its width, so it loops without a seam. The second copy is hidden from screen readers and out of the tab
+// order (tabIndex -1), but clickable: it was `inert` until 2026-11-25, which also ignores clicks on half the chips. It pauses on hover and focus; under prefers-reduced-motion it stops and the strip scrolls sideways by hand.
 import Link from '@/components/ui/Link'
 
 import { CompanyLogo } from '@/components/companies/CompanyLogo'
@@ -17,7 +17,7 @@ const SECONDS_PER_CHIP = 3.5
 
 function Chips({ companies, clone = false }: { companies: NewRolesCompany[]; clone?: boolean }) {
   return (
-    <ul className={clone ? `${styles.list} ${styles.clone}` : styles.list} aria-hidden={clone || undefined} inert={clone || undefined}>
+    <ul className={clone ? `${styles.list} ${styles.clone}` : styles.list} aria-hidden={clone || undefined}>
       {companies.map((company) => (
         <li key={company.id}>
           <Link

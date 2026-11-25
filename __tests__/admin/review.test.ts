@@ -4,7 +4,7 @@
 // Job reports read back from Feedback (lib/admin/jobReports.ts), the review queue's title rules (lib/admin/reviewQueue.ts),
 // and the two admin API actions they use.
 import { reportedJobId, JOB_REPORT_TYPES } from '../../lib/admin/jobReports'
-import { countReviewQueue, loadReviewIds, titleProblems } from '../../lib/admin/reviewQueue'
+import { countReviewQueue, daysUntilGone, loadReviewIds, titleProblems } from '../../lib/admin/reviewQueue'
 import { getDateThreshold, MAX_DISPLAY_AGE_DAYS } from '../../lib/ingest/jobAgeFilter'
 import { buildStaleJobWhere } from '../../lib/jobs/freshness'
 import { buildReportMessage } from '../../lib/jobs/jobReport'
@@ -12,7 +12,9 @@ import { buildReportMessage } from '../../lib/jobs/jobReport'
 const feedbackUpdateMany = jest.fn(async (_a: unknown) => ({ count: 2 }))
 const jobUpdate = jest.fn(async (_a: unknown) => ({}))
 const jobFindUnique = jest.fn(async (_a: unknown) => ({ title: 'Staff Engineer', minAnnual: BigInt(900_000), maxAnnual: BigInt(1_200_000), currency: 'USD' }))
-const jobFindMany = jest.fn(async (_a: unknown) => [{ id: 'board:a:1' }])
+const jobFindMany = jest.fn(async (_a: unknown): Promise<unknown[]> => [{ id: 'board:a:1' }])
+const jobUpdateMany = jest.fn(async (_a: unknown) => ({ count: 2 }))
+const jobFindFirst = jest.fn(async (_a: unknown): Promise<unknown> => null)
 const jobCount = jest.fn(async (_a: unknown) => 3)
 const queryRawUnsafe = jest.fn(async (..._a: unknown[]) => [{ id: 'board:a:2', n: 4 }])
 jest.mock('../../lib/prisma', () => ({
@@ -23,12 +25,17 @@ jest.mock('../../lib/prisma', () => ({
       findUnique: (a: unknown) => jobFindUnique(a),
       findMany: (a: unknown) => jobFindMany(a),
       count: (a: unknown) => jobCount(a),
+      updateMany: (a: unknown) => jobUpdateMany(a),
+      findFirst: (a: unknown) => jobFindFirst(a),
     },
     $queryRawUnsafe: (...a: unknown[]) => queryRawUnsafe(...a),
   },
 }))
 jest.mock('../../lib/admin/auth', () => ({ getAdminSession: async () => true }))
-jest.mock('../../lib/jobs/expiry', () => ({ expireJobsByIds: jest.fn() }))
+const expireJobsByIds = jest.fn(async (_ids: string[]) => ({ expired: 2 }))
+jest.mock('../../lib/jobs/expiry', () => ({ expireJobsByIds: (ids: string[]) => expireJobsByIds(ids) }))
+const markAdminExpired = jest.fn(async (_id: string | string[]) => undefined)
+jest.mock('../../lib/admin/adminExpired', () => ({ markAdminExpired: (id: string | string[]) => markAdminExpired(id), unmarkAdminExpired: jest.fn() }))
 
 describe('job reports', () => {
   it('reads the job id back from the message the report form saves', () => {
@@ -91,6 +98,25 @@ describe('review queue: only jobs whose page is up', () => {
   })
 })
 
+describe('review queue: order and time left', () => {
+  it('pay tab: highest in US dollars first, whatever the currency', async () => {
+    jobFindMany.mockResolvedValueOnce([
+      { id: 'aud', minAnnual: BigInt(962_000), maxAnnual: BigInt(1_400_000), currency: 'AUD' }, // about US$921k
+      { id: 'usd', minAnnual: BigInt(500_000), maxAnnual: BigInt(1_000_000), currency: 'USD' },
+      { id: 'cad', minAnnual: null, maxAnnual: BigInt(1_000_000), currency: 'CAD' }, // about US$735k
+      { id: 'unknown', minAnnual: null, maxAnnual: BigInt(2_000_000), currency: 'XYZ' },
+    ])
+    expect(await loadReviewIds('pay', 3)).toEqual(['usd', 'aud', 'cad'])
+  })
+  it('days until the page goes away, from the posting date', () => {
+    const now = new Date('2026-11-25T12:00:00Z')
+    expect(daysUntilGone({ postedAt: new Date('2026-11-24T12:00:00Z') }, now)).toBe(MAX_DISPLAY_AGE_DAYS - 1)
+    expect(daysUntilGone({ postedAt: null, createdAt: new Date('2026-11-25T11:00:00Z') }, now)).toBe(MAX_DISPLAY_AGE_DAYS - 1)
+    expect(daysUntilGone({ postedAt: new Date('2026-11-11T13:00:00Z') }, now)).toBe(0)
+    expect(daysUntilGone({}, now)).toBeNull()
+  })
+})
+
 describe('admin API actions', () => {
   const patch = (body: unknown) =>
     new Request('https://x.test/api', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
@@ -123,5 +149,43 @@ describe('admin API actions', () => {
     jobUpdate.mockClear()
     await PATCH(patch({ id: 'board:a:1', minAnnual: 60_000, maxAnnual: 80_000 }))
     expect(jobUpdate.mock.calls[0][0]).toMatchObject({ data: { isHighSalary: false, salaryValidated: false } })
+  })
+
+  it('bulk Expire goes through the same expiry path and remembers every id', async () => {
+    const { PATCH } = await import('../../app/api/ubaid93/jobs/route')
+    const res = await PATCH(patch({ ids: ['board:a:1', 'board:a:2'], isExpired: true }))
+    expect(await res.json()).toEqual({ ok: true, updated: 2 })
+    expect(expireJobsByIds).toHaveBeenCalledWith(['board:a:1', 'board:a:2'])
+    expect(markAdminExpired).toHaveBeenCalledWith(['board:a:1', 'board:a:2'])
+  })
+  it('bulk "Pay is right" clears only the review flag', async () => {
+    const { PATCH } = await import('../../app/api/ubaid93/jobs/route')
+    await PATCH(patch({ ids: ['board:a:1'], needsReview: false }))
+    expect(jobUpdateMany).toHaveBeenCalledWith({ where: { id: { in: ['board:a:1'] } }, data: { needsReview: false } })
+  })
+  it('bulk refuses anything else, an empty list, or too many', async () => {
+    const { PATCH } = await import('../../app/api/ubaid93/jobs/route')
+    expect((await PATCH(patch({ ids: ['a'], title: 'x' }))).status).toBe(400)
+    expect((await PATCH(patch({ ids: ['a'], isExpired: true, title: 'x' }))).status).toBe(400)
+    expect((await PATCH(patch({ ids: [], isExpired: true }))).status).toBe(400)
+    expect((await PATCH(patch({ ids: Array.from({ length: 201 }, (_, i) => `j${i}`), isExpired: true }))).status).toBe(400)
+  })
+  it('"Use cleaned title" writes the cleaner\'s title with its dedupe key', async () => {
+    const { PATCH } = await import('../../app/api/ubaid93/jobs/route')
+    jobUpdate.mockClear()
+    jobFindUnique.mockResolvedValueOnce({ id: 'j1', title: 'Attorney---Commercial Real Estate---Charlotte---$120k-$180k', companyId: 'c1', locationRaw: 'Charlotte, NC' } as never)
+    const res = await PATCH(patch({ id: 'j1', cleanTitle: true }))
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.title).toBe('Attorney - Commercial Real Estate')
+    expect(jobUpdate.mock.calls[0][0]).toMatchObject({ where: { id: 'j1' }, data: { title: 'Attorney - Commercial Real Estate', dedupeKey: expect.any(String) } })
+  })
+  it('"Use cleaned title" refuses when another job of the company already has that title', async () => {
+    const { PATCH } = await import('../../app/api/ubaid93/jobs/route')
+    jobUpdate.mockClear()
+    jobFindUnique.mockResolvedValueOnce({ id: 'j1', title: 'Staff Engineer ($200k-$250k)', companyId: 'c1', locationRaw: null } as never)
+    jobFindFirst.mockResolvedValueOnce({ id: 'other' })
+    expect((await PATCH(patch({ id: 'j1', cleanTitle: true }))).status).toBe(409)
+    expect(jobUpdate).not.toHaveBeenCalled()
   })
 })

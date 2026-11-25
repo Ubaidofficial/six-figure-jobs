@@ -3,6 +3,7 @@ import { forgetMemo } from '../../../../lib/cache/memo'
 
 import { getAdminSession } from '../../../../lib/admin/auth'
 import { markAdminExpired, unmarkAdminExpired } from '../../../../lib/admin/adminExpired'
+import { applyCleanTitle } from '../../../../lib/jobs/applyCleanTitle'
 import { expireJobsByIds } from '../../../../lib/jobs/expiry'
 import { buildSalaryText } from '../../../../lib/jobs/salary'
 import { validateHighSalaryEligibility } from '../../../../lib/normalizers/salary'
@@ -46,10 +47,44 @@ export async function GET(req: Request) {
   )
 }
 
+/** Most jobs one bulk action takes (the Review queue shows at most 100 a page). */
+const MAX_BULK = 200
+
 export async function PATCH(req: Request) {
   if (!(await getAdminSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { id, ...data } = await req.json()
+  const { id, ids, ...data } = await req.json()
+
+  // Bulk, from the Review queue: "Expire" or "Pay is right" on the ticked jobs, the same as one at a time.
+  if (ids !== undefined) {
+    if (!Array.isArray(ids) || ids.length === 0 || ids.length > MAX_BULK || !ids.every((x) => typeof x === 'string' && x)) {
+      return NextResponse.json({ error: `ids must be 1 to ${MAX_BULK} job ids` }, { status: 400 })
+    }
+    const keys = Object.keys(data).join(',')
+    if (keys === 'isExpired' && data.isExpired === true) {
+      await expireJobsByIds(ids)
+      await markAdminExpired(ids)
+    } else if (keys === 'needsReview' && data.needsReview === false) {
+      await prisma.job.updateMany({ where: { id: { in: ids } }, data: { needsReview: false } })
+    } else {
+      return NextResponse.json({ error: 'A bulk action is isExpired: true or needsReview: false' }, { status: 400 })
+    }
+    forgetMemo('admin:review-counts')
+    return NextResponse.json({ ok: true, updated: ids.length })
+  }
+
   if (!id || typeof id !== 'string') return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+
+  // "Use cleaned title" in the Review queue: the title cleaner's result, written with its dedupe key (as the backfill
+  // script does). The page address follows the title; the old one redirects.
+  if (data.cleanTitle === true && Object.keys(data).length === 1) {
+    const job = await prisma.job.findUnique({ where: { id }, select: { id: true, title: true, companyId: true, locationRaw: true } })
+    if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+    const result = await applyCleanTitle(job)
+    if (result.state === 'unchanged') return NextResponse.json({ error: 'The cleaner leaves this title as it is; edit it by hand' }, { status: 400 })
+    if (result.state === 'clash') return NextResponse.json({ error: 'Another job of this company already has the cleaned title' }, { status: 409 })
+    forgetMemo('admin:review-counts')
+    return NextResponse.json({ ok: true, title: result.title })
+  }
 
   // Expiring goes through the same path as the automatic checks, so Google is told the page is gone and the sitemap
   // drops it; restoring clears the expiry dates those checks set, or the freshness rules would still hide the job.
