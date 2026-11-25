@@ -148,7 +148,7 @@ export function SiteStatsStrip({
             <div className={styles.step}>
               <p className={styles.label}>We screen</p>
               <p className={styles.big}>
-                <AnimatedNumber text={n(catalog.jobs)} reveal />
+                <AnimatedNumber text={n(catalog.jobs)} reveal roll />
               </p>
               <p className={styles.sub}>
                 open jobs from {n(catalog.sources)} sources, {n(catalog.atsPlatforms)} hiring platforms and{' '}
@@ -164,7 +164,7 @@ export function SiteStatsStrip({
         <div className={`${styles.step} ${styles.stepMain}`}>
           <p className={styles.label}>You see</p>
           <p className={`${styles.big} ${styles.bigMain}`}>
-            <AnimatedNumber text={n(jobs)} reveal />
+            <AnimatedNumber text={n(jobs)} reveal roll />
           </p>
           <p className={styles.sub}>$100k+ jobs with published pay</p>
         </div>
@@ -172,7 +172,7 @@ export function SiteStatsStrip({
           {facts.map(([value, label]) => (
             <li key={label}>
               <span className={styles.factValue}>
-                <AnimatedNumber text={n(value)} reveal />
+                <AnimatedNumber text={n(value)} reveal roll />
               </span>
               <span className={styles.factLabel}>{label}</span>
             </li>
