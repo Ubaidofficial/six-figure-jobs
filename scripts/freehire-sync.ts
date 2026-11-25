@@ -14,7 +14,7 @@ async function main() {
   console.log(`\nfreehire sync ${dryRun ? '(DRY RUN — nothing written)' : ''}`)
   for (const m of markets) {
     console.log(
-      `${m.currency}: available=${m.available} fetched=${m.fetched} mappable=${m.mappable}` +
+      `${m.currency}: available=${m.available} fetched=${m.fetched} links=${m.linksRead} mappable=${m.mappable}` +
         (m.tooOld ? ` postedOver30Days=${m.tooOld}` : '') +
         (dryRun ? ` gateRejected=${m.gateRejected}` : '') +
         // First-seen dates (when freehire found the jobs), not posting dates.
