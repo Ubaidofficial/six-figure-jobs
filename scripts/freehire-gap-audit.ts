@@ -11,7 +11,7 @@ import { appendFileSync } from 'node:fs'
 
 import { readPayFromDescription } from '../lib/jobs/payEvidence'
 import { getMinimumSalaryRejection } from '../lib/jobs/salaryPublicationGate'
-import { FREEHIRE_MARKETS, freehireHeaders, isListableByReality, mapFreehireJob, type FreehireJob } from '../lib/scrapers/freehire'
+import { FREEHIRE_MARKETS, freehireHeaders, freehireListing, isListableByReality, type FreehireJob } from '../lib/scrapers/freehire'
 
 const API_URL = 'https://freehire.me/api/v1/agent/jobs/search'
 const PAGE_SIZE = 100
@@ -53,7 +53,8 @@ export function classifyFreehireJob(job: FreehireJob): { reason: GapReason; deta
   if (getMinimumSalaryRejection({ salaryMin: e.salary_min, salaryMax: e.salary_max, salaryCurrency: currency })) {
     return { reason: 'below-gate', detail: currency }
   }
-  return mapFreehireJob(job) ? { reason: 'ok', detail: '' } : { reason: 'unusable-record', detail: '' }
+  // The link is not checked: the public search this reads leaves it empty (it comes from /data/jobs, see fetchOriginalLink).
+  return freehireListing(job) ? { reason: 'ok', detail: '' } : { reason: 'unusable-record', detail: '' }
 }
 
 const tally = <T extends string>(items: T[]) => {
