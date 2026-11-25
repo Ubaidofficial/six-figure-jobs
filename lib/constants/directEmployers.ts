@@ -14,6 +14,74 @@ export type DirectEmployer = {
   website?: string
 }
 
+// The 55 employers added for remote100k.com coverage on 2026-11-25. Kept as their own list because their company pages
+// are released past the sitemap wave's company cap once they pass the quality bar (owner's decision, 2026-11-25:
+// "make the new company pages indexable too"; lib/seo/companyPublishing.ts).
+export const REMOTE100K_EMPLOYERS: readonly DirectEmployer[] = [
+  // From the remote100k.com coverage audit (owner's request, 2026-11-25: "do all three", item 2): boards behind remote100k's
+  // jobs we did not read, found by scripts/findRemote100kBoards.ts from each job's apply link and checked against the
+  // board's own name (Greenhouse) or its account/tenant name. The note gives the jobs remote100k showed, the board's size
+  // and how many of its jobs state pay (only those are listed here).
+  { slug: 'grafana-labs', name: 'Grafana Labs', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/grafanalabs' }, // remote100k 18; board 136 jobs, 71 state pay
+  { slug: 'tailscale', name: 'Tailscale', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/tailscale' }, // remote100k 16; board 84 jobs, 78 state pay
+  { slug: 'beigene', name: 'BeiGene', provider: 'workday', boardUrl: 'https://beigene.wd5.myworkdayjobs.com/BeiGene' }, // remote100k 14; board 278 jobs
+  { slug: 'chainguard', name: 'Chainguard', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/chainguard' }, // remote100k 13; board 107 jobs, 60 state pay
+  { slug: 'headway', name: 'Headway', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/headway' }, // remote100k 10; board 87 jobs, 79 state pay
+  { slug: 'gartner', name: 'Gartner', provider: 'workday', boardUrl: 'https://gartner.wd5.myworkdayjobs.com/EXT' }, // remote100k 9; board 794 jobs
+  { slug: 'workiva', name: 'Workiva', provider: 'workday', boardUrl: 'https://workiva.wd503.myworkdayjobs.com/careers' }, // remote100k 8; board 93 jobs
+  { slug: 'engine', name: 'Engine', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/engine' }, // remote100k 7; board 70 jobs, 69 state pay
+  { slug: 'natera', name: 'Natera', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/natera' }, // remote100k 6; board 216 jobs, 145 state pay
+  { slug: 'owner-com', name: 'Owner.com', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/owner' }, // remote100k 5; board 50 jobs, 43 state pay
+  { slug: 'kraken', name: 'Kraken', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/kraken.com' }, // remote100k 5; board 92 jobs, 38 state pay
+  { slug: 'abbott', name: 'Abbott', provider: 'workday', boardUrl: 'https://abbott.wd5.myworkdayjobs.com/abbottcareers' }, // remote100k 5; board 2000 jobs
+  { slug: 'sentilink', name: 'SentiLink', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/sentilink' }, // remote100k 5; board 46 jobs, 46 state pay
+  { slug: 'teleport', name: 'Teleport', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/goteleport' }, // remote100k 4; board 27 jobs, 27 state pay
+  { slug: 'tilt', name: 'Tilt', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/tilthq' }, // remote100k 4; board 25 jobs, 12 state pay
+  { slug: 'humana', name: 'Humana', provider: 'workday', boardUrl: 'https://humana.wd5.myworkdayjobs.com/Humana_External_Career_Site' }, // remote100k 3; board 333 jobs
+  { slug: 'clariti-cloud-inc', name: 'Clariti Cloud Inc.', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/clariticloudinc' }, // remote100k 3; board 13 jobs, 9 state pay
+  { slug: 'ashby', name: 'Ashby', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/ashby' }, // remote100k 3; board 79 jobs, 79 state pay
+  { slug: 'sprinklr', name: 'Sprinklr', provider: 'workday', boardUrl: 'https://sprinklr.wd1.myworkdayjobs.com/careers' }, // remote100k 2; board 60 jobs
+  { slug: 'evercommerce', name: 'EverCommerce', provider: 'workday', boardUrl: 'https://evercommerce.wd1.myworkdayjobs.com/EverCommerce_Careers' }, // remote100k 2; board 56 jobs
+  { slug: 'forma-ai', name: 'Forma.ai', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/formaaiinc' }, // remote100k 2; board 19 jobs, 4 state pay
+  { slug: 'metamask', name: 'MetaMask', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/consensys' }, // remote100k 2; board 10 jobs, 8 state pay
+  { slug: 'alnylam-pharmaceuticals', name: 'Alnylam Pharmaceuticals', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/alnylampharmaceuticals' }, // remote100k 2; board 118 jobs, 101 state pay
+  { slug: 'wiz', name: 'Wiz', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/wizinc' }, // remote100k 2; board 102 jobs, 29 state pay
+  { slug: 'socure', name: 'Socure', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/socure' }, // remote100k 2; board 84 jobs, 79 state pay
+  { slug: 'liftoff', name: 'Liftoff', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/liftoff' }, // remote100k 2; board 23 jobs, 15 state pay
+  { slug: 'honeycomb-io', name: 'Honeycomb.io', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/honeycomb' }, // remote100k 2; board 16 jobs, 16 state pay
+  { slug: 'jane-app', name: 'Jane App', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/jane' }, // remote100k 2; board 19 jobs, 19 state pay
+  { slug: 'serve-robotics', name: 'Serve Robotics', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/serverobotics' }, // remote100k 2; board 13 jobs, 13 state pay
+  { slug: 'pantheon-systems', name: 'Pantheon Systems', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/pantheon' }, // remote100k 2; board 8 jobs, 5 state pay
+  { slug: 'henry-schein', name: 'Henry Schein', provider: 'workday', boardUrl: 'https://henryschein.wd1.myworkdayjobs.com/External_Careers' }, // remote100k 1; board 265 jobs
+  { slug: 'first-advantage', name: 'First Advantage', provider: 'workday', boardUrl: 'https://firstadvantage.wd5.myworkdayjobs.com/FirstAdvantage' }, // remote100k 1; board 87 jobs
+  { slug: 'wex', name: 'WEX', provider: 'workday', boardUrl: 'https://wexinc.wd5.myworkdayjobs.com/WEXInc' }, // remote100k 1; board 89 jobs
+  { slug: 'ooma', name: 'Ooma', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/ooma' }, // remote100k 1; board 10 jobs, 8 state pay
+  { slug: 'coder', name: 'Coder', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/coder' }, // remote100k 1; board 31 jobs, 31 state pay
+  { slug: 'neo4j', name: 'Neo4j', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/neo4j' }, // remote100k 1; board 60 jobs, 11 state pay
+  { slug: 'maze', name: 'Maze', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/mazehq' }, // remote100k 1; board 3 jobs, 3 state pay
+  { slug: 'hubspot', name: 'HubSpot', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/hubspotjobs' }, // remote100k 1; board 141 jobs, 17 state pay
+  { slug: 'bugcrowd', name: 'Bugcrowd', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/bugcrowd' }, // remote100k 1; board 11 jobs, 6 state pay
+  { slug: 'earnin', name: 'EarnIn', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/earnin' }, // remote100k 1; board 27 jobs, 20 state pay
+  { slug: 'onebrief', name: 'Onebrief', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/onebrief' }, // remote100k 1; board 33 jobs, 33 state pay
+  { slug: 'dexcom', name: 'Dexcom', provider: 'workday', boardUrl: 'https://dexcom.wd1.myworkdayjobs.com/Dexcom' }, // remote100k 1; board 283 jobs
+  { slug: 'runway', name: 'Runway', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/runway' }, // remote100k 1; board 3 jobs, 3 state pay
+  { slug: 'attio', name: 'Attio', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/attio' }, // remote100k 1; board 22 jobs, 18 state pay
+  { slug: 'automattic', name: 'Automattic', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/automatticcareers' }, // remote100k 1; board 6 jobs, 6 state pay
+  { slug: 'hims-hers', name: 'Hims & Hers', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/hims-and-hers' }, // remote100k; board name check missed only on '&' vs 'and'
+  { slug: 'gdit', name: 'General Dynamics Information Technology', provider: 'workday', boardUrl: 'https://gdit.wd5.myworkdayjobs.com/External_Career_Site' }, // remote100k; Workday tenant 'gdit'
+  { slug: 'solventum', name: 'Solventum', provider: 'workday', boardUrl: 'https://healthcare.wd1.myworkdayjobs.com/Search' }, // remote100k; Solventum (former 3M Health Care) Workday tenant 'healthcare'
+  { slug: 'abnormal-ai', name: 'Abnormal AI', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/abnormalsecurity' }, // remote100k 11 via gh_jid; board 'Abnormal', 86 jobs
+  // Oracle Recruiting Cloud and Gem boards behind remote100k.com's jobs (owner's request, 2026-11-25: "do all three",
+  // item 3; read by lib/scrapers/ats/oraclecloud.ts and gem.ts). Job counts on 2026-11-25; only jobs whose posting states
+  // pay reaching the floor are listed.
+  { slug: 'argano', name: 'Argano', provider: 'oraclecloud', boardUrl: 'https://fa-eyau-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1' }, // 86 jobs, 1 states pay
+  { slug: 'akamai', name: 'Akamai', provider: 'oraclecloud', boardUrl: 'https://fa-extu-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1' }, // 298 jobs, 75 state pay
+  { slug: 'icertis', name: 'Icertis', provider: 'oraclecloud', boardUrl: 'https://iaaviz.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Jobs-at-Icertis' }, // 42 jobs, 2 state pay
+  { slug: 'fortinet', name: 'Fortinet', provider: 'oraclecloud', boardUrl: 'https://edel.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_xx' }, // 400+ jobs (read 400), 51 state pay
+  { slug: 'bigpanda', name: 'BigPanda', provider: 'gem', boardUrl: 'https://jobs.gem.com/bigpanda' }, // 22 jobs, 8 state pay
+  { slug: 'linktree', name: 'Linktree', provider: 'gem', boardUrl: 'https://jobs.gem.com/linktree' }, // 23 jobs, 15 state pay
+]
+
 export const DIRECT_EMPLOYERS: readonly DirectEmployer[] = [
   { slug: 'spacex', name: 'SpaceX', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/spacex', website: 'spacex.com' },
   { slug: 'anduril-industries', name: 'Anduril', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/andurilindustries', website: 'anduril.com' },
@@ -411,66 +479,5 @@ export const DIRECT_EMPLOYERS: readonly DirectEmployer[] = [
   { slug: 'sylvera', name: 'Sylvera', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/sylvera', website: 'sylvera.com' },
   { slug: 'tessl', name: 'Tessl', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/tesslcareers', website: 'tessl.io' },
   { slug: 'world-labs', name: 'World Labs', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/worldlabs', website: 'worldlabs.ai' },
-  // From the remote100k.com coverage audit (owner's request, 2026-11-25: "do all three", item 2): boards behind remote100k's
-  // jobs we did not read, found by scripts/findRemote100kBoards.ts from each job's apply link and checked against the
-  // board's own name (Greenhouse) or its account/tenant name. The note gives the jobs remote100k showed, the board's size
-  // and how many of its jobs state pay (only those are listed here).
-  { slug: 'grafana-labs', name: 'Grafana Labs', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/grafanalabs' }, // remote100k 18; board 136 jobs, 71 state pay
-  { slug: 'tailscale', name: 'Tailscale', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/tailscale' }, // remote100k 16; board 84 jobs, 78 state pay
-  { slug: 'beigene', name: 'BeiGene', provider: 'workday', boardUrl: 'https://beigene.wd5.myworkdayjobs.com/BeiGene' }, // remote100k 14; board 278 jobs
-  { slug: 'chainguard', name: 'Chainguard', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/chainguard' }, // remote100k 13; board 107 jobs, 60 state pay
-  { slug: 'headway', name: 'Headway', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/headway' }, // remote100k 10; board 87 jobs, 79 state pay
-  { slug: 'gartner', name: 'Gartner', provider: 'workday', boardUrl: 'https://gartner.wd5.myworkdayjobs.com/EXT' }, // remote100k 9; board 794 jobs
-  { slug: 'workiva', name: 'Workiva', provider: 'workday', boardUrl: 'https://workiva.wd503.myworkdayjobs.com/careers' }, // remote100k 8; board 93 jobs
-  { slug: 'engine', name: 'Engine', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/engine' }, // remote100k 7; board 70 jobs, 69 state pay
-  { slug: 'natera', name: 'Natera', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/natera' }, // remote100k 6; board 216 jobs, 145 state pay
-  { slug: 'owner-com', name: 'Owner.com', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/owner' }, // remote100k 5; board 50 jobs, 43 state pay
-  { slug: 'kraken', name: 'Kraken', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/kraken.com' }, // remote100k 5; board 92 jobs, 38 state pay
-  { slug: 'abbott', name: 'Abbott', provider: 'workday', boardUrl: 'https://abbott.wd5.myworkdayjobs.com/abbottcareers' }, // remote100k 5; board 2000 jobs
-  { slug: 'sentilink', name: 'SentiLink', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/sentilink' }, // remote100k 5; board 46 jobs, 46 state pay
-  { slug: 'teleport', name: 'Teleport', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/goteleport' }, // remote100k 4; board 27 jobs, 27 state pay
-  { slug: 'tilt', name: 'Tilt', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/tilthq' }, // remote100k 4; board 25 jobs, 12 state pay
-  { slug: 'humana', name: 'Humana', provider: 'workday', boardUrl: 'https://humana.wd5.myworkdayjobs.com/Humana_External_Career_Site' }, // remote100k 3; board 333 jobs
-  { slug: 'clariti-cloud-inc', name: 'Clariti Cloud Inc.', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/clariticloudinc' }, // remote100k 3; board 13 jobs, 9 state pay
-  { slug: 'ashby', name: 'Ashby', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/ashby' }, // remote100k 3; board 79 jobs, 79 state pay
-  { slug: 'sprinklr', name: 'Sprinklr', provider: 'workday', boardUrl: 'https://sprinklr.wd1.myworkdayjobs.com/careers' }, // remote100k 2; board 60 jobs
-  { slug: 'evercommerce', name: 'EverCommerce', provider: 'workday', boardUrl: 'https://evercommerce.wd1.myworkdayjobs.com/EverCommerce_Careers' }, // remote100k 2; board 56 jobs
-  { slug: 'forma-ai', name: 'Forma.ai', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/formaaiinc' }, // remote100k 2; board 19 jobs, 4 state pay
-  { slug: 'metamask', name: 'MetaMask', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/consensys' }, // remote100k 2; board 10 jobs, 8 state pay
-  { slug: 'alnylam-pharmaceuticals', name: 'Alnylam Pharmaceuticals', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/alnylampharmaceuticals' }, // remote100k 2; board 118 jobs, 101 state pay
-  { slug: 'wiz', name: 'Wiz', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/wizinc' }, // remote100k 2; board 102 jobs, 29 state pay
-  { slug: 'socure', name: 'Socure', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/socure' }, // remote100k 2; board 84 jobs, 79 state pay
-  { slug: 'liftoff', name: 'Liftoff', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/liftoff' }, // remote100k 2; board 23 jobs, 15 state pay
-  { slug: 'honeycomb-io', name: 'Honeycomb.io', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/honeycomb' }, // remote100k 2; board 16 jobs, 16 state pay
-  { slug: 'jane-app', name: 'Jane App', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/jane' }, // remote100k 2; board 19 jobs, 19 state pay
-  { slug: 'serve-robotics', name: 'Serve Robotics', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/serverobotics' }, // remote100k 2; board 13 jobs, 13 state pay
-  { slug: 'pantheon-systems', name: 'Pantheon Systems', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/pantheon' }, // remote100k 2; board 8 jobs, 5 state pay
-  { slug: 'henry-schein', name: 'Henry Schein', provider: 'workday', boardUrl: 'https://henryschein.wd1.myworkdayjobs.com/External_Careers' }, // remote100k 1; board 265 jobs
-  { slug: 'first-advantage', name: 'First Advantage', provider: 'workday', boardUrl: 'https://firstadvantage.wd5.myworkdayjobs.com/FirstAdvantage' }, // remote100k 1; board 87 jobs
-  { slug: 'wex', name: 'WEX', provider: 'workday', boardUrl: 'https://wexinc.wd5.myworkdayjobs.com/WEXInc' }, // remote100k 1; board 89 jobs
-  { slug: 'ooma', name: 'Ooma', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/ooma' }, // remote100k 1; board 10 jobs, 8 state pay
-  { slug: 'coder', name: 'Coder', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/coder' }, // remote100k 1; board 31 jobs, 31 state pay
-  { slug: 'neo4j', name: 'Neo4j', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/neo4j' }, // remote100k 1; board 60 jobs, 11 state pay
-  { slug: 'maze', name: 'Maze', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/mazehq' }, // remote100k 1; board 3 jobs, 3 state pay
-  { slug: 'hubspot', name: 'HubSpot', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/hubspotjobs' }, // remote100k 1; board 141 jobs, 17 state pay
-  { slug: 'bugcrowd', name: 'Bugcrowd', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/bugcrowd' }, // remote100k 1; board 11 jobs, 6 state pay
-  { slug: 'earnin', name: 'EarnIn', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/earnin' }, // remote100k 1; board 27 jobs, 20 state pay
-  { slug: 'onebrief', name: 'Onebrief', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/onebrief' }, // remote100k 1; board 33 jobs, 33 state pay
-  { slug: 'dexcom', name: 'Dexcom', provider: 'workday', boardUrl: 'https://dexcom.wd1.myworkdayjobs.com/Dexcom' }, // remote100k 1; board 283 jobs
-  { slug: 'runway', name: 'Runway', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/runway' }, // remote100k 1; board 3 jobs, 3 state pay
-  { slug: 'attio', name: 'Attio', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/attio' }, // remote100k 1; board 22 jobs, 18 state pay
-  { slug: 'automattic', name: 'Automattic', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/automatticcareers' }, // remote100k 1; board 6 jobs, 6 state pay
-  { slug: 'hims-hers', name: 'Hims & Hers', provider: 'ashby', boardUrl: 'https://jobs.ashbyhq.com/hims-and-hers' }, // remote100k; board name check missed only on '&' vs 'and'
-  { slug: 'gdit', name: 'General Dynamics Information Technology', provider: 'workday', boardUrl: 'https://gdit.wd5.myworkdayjobs.com/External_Career_Site' }, // remote100k; Workday tenant 'gdit'
-  { slug: 'solventum', name: 'Solventum', provider: 'workday', boardUrl: 'https://healthcare.wd1.myworkdayjobs.com/Search' }, // remote100k; Solventum (former 3M Health Care) Workday tenant 'healthcare'
-  { slug: 'abnormal-ai', name: 'Abnormal AI', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/abnormalsecurity' }, // remote100k 11 via gh_jid; board 'Abnormal', 86 jobs
-  // Oracle Recruiting Cloud and Gem boards behind remote100k.com's jobs (owner's request, 2026-11-25: "do all three",
-  // item 3; read by lib/scrapers/ats/oraclecloud.ts and gem.ts). Job counts on 2026-11-25; only jobs whose posting states
-  // pay reaching the floor are listed.
-  { slug: 'argano', name: 'Argano', provider: 'oraclecloud', boardUrl: 'https://fa-eyau-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1' }, // 86 jobs, 1 states pay
-  { slug: 'akamai', name: 'Akamai', provider: 'oraclecloud', boardUrl: 'https://fa-extu-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1' }, // 298 jobs, 75 state pay
-  { slug: 'icertis', name: 'Icertis', provider: 'oraclecloud', boardUrl: 'https://iaaviz.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Jobs-at-Icertis' }, // 42 jobs, 2 state pay
-  { slug: 'fortinet', name: 'Fortinet', provider: 'oraclecloud', boardUrl: 'https://edel.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_xx' }, // 400+ jobs (read 400), 51 state pay
-  { slug: 'bigpanda', name: 'BigPanda', provider: 'gem', boardUrl: 'https://jobs.gem.com/bigpanda' }, // 22 jobs, 8 state pay
-  { slug: 'linktree', name: 'Linktree', provider: 'gem', boardUrl: 'https://jobs.gem.com/linktree' }, // 23 jobs, 15 state pay
+  ...REMOTE100K_EMPLOYERS,
 ]
