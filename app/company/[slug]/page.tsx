@@ -1,5 +1,6 @@
 // app/company/[slug]/page.tsx
 
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { CountryFlag } from '@/components/ui/CountryFlag'
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
@@ -308,7 +309,10 @@ export default async function CompanyPage({
                 ].map((tile) => (
                   <div key={tile.label} className="rounded-lg border border-border bg-card p-4">
                     <dt className="text-xs text-muted-foreground">{tile.label}</dt>
-                    <dd className="mt-1 font-mono text-xl font-semibold text-foreground">{tile.value}</dd>
+                    <dd className="mt-1 font-mono text-xl font-semibold text-foreground">
+                      {/* Counts up when the tile scrolls into view (phones); a tile already on screen stays put. */}
+                      <AnimatedNumber text={tile.value} reveal />
+                    </dd>
                   </div>
                 ))}
               </dl>
