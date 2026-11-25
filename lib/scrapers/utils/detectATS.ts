@@ -109,6 +109,8 @@ export function toAtsProvider(atsType: ATSType): AtsProvider | null {
     case 'workable':
     case 'breezy':
     case 'icims':
+    case 'oraclecloud':
+    case 'gem':
       return atsType
     default:
       return null
