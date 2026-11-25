@@ -44,6 +44,8 @@ jobs:
 
       - name: remote100k.com jobs we have and lack (read-only; reads remote100k's public job pages, 4 at a time)
         run: npx tsx scripts/auditRemote100kCoverage.ts
+      - name: Listed jobs with no country (read-only)
+        run: npx tsx scripts/auditMissingCountry.ts
 
       - name: Coverage audit (read-only)
         run: npm run audit:db-coverage

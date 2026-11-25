@@ -4,6 +4,7 @@
 // (that script still fails the daily data-quality run); the rest measure what visitors and Google see.
 import { titleProblems } from '../admin/reviewQueue'
 import { isAggregatorApplyUrl, unwrapRedirectUrl } from '../jobs/applyUrl'
+import { countriesFromText } from '../location/jobLocation'
 
 export type Area = 'data' | 'filters' | 'seo' | 'review'
 export type Severity = 'high' | 'medium' | 'low'
@@ -21,6 +22,7 @@ export type CheckRow = {
   countryCode: string | null
   remoteMode: string | null
   companyId: string | null
+  locationRaw: string | null
 }
 
 export type CheckResult = {
@@ -35,6 +37,19 @@ export type CheckResult = {
 }
 
 const SAMPLE = 5
+
+// Words that name no single place: a remote job described only by these (or by several countries) has no country by
+// rule (lib/ingest/index.ts processLocation: remote jobs never take one from a city or the pay currency), so it is not
+// a missing country. Found 2026-11-25: 312 listed jobs at plain "Remote", 82 at "Remote / Worldwide", others at "EMEA".
+const NO_SINGLE_PLACE = /\b(?:remote|job|jobs|worldwide|global|globally|anywhere|international|any location|location|work from home|wfh|distributed|emea|apac|apj|latam|namer|amer|americas|europe|european union|eu|asia|nordics|dach|benelux|middle east|africa|oceania|anz|north america|south america|in|the|and|or|only)\b/g
+
+/** A remote job whose location names no single place: no country is right for it (pure). */
+export function remoteWithoutSinglePlace(r: Pick<CheckRow, 'remoteMode' | 'locationRaw'>): boolean {
+  if (r.remoteMode !== 'remote') return false
+  const text = (r.locationRaw ?? '').toLowerCase()
+  if (countriesFromText(text).length >= 2) return true
+  return text.replace(NO_SINGLE_PLACE, ' ').replace(/[^a-z]+/g, '') === ''
+}
 const RETIREMENT_PLAN_VALUES = new Set([401000, 403000, 457000])
 const num = (v: bigint | number | null) => (v == null ? null : Number(v))
 
@@ -84,8 +99,10 @@ const DEFS: Def[] = [
     key: 'missing_country',
     area: 'filters',
     severity: 'medium',
-    title: 'No country, so the job is in no country filter, page or remote-region list',
-    bad: (r) => (r.countryCode ? null : r.title),
+    title: 'No country though the location names a place, so the job is in no country filter, page or remote-region list',
+    // Remote jobs at "Remote", "Worldwide", "EMEA" or several countries have no country by rule (2026-11-25).
+    applies: (r) => !remoteWithoutSinglePlace(r),
+    bad: (r) => (r.countryCode ? null : `${r.title} · "${r.locationRaw ?? ''}"`),
   },
   {
     key: 'work_mode_not_stated',

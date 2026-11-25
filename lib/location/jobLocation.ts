@@ -93,6 +93,8 @@ const COUNTRY_ALIASES: Record<string, string> = {
   osterreich: 'AT',
   czechia: 'CZ',
   'royaume-uni': 'GB',
+  // "Nottingham, ENG": UK addresses abbreviate England (read only as a whole part, never inside a word).
+  eng: 'GB',
 }
 
 // Words that sit next to a country in a remote job's text ("Remote - US", "Canada (Remote)", "Remote in the U.S.").
@@ -120,14 +122,14 @@ export function isPlaceholderLocation(text: unknown): boolean {
 export function countryFromText(text: unknown): string | null {
   if (typeof text !== 'string') return null
   const lower = text.toLowerCase().replace(/\./g, '')
-  const parts = lower
-    .replace(/[()[\]]/g, ',')
-    .replace(FILLER, ' ')
-    .split(/[,;|/–—]|\s-\s/)
-    .map((p) => p.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
+  // A colon separates too: "Remote - US: Select locations", "US: Washington Remote Worker" (2026-11-25).
+  const split = (s: string) => s.split(/[,;|/:–—]|\s-\s/).map((p) => p.replace(/\s+/g, ' ').trim()).filter(Boolean)
+  const bracketed = lower.replace(/[()[\]]/g, ',')
+  const parts = split(bracketed.replace(FILLER, ' '))
   const last = parts[parts.length - 1]
   if (!last) return null
+  // "Remote - Texas": a word such as "remote" before the state counts as the something before it (see below).
+  const qualified = parts.length >= 2 || split(bracketed).length >= 2
 
   let code: string | null = COUNTRY_ALIASES[last] ?? null
   if (!code) {
@@ -137,7 +139,7 @@ export function countryFromText(text: unknown): string | null {
       if (last.endsWith(` ${name}`) && last !== 'new mexico') code = c
     }
   }
-  if (!code && parts.length >= 2) code = REGION_IMPLIES_COUNTRY.get(last) ?? null
+  if (!code && qualified) code = REGION_IMPLIES_COUNTRY.get(last) ?? null
   if (!code) {
     // "France, Auvergne-Rhône-Alpes, Savoie (73)": the country comes first. Fine when exactly one country is named.
     const named = new Set(parts.map((p) => COUNTRY_ALIASES[p]).filter(Boolean))
