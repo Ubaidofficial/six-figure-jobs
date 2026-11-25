@@ -6,9 +6,20 @@ import {
 
 const aggregate = jest.fn()
 const groupBy = jest.fn()
+// The saved pSEO list (SiteConfig). Empty unless a test stores one.
+let storedList: string | null = null
+const upsert = jest.fn(async (a: { update: { value: string } }) => {
+  storedList = a.update.value
+})
 
 jest.mock('../../lib/prisma', () => ({
-  prisma: { job: { aggregate: (...a: unknown[]) => aggregate(...a), groupBy: (...a: unknown[]) => groupBy(...a) } },
+  prisma: {
+    job: { aggregate: (...a: unknown[]) => aggregate(...a), groupBy: (...a: unknown[]) => groupBy(...a) },
+    siteConfig: {
+      findUnique: async () => (storedList ? { value: storedList } : null),
+      upsert: (a: { update: { value: string } }) => upsert(a),
+    },
+  },
 }))
 jest.mock('../../lib/jobs/queryJobs', () => ({
   buildWhere: (input: {
@@ -140,6 +151,8 @@ describe('collectEvergreenEntries (phase 1)', () => {
 describe('collectPseoBatchEntries (phase 1)', () => {
   beforeEach(() => {
     __resetEvergreenSitemapCacheForTests()
+    storedList = null
+    upsert.mockClear()
     aggregate.mockReset()
     groupBy.mockReset()
     process.env.INDEXING_PHASE = '1'
@@ -249,6 +262,7 @@ describe('collectPseoBatchEntries (phase 1)', () => {
       const oneRebuild = aggregate.mock.calls.length
 
       __resetEvergreenSitemapCacheForTests()
+      storedList = null // a first deploy: nothing saved yet
       aggregate.mockClear()
       const results = await Promise.all([1, 1, 1].map((n) => collectPseoBatchEntries(n, 1)))
       expect(aggregate.mock.calls.length).toBe(oneRebuild)
@@ -278,6 +292,36 @@ describe('collectPseoBatchEntries (phase 1)', () => {
       await collectPseoBatchEntries(1, 3 + TTL)
       await flush()
       expect(paths(await collectPseoBatchEntries(1, 4 + TTL))).toContain('/jobs/skills/typescript')
+    })
+
+    it('saves a finished list, and after a restart serves it at once while it rebuilds behind the request', async () => {
+      mockDb({}, { skills: { python: 279 } })
+      await collectPseoBatchEntries(1, 1)
+      await flush()
+      expect(upsert).toHaveBeenCalledTimes(1)
+      expect(JSON.parse(storedList as string).entries.map((e: { path: string }) => e.path)).toContain('/jobs/skills/python')
+
+      // A restart: memory is empty, the database counts would now give a different list but take a while.
+      __resetEvergreenSitemapCacheForTests()
+      let finish: () => void = () => {}
+      const slow = new Promise<void>((resolve) => (finish = resolve))
+      aggregate.mockReset()
+      aggregate.mockImplementation(async () => {
+        await slow
+        return { _count: { _all: 300 }, _max: { createdAt: new Date('2026-11-04T10:00:00Z') } }
+      })
+      // Answered from the saved list without waiting for the counts (the rebuild is still blocked on `slow`).
+      expect(paths(await collectPseoBatchEntries(1, 2))).toContain('/jobs/skills/python')
+      expect(aggregate).toHaveBeenCalled() // the rebuild started
+      finish()
+    })
+
+    it('ignores a saved list built for another released batch', async () => {
+      storedList = JSON.stringify({ at: 1, released: 2, entries: [{ path: '/jobs/skills/old-saved', lastmod: null }] })
+      mockDb({}, { skills: { python: 279 } })
+      const got = paths(await collectPseoBatchEntries(1, 1))
+      expect(got).not.toContain('/jobs/skills/old-saved')
+      expect(got).toContain('/jobs/skills/python')
     })
 
     it('still fails the first request after a restart when the database is down, and does not cache that', async () => {

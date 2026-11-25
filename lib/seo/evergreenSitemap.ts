@@ -302,6 +302,39 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
 let pseoCache: { at: number; released: number; entries: SitemapEntry[] } | null = null
 let pseoRefresh: { released: number; promise: Promise<SitemapEntry[]> } | null = null
 
+/** The last complete pSEO list, kept in SiteConfig so a restart does not start from nothing. */
+export const PSEO_LIST_KEY = 'seo.pseo.entries'
+
+async function loadStoredPseoList(): Promise<{ at: number; released: number; entries: SitemapEntry[] } | null> {
+  try {
+    const row = await prisma.siteConfig.findUnique({ where: { key: PSEO_LIST_KEY } })
+    const v = JSON.parse(row?.value ?? 'null') as {
+      at?: number
+      released?: number
+      entries?: Array<{ path?: unknown; lastmod?: unknown }>
+    } | null
+    if (!v || typeof v.at !== 'number' || typeof v.released !== 'number' || !Array.isArray(v.entries)) return null
+    const entries = v.entries
+      .filter((e): e is { path: string; lastmod?: unknown } => typeof e?.path === 'string')
+      .map((e) => {
+        const d = typeof e.lastmod === 'string' ? new Date(e.lastmod) : null
+        return { path: e.path, lastmod: d && Number.isFinite(d.getTime()) ? d : null }
+      })
+    return { at: v.at, released: v.released, entries }
+  } catch {
+    return null // no row, unreadable, or the database is down: build it as before
+  }
+}
+
+async function saveStoredPseoList(list: { at: number; released: number; entries: SitemapEntry[] }): Promise<void> {
+  try {
+    const value = JSON.stringify(list)
+    await prisma.siteConfig.upsert({ where: { key: PSEO_LIST_KEY }, update: { value }, create: { key: PSEO_LIST_KEY, value } })
+  } catch {
+    // the in-memory copy still serves this server; the next build tries again
+  }
+}
+
 // One rebuild at a time. The rebuild is ~100 count queries, and the cache starts empty on every deploy (the site
 // deploys many times a day), so Googlebot arriving right after a deploy used to start several rebuilds at once and
 // time out. Concurrent callers now share the one in flight.
@@ -310,6 +343,7 @@ function refreshPseoCache(now: number, released: number): Promise<SitemapEntry[]
   const promise = collectAllPseoEntries(released)
     .then((entries) => {
       pseoCache = { at: now, released, entries }
+      void saveStoredPseoList(pseoCache)
       return entries
     })
     .finally(() => {
@@ -328,6 +362,16 @@ function refreshPseoCache(now: number, released: number): Promise<SitemapEntry[]
 export async function collectPseoBatchEntries(batch: number, now: number = Date.now()): Promise<SitemapEntry[]> {
   if (!getReleasedBatchNumbers(now).includes(batch)) return []
   const released = getReleasedPseoBatch(now)
+  // After a restart, the list the last build saved (for the same released batch) is served at once and rebuilt behind
+  // the request. Counting only released batches (#243) keeps batch 1's first build short, but batches 2-4 bring it back
+  // toward ~1,135 count queries, past the edge's 60 s limit (/sitemap-batch/1.xml answered 504 after a deploy, 2026-11-25).
+  if (!pseoCache) {
+    const stored = await loadStoredPseoList()
+    if (stored && stored.released === released) {
+      pseoCache = stored
+      refreshPseoCache(now, released).catch(() => {})
+    }
+  }
   let entries: SitemapEntry[]
   if (!pseoCache || pseoCache.released !== released) {
     entries = await refreshPseoCache(now, released)
