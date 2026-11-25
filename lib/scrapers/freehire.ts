@@ -1,7 +1,7 @@
 // lib/scrapers/freehire.ts
 // Pulls six-figure jobs from the freehire.me public API (https://freehire.me/docs/api) for the
 // US (any location, USD), UK, EU, Canada, Australia and Switzerland (CHF). The minimum salary per currency comes from
-// lib/currency/thresholds.ts. Auth is optional: set FREEHIRE_API_KEY for the higher account limit.
+// lib/currency/thresholds.ts. FREEHIRE_API_KEY (an API plan) is needed for the employer's own links (fetchOriginalLink).
 import axios from 'axios'
 
 import { getSalaryFloorAnnual } from '../currency/thresholds'
@@ -208,6 +208,8 @@ export type FreehireMarketReport = {
   sample: string[]
   /** True only if paging ended because the window (or the result list) was exhausted, not because a cap was hit or a request failed. */
   complete: boolean
+  /** Employer links read from /data/jobs/{slug} for this market's jobs. */
+  linksRead: number
 }
 
 export type FreehireSyncOptions = {
@@ -291,8 +293,11 @@ export function applicationDeadline(raw: string | null | undefined): Date | null
 /** Reposted this many times, a role is not published (see mapFreehireJob). */
 export const MAX_REPOSTS = 10
 
-/** Map a freehire record to the board ingest input, or null if it must not be published. */
-export function mapFreehireJob(job: FreehireJob, now: number = Date.now()): BoardJobInput | null {
+/** What mapFreehireJob decides before it needs the job's link: the pay to list, or null if the job is not published. */
+export function freehireListing(
+  job: FreehireJob,
+  now: number = Date.now(),
+): { salaryMin: number; salaryMax: number | null; currency: string; payQuote: string | null; deadline: Date | null } | null {
   const e = job.enrichment ?? {}
   if (job.closed_at) return null
   // A posting whose own deadline has passed takes no more applications.
@@ -325,7 +330,17 @@ export function mapFreehireJob(job: FreehireJob, now: number = Date.now()): Boar
     payQuote = pay.quote
   }
   if (getMinimumSalaryRejection({ salaryMin, salaryMax, salaryCurrency: currency })) return null
-  if (!job.title || !job.url) return null
+  if (!job.title) return null
+  return { salaryMin, salaryMax, currency, payQuote, deadline }
+}
+
+/** Map a freehire record to the board ingest input, or null if it must not be published. */
+export function mapFreehireJob(job: FreehireJob, now: number = Date.now()): BoardJobInput | null {
+  const listing = freehireListing(job, now)
+  // `url` is the employer's own posting; the public reads leave it empty (see fetchOriginalLink).
+  if (!listing || !job.url) return null
+  const e = job.enrichment ?? {}
+  const { salaryMin, salaryMax, currency, payQuote, deadline } = listing
 
   const url = stripFreehireUtm(job.url)
   // freehire sometimes has an ATS identifier where the employer's name should be (Amplitude's Ashby jobs came as
@@ -504,6 +519,78 @@ async function fetchPageWithRetry(market: FreehireMarket, offset: number): Promi
   }
 }
 
+// Since 2026-11-25 freehire's public job reads (search, the /agent/ search, /jobs/{slug}) leave `url` empty and drop
+// `source_url` wherever `apply_url`, a counted freehire redirect, is set. The API plan keeps the employer's own link on
+// /data/jobs/search and /data/jobs/{slug} (freehire.me/docs/api/data), counted apart: 1,200 requests a minute. /data
+// search returns the public search's shape, whose description is cut at ~1,000 characters, so the full-description
+// /agent/ search stays the source and each job we would publish has its link read from /data/jobs/{slug}.
+const DATA_JOB_URL = 'https://freehire.me/api/v1/data/jobs'
+/** Link reads at once, and the least time between two starts (at most ~16 a second, under 1,200 a minute). */
+const LINK_CONCURRENCY = 4
+const LINK_GAP_MS = 60
+
+let nextLinkSlot = 0
+async function linkSlot(): Promise<void> {
+  const now = Date.now()
+  const at = Math.max(now, nextLinkSlot)
+  nextLinkSlot = at + LINK_GAP_MS
+  if (at > now) await sleep(at - now)
+}
+
+/** The employer's own link for one freehire job (its `url`, UTM kept for stripFreehireUtm), or null when it has none. */
+export async function fetchOriginalLink(slug: string): Promise<string | null> {
+  for (let attempt = 0; ; attempt++) {
+    await linkSlot()
+    try {
+      const res = await axios.get<{ data?: { url?: string | null } }>(`${DATA_JOB_URL}/${encodeURIComponent(slug)}`, {
+        headers: freehireHeaders(),
+        timeout: 30_000,
+      })
+      const url = res.data?.data?.url
+      return typeof url === 'string' && url ? url : null
+    } catch (error) {
+      const response = (error as { response?: { status?: number; headers?: Record<string, string> } }).response
+      if (response?.status === 404) return null
+      if (response?.status === 401 || response?.status === 403) {
+        throw new Error(
+          `freehire /data/jobs answered ${response.status}: the employer links need FREEHIRE_API_KEY on an API plan. Without them no freehire job can be listed.`,
+        )
+      }
+      if (response?.status === 429 && attempt < 4) {
+        const decision = decideRateLimitWait(response.headers?.['retry-after'])
+        if (decision.action === 'give-up') throw new Error(`freehire /data/jobs rate limit: asked to wait ${decision.seconds}s`)
+        await sleep(decision.seconds * 1000)
+        continue
+      }
+      const code = (error as { code?: string }).code
+      if (!response && code && NETWORK_RETRY_CODES.has(code) && attempt < 3) {
+        await sleep(5_000 * (attempt + 1))
+        continue
+      }
+      throw error
+    }
+  }
+}
+
+/**
+ * Fill in `url` on the jobs that lack it and would otherwise be published, from /data/jobs/{slug}. `known` holds the
+ * links already read this run (a job can come up in more than one market). Returns how many were looked up.
+ */
+export async function fillOriginalLinks(jobs: FreehireJob[], known: Map<string, string | null>): Promise<number> {
+  const todo = jobs.filter((j) => !j.url && j.public_slug && freehireListing(j))
+  const fresh = todo.filter((j) => !known.has(j.public_slug!))
+  let i = 0
+  const worker = async () => {
+    while (i < fresh.length) {
+      const job = fresh[i++]
+      known.set(job.public_slug!, await fetchOriginalLink(job.public_slug!))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(LINK_CONCURRENCY, fresh.length) }, worker))
+  for (const job of todo) job.url = known.get(job.public_slug!) ?? ''
+  return fresh.length
+}
+
 export type FreehireCollected = {
   inputs: BoardJobInput[]
   markets: FreehireMarketReport[]
@@ -519,6 +606,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
   const markets: FreehireMarketReport[] = []
   const errors: string[] = []
   let unmappable = 0
+  const links = new Map<string, string | null>()
   const cutoff = options.since?.getTime() ?? Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000
 
   for (const market of [...FREEHIRE_MARKETS, ...(options.withDescriptionPay === false ? [] : DESCRIPTION_PAY_MARKETS)]) {
@@ -540,6 +628,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
       newest: null,
       sample: [],
       complete: false,
+      linksRead: 0,
     }
     markets.push(report)
 
@@ -561,6 +650,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
         }
 
         let oldOnPage = 0
+        const listed: FreehireJob[] = []
         for (const job of page.data) {
           const seen = firstSeen(job)
           if (seen && new Date(seen).getTime() < marketCutoff) {
@@ -581,6 +671,10 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
             report.oldest = report.oldest && report.oldest < seen ? report.oldest : seen
           }
 
+          listed.push(job)
+        }
+        report.linksRead += await fillOriginalLinks(listed, links)
+        for (const job of listed) {
           const input = mapFreehireJob(job)
           if (!input) {
             unmappable++
