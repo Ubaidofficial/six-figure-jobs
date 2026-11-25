@@ -1,4 +1,9 @@
 // AnimatedNumber `roll` (owner's request, 2026-11-25): which digits roll when a live number changes, right to left.
+jest.mock('@/components/ui/AnimatedNumber.module.css', () => ({
+  __esModule: true,
+  default: new Proxy({}, { get: (_t, key) => String(key) }),
+}))
+
 import { rollSlots } from '@/components/ui/AnimatedNumber'
 
 describe('rollSlots', () => {
