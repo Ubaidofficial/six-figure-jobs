@@ -26,7 +26,7 @@ import { countryCodeToSlug } from '../../../lib/seo/countrySlug'
 import { isCompanyPageIndexable } from '../../../lib/seo/indexabilityGates'
 import { getCompanyPublishingDecision } from '../../../lib/seo/companyPublishing'
 import { areCompanyPagesReleased } from '../../../lib/seo/sitemapWaves'
-import { COMPANY_JOBS_ORDER_BY, buildCompanyJobsWhere } from '../../../lib/companies/companyJobs'
+import { buildCompanyJobsWhere, newestFirst } from '../../../lib/companies/companyJobs'
 import {
   companyJobsPagePath,
   companyJobsWindow,
@@ -65,13 +65,13 @@ async function getCompanyWithJobs(slug: string) {
       include: {
         companyRef: true,
       },
-      orderBy: COMPANY_JOBS_ORDER_BY,
     }),
   ])
 
   if (!company) return null
 
-  return { company, jobs }
+  // Newest first, the same order as the "Show more jobs" chunks (lib/companies/companyJobs.ts).
+  return { company, jobs: newestFirst(jobs) }
 }
 
 /* -------------------------------------------------------------------------- */
