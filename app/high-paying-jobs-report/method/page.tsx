@@ -32,6 +32,7 @@ import {
   REPORT_CONTACT,
   usd,
 } from '@/lib/research/payReport'
+import { METHOD_DESCRIPTION, buildMethodJsonLd } from '@/lib/research/methodJsonLd'
 import { fitTitle } from '@/lib/seo/metaText'
 import { SITE_NAME, defaultOgImages, getSiteUrl } from '@/lib/seo/site'
 
@@ -44,8 +45,7 @@ const TITLE = fitTitle([
   `${PAY_REPORT_HEADING}: method and data dictionary`,
   `${PAY_REPORT_HEADING} method`,
 ])
-const DESCRIPTION =
-  'How the Six-Figure Job Pay Report is built: what counts, the salary checks, sample floors, what is left out, a data dictionary and the history of method changes.'
+const DESCRIPTION = METHOD_DESCRIPTION
 const UPDATED = METHOD_CHANGELOG[0].date
 
 export const metadata: Metadata = {
@@ -67,31 +67,7 @@ export const metadata: Metadata = {
 
 export default function PayReportMethodPage() {
   const latest = PAY_REPORT
-  const jsonLd = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'TechArticle',
-      mainEntityOfPage: URL,
-      headline: `${PAY_REPORT_HEADING}: method and data dictionary (version ${METHOD_VERSION})`,
-      description: DESCRIPTION,
-      url: URL,
-      dateModified: UPDATED,
-      inLanguage: 'en',
-      author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
-      publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL, logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo.png` } },
-      // The Dataset itself is marked up on the report page; a nested Dataset here counts as a second, incomplete one.
-      about: { '@type': 'Report', name: PAY_REPORT_HEADING, url: `${SITE_URL}${PAY_REPORT_PATH}` },
-    },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
-        { '@type': 'ListItem', position: 2, name: PAY_REPORT_HEADING, item: `${SITE_URL}${PAY_REPORT_PATH}` },
-        { '@type': 'ListItem', position: 3, name: 'Method and data dictionary', item: URL },
-      ],
-    },
-  ]
+  const jsonLd = buildMethodJsonLd()
 
   return (
     <ListingPage>
