@@ -9,21 +9,23 @@ const job = (name: string, h: number | null, conclusion: string | null = 'succes
 })
 
 describe('decideFreehireMode', () => {
-  it('runs a full sync when no full run started in the last 20 hours', () => {
+  // Twice a day since 2026-11-25 (it was every 20 hours): the full run is the one that reads the employers' own boards.
+  it('runs a full sync when no full run started in the last 11.5 hours', () => {
     expect(decideFreehireMode([], NOW)).toBe('full')
-    expect(decideFreehireMode([job('sync (full)', 21), job('sync (light)', 1)], NOW)).toBe('full')
+    expect(decideFreehireMode([job('sync (full)', 12), job('sync (light)', 1)], NOW)).toBe('full')
+    expect(decideFreehireMode([job('sync (full)', 11), job('sync (light)', 1)], NOW)).toBe('skip')
   })
 
   it('runs a light sync 5.5 hours after the last sync of any kind', () => {
     expect(decideFreehireMode([job('sync (full)', 6)], NOW)).toBe('light')
-    expect(decideFreehireMode([job('sync (full)', 12), job('sync (light)', 6)], NOW)).toBe('light')
-    expect(decideFreehireMode([job('sync (full)', 12), job('sync (manual)', 5.6)], NOW)).toBe('light')
+    expect(decideFreehireMode([job('sync (full)', 11), job('sync (light)', 6)], NOW)).toBe('light')
+    expect(decideFreehireMode([job('sync (full)', 11), job('sync (manual)', 5.6)], NOW)).toBe('light')
   })
 
   it('skips when a sync started recently', () => {
     expect(decideFreehireMode([job('sync (full)', 5)], NOW)).toBe('skip')
-    expect(decideFreehireMode([job('sync (full)', 12), job('sync (light)', 1)], NOW)).toBe('skip')
-    expect(decideFreehireMode([job('sync (full)', 12), job('sync (manual)', 2)], NOW)).toBe('skip')
+    expect(decideFreehireMode([job('sync (full)', 11), job('sync (light)', 1)], NOW)).toBe('skip')
+    expect(decideFreehireMode([job('sync (full)', 11), job('sync (manual)', 2)], NOW)).toBe('skip')
   })
 
   it('counts failed runs, so a failing full run is not retried every hour', () => {
@@ -44,7 +46,8 @@ describe('decideFreehireMode', () => {
 describe('fallbackMode', () => {
   it('keeps the old fixed times', () => {
     expect(fallbackMode(Date.parse('2026-11-13T05:17:00Z'))).toBe('full')
-    expect(fallbackMode(Date.parse('2026-11-13T17:17:00Z'))).toBe('light')
+    expect(fallbackMode(Date.parse('2026-11-13T17:17:00Z'))).toBe('full')
+    expect(fallbackMode(Date.parse('2026-11-13T11:17:00Z'))).toBe('light')
     expect(fallbackMode(Date.parse('2026-11-13T08:17:00Z'))).toBe('skip')
   })
 })
