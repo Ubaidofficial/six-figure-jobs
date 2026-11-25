@@ -20,12 +20,14 @@ name: enrichment backfill
 #                   countries or region) against what we store (scripts/audit-remote-scope.ts; "limit" = jobs, default 6000)
 #   remote-country  the country of remote jobs whose location text names exactly one (scripts/backfill-remote-country.ts; "limit" = jobs;
 #                   only jobs whose JobPosting JSON-LD stays identical are written)
+#   job-country     the country today's import rules give live jobs that have none (scripts/backfillJobCountry.ts; "limit" = jobs;
+#                   JobPostings change: addressCountry, or applicantLocationRequirements for remote jobs; read the dry run first)
 
 on:
   workflow_dispatch:
     inputs:
       task:
-        description: "tech-stack, websites, remote-country, fix-company-names, boards, freehire-gap, remote-scope or quality-report"
+        description: "tech-stack, websites, remote-country, job-country, fix-company-names, boards, freehire-gap, remote-scope or quality-report"
         type: choice
         required: false
         default: tech-stack
@@ -33,6 +35,7 @@ on:
           - tech-stack
           - websites
           - remote-country
+          - job-country
           - fix-company-names
           - boards
           - freehire-gap
@@ -101,6 +104,7 @@ jobs:
           case "$TASK" in
             websites) npx tsx scripts/backfill-company-websites.ts "${args[@]}" ;;
             remote-country) npx tsx scripts/backfill-remote-country.ts "${args[@]}" ;;
+            job-country) npx tsx scripts/backfillJobCountry.ts "${args[@]}" ;;
             fix-company-names) npx tsx scripts/fix-entity-company-names.ts $([ "$APPLY" = "true" ] && echo --apply) ;;
             quality-report) npx tsx scripts/quality-report.ts --hours=8 ;;
             remote-scope) npx tsx scripts/audit-remote-scope.ts --limit="$LIMIT" ;;
