@@ -42,6 +42,8 @@ jobs:
           EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
         run: npm run scrape:db-target
 
+      - name: remote100k.com jobs we have and lack (read-only; reads remote100k's public job pages, 4 at a time)
+        run: npx tsx scripts/auditRemote100kCoverage.ts
       - name: Listed jobs with no country (read-only)
         run: npx tsx scripts/auditMissingCountry.ts
 

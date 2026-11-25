@@ -92,7 +92,7 @@ function decodeEntities(input: string): string {
     .replace(/&#39;/g, "'")
 }
 
-async function loadJobUrlsFromSitemap(): Promise<string[]> {
+export async function loadJobUrlsFromSitemap(): Promise<string[]> {
   const res = await fetchWithBackoff(SITEMAP_URL, {
     timeoutMs: REQUEST_TIMEOUT_MS,
     headers: { Accept: 'application/xml,text/xml,*/*', 'User-Agent': USER_AGENT },
@@ -184,7 +184,7 @@ function extractDescriptionHtml(html: string): string | null {
   return null
 }
 
-async function fetchJobDetail(url: string): Promise<JobDetailExtraction | null> {
+export async function fetchJobDetail(url: string): Promise<JobDetailExtraction | null> {
   const res = await fetchWithBackoff(url, {
     timeoutMs: REQUEST_TIMEOUT_MS,
     headers: { Accept: 'text/html,application/xhtml+xml', 'User-Agent': USER_AGENT },
