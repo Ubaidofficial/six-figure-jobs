@@ -6,6 +6,7 @@
 // exactly one country). When unsure it says less instead of guessing.
 import { CITY_TARGETS, STATE_TARGETS } from '../seo/pseoTargets'
 import { countryName, normalizeCountryCode, COUNTRY_NAMES } from './country'
+import { UN_MEMBER_STATES } from './worldwideCountries'
 
 type Region = { name: string; codes?: string[] }
 
@@ -76,7 +77,18 @@ const COUNTRY_BY_NAME: Record<string, string> = Object.fromEntries(
   Object.entries(COUNTRY_NAMES).map(([code, name]) => [name.toLowerCase(), code]),
 )
 
+// Every UN member state by its plain name, so "Colombia, Remote" or "Athens, Attiki, Greece" is read (2026-11-25: our
+// own list has 32 countries). Names the UN writes with a bracket ("Bahamas (The)") are left out, and so are Georgia (a
+// US state), Jordan and Chad (also given names).
+const UN_NAMES: Record<string, string> = Object.fromEntries(
+  UN_MEMBER_STATES.filter(([, name]) => !name.includes('(') && !/^(?:georgia|jordan|chad)$/i.test(name)).map(([code, name]) => [
+    name.toLowerCase(),
+    code,
+  ]),
+)
+
 const COUNTRY_ALIASES: Record<string, string> = {
+  ...UN_NAMES,
   ...COUNTRY_BY_NAME,
   us: 'US',
   usa: 'US',
@@ -129,7 +141,8 @@ export function countryFromText(text: unknown): string | null {
   const last = parts[parts.length - 1]
   if (!last) return null
   // "Remote - Texas": a word such as "remote" before the state counts as the something before it (see below).
-  const qualified = parts.length >= 2 || split(bracketed).length >= 2
+  // "Remote California": the word alone counts too, with no comma or dash after it.
+  const qualified = parts.length >= 2 || split(bracketed).length >= 2 || bracketed.replace(FILLER, ' ').trim() !== bracketed.trim()
 
   let code: string | null = COUNTRY_ALIASES[last] ?? null
   if (!code) {
@@ -154,6 +167,18 @@ export function countryFromText(text: unknown): string | null {
   return code
 }
 
+// Words that name no single place: a remote job described only by these (or by several countries) has no country by
+// rule (processLocation in lib/ingest/index.ts: remote jobs never take one from a city or the pay currency, nor from the
+// source's stated country when the text names no single place), so the quality check does not count it as missing. Found 2026-11-25: 312 listed jobs at plain "Remote", 82 at "Remote / Worldwide", others at "EMEA".
+const NO_SINGLE_PLACE = /\b(?:remote|job|jobs|worldwide|global|globally|anywhere|international|any location|location|work from home|wfh|distributed|emea|apac|apj|latam|namer|amer|americas|europe|european union|eu|asia|nordics|dach|benelux|middle east|africa|oceania|anz|north america|south america|in|the|and|or|only)\b/g
+
+/** A remote job whose location names no single place: no country is right for it (pure). */
+export function remoteWithoutSinglePlace(r: { remoteMode: string | null; locationRaw: string | null }): boolean {
+  if (r.remoteMode !== 'remote') return false
+  const text = (r.locationRaw ?? '').toLowerCase()
+  if (countriesFromText(text).length >= 2) return true
+  return text.replace(NO_SINGLE_PLACE, ' ').replace(/[^a-z]+/g, '') === ''
+}
 // Two-letter codes read as a country only when EVERY part of the text is a country ("US, CA, Remote"): the CA in
 // "San Francisco, CA" is California. Left out: IN, IT, OR, ES, PL and the like, which are also words or states.
 const CODE_AS_COUNTRY: Record<string, string> = {

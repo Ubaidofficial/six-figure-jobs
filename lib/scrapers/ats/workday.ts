@@ -384,6 +384,7 @@ function mapWorkdayDetailToJob(
       detail?.externalUrl ||
       `${context.origin}/${context.siteId}${summary.externalPath || ''}`,
     locationText,
+    countryCode,
     remote:
       locationText?.toLowerCase().includes('remote') ||
       locationText?.toLowerCase().includes('anywhere') ||

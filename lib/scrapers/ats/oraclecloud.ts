@@ -65,6 +65,7 @@ export function mapOracleJob(board: OracleBoard, d: Detail): AtsJob {
     title: String(d.Title ?? '').trim(),
     url: `https://${board.host}/hcmUI/CandidateExperience/${board.lang}/sites/${board.site}/job/${d.Id}`,
     locationText: d.PrimaryLocation ?? null,
+    countryCode: d.PrimaryLocationCountry ?? null,
     remote: workplaceType === 'remote',
     workplaceType,
     salaryMin: pay?.min ?? null,

@@ -43,6 +43,17 @@ describe('stripFreehireUtm', () => {
   })
 })
 
+describe('mapFreehireJob country', () => {
+  // freehire lists the job's countries; with exactly one, the ingest uses it where the location text names none
+  // (missing_country, 2026-11-25: 392 freehire jobs at "Barmen, Wuppertal", a remote "Chicago" and the like).
+  it('passes the one listed country, and none when it lists several or none', () => {
+    expect(mapFreehireJob({ ...job, countries: ['de'] })?.countryCode).toBe('DE')
+    expect(mapFreehireJob({ ...job, countries: ['us', 'ca'] })?.countryCode).toBeNull()
+    expect(mapFreehireJob({ ...job, countries: [] })?.countryCode).toBeNull()
+    expect(mapFreehireJob({ ...job, countries: null })?.countryCode).toBeNull()
+  })
+})
+
 describe('mapFreehireJob work mode', () => {
   // freehire says remote, hybrid or onsite in work_mode. The mapper used to pass only "remote", so a hybrid job was stored as on-site
   // (3 days to 2026-11-17: 0 hybrid among 1,065 freehire jobs, 142 whose own text says hybrid stored as on-site).

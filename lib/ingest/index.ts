@@ -30,7 +30,8 @@ import {
 } from '../normalizers/salary'
 import { normalizeLocation as normalizeLocationData } from '../normalizers/location'
 import { countryCodeFromContext } from '../location/subdivisionCountry'
-import { countryFromCity, countryFromText } from '../location/jobLocation'
+import { countryFromCity, countryFromText, remoteWithoutSinglePlace } from '../location/jobLocation'
+import { normalizeCountryCode } from '../location/country'
 import { normalizeRole } from '../normalizers/role'
 import slugify from 'slugify'
 import { parseGreenhouseSalary } from './greenhouseSalaryParser'
@@ -1229,6 +1230,12 @@ export function processLocation(input: ScrapedJobInput) {
   // currency. City and currency must agree when both are known ("Birmingham, Jefferson County" paid in USD is Alabama, not
   // England), and the euro never names a country ("Kerestinec, HR" is in Croatia).
   const byCity = countryFromCity(location.city) ?? countryFromCity(location.country) // "Mitte, Berlin": the last segment is a city
+  // The source's own stated country (Workday, Oracle, freehire with one listed country) places "Barmen, Wuppertal",
+  // "Rotterdam - Hofplein 19" or a remote "Chicago" that the text alone cannot (quality finding `missing_country`,
+  // 2026-11-25). It comes after the text, so a country the text names still wins; and a remote job whose text names no
+  // single place ("Remote", "Worldwide", "EMEA") does not take it, since there it is only where the employer files the job.
+  const sourceCountry = normalizeCountryCode(input.countryCode)
+  const remoteNoPlace = remoteWithoutSinglePlace({ remoteMode: 'remote', locationRaw: locationText })
   const byCurrency = CURRENCY_COUNTRY[currency] ?? null
   // Remote jobs take a country only from the location text (stated or named in it), never from the city or the pay
   // currency: a remote job paid in dollars is not necessarily open only to the US. They used to take only the stated
@@ -1236,6 +1243,7 @@ export function processLocation(input: ScrapedJobInput) {
   const countryCode = (onsite: boolean): string | null =>
     statedCountry ??
     textCountry ??
+    (onsite || !remoteNoPlace ? sourceCountry : null) ??
     (onsite ? (byCity && byCurrency && byCity !== byCurrency ? null : byCity ?? byCurrency) : null)
 
   // A structured workplace type from the source decides; otherwise the location text does. Ashby marks hybrid jobs

@@ -74,6 +74,11 @@ export interface BoardJobInput {
   isRemote?: boolean | null
   /** The board's own structured work mode (freehire `work_mode`), when it states one: decides remote, hybrid or on-site. */
   workplaceType?: 'remote' | 'hybrid' | 'onsite' | null
+  /**
+   * The source's own structured country for the job, when it states one (Workday's requisition country, Oracle's
+   * primary location country, freehire when it lists exactly one country). Used only when the location text names none.
+   */
+  countryCode?: string | null
   employmentType?: string | null
 
   /** Optional LinkedIn URL */
@@ -157,6 +162,7 @@ export async function ingestBoardJob(
     locationText: job.locationText ?? null,
     isRemote: job.isRemote ?? null,
     workplaceType: job.workplaceType ?? null,
+    countryCode: job.countryCode ?? null,
 
     // Salary
     salaryMin: job.salaryMin ?? null,
