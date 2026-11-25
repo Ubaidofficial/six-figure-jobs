@@ -1,7 +1,13 @@
 # Quality agents: plan
 
-Status: **draft for the owner's decisions** (2026-11-25). Nothing in this plan is built or scheduled yet. Section 7
-lists the decisions it waits on.
+Status (2026-11-25): **the owner decided section 7** (answers recorded there). Phases 0 and 1 are built:
+- the daily snapshot (`lib/quality`, `scripts/qualitySnapshot.ts`, `.github/workflows/quality-snapshot.yml`);
+- the findings table (migration `20261125010000_add_quality_snapshot_findings`);
+- the admin Quality page (`/ubaid93/quality`);
+- the Monday digest email (`lib/quality/digest.ts`);
+- the data-quality agent's instructions (`docs/quality/AGENT_DATA_QUALITY.md`), run by a daily scheduled cloud task.
+
+The agent ends each run in one line until the harness is merged, migrated and has a successful snapshot.
 
 The owner's request (2026-11-25): "make sure we have agent orchestration + harness which is always improving the data
 quality and other filters across our website and seo and other aspects of the project. plan well before you do start
@@ -138,6 +144,14 @@ five of them.
   coordinator's weekly clean-up.
 
 ## 7. Decisions for the owner
+
+**Answered 2026-11-25:**
+1. Pull requests only; the owner merges.
+2. The proposed cadence (about 12 runs a week at full rollout).
+3. A new table, the Quality page and an emailed digest.
+4. The harness plus the data-quality agent first.
+
+Point 6, a saved cloud environment, is not decided yet.
 
 1. **Autonomy.** PRs only, owner merges (recommended), or may some kinds of agent PRs auto-merge once CI passes, like
    the design refresh?
