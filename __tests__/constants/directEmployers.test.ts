@@ -23,7 +23,8 @@ describe('DIRECT_EMPLOYERS', () => {
         continue
       }
       expect(e.boardUrl.startsWith(HOSTS[e.provider])).toBe(true)
-      expect(e.boardUrl.slice(HOSTS[e.provider].length)).toMatch(/^[a-z0-9-]+$/)
+      // Lower case; a dot is allowed because some Ashby accounts are domain names ("kraken.com", 2026-11-25).
+      expect(e.boardUrl.slice(HOSTS[e.provider].length)).toMatch(/^[a-z0-9.-]+$/)
       expect(e.slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/)
     }
   })
