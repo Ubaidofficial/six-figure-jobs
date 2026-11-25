@@ -43,6 +43,22 @@ export function normUrl(url: string | null | undefined): string {
   }
 }
 
+/**
+ * The careers system's own job id in an apply link, which our job ids end with ("ats:greenhouse:8397522"): Greenhouse
+ * "/jobs/<n>" or "gh_jid=<n>" (company sites that embed Greenhouse), Ashby and Lever "/<org>/<uuid>" or "ashby_jid=<uuid>",
+ * Workday "_R12345". Null when none is recognised (pure).
+ */
+export function atsJobId(url: string | null | undefined): string | null {
+  const s = String(url ?? '')
+  const m =
+    s.match(/[?&]gh_jid=(\d{5,})/i) ??
+    s.match(/greenhouse\.io\/[^/?#]+\/jobs\/(\d{5,})/i) ??
+    s.match(/[?&]ashby_jid=([0-9a-f-]{36})/i) ??
+    s.match(/(?:ashbyhq\.com|lever\.co)\/[^/?#]+\/([0-9a-f-]{36})/i) ??
+    s.match(/_(R-?\d{4,})(?:[/?#-]|$)/i)
+  return m ? m[1].toLowerCase() : null
+}
+
 async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length)
   let next = 0
@@ -83,36 +99,49 @@ async function main() {
   const ours = await prisma.$transaction(
     async (tx) => {
       await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY')
-      return tx.job.findMany({ where: { isExpired: false }, select: { title: true, company: true, applyUrl: true, url: true } })
+      // Expired jobs too: a job we imported and later expired is a different gap from one we never imported.
+      return tx.job.findMany({ select: { id: true, externalId: true, isExpired: true, title: true, company: true, applyUrl: true, url: true } })
     },
     { timeout: 120_000 },
   )
   await prisma.$disconnect()
 
-  const byUrl = new Set<string>()
-  const byCompanyTitle = new Set<string>()
-  const companies = new Set<string>()
+  // Live and expired lookups, by apply link, careers-system job id, and company + title.
+  const live = { url: new Set<string>(), id: new Set<string>(), title: new Set<string>(), company: new Set<string>() }
+  const expired = { url: new Set<string>(), id: new Set<string>(), title: new Set<string>() }
   for (const j of ours) {
-    for (const u of [j.applyUrl, j.url]) if (normUrl(u)) byUrl.add(normUrl(u))
-    byCompanyTitle.add(`${normCompany(j.company)}|${normTitle(j.title)}`)
-    companies.add(normCompany(j.company))
+    const into = j.isExpired ? expired : live
+    for (const u of [j.applyUrl, j.url]) if (normUrl(u)) into.url.add(normUrl(u))
+    const ids = [j.id.split(':').pop(), j.externalId, atsJobId(j.applyUrl), atsJobId(j.url)]
+    for (const id of ids) if (id && id.length >= 5) into.id.add(id.toLowerCase())
+    into.title.add(`${normCompany(j.company)}|${normTitle(j.title)}`)
+    if (!j.isExpired) live.company.add(normCompany(j.company))
+  }
+  const found = (set: typeof expired, j: R100kJob) => {
+    const u = normUrl(j.applyUrl?.replace(/[?&]ref=remote100k/, ''))
+    const id = atsJobId(j.applyUrl)
+    if (u && set.url.has(u)) return 'link'
+    if (id && set.id.has(id)) return 'id'
+    if (set.title.has(`${normCompany(j.company)}|${normTitle(j.title)}`)) return 'title'
+    return null
   }
 
-  let viaUrl = 0
-  let viaTitle = 0
+  const how = new Map<string, number>()
+  const wasExpired: R100kJob[] = []
   const missingKnown: R100kJob[] = []
   const missingUnknown: R100kJob[] = []
   for (const j of jobs) {
-    const u = normUrl(j.applyUrl?.replace(/[?&]ref=remote100k/, ''))
-    if (u && byUrl.has(u)) viaUrl++
-    else if (byCompanyTitle.has(`${normCompany(j.company)}|${normTitle(j.title)}`)) viaTitle++
-    else if (companies.has(normCompany(j.company))) missingKnown.push(j)
+    const hit = found(live, j)
+    if (hit) how.set(hit, (how.get(hit) ?? 0) + 1)
+    else if (found(expired, j)) wasExpired.push(j)
+    else if (live.company.has(normCompany(j.company))) missingKnown.push(j)
     else missingUnknown.push(j)
   }
-  const have = viaUrl + viaTitle
+  const have = [...how.values()].reduce((a, b) => a + b, 0)
   out.push(
-    `We have **${have} of ${jobs.length}** (${jobs.length ? Math.round((have / jobs.length) * 100) : 0}%): ${viaUrl} by apply link, ${viaTitle} by company and title.`,
-    `Missing: ${missingKnown.length + missingUnknown.length}. Of those, ${missingKnown.length} are at companies we already have jobs from (that job is missing), ${missingUnknown.length} at companies we have no live job from.`,
+    `We have **${have} of ${jobs.length}** live (${jobs.length ? Math.round((have / jobs.length) * 100) : 0}%): ${how.get('link') ?? 0} by apply link, ${how.get('id') ?? 0} by the careers system's job id, ${how.get('title') ?? 0} by company and title.`,
+    `Imported but expired here, still listed there: ${wasExpired.length}.`,
+    `Never imported: ${missingKnown.length + missingUnknown.length}: ${missingKnown.length} at companies we have live jobs from, ${missingUnknown.length} at companies we have none from.`,
     '',
   )
 
@@ -128,12 +157,12 @@ async function main() {
     return [...m.entries()].sort((a, b) => b[1].jobs - a[1].jobs)
   }
   const atsTotals = new Map<string, number>()
-  for (const j of [...missingKnown, ...missingUnknown]) {
+  for (const j of [...wasExpired, ...missingKnown, ...missingUnknown]) {
     const ats = j.applyUrl ? detectATS(j.applyUrl) : 'none'
     atsTotals.set(ats, (atsTotals.get(ats) ?? 0) + 1)
   }
   out.push(`Missing jobs by the careers system their apply link points to: ${[...atsTotals.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}`, '')
-  for (const [label, list] of [['Companies we have no live job from', missingUnknown], ['Companies we have, missing these jobs', missingKnown]] as const) {
+  for (const [label, list] of [['Imported but expired here', wasExpired], ['Never imported, companies we have no live job from', missingUnknown], ['Never imported, companies we have', missingKnown]] as const) {
     out.push(`### ${label}`, '')
     for (const [company, e] of group(list).slice(0, 60)) {
       out.push(`- ${company || '(no name)'}: ${e.jobs} · ${[...e.ats.entries()].map(([k, n]) => `${k} ${n}`).join(', ')} · ${e.example.slice(0, 110)}`)
