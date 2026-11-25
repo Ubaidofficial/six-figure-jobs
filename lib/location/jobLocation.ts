@@ -79,7 +79,8 @@ const COUNTRY_BY_NAME: Record<string, string> = Object.fromEntries(
 
 // Every UN member state by its plain name, so "Colombia, Remote" or "Athens, Attiki, Greece" is read (2026-11-25: our
 // own list has 32 countries). Names the UN writes with a bracket ("Bahamas (The)") are left out, and so are Georgia (a
-// US state), Jordan and Chad (also given names).
+// US state), Jordan and Chad (also given names). Read only as the LAST part of the text: "Palau-solità i Plegamans,
+// Catalonia" (a town in Spain) once read as Palau through the country-first rule below.
 const UN_NAMES: Record<string, string> = Object.fromEntries(
   UN_MEMBER_STATES.filter(([, name]) => !name.includes('(') && !/^(?:georgia|jordan|chad)$/i.test(name)).map(([code, name]) => [
     name.toLowerCase(),
@@ -88,7 +89,6 @@ const UN_NAMES: Record<string, string> = Object.fromEntries(
 )
 
 const COUNTRY_ALIASES: Record<string, string> = {
-  ...UN_NAMES,
   ...COUNTRY_BY_NAME,
   us: 'US',
   usa: 'US',
@@ -144,7 +144,7 @@ export function countryFromText(text: unknown): string | null {
   // "Remote California": the word alone counts too, with no comma or dash after it.
   const qualified = parts.length >= 2 || split(bracketed).length >= 2 || bracketed.replace(FILLER, ' ').trim() !== bracketed.trim()
 
-  let code: string | null = COUNTRY_ALIASES[last] ?? null
+  let code: string | null = COUNTRY_ALIASES[last] ?? UN_NAMES[last] ?? null
   if (!code) {
     // "ca united states": a state code run into the country name. Long names only, so "us" is never a suffix match.
     // "new mexico" ends in " mexico" but is a US state, not the country.

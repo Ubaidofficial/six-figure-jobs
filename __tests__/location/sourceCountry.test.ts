@@ -57,6 +57,12 @@ describe('countryFromText reads more of what employers write', () => {
     expect(countryFromText(text)).toBe(cc)
   })
 
+  // Found by the backfill dry run (2026-11-25): a town in Catalonia read as the country Palau.
+  it('reads a UN name only as the last part, not inside a town name', () => {
+    expect(countryFromText('Palau-solità i Plegamans, Catalonia')).toBeNull()
+    expect(countryFromText('Palau, solità i Plegamans, Catalonia')).toBeNull()
+  })
+
   it.each(['Remote - Georgia', 'Georgia', 'Jordan', 'California'])('%s stays unread (ambiguous, or nothing before the state)', (text) => {
     expect(countryFromText(text)).toBeNull()
   })
