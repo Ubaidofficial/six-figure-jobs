@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 // The daily quality snapshot's checks and findings rules (lib/quality, docs/QUALITY_AGENTS_PLAN.md).
-import { fillRate, runChecks, type CheckRow } from '../../lib/quality/checks'
+import { fillRate, remoteWithoutSinglePlace, runChecks, type CheckRow } from '../../lib/quality/checks'
 import { fetchPrs, findingKeysOf, formatReport, nextFindingState, type PrInfo, type Snapshot } from '../../lib/quality/snapshot'
 
 const row = (over: Partial<CheckRow> = {}): CheckRow => ({
@@ -18,9 +18,26 @@ const row = (over: Partial<CheckRow> = {}): CheckRow => ({
   countryCode: 'US',
   remoteMode: 'remote',
   companyId: 'c1',
+  locationRaw: 'New York, NY',
   ...over,
 })
 const count = (rows: CheckRow[], key: string) => runChecks(rows).find((c) => c.key === key)!
+
+describe('remote jobs that name no single place', () => {
+  // These have no country by rule, so missing_country does not count them (2026-11-25: "Remote" 312, "Remote / Worldwide" 82).
+  it.each(['Remote', 'Remote / Worldwide', 'remote - worldwide', 'EMEA', 'Europe', 'Any Location / Remote', 'Canada; United States', 'Germany,  Ireland,  Spain,  Sweden,  UK', 'NAMER', ''])(
+    '"%s"',
+    (text) => expect(remoteWithoutSinglePlace({ remoteMode: 'remote', locationRaw: text })).toBe(true),
+  )
+  it.each([['Boston', 'remote'], ['Remote - Texas', 'remote'], ['Montréal - Remote', 'remote'], ['Remote', 'hybrid'], ['Remote', null]] as const)(
+    'counts "%s" (%s)',
+    (text, mode) => expect(remoteWithoutSinglePlace({ remoteMode: mode, locationRaw: text })).toBe(false),
+  )
+  it('missing_country leaves them out of the count and of the total', () => {
+    const c = runChecks([row({ countryCode: null, remoteMode: 'remote', locationRaw: 'Remote' }), row({ countryCode: null, remoteMode: 'remote', locationRaw: 'Boston' })])
+    expect(c.find((x) => x.key === 'missing_country')).toMatchObject({ count: 1, of: 1 })
+  })
+})
 
 describe('quality checks', () => {
   it('a clean job breaks no rule', () => {

@@ -77,3 +77,39 @@ describe('countryCodeFromContext', () => {
     expect(countryCodeFromContext('Springfield', null)).toBeNull()
   })
 })
+
+// Found by the missing_country quality check (2026-11-25): listed jobs whose location names a French region, a German
+// city-state or district, or Austria's "Bundesland Wien", had no country (French pay is in euros, which names no country).
+describe('countryCodeFromSubdivision: French regions, city-states and districts', () => {
+  it.each([
+    ['Lyon, Rhône-Alpes', 'FR'],
+    ['Lyon, Auvergne-Rhône-Alpes', 'FR'],
+    ['Rennes, Bretagne', 'FR'],
+    ['Toulouse, Midi-Pyrénées', 'FR'],
+    ['Lille, Nord-Pas-de-Calais', 'FR'],
+    ["Aix-en-Provence, Provence-Alpes-Côtes d'Azur", 'FR'],
+    ["Marseille, Provence-Alpes-Côte d'Azur", 'FR'],
+    ['Nantes, Pays-de-la-Loire', 'FR'],
+    ['Nantes, Pays de la Loire', 'FR'],
+    ['Montpellier, Languedoc-Roussillon', 'FR'],
+    ['Clermont-Ferrand, Auvergne', 'FR'],
+    ['Bordeaux, Aquitaine', 'FR'],
+    ['Pau, Nouvelle-Aquitaine', 'FR'],
+    ['Paris, Île-de-France', 'FR'],
+    ['Strasbourg, Grand Est', 'FR'],
+    ['Haute-Garonne, Midi-Pyrénées', 'FR'],
+    ['Bremen, Freie Hansestadt Bremen', 'DE'],
+    ['Hamburg, Freie und Hansestadt Hamburg', 'DE'],
+    ['Wien, Bundesland Wien', 'AT'],
+    ['Taufkirchen, München (Kreis)', 'DE'],
+    ['Hohenlohekreis', 'DE'],
+    ['Siegburg, Rhein-Sieg-Kreis', 'DE'],
+    ['Landkreis Böblingen', 'DE'],
+  ])('%s -> %s', (text, code) => {
+    expect(countryCodeFromSubdivision(text)).toBe(code)
+  })
+
+  it.each(['Bremen, Bremen', 'Lorraine, OH', 'Centre', 'Normandy, TN', 'Georgia', 'Kreis'])('leaves "%s" alone', (text) => {
+    expect(countryCodeFromSubdivision(text)).toBeNull()
+  })
+})

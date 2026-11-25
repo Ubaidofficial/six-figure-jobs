@@ -42,6 +42,9 @@ jobs:
           EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
         run: npm run scrape:db-target
 
+      - name: Listed jobs with no country (read-only)
+        run: npx tsx scripts/auditMissingCountry.ts
+
       - name: Coverage audit (read-only)
         run: npm run audit:db-coverage
 
