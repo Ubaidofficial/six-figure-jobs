@@ -36,7 +36,10 @@ describe('processLocation country code', () => {
 
   it('does not guess from the euro, from a city that disagrees with the currency, or for a remote job', () => {
     expect(processLocation(job({ locationText: 'Kerestinec, HR', salaryCurrency: 'EUR' })).countryCode).toBeNull()
-    expect(processLocation(job({ locationText: 'Schwetzingen, Rhein-Neckar-Kreis', salaryCurrency: 'EUR' })).countryCode).toBeNull()
+    // The euro alone names no country. (Schwetzingen, Rhein-Neckar-Kreis, the example here until 2026-11-25, is in
+    // Germany, and its district now says so; see the missing_country cases below.)
+    expect(processLocation(job({ locationText: 'Kerkrade-West, Zuidrand', salaryCurrency: 'EUR' })).countryCode).toBeNull()
+    expect(processLocation(job({ locationText: 'Schwetzingen, Rhein-Neckar-Kreis', salaryCurrency: 'EUR' })).countryCode).toBe('DE')
     expect(processLocation(job({ locationText: 'Birmingham, Jefferson County', salaryCurrency: 'USD' })).countryCode).toBeNull()
     expect(processLocation(job({ locationText: 'Any Location / Remote', salaryCurrency: 'USD', isRemote: true })).countryCode).toBeNull()
   })
@@ -114,5 +117,35 @@ describe('processLocation remote job country', () => {
     expect(remote('Remote - EMEA', 'EUR').countryCode).toBeNull()
     expect(remote('Remote from Spain', 'EUR').city).toBeNull()
     expect(remote('Remote (USA), strong preference for East Coast', 'USD').city).toBeNull()
+  })
+})
+
+// The missing_country quality check (2026-11-25, 1,485 listed jobs): real location texts from production that today's
+// rules left with no country. Remote jobs still never take a country from a city or the pay currency.
+describe('processLocation: places found by the missing_country check', () => {
+  it.each([
+    ['Lyon, Rhône-Alpes', 'EUR', 'onsite', 'FR'],
+    ['Toulouse, Midi-Pyrénées', 'EUR', null, 'FR'],
+    ["Aix-en-Provence, Provence-Alpes-Côtes d'Azur", 'EUR', 'hybrid', 'FR'],
+    ['Bremen, Freie Hansestadt Bremen', 'EUR', 'onsite', 'DE'],
+    ['Wien, Bundesland Wien', 'EUR', 'hybrid', 'AT'],
+    ['Taufkirchen, München (Kreis)', 'EUR', 'onsite', 'DE'],
+    ['Remote - Texas', 'USD', 'remote', 'US'],
+    ['Remote - US: Select locations', 'USD', 'remote', 'US'],
+    ['US: Washington Remote Worker', 'CAD', 'remote', 'US'],
+    ['Nottingham,  ENG', 'GBP', 'onsite', 'GB'],
+  ] as const)('%s (%s, %s) -> %s', (text, currency, mode, cc) => {
+    expect(processLocation(job({ locationText: text, salaryCurrency: currency, workplaceType: mode })).countryCode).toBe(cc)
+  })
+
+  it.each([
+    ['Remote', 'USD'],
+    ['Remote / Worldwide', 'USD'],
+    ['EMEA', 'EUR'],
+    ['Canada; United States', 'USD'],
+    ['Boston', 'USD'],
+    ['Montréal - Remote', 'CAD'],
+  ])('a remote job at "%s" (%s) still gets no country', (text, currency) => {
+    expect(processLocation(job({ locationText: text, salaryCurrency: currency, workplaceType: 'remote' })).countryCode).toBeNull()
   })
 })
