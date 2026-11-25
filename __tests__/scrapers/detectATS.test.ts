@@ -35,6 +35,9 @@ describe('ATS detection support boundaries', () => {
       'teamtailor',
       'breezy',
       'icims',
+      // Readers added 2026-11-25 (lib/scrapers/ats/oraclecloud.ts, gem.ts).
+      'oraclecloud',
+      'gem',
     ])
   })
 })
