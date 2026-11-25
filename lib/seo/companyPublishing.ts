@@ -1,4 +1,5 @@
 import { memoAsync } from '@/lib/cache/memo'
+import { REMOTE100K_EMPLOYERS } from '@/lib/constants/directEmployers'
 import { prisma } from '@/lib/prisma'
 import { buildWhere } from '@/lib/jobs/queryJobs'
 import {
@@ -206,6 +207,12 @@ function evaluateReadiness(
   return reasons
 }
 
+// Owner's decision, 2026-11-25 ("make the new company pages indexable too"): the employers added for remote100k.com
+// coverage are released past the wave's company cap, but only once their page is ready (the same bar as every company
+// above). Matched the way scripts/sync-direct-employers.ts finds an employer's company: by slug, else by exact name.
+const PAST_CAP_SLUGS = new Set(REMOTE100K_EMPLOYERS.map((e) => e.slug))
+const PAST_CAP_NAMES = new Set(REMOTE100K_EMPLOYERS.map((e) => e.name.toLowerCase()))
+
 function readStartDate(now: Date): Date {
   const parsed = new Date(COMPANY_PSEO_START_DATE)
   return Number.isFinite(parsed.getTime()) ? parsed : now
@@ -393,10 +400,17 @@ async function buildCompanyPublishingManifestData(
     })
 
   const readyCandidates = baseCandidates.filter((candidate) => candidate.ready)
-  const unlockedCount = getUnlockedCount(readyCandidates.length, now)
   const unlockedIds = new Set(
-    readyCandidates.slice(0, unlockedCount).map((candidate) => candidate.companyId),
+    readyCandidates.slice(0, getUnlockedCount(readyCandidates.length, now)).map((candidate) => candidate.companyId),
   )
+  // Only while a cap applies (wave 5+), and not when COMPANY_RELEASE_LIMIT=0 holds every company page back.
+  const releaseLimit = getCompanyReleaseLimit()
+  if (Number.isFinite(releaseLimit) && releaseLimit > 0) {
+    for (const candidate of readyCandidates) {
+      if (PAST_CAP_SLUGS.has(candidate.slug) || PAST_CAP_NAMES.has(candidate.name.toLowerCase())) unlockedIds.add(candidate.companyId)
+    }
+  }
+  const unlockedCount = unlockedIds.size
   const rolloutRankById = new Map(
     readyCandidates.map((candidate, index) => [candidate.companyId, index + 1] as const),
   )

@@ -90,6 +90,47 @@ describe('the manifest unlocks only the capped number of ready companies, best f
     expect(m.candidates.filter((c) => c.unlocked).map((c) => c.slug)).toEqual(['company-29', 'company-28', 'company-27'])
   })
 
+  // Owner's decision, 2026-11-25: the employers added for remote100k.com coverage go past the cap once ready.
+  describe('the remote100k employers', () => {
+    // The two weakest companies become Grafana Labs (by slug) and Tailscale (by exact name, under another slug).
+    const withNew = () => {
+      const list = companies.map((c) => ({ ...c }))
+      list[0] = { ...list[0], slug: 'grafana-labs', name: 'Grafana Labs' }
+      list[1] = { ...list[1], slug: 'tailscale-inc', name: 'Tailscale' }
+      return list
+    }
+
+    it('are unlocked past the cap at wave 5, matched by slug or by name', async () => {
+      process.env.SITEMAP_WAVE = '5'
+      ;(prisma.company.findMany as unknown as jest.Mock).mockResolvedValue(withNew())
+      const m = await buildCompanyPublishingManifestData(now)
+      const unlocked = m.candidates.filter((c) => c.unlocked).map((c) => c.slug)
+      expect(unlocked).toEqual(expect.arrayContaining(['grafana-labs', 'tailscale-inc', 'company-29']))
+      expect(unlocked).toHaveLength(27)
+      expect(m.unlockedCount).toBe(27) // the company sitemap pages by this count
+    })
+
+    it('stay locked while their page is not ready', async () => {
+      process.env.SITEMAP_WAVE = '5'
+      const list = withNew()
+      list[0] = { ...list[0], website: null } // not ready: missing_website
+      ;(prisma.company.findMany as unknown as jest.Mock).mockResolvedValue(list)
+      const m = await buildCompanyPublishingManifestData(now)
+      const grafana = m.candidates.find((c) => c.slug === 'grafana-labs')
+      expect(grafana?.ready).toBe(false)
+      expect(grafana?.unlocked).toBe(false)
+      expect(m.unlockedCount).toBe(26)
+    })
+
+    it('stay locked when COMPANY_RELEASE_LIMIT=0 holds every company back', async () => {
+      process.env.SITEMAP_WAVE = '5'
+      process.env.COMPANY_RELEASE_LIMIT = '0'
+      ;(prisma.company.findMany as unknown as jest.Mock).mockResolvedValue(withNew())
+      const m = await buildCompanyPublishingManifestData(now)
+      expect(m.unlockedCount).toBe(0)
+    })
+  })
+
   it('before wave 5 the drip alone decides, as before', async () => {
     process.env.SITEMAP_WAVE = '4'
     const m = await buildCompanyPublishingManifestData(now)
