@@ -27,6 +27,15 @@ nothing worth a pull request ends without one. That is a good run, not a failure
 3. **The code.** Ingest (`lib/ingest`, `lib/scrapers`, `lib/normalizers`), the readers (`lib/jobs/*Evidence.ts`,
    `lib/jobs/cleanTitle.ts`), and the role and country mapping.
 
+Use the GitHub tools when the session has them. Without them, `gh api` does the same over REST (a test run on
+2026-11-25 had no GitHub tools, and `gh` REST calls worked):
+- `gh api repos/Ubaidofficial/six-figure-jobs/actions/workflows/quality-snapshot.yml/runs?branch=main&status=success`,
+  then `.../actions/runs/<id>/logs`;
+- `gh api repos/Ubaidofficial/six-figure-jobs/pulls` to list pull requests, and the same path with `-X POST` to open
+  one.
+
+If you cannot push a branch, stop and say so in the run's last message.
+
 You have no production database credential, and you must not look for one. The read-only workflows are the only way
 to see production data: `quality snapshot`, `db audit` and `research 30d`, as dry runs.
 
