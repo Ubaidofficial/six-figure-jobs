@@ -12,6 +12,8 @@ import { scrapeBambooHRResult } from './bamboohr'
 import { scrapeTeamtailorResult } from './teamtailor'
 import { scrapeBreezyResult } from './breezy'
 import { scrapeIcimsResult } from './icims'
+import { scrapeOracleCloudResult } from './oraclecloud'
+import { scrapeGemResult } from './gem'
 
 export type { ATSResult } from './types'
 
@@ -73,6 +75,12 @@ export async function scrapeCompanyAtsJobs(
 
       case 'icims':
         return await scrapeIcimsResult(atsUrl)
+
+      case 'oraclecloud':
+        return await scrapeOracleCloudResult(atsUrl)
+
+      case 'gem':
+        return await scrapeGemResult(atsUrl)
 
       default:
         return {

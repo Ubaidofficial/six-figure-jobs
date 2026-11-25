@@ -2,6 +2,9 @@ import { DIRECT_EMPLOYERS } from '../../lib/constants/directEmployers'
 
 const HOSTS = { greenhouse: 'https://boards.greenhouse.io/', ashby: 'https://jobs.ashbyhq.com/', lever: 'https://jobs.lever.co/' }
 const WORKDAY = /^https:\/\/[a-z0-9-]+\.wd\d+\.myworkdayjobs\.com\/[A-Za-z0-9_-]+$/
+// Oracle Recruiting Cloud candidate sites and Gem boards (added 2026-11-25).
+const ORACLE = /^https:\/\/[a-z0-9.-]+\.oraclecloud\.com\/hcmUI\/CandidateExperience\/[a-z]{2}\/sites\/[A-Za-z0-9_-]+$/
+const GEM = /^https:\/\/jobs\.gem\.com\/[a-z0-9-]+$/
 
 describe('DIRECT_EMPLOYERS', () => {
   it('includes the employers the owner asked for', () => {
@@ -18,8 +21,8 @@ describe('DIRECT_EMPLOYERS', () => {
 
   it('gives every employer a board URL on its own provider and a page-style slug', () => {
     for (const e of DIRECT_EMPLOYERS) {
-      if (e.provider === 'workday') {
-        expect(e.boardUrl).toMatch(WORKDAY)
+      if (e.provider === 'workday' || e.provider === 'oraclecloud' || e.provider === 'gem') {
+        expect(e.boardUrl).toMatch(e.provider === 'workday' ? WORKDAY : e.provider === 'gem' ? GEM : ORACLE)
         continue
       }
       expect(e.boardUrl.startsWith(HOSTS[e.provider])).toBe(true)

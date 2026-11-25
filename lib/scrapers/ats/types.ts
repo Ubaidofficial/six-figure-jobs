@@ -12,6 +12,9 @@ export const SUPPORTED_ATS_PROVIDERS = [
   'teamtailor',
   'breezy',
   'icims',
+  // Added 2026-11-25 (remote100k coverage): Oracle Recruiting Cloud candidate sites and Gem job boards.
+  'oraclecloud',
+  'gem',
 ] as const
 
 export type AtsProvider = (typeof SUPPORTED_ATS_PROVIDERS)[number]

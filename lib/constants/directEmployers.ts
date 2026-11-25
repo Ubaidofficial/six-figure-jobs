@@ -8,7 +8,7 @@
 export type DirectEmployer = {
   slug: string
   name: string
-  provider: 'greenhouse' | 'ashby' | 'lever' | 'workday'
+  provider: 'greenhouse' | 'ashby' | 'lever' | 'workday' | 'oraclecloud' | 'gem'
   boardUrl: string
   /** The employer's own domain, for its logo; checked on 2026-11-09 to have a logo on logo.dev. */
   website?: string
@@ -464,4 +464,13 @@ export const DIRECT_EMPLOYERS: readonly DirectEmployer[] = [
   { slug: 'gdit', name: 'General Dynamics Information Technology', provider: 'workday', boardUrl: 'https://gdit.wd5.myworkdayjobs.com/External_Career_Site' }, // remote100k; Workday tenant 'gdit'
   { slug: 'solventum', name: 'Solventum', provider: 'workday', boardUrl: 'https://healthcare.wd1.myworkdayjobs.com/Search' }, // remote100k; Solventum (former 3M Health Care) Workday tenant 'healthcare'
   { slug: 'abnormal-ai', name: 'Abnormal AI', provider: 'greenhouse', boardUrl: 'https://boards.greenhouse.io/abnormalsecurity' }, // remote100k 11 via gh_jid; board 'Abnormal', 86 jobs
+  // Oracle Recruiting Cloud and Gem boards behind remote100k.com's jobs (owner's request, 2026-11-25: "do all three",
+  // item 3; read by lib/scrapers/ats/oraclecloud.ts and gem.ts). Job counts on 2026-11-25; only jobs whose posting states
+  // pay reaching the floor are listed.
+  { slug: 'argano', name: 'Argano', provider: 'oraclecloud', boardUrl: 'https://fa-eyau-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1' }, // 86 jobs, 1 states pay
+  { slug: 'akamai', name: 'Akamai', provider: 'oraclecloud', boardUrl: 'https://fa-extu-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1' }, // 298 jobs, 75 state pay
+  { slug: 'icertis', name: 'Icertis', provider: 'oraclecloud', boardUrl: 'https://iaaviz.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Jobs-at-Icertis' }, // 42 jobs, 2 state pay
+  { slug: 'fortinet', name: 'Fortinet', provider: 'oraclecloud', boardUrl: 'https://edel.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_xx' }, // 400+ jobs (read 400), 51 state pay
+  { slug: 'bigpanda', name: 'BigPanda', provider: 'gem', boardUrl: 'https://jobs.gem.com/bigpanda' }, // 22 jobs, 8 state pay
+  { slug: 'linktree', name: 'Linktree', provider: 'gem', boardUrl: 'https://jobs.gem.com/linktree' }, // 23 jobs, 15 state pay
 ]
