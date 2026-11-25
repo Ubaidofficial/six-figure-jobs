@@ -7,6 +7,9 @@
 //   - a changed `text` (the visitor picked another salary band): it counts from the old value to the new one.
 // Under prefers-reduced-motion it never animates. Only the first run of digits in `text` moves ("$150k" counts the
 // 150, "1,404,073" keeps its commas); text with a decimal point is left as it is.
+// `roll` (owner's request, 2026-11-25: "real time animations to numbers"): for numbers that update live, a changed text
+// rolls instead of counting: each digit that changed slides up into place like an odometer, right to left, and a rise
+// glows green for a moment. Screen readers get the whole number, not the moving digits.
 
 import * as React from 'react'
 
@@ -40,9 +43,31 @@ export function formatNumberText(parts: Pick<Parts, 'pre' | 'post' | 'grouped'>,
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-export function AnimatedNumber({ text, className, reveal = false }: { text: string; className?: string; reveal?: boolean }) {
+type Slot = { char: string; from: string | null; delay: number }
+
+/**
+ * The characters of `to`, each with the character it replaces in `from` when that is a different digit (aligned from the
+ * right, so "9,999" -> "10,000" rolls every digit) and a delay that runs right to left (pure).
+ */
+export function rollSlots(from: string, to: string, stepMs = 45): Slot[] {
+  const offset = to.length - from.length
+  let changedFromRight = 0
+  const slots: Slot[] = new Array(to.length)
+  for (let i = to.length - 1; i >= 0; i--) {
+    const char = to[i]
+    const old = from[i - offset] ?? null
+    const rolls = /\d/.test(char) && old !== char
+    slots[i] = { char, from: rolls ? (old && /\d/.test(old) ? old : '') : null, delay: rolls ? changedFromRight++ * stepMs : 0 }
+  }
+  return slots
+}
+
+export function AnimatedNumber({ text, className, reveal = false, roll = false }: { text: string; className?: string; reveal?: boolean; roll?: boolean }) {
   const ref = React.useRef<HTMLSpanElement>(null)
   const [shown, setShown] = React.useState(text)
+  // A live change being rolled: the old and new text, a key to restart the CSS animation, and whether it went up.
+  const [rolling, setRolling] = React.useState<{ from: string; to: string; key: number; up: boolean } | null>(null)
+  const rollKey = React.useRef(0)
   const raf = React.useRef(0)
   const current = React.useRef<number | null>(parseNumberText(text)?.value ?? null)
   const lastText = React.useRef<string | null>(null)
@@ -67,13 +92,22 @@ export function AnimatedNumber({ text, className, reveal = false }: { text: stri
 
   React.useEffect(() => {
     const target = parseNumberText(text)
-    const changed = lastText.current !== null && lastText.current !== text
+    const previous = lastText.current
+    const changed = previous !== null && previous !== text
     lastText.current = text
 
     if (!target || prefersReducedMotion()) {
       setShown(text)
       current.current = target?.value ?? null
       return
+    }
+    if (changed && roll) {
+      const before = parseNumberText(previous)
+      setRolling({ from: previous, to: text, key: ++rollKey.current, up: before ? target.value > before.value : false })
+      setShown(text)
+      current.current = target.value
+      const done = window.setTimeout(() => setRolling(null), 1400)
+      return () => window.clearTimeout(done)
     }
     if (changed) {
       animate(current.current ?? target.value, text)
@@ -99,7 +133,27 @@ export function AnimatedNumber({ text, className, reveal = false }: { text: stri
       observer.disconnect()
       cancelAnimationFrame(raf.current)
     }
-  }, [text, reveal, animate])
+  }, [text, reveal, roll, animate])
+
+  if (rolling) {
+    return (
+      <span ref={ref} className={cn(styles.number, styles.roll, rolling.up && styles.up, className)} key={rolling.key}>
+        <span className={styles.srOnly}>{rolling.to}</span>
+        <span aria-hidden="true">
+          {rollSlots(rolling.from, rolling.to).map((s, i) =>
+            s.from === null ? (
+              <span key={i}>{s.char}</span>
+            ) : (
+              <span key={i} className={styles.slot} style={{ '--roll-delay': `${s.delay}ms` } as React.CSSProperties}>
+                <span className={styles.out}>{s.from}</span>
+                <span className={styles.in}>{s.char}</span>
+              </span>
+            ),
+          )}
+        </span>
+      </span>
+    )
+  }
 
   return (
     <span ref={ref} className={cn(styles.number, className)}>

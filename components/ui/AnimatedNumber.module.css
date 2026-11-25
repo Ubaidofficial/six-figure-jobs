@@ -2,3 +2,82 @@
 .number {
   font-variant-numeric: tabular-nums;
 }
+
+/* `roll`: a live change. Each changed digit is a one-character window; the old digit slides up and out while the new one
+   slides up into place (an odometer), right to left via --roll-delay. A rise glows green for a moment. */
+.roll {
+  display: inline-block;
+}
+
+.slot {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  line-height: inherit;
+}
+
+.in {
+  display: inline-block;
+  animation: roll-in 560ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  animation-delay: var(--roll-delay, 0ms);
+}
+
+.out {
+  position: absolute;
+  inset: 0 auto auto 0;
+  animation: roll-out 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--roll-delay, 0ms);
+}
+
+.up {
+  animation: rise-glow 1300ms ease-out both;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes roll-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0.2;
+  }
+}
+
+@keyframes roll-out {
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes rise-glow {
+  0% {
+    color: inherit;
+  }
+  25% {
+    color: #3f9a1b;
+    text-shadow: 0 0 18px color-mix(in srgb, #9be15d 70%, transparent);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .in,
+  .out,
+  .up {
+    animation: none;
+  }
+  .out {
+    display: none;
+  }
+}

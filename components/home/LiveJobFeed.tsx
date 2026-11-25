@@ -7,6 +7,7 @@
 // reader's thumb, arrivals wait while the pointer or keyboard focus is in the list, and Pause holds them behind a
 // "Show N new jobs" button. Polling stops after 30 minutes of one visit and resumes when the tab is shown again.
 
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import * as React from 'react'
 import Link from '@/components/ui/Link'
 
@@ -114,7 +115,12 @@ export function LiveJobFeed({
             <span className={styles.dot} aria-hidden="true" />
             <span>
               <strong>Live.</strong>{' '}
-              {addedLastHour && newest ? `${addedLastHour.toLocaleString('en-US')} added in the last hour, the latest ${formatAgo(newest, now)}.` : newest ? `Latest job added ${formatAgo(newest, now)}.` : 'Updated continuously.'}{' '}
+              {addedLastHour && newest ? (
+                <>
+                  {/* Rolls like an odometer when a poll brings a new count (AnimatedNumber `roll`). */}
+                  <AnimatedNumber text={addedLastHour.toLocaleString('en-US')} roll /> added in the last hour, the latest {formatAgo(newest, now)}.
+                </>
+              ) : newest ? `Latest job added ${formatAgo(newest, now)}.` : 'Updated continuously.'}{' '}
               {paused ? 'Paused: new jobs wait until you resume.' : 'New jobs appear here as we add them.'}
             </span>
           </p>
