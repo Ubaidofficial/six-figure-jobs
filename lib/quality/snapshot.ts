@@ -37,7 +37,7 @@ export async function collectSnapshot(db: PrismaClient, prs: PrInfo[] = [], now:
       where: listed,
       select: {
         id: true, title: true, source: true, applyUrl: true, salaryMin: true, salaryMax: true, salaryCurrency: true,
-        salaryValidated: true, roleSlug: true, countryCode: true, remoteMode: true, companyId: true,
+        salaryValidated: true, roleSlug: true, countryCode: true, remoteMode: true, companyId: true, locationRaw: true,
       },
     }) as Promise<CheckRow[]>,
     db.job.count({ where: { isExpired: false, ...buildFreshJobWhere() } }),
