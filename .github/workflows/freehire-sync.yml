@@ -1,7 +1,7 @@
 name: freehire daily sync
 
 # Pulls the last ~36 hours of fresh six-figure jobs from freehire (US, UK, EU, Canada, Australia) through
-# the normal ingest path, then expires jobs not refreshed in 7 days. Runs about daily in full, plus light runs (freehire
+# the normal ingest path, then expires jobs not refreshed in 7 days. Runs in full twice a day, plus light runs (freehire
 # sync of the last 18 hours, self-heal, slices) about 6 hours apart; can also be started by hand.
 # New/removed URLs are queued in the database (JobIndexingQueue) during the sync, never sent in a burst; after the
 # sync, the queue is drained at most INDEXING_API_DAILY_LIMIT URLs a day (only that step gets the Google credentials).
@@ -13,7 +13,7 @@ on:
   schedule:
     # Every hour; the plan job below decides what runs (scripts/freehire-plan.js). GitHub starts scheduled runs hours
     # late and drops some (2026-11-12: the 11:17 and 17:17 runs never started), so fixed times were not reliable.
-    # - full run (every step below): when no full run started in the last 20 hours
+    # - full run (every step below): when no full run started in the last 11.5 hours (twice a day since 2026-11-25; it was 20)
     # - light run, 5.5+ hours after the last sync (owner's request 2026-11-12: new jobs within hours, not once a day):
     #   the freehire sync over the last 18 hours, a 1,000-job closed check, the self-heal and the slices. Measured
     #   2026-11-19: about 120-170 search pages and 400-1,100 company lookups a run before the description-pay pass was
@@ -192,6 +192,16 @@ jobs:
         timeout-minutes: 5
         run: npx tsx scripts/quality-report.ts --hours=8
       # Runs whenever a sync succeeded, even if the closed-job check above failed or timed out.
+      # remote100k.com coverage (owner's request, 2026-11-25: check it twice a day, with the employers' boards read on each
+      # full run): which of its listed jobs we show, lack, or expired, in this run's summary. Read-only (SELECTs in a READ ONLY
+      # transaction; remote100k's public sitemap and job pages, 4 at a time). remote100k itself is not imported: its pay is
+      # sometimes not the employer's, so missing jobs are added through the employer's own board (directEmployers.ts).
+      - name: remote100k.com coverage (read-only)
+        if: ${{ !cancelled() && env.LIGHT_RUN != 'true' && steps.employers.conclusion == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 15
+        run: npx tsx scripts/auditRemote100kCoverage.ts
+
       - name: Expire jobs not refreshed in 7 days
         if: ${{ !cancelled() && (steps.sync.conclusion == 'success' || steps.employers.conclusion == 'success') }}
         run: npx tsx scripts/run-expiry.ts

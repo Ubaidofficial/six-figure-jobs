@@ -3,12 +3,13 @@
 //
 // GitHub starts this workflow's scheduled runs hours late and sometimes not at all (2026-11-12: the 05:17 run started
 // at 13:43; the 11:17 and 17:17 light runs never started). So the workflow is scheduled every hour and this script
-// decides from the previous runs' start times: a full run when none started in the last 20 hours, a light run when no
-// sync started in the last 5.5 hours, otherwise nothing. Failed and timed-out runs count, so a failing run is not
+// decides from the previous runs' start times: a full run when none started in the last 11.5 hours (twice a day since
+// 2026-11-25, owner's request: read the employers' own boards, where remote100k.com's jobs come from, twice a day; it was
+// 20 hours), a light run when no sync started in the last 5.5 hours, otherwise nothing. Failed and timed-out runs count, so a failing run is not
 // retried every hour against freehire's daily quota. Plain Node, no dependencies: the hourly check needs no npm ci.
 
 const HOUR_MS = 60 * 60 * 1000
-const FULL_EVERY_MS = 20 * HOUR_MS
+const FULL_EVERY_MS = 11.5 * HOUR_MS
 const LIGHT_EVERY_MS = 5.5 * HOUR_MS
 
 /**
@@ -30,8 +31,8 @@ function decideFreehireMode(syncJobs, now) {
 /** The fixed times this workflow used before, for when the GitHub API cannot be read. */
 function fallbackMode(now) {
   const hour = new Date(now).getUTCHours()
-  if (hour === 5) return 'full'
-  return [11, 17, 23].includes(hour) ? 'light' : 'skip'
+  if (hour === 5 || hour === 17) return 'full'
+  return [11, 23].includes(hour) ? 'light' : 'skip'
 }
 
 async function main() {
