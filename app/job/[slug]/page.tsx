@@ -1,6 +1,7 @@
 // app/job/[slug]/page.tsx
 
 import { JobAlertBox } from '@/components/alerts/JobAlertBox'
+import { JobAlertCardBox } from '@/components/alerts/JobAlertCardBox'
 import type { Metadata } from 'next'
 import NextLink from '@/components/ui/Link'
 import NextImage from 'next/image'
@@ -770,7 +771,8 @@ export default async function JobPage({
       ) : null}
 
       {/* Jobs like this one by email: the same role (or, failing that, title words) and country as "Similar six-figure
-          roles" above. No popup on job pages (lib/alerts/popup.ts), so this is the page's own signup besides the footer. */}
+          roles" above. The site-wide corner popup skips job pages (lib/alerts/popup.ts); the page has this box and the
+          floating card below (JobAlertCardBox). */}
       <div className="mt-10">
         <JobAlertBox
           query={{
@@ -802,6 +804,16 @@ export default async function JobPage({
       ) : null}
 
       <MobileApplyBar salaryText={salaryText || null} applyHref={applyHref} jobId={publicId} />
+
+      {/* The floating alert card (owner's choice, 2026-11-25): slides in after a few seconds or half-way down, no close
+          button, never over the Apply button; client-only, so no crawled markup changes (lib/alerts/jobAlertCard.ts). */}
+      <JobAlertCardBox
+        query={{
+          roleSlugs: canonicalRoleSlug ? [canonicalRoleSlug] : undefined,
+          keyword: canonicalRoleSlug ? undefined : similarKeyword ?? undefined,
+          countryCode: typedJob.countryCode || undefined,
+        }}
+      />
 
       {/* JSON-LD (keep existing schema) */}
       {jsonLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /> : null}

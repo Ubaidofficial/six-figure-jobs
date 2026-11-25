@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import type { AlertFilters } from '@/lib/alerts/filters'
 import { suggestEmailFix } from '@/lib/alerts/email'
 import { cleanAlertKeyword } from '@/lib/alerts/keyword'
+import { ALERT_SIGNED_UP_KEY, SIGNED_UP_FOR_MS } from '@/lib/alerts/jobAlertCard'
 import { pushAlertEvent } from '@/lib/alerts/track'
 
 import styles from './JobAlertSignup.module.css'
@@ -92,6 +93,12 @@ export function JobAlertSignup({ filters, label, variant = 'inline', title = 'Ge
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string }
       if (res.ok && body.ok) {
         setState({ kind: 'done', message: body.message })
+        // Signed up: the job page's alert card (JobAlertCard) stops showing. Storage can be blocked; that only means it shows.
+        try {
+          window.localStorage.setItem(ALERT_SIGNED_UP_KEY, String(Date.now() + SIGNED_UP_FOR_MS))
+        } catch {
+          /* nothing to do */
+        }
         pushAlertEvent('job_alert_signup', {
           alert_form: variant,
           alert_frequency: frequency,
