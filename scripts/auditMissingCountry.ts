@@ -11,6 +11,7 @@ import { appendFileSync } from 'node:fs'
 
 import { processLocation } from '../lib/ingest/index'
 import { buildWhere } from '../lib/jobs/queryJobs'
+import { remoteWithoutSinglePlace } from '../lib/quality/checks'
 
 type Row = { id: string; source: string; title: string; locationRaw: string | null; currency: string | null; remote: boolean | null; remoteMode: string | null }
 
@@ -77,6 +78,19 @@ async function main() {
         for (const [t, n] of top(byText, 60)) out.push(`- ${n} × "${t}"`)
         out.push('', 'Examples:', '')
         for (const r of unresolved.slice(0, 25)) out.push(`- ${r.id} · ${r.title.slice(0, 70)} · "${r.locationRaw ?? ''}" · ${r.currency ?? '-'} · ${r.remoteMode ?? '-'}`)
+
+        // The quality check's count leaves out remote jobs at "Remote", "Worldwide", a region or several countries, which
+        // have no country by rule (lib/quality/checks.ts); these are the rest, the ones a better reading could place.
+        const checked = unresolved.filter((r) => !remoteWithoutSinglePlace(r))
+        out.push('', `### Counted by the quality check (missing_country): ${checked.length}`, '')
+        const bySourceMode = new Map<string, number>()
+        const byTextMode = new Map<string, number>()
+        for (const r of checked) {
+          count(bySourceMode, `${r.source.split(':').slice(0, 2).join(':')} ${r.remoteMode ?? 'unknown'}`)
+          count(byTextMode, `"${(r.locationRaw ?? '').trim().toLowerCase().slice(0, 70)}" · ${r.remoteMode ?? 'unknown'} · ${r.currency ?? '-'}`)
+        }
+        out.push(`By source and work mode: ${top(bySourceMode, 20).map(([k, n]) => `${k} ${n}`).join(', ')}`, '')
+        for (const [t, n] of top(byTextMode, 150)) out.push(`- ${n} × ${t}`)
       },
       { timeout: 120_000 },
     )

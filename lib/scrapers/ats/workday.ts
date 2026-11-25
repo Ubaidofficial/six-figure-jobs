@@ -400,6 +400,7 @@ function mapWorkdayDetailToJob(
       detail?.externalUrl ||
       `${context.origin}/${context.siteId}${summary.externalPath || ''}`,
     locationText,
+    countryCode,
     // The tenant's own work arrangement decides when it publishes one; otherwise the location text, as before.
     workplaceType,
     remote: workplaceType

@@ -31,6 +31,11 @@ export interface AtsJob {
   remote?: boolean | null
   /** The board's structured workplace type, when it has one (Ashby). */
   workplaceType?: 'remote' | 'hybrid' | 'onsite' | null
+  /**
+   * The source's own structured country for the job, when it states one (Workday's requisition country, Oracle's
+   * primary location country, freehire when it lists exactly one country). Used only when the location text names none.
+   */
+  countryCode?: string | null
 
   salaryMin?: number | null
   salaryMax?: number | null

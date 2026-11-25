@@ -121,6 +121,11 @@ export interface ScrapedJobInput {
 
   /** The source's own structured workplace type (Ashby `workplaceType`); when set it decides remote, hybrid or on-site. */
   workplaceType?: 'remote' | 'hybrid' | 'onsite' | null
+  /**
+   * The source's own structured country for the job, when it states one (Workday's requisition country, Oracle's
+   * primary location country, freehire when it lists exactly one country). Used only when the location text names none.
+   */
+  countryCode?: string | null
   
   /** Remote region if specified (e.g., "US only", "EMEA") */
   remoteRegion?: string | null

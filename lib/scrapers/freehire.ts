@@ -11,7 +11,7 @@ import { repairCompanyName } from '../companies/repairCompanyName'
 import { readPayFromDescription } from '../jobs/payEvidence'
 import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
-import { freehireStructuredLocationText } from './freehireStructured'
+import { freehireCountryCodes, freehireStructuredLocationText } from './freehireStructured'
 import {
   companiesToLookUp,
   freehireCompanyKey,
@@ -350,6 +350,8 @@ export function mapFreehireJob(job: FreehireJob, now: number = Date.now()): Boar
     isRemote: job.work_mode === 'remote',
     // The structured work mode decides remote, hybrid or on-site in the ingest (processLocation). Without it a hybrid job read as on-site.
     workplaceType: job.work_mode === 'remote' || job.work_mode === 'hybrid' || job.work_mode === 'onsite' ? job.work_mode : null,
+    // freehire's own country, when it lists exactly one: the ingest uses it only where the location text names none.
+    countryCode: freehireCountryCodes(job.countries).length === 1 ? freehireCountryCodes(job.countries)[0] : null,
     employmentType: e.employment_type ?? null,
     salaryMin,
     salaryMax,
