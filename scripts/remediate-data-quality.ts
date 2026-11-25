@@ -35,9 +35,12 @@ async function main() {
   }
 
   // 2. Dedupe exact-apply-URL rows — keep the most complete, expire the rest.
+  //    Descriptions are not loaded for every live job: all of them in one result passed what Prisma can hand to Node as
+  //    one string ("Failed to convert rust `String` into napi `string`", 2026-11-25 22:50 UTC), and self-heal stopped.
+  //    Only the rows that share a link are asked whether they have one.
   const active = await prisma.job.findMany({
     where: { isExpired: false, applyUrl: { not: null } },
-    select: { id: true, applyUrl: true, salaryValidated: true, descriptionHtml: true, companyLogo: true, lastSeenAt: true },
+    select: { id: true, applyUrl: true, salaryValidated: true, companyLogo: true, lastSeenAt: true },
   })
   const byUrl = new Map<string, typeof active>()
   for (const j of active) {
@@ -45,8 +48,14 @@ async function main() {
     if (!byUrl.has(k)) byUrl.set(k, [])
     byUrl.get(k)!.push(j)
   }
+  const sharedIds = [...byUrl.values()].filter((rows) => rows.length > 1).flat().map((j) => j.id)
+  const described = new Set(
+    sharedIds.length
+      ? (await prisma.job.findMany({ where: { id: { in: sharedIds }, AND: [{ descriptionHtml: { not: null } }, { descriptionHtml: { not: '' } }] }, select: { id: true } })).map((j) => j.id)
+      : [],
+  )
   const score = (j: any) =>
-    (j.salaryValidated ? 4 : 0) + (j.descriptionHtml ? 2 : 0) + (j.companyLogo ? 1 : 0) +
+    (j.salaryValidated ? 4 : 0) + (described.has(j.id) ? 2 : 0) + (j.companyLogo ? 1 : 0) +
     (j.lastSeenAt ? new Date(j.lastSeenAt).getTime() / 1e13 : 0)
   const expireIds: string[] = []
   for (const [, rows] of byUrl) {
