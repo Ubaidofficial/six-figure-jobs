@@ -75,7 +75,9 @@ jobs:
     runs-on: ubuntu-latest
     # 180 since 2026-11-22: the closed check looks up 10,000 jobs (about 9 minutes) and the sync reads 400 description-pay
     # pages (the freehire step took 16 minutes, 2026-11-22); a full run took up to 129 minutes before that (2026-11-21).
-    timeout-minutes: 180
+    # 240 since 2026-11-25: with ~150 employers a full run took 151 minutes (freehire 30, employers 81, boards 24), and the
+    # manual 14-day run hit 180 in the 4-day-week step, so expiry, self-heal, slices and the indexing queue never ran.
+    timeout-minutes: 240
     permissions:
       contents: read
     env:
