@@ -224,6 +224,26 @@ describe('collectPseoBatchEntries (phase 1)', () => {
     expect(all).not.toContain('/jobs/data-engineer/city/new-york')
   })
 
+  // Seen 2026-11-25: the first /sitemap-batch/1.xml after a deploy took over 60 s and Openship answered 504, because the
+  // rebuild counted every batch (up to about 1,135 queries, mostly role x skill / city combos) with only batch 1 released.
+  it('with batch 1 released, counts only batch 1 pages: no combos, no batch 2 hubs', async () => {
+    process.env.PSEO_RELEASED_BATCH = '1'
+    mockDb({}, { skills: { python: 279, nextjs: 40 }, cities: { 'new-york': 135 }, levels: { senior: 708 } })
+    expect(await batchPaths(1)).toEqual(expect.arrayContaining(['/jobs/skills/python', '/jobs/city/new-york', '/jobs/level/senior']))
+    const wheres = aggregate.mock.calls.map(([args]) => args.where)
+    expect(wheres.some((w) => w.role)).toBe(false)
+    expect(wheres.some((w) => w.skill === 'nextjs')).toBe(false)
+    expect(aggregate.mock.calls.length).toBeLessThanOrEqual(17) // 10 skills, 6 cities, 1 level
+  })
+
+  it('rebuilds at once when a further batch is released, instead of serving the shorter list for an hour', async () => {
+    process.env.PSEO_RELEASED_BATCH = '1'
+    mockDb({}, { skills: { python: 279, nextjs: 40 } })
+    expect(await batchPaths(1)).toContain('/jobs/skills/python')
+    process.env.PSEO_RELEASED_BATCH = '2'
+    expect(await batchPaths(2)).toContain('/jobs/skills/nextjs')
+  })
+
   it('returns nothing for a batch that has not been released', async () => {
     process.env.PSEO_RELEASED_BATCH = '1'
     mockDb({}, { skills: { python: 279, nextjs: 40 } })
@@ -294,6 +314,14 @@ describe('collectPseoBatchEntries (phase 1)', () => {
       expect(paths(await collectPseoBatchEntries(1, 2))).toContain('/jobs/skills/python')
       expect(aggregate).toHaveBeenCalled() // the rebuild started
       finish()
+    })
+
+    it('ignores a saved list built for another released batch', async () => {
+      storedList = JSON.stringify({ at: 1, released: 2, entries: [{ path: '/jobs/skills/old-saved', lastmod: null }] })
+      mockDb({}, { skills: { python: 279 } })
+      const got = paths(await collectPseoBatchEntries(1, 1))
+      expect(got).not.toContain('/jobs/skills/old-saved')
+      expect(got).toContain('/jobs/skills/python')
     })
 
     it('still fails the first request after a restart when the database is down, and does not cache that', async () => {

@@ -27,7 +27,7 @@ import {
   meetsPseoHubFloor,
   meetsPseoRoleFloor,
 } from './pseoUnlock'
-import { getPseoBatch, getReleasedBatchNumbers, isPseoBatchReleased } from './pseoBatches'
+import { getPseoBatch, getReleasedBatchNumbers, getReleasedPseoBatch, isPseoBatchReleased } from './pseoBatches'
 import { shouldAdvertiseSitemapFamily } from './sitemapPolicy'
 
 export type SitemapEntry = { path: string; lastmod: Date | null }
@@ -115,14 +115,19 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
 const QUERY_CONCURRENCY = 6
 
 /**
- * Every pSEO page that clears its job-count threshold while Phase 1 still silences its sitemap family, whether or not
- * its batch is released yet (the batch filter is applied in collectPseoBatchEntries).
+ * Every pSEO page in a released batch (up to `released`) that clears its job-count threshold while Phase 1 still
+ * silences its sitemap family. Only those pages are counted: all four batches were up to about 1,135 count queries,
+ * mostly role x skill / city combos, and the first build after a deploy outlasted Openship's 60 s gateway (504 on
+ * /sitemap-batch/1.xml, 2026-11-25) when batch 1 needed about 17.
  * Every count uses the same buildWhere() input as the page, so the sitemap and the page's robots tag agree.
  * In phase 2+ the dedicated families (skills / city / level / browse) own these URLs, so nothing is listed twice.
  */
-async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
+async function collectAllPseoEntries(released: number): Promise<SitemapEntry[]> {
   if (!isPseoUnlockEnabled()) return []
   const entries: SitemapEntry[] = []
+  const inRelease = (path: string) => (getPseoBatch(path) ?? 0) <= released
+  const skillTargets = SKILL_TARGETS.filter((skill) => inRelease(`/jobs/skills/${skill.slug}`))
+  const cityTargets = CITY_TARGETS.filter((city) => inRelease(`/jobs/city/${city.slug}`))
   const listSkills = !shouldAdvertiseSitemapFamily('skills')
   const listCities = !shouldAdvertiseSitemapFamily('city')
   const listLevels = !shouldAdvertiseSitemapFamily('level')
@@ -132,10 +137,10 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
   const unlockedCities: Array<{ slug: string; countryCode?: string }> = []
 
   if (listSkills || listRolesAndCombos) {
-    const counts = await mapLimit(SKILL_TARGETS, QUERY_CONCURRENCY, (skill) =>
+    const counts = await mapLimit(skillTargets, QUERY_CONCURRENCY, (skill) =>
       countAndLatest(buildWhere({ skillSlugs: [skill.slug], isHundredKLocal: true, page: 1, pageSize: 1 })),
     )
-    SKILL_TARGETS.forEach((skill, i) => {
+    skillTargets.forEach((skill, i) => {
       if (counts[i].count >= 5 && meetsPseoHubFloor(counts[i].count)) {
         if (!skill.hubOnly) unlockedSkills.push(skill.slug) // role-by-skill pages only for the original skills
         if (listSkills) entries.push({ path: `/jobs/skills/${skill.slug}`, lastmod: counts[i].latest })
@@ -144,12 +149,12 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
   }
 
   if (listCities || listRolesAndCombos) {
-    const counts = await mapLimit(CITY_TARGETS, QUERY_CONCURRENCY, (city) =>
+    const counts = await mapLimit(cityTargets, QUERY_CONCURRENCY, (city) =>
       countAndLatest(
         buildWhere({ citySlug: city.slug, countryCode: city.countryCode, isHundredKLocal: true, page: 1, pageSize: 1 }),
       ),
     )
-    CITY_TARGETS.forEach((city, i) => {
+    cityTargets.forEach((city, i) => {
       if (isCityPageIndexable(counts[i].count) && meetsPseoHubFloor(counts[i].count)) {
         unlockedCities.push({ slug: city.slug, countryCode: city.countryCode })
         if (listCities) entries.push({ path: `/jobs/city/${city.slug}`, lastmod: counts[i].latest })
@@ -158,7 +163,7 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
   }
 
   if (listLevels) {
-    const levels = Object.keys(LEVEL_TARGETS)
+    const levels = Object.keys(LEVEL_TARGETS).filter((level) => inRelease(`/jobs/level/${level}`))
     const counts = await mapLimit(levels, QUERY_CONCURRENCY, (level) =>
       countAndLatest(buildWhere({ experienceLevel: level, isHundredKLocal: true, page: 1, pageSize: 1 })),
     )
@@ -187,19 +192,23 @@ async function collectAllPseoEntries(): Promise<SitemapEntry[]> {
         const at = g._max.createdAt
         if (at && (!latest || at > latest)) latest = at
       }
-      if (count >= 3 && meetsPseoRoleFloor(count)) entries.push({ path: `/jobs/${role}`, lastmod: latest })
+      if (count >= 3 && meetsPseoRoleFloor(count) && inRelease(`/jobs/${role}`)) {
+        entries.push({ path: `/jobs/${role}`, lastmod: latest })
+      }
     }
 
     // Role x skill and role x city combos for the Phase 1 roles, limited to unlocked skills / cities.
     const combos: Array<{ path: string; input: Parameters<typeof buildWhere>[0] }> = []
     for (const role of PHASE_1_ROLE_SLUGS) {
       for (const skill of unlockedSkills) {
+        if (!inRelease(`/jobs/${role}/skills/${skill}`)) continue
         combos.push({
           path: `/jobs/${role}/skills/${skill}`,
           input: { roleSlugs: [role], skillSlugs: [skill], isHundredKLocal: true, page: 1, pageSize: 1 },
         })
       }
       for (const city of unlockedCities) {
+        if (!inRelease(`/jobs/${role}/city/${city.slug}`)) continue
         combos.push({
           path: `/jobs/${role}/city/${city.slug}`,
           input: { roleSlugs: [role], citySlug: city.slug, isHundredKLocal: true, page: 1, pageSize: 1 },
@@ -289,32 +298,37 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
   return result
 }
 
-let pseoCache: { at: number; entries: SitemapEntry[] } | null = null
-let pseoRefresh: Promise<SitemapEntry[]> | null = null
+// Each list is built for one released batch number: releasing a further batch rebuilds it at once.
+let pseoCache: { at: number; released: number; entries: SitemapEntry[] } | null = null
+let pseoRefresh: { released: number; promise: Promise<SitemapEntry[]> } | null = null
 
 /** The last complete pSEO list, kept in SiteConfig so a restart does not start from nothing. */
 export const PSEO_LIST_KEY = 'seo.pseo.entries'
 
-async function loadStoredPseoList(): Promise<{ at: number; entries: SitemapEntry[] } | null> {
+async function loadStoredPseoList(): Promise<{ at: number; released: number; entries: SitemapEntry[] } | null> {
   try {
     const row = await prisma.siteConfig.findUnique({ where: { key: PSEO_LIST_KEY } })
-    const v = JSON.parse(row?.value ?? 'null') as { at?: number; entries?: Array<{ path?: unknown; lastmod?: unknown }> } | null
-    if (!v || typeof v.at !== 'number' || !Array.isArray(v.entries)) return null
+    const v = JSON.parse(row?.value ?? 'null') as {
+      at?: number
+      released?: number
+      entries?: Array<{ path?: unknown; lastmod?: unknown }>
+    } | null
+    if (!v || typeof v.at !== 'number' || typeof v.released !== 'number' || !Array.isArray(v.entries)) return null
     const entries = v.entries
       .filter((e): e is { path: string; lastmod?: unknown } => typeof e?.path === 'string')
       .map((e) => {
         const d = typeof e.lastmod === 'string' ? new Date(e.lastmod) : null
         return { path: e.path, lastmod: d && Number.isFinite(d.getTime()) ? d : null }
       })
-    return { at: v.at, entries }
+    return { at: v.at, released: v.released, entries }
   } catch {
     return null // no row, unreadable, or the database is down: build it as before
   }
 }
 
-async function saveStoredPseoList(at: number, entries: SitemapEntry[]): Promise<void> {
+async function saveStoredPseoList(list: { at: number; released: number; entries: SitemapEntry[] }): Promise<void> {
   try {
-    const value = JSON.stringify({ at, entries })
+    const value = JSON.stringify(list)
     await prisma.siteConfig.upsert({ where: { key: PSEO_LIST_KEY }, update: { value }, create: { key: PSEO_LIST_KEY, value } })
   } catch {
     // the in-memory copy still serves this server; the next build tries again
@@ -324,17 +338,19 @@ async function saveStoredPseoList(at: number, entries: SitemapEntry[]): Promise<
 // One rebuild at a time. The rebuild is ~100 count queries, and the cache starts empty on every deploy (the site
 // deploys many times a day), so Googlebot arriving right after a deploy used to start several rebuilds at once and
 // time out. Concurrent callers now share the one in flight.
-function refreshPseoCache(now: number): Promise<SitemapEntry[]> {
-  pseoRefresh ??= collectAllPseoEntries()
+function refreshPseoCache(now: number, released: number): Promise<SitemapEntry[]> {
+  if (pseoRefresh?.released === released) return pseoRefresh.promise
+  const promise = collectAllPseoEntries(released)
     .then((entries) => {
-      pseoCache = { at: now, entries }
-      void saveStoredPseoList(now, entries)
+      pseoCache = { at: now, released, entries }
+      void saveStoredPseoList(pseoCache)
       return entries
     })
     .finally(() => {
-      pseoRefresh = null
+      if (pseoRefresh?.promise === promise) pseoRefresh = null
     })
-  return pseoRefresh
+  pseoRefresh = { released, promise }
+  return promise
 }
 
 /**
@@ -345,22 +361,23 @@ function refreshPseoCache(now: number): Promise<SitemapEntry[]> {
  */
 export async function collectPseoBatchEntries(batch: number, now: number = Date.now()): Promise<SitemapEntry[]> {
   if (!getReleasedBatchNumbers(now).includes(batch)) return []
-  // After a restart, the list the last build saved is served at once and rebuilt behind the request. The rebuild takes
-  // 45-60 s against the live database (2026-11-25), past the edge's 60 s limit: /sitemap-batch/1.xml answered 504 twice
-  // right after a deploy, as Google would see it.
+  const released = getReleasedPseoBatch(now)
+  // After a restart, the list the last build saved (for the same released batch) is served at once and rebuilt behind
+  // the request. Counting only released batches (#243) keeps batch 1's first build short, but batches 2-4 bring it back
+  // toward ~1,135 count queries, past the edge's 60 s limit (/sitemap-batch/1.xml answered 504 after a deploy, 2026-11-25).
   if (!pseoCache) {
     const stored = await loadStoredPseoList()
-    if (stored) {
-      pseoCache = { at: stored.at, entries: stored.entries }
-      refreshPseoCache(now).catch(() => {})
+    if (stored && stored.released === released) {
+      pseoCache = stored
+      refreshPseoCache(now, released).catch(() => {})
     }
   }
   let entries: SitemapEntry[]
-  if (!pseoCache) {
-    entries = await refreshPseoCache(now)
+  if (!pseoCache || pseoCache.released !== released) {
+    entries = await refreshPseoCache(now, released)
   } else {
     entries = pseoCache.entries
-    if (now - pseoCache.at >= CACHE_TTL_MS) refreshPseoCache(now).catch(() => {})
+    if (now - pseoCache.at >= CACHE_TTL_MS) refreshPseoCache(now, released).catch(() => {})
   }
   return entries.filter((e) => getPseoBatch(e.path) === batch && isPseoBatchReleased(e.path, now))
 }
