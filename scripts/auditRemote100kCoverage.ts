@@ -96,11 +96,24 @@ async function main() {
   out.push(`remote100k's sitemap lists ${urls.length} job pages; read ${jobs.length} (${failed} failed, ${urls.length - jobs.length - failed} without a JobPosting).`, '')
 
   const { prisma } = await import('../lib/prisma')
+  let adminExpired = new Set<string>()
   const ours = await prisma.$transaction(
     async (tx) => {
       await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY')
+      // Jobs the owner expired by hand (lib/admin/adminExpired.ts).
+      const row = await tx.siteConfig.findUnique({ where: { key: 'admin.expired.jobIds' } })
+      try {
+        adminExpired = new Set(JSON.parse(row?.value ?? '[]') as string[])
+      } catch {
+        adminExpired = new Set()
+      }
       // Expired jobs too: a job we imported and later expired is a different gap from one we never imported.
-      return tx.job.findMany({ select: { id: true, externalId: true, isExpired: true, title: true, company: true, applyUrl: true, url: true } })
+      return tx.job.findMany({
+        select: {
+          id: true, externalId: true, isExpired: true, title: true, company: true, applyUrl: true, url: true, source: true,
+          createdAt: true, updatedAt: true, lastSeenAt: true, validThrough: true, postedAt: true, sourcePriority: true,
+        },
+      })
     },
     { timeout: 120_000 },
   )
@@ -109,6 +122,8 @@ async function main() {
   // Live and expired lookups, by apply link, careers-system job id, and company + title.
   const live = { url: new Set<string>(), id: new Set<string>(), title: new Set<string>(), company: new Set<string>() }
   const expired = { url: new Set<string>(), id: new Set<string>(), title: new Set<string>() }
+  // The expired record behind each key, to say how it was expired (when last seen and updated, by which source).
+  const expiredRecord = new Map<string, (typeof ours)[number]>()
   for (const j of ours) {
     const into = j.isExpired ? expired : live
     for (const u of [j.applyUrl, j.url]) if (normUrl(u)) into.url.add(normUrl(u))
@@ -116,6 +131,11 @@ async function main() {
     for (const id of ids) if (id && id.length >= 5) into.id.add(id.toLowerCase())
     into.title.add(`${normCompany(j.company)}|${normTitle(j.title)}`)
     if (!j.isExpired) live.company.add(normCompany(j.company))
+    if (j.isExpired) {
+      for (const u of [j.applyUrl, j.url]) if (normUrl(u)) expiredRecord.set(`u:${normUrl(u)}`, j)
+      for (const id of ids) if (id && id.length >= 5) expiredRecord.set(`i:${id.toLowerCase()}`, j)
+      expiredRecord.set(`t:${normCompany(j.company)}|${normTitle(j.title)}`, j)
+    }
   }
   const found = (set: typeof expired, j: R100kJob) => {
     const u = normUrl(j.applyUrl?.replace(/[?&]ref=remote100k/, ''))
@@ -144,6 +164,20 @@ async function main() {
     `Never imported: ${missingKnown.length + missingUnknown.length}: ${missingKnown.length} at companies we have live jobs from, ${missingUnknown.length} at companies we have none from.`,
     '',
   )
+
+  if (wasExpired.length) {
+    const d = (x: Date | null) => (x ? x.toISOString().slice(0, 16).replace('T', ' ') : '-')
+    out.push('### How the expired ones were expired', '', 'remote100k job -> our record: source · stored · last seen · last updated · expired (validThrough) · posted', '')
+    for (const j of wasExpired) {
+      const u = normUrl(j.applyUrl?.replace(/[?&]ref=remote100k/, ''))
+      const id = atsJobId(j.applyUrl)
+      const r =
+        (u && expiredRecord.get(`u:${u}`)) || (id && expiredRecord.get(`i:${id}`)) || expiredRecord.get(`t:${normCompany(j.company)}|${normTitle(j.title)}`)
+      if (!r) continue
+      out.push(`- ${j.company} · ${j.title.slice(0, 50)} -> ${r.id} · ${r.source} (priority ${r.sourcePriority ?? '-'}) · ${d(r.createdAt)} · ${d(r.lastSeenAt)} · ${d(r.updatedAt)} · ${d(r.validThrough)} · ${d(r.postedAt)}${adminExpired.has(r.id) ? ' · EXPIRED BY HAND' : ''}`)
+    }
+    out.push('')
+  }
 
   const group = (list: R100kJob[]) => {
     const m = new Map<string, { jobs: number; ats: Map<string, number>; example: string }>()

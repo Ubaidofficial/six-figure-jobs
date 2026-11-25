@@ -68,6 +68,40 @@ export function atsTenantKey(link: string | null): string | null {
   return null
 }
 
+/**
+ * The employer's own posting id in a link, when the link names one: Greenhouse "/jobs/<n>" or "gh_jid=<n>" (career sites
+ * that embed Greenhouse), Ashby and Lever "/<account>/<uuid>" or "ashby_jid=<uuid>", Workday "_R12345" / "_JR-1234".
+ * Two copies with different posting ids are two openings, however alike their title and place (pure).
+ */
+export function atsPostingId(link: string | null): string | null {
+  const s = String(link ?? '')
+  const gh = s.match(/[?&]gh_jid=(\d{5,})/i) ?? s.match(/greenhouse\.io\/[^/?#]+\/jobs\/(\d{5,})/i)
+  if (gh) return `greenhouse:${gh[1]}`
+  const uuid = s.match(/[?&]ashby_jid=([0-9a-f-]{36})/i) ?? s.match(/(?:ashbyhq\.com|lever\.co)\/[^/?#]+\/([0-9a-f-]{36})/i)
+  if (uuid) return `uuid:${uuid[1].toLowerCase()}`
+  const wd = s.match(/myworkday(?:jobs|site)\.com\/.*_((?:J?R)-?\d{4,})(?:[/?#-]|$)/i)
+  if (wd) return `workday:${wd[1].toUpperCase()}`
+  return null
+}
+
+/**
+ * The copies to drop from one group of look-alike jobs. Usually one opening listed twice: keep the best copy. But an
+ * employer often posts the same title more than once (Chainguard had two open "Staff Software Engineer, Chainguard
+ * Harness" postings on Greenhouse, 4716831006 and 4727461006, and this step expired one every day until 2026-11-25):
+ * when the group holds two or more different employer posting ids, each posting keeps its best copy, and only extra
+ * copies of a posting and board re-posts (no posting id of their own) go (pure).
+ */
+function dropFromGroup(ranked: DuplicateCandidate[]): string[] {
+  const keptByPosting = new Map<string, string>()
+  for (const j of ranked) {
+    const id = atsPostingId(j.applyUrl || j.url)
+    if (id && !keptByPosting.has(id)) keptByPosting.set(id, j.id)
+  }
+  if (keptByPosting.size < 2) return ranked.slice(1).map((j) => j.id)
+  const kept = new Set(keptByPosting.values())
+  return ranked.filter((j) => !kept.has(j.id)).map((j) => j.id)
+}
+
 /** The ids to expire: every copy but the best one in each group of the same opening. */
 export function duplicateJobIdsToExpire(jobs: DuplicateCandidate[]): string[] {
   // Copies are one opening when they share a company or an applicant-tracking account, plus the title and place;
@@ -119,7 +153,7 @@ export function duplicateJobIdsToExpire(jobs: DuplicateCandidate[]): string[] {
       const timeB = (b.postedAt ?? b.createdAt).getTime()
       return timeB - timeA || a.id.localeCompare(b.id)
     })
-    expire.push(...ranked.slice(1).map((j) => j.id))
+    expire.push(...dropFromGroup(ranked))
   }
   return expire
 }
