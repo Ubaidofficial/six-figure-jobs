@@ -41,8 +41,10 @@ async function updateIds(change: (ids: string[]) => string[]): Promise<void> {
   cache = null
 }
 
-export async function markAdminExpired(id: string): Promise<void> {
-  await updateIds((ids) => [...ids.filter((x) => x !== id), id])
+/** One id, or several in one write (the Review queue's bulk "Expire"). */
+export async function markAdminExpired(id: string | string[]): Promise<void> {
+  const add = new Set(Array.isArray(id) ? id : [id])
+  await updateIds((ids) => [...ids.filter((x) => !add.has(x)), ...add])
 }
 
 export async function unmarkAdminExpired(id: string): Promise<void> {

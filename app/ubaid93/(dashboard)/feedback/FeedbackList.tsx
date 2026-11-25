@@ -24,6 +24,8 @@ export type ReportedJob = {
   company: string | null
   source: string
   isExpired: boolean
+  /** As the job page answers: 'stale' is not expired but posted too long ago, so its page is gone too. */
+  availability: 'available' | 'expired' | 'stale'
   pay: string | null
   href: string
   applyUrl: string | null
@@ -129,7 +131,9 @@ export default function FeedbackList({ items, jobs }: { items: Item[]; jobs: Rec
                           {[job.company, job.source, job.pay ?? 'no pay shown'].filter(Boolean).join(' · ')}
                         </div>
                         <div className={s.cellSub}>
-                          <span className={`${s.status} ${job.isExpired ? s.muted : s.ok}`}>{job.isExpired ? 'Expired' : 'Live'}</span>
+                          <span className={`${s.status} ${job.availability === 'available' ? s.ok : job.availability === 'stale' ? s.warn : s.muted}`}>
+                            {job.availability === 'available' ? 'Live' : job.availability === 'stale' ? 'Too old: page gone' : 'Expired'}
+                          </span>
                           {job.openReports > 1 ? <span className={s.checkDetail}>{job.openReports} open reports on this job</span> : null}
                         </div>
                       </div>

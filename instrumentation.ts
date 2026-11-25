@@ -7,7 +7,8 @@
 //  - saves freehire's newest jobs every 5 minutes (lib/scrapers/freehireRecent.ts), first 5 minutes after start;
 //    FREEHIRE_RECENT_EVERY_MIN sets the minutes, 0 turns it off;
 //  - checks the data pipeline's health every 30 minutes and emails the owner when a check turns bad or recovers
-//    (lib/admin/healthAlerts.ts), first 10 minutes after start; HEALTH_ALERTS_EVERY_MIN sets the minutes, 0 turns it off.
+//    (lib/admin/healthAlerts.ts), first 10 minutes after start; HEALTH_ALERTS_EVERY_MIN sets the minutes, 0 turns it off;
+//    the same timer sends the weekly quality digest, once a week from Monday 07:00 UTC (lib/quality/digest.ts).
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
   if (process.env.NODE_ENV !== 'production') return
@@ -33,8 +34,13 @@ export async function register() {
   const { START_DELAY_MS, healthAlertsEveryMs, runHealthAlerts } = await import('./lib/admin/healthAlerts')
   const healthEveryMs = healthAlertsEveryMs()
   if (healthEveryMs) {
+    const { runQualityDigest } = await import('./lib/quality/digest')
     const check = () =>
-      runHealthAlerts().catch((e) => console.error('[health-alerts] run failed:', e instanceof Error ? e.message.split('\n')[0] : e))
+      runHealthAlerts()
+        .catch((e) => console.error('[health-alerts] run failed:', e instanceof Error ? e.message.split('\n')[0] : e))
+        // The weekly quality digest rides on the same timer: it sends only once a week, from Monday 07:00 UTC.
+        .then(() => runQualityDigest())
+        .catch((e) => console.error('[quality-digest] run failed:', e instanceof Error ? e.message.split('\n')[0] : e))
     setTimeout(() => {
       void check()
       setInterval(check, healthEveryMs).unref()

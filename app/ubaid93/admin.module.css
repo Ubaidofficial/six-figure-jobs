@@ -704,3 +704,13 @@ th.num {
     transition: none;
   }
 }
+
+/* A row checkbox (Review queue). The page inherits the site's dark color-scheme, which drew native checkboxes as solid
+   dark squares that looked ticked on the light admin panels. */
+.tick {
+  color-scheme: light;
+  accent-color: #16a34a;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}

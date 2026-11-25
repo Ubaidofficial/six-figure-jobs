@@ -8,7 +8,7 @@
 //
 //   npx tsx scripts/cleanJobTitles.ts            # dry run
 //   npx tsx scripts/cleanJobTitles.ts --apply
-import { makeJobDedupeKey } from '../lib/ingest/dedupeHelpers'
+import { applyCleanTitle } from '../lib/jobs/applyCleanTitle'
 import { cleanJobTitle } from '../lib/jobs/cleanTitle'
 import { prisma } from '../lib/prisma'
 
@@ -32,16 +32,9 @@ async function main() {
   let written = 0
   let clashes = 0
   for (const c of changes) {
-    const dedupeKey = c.companyId ? makeJobDedupeKey(c.companyId, c.cleaned, c.locationRaw) : null
-    if (dedupeKey) {
-      const taken = await prisma.job.findFirst({ where: { companyId: c.companyId, dedupeKey, id: { not: c.id } }, select: { id: true } })
-      if (taken) {
-        clashes++
-        continue
-      }
-    }
-    await prisma.job.update({ where: { id: c.id }, data: { title: c.cleaned, ...(dedupeKey ? { dedupeKey } : {}) } })
-    written++
+    const result = await applyCleanTitle(c)
+    if (result.state === 'written') written++
+    else if (result.state === 'clash') clashes++
   }
   console.log(`written ${written}, skipped ${clashes} whose cleaned title another job of the same company already has`)
 }

@@ -52,3 +52,16 @@ export function buildFreshJobWhere(
     OR: [{ postedAt: { gte: cutoff } }, { postedAt: null, createdAt: { gte: cutoff } }],
   }
 }
+
+/** The other side of buildFreshJobWhere: posted (else stored) before the cutoff. Written out, not NOT(fresh): a NOT
+ *  over the null postedAt branch would drop the rows that have no postedAt. */
+export function buildStaleJobWhere(
+  maxAgeDays: number = MAX_DISPLAY_AGE_DAYS,
+  asOf: Date = new Date(),
+): Prisma.JobWhereInput {
+  const cutoff = getDateThreshold(maxAgeDays, asOf)
+
+  return {
+    OR: [{ postedAt: { lt: cutoff } }, { postedAt: null, createdAt: { lt: cutoff } }],
+  }
+}

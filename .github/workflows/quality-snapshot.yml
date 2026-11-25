@@ -1,0 +1,62 @@
+name: quality snapshot
+
+# The daily quality snapshot (scripts/qualitySnapshot.ts, docs/QUALITY_AGENTS_PLAN.md): every quality check's count over
+# the listed jobs, compared with yesterday, in the run log and the job summary, where the quality agents read it. A
+# scheduled run stores it (QualitySnapshot) and updates the findings list (QualityFinding), linking pull requests that
+# name a finding. A manual run is a dry run unless "apply" is ticked, so an agent can run it to see today's numbers.
+# Reads the jobs; writes only the two quality tables, which come from migration
+# 20261125010000_add_quality_snapshot_findings (apply it with the "database migrate" workflow before the first run).
+
+on:
+  schedule:
+    - cron: "27 5 * * *"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Store the snapshot and update the findings (leave unticked for a dry run)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: quality-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Database target guard
+        env:
+          EXPECTED_DB_TARGET_FINGERPRINT: ${{ vars.PRODUCTION_DB_TARGET_FINGERPRINT }}
+        run: npm run scrape:db-target
+
+      - name: Quality snapshot
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.apply }}" = "true" ]; then
+            npx tsx scripts/qualitySnapshot.ts --apply
+          else
+            npx tsx scripts/qualitySnapshot.ts
+          fi

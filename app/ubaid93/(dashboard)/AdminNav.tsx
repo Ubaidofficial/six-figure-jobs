@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Activity,
+  BadgeCheck,
   BellRing,
   Bot,
   Briefcase,
@@ -33,6 +34,7 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
     items: [
       { href: '/ubaid93/jobs', label: 'Jobs', icon: Briefcase },
       { href: '/ubaid93/review', label: 'Review', icon: ClipboardCheck, count: 'review' },
+      { href: '/ubaid93/quality', label: 'Quality', icon: BadgeCheck },
       { href: '/ubaid93/sponsors', label: 'Sponsors', icon: Megaphone },
     ],
   },

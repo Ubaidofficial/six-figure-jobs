@@ -42,8 +42,10 @@ function LogoItem({ company, index, clone }: { company: FeaturedCompany; index: 
 const MIN_LOGOS_PER_HALF = 24
 
 /** One sliding row: two equal halves side by side; moving by half the rail is one half, so the loop has no seam. Only
- *  the first list is real; the repeats are `inert` (out of the tab order and hidden from screen readers), so each
- *  company is listed once. */
+ *  the first list is announced; the repeats are hidden from screen readers and out of the tab order (each link has
+ *  tabIndex -1), so each company is listed once, but they stay clickable. They were `inert` until 2026-11-25, which also
+ *  ignores clicks: most logos on screen are repeats (20 of 37 on load at 1440 px, 30 of 37 half a minute later), so
+ *  clicking a logo usually did nothing. */
 function LogoRow({ companies, offset, reverse }: { companies: FeaturedCompany[]; offset: number; reverse?: boolean }) {
   const repeats = Math.max(1, Math.ceil(MIN_LOGOS_PER_HALF / companies.length))
   const duration = `${Math.max(20, companies.length * repeats * SECONDS_PER_LOGO)}s`
@@ -61,7 +63,6 @@ function LogoRow({ companies, offset, reverse }: { companies: FeaturedCompany[];
               className={clone ? `${styles.track} ${styles.clone}` : styles.track}
               aria-label={clone ? undefined : 'Featured companies'}
               aria-hidden={clone || undefined}
-              inert={clone || undefined}
             >
               {companies.map((company, i) => (
                 <LogoItem key={company.id} company={company} index={offset + i} clone={clone} />

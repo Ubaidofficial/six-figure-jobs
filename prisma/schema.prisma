@@ -753,6 +753,40 @@ model DataScorecard {
   @@index([capturedAt])
 }
 
+// The daily quality snapshot (lib/quality/snapshot.ts, scripts/qualitySnapshot.ts): headline numbers and every quality
+// check's count, so the admin Quality page and the quality agents can see a trend (docs/QUALITY_AGENTS_PLAN.md).
+model QualitySnapshot {
+  id         String   @id @default(cuid())
+  capturedAt DateTime @default(now()) @db.Timestamptz(6)
+  version    Int
+  metrics    Json
+  checks     Json
+
+  @@index([capturedAt])
+}
+
+// One open problem per quality check (key), kept by the daily snapshot: open while its count is above zero, "pr" while
+// a pull request names it ("Quality-Finding: <key>"), "fixed" once the count reaches zero, "wontfix" when the owner
+// closed its PR unmerged or said so. Agents read this list; only the snapshot writes it.
+model QualityFinding {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  area        String
+  title       String
+  severity    String
+  count       Int
+  sample      Json
+  status      String    @default("open")
+  prUrl       String?
+  note        String?
+  firstSeenAt DateTime  @default(now()) @db.Timestamptz(6)
+  lastSeenAt  DateTime  @default(now()) @db.Timestamptz(6)
+  fixedAt     DateTime? @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@index([status, area])
+}
+
 // Apply clicks per week, rolled up by dimension (all | company | role | country | source), so demand survives and reports do not
 // scan the raw ApplyClick table. Holds counts only: ApplyClick itself stores no IP, user agent or visitor id.
 model ApplyClickWeekly {

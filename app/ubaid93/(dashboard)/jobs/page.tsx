@@ -1,3 +1,7 @@
+import type { Prisma } from '@prisma/client'
+
+import { getJobDetailAvailability, type JobDetailAvailability } from '../../../../lib/jobs/detailAvailability'
+import { buildFreshJobWhere, buildStaleJobWhere } from '../../../../lib/jobs/freshness'
 import { buildJobSlugHref } from '../../../../lib/jobs/jobSlug'
 import { buildSalaryText } from '../../../../lib/jobs/salary'
 import { memoAsync } from '../../../../lib/cache/memo'
@@ -18,6 +22,8 @@ export type JobRow = {
   remoteMode: string | null
   pay: string | null
   isExpired: boolean
+  /** As the job page answers: 'stale' is not expired but posted too long ago, so its page is gone too. */
+  availability: JobDetailAvailability
   posted: string
   href: string
 }
@@ -30,12 +36,16 @@ export default async function AdminJobsPage({ searchParams }: { searchParams?: P
   const page = intParam(sp.page, 1, 1, 10_000)
   const q = (sp.q ?? '').trim().slice(0, 100)
   const source = sp.source ?? ''
-  const status = sp.status === 'live' || sp.status === 'expired' ? sp.status : ''
+  const status = sp.status === 'live' || sp.status === 'stale' || sp.status === 'expired' ? sp.status : ''
 
-  const where: Record<string, unknown> = {}
-  if (q) where.OR = [{ title: { contains: q, mode: 'insensitive' } }, { company: { contains: q, mode: 'insensitive' } }]
-  if (source) where.source = source
-  if (status) where.isExpired = status === 'expired'
+  const and: Prisma.JobWhereInput[] = []
+  if (q) and.push({ OR: [{ title: { contains: q, mode: 'insensitive' } }, { company: { contains: q, mode: 'insensitive' } }] })
+  if (source) and.push({ source })
+  // "Live" is what the job page serves; a job not expired but posted too long ago answers 410 like an expired one.
+  if (status === 'live') and.push({ isExpired: false }, buildFreshJobWhere())
+  if (status === 'stale') and.push({ isExpired: false }, buildStaleJobWhere())
+  if (status === 'expired') and.push({ isExpired: true })
+  const where: Prisma.JobWhereInput = { AND: and }
 
   const [jobs, total, sources] = await Promise.all([
     prisma.job.findMany({
@@ -65,6 +75,7 @@ export default async function AdminJobsPage({ searchParams }: { searchParams?: P
     remoteMode: j.remoteMode,
     pay: buildSalaryText(j as Parameters<typeof buildSalaryText>[0]),
     isExpired: j.isExpired,
+    availability: getJobDetailAvailability(j),
     posted: (j.postedAt ?? j.createdAt).toISOString().slice(0, 10),
     href: buildJobSlugHref(j),
   }))
@@ -83,8 +94,9 @@ export default async function AdminJobsPage({ searchParams }: { searchParams?: P
           ))}
         </select>
         <select className={s.select} name="status" defaultValue={status} aria-label="Status">
-          <option value="">Live and expired</option>
-          <option value="live">Live</option>
+          <option value="">Any status</option>
+          <option value="live">Live (page up)</option>
+          <option value="stale">Too old (page gone)</option>
           <option value="expired">Expired</option>
         </select>
         <button className={`${s.btn} ${s.btnPrimary}`} type="submit">

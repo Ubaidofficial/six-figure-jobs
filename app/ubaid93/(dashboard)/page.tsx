@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { MAX_DISPLAY_AGE_DAYS } from '../../../lib/ingest/jobAgeFilter'
+import { buildFreshJobWhere } from '../../../lib/jobs/freshness'
 import { prisma } from '../../../lib/prisma'
 import { JOB_REPORT_TYPES, reportedJobId } from '../../../lib/admin/jobReports'
 import { countReviewQueue } from '../../../lib/admin/reviewQueue'
@@ -21,10 +23,12 @@ export default async function AdminOverview() {
   const since24h = new Date(now - DAY)
   const since7d = new Date(now - 7 * DAY)
 
-  const [checks, daily, live, added24h, expired24h, clicks7d, newFeedback, openIssues, activeAlerts, modes, countries] = await Promise.all([
+  const [checks, daily, live, pagesUp, added24h, expired24h, clicks7d, newFeedback, openIssues, activeAlerts, modes, countries] = await Promise.all([
     loadHealthChecks(now),
     loadDaily(days),
     prisma.job.count({ where: { isExpired: false } }),
+    // The jobs whose page is up: a job not expired but posted before the display window answers 410 (detailAvailability).
+    prisma.job.count({ where: { isExpired: false, ...buildFreshJobWhere() } }),
     // "isExpired" IN (true, false) lets Postgres use the (isExpired, createdAt) index instead of reading every job.
     prisma.$queryRaw<Array<{ n: number }>>`SELECT count(*)::int AS n FROM "Job" WHERE "isExpired" IN (true, false) AND "createdAt" >= ${since24h}`.then(
       (r) => Number(r[0]?.n ?? 0),
@@ -80,7 +84,7 @@ export default async function AdminOverview() {
 
       <Figures
         items={[
-          { label: 'Jobs not expired', value: live.toLocaleString(), sub: 'the site lists those that pass its quality rules', spark: last14(liveByDay) },
+          { label: 'Jobs not expired', value: live.toLocaleString(), sub: `${pagesUp.toLocaleString()} with a page up (posted in the last ${MAX_DISPLAY_AGE_DAYS} days)`, spark: last14(liveByDay) },
           { label: 'Added, 24 h', value: added24h.toLocaleString(), sub: `${sum(last14(daily.added)).toLocaleString()} in 14 days`, spark: last14(daily.added) },
           { label: 'Expired, 24 h', value: expired24h.toLocaleString(), sub: `${sum(last14(daily.expired)).toLocaleString()} in 14 days`, spark: last14(daily.expired) },
           { label: 'Apply clicks, 7 days', value: clicks7d.toLocaleString(), sub: `${sum(last14(daily.clicks)).toLocaleString()} in 14 days`, spark: last14(daily.clicks) },
