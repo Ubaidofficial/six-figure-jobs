@@ -102,3 +102,34 @@ describe('normalizeTitleForMatch', () => {
     expect(normalizeTitle('Product Manager (m/f/d)')).toBe('product manager m f d')
   })
 })
+
+// 2026-11-25: Chainguard had two open Greenhouse postings with one title in one place (4716831006 and 4727461006); this
+// step expired one of them every day. Different employer posting ids are different openings.
+describe('duplicateJobIdsToExpire: same title, different postings', () => {
+  const at = (iso: string) => new Date(iso)
+  it('keeps two employer postings with different ids', () => {
+    const a = job({ id: 'a', companyId: 'cg', title: 'Staff Software Engineer, Chainguard Harness', locationRaw: 'Remote', applyUrl: 'https://job-boards.greenhouse.io/chainguard/jobs/4716831006' })
+    const b = job({ id: 'b', companyId: 'cg', title: 'Staff Software Engineer, Chainguard Harness', locationRaw: 'Remote', applyUrl: 'https://job-boards.greenhouse.io/chainguard/jobs/4727461006', postedAt: at('2026-11-08T00:00:00Z') })
+    expect(duplicateJobIdsToExpire([a, b])).toEqual([])
+  })
+  it('still drops a board re-post, and a second copy of one posting, when there are two postings', () => {
+    const a = job({ id: 'a', applyUrl: 'https://job-boards.greenhouse.io/acme/jobs/1111111' })
+    const a2 = job({ id: 'a-again', applyUrl: 'https://acme.com/careers/x?gh_jid=1111111', postedAt: at('2026-11-01T00:00:00Z') })
+    const b = job({ id: 'b', applyUrl: 'https://job-boards.greenhouse.io/acme/jobs/2222222' })
+    const board = job({ id: 'board', applyUrl: 'https://www.adzuna.co.uk/jobs/details/5957977760' })
+    expect(duplicateJobIdsToExpire([board, a2, a, b]).sort()).toEqual(['a-again', 'board'])
+  })
+  it('one posting shown on two career sites of one Workday tenant is still one opening (GDIT, 2026-11-09)', () => {
+    const ext = job({ id: 'ext', companyId: 'c1', title: 'Senior System Administrator', locationRaw: 'Fort Meade, MD', applyUrl: 'https://gdit.wd5.myworkdayjobs.com/External_Career_Site/job/Fort-Meade/Senior-System-Administrator_RQ212345' })
+    const ref = job({ id: 'ref', companyId: 'c2', title: 'Senior System Administrator', locationRaw: 'Fort Meade, MD', applyUrl: 'https://gdit.wd5.myworkdayjobs.com/GDIT_Empl_Ref/job/Fort-Meade/Senior-System-Administrator_RQ212345' })
+    expect(duplicateJobIdsToExpire([ext, ref])).toEqual(['ref'])
+  })
+  it('reads posting ids from the usual places', () => {
+    const { atsPostingId } = jest.requireActual('../../lib/jobs/crossSourceDuplicates')
+    expect(atsPostingId('https://boards.greenhouse.io/acme/jobs/4716831006')).toBe('greenhouse:4716831006')
+    expect(atsPostingId('https://www.hubspot.com/careers/jobs/8397522?gh_jid=8397522')).toBe('greenhouse:8397522')
+    expect(atsPostingId('https://jobs.ashbyhq.com/webflow/4078c63c-4251-4c85-9615-851a0956ec51')).toBe('uuid:4078c63c-4251-4c85-9615-851a0956ec51')
+    expect(atsPostingId('https://abbott.wd5.myworkdayjobs.com/abbottcareers/job/Remote/Sr-Manager_R123456')).toBe('workday:R123456')
+    expect(atsPostingId('https://www.adzuna.co.uk/jobs/details/5957977760')).toBeNull()
+  })
+})
