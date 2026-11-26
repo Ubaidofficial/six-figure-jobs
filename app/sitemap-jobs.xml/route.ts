@@ -1,6 +1,7 @@
 // app/sitemap-jobs.xml/route.ts
 // Sitemap index for job shards (100k+ focus)
 
+import { sitemapDate } from '../../lib/seo/lastmod'
 import { prisma } from '../../lib/prisma'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { getSiteUrl } from '../../lib/seo/site'
@@ -89,10 +90,9 @@ export async function GET() {
 
       const token = cursor ? encodeCursor(cursor) : '1'
       const loc = escapeXml(`${SITE_URL}/sitemap-jobs/${token}`)
-      const lastmod = rows[0]?.updatedAt?.toISOString() ?? new Date().toISOString()
+      const lastmod = sitemapDate(rows[0]?.updatedAt)
       sitemapEntries.push(`  <sitemap>
-    <loc>${loc}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
   </sitemap>`)
 
       if (rows.length <= PAGE_SIZE) break

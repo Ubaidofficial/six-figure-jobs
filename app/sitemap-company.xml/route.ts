@@ -7,6 +7,8 @@ import { getSiteUrl } from '../../lib/seo/site'
 import { getPublishedCompanyCandidateCount } from '../../lib/seo/companyPublishing'
 import { areCompanyPagesReleased } from '../../lib/seo/sitemapWaves'
 import { prisma } from '../../lib/prisma'
+import { buildWhere } from '../../lib/jobs/queryJobs'
+import { sitemapDate } from '../../lib/seo/lastmod'
 import {
   getMaxCompanySitemapPages,
   getMaxCompanyUrlsPerPage,
@@ -18,12 +20,17 @@ const PAGE_SIZE = getMaxCompanyUrlsPerPage()
 
 export const dynamic = 'force-dynamic' // built per request: the deploy-time build cannot reach the database
 
-async function getCompaniesLastmod(): Promise<string> {
+// The newest job posted at a company: Company.updatedAt moves on every scraper re-sync, so it is not a content date.
+// Null (no <lastmod>) when there is none or the database cannot be reached: never the request time.
+async function getCompaniesLastmod(): Promise<string | null> {
   try {
-    const agg = await prisma.company.aggregate({ _max: { updatedAt: true } })
-    return (agg._max.updatedAt ?? new Date()).toISOString()
+    const agg = await prisma.job.aggregate({
+      where: { ...buildWhere({}), companyId: { not: null } },
+      _max: { createdAt: true },
+    })
+    return sitemapDate(agg._max.createdAt)
   } catch {
-    return new Date().toISOString()
+    return null
   }
 }
 
@@ -51,8 +58,7 @@ async function buildCompanyIndex(): Promise<Response> {
     const entries = Array.from({ length: totalPages }).map((_, i) => {
       const loc = escapeXml(`${SITE_URL}/sitemap-company/${i + 1}`)
       return `  <sitemap>
-    <loc>${loc}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
   </sitemap>`
     })
 

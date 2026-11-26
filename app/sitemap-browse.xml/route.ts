@@ -1,6 +1,7 @@
 // app/sitemap-browse.xml/route.ts
 // Sitemap for category + location browse pages (programmatic SEO)
 
+import { sitemapDate } from '@/lib/seo/lastmod'
 import { NextResponse } from 'next/server'
 
 import { buildBrowseSitemapReport } from '@/lib/seo/browseSitemap'
@@ -27,15 +28,16 @@ function escapeXml(s: string) {
     .replace(/'/g, '&apos;')
 }
 
-async function getGlobalLastmod(): Promise<string> {
+// Null (no <lastmod>) when there is no job or the database cannot be reached: never the request time.
+async function getGlobalLastmod(): Promise<string | null> {
   try {
     const agg = await prisma.job.aggregate({
       where: buildWhere({}),
       _max: { createdAt: true },
     })
-    return (agg._max.createdAt ?? new Date()).toISOString()
+    return sitemapDate(agg._max.createdAt)
   } catch {
-    return new Date().toISOString()
+    return null
   }
 }
 
@@ -65,8 +67,7 @@ export async function GET() {
 ${uniqueUrls
   .map(
     (u) => `  <url>
-    <loc>${escapeXml(u)}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${escapeXml(u)}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
   </url>`,
   )
   .join('\n')}

@@ -15,7 +15,7 @@ describe('company sitemap page cache', () => {
   })
 
   it('builds the list once and serves the repeat from memory', async () => {
-    candidates.mockResolvedValue([{ slug: 'acme', latestUpdatedAt: '2026-11-20T10:00:00.000Z' }])
+    candidates.mockResolvedValue([{ slug: 'acme', latestJobPostedAt: '2026-11-20T10:00:00.000Z' }])
     const first = await (await call('1')).text()
     const second = await (await call('1')).text()
     expect(first).toContain('/company/acme')
@@ -24,7 +24,7 @@ describe('company sitemap page cache', () => {
   })
 
   it('does not keep an empty page 1 (a list that failed to build), so the next request builds again', async () => {
-    candidates.mockResolvedValueOnce([]).mockResolvedValueOnce([{ slug: 'acme', latestUpdatedAt: '2026-11-20T10:00:00.000Z' }])
+    candidates.mockResolvedValueOnce([]).mockResolvedValueOnce([{ slug: 'acme', latestJobPostedAt: '2026-11-20T10:00:00.000Z' }])
     expect(await (await call('1')).text()).not.toContain('<url>')
     expect(await (await call('1')).text()).toContain('/company/acme')
     expect(candidates).toHaveBeenCalledTimes(2)

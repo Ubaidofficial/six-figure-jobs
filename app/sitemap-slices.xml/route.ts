@@ -1,6 +1,7 @@
 // app/sitemap-slices.xml/route.ts
 // Sitemap index for slice shards (priority + longtail)
 
+import { sitemapDate } from '../../lib/seo/lastmod'
 import { getSiteUrl } from '../../lib/seo/site'
 import { buildSliceSitemapEntries, type SliceShard } from '../../lib/seo/slicesSitemap'
 import { prisma } from '../../lib/prisma'
@@ -14,12 +15,13 @@ const SITE_URL = getSiteUrl()
 
 export const dynamic = 'force-dynamic' // built per request: the deploy-time build cannot reach the database
 
-async function getSlicesLastmod(): Promise<string> {
+// Null (no <lastmod>) when there is no job or the database cannot be reached: never the request time.
+async function getSlicesLastmod(): Promise<string | null> {
   try {
     const agg = await prisma.job.aggregate({ where: { isExpired: false }, _max: { createdAt: true } })
-    return (agg._max.createdAt ?? new Date()).toISOString()
+    return sitemapDate(agg._max.createdAt)
   } catch {
-    return new Date().toISOString()
+    return null
   }
 }
 
@@ -56,8 +58,7 @@ export async function GET() {
 ${entries
   .map(
     (loc) => `  <sitemap>
-    <loc>${SITE_URL}/${loc}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${SITE_URL}/${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
   </sitemap>`,
   )
   .join('\n')}

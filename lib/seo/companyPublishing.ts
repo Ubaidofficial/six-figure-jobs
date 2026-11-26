@@ -47,7 +47,6 @@ type CandidateCompany = {
   sizeBucket: string | null
   headquarters: string | null
   atsUrl: string | null
-  updatedAt: Date
 }
 
 type CandidateJob = {
@@ -61,7 +60,7 @@ type CandidateJob = {
   aiSnippet: string | null
   aiOneLiner: string | null
   descriptionHtml: string | null
-  updatedAt: Date
+  createdAt: Date
 }
 
 type CandidateAggregate = {
@@ -71,7 +70,7 @@ type CandidateAggregate = {
   richJobContentJobs: number
   roleKeys: Set<string>
   locationKeys: Set<string>
-  freshestJobUpdatedAt: Date | null
+  newestJobPostedAt: Date | null
 }
 
 export type CompanyPublishingCandidate = {
@@ -91,7 +90,11 @@ export type CompanyPublishingCandidate = {
   reasons: string[]
   rolloutRank: number | null
   unlocked: boolean
-  latestUpdatedAt: string
+  /**
+   * When the newest live job on the page was first posted (ISO), the company sitemap's <lastmod>. Not Job.updatedAt or
+   * Company.updatedAt: the scrapers bump those on every re-sync, which stamped every company with the sync day.
+   */
+  latestJobPostedAt: string | null
 }
 
 export type CompanyPublishingManifest = {
@@ -286,7 +289,7 @@ async function buildCompanyPublishingManifestData(
         aiSnippet: true,
         aiOneLiner: true,
         descriptionHtml: true,
-        updatedAt: true,
+        createdAt: true,
       },
     })) as CandidateJob[]
   } catch (err) {
@@ -321,7 +324,6 @@ async function buildCompanyPublishingManifestData(
       sizeBucket: true,
       headquarters: true,
       atsUrl: true,
-      updatedAt: true,
     },
   })) as CandidateCompany[]
 
@@ -334,7 +336,7 @@ async function buildCompanyPublishingManifestData(
       richJobContentJobs: 0,
       roleKeys: new Set<string>(),
       locationKeys: new Set<string>(),
-      freshestJobUpdatedAt: null,
+      newestJobPostedAt: null,
     }
 
     current.liveJobs += 1
@@ -346,8 +348,8 @@ async function buildCompanyPublishingManifestData(
     const locationKey = buildLocationKey(job)
     if (locationKey) current.locationKeys.add(locationKey)
 
-    if (!current.freshestJobUpdatedAt || job.updatedAt > current.freshestJobUpdatedAt) {
-      current.freshestJobUpdatedAt = job.updatedAt
+    if (!current.newestJobPostedAt || job.createdAt > current.newestJobPostedAt) {
+      current.newestJobPostedAt = job.createdAt
     }
 
     aggregates.set(job.companyId, current)
@@ -378,12 +380,7 @@ async function buildCompanyPublishingManifestData(
         reasons,
         rolloutRank: null,
         unlocked: false,
-        latestUpdatedAt: new Date(
-          Math.max(
-            aggregate.freshestJobUpdatedAt?.getTime() ?? 0,
-            company.updatedAt.getTime(),
-          ),
-        ).toISOString(),
+        latestJobPostedAt: aggregate.newestJobPostedAt?.toISOString() ?? null,
       } satisfies CompanyPublishingCandidate
     })
 
@@ -473,7 +470,7 @@ export async function getCompanyPublishingDecision(slug: string) {
       reasons: ['not_in_company_manifest'],
       rolloutRank: null,
       unlocked: false,
-      latestUpdatedAt: new Date(0).toISOString(),
+      latestJobPostedAt: null,
     }
   )
 }

@@ -1,6 +1,7 @@
 // app/sitemap-blog.xml/route.ts
 // Sitemap for blog/editorial content pages
 
+import { sitemapDate } from '../../lib/seo/lastmod'
 import { NextResponse } from 'next/server'
 import { getAllPosts } from '@/lib/blog/posts'
 import { getSiteUrl } from '@/lib/seo/site'
@@ -30,10 +31,10 @@ export function GET() {
   const posts = getAllPosts()
 
   const urls = [
-    { url: `${SITE_URL}/blog`, lastmod: posts[0]?.updatedAt ?? new Date().toISOString() },
+    { url: `${SITE_URL}/blog`, lastmod: sitemapDate(posts[0]?.updatedAt) },
     ...posts.map((p) => ({
       url: `${SITE_URL}/blog/${p.slug}`,
-      lastmod: p.updatedAt,
+      lastmod: sitemapDate(p.updatedAt),
     })),
   ]
 
@@ -42,8 +43,7 @@ export function GET() {
 ${urls
   .map(
     ({ url, lastmod }) => `  <url>
-    <loc>${escapeXml(url)}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${escapeXml(url)}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
     <changefreq>weekly</changefreq>
   </url>`,
   )
