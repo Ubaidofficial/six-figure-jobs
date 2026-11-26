@@ -8,7 +8,7 @@
 
 import { memoAsync } from '../../lib/cache/memo'
 import { getSiteUrl } from '../../lib/seo/site'
-import { collectEvergreenEntries } from '../../lib/seo/evergreenSitemap'
+import { collectEvergreenEntriesWithStatus, type SitemapEntry } from '../../lib/seo/evergreenSitemap'
 import { sitemapDate } from '../../lib/seo/lastmod'
 import { isHubPathInWave } from '../../lib/seo/sitemapWaves'
 import { buildSitemapMetaComment, buildSitemapMetaHeaders } from '../../lib/seo/sitemapResponseMeta'
@@ -30,12 +30,35 @@ function escapeXml(value: string) {
     .replace(/'/g, '&apos;')
 }
 
+// An incomplete list (the database failed part-way) is never stored: the loader throws, so the memo keeps serving the last
+// complete list while it retries, and only a request with no complete list yet gets the partial one. Before 2026-11-26 the
+// partial list was cached for 30 minutes at a time, and with the database failing repeatedly the sitemap lost every role
+// page, salary guide and /high-paying-jobs (19 URLs instead of the usual 40 or so).
+class IncompleteEntriesError extends Error {
+  constructor(readonly partial: SitemapEntry[]) {
+    super('sitemap-hubs: database read incomplete')
+  }
+}
+
+async function loadCompleteEntries(): Promise<SitemapEntry[]> {
+  const { entries, complete } = await collectEvergreenEntriesWithStatus()
+  if (!complete) throw new IncompleteEntriesError(entries)
+  return entries
+}
+
+async function readEntries(): Promise<SitemapEntry[]> {
+  try {
+    return await memoAsync('sitemap-hubs', ENTRIES_TTL_MS, loadCompleteEntries)
+  } catch (err) {
+    if (err instanceof IncompleteEntriesError) return err.partial
+    throw err
+  }
+}
+
 export async function GET() {
   // The cached list holds every eligible page; the sitemap wave (lib/seo/sitemapWaves.ts) picks the ones submitted now,
   // so raising SITEMAP_WAVE takes effect on the next request without waiting for the cache.
-  const entries = (await memoAsync('sitemap-hubs', ENTRIES_TTL_MS, () => collectEvergreenEntries())).filter((e) =>
-    isHubPathInWave(e.path),
-  )
+  const entries = (await readEntries()).filter((e) => isHubPathInWave(e.path))
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

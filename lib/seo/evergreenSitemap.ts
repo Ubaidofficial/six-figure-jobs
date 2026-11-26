@@ -113,6 +113,7 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
 }
 
 const QUERY_CONCURRENCY = 6
+const ROLE_CONCURRENCY = 2
 
 /**
  * Every pSEO page in a released batch (up to `released`) that clears its job-count threshold while Phase 1 still
@@ -261,7 +262,17 @@ async function collectDataPageEntries(lastmod: Date | null): Promise<SitemapEntr
 }
 
 export async function collectEvergreenEntries(now: number = Date.now()): Promise<SitemapEntry[]> {
-  if (cache && now - cache.at < CACHE_TTL_MS) return cache.entries
+  return (await collectEvergreenEntriesWithStatus(now)).entries
+}
+
+/**
+ * As collectEvergreenEntries, and whether the list is complete. An incomplete list (the database failed part-way) has
+ * only the static pages: callers that cache must not keep it in place of a complete one (app/sitemap-hubs.xml/route.ts).
+ */
+export async function collectEvergreenEntriesWithStatus(
+  now: number = Date.now(),
+): Promise<{ entries: SitemapEntry[]; complete: boolean }> {
+  if (cache && now - cache.at < CACHE_TTL_MS) return { entries: cache.entries, complete: true }
 
   const latestJob = await getLatestJobUpdate()
   const entries: SitemapEntry[] = PILLAR_PATHS.map((path) => ({ path, lastmod: latestJob }))
@@ -285,7 +296,10 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
   let complete = latestJob !== null
   if (complete) {
     try {
-      roleEntries = (await Promise.all([...PHASE_1_ROLE_SLUGS].map(collectRoleEntries))).flat()
+      // Two roles at a time (three counts each), not all ten at once: 30 heavy counts together outran the pool and the
+      // database's shared memory on 2026-11-26 (Postgres 53100 "could not resize shared memory segment"), and one
+      // failed count drops every role page, salary guide and data hub from the sitemap.
+      roleEntries = (await mapLimit([...PHASE_1_ROLE_SLUGS], ROLE_CONCURRENCY, collectRoleEntries)).flat()
     } catch {
       complete = false
     }
@@ -295,7 +309,7 @@ export async function collectEvergreenEntries(now: number = Date.now()): Promise
 
   // Only cache a complete result; a database blip must not freeze a thin sitemap for an hour.
   if (complete) cache = { at: now, entries: result }
-  return result
+  return { entries: result, complete }
 }
 
 // Each list is built for one released batch number: releasing a further batch rebuilds it at once.

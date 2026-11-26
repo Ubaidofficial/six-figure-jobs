@@ -60,4 +60,48 @@ describe('sitemap routes', () => {
     expect(locs.every((l) => l.startsWith('https://www.6figjobs.com'))).toBe(true)
     expect(new Set(locs).size).toBe(locs.length)
   })
+
+  describe('a database failure part-way through', () => {
+    const live = { _count: { _all: 5 }, _max: { createdAt: new Date('2026-01-02T03:04:05.000Z') } }
+    const locsOf = async () => [...(await (await getHubs()).text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
+    const evergreen = () => import('../../lib/seo/evergreenSitemap')
+
+    beforeEach(async () => (await evergreen()).__resetEvergreenSitemapCacheForTests())
+    afterEach(() => jest.restoreAllMocks())
+
+    it('does not keep the partial list: the next request with the database back lists the role pages', async () => {
+      // Pillars read fine, every role count fails: the list is partial.
+      aggregate.mockImplementation(async ({ _count }: { _count?: unknown }) => {
+        if (_count) throw new Error('could not resize shared memory segment')
+        return live
+      })
+      const partial = await locsOf()
+      expect(partial).toContain('https://www.6figjobs.com/jobs')
+      expect(partial).not.toContain('https://www.6figjobs.com/salary/software-engineer')
+
+      aggregate.mockReset()
+      aggregate.mockResolvedValue(live)
+      const full = await locsOf()
+      expect(full).toContain('https://www.6figjobs.com/jobs/software-engineer')
+      expect(full).toContain('https://www.6figjobs.com/salary/software-engineer')
+    })
+
+    it('keeps serving the last complete list while a refresh comes back partial', async () => {
+      const start = Date.now()
+      const now = jest.spyOn(Date, 'now').mockReturnValue(start)
+      aggregate.mockResolvedValue(live)
+      expect(await locsOf()).toContain('https://www.6figjobs.com/salary/software-engineer')
+
+      // Past both caches' freshness (30 minutes here, an hour in lib/seo/evergreenSitemap.ts) with the role counts failing.
+      now.mockReturnValue(start + 61 * 60 * 1000)
+      aggregate.mockReset()
+      aggregate.mockImplementation(async ({ _count }: { _count?: unknown }) => {
+        if (_count) throw new Error('could not resize shared memory segment')
+        return live
+      })
+      expect(await locsOf()).toContain('https://www.6figjobs.com/salary/software-engineer')
+      await new Promise((resolve) => setImmediate(resolve)) // the failed background refresh settles
+      expect(await locsOf()).toContain('https://www.6figjobs.com/salary/software-engineer')
+    })
+  })
 })
