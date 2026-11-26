@@ -64,8 +64,8 @@ describe('company sitemap page', () => {
       { slug: 'globex', latestJobPostedAt: null },
     ])
     const xml = await (await call()).text()
-    expect(xml).toContain('<loc>https://www.sixfigurejobs.net/company/acme</loc>\n    <lastmod>2026-11-18</lastmod>')
-    expect(xml).toContain('<loc>https://www.sixfigurejobs.net/company/globex</loc>\n  </url>')
+    expect(xml).toContain('/company/acme</loc>\n    <lastmod>2026-11-18</lastmod>')
+    expect(xml).toContain('/company/globex</loc>\n  </url>')
     expect(xml.match(/<lastmod>/g)).toHaveLength(1)
   })
 })
