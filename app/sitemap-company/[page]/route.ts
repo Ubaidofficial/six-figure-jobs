@@ -26,18 +26,9 @@ function escapeXml(s: string) {
     .replace(/'/g, '&apos;')
 }
 
-function toMs(value: unknown): number {
-  if (value instanceof Date) return value.getTime()
-  if (typeof value === 'string' || typeof value === 'number') {
-    const n = new Date(value).getTime()
-    return Number.isFinite(n) ? n : 0
-  }
-  return 0
-}
-
 type CompanyRow = {
   slug: string
-  latestUpdatedAt: string
+  latestJobPostedAt: string | null
 }
 
 async function fetchCompanyPage(page: number): Promise<CompanyRow[]> {
@@ -46,7 +37,7 @@ async function fetchCompanyPage(page: number): Promise<CompanyRow[]> {
   const candidates = await getPublishedCompanyCandidatesPage(page, PAGE_SIZE)
   return candidates.map((candidate) => ({
     slug: candidate.slug,
-    latestUpdatedAt: candidate.latestUpdatedAt,
+    latestJobPostedAt: candidate.latestJobPostedAt,
   }))
 }
 
@@ -86,7 +77,7 @@ async function buildCompanyPage(
 
   const urls = rows.map((row) => {
     const loc = escapeXml(`${SITE_URL}/company/${row.slug}`)
-    const day = sitemapDate(new Date(toMs(row.latestUpdatedAt)))
+    const day = sitemapDate(row.latestJobPostedAt)
 
     return `  <url>
     <loc>${loc}</loc>${day ? `\n    <lastmod>${day}</lastmod>` : ''}

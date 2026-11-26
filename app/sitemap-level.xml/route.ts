@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma'
+import { sitemapDate } from '../../lib/seo/lastmod'
 import { buildFallbackUrlsetResponse } from '../../lib/seo/fallbackSitemap'
 import { buildWhere } from '../../lib/jobs/queryJobs'
 import { getSiteUrl } from '../../lib/seo/site'
@@ -41,22 +42,20 @@ export async function GET() {
       .map((level) => {
         const total = counts.get(level) ?? 0
         if (total < MIN_INDEXABLE_JOBS) return null
-        const lastmod = (lastmods.get(level) ?? new Date()).toISOString()
         return {
           url: `${SITE_URL}/jobs/level/${level}`,
-          lastModified: lastmod,
+          lastModified: sitemapDate(lastmods.get(level)),
         }
       })
       .filter(Boolean) as Array<{
         url: string
-        lastModified: string
+        lastModified: string | null
       }>
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(u => `  <url>
-    <loc>${u.url}</loc>
-    <lastmod>${u.lastModified}</lastmod>
+    <loc>${u.url}</loc>${u.lastModified ? `\n    <lastmod>${u.lastModified}</lastmod>` : ''}
   </url>`).join('\n')}
   ${buildSitemapMetaComment('sitemap-level')}
 </urlset>`
