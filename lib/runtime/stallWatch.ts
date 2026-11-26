@@ -9,7 +9,7 @@
 // lib/prisma.ts). It reads two small cgroup files per window and keeps one histogram: no measurable cost.
 import { readFileSync } from 'node:fs'
 import { loadavg } from 'node:os'
-import { monitorEventLoopDelay } from 'node:perf_hooks'
+import { monitorEventLoopDelay, performance } from 'node:perf_hooks'
 
 export type CgroupReading = {
   throttledCount: number | null
@@ -86,10 +86,12 @@ export function startStallWatch(opts: { intervalMs?: number; thresholdMs?: numbe
   const histogram = monitorEventLoopDelay({ resolution: 10 })
   histogram.enable()
   let last = readCgroup()
-  let lastAt = Date.now()
+  let lastAt = performance.now()
   const timer = setInterval(() => {
-    const now = Date.now()
-    const maxMs = histogram.max / 1e6
+    const now = performance.now()
+    // reset() also drops a delay the histogram's own timer has not recorded yet, so when this tick runs before that timer after
+    // a block, the histogram never sees the block. This tick's own lateness is a lower bound on any block it waited through.
+    const maxMs = Math.max(histogram.max / 1e6, now - lastAt - intervalMs)
     const p99Ms = histogram.percentile(99) / 1e6
     histogram.reset()
     const cg = readCgroup()

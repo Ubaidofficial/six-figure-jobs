@@ -40,9 +40,13 @@ describe('formatStall', () => {
 describe('startStallWatch', () => {
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+  // Real timers: the delay comes from Node's native event-loop histogram, which fake timers cannot drive. An interval equal to
+  // the histogram's 10 ms resolution makes the watcher's tick often run before the histogram records a block, the order that
+  // used to lose it (histogram.reset() drops an unrecorded delay; 2026-11-25 CI flake). Waiting for the line with a deadline,
+  // not a fixed sleep, keeps a slow runner from failing a correct watcher; the line still has to come from the block.
   it('logs when the event loop is blocked past the threshold, and not otherwise', async () => {
     const lines: string[] = []
-    const stop = startStallWatch({ intervalMs: 60, thresholdMs: 150, log: (l) => lines.push(l) })
+    const stop = startStallWatch({ intervalMs: 10, thresholdMs: 150, log: (l) => lines.push(l) })
     try {
       await sleep(200) // idle: nothing to log
       expect(lines).toEqual([])
@@ -50,9 +54,11 @@ describe('startStallWatch', () => {
       while (Date.now() < until) {
         /* block the event loop */
       }
-      await sleep(200)
+      const deadline = Date.now() + 5_000
+      while (lines.length === 0 && Date.now() < deadline) await sleep(20)
       expect(lines.length).toBeGreaterThanOrEqual(1)
       expect(lines[0]).toMatch(/^\[stall\] event loop blocked max=\d+ms/)
+      expect(Number(/max=(\d+)ms/.exec(lines[0])?.[1])).toBeGreaterThanOrEqual(150)
     } finally {
       stop()
     }
