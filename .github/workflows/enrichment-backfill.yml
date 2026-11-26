@@ -27,7 +27,7 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "tech-stack, websites, remote-country, job-country, fix-company-names, boards, freehire-gap, remote-scope or quality-report"
+        description: "tech-stack, websites, remote-country, job-country, fix-company-names, boards, freehire-gap, remote-scope, quality-report or direct-links (employer links for job-board jobs; dry run unless apply; limit = jobs, about 1500 fit)"
         type: choice
         required: false
         default: tech-stack
@@ -41,6 +41,7 @@ on:
           - freehire-gap
           - remote-scope
           - quality-report
+          - direct-links
       sources:
         description: "For task boards: comma list of board keys"
         type: string
@@ -51,6 +52,11 @@ on:
         type: string
         required: false
         default: "2000"
+      offset:
+        description: "direct-links only: jobs to skip (the previous run prints the next offset)"
+        type: string
+        required: false
+        default: "0"
       apply:
         description: "Write the changes (leave unticked for a dry run)"
         type: boolean
@@ -96,6 +102,7 @@ jobs:
           LIMIT: ${{ inputs.limit }}
           APPLY: ${{ inputs.apply }}
           SOURCES: ${{ inputs.sources }}
+          OFFSET: ${{ inputs.offset }}
           BOARD_SCRAPE_TIMEOUT_MS: "300000"
           FREEHIRE_API_KEY: ${{ secrets.FREEHIRE_API_KEY }}
         run: |
@@ -107,6 +114,7 @@ jobs:
             job-country) npx tsx scripts/backfillJobCountry.ts "${args[@]}" ;;
             fix-company-names) npx tsx scripts/fix-entity-company-names.ts $([ "$APPLY" = "true" ] && echo --apply) ;;
             quality-report) npx tsx scripts/quality-report.ts --hours=8 ;;
+            direct-links) npx tsx scripts/backfillDirectLinks.ts "${args[@]}" --offset="${OFFSET:-0}" ;;
             remote-scope) npx tsx scripts/audit-remote-scope.ts --limit="$LIMIT" ;;
             freehire-gap) npx tsx scripts/freehire-gap-audit.ts --pages=$(( LIMIT / 100 > 0 ? LIMIT / 100 : 1 )) ;;
             boards) npx tsx scripts/dailyScrapeV2.ts --mode=boards --source="$SOURCES" $([ "$APPLY" = "true" ] || echo --dry-run) ;;

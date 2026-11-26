@@ -71,3 +71,24 @@ describe('freehire employer links from /data/jobs', () => {
     expect(r.errors[0]).toMatch(/FREEHIRE_API_KEY/)
   })
 })
+
+describe('job-board links on freehire jobs', () => {
+  beforeEach(() => get.mockReset())
+
+  it('lists the job under the employer link when another source has the same posting, and keeps the board link when none does', async () => {
+    const jobs = [rec(1), rec(2)]
+    get.mockImplementation(async (url: string) => {
+      if (url.endsWith('/data/jobs/slug-1')) return { data: { data: { url: 'https://www.linkedin.com/jobs/view/1' } } }
+      if (url.endsWith('/data/jobs/slug-2')) return { data: { data: { url: 'https://www.whatjobs.com/job/2' } } }
+      if (url.endsWith('/jobs/slug-1/copies')) return { data: { data: [{ public_slug: 'copy-1' }] } }
+      if (url.endsWith('/data/jobs/copy-1')) return { data: { data: { url: 'https://acme.wd5.myworkdayjobs.com/External/job/R1' } } }
+      if (url.includes('/copies')) return { data: { data: [] } }
+      return search(jobs)
+    })
+    const r = await withImmediateTimers(() => collectFreehireJobs({ since, withDescriptionPay: false }))
+    const byId = new Map(r.inputs.map((i) => [i.externalId, i]))
+    expect(byId.get('ext-1')?.applyUrl).toBe('https://acme.wd5.myworkdayjobs.com/External/job/R1')
+    expect(byId.get('ext-2')?.applyUrl).toBe('https://www.whatjobs.com/job/2')
+    expect(r.markets[0].directLinks).toBe(1)
+  })
+})

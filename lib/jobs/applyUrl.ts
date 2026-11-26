@@ -21,6 +21,41 @@ const AGGREGATOR_APPLY_HOSTS = [
   'himalayas.app',
 ]
 
+/**
+ * Job boards and job search engines: a link to one sends the applicant to another site's copy of the posting, not to
+ * the employer. Listed 2026-11-26 after a full freehire sync showed XING, LinkedIn, eFinancialCareers and Jobgether behind
+ * many freehire jobs' apply buttons. The owner chose (2026-11-26) to replace such a link with the employer's own where one
+ * can be found (lib/scrapers/freehireDirectLink.ts) and to keep it where none can: these are NOT in
+ * AGGREGATOR_APPLY_HOSTS, so the link is not dropped. Brands match any country domain (efinancialcareers.co.uk,
+ * indeed.de); the others match their own domain and its subdomains.
+ */
+export const JOB_BOARD_BRANDS = ['linkedin', 'xing', 'indeed', 'glassdoor', 'adzuna', 'stepstone', 'monster', 'efinancialcareers', 'jooble', 'careerjet', 'jobrapido']
+export const JOB_BOARD_DOMAINS = [
+  'ziprecruiter.com', 'totaljobs.com', 'reed.co.uk', 'cwjobs.co.uk', 'seek.com.au', 'seek.co.nz', 'careerbuilder.com',
+  'simplyhired.com', 'jobgether.com', 'karriere.at', 'cadremploi.fr', 'whatjobs.com', 'jobbank.gc.ca', 'jobup.ch',
+  'jobs.ch', 'rocket-match.de', 'powertofly.com', 'devglobaljobs.com', 'hellowork.com', 'clearancejobs.com',
+  'startup.jobs', 'jobviewtrack.com', 'welcometothejungle.com', 'apec.fr', 'lensa.com', 'jobright.ai', 'talent.com',
+  'jobted.com', 'arbeitsagentur.de', 'kimeta.de', 'meinestadt.de', 'jobware.de', 'stellenanzeigen.de', 'irishjobs.ie',
+  'jobs.ie', 'workinstartups.com',
+]
+
+/** The link's registrable site ("jobs.ashbyhq.com" -> "ashbyhq.com", "www.jobbank.gc.ca" -> "jobbank.gc.ca"). */
+export function applySiteOf(url: string | null | undefined): string | null {
+  if (!url) return null
+  const host = hostOf(String(url).trim())
+  if (!host) return null
+  const parts = host.split('.')
+  const twoPart = parts.length > 2 && /^(co|com|gov|gc|org|ac|net)$/.test(parts[parts.length - 2])
+  return parts.slice(twoPart ? -3 : -2).join('.')
+}
+
+/** True for a link to a job board or job search engine (JOB_BOARD_BRANDS, JOB_BOARD_DOMAINS). */
+export function isJobBoardApplyUrl(url: string | null | undefined): boolean {
+  const site = applySiteOf(url)
+  if (!site) return false
+  return JOB_BOARD_DOMAINS.includes(site) || JOB_BOARD_BRANDS.includes(site.split('.')[0])
+}
+
 function hostOf(url: string): string | null {
   try {
     return new URL(url).hostname.toLowerCase().replace(/^www\./, '')
