@@ -46,6 +46,8 @@ jobs:
         run: npx tsx scripts/auditRemote100kCoverage.ts
       - name: Where listed jobs' apply links lead (read-only)
         run: npx tsx scripts/auditApplyHosts.ts
+      - name: Job-board apply links, what option 2 would change (dry run, read-only)
+        run: npx tsx scripts/jobBoardLinks.ts
       - name: Listed jobs with no country (read-only)
         run: npx tsx scripts/auditMissingCountry.ts
 
