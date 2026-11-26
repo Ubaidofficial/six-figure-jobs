@@ -1,6 +1,7 @@
 import { __clearMemoForTests } from '../../lib/cache/memo'
 import { getCompanyPublishingManifest } from '../../lib/seo/companyPublishing'
 import { GET as getCompanySitemapPage } from '../../app/sitemap-company/[page]/route'
+import { GET as getCompanySitemapIndex } from '../../app/sitemap-company.xml/route'
 import { prisma } from '../../lib/prisma'
 
 jest.mock('../../lib/prisma', () => ({ prisma: { job: { findMany: jest.fn() }, company: { findMany: jest.fn() } } }))
@@ -50,6 +51,7 @@ jest.mock('../../lib/seo/sitemapWaves', () => ({ ...jest.requireActual('../../li
 jest.mock('../../lib/seo/companyPublishing', () => ({
   ...jest.requireActual('../../lib/seo/companyPublishing'),
   getPublishedCompanyCandidatesPage: jest.fn(),
+  getPublishedCompanyCandidateCount: jest.fn(),
 }))
 
 describe('company sitemap page', () => {
@@ -66,6 +68,26 @@ describe('company sitemap page', () => {
     const xml = await (await call()).text()
     expect(xml).toContain('/company/acme</loc>\n    <lastmod>2026-11-18</lastmod>')
     expect(xml).toContain('/company/globex</loc>\n  </url>')
+    expect(xml.match(/<lastmod>/g)).toHaveLength(1)
+  })
+})
+
+// Production, 2026-11-26 after #267: /sitemap-company.xml listed its file with no <lastmod> at all. The file is now dated
+// by its own companies, from the same manifest, with no separate database query.
+describe('company sitemap index', () => {
+  const { getPublishedCompanyCandidatesPage, getPublishedCompanyCandidateCount } = jest.requireMock('../../lib/seo/companyPublishing')
+
+  beforeEach(() => __clearMemoForTests())
+
+  it('dates each file by the newest posting day among its own companies', async () => {
+    getPublishedCompanyCandidateCount.mockResolvedValue(2)
+    getPublishedCompanyCandidatesPage.mockResolvedValue([
+      { slug: 'acme', latestJobPostedAt: '2026-11-18T09:00:00.000Z' },
+      { slug: 'globex', latestJobPostedAt: '2026-11-23T10:00:00.000Z' },
+      { slug: 'initech', latestJobPostedAt: null },
+    ])
+    const xml = await (await getCompanySitemapIndex()).text()
+    expect(xml).toContain('/sitemap-company/1</loc>\n    <lastmod>2026-11-23</lastmod>')
     expect(xml.match(/<lastmod>/g)).toHaveLength(1)
   })
 })
