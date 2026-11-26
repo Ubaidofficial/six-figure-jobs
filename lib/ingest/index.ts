@@ -18,7 +18,7 @@ import { enrichAtIngest } from './enrichAtIngest'
 import { fixMojibake } from '../jobs/mojibake'
 import { upsertCompanyFromBoard } from '../companies/upsertFromBoard'
 import { relinkToRepairedCompany } from '../companies/repairCompanyName'
-import { cleanApplyUrlForSource } from '../jobs/applyUrl'
+import { cleanApplyUrlForSource, isJobBoardApplyUrl } from '../jobs/applyUrl'
 import {
   normalizeSalary,
   parseSalaryFromText,
@@ -618,8 +618,12 @@ async function upgradeJob(
     type: input.employmentType ?? existing.type,
     employmentType: input.employmentType ?? existing.employmentType,
 
-    // URLs — never let the apply button point at an aggregator we scraped from.
-    applyUrl: cleanApplyUrlForSource(input.source, input.applyUrl, input.url, existing.applyUrl),
+    // URLs — never let the apply button point at an aggregator we scraped from, and never let a job-board link replace
+    // an employer link found earlier (lib/scrapers/freehireDirectLink.ts finds them; one failed lookup must not undo it).
+    applyUrl:
+      isJobBoardApplyUrl(input.applyUrl ?? input.url) && existing.applyUrl && !isJobBoardApplyUrl(existing.applyUrl)
+        ? cleanApplyUrlForSource(input.source, existing.applyUrl, input.applyUrl, input.url)
+        : cleanApplyUrlForSource(input.source, input.applyUrl, input.url, existing.applyUrl),
     url: input.url ?? existing.url,
     descriptionHtml: input.descriptionHtml ?? existing.descriptionHtml,
 
@@ -769,7 +773,9 @@ async function refreshJob(
 
   // Update applyUrl if we previously fell back to the board URL (or had none).
   // This lets board scrapers "upgrade" applyUrl once we can resolve an external/mailto destination.
-  if (input.applyUrl && input.applyUrl !== existing.applyUrl) {
+  // A job-board link never replaces an employer link found earlier (lib/scrapers/freehireDirectLink.ts).
+  const keepsEmployerLink = isJobBoardApplyUrl(input.applyUrl) && Boolean(existing.applyUrl) && !isJobBoardApplyUrl(existing.applyUrl)
+  if (input.applyUrl && input.applyUrl !== existing.applyUrl && !keepsEmployerLink) {
     const existingApply = existing.applyUrl || ''
     const existingUrl = existing.url || ''
     const shouldUpgradeApplyUrl =

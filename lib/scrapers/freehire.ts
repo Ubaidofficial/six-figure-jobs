@@ -12,6 +12,8 @@ import { readPayFromDescription } from '../jobs/payEvidence'
 import { getMinimumSalaryRejection } from '../jobs/salaryPublicationGate'
 import { addBoardIngestResult, type ScraperStats } from './scraperStats'
 import { freehireCountryCodes, freehireStructuredLocationText } from './freehireStructured'
+import { findDirectLink, type DirectLinkDeps } from './freehireDirectLink'
+import { isJobBoardApplyUrl } from '../jobs/applyUrl'
 import {
   companiesToLookUp,
   freehireCompanyKey,
@@ -210,6 +212,8 @@ export type FreehireMarketReport = {
   complete: boolean
   /** Employer links read from /data/jobs/{slug} for this market's jobs. */
   linksRead: number
+  /** Job-board links replaced by the employer's own (findDirectLink). */
+  directLinks: number
 }
 
 export type FreehireSyncOptions = {
@@ -537,17 +541,15 @@ async function linkSlot(): Promise<void> {
   if (at > now) await sleep(at - now)
 }
 
-/** The employer's own link for one freehire job (its `url`, UTM kept for stripFreehireUtm), or null when it has none. */
-export async function fetchOriginalLink(slug: string): Promise<string | null> {
+/**
+ * GET a freehire API path with the key, through the link pace (linkSlot): the JSON, or null on a 404. A 401/403 throws
+ * (the key is missing or not on an API plan), a 429 waits as freehire asks, a dropped connection is retried.
+ */
+async function freehireGet<T>(url: string): Promise<T | null> {
   for (let attempt = 0; ; attempt++) {
     await linkSlot()
     try {
-      const res = await axios.get<{ data?: { url?: string | null } }>(`${DATA_JOB_URL}/${encodeURIComponent(slug)}`, {
-        headers: freehireHeaders(),
-        timeout: 30_000,
-      })
-      const url = res.data?.data?.url
-      return typeof url === 'string' && url ? url : null
+      return (await axios.get<T>(url, { headers: freehireHeaders(), timeout: 30_000 })).data
     } catch (error) {
       const response = (error as { response?: { status?: number; headers?: Record<string, string> } }).response
       if (response?.status === 404) return null
@@ -572,23 +574,83 @@ export async function fetchOriginalLink(slug: string): Promise<string | null> {
   }
 }
 
+/** One job from /data/jobs/{slug}: where applications go (`url`) and the original posting when it differs. */
+export async function fetchDataJob(slug: string): Promise<{ url?: string | null; source_url?: string | null } | null> {
+  return (await freehireGet<{ data?: { url?: string | null; source_url?: string | null } }>(`${DATA_JOB_URL}/${encodeURIComponent(slug)}`))?.data ?? null
+}
+
+/** The employer's own link for one freehire job (its `url`, UTM kept for stripFreehireUtm), or null when it has none. */
+export async function fetchOriginalLink(slug: string): Promise<string | null> {
+  const url = (await fetchDataJob(slug))?.url
+  return typeof url === 'string' && url ? url : null
+}
+
+const PUBLIC_JOB_URL = 'https://freehire.me/api/v1/jobs'
+/** Least time between two requests to one board's pages. */
+const BOARD_PAGE_GAP_MS = 1_500
+const nextPageSlot = new Map<string, number>()
+
+/** The freehire calls and board-page reads findDirectLink uses (lib/scrapers/freehireDirectLink.ts). */
+export function directLinkDeps(): DirectLinkDeps {
+  return {
+    dataJob: fetchDataJob,
+    copies: async (slug) =>
+      (await freehireGet<{ data?: Array<{ public_slug?: string | null }> }>(`${PUBLIC_JOB_URL}/${encodeURIComponent(slug)}/copies`))?.data ?? [],
+    page: async (url) => {
+      const host = new URL(url).hostname
+      const now = Date.now()
+      const at = Math.max(now, nextPageSlot.get(host) ?? 0)
+      nextPageSlot.set(host, at + BOARD_PAGE_GAP_MS)
+      if (at > now) await sleep(at - now)
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': freehireHeaders()['User-Agent'] }, redirect: 'follow', signal: AbortSignal.timeout(20_000) })
+        return res.ok ? { finalUrl: res.url, html: await res.text() } : null
+      } catch {
+        return null
+      }
+    },
+  }
+}
+
 /**
- * Fill in `url` on the jobs that lack it and would otherwise be published, from /data/jobs/{slug}. `known` holds the
- * links already read this run (a job can come up in more than one market). Returns how many were looked up.
+ * Fill in `url` on the jobs that would be published and lack it, from /data/jobs/{slug}; where that link goes to a job
+ * board (a job's own `url` too, e.g. an Adzuna posting), look for the employer's own link (findDirectLink) and use it,
+ * keeping the board link when there is none. `known` holds the links settled this run (a job can come up in more than
+ * one market). Returns how many jobs were looked up and how many board links were replaced.
  */
-export async function fillOriginalLinks(jobs: FreehireJob[], known: Map<string, string | null>): Promise<number> {
-  const todo = jobs.filter((j) => !j.url && j.public_slug && freehireListing(j))
+export async function fillOriginalLinks(
+  jobs: FreehireJob[],
+  known: Map<string, string | null>,
+  deps: DirectLinkDeps = directLinkDeps(),
+): Promise<{ read: number; direct: number }> {
+  const todo = jobs.filter((j) => j.public_slug && (!j.url || isJobBoardApplyUrl(j.url)) && freehireListing(j))
   const fresh = todo.filter((j) => !known.has(j.public_slug!))
   let i = 0
+  let direct = 0
   const worker = async () => {
     while (i < fresh.length) {
       const job = fresh[i++]
-      known.set(job.public_slug!, await fetchOriginalLink(job.public_slug!))
+      const slug = job.public_slug!
+      let url: string | null = job.url || null
+      let sourceUrl: string | null | undefined = null
+      if (!url) {
+        const data = await deps.dataJob(slug)
+        url = typeof data?.url === 'string' && data.url ? data.url : null
+        sourceUrl = data?.source_url
+      }
+      if (url && isJobBoardApplyUrl(url)) {
+        const found = await findDirectLink(slug, url, sourceUrl, deps)
+        if (found) {
+          url = found.url
+          direct++
+        }
+      }
+      known.set(slug, url)
     }
   }
   await Promise.all(Array.from({ length: Math.min(LINK_CONCURRENCY, fresh.length) }, worker))
   for (const job of todo) job.url = known.get(job.public_slug!) ?? ''
-  return fresh.length
+  return { read: fresh.length, direct }
 }
 
 export type FreehireCollected = {
@@ -629,6 +691,7 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
       sample: [],
       complete: false,
       linksRead: 0,
+      directLinks: 0,
     }
     markets.push(report)
 
@@ -673,7 +736,9 @@ export async function collectFreehireJobs(options: FreehireSyncOptions = {}): Pr
 
           listed.push(job)
         }
-        report.linksRead += await fillOriginalLinks(listed, links)
+        const filled = await fillOriginalLinks(listed, links)
+        report.linksRead += filled.read
+        report.directLinks += filled.direct
         for (const job of listed) {
           const input = mapFreehireJob(job)
           if (!input) {

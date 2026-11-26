@@ -23,10 +23,11 @@ const AGGREGATOR_APPLY_HOSTS = [
 
 /**
  * Job boards and job search engines: a link to one sends the applicant to another site's copy of the posting, not to
- * the employer. Proposed 2026-11-26 (owner chose "treat job boards as aggregators", dry run first) after a full freehire
- * sync showed XING, LinkedIn, eFinancialCareers and Jobgether behind many freehire jobs' apply buttons. Not yet part of
- * AGGREGATOR_APPLY_HOSTS: scripts/jobBoardLinks.ts measures it first. Brands match any country domain
- * (efinancialcareers.co.uk, indeed.de); the others match their own domain and its subdomains.
+ * the employer. Listed 2026-11-26 after a full freehire sync showed XING, LinkedIn, eFinancialCareers and Jobgether behind
+ * many freehire jobs' apply buttons. The owner chose (2026-11-26) to replace such a link with the employer's own where one
+ * can be found (lib/scrapers/freehireDirectLink.ts) and to keep it where none can: these are NOT in
+ * AGGREGATOR_APPLY_HOSTS, so the link is not dropped. Brands match any country domain (efinancialcareers.co.uk,
+ * indeed.de); the others match their own domain and its subdomains.
  */
 export const JOB_BOARD_BRANDS = ['linkedin', 'xing', 'indeed', 'glassdoor', 'adzuna', 'stepstone', 'monster', 'efinancialcareers', 'jooble', 'careerjet', 'jobrapido']
 export const JOB_BOARD_DOMAINS = [
