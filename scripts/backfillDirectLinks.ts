@@ -4,21 +4,22 @@
 // lib/scrapers/freehireDirectLink.ts) and, with --apply, put it on the job's apply button. A job with no employer link
 // keeps its board link (owner's decision, 2026-11-26). DRY RUN unless --apply: reads only (SELECTs in a READ ONLY
 // transaction) and prints what it would change. --apply writes `applyUrl` and `updatedAt` on the jobs it found a link
-// for, nothing else. Newest jobs first; `--limit` caps how many are looked at (the workflow job has 30 minutes:
-// about 1,500 jobs at freehire's pace).
+// for, nothing else. Jobgether, karriere.at and PowerToFly jobs first, then newest first; `--limit` caps how many are
+// looked at (the workflow job has 30 minutes: about 1,500 jobs at freehire's pace), `--offset` skips those already seen.
 //
-//   npx tsx scripts/backfillDirectLinks.ts [--limit=1500] [--apply]
+//   npx tsx scripts/backfillDirectLinks.ts [--limit=1500] [--offset=0] [--apply]
 import { appendFileSync } from 'node:fs'
 
 import { applySiteOf, isJobBoardApplyUrl } from '../lib/jobs/applyUrl'
 import { buildWhere } from '../lib/jobs/queryJobs'
 import { directLinkDeps } from '../lib/scrapers/freehire'
-import { findDirectLink } from '../lib/scrapers/freehireDirectLink'
+import { findDirectLink, PAGE_BOARDS } from '../lib/scrapers/freehireDirectLink'
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set')
   const apply = process.argv.includes('--apply')
   const limit = Number(process.argv.find((a) => a.startsWith('--limit='))?.slice(8)) || 1500
+  const offset = Number(process.argv.find((a) => a.startsWith('--offset='))?.slice(9)) || 0
   const { prisma } = await import('../lib/prisma')
   const deps = directLinkDeps()
   const out = [`## Employer links for jobs that link to a job board (${apply ? 'APPLIED' : 'dry run'})`, '']
@@ -34,8 +35,13 @@ async function main() {
       },
       { timeout: 120_000 },
     )
-    const todo = listed.filter((j) => isJobBoardApplyUrl(j.applyUrl))
-    const batch = todo.slice(0, limit)
+    // Boards whose pages are read first (most links are found there: 32 of 46 Jobgether jobs on 2026-11-26), then the
+    // rest, newest first. A job with no employer link keeps its board link, so a rerun would see it again: --offset
+    // moves the next run past the jobs already looked at.
+    const todo = listed
+      .filter((j) => isJobBoardApplyUrl(j.applyUrl))
+      .sort((a, b) => Number(PAGE_BOARDS.includes(applySiteOf(b.applyUrl) ?? '')) - Number(PAGE_BOARDS.includes(applySiteOf(a.applyUrl) ?? '')))
+    const batch = todo.slice(offset, offset + limit)
     const bySite = new Map<string, { looked: number; found: number }>()
     const byWay = new Map<string, number>()
     const examples: string[] = []
@@ -55,7 +61,7 @@ async function main() {
       if (apply) await prisma.job.update({ where: { id: job.id }, data: { applyUrl: direct.url, updatedAt: new Date() } })
     }
     out.push(
-      `Listed freehire jobs with a job-board link: ${todo.length}; looked at ${batch.length} (newest first).`,
+      `Listed freehire jobs with a job-board link: ${todo.length}; looked at ${batch.length} (from ${offset}; next run: --offset=${offset + batch.length - (apply ? found : 0)}, since the jobs given an employer link leave this list).`,
       `**Employer link found: ${found}** (${Math.round((found / Math.max(batch.length, 1)) * 100)}%)${apply ? ', written' : ', nothing written'}. Found through: ${[...byWay.entries()].map(([w, n]) => `${w} ${n}`).join(', ') || '-'}.`,
       '',
       '| board site | looked at | found |',
