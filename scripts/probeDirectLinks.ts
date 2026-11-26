@@ -77,14 +77,14 @@ async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set')
   const limit = Number(process.argv.find((a) => a.startsWith('--limit='))?.slice(8)) || 12
   const { prisma } = await import('../lib/prisma')
-  let rows: Array<{ applyUrl: string | null; sourceRef: string | null; company: { website: string | null } | null }> = []
+  let rows: Array<{ applyUrl: string | null; sourceRef: string | null; companyRef: { website: string | null } | null }> = []
   try {
     rows = await prisma.$transaction(
       async (tx) => {
         await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY')
         return tx.job.findMany({
           where: { AND: [buildWhere({}), { source: 'board:freehire' }] },
-          select: { applyUrl: true, sourceRef: true, company: { select: { website: true } } },
+          select: { applyUrl: true, sourceRef: true, companyRef: { select: { website: true } } },
         })
       },
       { timeout: 120_000 },
@@ -109,7 +109,7 @@ async function main() {
     let b = 0
     let either = 0
     for (const r of sample) {
-      const companySite = applySiteOf(r.company?.website)
+      const companySite = applySiteOf(r.companyRef?.website)
       const fa = await viaFreehire(r.sourceRef!, companySite)
       const fb = fa || NO_PAGE_FETCH.has(site) ? null : await viaPage(r.applyUrl!, companySite)
       if (fa) a++
