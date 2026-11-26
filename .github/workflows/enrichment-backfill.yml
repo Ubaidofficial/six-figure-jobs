@@ -27,7 +27,7 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "tech-stack, websites, remote-country, job-country, fix-company-names, boards, freehire-gap, remote-scope or quality-report"
+        description: "tech-stack, websites, remote-country, job-country, fix-company-names, boards, freehire-gap, remote-scope, quality-report or direct-links (read-only probe; set limit to jobs per board site, e.g. 12)"
         type: choice
         required: false
         default: tech-stack
@@ -41,6 +41,7 @@ on:
           - freehire-gap
           - remote-scope
           - quality-report
+          - direct-links
       sources:
         description: "For task boards: comma list of board keys"
         type: string
@@ -107,6 +108,7 @@ jobs:
             job-country) npx tsx scripts/backfillJobCountry.ts "${args[@]}" ;;
             fix-company-names) npx tsx scripts/fix-entity-company-names.ts $([ "$APPLY" = "true" ] && echo --apply) ;;
             quality-report) npx tsx scripts/quality-report.ts --hours=8 ;;
+            direct-links) npx tsx scripts/probeDirectLinks.ts --limit="${LIMIT:-12}" ;;
             remote-scope) npx tsx scripts/audit-remote-scope.ts --limit="$LIMIT" ;;
             freehire-gap) npx tsx scripts/freehire-gap-audit.ts --pages=$(( LIMIT / 100 > 0 ? LIMIT / 100 : 1 )) ;;
             boards) npx tsx scripts/dailyScrapeV2.ts --mode=boards --source="$SOURCES" $([ "$APPLY" = "true" ] || echo --dry-run) ;;
