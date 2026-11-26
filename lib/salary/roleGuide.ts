@@ -102,21 +102,44 @@ export function summarizeRoleGuide(rows: GuideRow[]): RoleSalaryGuide {
   return { listings: rows.length, usdCount: usdRows.length, usd, levels, countries, companies, asOf }
 }
 
+// Prisma codes for a connection that failed rather than a query that is wrong: pool timeout, can't reach the database,
+// database timeout, server closed the connection.
+const TRANSIENT_DB_CODES = new Set(['P2024', 'P1001', 'P1002', 'P1017'])
+const RETRY_DELAY_MS = 1000
+
 export function loadRoleSalaryGuide(roleSlug: string, minAnnual: number): Promise<RoleSalaryGuide> {
   return memoAsync(stableKey('role-salary-guide', roleSlug, minAnnual), 10 * 60 * 1000, async () => {
-    const jobs = await prisma.job.findMany({
-      where: buildWhere({ roleSlugs: [roleSlug], minAnnual, page: 1, pageSize: 1 }),
-      select: {
-        minAnnual: true,
-        maxAnnual: true,
-        currency: true,
-        countryCode: true,
-        experienceLevel: true,
-        updatedAt: true,
-        companyRef: { select: { name: true, slug: true } },
-      },
-      take: 5000,
-    })
+    const read = () =>
+      prisma.job.findMany({
+        where: buildWhere({ roleSlugs: [roleSlug], minAnnual, page: 1, pageSize: 1 }),
+        select: {
+          minAnnual: true,
+          maxAnnual: true,
+          currency: true,
+          countryCode: true,
+          experienceLevel: true,
+          updatedAt: true,
+          companyRef: { select: { name: true, slug: true } },
+        },
+        take: 5000,
+      })
+    // /salary/devops-engineer and /salary/machine-learning-engineer answered 500 on 2026-11-26 (cause not confirmed; the
+    // logs kept from later that evening show database queries of 10-20 s). When there is no cached guide to serve, one
+    // short retry on a transient connection error (pool timeout, unreachable, timeout, connection closed) gives the page a
+    // second chance; any other error, or a second failure, still fails the page (app/salary/error.tsx).
+    let jobs: Awaited<ReturnType<typeof read>>
+    try {
+      jobs = await read()
+    } catch (err) {
+      const e = err as { code?: string; errorCode?: string; name?: string } | null
+      const code = e?.code ?? e?.errorCode
+      // A connection that cannot be opened at all comes back as PrismaClientInitializationError, often with no code.
+      const transient = (code && TRANSIENT_DB_CODES.has(code)) || e?.name === 'PrismaClientInitializationError'
+      if (!transient) throw err
+      console.warn(`[salary-guide] ${code ?? e?.name} reading ${roleSlug}; retrying once`)
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+      jobs = await read()
+    }
     return summarizeRoleGuide(
       jobs.map((j) => ({
         minAnnual: j.minAnnual,
