@@ -1,4 +1,4 @@
-import { popupAllowedOnPath, popupIsSnoozed } from '@/lib/alerts/popup'
+import { isExitIntent, listAlertAfterIndex, popupAllowedOnPath, popupIsSnoozed } from '@/lib/alerts/popup'
 
 describe('popupAllowedOnPath', () => {
   it.each(['/', '/jobs', '/jobs/data-engineer', '/remote', '/salary/engineer', '/companies', '/high-paying-jobs'])(
@@ -26,5 +26,22 @@ describe('popupIsSnoozed', () => {
     expect(popupIsSnoozed(null, now)).toBe(false)
     expect(popupIsSnoozed('', now)).toBe(false)
     expect(popupIsSnoozed('soon', now)).toBe(false)
+  })
+})
+
+describe('isExitIntent', () => {
+  it('fires only when the mouse leaves the document through the top edge', () => {
+    expect(isExitIntent({ clientY: 0, relatedTarget: null })).toBe(true)
+    expect(isExitIntent({ clientY: -3, relatedTarget: null })).toBe(true)
+    expect(isExitIntent({ clientY: 400, relatedTarget: null })).toBe(false) // left through a side or the bottom
+    expect(isExitIntent({ clientY: 0, relatedTarget: {} })).toBe(false) // moved onto another element of the page
+  })
+})
+
+describe('listAlertAfterIndex', () => {
+  it('puts the box after the 10th row of a list of 15 or more, and none in a shorter list', () => {
+    expect(listAlertAfterIndex(14)).toBeNull()
+    expect(listAlertAfterIndex(15)).toBe(9)
+    expect(listAlertAfterIndex(50)).toBe(9)
   })
 })

@@ -3,9 +3,16 @@
 import { alertsEnabled } from '@/lib/alerts/config'
 import { buildAlertLabel } from '@/lib/alerts/filters'
 
+import { JobAlertExitIntentClient } from './JobAlertExitIntentClient'
 import { JobAlertPopupClient } from './JobAlertPopupClient'
 
 export function JobAlertPopup() {
   if (!alertsEnabled()) return null
-  return <JobAlertPopupClient label={buildAlertLabel({})} />
+  const label = buildAlertLabel({})
+  return (
+    <>
+      <JobAlertPopupClient label={label} />
+      <JobAlertExitIntentClient label={label} />
+    </>
+  )
 }

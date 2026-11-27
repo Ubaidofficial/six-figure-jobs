@@ -60,3 +60,82 @@
     bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Phones: the one-line bar shown first (JobAlertPopupClient); tapping "Get alerts" opens the card above. About 56px tall,
+   clear of the Feedback button on the right and of the home indicator. */
+.bar {
+  position: fixed;
+  left: 12px;
+  right: 72px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 900;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 6px 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  border-radius: 14px;
+  background: var(--color-bg-1, #fff);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.16);
+  animation: rise 220ms ease-out;
+}
+
+.barBell {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  color: var(--color-text-0);
+}
+
+.barText {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-text-0);
+}
+
+.barButton {
+  flex: none;
+  height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: #0c0d0e;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.barClose {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-1);
+  cursor: pointer;
+}
+
+.barButton:focus-visible,
+.barClose:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+}

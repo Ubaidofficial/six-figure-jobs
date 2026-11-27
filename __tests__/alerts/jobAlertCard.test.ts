@@ -8,6 +8,10 @@ describe('job page alert card', () => {
     expect(jobCardDue(JOB_CARD_DELAY_MS, 0)).toBe(true)
     expect(jobCardDue(1000, 0.5)).toBe(true)
   })
+  it('on phones opens only once scrolled half way, never on the timer (it would sit on the salary box)', () => {
+    expect(jobCardDue(JOB_CARD_DELAY_MS * 10, 0.2, true)).toBe(false)
+    expect(jobCardDue(0, 0.5, true)).toBe(true)
+  })
   it('stays away from visitors who signed up, and only from them', () => {
     const now = Date.parse('2026-11-25T12:00:00Z')
     expect(jobCardHidden(String(now + 1000), now)).toBe(true)

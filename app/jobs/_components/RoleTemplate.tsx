@@ -1,3 +1,4 @@
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import type { Metadata } from 'next'
 import { keywordsFor } from '@/lib/seo/keywordMap'
 
@@ -631,6 +632,7 @@ export async function RoleTemplate({
             scopeRole={roleSlug}
             live={sort === 'recent' && page === 1}
             serverNow={new Date().toISOString()}
+            midSlot={<JobAlertBox query={queryInput} title="Get new jobs like these by email" />}
           />
         )}
         <Pagination page={page} totalPages={totalPages} hrefFor={(n) => buildPageHref(basePath, sp, n)} />

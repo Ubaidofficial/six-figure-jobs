@@ -2,11 +2,12 @@
 
 // A small card in the bottom corner that offers the free job alert. Not a full-screen overlay and not shown at once: it
 // waits until the visitor has read for a while or scrolled, appears once per visit, and a dismissal or signup keeps it away
-// for weeks (rules in lib/alerts/popup.ts). It is added after load, so it is not in the server HTML and changes no crawled
+// for weeks (rules in lib/alerts/popup.ts). On phones it first shows as a one-line bar along the bottom and opens the form
+// only when tapped (owner's choice, 2026-11-27: the full card covered about half of a phone screen). It is added after load, so it is not in the server HTML and changes no crawled
 // markup, canonical, hreflang or JSON-LD.
 import * as React from 'react'
 import { usePathname } from 'next/navigation'
-import { X } from 'lucide-react'
+import { BellRing, X } from 'lucide-react'
 
 import {
   POPUP_DELAY_MS,
@@ -41,6 +42,8 @@ function write(store: 'local' | 'session', key: string, value: string) {
 export function JobAlertPopupClient({ label }: { label: string }) {
   const pathname = usePathname()
   const [open, setOpen] = React.useState(false)
+  // Phones: the one-line bar until tapped.
+  const [compact, setCompact] = React.useState(false)
 
   // Arm on every allowed page; the first of "read for a while" and "scrolled half way" opens it.
   React.useEffect(() => {
@@ -51,6 +54,7 @@ export function JobAlertPopupClient({ label }: { label: string }) {
     const show = () => {
       cleanup()
       write('session', POPUP_SESSION_KEY, '1')
+      setCompact(window.matchMedia('(max-width: 767px)').matches)
       setOpen(true)
     }
     const onScroll = () => {
@@ -81,6 +85,22 @@ export function JobAlertPopupClient({ label }: { label: string }) {
   }, [open, hide])
 
   if (!open) return null
+  if (compact) {
+    return (
+      <aside className={styles.bar} aria-label="Free job alerts">
+        <span className={styles.barBell} aria-hidden>
+          <BellRing width={16} height={16} />
+        </span>
+        <p className={styles.barText}>New six-figure jobs by email</p>
+        <button type="button" className={styles.barButton} onClick={() => setCompact(false)}>
+          Get alerts
+        </button>
+        <button type="button" className={styles.barClose} onClick={() => hide(POPUP_DISMISS_SNOOZE_MS)} aria-label="Close">
+          <X aria-hidden width={16} height={16} />
+        </button>
+      </aside>
+    )
+  }
   return (
     <aside className={styles.card} role="dialog" aria-modal="false" aria-label="Free job alerts">
       <button type="button" className={styles.close} onClick={() => hide(POPUP_DISMISS_SNOOZE_MS)} aria-label="Close">

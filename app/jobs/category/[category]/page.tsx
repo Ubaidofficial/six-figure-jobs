@@ -221,6 +221,7 @@ export default async function CategoryPage({
       <ListingLayout alert={cfg.roleSlugs.length <= 5 ? { roleSlugs: cfg.roleSlugs } : {}}>
         <JobRows
           jobs={jobs as JobWithCompany[]}
+          alert={cfg.roleSlugs.length <= 5 ? { roleSlugs: cfg.roleSlugs } : {}}
           empty={{
             title: `No ${cfg.label.toLowerCase()} roles meet the $100k+ filter yet.`,
             body: 'Check back soon, or browse every $100k+ job.',

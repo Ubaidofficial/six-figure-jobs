@@ -8,12 +8,13 @@
 // top: straight away when the reader is at the top and not using the list, otherwise behind a "Show N new jobs" button, so
 // a row never moves under a thumb. Polling stops after 30 minutes of one visit and starts again when the tab is shown.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { JobRow, JobRowList } from '@/components/jobs/JobRow'
 import { formatAgo } from '@/lib/jobs/formatAgo'
 import { newArrivals, newestAddedIso, rankTime, revealMore, shouldInsertNow, REVEAL_STEP } from '@/lib/jobs/liveList'
 import type { JobWithCompany } from '@/lib/jobs/queryJobs'
+import { listAlertAfterIndex } from '@/lib/alerts/popup'
 import { cn } from '@/lib/utils'
 import styles from '@/components/listing/Listing.module.css'
 import live from './InfiniteJobsList.module.css'
@@ -32,9 +33,11 @@ interface InfiniteJobsListProps {
   live?: boolean
   /** The server's clock when the page was rendered, so the first client render matches the server HTML. */
   serverNow: string
+  /** An alert box (server-rendered) shown after the 10th row once the reader has scrolled that far. */
+  midSlot?: ReactNode
 }
 
-export function InfiniteJobsList({ initialJobs, initialPage, totalPages, scopeRole, live: isLive = false, serverNow }: InfiniteJobsListProps) {
+export function InfiniteJobsList({ initialJobs, initialPage, totalPages, scopeRole, live: isLive = false, serverNow, midSlot }: InfiniteJobsListProps) {
   const [jobs, setJobs] = useState(initialJobs)
   const [page, setPage] = useState(initialPage)
   const [loading, setLoading] = useState(false)
@@ -192,6 +195,8 @@ export function InfiniteJobsList({ initialJobs, initialPage, totalPages, scopeRo
   }, [pending.length, holding, paused, scrolledPastTop, insertPending])
 
   const newest = newestAddedIso([...pending, ...jobs])
+  // Placed by the page's first rows, so it does not jump when more pages are loaded or new jobs come in at the top.
+  const midAfter = listAlertAfterIndex(initialJobs.length)
 
   return (
     <>
@@ -227,7 +232,10 @@ export function InfiniteJobsList({ initialJobs, initialPage, totalPages, scopeRo
       >
         <JobRowList>
           {jobs.map((job, i) => (
-            <JobRow key={job.id} job={job} className={cn(i >= visible && live.later, fresh.has(job.id) && live.fresh)} />
+            <Fragment key={job.id}>
+              <JobRow job={job} className={cn(i >= visible && live.later, fresh.has(job.id) && live.fresh)} />
+              {midSlot && i === midAfter ? <div className={cn(styles.alertMid, i + 1 >= visible && live.later)}>{midSlot}</div> : null}
+            </Fragment>
           ))}
         </JobRowList>
       </div>

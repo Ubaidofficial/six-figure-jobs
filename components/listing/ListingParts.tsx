@@ -1,5 +1,5 @@
 // Building blocks shared by every listing page. Server components; the toolbar/filters passed in are client components.
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import Link from '@/components/ui/Link'
 
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
@@ -7,6 +7,7 @@ import { JobRow, JobRowList } from '@/components/jobs/JobRow'
 import type { JobQueryInput, JobWithCompany } from '@/lib/jobs/queryJobs'
 import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import { pageLinkNumbers } from '@/lib/listing/pageNumbers'
+import { listAlertAfterIndex } from '@/lib/alerts/popup'
 
 import styles from './Listing.module.css'
 import { toPublicJob } from '@/lib/jobs/publicJob'
@@ -194,9 +195,12 @@ export function ResultsCount({ children }: { children: ReactNode }) {
 export function JobRows({
   jobs,
   empty,
+  alert,
 }: {
   jobs: JobWithCompany[]
   empty?: { title: string; body: string; href?: string; hrefLabel?: string }
+  /** The page's job query: an alert box after the 10th row of a long list (nothing while alerts are off). */
+  alert?: JobQueryInput
 }) {
   if (jobs.length === 0) {
     return (
@@ -213,10 +217,18 @@ export function JobRows({
       </div>
     )
   }
+  const alertAfter = alert ? listAlertAfterIndex(jobs.length) : null
   return (
     <JobRowList>
-      {jobs.map(toPublicJob).map((job) => (
-        <JobRow key={job.id} job={job} />
+      {jobs.map(toPublicJob).map((job, i) => (
+        <Fragment key={job.id}>
+          <JobRow job={job} />
+          {i === alertAfter ? (
+            <div className={styles.alertMid}>
+              <JobAlertBox query={alert!} title="Get new jobs like these by email" />
+            </div>
+          ) : null}
+        </Fragment>
       ))}
     </JobRowList>
   )
