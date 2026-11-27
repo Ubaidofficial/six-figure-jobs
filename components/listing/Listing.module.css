@@ -693,6 +693,11 @@
   border-top: 1px solid var(--color-border);
 }
 
+/* The signup box keeps its own bottom margin elsewhere; inside the list the padding above is the spacing. */
+.alertMid > * {
+  margin: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .savedSearchChip {
     transition: none;
