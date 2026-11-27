@@ -3,7 +3,13 @@ import { buildCompanyPublishingManifestData } from '../../lib/seo/companyPublish
 import { getCompanyReleaseLimit } from '../../lib/seo/sitemapWaves'
 import { prisma } from '../../lib/prisma'
 
-jest.mock('../../lib/prisma', () => ({ prisma: { job: { findMany: jest.fn() }, company: { findMany: jest.fn() } } }))
+jest.mock('../../lib/prisma', () => ({
+  prisma: {
+    job: { findMany: jest.fn() },
+    company: { findMany: jest.fn() },
+    siteConfig: { findUnique: jest.fn(), upsert: jest.fn() },
+  },
+}))
 
 // Wave 5 would otherwise release every company the drip had unlocked since 2026-06-04 (about 290 on 2026-11-24) at once.
 describe('company pages released per sitemap wave', () => {
@@ -61,10 +67,20 @@ describe('the manifest unlocks only the capped number of ready companies, best f
   const now = new Date('2026-11-24T12:00:00Z')
   const wave = process.env.SITEMAP_WAVE
 
+  // The released set kept in SiteConfig between builds: one stored row, empty at the start of each test.
+  let stored: string | null = null
+  const findUnique = prisma.siteConfig.findUnique as unknown as jest.Mock
+  const upsert = prisma.siteConfig.upsert as unknown as jest.Mock
+
   beforeEach(() => {
     __clearMemoForTests()
     ;(prisma.job.findMany as unknown as jest.Mock).mockReset().mockResolvedValue(jobs)
     ;(prisma.company.findMany as unknown as jest.Mock).mockReset().mockResolvedValue(companies)
+    stored = null
+    findUnique.mockReset().mockImplementation(async () => (stored === null ? null : { value: stored }))
+    upsert.mockReset().mockImplementation(async ({ update }: { update: { value: string } }) => {
+      stored = update.value
+    })
   })
   afterEach(() => {
     process.env.SITEMAP_WAVE = wave
@@ -128,6 +144,72 @@ describe('the manifest unlocks only the capped number of ready companies, best f
       ;(prisma.company.findMany as unknown as jest.Mock).mockResolvedValue(withNew())
       const m = await buildCompanyPublishingManifestData(now)
       expect(m.unlockedCount).toBe(0)
+    })
+  })
+
+  // Owner's request, 2026-11-27: the 25th place changed hands with every scrape, so pages went from index to noindex.
+  describe('a released company keeps its page', () => {
+    const unlockedOf = (m: { candidates: Array<{ slug: string; unlocked: boolean }> }) =>
+      m.candidates.filter((c) => c.unlocked).map((c) => c.slug)
+    const settle = () => new Promise((resolve) => setImmediate(resolve))
+    // company-05 overtakes the five released companies at the bottom of the list (company-05 .. company-09 rank 21-25).
+    const boosted = () =>
+      jobs.concat(Array.from({ length: 40 }, () => ({ ...jobs.find((j) => j.companyId === 'c0')!, companyId: 'c0' })))
+
+    it('when another company outscores it at the next build', async () => {
+      process.env.SITEMAP_WAVE = '5'
+      const first = unlockedOf(await buildCompanyPublishingManifestData(now, { persistRelease: true }))
+      await settle()
+      expect(first).not.toContain('company-00')
+      expect(JSON.parse(stored!)).toEqual([...first].sort())
+
+      ;(prisma.job.findMany as unknown as jest.Mock).mockResolvedValue(boosted())
+      const m = await buildCompanyPublishingManifestData(now, { persistRelease: true })
+      expect(unlockedOf(m).sort()).toEqual([...first].sort())
+      expect(m.candidates.find((c) => c.slug === 'company-00')?.unlocked).toBe(false)
+      // Released companies rank 1..25, so a rank within the count still means "released".
+      expect(m.candidates.filter((c) => c.unlocked).every((c) => (c.rolloutRank ?? Infinity) <= 25)).toBe(true)
+    })
+
+    it('until it stops being ready: its place goes to the next best company', async () => {
+      process.env.SITEMAP_WAVE = '5'
+      const first = unlockedOf(await buildCompanyPublishingManifestData(now, { persistRelease: true }))
+      await settle()
+      expect(first).toContain('company-29')
+
+      const list = companies.map((c) => (c.slug === 'company-29' ? { ...c, website: null } : c)) // missing_website
+      ;(prisma.company.findMany as unknown as jest.Mock).mockResolvedValue(list)
+      const m = await buildCompanyPublishingManifestData(now, { persistRelease: true })
+      await settle()
+      const unlocked = unlockedOf(m)
+      expect(unlocked).not.toContain('company-29')
+      expect(unlocked).toContain('company-04') // the best of those that waited
+      expect(unlocked).toHaveLength(25)
+      expect(JSON.parse(stored!)).not.toContain('company-29')
+    })
+
+    it('a lower COMPANY_RELEASE_LIMIT still holds it back, keeping the best of the released ones', async () => {
+      process.env.SITEMAP_WAVE = '5'
+      await buildCompanyPublishingManifestData(now, { persistRelease: true })
+      await settle()
+      process.env.COMPANY_RELEASE_LIMIT = '3'
+      const m = await buildCompanyPublishingManifestData(now, { persistRelease: true })
+      expect(unlockedOf(m)).toEqual(['company-29', 'company-28', 'company-27'])
+    })
+
+    it('a build without persistRelease (the report script) reads the released set but never writes it', async () => {
+      process.env.SITEMAP_WAVE = '5'
+      await buildCompanyPublishingManifestData(now)
+      await settle()
+      expect(upsert).not.toHaveBeenCalled()
+    })
+
+    it('rank alone decides when the stored set cannot be read', async () => {
+      process.env.SITEMAP_WAVE = '5'
+      findUnique.mockRejectedValue(new Error('db down'))
+      const m = await buildCompanyPublishingManifestData(now)
+      expect(unlockedOf(m)).toHaveLength(25)
+      expect(unlockedOf(m)).not.toContain('company-00')
     })
   })
 
