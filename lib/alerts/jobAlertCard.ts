@@ -36,6 +36,25 @@ export function jobCardDue(elapsedMs: number, scrolledRatio: number, phone = fal
   return !phone && elapsedMs >= JOB_CARD_DELAY_MS
 }
 
+export type CardSide = 'right' | 'left' | 'hidden'
+
+/**
+ * Where the card goes so it never covers an Apply button (owner's request, 2026-11-27: on desktop it sat over the Apply
+ * button in the job description when the "Ready to apply?" box pushed it left). Right first, else left; while an Apply
+ * button would be under it on both sides (or under its only place, on phones), it is hidden until the reader scrolls on.
+ */
+export function pickCardSide(rightCovered: boolean, leftCovered: boolean | null): CardSide {
+  if (!rightCovered) return 'right'
+  if (leftCovered === false) return 'left'
+  return 'hidden'
+}
+
+type Box = { left: number; right: number; top: number; bottom: number }
+/** Whether two boxes overlap (pure). */
+export function boxesOverlap(a: Box, b: Box): boolean {
+  return a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom
+}
+
 /** The headline: how many matching jobs were posted this week when known, else a plain offer. */
 export function jobCardHeadline(newThisWeek: number | null, what: string): string {
   if (newThisWeek && newThisWeek > 1) return `${newThisWeek.toLocaleString('en-US')} new ${what} this week`

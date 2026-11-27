@@ -16,9 +16,12 @@ import {
   JOB_CARD_DISMISS_KEY,
   JOB_CARD_DISMISS_SNOOZE_MS,
   SIGNED_UP_FOR_MS,
+  boxesOverlap,
   jobCardDue,
   jobCardHeadline,
   jobCardHidden,
+  pickCardSide,
+  type CardSide,
 } from '@/lib/alerts/jobAlertCard'
 import { POPUP_SIGNUP_SNOOZE_MS, POPUP_STORAGE_KEY } from '@/lib/alerts/popup'
 import { pushAlertEvent } from '@/lib/alerts/track'
@@ -48,8 +51,9 @@ export function JobAlertCard({ filters, label, newThisWeek }: { filters: AlertFi
   const [email, setEmail] = React.useState('')
   const [state, setState] = React.useState<State>({ kind: 'idle' })
   const [suggestion, setSuggestion] = React.useState<string | null>(null)
-  // Desktop: bottom-right, unless an Apply link would be under it there (the "Ready to apply?" box); then bottom-left.
-  const [side, setSide] = React.useState<'right' | 'left'>('right')
+  // Desktop: bottom-right, unless an Apply link would be under it there (the "Ready to apply?" box); then bottom-left; hidden
+  // while one would be under it on both sides. Phones have one place: hidden while an Apply link is under it.
+  const [side, setSide] = React.useState<CardSide>('right')
   const cardRef = React.useRef<HTMLElement>(null)
   const id = React.useId()
 
@@ -82,14 +86,17 @@ export function JobAlertCard({ filters, label, newThisWeek }: { filters: AlertFi
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
         const card = cardRef.current
-        if (!card || window.innerWidth < 1024) return setSide('right')
+        if (!card) return
+        // Never hide it while the reader is typing in it.
+        if (card.contains(document.activeElement)) return
         const r = card.getBoundingClientRect()
-        const right = { left: window.innerWidth - 24 - r.width, right: window.innerWidth - 24, top: r.top, bottom: r.bottom }
-        const covered = [...document.querySelectorAll('[data-apply-link]')].some((a) => {
-          const q = a.getBoundingClientRect()
-          return q.height > 0 && q.right > right.left && q.left < right.right && q.bottom > right.top && q.top < right.bottom
-        })
-        setSide(covered ? 'left' : 'right')
+        const links = [...document.querySelectorAll('[data-apply-link]')]
+          .map((a) => a.getBoundingClientRect())
+          .filter((q) => q.height > 0)
+        const coveredAt = (left: number) =>
+          links.some((q) => boxesOverlap(q, { left, right: left + r.width, top: r.top, bottom: r.bottom }))
+        if (window.innerWidth < 1024) return setSide(pickCardSide(coveredAt(r.left), null))
+        setSide(pickCardSide(coveredAt(window.innerWidth - 24 - r.width), coveredAt(24)))
       })
     }
     place()
@@ -144,7 +151,11 @@ export function JobAlertCard({ filters, label, newThisWeek }: { filters: AlertFi
   if (!open) return null
   const what = label.split(' · ')[0] || 'six-figure jobs'
   return (
-    <aside ref={cardRef} className={`${styles.card} ${side === 'left' ? styles.left : ''}`} aria-labelledby={`${id}-title`}>
+    <aside
+      ref={cardRef}
+      className={`${styles.card} ${side === 'left' ? styles.left : ''} ${side === 'hidden' ? styles.away : ''}`}
+      aria-labelledby={`${id}-title`}
+    >
       <div className={styles.inner}>
         <button
           type="button"
