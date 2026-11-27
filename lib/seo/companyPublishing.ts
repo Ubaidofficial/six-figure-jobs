@@ -256,9 +256,40 @@ function buildEmptyManifest(now: Date): CompanyPublishingManifest {
   }
 }
 
+// Company pages released under the wave's cap, kept between builds (owner's request, 2026-11-27: "company pages flapping wala
+// fix"). The best-ranked set was recomputed every 10 minutes from live counts, and many companies sit at the score's caps, so
+// the last places changed hands with every scrape: on 2026-11-26 Adobe, Applied Intuition and Chewy (48 to 233 live jobs, all
+// ready) left the sitemap and turned noindex, and Search Console saw noindex on pages that were indexable again later (Runway,
+// NVIDIA, OpenAI). A released company now keeps its page while it stays ready; only a free place goes to the next best one.
+export const COMPANY_RELEASED_KEY = 'seo.company.released'
+
+async function loadReleasedSlugs(): Promise<Set<string>> {
+  try {
+    const row = await prisma.siteConfig.findUnique({ where: { key: COMPANY_RELEASED_KEY } })
+    const value: unknown = JSON.parse(row?.value ?? '[]')
+    return new Set(Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [])
+  } catch {
+    return new Set() // no row, unreadable, or the database is down: rank alone decides, as before
+  }
+}
+
+async function saveReleasedSlugs(slugs: string[]): Promise<void> {
+  try {
+    const value = JSON.stringify(slugs)
+    await prisma.siteConfig.upsert({
+      where: { key: COMPANY_RELEASED_KEY },
+      update: { value },
+      create: { key: COMPANY_RELEASED_KEY, value, label: 'Company pages released under the sitemap wave cap' },
+    })
+  } catch (err) {
+    console.error('[companyPublishing] could not save the released companies:', err)
+  }
+}
+
 async function buildCompanyPublishingManifestData(
   now = new Date(),
-  opts: { throwOnError?: boolean } = {},
+  // persistRelease: store the released set for the next build. Only the site's own manifest does; a report only reads it.
+  opts: { throwOnError?: boolean; persistRelease?: boolean } = {},
 ): Promise<CompanyPublishingManifest> {
   // Defensive: in test environments where this function gets called without
   // a real Prisma client (e.g. mocked modules that didn't replace the
@@ -397,19 +428,28 @@ async function buildCompanyPublishingManifestData(
     })
 
   const readyCandidates = baseCandidates.filter((candidate) => candidate.ready)
-  const unlockedIds = new Set(
-    readyCandidates.slice(0, getUnlockedCount(readyCandidates.length, now)).map((candidate) => candidate.companyId),
-  )
-  // Only while a cap applies (wave 5+), and not when COMPANY_RELEASE_LIMIT=0 holds every company page back.
   const releaseLimit = getCompanyReleaseLimit()
-  if (Number.isFinite(releaseLimit) && releaseLimit > 0) {
+  const capped = Number.isFinite(releaseLimit)
+  // Under a cap (wave 5+), the companies released last time come first, in rank order, while they are still ready.
+  const kept = capped ? await loadReleasedSlugs() : new Set<string>()
+  const releaseOrder = kept.size
+    ? [...readyCandidates.filter((c) => kept.has(c.slug)), ...readyCandidates.filter((c) => !kept.has(c.slug))]
+    : readyCandidates
+  const released = releaseOrder.slice(0, getUnlockedCount(readyCandidates.length, now))
+  const unlockedIds = new Set(released.map((candidate) => candidate.companyId))
+  if (capped && opts.persistRelease) {
+    const next = released.map((c) => c.slug).sort()
+    if (next.length !== kept.size || next.some((slug) => !kept.has(slug))) void saveReleasedSlugs(next)
+  }
+  // Only while a cap applies (wave 5+), and not when COMPANY_RELEASE_LIMIT=0 holds every company page back.
+  if (capped && releaseLimit > 0) {
     for (const candidate of readyCandidates) {
       if (PAST_CAP_SLUGS.has(candidate.slug) || PAST_CAP_NAMES.has(candidate.name.toLowerCase())) unlockedIds.add(candidate.companyId)
     }
   }
   const unlockedCount = unlockedIds.size
   const rolloutRankById = new Map(
-    readyCandidates.map((candidate, index) => [candidate.companyId, index + 1] as const),
+    releaseOrder.map((candidate, index) => [candidate.companyId, index + 1] as const),
   )
 
   const candidates = baseCandidates.map((candidate) => ({
@@ -442,7 +482,7 @@ const MANIFEST_MEMO_TTL_MS = 10 * 60 * 1000
 export async function getCompanyPublishingManifest(): Promise<CompanyPublishingManifest> {
   try {
     return await memoAsync('company-pseo-manifest', MANIFEST_MEMO_TTL_MS, () =>
-      buildCompanyPublishingManifestData(new Date(), { throwOnError: true }),
+      buildCompanyPublishingManifestData(new Date(), { throwOnError: true, persistRelease: true }),
     )
   } catch (err) {
     console.error('[companyPublishing] manifest build failed, returning empty:', err)
