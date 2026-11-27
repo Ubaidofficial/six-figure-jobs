@@ -1,5 +1,5 @@
 // The job page's alert card (lib/alerts/jobAlertCard.ts, owner's choice 2026-11-25): when it shows and what it says.
-import { JOB_CARD_DELAY_MS, jobCardDue, jobCardHeadline, jobCardHidden } from '../../lib/alerts/jobAlertCard'
+import { JOB_CARD_DELAY_MS, boxesOverlap, jobCardDue, jobCardHeadline, jobCardHidden, pickCardSide } from '../../lib/alerts/jobAlertCard'
 
 describe('job page alert card', () => {
   it('opens after the delay or half-way down the page, not before', () => {
@@ -23,5 +23,18 @@ describe('job page alert card', () => {
     expect(jobCardHeadline(37, 'Software Engineer jobs')).toBe('37 new Software Engineer jobs this week')
     expect(jobCardHeadline(1, 'Software Engineer jobs')).toBe('New Software Engineer jobs, straight to your inbox')
     expect(jobCardHeadline(null, 'Six-figure jobs')).toBe('New Six-figure jobs, straight to your inbox')
+  })
+  it('never covers an Apply button: right, else left, else hidden until the reader scrolls on', () => {
+    expect(pickCardSide(false, true)).toBe('right')
+    expect(pickCardSide(true, false)).toBe('left')
+    expect(pickCardSide(true, true)).toBe('hidden') // the 2026-11-27 case: Apply buttons on both sides
+    expect(pickCardSide(true, null)).toBe('hidden') // phones: one place only
+    expect(pickCardSide(false, null)).toBe('right')
+  })
+  it('tells overlapping boxes from boxes that only touch', () => {
+    const card = { left: 24, right: 424, top: 700, bottom: 870 }
+    expect(boxesOverlap({ left: 100, right: 400, top: 800, bottom: 850 }, card)).toBe(true)
+    expect(boxesOverlap({ left: 424, right: 600, top: 800, bottom: 850 }, card)).toBe(false)
+    expect(boxesOverlap({ left: 100, right: 400, top: 600, bottom: 700 }, card)).toBe(false)
   })
 })

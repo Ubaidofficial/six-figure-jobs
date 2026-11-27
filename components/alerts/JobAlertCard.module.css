@@ -31,6 +31,14 @@
   left: 24px;
 }
 
+/* While an Apply link would be under it wherever it can go: out of sight and out of the way, back when the reader scrolls on.
+   It keeps its layout (visibility, not display), so its position can still be measured. */
+.away {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .inner {
   position: relative;
   padding: 16px 16px 14px;
