@@ -1,16 +1,25 @@
 'use client'
 
-// The job page's alert card (lib/alerts/jobAlertCard.ts): it slides in after a few seconds or half-way down the page and
-// stays until the page is reloaded (owner's choice, 2026-11-25: no close button). It floats in a corner and never covers
+// The job page's alert card (lib/alerts/jobAlertCard.ts): it slides in after a few seconds or half-way down the page (on
+// phones only half-way down) and has a close button that keeps it away for 14 days (owner's request, 2026-11-27; it had
+// none from 2026-11-25). It floats in a corner and never covers
 // the job text's column centre or the Apply button: on phones it sits above the sticky Apply bar and leaves the Feedback
 // button free. It is added after load, so it is in no server HTML and changes no crawled markup, canonical or JSON-LD.
 // Not a dialog: it does not take focus or trap the keyboard, and it is announced as a page region.
 import * as React from 'react'
-import { BellRing, MailCheck } from 'lucide-react'
+import { BellRing, MailCheck, X } from 'lucide-react'
 
 import type { AlertFilters } from '@/lib/alerts/filters'
 import { suggestEmailFix } from '@/lib/alerts/email'
-import { ALERT_SIGNED_UP_KEY, SIGNED_UP_FOR_MS, jobCardDue, jobCardHeadline, jobCardHidden } from '@/lib/alerts/jobAlertCard'
+import {
+  ALERT_SIGNED_UP_KEY,
+  JOB_CARD_DISMISS_KEY,
+  JOB_CARD_DISMISS_SNOOZE_MS,
+  SIGNED_UP_FOR_MS,
+  jobCardDue,
+  jobCardHeadline,
+  jobCardHidden,
+} from '@/lib/alerts/jobAlertCard'
 import { POPUP_SIGNUP_SNOOZE_MS, POPUP_STORAGE_KEY } from '@/lib/alerts/popup'
 import { pushAlertEvent } from '@/lib/alerts/track'
 
@@ -45,11 +54,13 @@ export function JobAlertCard({ filters, label, newThisWeek }: { filters: AlertFi
   const id = React.useId()
 
   React.useEffect(() => {
-    if (jobCardHidden(read(ALERT_SIGNED_UP_KEY), Date.now())) return
-    const started = Date.now()
+    const now = Date.now()
+    if (jobCardHidden(read(ALERT_SIGNED_UP_KEY), now) || jobCardHidden(read(JOB_CARD_DISMISS_KEY), now)) return
+    const started = now
+    const phone = window.matchMedia('(max-width: 1023px)').matches
     const check = () => {
       const scrollable = document.documentElement.scrollHeight - window.innerHeight
-      if (jobCardDue(Date.now() - started, scrollable > 0 ? window.scrollY / scrollable : 0)) {
+      if (jobCardDue(Date.now() - started, scrollable > 0 ? window.scrollY / scrollable : 0, phone)) {
         cleanup()
         setOpen(true)
         pushAlertEvent('job_alert_card_shown', {})
@@ -135,6 +146,17 @@ export function JobAlertCard({ filters, label, newThisWeek }: { filters: AlertFi
   return (
     <aside ref={cardRef} className={`${styles.card} ${side === 'left' ? styles.left : ''}`} aria-labelledby={`${id}-title`}>
       <div className={styles.inner}>
+        <button
+          type="button"
+          className={styles.close}
+          aria-label="Close"
+          onClick={() => {
+            write(JOB_CARD_DISMISS_KEY, String(Date.now() + JOB_CARD_DISMISS_SNOOZE_MS))
+            setOpen(false)
+          }}
+        >
+          <X aria-hidden width={16} height={16} />
+        </button>
         {state.kind === 'done' ? (
           <div role="status" className={styles.done}>
             <MailCheck aria-hidden className={styles.doneIcon} />

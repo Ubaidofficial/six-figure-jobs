@@ -554,6 +554,7 @@ export default async function RemoteJobsPage({
         <ListingLayout alert={{ remoteOnly: true, remoteRegion: activeRemoteRegion || undefined }}>
           <JobRows
             jobs={recentJobs}
+            alert={{ remoteOnly: true, remoteRegion: activeRemoteRegion || undefined }}
             empty={{
               title: 'No remote jobs found.',
               body: 'Try another region, or browse every $100k+ job.',

@@ -406,6 +406,7 @@ export async function SalaryTierTemplate({
       >
         <JobRows
           jobs={jobs}
+          alert={queryInput}
           empty={{
             title: 'No jobs match these filters.',
             body: 'Clear the filters to see every job in this salary range.',

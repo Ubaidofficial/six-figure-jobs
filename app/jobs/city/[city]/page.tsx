@@ -223,6 +223,7 @@ export default async function CityPage({ params }: { params: Params }) {
       <ListingLayout alert={{ countryCode: resolved.countryCode ?? undefined }}>
         <JobRows
           jobs={jobs as JobWithCompany[]}
+          alert={{ countryCode: resolved.countryCode ?? undefined }}
           empty={{
             title: `No ${salaryLabel} roles in ${resolved.label} yet.`,
             body: 'New postings land daily.',

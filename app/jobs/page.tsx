@@ -1,3 +1,4 @@
+import { JobAlertBox } from '@/components/alerts/JobAlertBox'
 import { roleFacetsFromRows } from '@/lib/jobs/roleFacets'
 import type { Metadata } from 'next'
 import { keywordsFor } from '@/lib/seo/keywordMap'
@@ -702,6 +703,7 @@ export default async function JobsIndexPage({
                 totalPages={totalPages}
                 live={sort === 'recent' && page === 1}
                 serverNow={new Date().toISOString()}
+            midSlot={<JobAlertBox query={queryInput} title="Get new jobs like these by email" />}
               />
               {/* Server-rendered pagination links so Google can crawl pages beyond 1; the client list above
                   appends pages for people. */}

@@ -494,6 +494,7 @@ export async function CountryLocationTemplate({
       >
         <JobRows
           jobs={jobs}
+          alert={queryInput}
           empty={{
             title: 'No jobs match these filters.',
             body: `Clear the filters to see every job in ${loc.label}.`,

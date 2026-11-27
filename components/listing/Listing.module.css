@@ -687,6 +687,17 @@
   margin-top: var(--space-24, 24px);
 }
 
+/* The alert box inside a long job list, after the 10th row (lib/alerts/popup.ts listAlertAfterIndex). */
+.alertMid {
+  padding: var(--space-12, 12px);
+  border-top: 1px solid var(--color-border);
+}
+
+/* The signup box keeps its own bottom margin elsewhere; inside the list the padding above is the spacing. */
+.alertMid > * {
+  margin: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .savedSearchChip {
     transition: none;

@@ -32,9 +32,35 @@
 }
 
 .inner {
+  position: relative;
   padding: 16px 16px 14px;
   border-radius: 16.5px;
   background: var(--color-bg-1, #fff);
+}
+
+/* Close: top-right, over the headline's right edge (the headline leaves room for it). */
+.close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-1, #555);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: color-mix(in srgb, var(--color-text-0, #0c0d0e) 8%, transparent);
+}
+
+.close:focus-visible {
+  outline: 2px solid #2a78d6;
+  outline-offset: 2px;
 }
 
 .head {
@@ -58,6 +84,7 @@
 
 .text {
   min-width: 0;
+  padding-right: 24px; /* room for the close button */
 }
 
 .title {
@@ -221,18 +248,36 @@
     bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Smaller on phones (owner's request, 2026-11-27: it was "big"): no sub line, a smaller bell and headline. */
   .inner {
-    padding: 12px;
+    padding: 10px 10px 10px 12px;
+  }
+
+  .bell {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+  }
+
+  .bell :global(svg) {
+    width: 15px;
+    height: 15px;
+  }
+
+  .title {
+    font-size: 0.88rem;
   }
 
   .sub {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: none;
   }
 
   .form {
-    margin-top: 10px;
+    margin-top: 8px;
+  }
+
+  .input,
+  .button {
+    height: 38px;
   }
 }
